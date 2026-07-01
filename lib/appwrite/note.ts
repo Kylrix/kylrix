@@ -799,6 +799,29 @@ export async function createMomentFromNote(note: Pick<Notes, '$id'>) {
 }
 
 export async function getNote(noteId: string): Promise<Notes> {
+  if (noteId.startsWith('ghost-') && typeof window !== 'undefined') {
+    const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+    if (historyRaw) {
+      const history = JSON.parse(historyRaw);
+      const match = history.find((n: any) => n.id === noteId);
+      if (match) {
+        return {
+          $id: match.id,
+          $createdAt: match.createdAt,
+          $updatedAt: match.createdAt,
+          title: match.title,
+          content: match.content || '',
+          format: 'text',
+          tags: [],
+          userId: 'ghost',
+          isPublic: false,
+          isGuest: false,
+          metadata: match.metadata || '{}',
+        } as any;
+      }
+    }
+  }
+
   let promise: Promise<Notes>;
 
   if (typeof window !== 'undefined') {
@@ -823,6 +846,43 @@ export async function getNote(noteId: string): Promise<Notes> {
 }
 
 export async function updateNote(noteId: string, data: Partial<Notes>, jwt?: string) {
+  if (noteId.startsWith('ghost-') && typeof window !== 'undefined') {
+    const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+    if (historyRaw) {
+      const history = JSON.parse(historyRaw);
+      const index = history.findIndex((n: any) => n.id === noteId);
+      if (index !== -1) {
+        const match = history[index];
+        const updatedRef = {
+          ...match,
+          title: data.title !== undefined ? data.title : match.title,
+          content: data.content !== undefined ? data.content : match.content,
+          metadata: data.metadata !== undefined ? data.metadata : match.metadata,
+          createdAt: match.createdAt,
+          expiresAt: match.expiresAt,
+          decryptionKey: match.decryptionKey,
+          deletionSecret: match.deletionSecret,
+        };
+        history[index] = updatedRef;
+        localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+        window.dispatchEvent(new Event('storage'));
+        return {
+          $id: updatedRef.id,
+          $createdAt: updatedRef.createdAt,
+          $updatedAt: new Date().toISOString(),
+          title: updatedRef.title,
+          content: updatedRef.content || '',
+          format: 'text',
+          tags: [],
+          userId: 'ghost',
+          isPublic: false,
+          isGuest: false,
+          metadata: updatedRef.metadata || '{}',
+        } as any;
+      }
+    }
+  }
+
   if (typeof window !== 'undefined') {
     invalidateNoteRowClientCache(noteId);
     
@@ -993,6 +1053,17 @@ export async function updateNoteIsomorphicLegacy(noteId: string, data: Partial<N
 }
 
 export async function deleteNote(noteId: string, jwt?: string) {
+  if (noteId.startsWith('ghost-') && typeof window !== 'undefined') {
+    const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+    if (historyRaw) {
+      const history = JSON.parse(historyRaw);
+      const filtered = history.filter((n: any) => n.id !== noteId);
+      localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(filtered));
+      window.dispatchEvent(new Event('storage'));
+      return { success: true };
+    }
+  }
+
   if (typeof window !== 'undefined') {
     invalidateNoteRowClientCache(noteId);
     const { deleteNote } = await import('@/lib/actions/client-ops');

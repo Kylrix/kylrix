@@ -88,9 +88,74 @@ function DashboardPageContent() {
   }, []);
 
   const loadAllCredentials = useCallback(async () => {
-    if (!user?.$id) return;
     setLoading(true);
     try {
+      if (!user?.$id) {
+        // Load ghost credentials from localStorage
+        const historyRaw = typeof window !== 'undefined' ? localStorage.getItem('kylrix_ghost_notes_v2') : null;
+        const ghostCreds: Credentials[] = [];
+        if (historyRaw) {
+          try {
+            const history = JSON.parse(historyRaw);
+            if (Array.isArray(history)) {
+              const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+              for (const item of history) {
+                const meta = (() => {
+                  try { return JSON.parse(item.metadata || '{}'); } catch { return {}; }
+                })();
+                if (meta?.send_object?.kind === 'password' || meta?.send_object?.kind === 'totp') {
+                  const decryptedContent = (item.content && item.decryptionKey)
+                    ? await decryptGhostData(item.content, item.decryptionKey)
+                    : (item.content || '');
+                  const payload = (() => {
+                    try { return JSON.parse(decryptedContent); } catch { return null; }
+                  })();
+                  if (payload) {
+                    ghostCreds.push({
+                      $id: item.id,
+                      $createdAt: item.createdAt,
+                      $updatedAt: item.createdAt,
+                      userId: 'ghost',
+                      itemType: meta.send_object.kind === 'password' ? 'login' : 'totp',
+                      name: item.title,
+                      url: null,
+                      notes: null,
+                      totpId: meta.send_object.kind === 'password' ? payload.totpSecret : payload.secret,
+                      username: meta.send_object.kind === 'password' ? payload.username : null,
+                      password: meta.send_object.kind === 'password' ? payload.password : null,
+                      cardNumber: null,
+                      cardholderName: null,
+                      cardExpiry: null,
+                      cardCVV: null,
+                      cardPIN: null,
+                      cardType: null,
+                      folderId: null,
+                      tags: [],
+                      customFields: null,
+                      faviconUrl: null,
+                      isFavorite: false,
+                      isDeleted: false,
+                      deletedAt: null,
+                      lastAccessedAt: null,
+                      passwordChangedAt: null,
+                      createdAt: item.createdAt,
+                      updatedAt: item.createdAt,
+                      attachments: null,
+                      isPinned: false,
+                      isPublic: false,
+                      isGuest: false,
+                    } as any);
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        setAllCredentials(ghostCreds);
+        return;
+      }
       const credentials = await listAllCredentials(user.$id);
       setAllCredentials(credentials);
     } catch (error: unknown) {
@@ -102,9 +167,22 @@ function DashboardPageContent() {
   }, [user]);
 
   const hydrateVaultData = useCallback(async () => {
-    if (!user?.$id || !isVaultUnlocked()) return;
+    if (!user?.$id) {
+      await loadAllCredentials();
+      return;
+    }
+    if (!isVaultUnlocked()) return;
     await loadAllCredentials();
   }, [user, isVaultUnlocked, loadAllCredentials]);
+
+  useEffect(() => {
+    if (user?.$id) return;
+    const handleStorage = () => {
+      void loadAllCredentials();
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [user?.$id, loadAllCredentials]);
 
   // Effects
   useEffect(() => {

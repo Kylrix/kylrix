@@ -781,6 +781,58 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         flowWarmOwnerRef.current = userId;
 
         if (userId === 'guest') {
+            const historyRaw = typeof window !== 'undefined' ? localStorage.getItem('kylrix_ghost_notes_v2') : null;
+            let ghostTasks: Task[] = [];
+            if (historyRaw) {
+                try {
+                    const history = JSON.parse(historyRaw);
+                    if (Array.isArray(history)) {
+                        const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+                        for (const item of history) {
+                            const meta = (() => {
+                                try { return JSON.parse(item.metadata || '{}'); } catch { return {}; }
+                            })();
+                            if (meta?.send_object?.kind === 'task') {
+                                const decryptedContent = (item.content && item.decryptionKey)
+                                    ? await decryptGhostData(item.content, item.decryptionKey)
+                                    : (item.content || '');
+                                const payload = (() => {
+                                    try { return JSON.parse(decryptedContent); } catch { return null; }
+                                })();
+                                if (payload) {
+                                    ghostTasks.push({
+                                        id: item.id,
+                                        title: payload.title || item.title,
+                                        description: payload.detail || '',
+                                        status: 'todo',
+                                        priority: payload.priority || 'medium',
+                                        labels: [],
+                                        subtasks: [],
+                                        comments: [],
+                                        attachments: [],
+                                        reminders: [],
+                                        timeEntries: [],
+                                        assigneeIds: ['guest'],
+                                        creatorId: 'guest',
+                                        dueDate: payload.dueAt ? new Date(payload.dueAt) : undefined,
+                                        createdAt: new Date(item.createdAt),
+                                        updatedAt: new Date(item.createdAt),
+                                        position: 0,
+                                        isArchived: false,
+                                        isPinned: false,
+                                    });
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to load ghost tasks', e);
+                }
+            }
+            dispatchSyncedData({
+                tasks: ghostTasks,
+                projects: [],
+            });
             dispatch({ type: 'SET_LOADING', payload: false });
             return;
         }
@@ -886,6 +938,78 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     async (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'position'>) => {
       try {
         const userId = state.userId || 'guest';
+
+        if (userId === 'guest') {
+          // Save as ghost task in localStorage
+          const secret = localStorage.getItem('kylrix_ghost_secret_v2') || crypto.randomUUID();
+          const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+          const deletionSecret = crypto.randomUUID();
+          const { sha256HexUtf8 } = await import('@/lib/crypto/sha256-hex');
+          const creatorDeletionProofHash = await sha256HexUtf8(deletionSecret);
+
+          const taskPayload = {
+            title: task.title,
+            detail: task.description || '',
+            dueAt: task.dueDate ? task.dueDate.toISOString() : undefined,
+            priority: task.priority || 'medium',
+          };
+
+          const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+          const { encrypted: encTitle, key: noteKey } = await encryptGhostData(task.title);
+          const { encrypted: encContent } = await encryptGhostData(JSON.stringify(taskPayload), noteKey);
+
+          const id = `ghost-${crypto.randomUUID()}`;
+          const newRef = {
+            id,
+            title: task.title,
+            content: JSON.stringify(taskPayload),
+            metadata: JSON.stringify({
+              isGhost: true,
+              ghostSecret: secret,
+              expiresAt,
+              isEncrypted: true,
+              creatorDeletionProofHash,
+              send_object: { kind: 'task' }
+            }),
+            createdAt: new Date().toISOString(),
+            expiresAt,
+            decryptionKey: noteKey,
+            deletionSecret,
+          };
+
+          const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+          let history = historyRaw ? JSON.parse(historyRaw) : [];
+          if (!Array.isArray(history)) history = [];
+          history.unshift(newRef);
+          localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+          window.dispatchEvent(new Event('storage'));
+
+          const mappedTask: Task = {
+            id,
+            title: task.title,
+            description: task.description || '',
+            status: task.status,
+            priority: task.priority,
+            labels: task.labels || [],
+            subtasks: [],
+            comments: [],
+            attachments: [],
+            reminders: [],
+            timeEntries: [],
+            assigneeIds: ['guest'],
+            creatorId: 'guest',
+            dueDate: task.dueDate,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            position: 0,
+            isArchived: false,
+            isPinned: false,
+          };
+
+          dispatch({ type: 'ADD_TASK', payload: mappedTask });
+          return mappedTask;
+        }
+
         // Prepare tags with project ID
         const tags = [...(task.labels || [])];
         if (task.linkedNotes?.length) {
@@ -926,6 +1050,44 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   );
 
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
+    if (id.startsWith('ghost-') && typeof window !== 'undefined') {
+      const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+      if (historyRaw) {
+        try {
+          const history = JSON.parse(historyRaw);
+          const index = history.findIndex((n: any) => n.id === id);
+          if (index !== -1) {
+            const match = history[index];
+            const payload = JSON.parse(match.content || '{}');
+            const updatedPayload = {
+              ...payload,
+              title: updates.title !== undefined ? updates.title : payload.title,
+              detail: updates.description !== undefined ? updates.description : payload.detail,
+              dueAt: updates.dueDate !== undefined ? (updates.dueDate ? updates.dueDate.toISOString() : undefined) : payload.dueAt,
+              priority: updates.priority !== undefined ? updates.priority : payload.priority,
+            };
+
+            const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+            const { encrypted: encTitle, key: noteKey } = await encryptGhostData(updatedPayload.title);
+            const { encrypted: encContent } = await encryptGhostData(JSON.stringify(updatedPayload), noteKey);
+
+            history[index] = {
+              ...match,
+              title: updatedPayload.title,
+              content: JSON.stringify(updatedPayload),
+              decryptionKey: noteKey,
+            };
+            localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+            window.dispatchEvent(new Event('storage'));
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      dispatch({ type: 'UPDATE_TASK', payload: { id, updates } });
+      return;
+    }
+
     const currentTask = state.tasks.find(t => t.id === id);
     if (!currentTask) return;
 
@@ -1079,6 +1241,22 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   }, [state.projects, state.userId, isResourcePinned, togglePin, setLocalPin, invalidateTasksNexus]);
 
   const deleteTask = useCallback(async (id: string) => {
+    if (id.startsWith('ghost-') && typeof window !== 'undefined') {
+      const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+      if (historyRaw) {
+        try {
+          const history = JSON.parse(historyRaw);
+          const filtered = history.filter((n: any) => n.id !== id);
+          localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(filtered));
+          window.dispatchEvent(new Event('storage'));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      dispatch({ type: 'DELETE_TASK', payload: id });
+      return;
+    }
+
     try {
       const collectDescendants = (taskId: string): string[] => {
         const directChildren = state.tasks.filter(task => task.parentTaskId === taskId).map(task => task.id);

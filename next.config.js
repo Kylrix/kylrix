@@ -50,6 +50,21 @@ const nextConfig = {
         permanent: true,
       },
       {
+        source: '/send',
+        destination: '/app',
+        permanent: true,
+      },
+      {
+        source: '/send/:noteId',
+        destination: '/app/shared/:noteId',
+        permanent: true,
+      },
+      {
+        source: '/send/:noteId/:key*',
+        destination: '/app/shared/:noteId/:key*',
+        permanent: true,
+      },
+      {
         source: '/app/notes',
         destination: '/app',
         permanent: true,

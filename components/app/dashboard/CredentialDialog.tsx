@@ -291,6 +291,63 @@ export default function CredentialDialog({
       if (customFields.length > 0)
         credentialData.customFields = JSON.stringify(customFields) as string;
 
+      if (!user?.$id) {
+        // Save as ghost credential in localStorage
+        const secret = localStorage.getItem('kylrix_ghost_secret_v2') || crypto.randomUUID();
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const deletionSecret = crypto.randomUUID();
+        const { sha256HexUtf8 } = await import('@/lib/crypto/sha256-hex');
+        const creatorDeletionProofHash = await sha256HexUtf8(deletionSecret);
+
+        const credentialPayload = {
+          username: credentialData.username || undefined,
+          password: credentialData.password || undefined,
+          totpSecret: credentialData.totpId || undefined,
+        };
+
+        const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+        const { encrypted: encTitle, key: noteKey } = await encryptGhostData(credentialData.name);
+        const { encrypted: encContent } = await encryptGhostData(JSON.stringify(credentialPayload), noteKey);
+
+        const id = initial?.$id || `ghost-${crypto.randomUUID()}`;
+        const newRef = {
+          id,
+          title: credentialData.name,
+          content: JSON.stringify(credentialPayload),
+          metadata: JSON.stringify({
+            isGhost: true,
+            ghostSecret: secret,
+            expiresAt,
+            isEncrypted: true,
+            creatorDeletionProofHash,
+            send_object: { kind: 'password' }
+          }),
+          createdAt: new Date().toISOString(),
+          expiresAt,
+          decryptionKey: noteKey,
+          deletionSecret,
+        };
+
+        const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+        let history = historyRaw ? JSON.parse(historyRaw) : [];
+        if (!Array.isArray(history)) history = [];
+
+        const existingIndex = history.findIndex((n: any) => n.id === id);
+        if (existingIndex !== -1) {
+          history[existingIndex] = newRef;
+        } else {
+          history.unshift(newRef);
+        }
+
+        localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+        window.dispatchEvent(new Event('storage'));
+
+        onSaved();
+        handleClose();
+        setLoading(false);
+        return;
+      }
+
       if (initial && initial.$id) {
         await updateCredential(initial.$id, credentialData);
       } else {

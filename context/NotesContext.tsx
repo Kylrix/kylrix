@@ -280,15 +280,84 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         hasInitiallyFetched.current = true;
       }
     } else if (!isAuthLoading && !isAuthenticated) {
-      setNotes([]);
-      setTotalNotes(0);
-      setHasMore(false);
-      setIsLoading(false);
-      setError(null);
-      setPinnedIds([]);
+      const loadGhost = () => {
+        const historyRaw = typeof window !== 'undefined' ? localStorage.getItem('kylrix_ghost_notes_v2') : null;
+        if (historyRaw) {
+          try {
+            const history = JSON.parse(historyRaw);
+            if (Array.isArray(history)) {
+              const mapped = history.map((item: any) => ({
+                $id: item.id,
+                $createdAt: item.createdAt,
+                $updatedAt: item.createdAt,
+                title: item.title,
+                content: item.content || '',
+                format: 'text',
+                tags: [],
+                userId: 'ghost',
+                isPublic: false,
+                isGuest: false,
+                metadata: item.metadata || '{}',
+              })) as any[];
+              setNotes(mapped);
+              setTotalNotes(mapped.length);
+              setIsLoading(false);
+              setHasMore(false);
+              setError(null);
+              setPinnedIds([]);
+              return;
+            }
+          } catch (e) {
+            console.error('Failed to parse ghost history', e);
+          }
+        }
+        setNotes([]);
+        setTotalNotes(0);
+        setHasMore(false);
+        setIsLoading(false);
+        setError(null);
+        setPinnedIds([]);
+      };
+      void loadGhost();
       hasInitiallyFetched.current = false;
     }
   }, [isAuthenticated, isAuthLoading, user?.$id, fetchBatch, isCacheLoaded, notes.length]);
+
+  useEffect(() => {
+    if (isAuthenticated) return;
+    
+    const handleStorage = () => {
+      const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+      if (historyRaw) {
+        try {
+          const history = JSON.parse(historyRaw);
+          if (Array.isArray(history)) {
+            const mapped = history.map((item: any) => ({
+              $id: item.id,
+              $createdAt: item.createdAt,
+              $updatedAt: item.createdAt,
+              title: item.title,
+              content: item.content || '',
+              format: 'text',
+              tags: [],
+              userId: 'ghost',
+              isPublic: false,
+              isGuest: false,
+              metadata: item.metadata || '{}',
+            })) as any[];
+            setNotes(mapped);
+            setTotalNotes(mapped.length);
+          }
+        } catch {}
+      } else {
+        setNotes([]);
+        setTotalNotes(0);
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [isAuthenticated]);
 
   const upsertNote = useCallback((note: Notes) => {
     const normalized = normalizeVisibility(note);

@@ -2,15 +2,15 @@
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
-import { account } from '@/lib/appwrite';
-import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { decryptGhostData } from '@/lib/encryption/ghost-crypto';
 
 const GHOST_STORAGE_KEY = 'kylrix_ghost_notes_v2';
 const GHOST_SECRET_KEY = 'kylrix_ghost_secret_v2';
 
 /**
  * Background component that claims ghost notes when a user authenticates.
- * Extremely lightweight: only does logic if data exists in localStorage and user is logged in.
+ * Automatically claims and twists all kinds of ghost notes (notes, tasks, credentials, TOTPs)
+ * into official data containers upon login.
  */
 export const GhostNoteClaimer = () => {
     const { isAuthenticated, user } = useAuth();
@@ -21,46 +21,117 @@ export const GhostNoteClaimer = () => {
 
         const claimGhostNotes = async () => {
             const historyRaw = localStorage.getItem(GHOST_STORAGE_KEY);
-            const secret = localStorage.getItem(GHOST_SECRET_KEY);
-
-            if (!historyRaw || !secret) return;
+            if (!historyRaw) return;
 
             try {
                 const history = JSON.parse(historyRaw);
                 if (!Array.isArray(history) || history.length === 0) return;
 
                 isClaiming.current = true;
-                console.log(`[GhostClaimer] Detected ${history.length} notes to claim for user ${user.$id}`);
+                console.log(`[GhostClaimer] Detected ${history.length} items to claim for user ${user.$id}`);
 
-                try {
-                    const noteIds = history.map(n => n.id);
-                    const jwt = await account.createJWT();
-                    const wrappedSecret = ecosystemSecurity.status.isUnlocked
-                        ? await ecosystemSecurity.encrypt(secret)
-                        : secret;
+                const remainingHistory = [...history];
 
-                    const { mutatePermissionsSecure } = await import('@/lib/actions/secure-ops');
-                    const result = await mutatePermissionsSecure({
-                        action: 'pin_ghost_note',
-                        noteIds,
-                        wrappedKey: wrappedSecret,
-                        metadata: {
-                            source: 'ghost-claimer',
-                            noteCount: noteIds.length,
-                        },
-                    }, jwt.jwt);
+                for (const item of history) {
+                    try {
+                        // Decrypt title and content
+                        const decryptedTitle = item.decryptionKey 
+                            ? await decryptGhostData(item.title, item.decryptionKey)
+                            : item.title;
+                        const decryptedContent = (item.content && item.decryptionKey)
+                            ? await decryptGhostData(item.content, item.decryptionKey)
+                            : (item.content || '');
 
-                    if (result.success) {
-                        localStorage.removeItem('kylrix:ghost:history');
-                        localStorage.removeItem(GHOST_STORAGE_KEY);
-                        localStorage.removeItem(GHOST_SECRET_KEY);
-                        console.log('[GhostClaimer] Successfully handed off ghost notes.');
-                    } else {
-                        throw new Error('Failed to claim ghost notes');
+                        // Parse metadata
+                        const meta = (() => {
+                            try { return JSON.parse(item.metadata || '{}'); } catch { return {}; }
+                        })();
+                        const kind = meta?.send_object?.kind || 'note';
+
+                        if (kind === 'task') {
+                            const payload = (() => {
+                                try { return JSON.parse(decryptedContent); } catch { return null; }
+                            })();
+                            if (payload) {
+                                const { tasks: taskApi, buildTaskPermissions } = await import('@/lib/kylrixflow');
+                                await taskApi.create({
+                                    title: payload.title || decryptedTitle,
+                                    description: payload.detail || '',
+                                    status: 'todo',
+                                    priority: payload.priority || 'medium',
+                                    dueDate: payload.dueAt ? new Date(payload.dueAt).toISOString() : null,
+                                    userId: user.$id,
+                                    tags: [],
+                                    assigneeIds: [user.$id],
+                                    attachmentIds: [],
+                                    eventId: '',
+                                    parentId: '',
+                                    recurrenceRule: '',
+                                }, buildTaskPermissions(user.$id, [user.$id]));
+                            }
+                        } else if (kind === 'password') {
+                            const payload = (() => {
+                                try { return JSON.parse(decryptedContent); } catch { return null; }
+                            })();
+                            if (payload) {
+                                const { createCredential } = await import('@/lib/appwrite/vault');
+                                await createCredential({
+                                    userId: user.$id,
+                                    itemType: 'login',
+                                    name: decryptedTitle,
+                                    username: payload.username || null,
+                                    password: payload.password || null,
+                                    totpId: payload.totpSecret || null,
+                                    isFavorite: false,
+                                });
+                            }
+                        } else if (kind === 'totp') {
+                            const payload = (() => {
+                                try { return JSON.parse(decryptedContent); } catch { return null; }
+                            })();
+                            if (payload) {
+                                const { createTotpSecret } = await import('@/lib/appwrite/vault');
+                                await createTotpSecret({
+                                    userId: user.$id,
+                                    label: decryptedTitle,
+                                    secret: payload.secret,
+                                    issuer: payload.issuer || null,
+                                });
+                            }
+                        } else {
+                            // Note
+                            const { createNote } = await import('@/lib/actions/client-ops');
+                            await createNote({
+                                title: decryptedTitle,
+                                content: decryptedContent,
+                                format: 'markdown',
+                                tags: [],
+                                isPublic: false,
+                                isGuest: false,
+                            });
+                        }
+
+                        // Remove from remaining list
+                        const idx = remainingHistory.findIndex(h => h.id === item.id);
+                        if (idx !== -1) {
+                            remainingHistory.splice(idx, 1);
+                        }
+                    } catch (itemErr) {
+                        console.error(`[GhostClaimer] Failed to claim item ${item.id}:`, itemErr);
                     }
-                } catch (fnErr: any) {
-                    console.error('[GhostClaimer] Failed to claim ghost notes:', fnErr);
                 }
+
+                // Update localStorage with any items that failed to claim
+                if (remainingHistory.length === 0) {
+                    localStorage.removeItem(GHOST_STORAGE_KEY);
+                    localStorage.removeItem(GHOST_SECRET_KEY);
+                    console.log('[GhostClaimer] All ghost items claimed successfully.');
+                } else {
+                    localStorage.setItem(GHOST_STORAGE_KEY, JSON.stringify(remainingHistory));
+                }
+
+                // Dispatch event to refresh UI
+                window.dispatchEvent(new Event('storage'));
             } catch (e) {
                 console.error('[GhostClaimer] Error processing ghost history:', e);
             } finally {

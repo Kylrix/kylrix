@@ -523,6 +523,75 @@ export default function CreateNoteForm({
           buildAutoTitleFromContent(payload.content) || (composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought')
         );
 
+        if (!user?.$id) {
+          // Unauthenticated/offline ghost note creation
+          const secret = localStorage.getItem('kylrix_ghost_secret_v2') || crypto.randomUUID();
+          const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+          const deletionSecret = crypto.randomUUID();
+          const { sha256HexUtf8 } = await import('@/lib/crypto/sha256-hex');
+          const creatorDeletionProofHash = await sha256HexUtf8(deletionSecret);
+          
+          const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+          const { encrypted: encTitle, key: noteKey } = await encryptGhostData(generatedTitle);
+          const { encrypted: encContent } = await encryptGhostData(payload.content, noteKey);
+
+          const id = resolvedNoteId || `ghost-${crypto.randomUUID()}`;
+          
+          saved = {
+            $id: id,
+            $createdAt: new Date().toISOString(),
+            $updatedAt: new Date().toISOString(),
+            title: generatedTitle,
+            content: payload.content,
+            format: 'text',
+            tags: payload.tags,
+            userId: 'ghost',
+            isPublic: false,
+            isGuest: false,
+            metadata: JSON.stringify({
+              isGhost: true,
+              ghostSecret: secret,
+              expiresAt,
+              isEncrypted: true,
+              creatorDeletionProofHash,
+              send_object: { kind: 'note' }
+            }),
+          } as any;
+
+          const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+          let history = historyRaw ? JSON.parse(historyRaw) : [];
+          if (!Array.isArray(history)) history = [];
+
+          const existingIndex = history.findIndex((n: any) => n.id === id);
+          const newRef = {
+            id,
+            title: generatedTitle,
+            content: payload.content,
+            metadata: saved.metadata,
+            createdAt: new Date().toISOString(),
+            expiresAt,
+            decryptionKey: noteKey,
+            deletionSecret,
+          };
+
+          if (existingIndex !== -1) {
+            history[existingIndex] = newRef;
+          } else {
+            history.unshift(newRef);
+          }
+
+          localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+          setResolvedNoteId(id);
+          onNoteCreated(saved);
+          upsertNote(saved);
+          setIsSaving(false);
+          if (showToast && !createdToastShown.current) {
+            createdToastShown.current = true;
+            showSuccess('Note saved', 'Your note has been saved offline.');
+          }
+          return saved;
+        }
+
         if (resolvedNoteId) {
           saved = (await updateNote(resolvedNoteId, {
             ...payload,

@@ -785,7 +785,7 @@ export default function NotesPage() {
                       : 'text-white/50 hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  Notes
+                  Ideas
                 </button>
                 <button
                   onClick={() => setActiveTab('projects')}

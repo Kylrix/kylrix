@@ -6,6 +6,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { hasAuthSessionHint } from '@/lib/appwrite/client';
 import { EcosystemProviders } from './EcosystemProviders';
 import { AppDynamicSidebarPortal } from '@/components/ui/AppDynamicSidebarPortal';
+import { GhostNoteClaimer } from '@/components/landing/GhostNoteClaimer';
 
 export default function AppLayout({
   children,
@@ -54,10 +55,6 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       if (isPublic) return;
 
       const protectedDashboardPrefixes = [
-        '/app',
-        '/vault',
-        '/flow',
-        '/connect',
         '/projects',
         '/accounts',
         '/settings',
@@ -78,6 +75,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-[#0A0908]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" /></div>}>
       <EcosystemProviders>
+        <GhostNoteClaimer />
         {children}
         <AppDynamicSidebarPortal />
       </EcosystemProviders>

@@ -2637,6 +2637,41 @@ export async function updateCredential(
   data: Partial<Credentials>,
   options?: { linkedNoteIds?: string[] },
 ) {
+  if (id.startsWith('ghost-') && typeof window !== 'undefined') {
+    const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+    if (historyRaw) {
+      try {
+        const history = JSON.parse(historyRaw);
+        const index = history.findIndex((n: any) => n.id === id);
+        if (index !== -1) {
+          const match = history[index];
+          const payload = JSON.parse(match.content || '{}');
+          const updatedPayload = {
+            ...payload,
+            username: data.username !== undefined ? data.username : payload.username,
+            password: data.password !== undefined ? data.password : payload.password,
+            totpSecret: data.totpId !== undefined ? data.totpId : payload.totpSecret,
+          };
+
+          const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+          const { encrypted: encTitle, key: noteKey } = await encryptGhostData(data.name || match.title);
+          const { encrypted: encContent } = await encryptGhostData(JSON.stringify(updatedPayload), noteKey);
+
+          history[index] = {
+            ...match,
+            title: data.name || match.title,
+            content: JSON.stringify(updatedPayload),
+            decryptionKey: noteKey,
+          };
+          localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+          window.dispatchEvent(new Event('storage'));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return { $id: id } as any;
+  }
   return await VaultService.updateCredential(id, data, options);
 }
 
@@ -2644,6 +2679,20 @@ export async function updateCredential(
  * Delete a credential by row ID.
  */
 export async function deleteCredential(id: string) {
+  if (id.startsWith('ghost-') && typeof window !== 'undefined') {
+    const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+    if (historyRaw) {
+      try {
+        const history = JSON.parse(historyRaw);
+        const filtered = history.filter((n: any) => n.id !== id);
+        localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(filtered));
+        window.dispatchEvent(new Event('storage'));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return;
+  }
   return await VaultService.deleteCredential(id);
 }
 
