@@ -34,8 +34,8 @@ export async function safeCreateSession(userId: string, secret: string): Promise
   await safeDeleteCurrentSession();
   
   // Now create the new session
-  await account.createSession(
+  await account.createSession({
     userId,
     secret
-  );
+  });
 }

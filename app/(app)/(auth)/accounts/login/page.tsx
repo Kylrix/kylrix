@@ -262,7 +262,7 @@ function LoginContent() {
       if (verifyRes.verified && verifyRes.token) {
         // 4. Delete existing sessions and establish the new Appwrite session
         await safeDeleteCurrentSession();
-        await account.createSession(verifyRes.userId, verifyRes.token);
+        await account.createSession({ userId: verifyRes.userId, secret: verifyRes.token });
 
         // 5. Concurrently decrypt the MEK and unlock the vault
         if (verifyRes.wrappedKey) {
@@ -400,7 +400,7 @@ function LoginContent() {
     setMessage(null);
     try {
       await safeDeleteCurrentSession();
-      await account.createSession(otpUserId, otp.trim());
+      await account.createSession({ userId: otpUserId, secret: otp.trim() });
       await confirmAuthenticated();
     } catch (_err: unknown) {
       const err = _err as any;

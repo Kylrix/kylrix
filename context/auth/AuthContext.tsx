@@ -300,9 +300,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const result = await account.createEmailToken(ID.unique(), email);
     return result.userId;
   }, []);
-
   const verifyEmailOTP = useCallback(async (_email: string, userId: string, secret: string) => {
-    await account.createSession(userId, secret);
+    await account.createSession({ userId, secret });
     try {
       await assertAuthenticatedAccount();
       await refreshUser(true);
