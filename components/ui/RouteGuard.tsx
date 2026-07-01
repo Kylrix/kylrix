@@ -37,7 +37,7 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
 
     // Silent redirect if on root
     if (!isLoading && isAuthenticated && pathname === '/') {
-      router.replace('/note');
+      router.replace('/app');
     }
   }, [isLoading, isAuthenticated, pathname, router, openIDMWindow, publicRoute]);
 

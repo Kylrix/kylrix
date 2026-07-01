@@ -58,7 +58,7 @@ export function EcosystemPortal({ open: controlledOpen, onClose: controlledOnClo
         if (typeof window === 'undefined') return null;
         const pathname = window.location.pathname;
         if (pathname.startsWith('/accounts')) return 'accounts';
-        if (pathname.startsWith('/note')) return 'note';
+        if (pathname.startsWith('/app')) return 'note';
         if (pathname.startsWith('/vault')) return 'vault';
         if (pathname.startsWith('/flow')) return 'flow';
         if (pathname.startsWith('/connect')) return 'connect';

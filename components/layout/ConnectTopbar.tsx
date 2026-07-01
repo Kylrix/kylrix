@@ -233,7 +233,7 @@ export default function ConnectTopbar({
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
   const activeApp = useMemo<KylrixApp>(() => {
-    if (pathname?.startsWith('/note')) return 'note';
+    if (pathname?.startsWith('/app')) return 'note';
     if (pathname?.startsWith('/flow')) return 'flow';
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/connect')) return 'connect';
@@ -480,7 +480,7 @@ export default function ConnectTopbar({
     // 1. Dynamic recommendations based on current app route
     const routeSuggestions = {
       note: [
-        { id: 'create-note', title: 'Write a New Note', description: 'Create a private note inside your workspace', href: '/note', kind: 'note', accent: '#EC4899' },
+        { id: 'create-note', title: 'Write a New Note', description: 'Create a private note inside your workspace', href: '/app', kind: 'note', accent: '#EC4899' },
         { id: 'view-settings', title: 'Security Preferences', description: 'Adjust your notes security & encryption rules', href: '/settings', kind: 'system', accent: '#6366F1' }
       ],
       projects: [
@@ -521,7 +521,7 @@ export default function ConnectTopbar({
         id: 'hist-note',
         title: 'Review Recent Notes',
         description: 'You spent a lot of time in workspace notes recently. Resume writing?',
-        href: '/note',
+        href: '/app',
         kind: 'note',
         accent: '#EC4899'
       });
@@ -651,7 +651,7 @@ export default function ConnectTopbar({
         a: 'agent',
         k: 'shortcuts',
         p: '/projects',
-        n: '/note',
+        n: '/app',
         t: '/tags',
         x: '/settings',
         v: '/vault',
@@ -965,7 +965,7 @@ export default function ConnectTopbar({
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25 }}>
                   {[
-                    { name: 'note', label: 'Note', color: '#EC4899', href: '/note' },
+                    { name: 'note', label: 'Note', color: '#EC4899', href: '/app' },
                     { name: 'flow', label: 'Flow', color: '#A855F7', href: '/flow' },
                     { name: 'vault', label: 'Vault', color: '#10B981', href: '/vault' },
                     { name: 'connect', label: 'Connect', color: '#F59E0B', href: '/connect' }

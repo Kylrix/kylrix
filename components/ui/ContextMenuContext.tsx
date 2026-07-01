@@ -112,7 +112,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
 
       // Determine sub-app theme based on path
       let appType: KylrixApp = 'kylrix';
-      if (pathname?.startsWith('/note')) appType = 'note';
+      if (pathname?.startsWith('/app')) appType = 'note';
       else if (pathname?.startsWith('/connect')) appType = 'connect';
       else if (pathname?.startsWith('/vault')) appType = 'vault';
       else if (pathname?.startsWith('/flow')) appType = 'flow';
@@ -145,7 +145,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
       // Compile Morphing Options
       if (isSidebar) {
         items.push(
-          { label: 'Notes Vault', icon: <FolderIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/note') },
+          { label: 'Notes Vault', icon: <FolderIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/app') },
           { label: 'Connect Hub', icon: <ChatIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/connect') },
           { label: 'Vault Crypt', icon: <LockIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/vault') },
           { label: 'Settings', icon: <SettingsIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/settings') }

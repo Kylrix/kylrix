@@ -576,7 +576,7 @@ export default function ProjectsPage() {
       actions: [
         { id: 'create-project', label: 'CREATE PROJECT', icon: <Plus size={20} />, onClick: () => openCreateDrawerRef.current() },
         { id: 'workflows-nav', label: 'ACTION WORKFLOWS', icon: <Workflow size={20} />, onClick: () => router.push('/projects/workflows') },
-        { id: 'insights', label: 'AI INSIGHTS', icon: <Sparkles size={20} />, onClick: () => router.push('/note') }]
+        { id: 'insights', label: 'AI INSIGHTS', icon: <Sparkles size={20} />, onClick: () => router.push('/app') }]
     });
     return () => resetConfiguration();
   }, [setConfiguration, resetConfiguration, router, user, open, showSuccess, isDesktop]);

@@ -74,7 +74,7 @@ function LoginContent() {
   const getPostAuthDefaultUrl = useCallback(() => {
     const lastApp = getLastActiveApp();
     if (lastApp === 'accounts') return '/accounts/settings/profile';
-    if (lastApp === 'note') return '/note';
+    if (lastApp === 'note') return '/app';
     if (lastApp === 'vault') return '/vault';
     if (lastApp === 'flow') return '/flow';
     return '/connect';

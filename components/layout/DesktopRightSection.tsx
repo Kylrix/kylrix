@@ -583,7 +583,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                     <IconButton onClick={() => togglePanel(panel)} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
                       {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </IconButton>
-                    <IconButton onClick={() => router.push('/note')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#EC4899' } }}>
+                    <IconButton onClick={() => router.push('/app')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#EC4899' } }}>
                       <Maximize2 size={14} />
                     </IconButton>
                   </Box>

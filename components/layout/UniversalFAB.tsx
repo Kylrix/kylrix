@@ -38,7 +38,7 @@ export default function UniversalFAB() {
 
   const isAppRoute = pathname && (
     pathname.startsWith('/projects') ||
-    pathname.startsWith('/note') ||
+    pathname.startsWith('/app') ||
     (pathname.startsWith('/flow') && !pathname.startsWith('/flow/form/')) ||
     pathname.startsWith('/vault') ||
     (pathname.startsWith('/connect') && pathname !== '/connect' && !pathname.includes('/invite/') && !pathname.startsWith('/connect/chat/'))

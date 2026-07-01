@@ -62,7 +62,7 @@ function NotesFeed() {
                     Recent Notes
                 </h3>
                 <button 
-                    onClick={() => router.push('/note')} 
+                    onClick={() => router.push('/app')} 
                     className="text-sm text-[#F59E0B] hover:text-[#d98105] font-bold transition-colors"
                 >
                     View All

@@ -54,7 +54,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       if (isPublic) return;
 
       const protectedDashboardPrefixes = [
-        '/note',
+        '/app',
         '/vault',
         '/flow',
         '/connect',

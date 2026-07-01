@@ -13,7 +13,7 @@ export interface EcosystemApp {
 export const NEXT_PUBLIC_DOMAIN = APPWRITE_CONFIG.SYSTEM?.DOMAIN || 'kylrix.space';
 export const APP_BASE_PATHS: Record<string, string> = {
   accounts: '/accounts',
-  note: '/note',
+  note: '/app',
   vault: '/vault',
   flow: '/flow',
   connect: '/connect',
@@ -43,7 +43,7 @@ export function getEcosystemUrl(subdomain: string, path = '') {
   if (normalizedPath) {
     const rawPaths: Record<string, string> = {
       accounts: '/accounts',
-      note: '/note',
+      note: '/app',
       vault: '/vault',
       flow: '/flow',
       connect: '/connect',
