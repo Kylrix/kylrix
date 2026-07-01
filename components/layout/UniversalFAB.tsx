@@ -96,27 +96,7 @@ export default function UniversalFAB() {
     );
   }
 
-  const workflowAction = isRecording
-    ? {
-        id: 'workflow_stop',
-        label: `Stop Recording (${currentWorkflow.length} Steps)`,
-        icon: <X size={20} style={{ color: '#EF4444' }} />,
-        onClick: () => {
-          const name = prompt('Name your workflow:') || 'Custom Automated Workflow';
-          const desc = prompt('Workflow description:') || 'Recorded chain of actions in Kylrix';
-          stopRecording(name, desc, 'workspace');
-        },
-      }
-    : {
-        id: 'workflow_start',
-        label: 'Record Action Chain',
-        icon: <Plus size={20} style={{ color: '#10B981' }} />,
-        onClick: () => {
-          startRecording();
-        },
-      };
-
-  const speedDialActions = config.suppressWorkflow ? actions : [...actions, workflowAction];
+  const speedDialActions = actions;
 
   return (
     <>

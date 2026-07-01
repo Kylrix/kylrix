@@ -45,20 +45,7 @@ export default function EventList() {
         setIsDialogOpen(true);
       },
       suppressWorkflow: true,
-      actions: [
-        {
-          id: 'new-event',
-          label: 'NEW EVENT',
-          icon: <Plus className="h-5 w-5" />,
-          onClick: () => {
-            if (!isAuthenticated) {
-              openIDMWindow();
-              return;
-            }
-            setIsDialogOpen(true);
-          }
-        }
-      ]
+      actions: []
     });
 
     return () => resetConfiguration();
