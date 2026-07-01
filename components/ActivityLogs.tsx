@@ -2,7 +2,7 @@
 import { useColors } from '@/lib/theme-context';
 
 import { useState, useEffect, useCallback } from 'react';
-import { account } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 import {
   Box,
   Typography,

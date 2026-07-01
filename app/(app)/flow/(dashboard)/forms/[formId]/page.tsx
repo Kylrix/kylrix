@@ -15,7 +15,7 @@ import { useToast } from '@/components/ui/Toast';
 import { AppwriteService } from '@/lib/appwrite';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { getResourceCollaboratorsSecure } from '@/lib/actions/secure-ops';
-import { account } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 import { 
   MessageSquare, 
   Clock, 

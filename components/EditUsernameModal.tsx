@@ -2,7 +2,8 @@
 
 import { useColors } from '@/lib/theme-context';
 import { useState } from 'react';
-import { account, AppwriteService } from '@/lib/appwrite';
+import { AppwriteService } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 import {
   Drawer,
   Button,

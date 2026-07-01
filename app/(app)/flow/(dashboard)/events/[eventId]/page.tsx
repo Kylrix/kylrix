@@ -25,7 +25,7 @@ import {
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { getResourceCollaboratorsSecure } from '@/lib/actions/secure-ops';
-import { account } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 import { useCallback } from 'react';
 import { events as eventApi, eventGuests as guestApi } from '@/lib/kylrixflow';
 import { Event } from '@/types/kylrixflow';

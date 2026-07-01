@@ -25,7 +25,8 @@ import {
   Copy
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { account, AppwriteService } from '@/lib/appwrite';
+import { AppwriteService } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 import { useAuth } from '@/context/auth/AuthContext';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/utils';

@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, CircularProgress, Typography } from '@/lib/openbricks/primitives';
-import { account } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 import { isMfaRequiredError, requiresMfaChallenge } from '@/lib/mfa';
 import { useSource } from '@/lib/source-context';
 import { MfaChallengeDrawer } from '@/components/overlays/MfaChallengeDrawer';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { account, functions } from '@/lib/appwrite';
+import { account, functions } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
   Box,

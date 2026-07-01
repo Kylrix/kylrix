@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { account, avatars } from '@/lib/appwrite';
+import { account, avatars } from '@/lib/appwrite/client';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import {
   createTotpAuthenticator,

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { account, AppwriteService } from '@/lib/appwrite';
+import { AppwriteService } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 import { useTheme } from '@/lib/theme-context';
 
 interface PrefsData {

@@ -1,6 +1,6 @@
 'use client';
 
-import { account } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 import { OAuthProvider } from 'appwrite';
 import { useState } from 'react';
 import { clearStatelessSessions } from '@/lib/utils';

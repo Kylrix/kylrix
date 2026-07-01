@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback, use, useMemo } from 'react';
-import { account, AppwriteService } from '@/lib/appwrite';
+import { AppwriteService } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 import { useRouter } from 'next/navigation';
 import PreferencesManager from '@/components/PreferencesManager';
 import SessionsManager from '@/components/SessionsManager';

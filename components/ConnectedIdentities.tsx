@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, ReactElement } from 'react';
-import { account } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 import {
   Box,
   Typography,

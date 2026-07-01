@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Terminal, CheckCircle, ChevronRight, ArrowLeft, Play, ChevronDown, ChevronUp, GitPullRequest, ArrowUpRight } from 'lucide-react';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import toast from 'react-hot-toast';
-import { account } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSudo } from '@/context/SudoContext';
 import { SourceControlService } from '@/lib/services/sourceControl';

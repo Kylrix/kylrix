@@ -25,7 +25,7 @@ import { AgenticService } from '@/lib/services/agentic';
 import { runMyAgent, executeInstantRequestAction } from '@/lib/actions/agentic';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
-import { account } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 
 type AgentFramework = 'kylrix' | 'openclaw' | 'hermes';
 

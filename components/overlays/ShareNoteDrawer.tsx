@@ -7,7 +7,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { grantPermissionSecure, getResourceCollaboratorsSecure, revokePermissionSecure, PermissionLevel } from '@/lib/actions/secure-ops';
 import UserSearch from '@/components/UserSearch';
 import { useAuth } from '@/context/auth/AuthContext';
-import { account } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import toast from 'react-hot-toast';

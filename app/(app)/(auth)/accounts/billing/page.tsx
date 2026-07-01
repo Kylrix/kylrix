@@ -17,7 +17,8 @@ import {
   Search
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
-import { account, AppwriteService } from '@/lib/appwrite';
+import { AppwriteService } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 import { listCouponsAction as getMyCouponsAction } from '../actions/coupons';
 import { listBillingTransactionsAction } from '../actions/billing';
 import toast from 'react-hot-toast';

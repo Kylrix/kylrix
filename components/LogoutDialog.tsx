@@ -11,7 +11,7 @@ import {
   useTheme,
   useMediaQuery,
 } from '@/lib/openbricks/primitives';
-import { account } from '@/lib/appwrite';
+import { account } from '@/lib/appwrite/client';
 
 interface LogoutDialogProps {
   open: boolean;
