@@ -19,6 +19,7 @@
 
 ### ✅ SOURCE CONTROL PERMISSIONS
 - **Git Operations Permitted**: The agent is permitted and expected to perform Git operations. After implementing any fix or feature, the agent must consolidate the modifications, perform a commit with a descriptive message, and push the changes immediately.
+- **Pure Commit Messages (STRICT)**: When committing, NEVER add any co-author metadata (e.g., `Co-authored-by:` headers, names, or emails). Commit messages must contain only the pure commit message description. Leave author identification entirely to the automatic system git configuration.
 
 ### ⚡ Development Standards
 - **Canonical App**: Only implement against **`kylrix/`**. Legacy trees at repo root are for reference only.
