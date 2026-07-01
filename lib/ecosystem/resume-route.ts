@@ -3,7 +3,7 @@
 const PUBLIC_PREFIXES = [
   '/send',
   '/i/',
-  '/note/shared',
+  '/app/shared',
   '/u/',
   '/p/',
   '/call/',
@@ -15,7 +15,7 @@ const PUBLIC_PREFIXES = [
 ];
 
 const APP_PREFIXES = [
-  '/note',
+  '/app',
   '/vault',
   '/flow',
   '/connect',

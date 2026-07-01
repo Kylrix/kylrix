@@ -14,7 +14,7 @@ const defaultContext: EcosystemContextType = {
   getAppUri: (app: string) => {
     const pathMap: Record<string, string> = {
       'accounts': '/accounts',
-      'note': '/note',
+      'note': '/app',
       'vault': '/vault',
       'flow': '/flow',
       'connect': '/connect'

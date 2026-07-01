@@ -33,7 +33,7 @@ export function getEcosystemUrl(subdomain: string) {
   // Map subdomain to unified app paths
   const appPaths: Record<string, string> = {
     'accounts': '/accounts',
-    'note': '/note',
+    'note': '/app',
     'vault': '/vault',
     'flow': '/flow',
     'connect': '/connect',

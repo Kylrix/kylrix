@@ -175,7 +175,7 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
               title = 'Quick Note Shortcut';
               description = 'You frequently manage notes. Jump straight back to your workspace notes?';
               actionLabel = 'Write note';
-              actionHref = '/note';
+              actionHref = '/app';
             } else if (app === 'projects') {
               title = 'Workflow Hub Suggestion';
               description = 'We notice you are actively working in Projects. Manage your recorded workflows to speed up task automation?';
@@ -325,7 +325,7 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
     if (!pathname) return;
 
     const getNicheAndApp = (path: string): { niche: TelemetryNiche; app: string } => {
-      if (path.startsWith('/note')) return { niche: 'workspace', app: 'note' };
+      if (path.startsWith('/app')) return { niche: 'workspace', app: 'note' };
       if (path.startsWith('/vault')) return { niche: 'security', app: 'vault' };
       if (path.startsWith('/flow')) return { niche: 'productivity', app: 'flow' };
       if (path.startsWith('/connect')) return { niche: 'connect', app: 'connect' };

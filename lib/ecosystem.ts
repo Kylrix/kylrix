@@ -15,7 +15,7 @@ export const KYLRIX_DOMAIN = 'kylrix.space';
 export const KYLRIX_AUTH_SUBDOMAIN = 'accounts';
 export const APP_BASE_PATHS: Record<string, string> = {
   accounts: '/accounts',
-  note: '/note',
+  note: '/app',
   vault: '/vault',
   flow: '/flow',
   connect: '/connect',
@@ -48,7 +48,7 @@ export function getEcosystemUrl(subdomain: string, path = '') {
   if (normalizedPath) {
     const rawPaths: Record<string, string> = {
       accounts: '/accounts',
-      note: '/note',
+      note: '/app',
       vault: '/vault',
       flow: '/flow',
       connect: '/connect',

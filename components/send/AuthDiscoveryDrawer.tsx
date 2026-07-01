@@ -9,7 +9,7 @@ const PRIMARY = '#6366F1';
 
 function getPathTitle(path: string): string {
   if (path.startsWith('/projects')) return 'Projects';
-  if (path.startsWith('/note')) return 'Note';
+  if (path.startsWith('/app')) return 'Note';
   if (path.startsWith('/flow')) return 'Flow';
   if (path.startsWith('/vault')) return 'Vault';
   if (path.startsWith('/connect')) return 'Connect';
