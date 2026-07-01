@@ -5,7 +5,6 @@ import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_KEYCHAIN_ID } from '@/lib/appwrite';
 import { Query } from 'node-appwrite';
 import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
-import { cookies } from 'next/headers';
 import { createHmac } from 'node:crypto';
 
 /**
@@ -64,7 +63,8 @@ export async function getPasskeyLoginOptionsAction(email?: string, hostname: str
     };
 
     // Store the generated challenge in a secure cookie to verify against it
-    const cookieStore = await cookies();
+    const { cookies: getCookies } = await import('next/headers');
+    const cookieStore = await getCookies();
     cookieStore.set('passkey_login_challenge', options.challenge, {
       httpOnly: true,
       secure: true,
@@ -117,7 +117,8 @@ export async function verifyPasskeyLoginAction(authResp: any, hostname: string =
     const origin = `${protocol}://${hostHeader}`;
 
     // Read stored challenge
-    const cookieStore = await cookies();
+    const { cookies: getCookies } = await import('next/headers');
+    const cookieStore = await getCookies();
     const expectedChallenge = cookieStore.get('passkey_login_challenge')?.value;
     if (!expectedChallenge) {
       return { success: false, error: 'Login session expired. Please retry.' };

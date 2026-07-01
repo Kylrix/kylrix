@@ -71,7 +71,7 @@ export function PasskeySetupPanel({
   const [passkeyName, setPasskeyName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [verifyingPassword, setVerifyingPassword] = useState(false);
-  const [alsoUseForLogin, setAlsoUseForLogin] = useState(false);
+  const [alsoUseForLogin, setAlsoUseForLogin] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const verifyMasterPassword = async () => {
