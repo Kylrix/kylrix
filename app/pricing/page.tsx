@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Globe, ShieldCheck, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Sparkles, Globe, ShieldCheck, ArrowRight, ArrowLeft, MessageSquare, Phone, Folder, Users, Share2, Mic } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/context/auth/AuthContext';
@@ -176,17 +176,34 @@ export default function PricingPage() {
               <div className="flex flex-col gap-3.5 pt-2">
                 {(selectedTier === 'PRO'
                   ? [
-                      { icon: ShieldCheck, text: 'Unlimited Vault & Notes storage' },
+                      { icon: ShieldCheck, text: 'Full personal database (unlimited solo use)' },
+                      { icon: MessageSquare, text: 'Secure chats & Hangouts (groups)' },
+                      { icon: Globe, text: 'Moments & social feed access' },
+                      { icon: Folder, text: 'Profile picture storage' },
+                      { icon: Phone, text: '1-on-1 direct voice/video calls' },
                       { icon: Globe, text: 'Universal Identity across all apps' },
                       { icon: Sparkles, text: 'Full AI Neural Graph access' },
-                      { icon: ShieldCheck, text: 'Up to 10 Projects (Free gets 1)' },
-                      { icon: ShieldCheck, text: 'Up to 3 collaborators per object/project' },
+                      { icon: Folder, text: 'Arbitrary file storage' },
+                      { icon: Mic, text: 'Audio messages & recording features' },
+                      { icon: Share2, text: 'Shared note duplication' },
+                      { icon: Share2, text: 'Shared Send claiming' },
                     ]
                   : [
-                      { icon: ShieldCheck, text: 'Unlimited Projects & Vault' },
-                      { icon: ShieldCheck, text: 'Unlimited Collaborators & team members' },
-                      { icon: Sparkles, text: 'Full AI Neural Graph access' },
+                      { icon: ShieldCheck, text: 'Full personal database (unlimited solo use)' },
+                      { icon: MessageSquare, text: 'Secure chats & Hangouts (groups)' },
+                      { icon: Globe, text: 'Moments & social feed access' },
+                      { icon: Folder, text: 'Profile picture storage' },
+                      { icon: Phone, text: '1-on-1 direct voice/video calls' },
                       { icon: Globe, text: 'Universal Identity across all apps' },
+                      { icon: Sparkles, text: 'Full AI Neural Graph access' },
+                      { icon: Folder, text: 'Arbitrary file storage' },
+                      { icon: Mic, text: 'Audio messages & recording features' },
+                      { icon: Share2, text: 'Shared note duplication' },
+                      { icon: Share2, text: 'Shared Send claiming' },
+                      { icon: Users, text: 'Multi-user collaboration (shared databases)' },
+                      { icon: Users, text: 'Unlimited collaborators & team members' },
+                      { icon: Phone, text: 'WebRTC group calls (3+ participants)' },
+                      { icon: Share2, text: 'Edit access requests on shared screens' },
                     ]
                 ).map((feat, i) => (
                   <div key={i} className="flex items-center gap-3">
@@ -231,15 +248,18 @@ export default function PricingPage() {
           </div>
         </div>
 
-        <div className="mt-8 text-center">
-          <div className="inline-flex flex-col sm:flex-row items-center gap-4 sm:gap-6 px-6 py-3.5 rounded-full bg-[#1F1D1B] border border-white/8">
-            <span className="text-sm font-bold text-white">Kylrix Free is free forever. No pressure.</span>
+        <div className="mt-12 text-center">
+          <div className="inline-flex flex-col sm:flex-row items-center gap-6 sm:gap-8 px-10 py-6 rounded-[24px] bg-[#1F1D1B] border border-white/8 max-w-2xl mx-auto">
+            <div className="text-left sm:text-left flex flex-col gap-1">
+              <span className="text-sm md:text-base font-black text-white">Kylrix Free is free forever. No pressure.</span>
+              <span className="text-xs text-white/50 font-bold">Includes full personal database, secure chats, moments, and 1-on-1 direct calls.</span>
+            </div>
 
-            <div className="hidden sm:block w-px h-5 bg-white/10" />
+            <div className="hidden sm:block w-px h-10 bg-white/10 flex-shrink-0" />
 
             <button
               onClick={() => router.push('/')}
-              className="inline-flex items-center gap-1.5 text-black bg-[#6366F1] hover:bg-[#6366F1]/90 font-black text-xs px-4 py-2 rounded-full transition-all group"
+              className="inline-flex items-center gap-1.5 text-black bg-[#6366F1] hover:bg-[#6366F1]/90 font-black text-xs px-6 py-3 rounded-full transition-all group flex-shrink-0"
             >
               <span>Continue Free</span>
               <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
