@@ -11,7 +11,8 @@ import { getCurrentLoginMethod, isMfaRequiredError } from '@/lib/mfa';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { startAuthentication } from '@simplewebauthn/browser';
-import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction } from '@/lib/actions/auth-actions';
+import { account } from '@/lib/appwrite';
+import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction, checkEmailAuthStatusAction } from '@/lib/actions/auth-actions';
 
 type LoginStep = 'initial' | 'email' | 'otp';
 
@@ -46,6 +47,89 @@ export function LoginDrawer() {
   const [lastUsedMethod, setLastUsedMethod] = useState<string | null>(null);
 
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [hasMasterpass, setHasMasterpass] = useState(false);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [useOTPAlternative, setUseOTPAlternative] = useState(false);
+
+  useEffect(() => {
+    if (step !== 'email') {
+      setHasMasterpass(false);
+      setPassword('');
+      setUseOTPAlternative(false);
+      return;
+    }
+
+    const emailTrimmed = email.trim();
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed);
+
+    if (!emailValid) {
+      setHasMasterpass(false);
+      setPassword('');
+      setUseOTPAlternative(false);
+      return;
+    }
+
+    setCheckingEmail(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await checkEmailAuthStatusAction(emailTrimmed);
+        if (res.success && res.exists && res.hasMasterpass) {
+          setHasMasterpass(true);
+        } else {
+          setHasMasterpass(false);
+          setUseOTPAlternative(false);
+        }
+      } catch (err) {
+        console.error('Error checking email auth status:', err);
+      } finally {
+        setCheckingEmail(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [email, step]);
+
+  const handlePasswordLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!email || !password) return;
+    setLoading(true);
+    localStorage.setItem('kylrix_last_auth_method', 'password');
+    setLastUsedMethod('password');
+
+    try {
+      try {
+        await account.deleteSession('current');
+      } catch {}
+
+      const session = await account.createEmailPasswordSession(email, password);
+      
+      try {
+        const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
+        const unlockSuccess = await masterPassCrypto.unlock(password, session.userId, false);
+        if (unlockSuccess) {
+          toast.success("Vault unlocked automatically");
+        }
+      } catch (vaultErr) {
+        console.warn('Failed to auto-unlock vault with master password:', vaultErr);
+      }
+
+      toast.success('Logged in successfully!');
+      await refreshUser(true);
+      close();
+    } catch (err: any) {
+      if (isMfaRequiredError(err)) {
+        setMfaLoginMethod('password');
+        setMfaDrawerOpen(true);
+        return;
+      }
+      toast.error(err.message || 'Password login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePasskeyLogin = async () => {
     setPasskeyLoading(true);
@@ -301,8 +385,12 @@ export function LoginDrawer() {
         );
 
       case 'email':
+        const showPasswordField = hasMasterpass && !useOTPAlternative;
         return (
-          <form onSubmit={handleSendOTP} className="space-y-4 animate-fadeIn">
+          <form 
+            onSubmit={showPasswordField ? handlePasswordLogin : handleSendOTP} 
+            className="space-y-4 animate-fadeIn"
+          >
             <div className="relative">
               <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                 <Mail className="w-4.5 h-4.5 text-white/30" />
@@ -315,20 +403,63 @@ export function LoginDrawer() {
                 disabled={loading}
                 required
                 autoFocus
-                className="w-full bg-[#0A0908] pl-11 pr-4 py-3 rounded-xl border border-[#34322F] text-white text-sm font-semibold focus:outline-none focus:border-[#6366F1] transition-all"
+                className="w-full bg-[#0A0908] pl-11 pr-10 py-3 rounded-xl border border-[#34322F] text-white text-sm font-semibold focus:outline-none focus:border-[#6366F1] transition-all"
               />
+              {checkingEmail && (
+                <div className="absolute inset-y-0 right-4 flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#6366F1]" />
+                </div>
+              )}
             </div>
+
+            {showPasswordField && (
+              <div className="relative animate-fadeIn">
+                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                  <span className="text-white/30 text-sm font-semibold">🔑</span>
+                </div>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your master password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                  required
+                  autoFocus
+                  className="w-full bg-[#0A0908] pl-11 pr-12 py-3 rounded-xl border border-[#34322F] text-white text-sm font-semibold focus:outline-none focus:border-[#6366F1] transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-4 flex items-center text-xs text-white/40 hover:text-white transition-colors"
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading || !email}
+              disabled={loading || !email || (showPasswordField && !password)}
               className="w-full h-[52px] rounded-xl bg-white hover:bg-white/90 text-black font-black text-sm transition-all cursor-pointer flex justify-center items-center disabled:opacity-50"
             >
               {loading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black" />
               ) : (
-                'Send Login Code'
+                showPasswordField ? 'Login with Password' : 'Send Login Code'
               )}
             </button>
+
+            {hasMasterpass && (
+              <div className="flex justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => setUseOTPAlternative(!useOTPAlternative)}
+                  className="text-xs text-[#6366F1] hover:underline font-bold transition-all"
+                >
+                  {useOTPAlternative ? 'Use Password Login instead' : 'Login with Email OTP instead'}
+                </button>
+              </div>
+            )}
           </form>
         );
 

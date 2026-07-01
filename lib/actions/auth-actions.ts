@@ -201,3 +201,66 @@ export async function getPasskeyRegisterFallbackSeedAction(credentialId: string)
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * Checks if a user exists by email and if they have a master password.
+ */
+export async function checkEmailAuthStatusAction(email: string) {
+  try {
+    const systemClient = createSystemClient();
+    const db = systemClient.databases;
+
+    // 1. Find user by email
+    const usersList = await systemClient.users.list([
+      Query.equal('email', email),
+      Query.limit(1)
+    ]);
+
+    if (usersList.total === 0) {
+      return { success: true, exists: false, hasMasterpass: false };
+    }
+
+    const userId = usersList.users[0].$id;
+
+    // 2. Check if user has masterpass in users table
+    let hasMasterpass = false;
+    try {
+      const userRows = await db.listRows(
+        APPWRITE_DATABASE_ID,
+        'users',
+        [Query.equal('userId', userId), Query.limit(1)]
+      );
+      if (userRows.total > 0 && userRows.rows[0].hasMasterpass) {
+        hasMasterpass = true;
+      }
+    } catch (e) {
+      console.warn('Error checking users table for masterpass:', e);
+    }
+
+    // 3. Fallback/Double check keychain table for password entry
+    if (!hasMasterpass) {
+      try {
+        const keychainRows = await db.listRows(
+          APPWRITE_DATABASE_ID,
+          APPWRITE_COLLECTION_KEYCHAIN_ID,
+          [
+            Query.equal('userId', userId),
+            Query.equal('type', 'password'),
+            Query.limit(1)
+          ]
+        );
+        if (keychainRows.total > 0) {
+          hasMasterpass = true;
+        }
+      } catch (e) {
+        console.warn('Error checking keychain table for masterpass:', e);
+      }
+    }
+
+    return { success: true, exists: true, hasMasterpass, userId };
+  } catch (error: any) {
+    console.error('Error checking email auth status action:', error);
+    return { success: false, error: error.message };
+  }
+}
+
