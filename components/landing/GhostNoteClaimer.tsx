@@ -135,6 +135,7 @@ export const GhostNoteClaimer = () => {
 
                 // Dispatch event to refresh UI
                 window.dispatchEvent(new Event('storage'));
+                window.dispatchEvent(new CustomEvent('kylrix:ghost-claimed'));
             } catch (e) {
                 console.error('[GhostClaimer] Error processing ghost history:', e);
             } finally {

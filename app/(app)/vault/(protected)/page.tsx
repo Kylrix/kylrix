@@ -186,6 +186,27 @@ function DashboardPageContent() {
     return () => window.removeEventListener('storage', handleStorage);
   }, [user?.$id, loadAllCredentials]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleOnline = () => {
+      console.log('[Vault] Network connection restored. Hydrating vault data...');
+      void hydrateVaultData();
+    };
+
+    const handleGhostClaimed = () => {
+      console.log('[Vault] Ghost items claimed. Hydrating vault data...');
+      void hydrateVaultData();
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('kylrix:ghost-claimed', handleGhostClaimed);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('kylrix:ghost-claimed', handleGhostClaimed);
+    };
+  }, [hydrateVaultData]);
+
   // Effects
   useEffect(() => {
     setConfiguration({

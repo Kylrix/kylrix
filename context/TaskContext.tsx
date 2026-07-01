@@ -886,6 +886,31 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       }, 10000); // 10s cooldown for route-based refreshes
     }
   }, [pathname, state.userId, isAuthLoading, fetchBatch, refreshInBackground, dispatchSyncedData]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleOnline = () => {
+      console.log('[TaskContext] Network connection restored. Refreshing tasks...');
+      if (state.userId && state.userId !== 'guest') {
+        void refreshTasks();
+      }
+    };
+
+    const handleGhostClaimed = () => {
+      console.log('[TaskContext] Ghost items claimed. Refreshing tasks...');
+      if (state.userId && state.userId !== 'guest') {
+        void refreshTasks();
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('kylrix:ghost-claimed', handleGhostClaimed);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('kylrix:ghost-claimed', handleGhostClaimed);
+    };
+  }, [state.userId, refreshTasks]);
   // Realtime Subscriptions
   useEffect(() => {
     if (!state.userId) return;

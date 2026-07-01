@@ -476,6 +476,31 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   }, [sweepEncryptedNotes]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleOnline = () => {
+      console.log('[NotesContext] Network connection restored. Refetching notes...');
+      if (isAuthenticated) {
+        refetchNotes();
+      }
+    };
+
+    const handleGhostClaimed = () => {
+      console.log('[NotesContext] Ghost items claimed. Refetching notes...');
+      if (isAuthenticated) {
+        refetchNotes();
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('kylrix:ghost-claimed', handleGhostClaimed);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('kylrix:ghost-claimed', handleGhostClaimed);
+    };
+  }, [isAuthenticated, refetchNotes]);
+
+  useEffect(() => {
     if (!isAuthenticated) return;
     if (!notesRef.current.length) return;
     if (!sweepInFlightRef.current) {
