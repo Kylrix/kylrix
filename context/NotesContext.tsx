@@ -280,24 +280,37 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         hasInitiallyFetched.current = true;
       }
     } else if (!isAuthLoading && !isAuthenticated) {
-      const loadGhost = () => {
+      const loadGhost = async () => {
         const historyRaw = typeof window !== 'undefined' ? localStorage.getItem('kylrix_ghost_notes_v2') : null;
         if (historyRaw) {
           try {
             const history = JSON.parse(historyRaw);
             if (Array.isArray(history)) {
-              const mapped = history.map((item: any) => ({
-                $id: item.id,
-                $createdAt: item.createdAt,
-                $updatedAt: item.createdAt,
-                title: item.title,
-                content: item.content || '',
-                format: 'text',
-                tags: [],
-                userId: 'ghost',
-                isPublic: false,
-                isGuest: false,
-                metadata: item.metadata || '{}',
+              const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+              const mapped = await Promise.all(history.map(async (item: any) => {
+                let decryptedTitle = item.title;
+                let decryptedContent = item.content || '';
+                if (item.decryptionKey) {
+                  try {
+                    decryptedTitle = await decryptGhostData(item.title, item.decryptionKey);
+                    decryptedContent = await decryptGhostData(item.content || '', item.decryptionKey);
+                  } catch (e) {
+                    console.error('Failed to decrypt ghost note in NotesContext:', e);
+                  }
+                }
+                return {
+                  $id: item.id,
+                  $createdAt: item.createdAt,
+                  $updatedAt: item.createdAt,
+                  title: decryptedTitle,
+                  content: decryptedContent,
+                  format: 'text',
+                  tags: [],
+                  userId: 'ghost',
+                  isPublic: false,
+                  isGuest: false,
+                  metadata: item.metadata || '{}',
+                };
               })) as any[];
               setNotes(mapped);
               setTotalNotes(mapped.length);
@@ -326,24 +339,37 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isAuthenticated) return;
     
-    const handleStorage = () => {
+    const handleStorage = async () => {
       const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
       if (historyRaw) {
         try {
           const history = JSON.parse(historyRaw);
           if (Array.isArray(history)) {
-            const mapped = history.map((item: any) => ({
-              $id: item.id,
-              $createdAt: item.createdAt,
-              $updatedAt: item.createdAt,
-              title: item.title,
-              content: item.content || '',
-              format: 'text',
-              tags: [],
-              userId: 'ghost',
-              isPublic: false,
-              isGuest: false,
-              metadata: item.metadata || '{}',
+            const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+            const mapped = await Promise.all(history.map(async (item: any) => {
+              let decryptedTitle = item.title;
+              let decryptedContent = item.content || '';
+              if (item.decryptionKey) {
+                try {
+                  decryptedTitle = await decryptGhostData(item.title, item.decryptionKey);
+                  decryptedContent = await decryptGhostData(item.content || '', item.decryptionKey);
+                } catch (e) {
+                  console.error('Failed to decrypt ghost note in NotesContext handleStorage:', e);
+                }
+              }
+              return {
+                $id: item.id,
+                $createdAt: item.createdAt,
+                $updatedAt: item.createdAt,
+                title: decryptedTitle,
+                content: decryptedContent,
+                format: 'text',
+                tags: [],
+                userId: 'ghost',
+                isPublic: false,
+                isGuest: false,
+                metadata: item.metadata || '{}',
+              };
             })) as any[];
             setNotes(mapped);
             setTotalNotes(mapped.length);
@@ -355,8 +381,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    window.addEventListener('storage', () => { void handleStorage(); });
+    return () => window.removeEventListener('storage', () => { void handleStorage(); });
   }, [isAuthenticated]);
 
   const upsertNote = useCallback((note: Notes) => {
