@@ -10,9 +10,9 @@ import { MfaChallengeDrawer } from '@/components/overlays/MfaChallengeDrawer';
 import { getCurrentLoginMethod, isMfaRequiredError } from '@/lib/mfa';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
-import { startAuthentication } from '@simplewebauthn/browser';
 import { account } from '@/lib/appwrite/client';
 import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction, checkEmailAuthStatusAction } from '@/lib/actions/auth-actions';
+import { performNativePasskeyAuthentication } from '@/lib/webauthn-utils';
 
 type LoginStep = 'initial' | 'email' | 'otp';
 
@@ -142,19 +142,7 @@ export function LoginDrawer() {
         throw new Error(optionsRes.error || 'Failed to generate passkey options');
       }
 
-      // Prepare options with correct PRF format if present
-      const options = { ...optionsRes.options };
-      if (options.extensions?.prf?.eval?.first) {
-        // If the first salt was serialized as a plain object (e.g. {"0":107, "1":121...}) by JSON.stringify,
-        // convert it back to a proper Uint8Array so startAuthentication doesn't throw a type/support error.
-        const rawFirst = options.extensions.prf.eval.first;
-        if (rawFirst && typeof rawFirst === 'object' && !(rawFirst instanceof Uint8Array)) {
-          const values = Object.values(rawFirst) as number[];
-          options.extensions.prf.eval.first = new Uint8Array(values);
-        }
-      }
-
-      const authResp = await startAuthentication({ optionsJSON: options });
+      const authResp = await performNativePasskeyAuthentication(optionsRes.options);
       const verifyRes = await verifyPasskeyLoginAction(authResp, optionsRes.challengeToken, hostname, hostHeader);
 
       if (!verifyRes.success || !verifyRes.token) {
@@ -166,49 +154,6 @@ export function LoginDrawer() {
       
       localStorage.setItem('kylrix_last_auth_method', 'passkey');
       localStorage.setItem(`kylrix_has_passkey_${verifyRes.userId}`, 'true');
-
-      // Sync MEK/Masterpass wrapping if available
-      if (verifyRes.wrappedKey) {
-        let kwrapSeed: ArrayBuffer;
-        const extensionResults = authResp.clientExtensionResults as any;
-        const prfBuffer = extensionResults?.prf?.results?.first;
-        
-        if (prfBuffer) {
-          kwrapSeed = prfBuffer;
-        } else if (verifyRes.fallbackSeed) {
-          kwrapSeed = new Uint8Array(
-            atob(verifyRes.fallbackSeed).split("").map(c => c.charCodeAt(0))
-          ).buffer;
-        } else {
-          const encoder = new TextEncoder();
-          const credentialData = encoder.encode(authResp.id + verifyRes.userId);
-          kwrapSeed = await crypto.subtle.digest("SHA-256", credentialData);
-        }
-
-        const kwrap = await crypto.subtle.importKey(
-          "raw",
-          kwrapSeed,
-          { name: "AES-GCM" },
-          false,
-          ["decrypt"],
-        );
-
-        const wrappedKeyBytes = new Uint8Array(
-          atob(verifyRes.wrappedKey).split("").map(c => c.charCodeAt(0))
-        );
-
-        const iv = wrappedKeyBytes.slice(0, 12);
-        const ciphertext = wrappedKeyBytes.slice(12);
-
-        const mekBytes = await crypto.subtle.decrypt(
-          { name: "AES-GCM", iv: iv },
-          kwrap,
-          ciphertext
-        );
-
-        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
-        await ecosystemSecurity.importMasterKey(mekBytes);
-      }
 
       toast.success('Authenticated via Passkey!');
       await refreshUser(true);

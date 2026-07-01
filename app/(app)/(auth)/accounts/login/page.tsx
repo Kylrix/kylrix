@@ -13,9 +13,8 @@ import { getLastActiveApp } from '@/lib/sdk/ecosystem/useLastActiveApp';
 import Logo from '../components/Logo';
 import { MfaChallengeDrawer } from '@/components/overlays/MfaChallengeDrawer';
 import { createHandoffSessionSecure } from '@/lib/actions/secure-ops';
-import { startAuthentication } from '@simplewebauthn/browser';
+import { performNativePasskeyAuthentication } from '@/lib/webauthn-utils';
 import { Fingerprint } from 'lucide-react';
-import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import toast from 'react-hot-toast';
 import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction } from '@/lib/actions/auth-actions';
 
@@ -250,8 +249,7 @@ function LoginContent() {
         throw new Error(optionsRes.error || 'Failed to generate passkey login options');
       }
 
-      // 2. Perform WebAuthn authentication via startAuthentication
-      const authResp = await startAuthentication({ optionsJSON: optionsRes.options });
+      const authResp = await performNativePasskeyAuthentication(optionsRes.options);
 
       // 3. Post assertion response to the verification Server Action
       const verifyRes = await verifyPasskeyLoginAction(authResp, optionsRes.challengeToken, hostname, hostHeader);
@@ -264,53 +262,7 @@ function LoginContent() {
         await safeDeleteCurrentSession();
         await account.createSession({ userId: verifyRes.userId, secret: verifyRes.token });
 
-        // 5. Concurrently decrypt the MEK and unlock the vault
-        if (verifyRes.wrappedKey) {
-          const extensionResults = authResp.clientExtensionResults as any;
-          const prfBuffer = extensionResults?.prf?.results?.first;
-
-          let kwrapSeed: ArrayBuffer;
-          if (prfBuffer) {
-            kwrapSeed = prfBuffer;
-          } else if (verifyRes.fallbackSeed) {
-            kwrapSeed = new Uint8Array(
-              atob(verifyRes.fallbackSeed).split("").map((c: string) => c.charCodeAt(0))
-            ).buffer;
-          } else {
-            // Fallback derivation
-            const encoder = new TextEncoder();
-            const credentialData = encoder.encode(authResp.id + verifyRes.userId);
-            kwrapSeed = await crypto.subtle.digest("SHA-256", credentialData);
-          }
-
-          const kwrap = await crypto.subtle.importKey(
-            "raw",
-            kwrapSeed,
-            { name: "AES-GCM" },
-            false,
-            ["decrypt"],
-          );
-
-          const wrappedKeyBytes = new Uint8Array(
-            atob(verifyRes.wrappedKey).split("").map((c: string) => c.charCodeAt(0))
-          );
-
-          const iv = wrappedKeyBytes.slice(0, 12);
-          const ciphertext = wrappedKeyBytes.slice(12);
-
-          const mekBytes = await crypto.subtle.decrypt(
-            { name: "AES-GCM", iv },
-            kwrap,
-            ciphertext
-          );
-
-          const unlockSuccess = await ecosystemSecurity.importMasterKey(mekBytes);
-          if (unlockSuccess) {
-            toast.success("Vault unlocked automatically");
-          }
-        }
-
-        // 6. Complete authentication and route user
+        // 5. Complete authentication and route user
         await confirmAuthenticated();
       } else {
         throw new Error('Authentication succeeded but server returned invalid verification payload');

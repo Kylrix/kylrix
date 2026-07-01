@@ -52,16 +52,6 @@ export async function getPasskeyLoginOptionsAction(email?: string, hostname: str
       userVerification: 'preferred',
     });
 
-    // Request PRF extension with our static salt
-    (options.extensions as any) = {
-      ...options.extensions,
-      prf: {
-        eval: {
-          first: new TextEncoder().encode('kylrix-unified-salt-v1'),
-        },
-      },
-    };
-
     // Generate stateless challenge token using our APPWRITE_API secret
     const exp = Date.now() + 300000; // 5 minutes
     const payload = JSON.stringify({ c: options.challenge, e: exp });

@@ -15,6 +15,45 @@ export function base64UrlToBuffer(base64url: string) {
   return bytes.buffer;
 }
 
+export function isWebAuthnGetAvailable(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    'credentials' in navigator &&
+    typeof navigator.credentials?.get === 'function'
+  );
+}
+
+/** Native WebAuthn assertion (login only — vault unlock uses separate flows). */
+export async function performNativePasskeyAuthentication(
+  options: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  if (!isWebAuthnGetAvailable()) {
+    throw new Error('WebAuthn is not supported in this browser');
+  }
+
+  const publicKey: Record<string, unknown> = { ...options };
+  publicKey.challenge = base64UrlToBuffer(options.challenge as string);
+
+  const allowCreds = options.allowCredentials;
+  if (Array.isArray(allowCreds) && allowCreds.length > 0) {
+    publicKey.allowCredentials = allowCreds.map((c: Record<string, unknown>) => ({
+      ...c,
+      id: base64UrlToBuffer(c.id as string),
+    }));
+  } else {
+    delete publicKey.allowCredentials;
+  }
+
+  const assertion = await navigator.credentials.get({
+    publicKey: publicKey as PublicKeyCredentialRequestOptions,
+  });
+  if (!assertion) {
+    throw new Error('Authentication was not completed');
+  }
+
+  return publicKeyCredentialToJSON(assertion) as Record<string, unknown>;
+}
+
 export function publicKeyCredentialToJSON(pubKeyCred: unknown): unknown {
   if (Array.isArray(pubKeyCred)) return (pubKeyCred as unknown[]).map(publicKeyCredentialToJSON);
   if (pubKeyCred instanceof ArrayBuffer) return bufferToBase64Url(pubKeyCred);
