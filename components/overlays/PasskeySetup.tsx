@@ -256,6 +256,7 @@ export function PasskeySetupPanel({
           transports: regResp.response.transports || [],
           created: new Date().toISOString(),
           rpId,
+          prf: !!(alsoUseForLogin && extensionResults?.prf?.enabled && extensionResults?.prf?.results?.first),
         }),
         isBackup: false,
         authPass: false,

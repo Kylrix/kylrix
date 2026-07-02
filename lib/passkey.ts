@@ -67,7 +67,15 @@ export async function unlockWithPasskey(userId: string): Promise<boolean> {
     // 5. Derive the wrapping key
     let kwrapSeed: ArrayBuffer;
 
-    if (matchingEntry.authPasskey) {
+    let usePrf = false;
+    if (matchingEntry.params) {
+      try {
+        const paramsObj = JSON.parse(matchingEntry.params);
+        usePrf = !!paramsObj.prf;
+      } catch (e) {}
+    }
+
+    if (usePrf) {
       const extensionResults = authResp.clientExtensionResults as any;
       const prfBuffer = extensionResults?.prf?.results?.first;
       if (prfBuffer) {
