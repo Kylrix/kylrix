@@ -1221,6 +1221,27 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
             href="/"
           />
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+            <Button
+              component={NextLink}
+              href="/app"
+              startIcon={<ArrowBackIcon />}
+              sx={{
+                borderRadius: '10px',
+                color: 'rgba(255,255,255,0.72)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                textTransform: 'none',
+                fontWeight: 700,
+                minWidth: 'unset',
+                px: 1.5,
+                py: 0.75,
+                '&:hover': {
+                  borderColor: 'rgba(255,255,255,0.24)',
+                  bgcolor: 'rgba(255,255,255,0.05)',
+                },
+              }}
+            >
+              Back
+            </Button>
             <Tooltip title="Refresh Note">
               <IconButton
                 onClick={handleManualRefresh}
