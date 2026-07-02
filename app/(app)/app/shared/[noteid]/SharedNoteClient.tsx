@@ -1196,118 +1196,80 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: 'white' }}>
-      <AppBar 
-        position="fixed" 
-        sx={{ 
+      <AppBar
+        position="fixed"
+        sx={{
           bgcolor: '#161412',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           boxShadow: '0 4px 20px rgba(0,0,0,0.4), inset 0 -1px 0 rgba(255,255,255,0.02)',
-          backgroundImage: 'none'
+          backgroundImage: 'none',
         }}
       >
-        <Toolbar sx={{ justifyContent: 'space-between', maxWidth: 'lg', mx: 'auto', width: '100%', minHeight: '88px' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Logo 
-              app="note" 
-              size={40} 
-              variant="full"
-              sx={{ 
-                cursor: 'pointer', 
-                '&:hover': { opacity: 0.8 },
-                fontFamily: 'var(--font-clash)',
-                fontWeight: 900,
-                letterSpacing: '-0.04em'
-              }}
-              component={ObLink}
-              href="/"
-            />
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Toolbar sx={{ justifyContent: 'space-between', maxWidth: 'lg', mx: 'auto', width: '100%', minHeight: 72 }}>
+          <Logo
+            app="note"
+            size={34}
+            variant="full"
+            sx={{
+              cursor: 'pointer',
+              '&:hover': { opacity: 0.8 },
+              fontFamily: 'var(--font-clash)',
+              fontWeight: 900,
+              letterSpacing: '-0.04em',
+            }}
+            component={ObLink}
+            href="/"
+          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
             <Tooltip title="Refresh Note">
-              <IconButton 
+              <IconButton
                 onClick={handleManualRefresh}
                 disabled={isRefreshing}
-                sx={{ 
+                sx={{
                   color: isRefreshing ? '#EC4899' : 'rgba(255, 255, 255, 0.4)',
                   bgcolor: 'rgba(255, 255, 255, 0.03)',
                   border: '1px solid',
                   borderColor: isRefreshing ? 'rgba(236, 72, 153, 0.3)' : 'rgba(255, 255, 255, 0.08)',
-                  borderRadius: '12px',
-                  width: 44,
-                  height: 44,
-                  '&:hover': { 
-                    bgcolor: 'rgba(255, 255, 255, 0.05)', 
+                  borderRadius: '10px',
+                  width: 40,
+                  height: 40,
+                  '&:hover': {
+                    bgcolor: 'rgba(255, 255, 255, 0.05)',
                     borderColor: 'rgba(255, 255, 255, 0.2)',
-                    color: 'white'
+                    color: 'white',
                   },
                   '& svg': {
                     animation: isRefreshing ? `${spin} 1s linear infinite` : 'none',
-                  }
+                  },
                 }}
               >
-                <RefreshIcon sx={{ fontSize: 20 }} />
+                <RefreshIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
-
-            <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 2 }}>
-              <Button component={NextLink} href="/" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontWeight: 700, textTransform: 'none' }}>Home</Button>
-              <Button 
-                component={NextLink}
-                href="/" 
-                variant="contained" 
-                sx={{ 
-                  borderRadius: '12px', 
-                  fontWeight: 800, 
-                  bgcolor: '#6366F1', 
-                  color: '#000',
-                  textTransform: 'none',
-                  '&:hover': { bgcolor: alpha('#6366F1', 0.8) }
-                }}
-              >
-                Join Now
-              </Button>
-            </Box>
+            <Button
+              component={NextLink}
+              href="/"
+              variant="contained"
+              sx={{
+                borderRadius: '10px',
+                fontWeight: 800,
+                bgcolor: '#6366F1',
+                color: '#000',
+                textTransform: 'none',
+                minWidth: 'unset',
+                px: 2,
+                py: 0.75,
+                '&:hover': { bgcolor: alpha('#6366F1', 0.8) },
+              }}
+            >
+              Join
+            </Button>
           </Box>
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ pt: 12, pb: 4, bgcolor: alpha('#6366F1', 0.02), borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-        <Container maxWidth="md">
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-            <Typography variant="body2" sx={{ color: alpha('#FFFFFF', 0.5), fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>
-              Organize unlimited notes, AI insights & secure sharing.
-            </Typography>
-            <Button 
-              component={NextLink}
-              href="/" 
-              endIcon={<ArrowRightIcon />}
-              sx={{ fontWeight: 800, color: '#6366F1', textTransform: 'none' }}
-            >
-              Get Started Free
-            </Button>
-          </Box>
-        </Container>
-      </Box>
-
-      <Container maxWidth="md" sx={{ py: 8 }}>
+      <Container maxWidth="md" sx={{ pt: { xs: 11, md: 12 }, pb: 6 }}>
         <SharedWorkspaceBar objectType="note" />
-        <Box sx={{ mb: 2 }}>
-          <Button
-            component={NextLink}
-            href="/app"
-            startIcon={<ArrowBackIcon />}
-            sx={{
-              borderRadius: '12px',
-              color: 'rgba(255,255,255,0.72)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              textTransform: 'none',
-              fontWeight: 700,
-              px: 1.5,
-            }}
-          >
-            Back
-          </Button>
-        </Box>
         <NoteContent />
 
         <Box sx={{ mt: 4 }}>
@@ -1318,20 +1280,20 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
           <CommentsSection noteId={noteId} decryptionKey={key} />
         </Box>
 
-          <Box sx={{ mt: 8, textAlign: 'center' }}>
+        <Box sx={{ mt: 6, textAlign: 'center' }}>
           <Paper
             sx={{
-              p: 6,
-              borderRadius: '32px',
+              p: { xs: 4, md: 5 },
+              borderRadius: '24px',
               bgcolor: '#161412',
               border: '1px solid rgba(99, 102, 241, 0.1)',
               boxShadow: '0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.02)'
             }}
           >
-            <Typography variant="h4" sx={{ fontWeight: 900, mb: 2, fontFamily: 'var(--font-clash)', color: 'white' }}>
+            <Typography variant="h5" sx={{ fontWeight: 900, mb: 1.5, fontFamily: 'var(--font-clash)', color: 'white' }}>
               Create Your Own Notes
             </Typography>
-            <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 4, maxWidth: 500, mx: 'auto' }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 3, maxWidth: 500, mx: 'auto' }}>
               Join thousands of users who trust Kylrix Note to capture, organize, and share their thoughts.
             </Typography>
             <Button
