@@ -586,7 +586,7 @@ export default function ConnectTopbar({
 
   const appPanelMotion = useMemo(() => createTopbarPanelMotion(), []);
 
-  const activePanel = searchOpen ? 'search' : notificationsOpen ? 'notifications' : profileMenuAnchorEl ? 'profile' : appMenuAnchorEl ? 'ecosystem' : null;
+  const activePanel = searchOpen ? 'search' : notificationsOpen ? 'notifications' : shortcutsOpen ? 'shortcuts' : profileMenuAnchorEl ? 'profile' : appMenuAnchorEl ? 'ecosystem' : null;
 
   useEffect(() => {
     if (!activePanel) return;
@@ -2155,74 +2155,156 @@ export default function ConnectTopbar({
       { key: 'Ctrl + H', desc: 'Navigate to Calls / Huddles' },
     ];
 
-    return (
-      <Drawer
-        anchor="bottom"
-        open={shortcutsOpen}
-        onClose={handleCloseAll}
-        keepMounted={false}
-        disablePortal={false}
-        PaperProps={{
-          sx: {
-            bgcolor: '#161412',
-            backgroundImage: 'none',
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '28px 28px 0 0',
-            boxShadow: '0 -16px 42px rgba(0,0,0,0.5)',
-            maxHeight: '60vh',
-            width: isDesktop ? 600 : '100%',
-            mx: 'auto',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            p: 3,
-            boxSizing: 'border-box',
-            display: 'flex',
-            flexDirection: 'column',
+    const shortcutsContent = (
+      <Box
+        onWheel={(event: React.WheelEvent) => {
+          if (isDesktop) return;
+          const node = event.currentTarget;
+          if (event.deltaY < 0 && isTopbarScrollAtTop(node as HTMLElement)) {
+            event.preventDefault();
+            handleCloseAll();
           }
         }}
+        sx={{
+          px: { xs: 2.25, md: 2.75 },
+          py: { xs: 1.25, md: 0 },
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+          maxHeight: isDesktop ? 'none' : '45vh',
+          overflowY: isDesktop ? 'visible' : 'auto',
+          flex: isDesktop ? 1 : undefined,
+          minHeight: isDesktop ? 0 : undefined,
+        }}
       >
-        {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pb: 1.5, borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-            <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
-              <Sparkles size={16} />
-            </Box>
-            <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
-              System Shortcuts
-            </Typography>
-          </Box>
-          <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
-            <CloseIcon size={16} />
-          </IconButton>
-        </Box>
-
-        {/* Shortcuts list */}
-        <Box sx={{ overflowY: 'auto', flex: 1, pr: 0.5 }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-            {shortcutsList.map((item) => (
-              <Box 
-                key={item.key} 
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between', 
-                  p: 1.5, 
-                  borderRadius: '14px', 
-                  bgcolor: 'rgba(255,255,255,0.01)', 
-                  border: '1px solid rgba(255,255,255,0.03)' 
-                }}
-              >
-                <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>
-                  {item.desc}
+        {!isDesktop && (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
+                <Sparkles size={16} />
+              </Box>
+              <Box>
+                <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1rem', lineHeight: 1.1 }}>
+                  System Shortcuts
                 </Typography>
-                <Typography sx={{ color: '#6366F1', fontSize: '0.74rem', fontWeight: 700, fontFamily: 'var(--font-mono)', bgcolor: 'rgba(99, 102, 241, 0.08)', px: 1, py: 0.5, borderRadius: '6px', border: '1px solid rgba(99, 102, 241, 0.18)' }}>
-                  {item.key}
+                <Typography sx={{ color: 'rgba(255,255,255,0.38)', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Quick keys
                 </Typography>
               </Box>
-            ))}
+            </Box>
+            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
+              <CloseIcon size={16} />
+            </IconButton>
           </Box>
+        )}
+
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: '1fr' },
+            gap: 1,
+            overflowY: isDesktop ? 'auto' : 'visible',
+            maxHeight: isDesktop ? 'calc(100vh - 180px)' : 'none',
+            pr: 0.5,
+            pb: 0.5,
+          }}
+        >
+          {shortcutsList.map((item) => (
+            <Box
+              key={item.key}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1.5,
+                p: 1.5,
+                borderRadius: '16px',
+                bgcolor: 'rgba(255,255,255,0.015)',
+                border: '1px solid rgba(255,255,255,0.04)',
+              }}
+            >
+              <Typography sx={{ color: 'rgba(255,255,255,0.78)', fontSize: '0.84rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)', lineHeight: 1.35, minWidth: 0 }}>
+                {item.desc}
+              </Typography>
+              <Typography
+                component="span"
+                sx={{
+                  color: '#6366F1',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-mono)',
+                  bgcolor: 'rgba(99, 102, 241, 0.08)',
+                  px: 1.1,
+                  py: 0.55,
+                  borderRadius: '8px',
+                  border: '1px solid rgba(99, 102, 241, 0.18)',
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {item.key}
+              </Typography>
+            </Box>
+          ))}
         </Box>
-      </Drawer>
+      </Box>
+    );
+
+    if (isDesktop) {
+      return (
+        <Drawer
+          anchor="left"
+          open={shortcutsOpen}
+          onClose={handleCloseAll}
+          keepMounted={false}
+          disablePortal={false}
+          PaperProps={{
+            sx: {
+              bgcolor: '#161412',
+              backgroundImage: 'none',
+              width: 320,
+              height: '100vh',
+              borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+              boxShadow: '0 12px 48px rgba(0,0,0,0.6)',
+              display: 'flex',
+              flexDirection: 'column',
+              boxSizing: 'border-box',
+              p: 2.75,
+            },
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5, flexShrink: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
+                <Sparkles size={16} />
+              </Box>
+              <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
+                System Shortcuts
+              </Typography>
+            </Box>
+            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' }, width: 32, height: 32 }}>
+              <CloseIcon size={16} />
+            </IconButton>
+          </Box>
+          {shortcutsContent}
+        </Drawer>
+      );
+    }
+
+    return (
+      <Box
+        sx={{
+          width: '100%',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '0 0 28px 28px',
+          bgcolor: '#161412',
+          overflow: 'hidden',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
+        }}
+      >
+        {shortcutsContent}
+      </Box>
     );
   };
 
