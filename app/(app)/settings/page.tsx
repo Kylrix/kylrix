@@ -671,41 +671,104 @@ export default function SettingsPage() {
                                             No passkeys registered.
                                         </div>
                                     ) : (
-                                        passkeyEntries.map((pk, idx) => (
-                                            <div 
-                                                key={pk.$id}
-                                                className="flex items-center justify-between gap-3 p-3 rounded-xl hover:bg-white/[0.02] transition-colors"
-                                            >
-                                                <div className="flex items-center gap-3 min-w-0">
-                                                    <div className="w-8 h-8 rounded-lg bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center flex-shrink-0">
-                                                        <Fingerprint size={16} />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <span className="block text-white font-extrabold text-xs truncate">
-                                                            {pk.params?.name || `Passkey ${idx + 1}`}
-                                                        </span>
-                                                        <div className="flex items-center gap-1.5 mt-0.5">
-                                                            <span className="block text-[#10B981] text-[9px] font-black uppercase tracking-wider font-mono">
-                                                                Active
-                                                            </span>
-                                                            {pk.authPasskey && (
-                                                                <span className="flex items-center gap-1 text-[#6366F1] text-[9px] font-black uppercase tracking-wider font-mono bg-[#6366F1]/10 px-1.5 py-0.5 rounded" title="Auth Enabled (Can be used for account login)">
-                                                                    <Key size={9} />
-                                                                    <span>Auth</span>
+                                        <div className="flex flex-col gap-4">
+                                            {(() => {
+                                                const productionPasskeys = passkeyEntries.filter(pk => pk.params?.rpId !== 'localhost' && pk.params?.rpId !== '127.0.0.1');
+                                                const localhostPasskeys = passkeyEntries.filter(pk => pk.params?.rpId === 'localhost' || pk.params?.rpId === '127.0.0.1');
+                                                return (
+                                                    <>
+                                                        {productionPasskeys.length > 0 && (
+                                                            <div className="flex flex-col gap-1.5">
+                                                                <span className="block text-white/40 text-[9px] font-black uppercase tracking-wider font-mono px-3">
+                                                                    Primary Passkeys (kylrix.space)
                                                                 </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleRemovePasskey(pk.$id)}
-                                                    className="w-8 h-8 rounded-lg text-white/20 hover:text-red-500 hover:bg-red-500/10 flex items-center justify-center transition-all"
-                                                    title="Remove Passkey"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        ))
+                                                                {productionPasskeys.map((pk, idx) => (
+                                                                    <div 
+                                                                        key={pk.$id}
+                                                                        className="flex items-center justify-between gap-3 p-3 rounded-xl hover:bg-white/[0.02] transition-colors"
+                                                                    >
+                                                                        <div className="flex items-center gap-3 min-w-0">
+                                                                            <div className="w-8 h-8 rounded-lg bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center flex-shrink-0">
+                                                                                <Fingerprint size={16} />
+                                                                            </div>
+                                                                            <div className="min-w-0">
+                                                                                <span className="block text-white font-extrabold text-xs truncate">
+                                                                                    {pk.params?.name || `Passkey ${idx + 1}`}
+                                                                                </span>
+                                                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                                                    <span className="block text-[#10B981] text-[9px] font-black uppercase tracking-wider font-mono">
+                                                                                        Active
+                                                                                    </span>
+                                                                                    {pk.authPasskey && (
+                                                                                        <span className="flex items-center gap-1 text-[#6366F1] text-[9px] font-black uppercase tracking-wider font-mono bg-[#6366F1]/10 px-1.5 py-0.5 rounded" title="Auth Enabled (Can be used for account login)">
+                                                                                            <Key size={9} />
+                                                                                            <span>Auth</span>
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <button
+                                                                            onClick={() => handleRemovePasskey(pk.$id)}
+                                                                            className="w-8 h-8 rounded-lg text-white/20 hover:text-red-500 hover:bg-red-500/10 flex items-center justify-center transition-all"
+                                                                            title="Remove Passkey"
+                                                                        >
+                                                                            <Trash2 size={16} />
+                                                                        </button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        {localhostPasskeys.length > 0 && (
+                                                            <div className="flex flex-col gap-1.5 border-t border-white/5 pt-3 mt-1">
+                                                                <span className="block text-amber-500/70 text-[9px] font-black uppercase tracking-wider font-mono px-3">
+                                                                    Development / Localhost Passkeys
+                                                                </span>
+                                                                {localhostPasskeys.map((pk, idx) => (
+                                                                    <div 
+                                                                        key={pk.$id}
+                                                                        className="flex items-center justify-between gap-3 p-3 rounded-xl hover:bg-white/[0.02] transition-colors"
+                                                                    >
+                                                                        <div className="flex items-center gap-3 min-w-0">
+                                                                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center flex-shrink-0">
+                                                                                <Fingerprint size={16} />
+                                                                            </div>
+                                                                            <div className="min-w-0">
+                                                                                <span className="block text-white font-extrabold text-xs truncate">
+                                                                                    {pk.params?.name || `Local Passkey ${idx + 1}`} <span className="text-amber-500 text-[10px] font-black font-mono">(Localhost)</span>
+                                                                                </span>
+                                                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                                                    <span className="block text-[#10B981] text-[9px] font-black uppercase tracking-wider font-mono">
+                                                                                        Active
+                                                                                    </span>
+                                                                                    {pk.authPasskey && (
+                                                                                        <span className="flex items-center gap-1 text-[#6366F1] text-[9px] font-black uppercase tracking-wider font-mono bg-[#6366F1]/10 px-1.5 py-0.5 rounded" title="Auth Enabled (Can be used for account login)">
+                                                                                            <Key size={9} />
+                                                                                            <span>Auth</span>
+                                                                                        </span>
+                                                                                    )}
+                                                                                    <span className="text-white/40 text-[9px] font-mono">
+                                                                                        RP: {pk.params?.rpId}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <button
+                                                                            onClick={() => handleRemovePasskey(pk.$id)}
+                                                                            className="w-8 h-8 rounded-lg text-white/20 hover:text-red-500 hover:bg-red-500/10 flex items-center justify-center transition-all"
+                                                                            title="Remove Passkey"
+                                                                        >
+                                                                            <Trash2 size={16} />
+                                                                        </button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
                                     )}
                                 </div>
                             </div>
