@@ -219,7 +219,21 @@ export default function SudoModal({
 
                 // 3. Check if user has passkeys configured
                 const entries = await AppwriteService.listKeychainEntries(user?.$id || '');
-                const passkeyPresent = entries.some((e: { type?: string }) => e.type === "passkey");
+                const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+                const isLocalHost = currentHost === 'localhost' || currentHost === '127.0.0.1';
+                const passkeyPresent = entries.some((e: any) => {
+                    if (e.type !== "passkey") return false;
+                    let rpId = '';
+                    try {
+                        const parsed = typeof e.params === 'string' ? JSON.parse(e.params) : e.params;
+                        rpId = parsed?.rpId || '';
+                    } catch (err) {}
+                    if (isLocalHost) {
+                        return rpId === 'localhost' || rpId === '127.0.0.1';
+                    } else {
+                        return rpId !== 'localhost' && rpId !== '127.0.0.1';
+                    }
+                });
                 const passkeyAllowed = passkeyPresent && isKylrixDomain;
                 if (!active) return;
                 setHasPasskey(passkeyAllowed);

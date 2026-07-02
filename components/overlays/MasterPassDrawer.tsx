@@ -243,7 +243,21 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
     // Check for keychain entries to determine mode
     AppwriteService.listKeychainEntries(user.$id)
       .then((entries: any[]) => {
-        const passkeyPresent = entries.some((e: any) => e.type === 'passkey');
+        const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+        const isLocalHost = currentHost === 'localhost' || currentHost === '127.0.0.1';
+        const passkeyPresent = entries.some((e: any) => {
+          if (e.type !== "passkey") return false;
+          let rpId = '';
+          try {
+            const parsed = typeof e.params === 'string' ? JSON.parse(e.params) : e.params;
+            rpId = parsed?.rpId || '';
+          } catch (err) {}
+          if (isLocalHost) {
+            return rpId === 'localhost' || rpId === '127.0.0.1';
+          } else {
+            return rpId !== 'localhost' && rpId !== '127.0.0.1';
+          }
+        });
         const passwordEntries = entries.filter((e: any) => e.type === 'password');
         const passwordPresent = passwordEntries.length > 0;
 
