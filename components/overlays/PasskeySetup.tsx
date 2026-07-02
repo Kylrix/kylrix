@@ -29,6 +29,7 @@ import {
 } from '@/lib/openbricks/icons';
 import { Fingerprint, X, Key, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 export interface PasskeySetupPanelProps {
   onClose: () => void;
@@ -60,6 +61,23 @@ export function PasskeySetupPanel({
   const obTheme = useTheme();
   const isDesktop = useMediaQuery(obTheme.breakpoints.up('md'));
   const { setIsDrawerOpen } = useDrawerState();
+  const { openDrawer } = useUnifiedDrawer();
+
+  const handleAlsoUseForLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    if (!checked) {
+      openDrawer('delete-confirm', {
+        title: 'Disable Passkey Login?',
+        description: 'WARNING: Disabling this will prevent you from signing into your account using this passkey. If you also disable MasterPass login, you could permanently lose access to your account and be unable to decrypt your data. Are you sure you want to proceed?',
+        confirmLabel: 'Disable',
+        onConfirm: () => {
+          setAlsoUseForLogin(false);
+        }
+      });
+    } else {
+      setAlsoUseForLogin(true);
+    }
+  };
 
   useEffect(() => {
     setIsDrawerOpen(true);
@@ -449,7 +467,7 @@ export function PasskeySetupPanel({
                   <input
                     type="checkbox"
                     checked={alsoUseForLogin}
-                    onChange={(e) => setAlsoUseForLogin(e.target.checked)}
+                    onChange={handleAlsoUseForLoginChange}
                     style={{
                       width: '16px',
                       height: '16px',
