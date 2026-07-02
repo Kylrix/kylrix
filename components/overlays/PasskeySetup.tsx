@@ -21,6 +21,7 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
 import { getPasskeyRegisterFallbackSeedAction, verifyPasskeyRegistrationAction } from '@/lib/actions/auth-actions';
+import { bufferToBase64Url } from '@/lib/webauthn-utils';
 import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
@@ -139,7 +140,7 @@ export function PasskeySetupPanel({
       }
 
       const challenge = crypto.getRandomValues(new Uint8Array(32));
-      const challengeBase64 = arrayBufferToBase64(challenge.buffer);
+      const challengeBase64 = bufferToBase64Url(challenge.buffer);
 
       const userIdBytes = new TextEncoder().encode(userId);
       const rpId = resolvePasskeyRpId(window.location.hostname);
