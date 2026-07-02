@@ -1,3 +1,12 @@
+// Sanitization block to clear broken password manager extensions on PublicKeyCredential prototype
+if (typeof window !== 'undefined' && (window as any).PublicKeyCredential && (window as any).PublicKeyCredential.prototype.toJSON) {
+  try {
+    delete (window as any).PublicKeyCredential.prototype.toJSON;
+  } catch (e) {
+    console.error("Failed to clean up WebAuthn prototype bindings:", e);
+  }
+}
+
 export function bufferToBase64Url(buffer: ArrayBuffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
