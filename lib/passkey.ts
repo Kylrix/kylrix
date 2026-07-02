@@ -7,6 +7,7 @@ import {
   resolvePasskeyRpId,
   transportsForPasskeyEntry,
 } from '@/lib/passkey-webauthn-options';
+import { bufferToBase64Url } from '@/lib/webauthn-utils';
 import toast from 'react-hot-toast';
 import { getPasskeyRegisterFallbackSeedAction } from '@/lib/actions/auth-actions';
 
@@ -26,7 +27,7 @@ export async function unlockWithPasskey(userId: string): Promise<boolean> {
 
     // 2. Prepare authentication options
     const challenge = crypto.getRandomValues(new Uint8Array(32));
-    const challengeBase64 = btoa(String.fromCharCode(...Array.from(challenge)));
+    const challengeBase64 = bufferToBase64Url(challenge.buffer);
 
     const rpId = resolvePasskeyRpId(window.location.hostname);
 
