@@ -463,7 +463,10 @@ export async function pullNotesDeltaSecure(params: { lastCheckpoint: string | nu
   const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
 
   const queries = [
-    Query.equal('userId', actor.$id),
+    Query.or([
+      Query.equal('userId', actor.$id),
+      Query.equal('creatorId', actor.$id),
+    ]),
     Query.orderAsc('$updatedAt'),
     Query.limit(params.limit || 50)
   ];
@@ -510,7 +513,8 @@ export async function pushNotesDeltaSecure(rows: any[], jwt?: string) {
 
     if (currentMaster) {
       // 2. Authorization: Verify ownership
-      if (currentMaster.userId !== actor.$id) {
+      const ownerId = String(currentMaster.userId || currentMaster.creatorId || currentMaster.ownerId || '').trim();
+      if (ownerId !== actor.$id) {
           // Check shared access if not owner
           const hasAccess = await verifyResourcePermissionSecure({
               databaseId: dbId,
@@ -576,6 +580,7 @@ export async function createNoteSecure(data: any, jwt?: string) {
   const noteData: any = {
     ...validated,
     userId: actor.$id,
+    creatorId: actor.$id,
   };
 
   const isCreateAllowed = await verifyResourcePermissionSecure({
@@ -754,6 +759,11 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string) 
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
+  if (!isValidAppwriteRowId(noteId)) {
+    throw new Error('This idea is saved offline only. Sign in and wait for sync, or save it again while online.');
   }
 
   const isAllowed = await verifyNotePermission(noteId, actor.$id, 'editor');

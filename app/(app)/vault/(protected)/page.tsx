@@ -17,7 +17,7 @@ import { useAI } from '@/context/AIContext';
 import { useSudo } from '@/context/SudoContext';
 import { useFAB } from '@/context/FABContext';
 import { MultiSectionContainer, useSection } from '@/context/SectionContext';
-import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown } from 'lucide-react';
+import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { Box, Typography, Paper, Button, IconButton, Avatar, CircularProgress, Tooltip, alpha } from '@/lib/openbricks/primitives';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { TOTPPageContent } from './totp/page';
@@ -55,6 +55,7 @@ function DashboardPageContent() {
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isMultiDeleting, setIsMultiDeleting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleToggleSelectMode = () => {
     setIsSelectMode(!isSelectMode);
@@ -89,8 +90,8 @@ function DashboardPageContent() {
     setShowDialog(true);
   }, []);
 
-  const loadAllCredentials = useCallback(async () => {
-    setLoading(true);
+  const loadAllCredentials = useCallback(async (background = false) => {
+    if (!background) setLoading(true);
     try {
       if (!user?.$id) {
         // Load ghost credentials from localStorage
@@ -164,7 +165,7 @@ function DashboardPageContent() {
       toast.error("Failed to load secrets. Please try again.");
       console.error("Failed to load credentials:", error);
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   }, [user]);
 
@@ -209,16 +210,17 @@ function DashboardPageContent() {
 
   // Effects
   useEffect(() => {
+    if (activeTab !== 'secrets') return;
+
     setConfiguration({
       isVisible: true,
       mainColor: '#10B981',
       mainIcon: <Plus size={32} strokeWidth={3} />,
       onMainClick: () => handleAdd(),
-      actions: [
-        { id: 'add', label: 'ADD SECRET', icon: <Plus size={20} />, onClick: () => handleAdd() }]
+      actions: [],
     });
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, handleAdd]);
+  }, [activeTab, setConfiguration, resetConfiguration, handleAdd]);
 
   useEffect(() => {
     const action = searchParams?.get('action');
@@ -338,8 +340,25 @@ function DashboardPageContent() {
 
   const refreshCredentials = () => {
     if (!user?.$id) return;
-    loadAllCredentials();
+    void loadAllCredentials();
   };
+
+  const handleManualRefresh = useCallback(async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      if (user?.$id && !isVaultUnlocked()) {
+        toast.error('Unlock your vault to refresh secrets.');
+        return;
+      }
+      await loadAllCredentials(true);
+    } catch (error: unknown) {
+      console.error('Manual secrets refresh failed:', error);
+      toast.error('Could not refresh secrets. Try again.');
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
+  }, [isRefreshing, user?.$id, isVaultUnlocked, loadAllCredentials]);
 
   const handleCopy = (value: string) => {
     navigator.clipboard.writeText(value);
@@ -427,6 +446,16 @@ function DashboardPageContent() {
                         }`}
                       >
                         {isSelectMode ? 'Cancel' : 'Select'}
+                      </button>
+
+                      <button
+                        onClick={() => void handleManualRefresh()}
+                        disabled={isRefreshing}
+                        className="p-2 border border-[#1C1A18] rounded-xl text-white/60 bg-[#161412] hover:text-white hover:bg-[#1C1A18] transition-colors disabled:opacity-40"
+                        title="Refresh secrets list"
+                        aria-label="Refresh secrets list"
+                      >
+                        <RefreshCw size={16} className={isRefreshing ? 'animate-spin text-[#10B981]' : ''} />
                       </button>
 
                       <button

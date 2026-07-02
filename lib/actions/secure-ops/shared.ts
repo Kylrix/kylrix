@@ -2,7 +2,6 @@ export { cookies } from 'next/headers';
 import { createHmac, randomBytes } from 'node:crypto';
 import { ID, Permission, Query, Role, Databases, TablesDB, Account } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
 import {
   allowsCollaboratorSharing,
   getCollaboratorCap,
@@ -367,6 +366,35 @@ export const isViewerTokenValid = (token: string) => {
 
 export type PermissionLevel = 'viewer' | 'editor' | 'admin';
 
+function resolveCollaboratorTypeFilter(tableId?: string) {
+  if (!tableId) return null;
+  if (tableId === APPWRITE_CONFIG.TABLES.NOTE.NOTES) {
+    return Query.equal('resourceType', 'note');
+  }
+  if (tableId === 'projects') {
+    return Query.equal('resourceType', 'project');
+  }
+  if (tableId === APPWRITE_CONFIG.TABLES.FLOW.EVENTS || tableId === 'events') {
+    return Query.equal('resourceType', 'event');
+  }
+  if (tableId === APPWRITE_CONFIG.TABLES.FLOW.FORMS || tableId === 'forms') {
+    return Query.equal('resourceType', 'form');
+  }
+  if (tableId === 'credentials') {
+    return Query.or([
+      Query.equal('resourceType', 'secret'),
+      Query.equal('resourceType', 'credential'),
+    ]);
+  }
+  if (tableId === 'totpSecrets') {
+    return Query.equal('resourceType', 'totp');
+  }
+  if (tableId === APPWRITE_CONFIG.TABLES.FLOW.TASKS) {
+    return Query.equal('resourceType', 'task');
+  }
+  return null;
+}
+
 export interface PermissionChangeInput {
   userId: string;
   resourceId: string;
@@ -437,7 +465,7 @@ export function isEnvAdminUser(user: any) {
 }
 
 export function hasWriteAccess(note: any, actorId: string) {
-  const ownerId = String(note?.userId || '').trim();
+  const ownerId = String(note?.userId || note?.creatorId || note?.ownerId || '').trim();
   if (ownerId && ownerId === actorId) return true;
   const collaborators = Array.isArray(note?.collaborators) ? note.collaborators : [];
   const collaboratorIds = collaborators
@@ -670,14 +698,19 @@ export async function verifyResourcePermissionSecure(params: {
       const tables = createSystemTablesDB();
       const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
       const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+      const resourceTypeFilter = resolveCollaboratorTypeFilter(tableId);
+      const collabQueries = [
+        Query.equal('resourceId', rowId),
+        Query.equal('userId', actorId),
+      ] as any[];
+      if (resourceTypeFilter) {
+        collabQueries.push(resourceTypeFilter);
+      }
       
       const collabsRes = await tables.listRows({
         databaseId: FLOW_DATABASE_ID,
         tableId: COLLABORATORS_TABLE,
-        queries: [
-          Query.equal('resourceId', rowId),
-          Query.equal('userId', actorId)
-        ] as any
+        queries: collabQueries
       });
       
       if (collabsRes.rows.length > 0) {
@@ -760,7 +793,7 @@ export async function verifyNotePermission(noteId: string, actorId: string, minL
     rowId: noteId,
     actorId,
     action: minToLevelMap[minLevel],
-    ownerFields: ['userId'],
+    ownerFields: ['userId', 'creatorId', 'ownerId'],
     metadataField: 'metadata',
   });
 }
@@ -794,7 +827,7 @@ export async function verifyFormPermission(formId: string, actorId: string, minL
     rowId: formId,
     actorId,
     action: minToLevelMap[minLevel],
-    ownerFields: ['userId'],
+    ownerFields: ['userId', 'creatorId', 'ownerId'],
     metadataField: 'settings',
   });
 }

@@ -60,6 +60,7 @@ import { getEcosystemUrl } from '@/constants/ecosystem';
 import { getEffectiveDisplayName } from '@/lib/utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { useDataNexus } from '@/context/DataNexusContext';
+import { resolveResourceOwnerId } from '@/lib/utils/resource-ids';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { decryptGhostData } from '@/lib/encryption/ghost-crypto';
 import { SharedWorkspaceBar } from '@/components/common/SharedWorkspaceBar';
@@ -504,7 +505,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
   // Define these hooks before any conditional returns
   const canStartSharedNoteHuddle = useMemo(() => {
     if (!isAuthenticated || !user?.$id || !verifiedNote) return false;
-    const ownerId = verifiedNote.userId;
+    const ownerId = resolveResourceOwnerId(verifiedNote as Record<string, unknown>);
     const collaborators = Array.isArray(verifiedNote.collaborators) ? verifiedNote.collaborators : [];
     const meta = parseSharedNoteMeta(verifiedNote);
     const writeCollaborators = Array.isArray(meta?.writeCollaborators)
@@ -734,7 +735,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
 
   const handlePostAsMoment = async () => {
     if (!verifiedNote || !user || isPostingMoment) return;
-    const ownerId = String(verifiedNote.userId || '').trim();
+    const ownerId = resolveResourceOwnerId(verifiedNote as Record<string, unknown>);
     const collaborators = Array.isArray(verifiedNote.collaborators)
       ? verifiedNote.collaborators
           .map((entry: any) => {
@@ -786,7 +787,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
     const paywall = meta?.paywall;
     if (!paywall?.enabled) return false;
     // Show paywall if user is not the owner
-    if (isAuthenticated && user?.$id === verifiedNote.userId) return false;
+    if (isAuthenticated && user?.$id === resolveResourceOwnerId(verifiedNote as Record<string, unknown>)) return false;
     return true;
   };
 
@@ -827,7 +828,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
             {/* Duplicate Button Logic */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
               {isAuthenticated && (verifiedNote.isPublic || isEditableByAnyone) && (() => {
-                const ownerId = String(verifiedNote.userId || '').trim();
+                const ownerId = resolveResourceOwnerId(verifiedNote as Record<string, unknown>);
                 const collaborators = Array.isArray(verifiedNote.collaborators)
                   ? verifiedNote.collaborators
                       .map((entry: any) => {
@@ -887,7 +888,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
                   {existingHuddleId ? 'Join Huddle' : 'Start Huddle'}
                 </Button>
               )}
-              {(!user || user.$id !== verifiedNote.userId) && (
+              {(!user || user.$id !== resolveResourceOwnerId(verifiedNote as Record<string, unknown>)) && (
                 <Stack direction="row" spacing={2} alignItems="center">
                   {isAuthenticated && (
                     editRequestStatus ? (

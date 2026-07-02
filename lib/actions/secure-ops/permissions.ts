@@ -48,6 +48,11 @@ import {
   EphemeralNoteSchema,
   SuggestionParamsSchema
 } from '@/lib/validations/schemas';
+import {
+  isValidAppwriteRowId,
+  normalizeCollaboratorResourceType,
+  resolveResourceOwnerId,
+} from '@/lib/utils/resource-ids';
 
 // Import interfaces / types from shared
 import { PermissionChangeInput, PermissionLevel, TokenAction } from './shared';
@@ -129,10 +134,20 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
       throw new Error('Unauthorized');
   }
 
+  if (!isValidAppwriteRowId(input.resourceId)) {
+    throw new Error('Resource is not saved online yet. Save it first, then share.');
+  }
+
+  const normalizedResourceType = normalizeCollaboratorResourceType(input.resourceType);
+  if (!normalizedResourceType) {
+    throw new Error(`Unsupported resource type: ${input.resourceType}`);
+  }
+  const resourceType = normalizedResourceType;
+
   const { client, users, teams } = createSystemClient();
 
   // Handle Project Team synchronization
-  if (input.resourceType === 'project') {
+  if (resourceType === 'project') {
     try {
         // Sync to native Appwrite Team for optimized read-access
         await teams.createMembership(
@@ -146,15 +161,15 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     }
   }
 
-  const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : 
-               input.resourceType === 'project' ? APPWRITE_CONFIG.DATABASES.CHAT :
-               input.resourceType === 'secret' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
-               input.resourceType === 'totp' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
+  const dbId = resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : 
+               resourceType === 'project' ? APPWRITE_CONFIG.DATABASES.CHAT :
+               resourceType === 'secret' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
+               resourceType === 'totp' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
                APPWRITE_CONFIG.DATABASES.FLOW;
-  const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : 
-                  input.resourceType === 'project' ? 'projects' :
-                  input.resourceType === 'secret' ? 'credentials' :
-                  input.resourceType === 'totp' ? 'totpSecrets' :
+  const tableId = resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : 
+                  resourceType === 'project' ? 'projects' :
+                  resourceType === 'secret' ? 'credentials' :
+                  resourceType === 'totp' ? 'totpSecrets' :
                   APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 
   // 1. Grant physical READ permission only!
@@ -163,17 +178,24 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     permission: 'read',
     targetUserId: input.targetUserId,
     resourceId: input.resourceId,
-    resourceType: input.resourceType === 'note' ? 'ghost_note' : (input.resourceType === 'secret' || input.resourceType === 'totp' ? 'secret' : 'task'),
+    resourceType: resourceType === 'note' ? 'ghost_note' : (resourceType === 'secret' || resourceType === 'totp' ? 'secret' : 'task'),
     databaseId: dbId,
     tableId: tableId,
     rowId: input.resourceId,
   }, requester.$id);
 
   // 2. Set virtual permission in polymorphic flow.collaborators table
-  if (input.resourceType === 'note' || input.resourceType === 'project' || input.resourceType === 'secret' || input.resourceType === 'totp') {
+  if (resourceType === 'note' || resourceType === 'project' || resourceType === 'secret' || resourceType === 'totp') {
     const tables = createSystemTablesDB();
     const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
     const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+
+    const collabTypeFilter = resourceType === 'secret'
+      ? Query.or([
+          Query.equal('resourceType', 'secret'),
+          Query.equal('resourceType', 'credential'),
+        ])
+      : Query.equal('resourceType', resourceType);
 
     // Enforce 3-collaborator limit for FREE tier
     const existingCollabsRes = await tables.listRows({
@@ -181,17 +203,17 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
       tableId: COLLABORATORS_TABLE,
       queries: [
         Query.equal('resourceId', input.resourceId),
-        Query.equal('resourceType', input.resourceType)
+        collabTypeFilter,
       ] as any
     });
 
     const userTier = getUserSubscriptionTier(requester);
     if (!allowsCollaboratorSharing(userTier)) {
-      throw new Error(`Adding collaborators is a premium feature. Upgrade to PRO or TEAMS to collaborate on your ${input.resourceType}.`);
+      throw new Error(`Adding collaborators is a premium feature. Upgrade to PRO or TEAMS to collaborate on your ${resourceType}.`);
     }
     const maxCollabs = getCollaboratorCap(userTier);
     if (existingCollabsRes.rows.length >= maxCollabs) {
-      throw new Error(`Limit reached: PRO tier is limited to 3 collaborators per ${input.resourceType}. Upgrade to TEAMS for unlimited team members.`);
+      throw new Error(`Limit reached: PRO tier is limited to 3 collaborators per ${resourceType}. Upgrade to TEAMS for unlimited team members.`);
     }
 
     const existingCollab = await tables.listRows({
@@ -199,7 +221,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
       tableId: COLLABORATORS_TABLE,
       queries: [
         Query.equal('resourceId', input.resourceId),
-        Query.equal('resourceType', input.resourceType),
+        collabTypeFilter,
         Query.equal('userId', input.targetUserId)
       ] as any
     });
@@ -224,7 +246,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
         rowId: ID.unique(),
         data: {
           resourceId: input.resourceId,
-          resourceType: input.resourceType,
+          resourceType,
           userId: input.targetUserId,
           permission,
           invitedAt: new Date().toISOString(),
@@ -379,47 +401,69 @@ function extractCollaboratorsFromPermissions(permissions: string[]): Array<{ use
 
 export async function getResourceCollaboratorsSecure(input: {
     resourceId: string;
-    resourceType: 'note' | 'task' | 'project' | 'event' | 'form' | 'huddle' | 'call' | 'secret' | 'totp';
+    resourceType: 'note' | 'task' | 'project' | 'event' | 'form' | 'huddle' | 'call' | 'secret' | 'totp' | string;
     jwt?: string;
 }) {
     const requester = await getActor(input.jwt);
     if (!requester) throw new Error('Unauthorized');
 
-    const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : 
-                 input.resourceType === 'project' ? APPWRITE_CONFIG.DATABASES.CHAT :
-                 input.resourceType === 'secret' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
-                 input.resourceType === 'totp' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
+    if (!isValidAppwriteRowId(input.resourceId)) {
+        return { collaborators: [] };
+    }
+
+    const resourceType = normalizeCollaboratorResourceType(input.resourceType);
+    if (!resourceType) {
+        return { collaborators: [] };
+    }
+
+    const dbId = resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : 
+                 resourceType === 'project' ? APPWRITE_CONFIG.DATABASES.CHAT :
+                 resourceType === 'secret' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
+                 resourceType === 'totp' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
+                 resourceType === 'event' || resourceType === 'form' ? APPWRITE_CONFIG.DATABASES.FLOW :
+                 resourceType === 'huddle' || resourceType === 'call' ? APPWRITE_CONFIG.DATABASES.CHAT :
                  APPWRITE_CONFIG.DATABASES.FLOW;
-    const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : 
-                    input.resourceType === 'project' ? 'projects' :
-                    input.resourceType === 'event' ? (APPWRITE_CONFIG.TABLES.FLOW.EVENTS || 'events') :
-                    input.resourceType === 'form' ? (APPWRITE_CONFIG.TABLES.FLOW.FORMS || 'forms') :
-                    input.resourceType === 'huddle' ? 'huddles' :
-                    input.resourceType === 'call' ? 'calls' :
-                    input.resourceType === 'secret' ? 'credentials' :
-                    input.resourceType === 'totp' ? 'totpSecrets' :
+    const tableId = resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : 
+                    resourceType === 'project' ? 'projects' :
+                    resourceType === 'event' ? (APPWRITE_CONFIG.TABLES.FLOW.EVENTS || 'events') :
+                    resourceType === 'form' ? (APPWRITE_CONFIG.TABLES.FLOW.FORMS || 'forms') :
+                    resourceType === 'huddle' ? 'huddles' :
+                    resourceType === 'call' ? 'calls' :
+                    resourceType === 'secret' ? 'credentials' :
+                    resourceType === 'totp' ? 'totpSecrets' :
                     APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 
     const tables = createSystemTablesDB();
-    const row = await tables.getRow({
-      databaseId: dbId,
-      tableId: tableId,
-      rowId: input.resourceId,
-    });
+    let row: Record<string, unknown> | null = null;
+    try {
+      row = await tables.getRow({
+        databaseId: dbId,
+        tableId: tableId,
+        rowId: input.resourceId,
+      }) as Record<string, unknown>;
+    } catch {
+      return { collaborators: [] };
+    }
     
     let filteredCollabs: Array<{ userId: string, level: string, status: string, accepted: boolean }> = [];
     
-    if (input.resourceType === 'note' || input.resourceType === 'project' || input.resourceType === 'event' || input.resourceType === 'form' || input.resourceType === 'huddle' || input.resourceType === 'call' || input.resourceType === 'secret' || input.resourceType === 'totp') {
+    if (resourceType === 'note' || resourceType === 'project' || resourceType === 'event' || resourceType === 'form' || resourceType === 'huddle' || resourceType === 'call' || resourceType === 'secret' || resourceType === 'totp') {
         // Query polymorphic collaborators table as the single source of truth
         try {
             const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
             const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+            const collabTypeFilter = resourceType === 'secret'
+              ? Query.or([
+                  Query.equal('resourceType', 'secret'),
+                  Query.equal('resourceType', 'credential'),
+                ])
+              : Query.equal('resourceType', resourceType);
             const collabsRes = await tables.listRows({
                 databaseId: FLOW_DATABASE_ID,
                 tableId: COLLABORATORS_TABLE,
                 queries: [
                     Query.equal('resourceId', input.resourceId),
-                    Query.equal('resourceType', input.resourceType)
+                    collabTypeFilter,
                 ] as any
             });
 
@@ -450,8 +494,8 @@ export async function getResourceCollaboratorsSecure(input: {
     } else {
         // Fallback for tasks
         const rawPermissions = row.$permissions || [];
-        const collabMeta = extractCollaboratorsFromPermissions(rawPermissions);
-        const ownerId = String((row as any).userId || '').trim();
+        const collabMeta = extractCollaboratorsFromPermissions(rawPermissions as string[]);
+        const ownerId = resolveResourceOwnerId(row);
         filteredCollabs = collabMeta
             .filter(c => c.userId !== ownerId && c.userId !== requester.$id)
             .map(c => ({ userId: c.userId, level: c.level, status: 'accepted', accepted: true }));

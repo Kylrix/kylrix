@@ -83,6 +83,7 @@ import { useCallLauncher } from '@/context/CallLauncherContext';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAutosave } from '@/hooks/useAutosave';
+import { resolveResourceOwnerId, isValidAppwriteRowId } from '@/lib/utils/resource-ids';
 import { pickNoteAutosavePayload } from '@/lib/appwrite/note';
 import { attachObject } from '@/lib/actions/client-ops';
 import ProjectLinker from '@/components/projects/ProjectLinker';
@@ -387,7 +388,7 @@ export function NoteDetailSidebar({
   useEffect(() => {
     let active = true;
     const fetchCollaborators = async () => {
-      if (!liveNote.$id) return;
+      if (!liveNote.$id || !isValidAppwriteRowId(liveNote.$id)) return;
       setIsLoadingCollaborators(true);
       try {
         const { getResourceCollaborators } = await import('@/lib/actions/client-ops');

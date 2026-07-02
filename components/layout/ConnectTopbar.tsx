@@ -613,9 +613,16 @@ export default function ConnectTopbar({
 
   useEffect(() => {
     const handleGlobalShortcuts = (event: KeyboardEvent) => {
-      if (!event.ctrlKey) return;
+      if (!event.ctrlKey && !event.metaKey) return;
       
       const key = event.key.toLowerCase();
+
+      if (event.shiftKey && key === 'v') {
+        event.preventDefault();
+        handleCloseAll();
+        router.push('/vault');
+        return;
+      }
       
       // Load user-defined custom shortcuts if any
       let customShortcuts: any[] = [];
@@ -654,7 +661,6 @@ export default function ConnectTopbar({
         n: '/app',
         t: '/tags',
         x: '/settings',
-        v: '/vault',
         g: '/flow/goals',
         q: '/flow/forms',
         e: '/flow/events',
@@ -2148,7 +2154,7 @@ export default function ConnectTopbar({
       { key: 'Ctrl + N', desc: 'Navigate to Notes' },
       { key: 'Ctrl + T', desc: 'Navigate to Tags' },
       { key: 'Ctrl + X', desc: 'Navigate to Settings' },
-      { key: 'Ctrl + V', desc: 'Navigate to Vault' },
+      { key: 'Ctrl + Shift + V', desc: 'Navigate to Vault' },
       { key: 'Ctrl + G', desc: 'Navigate to Goals' },
       { key: 'Ctrl + Q', desc: 'Navigate to Forms' },
       { key: 'Ctrl + E', desc: 'Navigate to Events' },

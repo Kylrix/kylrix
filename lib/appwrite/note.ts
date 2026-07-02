@@ -282,7 +282,10 @@ function hydrateVirtualAttributes(doc: any): any {
  */
 function getNotePermissions(userId: string, isPublic: boolean) {
   const permissions = [
-    Permission.read(Role.user(userId))];
+    Permission.read(Role.user(userId)),
+    Permission.update(Role.user(userId)),
+    Permission.delete(Role.user(userId)),
+  ];
 
   if (isPublic) {
     // Role.any() includes guests, so Role.guests() is redundant.
@@ -766,7 +769,7 @@ const noteCreationService = createNoteCreationService({
   generateId: () => ID.unique(),
   getCurrentUser,
   createRow: async (databaseId, tableId, data, rowId, permissions) => {
-    return databases.createRow(databaseId, tableId, data as any, permissions) as any;
+    return databases.createRow(databaseId, tableId, rowId || ID.unique(), data as any, permissions) as any;
   },
   getNote,
   getNotePermissions,
@@ -3504,7 +3507,10 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     }
     
     baseQueries = [
-      Query.equal('userId', effectiveUserId)
+      Query.or([
+        Query.equal('userId', effectiveUserId),
+        Query.equal('creatorId', effectiveUserId),
+      ]),
     ];
   }
 

@@ -78,6 +78,7 @@ export function createNoteCreationService<NoteRow = any>(deps: NoteCreationConte
         ...noteData,
         id: docId,
         userId: user.$id,
+        creatorId: user.$id,
         createdAt: now,
         updatedAt: now,
         attachments: null,

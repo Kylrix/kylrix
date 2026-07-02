@@ -344,9 +344,13 @@ export async function listGhostNoteChats() {
 
 export async function getResourceCollaborators(params: { resourceId: string; resourceType: string }) {
   const jwt = await getJwt();
+  const normalizedType = (await import('@/lib/utils/resource-ids')).normalizeCollaboratorResourceType(params.resourceType);
+  if (!normalizedType) {
+    return { collaborators: [] };
+  }
   return getResourceCollaboratorsSecure({
     resourceId: params.resourceId,
-    resourceType: params.resourceType as 'note' | 'project' | 'task' | 'event' | 'form' | 'secret' | 'totp' | 'call' | 'huddle',
+    resourceType: normalizedType,
     jwt,
   });
 }
