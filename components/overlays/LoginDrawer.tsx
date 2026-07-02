@@ -11,7 +11,7 @@ import { getCurrentLoginMethod, isMfaRequiredError } from '@/lib/mfa';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { account } from '@/lib/appwrite/client';
-import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction, checkEmailAuthStatusAction } from '@/lib/actions/auth-actions';
+import { checkEmailAuthStatusAction } from '@/lib/actions/auth-actions';
 import { performNativePasskeyAuthentication } from '@/lib/webauthn-utils';
 
 type LoginStep = 'initial' | 'email' | 'otp';
@@ -137,13 +137,37 @@ export function LoginDrawer() {
       const hostname = window.location.hostname;
       const hostHeader = window.location.host;
       
-      const optionsRes = await getPasskeyLoginOptionsAction(undefined, hostname);
+      // 1. Fetch options via API Route
+      const optionsResponse = await fetch('/api/auth/passkey', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: undefined, hostname })
+      });
+      if (!optionsResponse.ok) {
+        throw new Error('Failed to fetch authentication options');
+      }
+      const optionsRes = await optionsResponse.json();
       if (!optionsRes.success || !optionsRes.options || !optionsRes.challengeToken) {
         throw new Error(optionsRes.error || 'Failed to generate passkey options');
       }
 
       const authResp = await performNativePasskeyAuthentication(optionsRes.options);
-      const verifyRes = await verifyPasskeyLoginAction(authResp, optionsRes.challengeToken, hostname, hostHeader);
+
+      // 2. Verify assertion response via API Route
+      const verifyResponse = await fetch('/api/auth/passkey', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          authResp,
+          challengeToken: optionsRes.challengeToken,
+          hostname,
+          hostHeader
+        })
+      });
+      if (!verifyResponse.ok) {
+        throw new Error('Passkey verification failed');
+      }
+      const verifyRes = await verifyResponse.json();
 
       if (!verifyRes.success || !verifyRes.token) {
         throw new Error(verifyRes.error || 'Passkey verification failed');
