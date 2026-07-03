@@ -21,6 +21,7 @@ const NewProjectDrawer = dynamic(() => import('./NewProjectDrawer').then(mod => 
 const SecureChatSetupDrawer = dynamic(() => import('./SecureChatSetupDrawer').then(mod => mod.SecureChatSetupDrawer), { ssr: false });
 const PasskeySetupPanel = dynamic(() => import('./PasskeySetup').then(mod => mod.PasskeySetupPanel), { ssr: false });
 const DeleteConfirmDrawer = dynamic(() => import('./DeleteConfirmDrawer').then(mod => mod.DeleteConfirmDrawer), { ssr: false });
+const SecurityConfirmDrawer = dynamic(() => import('./SecurityConfirmDrawer').then(mod => mod.SecurityConfirmDrawer), { ssr: false });
 const ProjectInviteDrawer = dynamic(() => import('./ProjectInviteDrawer').then(mod => mod.ProjectInviteDrawer), { ssr: false });
 const UnifiedFormContent = dynamic(() => import('../forms/UnifiedFormContent').then(mod => mod.UnifiedFormContent), { ssr: false });
 const GithubIntegrationDrawer = dynamic(() => import('./GithubIntegrationDrawer').then(mod => mod.GithubIntegrationDrawer), { ssr: false });
@@ -88,6 +89,8 @@ export function UnifiedBottomDrawer() {
             );
         case 'delete-confirm':
             return <DeleteConfirmDrawer />;
+        case 'security-confirm':
+            return <SecurityConfirmDrawer />;
         case 'project-invite':
             return <ProjectInviteDrawer />;
         case 'form':
@@ -118,7 +121,7 @@ export function UnifiedBottomDrawer() {
   if (!content) return null;
 
   // Authoritative Drawer Wrapper with Rigid Viewport Isolation
-  if (['secure-chat-setup', 'passkey-setup', 'delete-confirm', 'project-invite', 'project-join-request-confirm'].includes(activeContent)) {
+  if (['secure-chat-setup', 'passkey-setup', 'delete-confirm', 'security-confirm', 'project-invite', 'project-join-request-confirm'].includes(activeContent)) {
     return (
         <>
             {/* Mobile-Only Authoritative Bottom Drawer */}

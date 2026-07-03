@@ -674,7 +674,14 @@ export default function SettingsPage() {
                                         <>
                                             {isUnlocked && (
                                                 <button
-                                                    onClick={() => promptSudo('upgrade', true)}
+                                                    onClick={() => {
+                                                        openDrawer('security-confirm', {
+                                                            flow: 'change-password',
+                                                            onAfterConfirmations: () => {
+                                                                void promptSudo('upgrade', true);
+                                                            },
+                                                        });
+                                                    }}
                                                     className="h-10 px-4 rounded-xl border border-white/10 hover:border-white/20 bg-white/2 hover:bg-white/5 text-white/80 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all flex-1 sm:flex-initial"
                                                 >
                                                     Change Password
@@ -682,13 +689,11 @@ export default function SettingsPage() {
                                             )}
                                             <button
                                                 onClick={() => {
-                                                    openDrawer('delete-confirm', {
-                                                        title: 'Reset Vault?',
-                                                        description: 'WARNING: Resetting will permanently wipe all encrypted data from the vault (passwords, TOTPs, identities). This action is irreversible. Are you sure you want to proceed?',
-                                                        confirmLabel: 'Proceed to Reset',
-                                                        onConfirm: () => {
-                                                            promptSudo('reset', true);
-                                                        }
+                                                    openDrawer('security-confirm', {
+                                                        flow: 'vault-wipe',
+                                                        onAfterConfirmations: () => {
+                                                            void promptSudo('reset', true);
+                                                        },
                                                     });
                                                 }}
                                                 className="h-10 px-4 rounded-xl border border-red-500/20 hover:border-red-500/30 bg-red-500/5 hover:bg-red-500/10 text-red-500 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all flex-1 sm:flex-initial"
