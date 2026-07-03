@@ -36,7 +36,7 @@ const PasskeyReminderDrawer = dynamic(() => import('./overlays/PasskeyReminderDr
 const Overlay = dynamic(() => import('@/components/ui/Overlay'), { ssr: false });
 const DynamicSidebar = dynamic(() => import('./ui/DynamicSidebarPanel').then(m => m.DynamicSidebar), { ssr: false });
 const RightSidebar = dynamic(() => import('./layout/RightSidebar'), { ssr: false });
-const AgenticDrawer = dynamic(() => import('./overlays/AgenticDrawer').then(m => m.AgenticDrawer), { ssr: false });
+const AgenticDrawer = dynamic(() => import('./overlays/AgenticDrawer').then((m) => m.AgenticDrawer), { ssr: false });
 const UnifiedLeftSidebar = dynamic(() => import('./UnifiedLeftSidebar').then(m => m.UnifiedLeftSidebar), { ssr: false });
 const AccountHealthDrawers = dynamic(() => import('./onboarding/AccountHealthDrawers').then(m => m.AccountHealthDrawers), { ssr: false });
 

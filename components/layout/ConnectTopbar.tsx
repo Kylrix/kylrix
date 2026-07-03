@@ -211,7 +211,7 @@ export default function ConnectTopbar({
 }: ConnectTopbarProps) {
   const { user, logout, isAuthenticating } = useAuth();
   const { openWallet } = useWalletOverlay();
-  const { openAgenticDrawer } = useAgenticDrawer();
+  const { openAgenticDrawer, closeAgenticDrawer } = useAgenticDrawer();
   const { open: openUnified } = useUnifiedDrawer();
   const { openProUpgrade } = useProUpgrade();
   const { currentTier } = useSubscription();
@@ -414,7 +414,18 @@ export default function ConnectTopbar({
     setNotificationsOpen(false);
     setNotifHint(null);
     setShortcutsOpen(false);
-  }, []);
+    closeAgenticDrawer();
+  }, [closeAgenticDrawer]);
+
+  const openAgenticFromTopbar = useCallback(() => {
+    setProfileMenuAnchorEl(null);
+    setAppMenuAnchorEl(null);
+    setSearchOpen(false);
+    setNotificationsOpen(false);
+    setNotifHint(null);
+    setShortcutsOpen(false);
+    openAgenticDrawer();
+  }, [openAgenticDrawer]);
 
   const toggleNotifications = useCallback(() => {
     if (!notificationsOpen) {
@@ -691,7 +702,7 @@ export default function ConnectTopbar({
           setProfileMenuAnchorEl(document.body);
           break;
         case 'agent':
-          openAgenticDrawer();
+          openAgenticFromTopbar();
           break;
         case 'shortcuts':
           setShortcutsOpen(true);
@@ -703,7 +714,7 @@ export default function ConnectTopbar({
 
     window.addEventListener('keydown', handleGlobalShortcuts, true);
     return () => window.removeEventListener('keydown', handleGlobalShortcuts, true);
-  }, [handleCloseAll, openSearch, openAgenticDrawer, router]);
+  }, [handleCloseAll, openSearch, openAgenticFromTopbar, router]);
 
   const renderNotificationDrawer = () => {
     if (!notificationsOpen) return null;
@@ -2525,7 +2536,7 @@ export default function ConnectTopbar({
               <Stack direction="row" alignItems="center" spacing={1.5} sx={{ flexShrink: 0 }}>
                 {user ? (
                   <>
-                    <IconButton onClick={() => openAgenticDrawer()} sx={{ color: appAccent, bgcolor: '#0A0908', border: '1px solid', borderColor: alpha(appAccent, 0.2), borderRadius: '50%', width: 38, height: 38, boxShadow: `0 8px 22px ${alpha(appAccent, 0.15)}`, '&:hover': { bgcolor: '#111' } }}>
+                    <IconButton onClick={openAgenticFromTopbar} sx={{ color: appAccent, bgcolor: '#0A0908', border: '1px solid', borderColor: alpha(appAccent, 0.2), borderRadius: '50%', width: 38, height: 38, boxShadow: `0 8px 22px ${alpha(appAccent, 0.15)}`, '&:hover': { bgcolor: '#111' } }}>
                       <Bot size={16} strokeWidth={2} />
                     </IconButton>
                     <ButtonBase onClick={openProfileMenu} sx={{ borderRadius: '50%', transition: 'all 0.2s', '&:hover': { transform: 'scale(1.05)' } }}>
