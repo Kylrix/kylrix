@@ -512,8 +512,11 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
       disablePortal={true}
       PaperProps={{
         sx: {
+          display: 'flex',
+          flexDirection: 'column',
           height: 'auto',
-          maxHeight: '85vh',
+          maxHeight: '60vh',
+          overflow: 'hidden',
           borderTopLeftRadius: '24px',
           borderTopRightRadius: '24px',
           bgcolor: '#161514',
@@ -529,7 +532,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
       }}
     >
       {/* Header */}
-      <div className="px-5 py-4 flex justify-between items-center border-b border-white/5">
+      <div className="px-5 py-4 flex justify-between items-center border-b border-white/5 shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20">
             <TelegramIcon sx={{ fontSize: 16 }} />
@@ -546,8 +549,8 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
         </button>
       </div>
 
-      {/* Main Content */}
-      <div className="p-5 flex flex-col gap-4 overflow-y-auto max-h-[calc(85vh-70px)]">
+      {/* Main Content — scrolls inside the 60vh cap */}
+      <div className="p-5 flex flex-col gap-4 overflow-y-auto flex-1 min-h-0">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
             <CircularProgress sx={{ color: '#F59E0B' }} size={28} />
