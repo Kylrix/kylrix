@@ -456,7 +456,7 @@ export default function SudoModal({
         <>
             {/* Backdrop */}
             <div 
-                className="fixed inset-0 z-[1298] bg-black/60 backdrop-blur-sm transition-all duration-300 animate-fadeIn"
+                className="fixed inset-0 z-[99998] bg-black/60 backdrop-blur-sm transition-all duration-300 animate-fadeIn"
                 onClick={cancelHandler}
             />
 
@@ -467,7 +467,7 @@ export default function SudoModal({
                     height: isDesktop ? 'calc(100vh - 88px)' : 'auto',
                     maxHeight: isDesktop ? 'calc(100vh - 88px)' : 'calc(100vh - 12px)',
                 }}
-                className={`fixed z-[1299] bg-[#161412] border-white/5 shadow-2xl transition-all duration-300 flex flex-col overflow-hidden bottom-0 right-0 w-full sm:w-[420px] rounded-t-[32px] sm:rounded-tr-none sm:rounded-l-[32px] border ${
+                className={`fixed z-[99999] bg-[#161412] border-white/5 shadow-2xl transition-all duration-300 flex flex-col overflow-hidden bottom-0 right-0 w-full sm:w-[420px] rounded-t-[32px] sm:rounded-tr-none sm:rounded-l-[32px] border ${
                     isDesktop ? 'animate-slideInRight' : 'animate-slideInUp'
                 }`}
             >

@@ -1575,7 +1575,12 @@ const SetupCountdownDrawer = ({
                 if (typeof window !== 'undefined') {
                     localStorage.setItem('kylrix_connect_active_tab', 'secure');
                 }
-                router.replace(`/vault/masterpass?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+                requestSudo({
+                    intent: 'initialize',
+                    onSuccess: () => {
+                        router.replace(callbackUrl);
+                    }
+                });
             }
             return;
         }

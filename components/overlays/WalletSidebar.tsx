@@ -738,9 +738,12 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                     <Button
                         variant="contained"
                         onClick={() => {
-                            const baseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
-                            const callbackUrl = encodeURIComponent(baseUrl + '?openWallet=true');
-                            router.push(`/vault/masterpass?callbackUrl=${callbackUrl}`);
+                            requestSudo({
+                                intent: 'initialize',
+                                onSuccess: async () => {
+                                    await refreshWallets();
+                                }
+                            });
                         }}
                         sx={{
                             bgcolor: 'white',
@@ -760,15 +763,21 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                     </Button>
                 </Box>
             ) : !isUnlocked ? (
-                <Box sx={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    textAlign: 'center',
-                    px: 2
-                }}>
+                <Box 
+                    onClick={handleUnlock}
+                    sx={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center',
+                        px: 2,
+                        cursor: 'pointer',
+                        transition: 'opacity 0.2s',
+                        '&:hover': { opacity: 0.8 }
+                    }}
+                >
                     <Box sx={{
                         width: 64,
                         height: 64,
@@ -787,28 +796,8 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                         Wallet is Locked
                     </Typography>
                     <Typography variant="body2" sx={{ color: MUTED, mb: 4, maxWidth: 240, fontFamily: 'var(--font-satoshi)' }}>
-                        Unlock your secure vault and Connect will auto-provision your main wallet addresses with zero extra input.
+                        Vault is locked. Click anywhere here to prompt the unlock screen and auto-provision your wallet.
                     </Typography>
-                    <Button
-                        variant="contained"
-                        onClick={handleUnlock}
-                        startIcon={<Unlock size={18} />}
-                        sx={{
-                            bgcolor: ACCENT,
-                            color: '#000',
-                            fontWeight: 900,
-                            borderRadius: '14px',
-                            px: 4,
-                            py: 1.5,
-                            textTransform: 'none',
-                            fontFamily: 'var(--font-satoshi)',
-                            border: `1px solid ${EDGE}`,
-                            '&:hover': { bgcolor: '#575CF0', transform: 'translateY(-1px)' },
-                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                        }}
-                    >
-                        Unlock Wallet
-                    </Button>
                 </Box>
             ) : loading ? (
                 <Box sx={{

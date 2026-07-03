@@ -30,6 +30,7 @@ import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { PasskeySetup } from '@/components/overlays/PasskeySetup';
+import { useSudo } from '@/context/SudoContext';
 
 const SURFACE = '#161412';
 const SURFACE_HOVER = '#1C1A18';
@@ -45,6 +46,7 @@ export function AccountHealthDrawers() {
     const { user } = useAuth();
     const { activeContent } = useUnifiedDrawer();
     const { currentStep, dismissStep, profile, triggerCheck } = useSetup();
+    const { requestSudo } = useSudo();
 
     const [newHandle, setNewHandle] = useState('');
     const [displayName, setDisplayName] = useState('');
@@ -109,11 +111,12 @@ export function AccountHealthDrawers() {
     }, [newHandle, canonicalSavedHandle, currentStep]);
 
     const openVaultSetup = () => {
-        const callback =
-            typeof window !== 'undefined'
-                ? encodeURIComponent(window.location.href)
-                : encodeURIComponent('/');
-        router.push(`/vault/masterpass?callbackUrl=${callback}`);
+        requestSudo({
+            intent: 'initialize',
+            onSuccess: () => {
+                triggerCheck();
+            }
+        });
     };
 
     const commitUsername = async (normalizedHandle: string, displayTrim: string) => {
