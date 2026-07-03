@@ -40,58 +40,58 @@ const ZONE_META: Record<
   note: {
     title: 'Ideas',
     subtitle: 'Capture, refine, and turn notes into action.',
-    placeholder: 'Draft an outline, summarize, or reshape a note…',
+    placeholder: 'Compose, rewrite, or ask anything about your notes…',
     accentApp: 'note',
-    systemHint: 'User is in Ideas (notes). Help with writing, summarizing, tagging, and turning notes into tasks.',
+    systemHint: 'User is in Ideas (notes). Help compose notes, summarize, tag, and convert ideas into tasks.',
   },
   flow: {
     title: 'Flow',
     subtitle: 'Plan tasks, goals, and what happens next.',
-    placeholder: 'Prioritize work, plan the week, or break down a goal…',
+    placeholder: 'Schedule work, prioritize, or break down a goal…',
     accentApp: 'flow',
-    systemHint: 'User is in Flow (tasks, goals, calendar). Help with prioritization, scheduling, and productivity.',
+    systemHint: 'User is in Flow (tasks, goals, calendar). Help schedule tasks, prioritize, and plan execution.',
   },
   vault: {
     title: 'Vault',
     subtitle: 'Keep logins safe and easy to manage.',
-    placeholder: 'Check password strength, suggest secrets, or audit entries…',
+    placeholder: 'Audit secrets, generate passwords, or organize labels…',
     accentApp: 'vault',
-    systemHint: 'User is in Vault (passwords and secure items). Help with security hygiene and credential management.',
+    systemHint: 'User is in Vault. Help with password hygiene, new secrets, and secure organization.',
   },
   connect: {
     title: 'Connect',
     subtitle: 'Messages, calls, and team coordination.',
-    placeholder: 'Draft a reply, plan a follow-up, or summarize a thread…',
+    placeholder: 'Draft a message, plan a follow-up, or summarize a thread…',
     accentApp: 'connect',
-    systemHint: 'User is in Connect (chat and calls). Help with communication drafts and coordination.',
+    systemHint: 'User is in Connect. Help draft messages, plan follow-ups, and coordinate people.',
   },
   projects: {
     title: 'Projects',
     subtitle: 'Ship work with linked notes, tasks, and people.',
-    placeholder: 'Summarize status, plan next steps, or draft updates…',
+    placeholder: 'Research scope, draft updates, or plan next milestones…',
     accentApp: 'root',
-    systemHint: 'User is in Projects. Help with project status, collaborators, and linking workspace objects.',
+    systemHint: 'User is in Projects. Help with scope research, status, collaborators, and delivery planning.',
   },
   accounts: {
     title: 'Accounts',
     subtitle: 'Profile, billing, and identity settings.',
     placeholder: 'Ask about your plan, profile, or account setup…',
     accentApp: 'accounts',
-    systemHint: 'User is in Accounts. Help with profile, billing, and identity questions.',
+    systemHint: 'User is in Accounts. Help with profile, billing, and identity.',
   },
   settings: {
     title: 'Settings',
     subtitle: 'Tune alerts, security, and workspace preferences.',
     placeholder: 'Configure notifications, security, or preferences…',
     accentApp: 'accounts',
-    systemHint: 'User is in Settings. Help with configuration and preferences.',
+    systemHint: 'User is in Settings. Help with configuration and security preferences.',
   },
   agents: {
     title: 'Smart System',
     subtitle: 'Run agents and automate recurring work.',
-    placeholder: 'Describe what the system should handle for you…',
+    placeholder: 'Design automations or describe what the system should handle…',
     accentApp: 'root',
-    systemHint: 'User is managing agents. Help design goals, automations, and execution plans.',
+    systemHint: 'User is managing agents. Help design goals, routines, and automations.',
   },
   workspace: {
     title: 'Workspace',
@@ -111,14 +111,18 @@ function resolveZone(pathname: string): AgenticZone {
   if (pathname.startsWith('/accounts')) return 'accounts';
   if (pathname.startsWith('/settings/agents') || pathname.startsWith('/agents')) return 'agents';
   if (pathname.startsWith('/settings')) return 'settings';
+  if (pathname.startsWith('/tags')) return 'workspace';
   return 'workspace';
 }
 
 function extractResourceId(pathname: string, zone: AgenticZone): string | undefined {
   const segments = pathname.split('/').filter(Boolean);
   if (zone === 'projects' && segments[0] === 'projects' && segments[1]) return segments[1];
-  if (zone === 'note' && segments[0] === 'app' && segments[1] && segments[1] !== 'shared') return segments[1];
-  if (zone === 'connect' && segments[1]) return segments[1];
+  if (zone === 'note' && segments[0] === 'app' && segments[1] && !['shared', 'landing', 'admin'].includes(segments[1])) {
+    return segments[1];
+  }
+  if (zone === 'connect' && segments[0] === 'connect' && segments[1]) return segments[1];
+  if (zone === 'flow' && segments[0] === 'flow' && segments[1]) return segments[1];
   return undefined;
 }
 
@@ -134,14 +138,26 @@ export function resolveAgenticPageContext(pathname: string): AgenticPageContext 
 
   if (zone === 'projects' && resourceId) {
     title = 'Project room';
-    subtitle = 'Status, people, and linked work in one place.';
-    systemHint = `User is viewing project ${resourceId}. Help with status summaries, collaborator updates, and next steps.`;
+    subtitle = 'Scope, people, and linked work in one place.';
+    systemHint = `User is viewing project ${resourceId}. Help research scope, status, collaborators, and milestones.`;
   }
 
   if (zone === 'note' && resourceId) {
     title = 'Note editor';
     subtitle = 'Polish this note or branch it into tasks.';
-    systemHint = `User is editing note ${resourceId}. Help rewrite, summarize, extract tasks, and improve clarity.`;
+    systemHint = `User is editing note ${resourceId}. Help compose, rewrite, summarize, and extract tasks.`;
+  }
+
+  if (zone === 'flow' && route.includes('/goals')) {
+    title = 'Goals';
+    subtitle = 'Break goals into scheduled work.';
+    systemHint = 'User is in Flow goals. Help define outcomes and schedule supporting tasks.';
+  }
+
+  if (zone === 'flow' && route.includes('/events')) {
+    title = 'Events';
+    subtitle = 'Plan moments and follow-ups.';
+    systemHint = 'User is in Flow events. Help schedule events and related tasks.';
   }
 
   return {
@@ -163,38 +179,58 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
     case 'note':
       return [
         {
-          id: 'note-outline',
-          label: 'Draft outline',
-          description: 'Structure a new idea fast',
+          id: 'note-compose',
+          label: 'Compose a note',
+          description: 'Start a fresh idea with structure',
+          icon: 'file-plus',
+          kind: 'prompt',
+          prompt: 'Help me compose a new note. Ask one clarifying question, then draft a clear title and body with sections.',
+        },
+        {
+          id: 'note-rewrite',
+          label: 'Polish this note',
+          description: 'Tighten tone and clarity',
           icon: 'pen-line',
-          kind: 'instant',
-          prompt: 'Create a tight outline for a new idea note with 4–6 sections and starter bullets.',
-          autoRun: true,
+          kind: 'prompt',
+          prompt: resourceId
+            ? `Rewrite note ${resourceId} for clarity. Keep the meaning, improve flow, and suggest a stronger title.`
+            : 'Rewrite my latest note for clarity. Keep the meaning and suggest a stronger title.',
         },
         {
           id: 'note-summarize',
-          label: 'Summarize pinned',
-          description: 'Condense what matters now',
+          label: 'Summarize',
+          description: 'Key points in bullets',
           icon: 'sparkles',
           kind: 'instant',
-          prompt: 'Summarize my most important pinned notes into 5 bullet points with suggested next actions.',
+          prompt: resourceId
+            ? `Summarize note ${resourceId} into 5 bullets with next actions.`
+            : 'Summarize my pinned notes into 5 bullets with next actions.',
           autoRun: true,
         },
         {
-          id: 'note-to-tasks',
-          label: 'Turn into tasks',
-          description: 'Extract actionable steps',
+          id: 'note-tasks',
+          label: 'Extract tasks',
+          description: 'Turn ideas into Flow work',
           icon: 'list-todo',
           kind: 'instant',
           prompt: resourceId
-            ? `From note ${resourceId}, extract a prioritized task list with owners and due hints.`
-            : 'From my latest notes, extract a prioritized task list with owners and due hints.',
+            ? `From note ${resourceId}, extract a prioritized task list with due hints.`
+            : 'From my latest notes, extract a prioritized task list with due hints.',
+          autoRun: true,
+        },
+        {
+          id: 'note-tags',
+          label: 'Suggest tags',
+          description: 'Organize and find faster',
+          icon: 'tags',
+          kind: 'instant',
+          prompt: 'Suggest 5 practical tags for my recent notes and explain when to use each.',
           autoRun: true,
         },
         {
           id: 'note-shared',
-          label: 'Open shared',
-          description: 'Browse shared notes',
+          label: 'Shared notes',
+          description: 'Open collaboration hub',
           icon: 'share-2',
           kind: 'navigate',
           href: '/app/shared',
@@ -203,6 +239,14 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
 
     case 'flow':
       return [
+        {
+          id: 'flow-schedule',
+          label: 'Schedule a task',
+          description: 'Pick time and priority',
+          icon: 'calendar-plus',
+          kind: 'prompt',
+          prompt: 'Help me schedule a new task with title, priority, due date, and a realistic time block this week.',
+        },
         {
           id: 'flow-week',
           label: 'Plan my week',
@@ -222,26 +266,59 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           autoRun: true,
         },
         {
+          id: 'flow-goal',
+          label: 'Break down a goal',
+          description: 'Milestones and tasks',
+          icon: 'target',
+          kind: 'prompt',
+          prompt: 'Help me break a goal into milestones, weekly targets, and the first 3 tasks to start today.',
+        },
+        {
           id: 'flow-focus',
           label: 'Today focus',
-          description: 'Pick the next 3 moves',
-          icon: 'target',
+          description: 'Next 3 moves',
+          icon: 'zap',
           kind: 'instant',
           prompt: 'Pick the 3 highest-leverage tasks I should finish today and explain why.',
           autoRun: true,
         },
         {
-          id: 'flow-open',
-          label: 'Open Flow',
-          description: 'Jump to task board',
-          icon: 'kanban',
+          id: 'flow-goals',
+          label: 'Open goals',
+          description: 'Review outcomes',
+          icon: 'flag',
           kind: 'navigate',
-          href: '/flow',
+          href: '/flow/goals',
+        },
+        {
+          id: 'flow-events',
+          label: 'Plan an event',
+          description: 'Moments and RSVPs',
+          icon: 'calendar',
+          kind: 'navigate',
+          href: '/flow/events',
         },
       ];
 
     case 'vault':
       return [
+        {
+          id: 'vault-add',
+          label: 'Add a login',
+          description: 'Open new secret form',
+          icon: 'key-round',
+          kind: 'navigate',
+          href: '/vault/credentials/new',
+        },
+        {
+          id: 'vault-password',
+          label: 'Generate password',
+          description: 'Strong random secret',
+          icon: 'sparkles',
+          kind: 'instant',
+          prompt: 'Generate a 20-character password with symbols and a memorable passphrase alternative.',
+          autoRun: true,
+        },
         {
           id: 'vault-audit',
           label: 'Security check',
@@ -249,15 +326,6 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           icon: 'shield-check',
           kind: 'instant',
           prompt: 'Give a vault hygiene checklist: reused passwords, stale entries, and rotation priorities.',
-          autoRun: true,
-        },
-        {
-          id: 'vault-password',
-          label: 'New password',
-          description: 'Strong random secret',
-          icon: 'key-round',
-          kind: 'instant',
-          prompt: 'Generate a 20-character password with symbols and a memorable passphrase alternative.',
           autoRun: true,
         },
         {
@@ -270,9 +338,17 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           autoRun: true,
         },
         {
+          id: 'vault-totp',
+          label: 'TOTP help',
+          description: 'Codes and rotation',
+          icon: 'smartphone',
+          kind: 'prompt',
+          prompt: 'Explain how to safely store and rotate TOTP codes in my vault.',
+        },
+        {
           id: 'vault-open',
           label: 'Open Vault',
-          description: 'Manage secrets',
+          description: 'Browse all secrets',
           icon: 'lock',
           kind: 'navigate',
           href: '/vault',
@@ -282,43 +358,84 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
     case 'connect':
       return [
         {
-          id: 'connect-reply',
-          label: 'Draft reply',
-          description: 'Clear, friendly tone',
+          id: 'connect-compose',
+          label: 'Compose message',
+          description: 'Draft a clear reply',
           icon: 'message-square',
           kind: 'prompt',
-          prompt: 'Draft a concise reply that acknowledges the message and proposes next steps:',
+          prompt: resourceId
+            ? `Draft a concise reply for chat ${resourceId}. Ask what tone I want, then write the message.`
+            : 'Draft a concise, friendly message. Ask what context I need, then write the reply.',
         },
         {
           id: 'connect-followup',
           label: 'Follow-up plan',
-          description: 'Who does what by when',
+          description: 'Owners and deadlines',
           icon: 'users',
           kind: 'instant',
           prompt: 'Create a follow-up plan from recent conversations with owners and deadlines.',
           autoRun: true,
         },
         {
+          id: 'connect-summarize',
+          label: 'Thread summary',
+          description: 'Catch up fast',
+          icon: 'sparkles',
+          kind: 'instant',
+          prompt: resourceId
+            ? `Summarize chat ${resourceId}: decisions, blockers, and open questions.`
+            : 'Summarize the latest chat activity into decisions, blockers, and open questions.',
+          autoRun: true,
+        },
+        {
+          id: 'connect-meeting',
+          label: 'Meeting notes',
+          description: 'Turn chat into actions',
+          icon: 'pen-line',
+          kind: 'prompt',
+          prompt: 'Turn this conversation into meeting notes with decisions, owners, and next tasks.',
+        },
+        {
           id: 'connect-huddle',
           label: 'Start huddle',
-          description: 'Open live calls',
+          description: 'Live call room',
           icon: 'video',
           kind: 'navigate',
           href: '/connect/calls',
         },
         {
-          id: 'connect-summarize',
-          label: 'Thread summary',
-          description: 'Catch up in seconds',
-          icon: 'sparkles',
-          kind: 'instant',
-          prompt: 'Summarize the latest chat activity into decisions, blockers, and open questions.',
-          autoRun: true,
+          id: 'connect-chats',
+          label: 'Open chats',
+          description: 'Continue conversations',
+          icon: 'messages',
+          kind: 'navigate',
+          href: '/connect/chats',
         },
       ];
 
     case 'projects':
       return [
+        {
+          id: 'project-scope',
+          label: 'Research scope',
+          description: 'Define boundaries and risks',
+          icon: 'search',
+          kind: 'prompt',
+          prompt: resourceId
+            ? `Research and outline the scope for project ${resourceId}: goals, deliverables, risks, and open questions.`
+            : 'Research and outline scope for my most active project: goals, deliverables, risks, and open questions.',
+        },
+        {
+          id: 'project-milestones',
+          label: 'Plan milestones',
+          description: 'Sequence delivery',
+          icon: 'milestone',
+          kind: 'instant',
+          prompt: resourceId
+            ? `Propose 4–6 milestones for project ${resourceId} with owners and target dates.`
+            : 'Propose milestones for my top active project with owners and target dates.',
+          autoRun: true,
+        },
         {
           id: 'project-status',
           label: 'Status snapshot',
@@ -326,14 +443,14 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           icon: 'bar-chart-3',
           kind: 'instant',
           prompt: resourceId
-            ? `Summarize project ${resourceId}: progress, risks, blockers, and recommended next 3 actions.`
+            ? `Summarize project ${resourceId}: progress, risks, blockers, and next 3 actions.`
             : 'Summarize my active projects with progress, risks, and next actions.',
           autoRun: true,
         },
         {
           id: 'project-update',
           label: 'Draft update',
-          description: 'Share with the team',
+          description: 'Share with collaborators',
           icon: 'send',
           kind: 'instant',
           prompt: resourceId
@@ -343,16 +460,16 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
         },
         {
           id: 'project-link',
-          label: 'Link objects',
+          label: 'Link work',
           description: 'Notes, tasks, secrets',
           icon: 'link-2',
           kind: 'navigate',
           href: resourceId ? `/projects/${resourceId}` : '/projects',
         },
         {
-          id: 'project-list',
-          label: 'All projects',
-          description: 'Browse portfolio',
+          id: 'project-new',
+          label: 'New project',
+          description: 'Start a workspace',
           icon: 'folder-kanban',
           kind: 'navigate',
           href: '/projects',
@@ -362,29 +479,38 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
     case 'settings':
       return [
         {
+          id: 'settings-security',
+          label: 'Security review',
+          description: 'Passkeys and vault',
+          icon: 'shield',
+          kind: 'instant',
+          prompt: 'Give a short security checklist: passkeys, vault lock, and alert settings.',
+          autoRun: true,
+        },
+        {
           id: 'settings-telegram',
           label: 'Telegram alerts',
-          description: 'Fine-tune notifications',
+          description: 'Notification rules',
           icon: 'bell',
           kind: 'navigate',
           href: '/settings',
         },
         {
-          id: 'settings-security',
-          label: 'Security review',
-          description: 'Passkeys and sudo',
-          icon: 'shield',
-          kind: 'instant',
-          prompt: 'Give a short security checklist for my Kylrix account: passkeys, sudo mode, and alert settings.',
-          autoRun: true,
-        },
-        {
           id: 'settings-agents',
-          label: 'Manage agents',
-          description: 'Automations hub',
+          label: 'Smart system',
+          description: 'Agents and automations',
           icon: 'bot',
           kind: 'navigate',
           href: '/settings/agents',
+        },
+        {
+          id: 'settings-profile',
+          label: 'Profile tips',
+          description: 'Public identity polish',
+          icon: 'user',
+          kind: 'instant',
+          prompt: 'Suggest improvements for my profile display name, bio, and discoverability.',
+          autoRun: true,
         },
       ];
 
@@ -392,19 +518,28 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
       return [
         {
           id: 'agents-goal',
-          label: 'Design agent goal',
-          description: 'Clear mission statement',
+          label: 'Design agent',
+          description: 'Mission and triggers',
           icon: 'compass',
           kind: 'prompt',
-          prompt: 'Help me write a focused agent goal that automates:',
+          prompt: 'Help me design an agent: goal, trigger, inputs, and success criteria for:',
         },
         {
           id: 'agents-routine',
-          label: 'Daily routine',
-          description: 'Morning triage agent',
-          icon: 'refresh-cw',
+          label: 'Morning routine',
+          description: 'Daily triage automation',
+          icon: 'sunrise',
           kind: 'instant',
-          prompt: 'Propose a daily triage agent routine for tasks, notes, and inbox follow-ups.',
+          prompt: 'Propose a morning triage agent routine across notes, tasks, and inbox follow-ups.',
+          autoRun: true,
+        },
+        {
+          id: 'agents-audit',
+          label: 'Audit agents',
+          description: 'What is running now',
+          icon: 'bot',
+          kind: 'instant',
+          prompt: 'List what my agents should monitor and suggest one new automation I am missing.',
           autoRun: true,
         },
         {
@@ -437,10 +572,34 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           prompt: 'Suggest improvements for my public profile and display name.',
           autoRun: true,
         },
+        {
+          id: 'accounts-billing',
+          label: 'Billing help',
+          description: 'Subscription questions',
+          icon: 'wallet',
+          kind: 'prompt',
+          prompt: 'Answer questions about my Kylrix plan, billing cycle, and upgrade options.',
+        },
       ];
 
     default:
       return [
+        {
+          id: 'ws-compose-note',
+          label: 'Compose a note',
+          description: 'Start in Ideas',
+          icon: 'file-plus',
+          kind: 'prompt',
+          prompt: 'Help me compose a new note with a title, outline, and first draft.',
+        },
+        {
+          id: 'ws-schedule-task',
+          label: 'Schedule a task',
+          description: 'Add to Flow',
+          icon: 'calendar-plus',
+          kind: 'prompt',
+          prompt: 'Help me schedule a task with priority, due date, and time block.',
+        },
         {
           id: 'ws-brief',
           label: 'Morning brief',
@@ -452,7 +611,7 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
         },
         {
           id: 'ws-notes',
-          label: 'Go to Ideas',
+          label: 'Ideas',
           description: 'Notes workspace',
           icon: 'lightbulb',
           kind: 'navigate',
@@ -460,7 +619,7 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
         },
         {
           id: 'ws-flow',
-          label: 'Go to Flow',
+          label: 'Flow',
           description: 'Tasks and goals',
           icon: 'workflow',
           kind: 'navigate',
@@ -468,11 +627,19 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
         },
         {
           id: 'ws-vault',
-          label: 'Go to Vault',
+          label: 'Vault',
           description: 'Secure storage',
           icon: 'lock',
           kind: 'navigate',
           href: '/vault',
+        },
+        {
+          id: 'ws-projects',
+          label: 'Projects',
+          description: 'Delivery rooms',
+          icon: 'folder-kanban',
+          kind: 'navigate',
+          href: '/projects',
         },
       ];
   }

@@ -1,29 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-    Box, 
-    Typography, 
-    Button, 
-    Stack, 
-    Divider,
-    CircularProgress,
-    TextField,
-    ButtonBase,
-    Radio,
-    RadioGroup,
-    FormControlLabel
-} from '@/lib/openbricks/primitives';
-import { 
-    ArrowLeft,
-    Lock, 
-    Shield, 
-    ChevronRight,
-    Key,
-    Bot,
-    Cpu,
-    ArrowUpRight
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Bot,
+  Check,
+  ChevronRight,
+  Cpu,
+  Key,
+  Lock,
+  RefreshCw,
+  Shield,
 } from 'lucide-react';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
@@ -31,453 +20,337 @@ import { useSudo } from '@/context/SudoContext';
 import { toast } from 'react-hot-toast';
 import { BYOKManager } from '@/lib/ai/byok';
 
-const fontUi = 'var(--font-satoshi)';
-const fontDisplay = 'var(--font-clash)';
-const fontMono = 'var(--font-mono)';
-
-// Opaque OpenBricks Colors
-const VOID = '#0A0908';
-const SURFACE_ASH = '#161412';
-const INSET_ASH = '#1C1A18';
-const BORDER_HAIRLINE = '#34322F';
-const TEXT_MUTED = '#9B9691';
-const SYSTEM_PRIMARY = '#6366F1';
-const SYSTEM_SUCCESS = '#10B981';
-
-const BORDER = `1px solid ${BORDER_HAIRLINE}`;
-const BRAND_TRANSITION = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+const FRAMEWORKS = [
+  {
+    id: 'kylrix',
+    title: 'Kylrix Internal',
+    description: 'Native stack for tasks, notes, and calendar automations.',
+    status: 'Active' as const,
+  },
+  {
+    id: 'openclaw',
+    title: 'OpenClaw Platform',
+    description: 'External tool bridges and third-party agent hooks.',
+    status: 'Coming Soon' as const,
+  },
+  {
+    id: 'hermes',
+    title: 'Hermes Orchestrator',
+    description: 'Fast dialogue routing and lightweight response flows.',
+    status: 'Coming Soon' as const,
+  },
+];
 
 export default function AssistantSettingsPage() {
-    const { user } = useAuth();
-    const router = useRouter();
-    const { promptSudo } = useSudo();
-    
-    // Unified vault state
-    const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
-    
-    // Private AI Key state
-    const [byokKeyInput, setByokKeyInput] = useState('');
-    const [hasByok, setHasByok] = useState(false);
-    const [byokLoading, setByokLoading] = useState(true);
-    const [byokSaving, setByokSaving] = useState(false);
-    const [showByokInput, setShowByokInput] = useState(false);
+  const { user } = useAuth();
+  const router = useRouter();
+  const { promptSudo } = useSudo();
 
-    // Framework state
-    const [selectedFramework, setSelectedFramework] = useState('kylrix');
+  const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
+  const [byokKeyInput, setByokKeyInput] = useState('');
+  const [hasByok, setHasByok] = useState(false);
+  const [byokLoading, setByokLoading] = useState(true);
+  const [byokSaving, setByokSaving] = useState(false);
+  const [showByokInput, setShowByokInput] = useState(false);
+  const [selectedFramework, setSelectedFramework] = useState('kylrix');
 
-    const handleBack = () => {
-        router.push('/settings');
-    };
+  const handleUnlockVault = async () => {
+    const success = await promptSudo('unlock');
+    if (success) toast.success('Vault unlocked.');
+  };
 
-    const handleUnlockVault = async () => {
-        const success = await promptSudo('unlock');
-        if (success) {
-            toast.success("Security vault unlocked successfully!");
-        }
-    };
+  const handleSaveByok = async () => {
+    if (!user?.$id || !byokKeyInput.trim()) {
+      toast.error('Enter a valid API key.');
+      return;
+    }
+    setByokSaving(true);
+    try {
+      await BYOKManager.saveKey(user.$id, 'gemini', byokKeyInput.trim());
+      toast.success('Private key saved.');
+      setHasByok(true);
+      setByokKeyInput('');
+      setShowByokInput(false);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Could not save key.');
+    } finally {
+      setByokSaving(false);
+    }
+  };
 
-    const handleSaveByok = async () => {
-        if (!user?.$id) return;
-        if (!byokKeyInput.trim()) {
-            toast.error("Please enter a valid API Key.");
-            return;
-        }
+  const handleDeleteByok = async () => {
+    if (!user?.$id) return;
+    if (!window.confirm('Remove your private AI key? Assistants will use default keys.')) return;
+    setByokSaving(true);
+    try {
+      await BYOKManager.deleteKey(user.$id, 'gemini');
+      toast.success('Private key removed.');
+      setHasByok(false);
+      setByokKeyInput('');
+      setShowByokInput(false);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Could not remove key.');
+    } finally {
+      setByokSaving(false);
+    }
+  };
 
-        setByokSaving(true);
-        try {
-            await BYOKManager.saveKey(user.$id, 'gemini', byokKeyInput.trim());
-            toast.success("Private AI key saved and encrypted successfully!");
-            setHasByok(true);
-            setByokKeyInput('');
-            setShowByokInput(false);
-        } catch (err: any) {
-            toast.error(err?.message || "Failed to encrypt and save private key.");
-        } finally {
-            setByokSaving(false);
-        }
-    };
+  useEffect(() => {
+    const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
+      setIsUnlocked(status.isUnlocked);
+    });
 
-    const handleDeleteByok = async () => {
-        if (!user?.$id) return;
-        if (!window.confirm("Are you sure you want to remove your private AI key? Automated assistants will fall back to default keys.")) return;
+    if (user?.$id && isUnlocked) {
+      setByokLoading(true);
+      BYOKManager.hasKey(user.$id, 'gemini')
+        .then((present) => {
+          setHasByok(present);
+          setByokLoading(false);
+        })
+        .catch(() => setByokLoading(false));
+    } else {
+      setByokLoading(false);
+    }
 
-        setByokSaving(true);
-        try {
-            await BYOKManager.deleteKey(user.$id, 'gemini');
-            toast.success("Private AI key removed.");
-            setHasByok(false);
-            setByokKeyInput('');
-            setShowByokInput(false);
-        } catch (err: any) {
-            toast.error(err?.message || "Failed to remove private key.");
-        } finally {
-            setByokSaving(false);
-        }
-    };
+    return unsubscribe;
+  }, [isUnlocked, user?.$id]);
 
-    useEffect(() => {
-        const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
-            if (status.isUnlocked !== isUnlocked) {
-                setIsUnlocked(status.isUnlocked);
-            }
-        });
-
-        if (user?.$id && isUnlocked) {
-            setByokLoading(true);
-            BYOKManager.hasKey(user.$id, 'gemini')
-                .then((present) => {
-                    setHasByok(present);
-                    setByokLoading(false);
-                })
-                .catch(() => setByokLoading(false));
-        } else {
-            setByokLoading(false);
-        }
-
-        return () => {
-            unsubscribe();
-        };
-    }, [isUnlocked, user?.$id]);
-
-    return (
-        <Box
-            sx={{
-                maxWidth: 840,
-                mx: 'auto',
-                pt: { xs: 2, md: 2.5 },
-                pb: { xs: 3, md: 4 },
-                px: { xs: 2, md: 3 },
-                pointerEvents: 'auto',
-                position: 'relative',
-                zIndex: 1,
-                bgcolor: VOID,
-                minHeight: '100vh',
-                color: 'white'
-            }}
+  return (
+    <div className="min-h-screen bg-[#0A0908] text-white font-satoshi">
+      <div className="max-w-[840px] mx-auto px-4 md:px-6 pt-4 md:pt-6 pb-16">
+        <button
+          type="button"
+          onClick={() => router.push('/settings')}
+          className="inline-flex items-center gap-2 mb-6 px-3.5 py-2 rounded-xl border border-white/10 text-white/75 text-sm font-bold hover:bg-white/[0.04] hover:text-white transition"
         >
-            <Button
-                variant="outlined"
-                onClick={handleBack}
-                startIcon={<ArrowLeft size={16} />}
-                sx={{
-                    mb: 2.5,
-                    borderRadius: '12px',
-                    textTransform: 'none',
-                    fontWeight: 700,
-                    color: 'rgba(255,255,255,0.78)',
-                    borderColor: 'rgba(255,255,255,0.15)',
-                    fontFamily: fontUi,
-                    '&:hover': {
-                        borderColor: 'rgba(255,255,255,0.3)',
-                        bgcolor: 'rgba(255,255,255,0.04)',
-                    },
-                }}
-            >
-                Back to Control Panel
-            </Button>
+          <ArrowLeft size={16} />
+          Back to settings
+        </button>
 
-            <Box sx={{ mb: 4 }}>
-                <Typography
-                    variant="overline"
-                    sx={{
-                        letterSpacing: '0.16em',
-                        color: TEXT_MUTED,
-                        fontWeight: 800,
-                        fontFamily: fontMono
-                    }}
+        <header className="mb-8 flex flex-col gap-2">
+          <span className="text-[10px] font-black uppercase tracking-[0.16em] text-[#9B9691] font-clash">
+            Smart system
+          </span>
+          <h1 className="text-white text-2xl md:text-[28px] font-extrabold font-clash tracking-tight leading-tight">
+            Assistant settings
+          </h1>
+          <p className="text-[#9B9691] text-sm font-semibold leading-relaxed max-w-[560px]">
+            Configure assistants, private keys, and the runtime that routes background work.
+          </p>
+        </header>
+
+        <div className="flex flex-col gap-5">
+          {/* Workspace gateway */}
+          <button
+            type="button"
+            onClick={() => router.push('/agents')}
+            className="w-full text-left rounded-[28px] border border-white/5 bg-[#161412] p-5 md:p-6 hover:bg-[#1C1A18] hover:border-[#6366F1]/30 transition group"
+          >
+            <div className="flex items-center gap-4 min-w-0">
+              <div className="w-[42px] h-[42px] rounded-[14px] bg-[#6366F1]/12 border border-[#6366F1]/25 text-[#6366F1] flex items-center justify-center flex-shrink-0">
+                <Bot size={20} strokeWidth={2.2} />
+              </div>
+              <div className="min-w-0 flex-1 flex flex-col gap-1 pr-2">
+                <span className="text-white text-[15px] font-extrabold font-clash leading-tight">
+                  Open assistants workspace
+                </span>
+                <span className="text-[#9B9691] text-xs font-semibold leading-relaxed">
+                  Launch, review, and coordinate active smart assistants.
+                </span>
+              </div>
+              <ArrowUpRight size={18} className="text-white/25 group-hover:text-white/60 flex-shrink-0" />
+            </div>
+          </button>
+
+          {/* Vault & keys */}
+          <section className="rounded-[28px] border border-white/5 bg-[#161412] overflow-hidden">
+            <div className="px-5 md:px-6 pt-5 md:pt-6 pb-4 border-b border-white/5">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 text-[#6366F1] flex items-center justify-center flex-shrink-0">
+                  <Shield size={18} />
+                </div>
+                <div className="min-w-0 flex flex-col gap-1">
+                  <h2 className="text-white text-base font-extrabold font-clash leading-tight">
+                    Vault and credentials
+                  </h2>
+                  <p className="text-[#9B9691] text-xs font-semibold leading-relaxed">
+                    Private keys are encrypted locally before they are saved.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 md:px-6 py-5 md:py-6 flex flex-col gap-5">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-[20px] bg-[#0B0A09] border border-white/5">
+                <div className="min-w-0 flex-1 flex flex-col gap-1">
+                  <span className="text-white text-sm font-extrabold leading-tight">Vault access</span>
+                  <span className="text-[#9B9691] text-xs font-semibold leading-relaxed">
+                    {isUnlocked ? 'Unlocked — keys can be viewed or rotated' : 'Locked — unlock to manage keys'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={isUnlocked ? undefined : () => void handleUnlockVault()}
+                  disabled={isUnlocked}
+                  className={`h-10 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 flex-shrink-0 transition ${
+                    isUnlocked
+                      ? 'border border-white/10 text-white/60 bg-white/[0.02]'
+                      : 'bg-[#6366F1] hover:bg-[#5458E8] text-white'
+                  }`}
                 >
-                    SYSTEM CONFIGURATION
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5, fontFamily: fontDisplay, color: 'white' }}>
-                    Assistant Settings
-                </Typography>
-                <Typography variant="body2" sx={{ color: TEXT_MUTED, mt: 1, maxWidth: 560, fontFamily: fontUi }}>
-                    Configure private keys, automated assistant systems, and resource allocations.
-                </Typography>
-            </Box>
+                  {isUnlocked ? <Lock size={14} /> : <Shield size={14} />}
+                  {isUnlocked ? 'Unlocked' : 'Unlock vault'}
+                </button>
+              </div>
 
-            <Stack spacing={4}>
-                {/* Assistants Workspace Gateway */}
-                <ButtonBase
-                    onClick={() => router.push('/agents')}
-                    sx={{
-                        width: '100%',
-                        textAlign: 'left',
-                        borderRadius: '24px',
-                        display: 'block'
-                    }}
-                >
-                    <Box sx={{
-                        bgcolor: SURFACE_ASH,
-                        borderRadius: '24px',
-                        p: 3,
-                        border: BORDER,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        transition: BRAND_TRANSITION,
-                        '&:hover': {
-                            bgcolor: INSET_ASH,
-                            borderColor: '#4F46E5',
-                            transform: 'translateY(-2px)'
-                        }
-                    }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(99, 102, 241, 0.1)', color: SYSTEM_PRIMARY }}>
-                                <Bot size={24} />
-                            </Box>
-                            <Box>
-                                <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', fontFamily: fontDisplay }}>
-                                    Go to Assistants Workspace
-                                </Typography>
-                                <Typography sx={{ color: TEXT_MUTED, fontSize: '0.85rem', mt: 0.5, fontFamily: fontUi }}>
-                                    Launch, audit, and coordinate your active smart assistants.
-                                </Typography>
-                            </Box>
-                        </Box>
-                        <ArrowUpRight size={20} color={TEXT_MUTED} />
-                    </Box>
-                </ButtonBase>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <Key size={16} className="text-[#6366F1] flex-shrink-0" />
+                    <span className="text-white text-sm font-extrabold font-clash leading-tight">
+                      Private AI key
+                    </span>
+                  </div>
+                  <p className="text-[#9B9691] text-xs font-semibold leading-relaxed pl-6">
+                    Optional Gemini key for assistants. Stored encrypted in your vault.
+                  </p>
+                </div>
 
-                {/* Vault & Keys Section */}
-                <Box sx={{ bgcolor: SURFACE_ASH, borderRadius: '24px', p: 3, border: BORDER }}>
-                    <Typography variant="h6" sx={{ fontWeight: 900, mb: 1, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white', fontFamily: fontDisplay }}>
-                        <Shield size={20} color={SYSTEM_PRIMARY} /> Security Vault & Credentials
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: TEXT_MUTED, mb: 3, fontFamily: fontUi, fontSize: '0.85rem' }}>
-                        To protect your sensitive credentials, private keys are encrypted locally before saving.
-                    </Typography>
+                {byokLoading ? (
+                  <div className="py-6 flex justify-center">
+                    <RefreshCw size={18} className="animate-spin text-[#6366F1]" />
+                  </div>
+                ) : !isUnlocked ? (
+                  <div className="p-4 rounded-[18px] bg-[#0B0A09] border border-white/5">
+                    <p className="text-[#9B9691] text-xs font-semibold leading-relaxed text-center">
+                      Unlock your vault to configure or rotate private keys.
+                    </p>
+                  </div>
+                ) : hasByok && !showByokInput ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-[18px] bg-[#0B0A09] border border-white/5">
+                    <span className="text-[#10B981] text-xs font-bold font-mono leading-relaxed flex-1 min-w-0 break-all">
+                      Encrypted key on file
+                    </span>
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setShowByokInput(true)}
+                        className="h-9 px-3 rounded-lg text-[#6366F1] text-xs font-extrabold hover:bg-[#6366F1]/10 transition"
+                      >
+                        Rotate
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteByok()}
+                        disabled={byokSaving}
+                        className="h-9 px-3 rounded-lg text-red-400 text-xs font-extrabold hover:bg-red-500/10 transition"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <input
+                      type="password"
+                      value={byokKeyInput}
+                      onChange={(e) => setByokKeyInput(e.target.value)}
+                      placeholder="Paste Gemini API key"
+                      className="w-full h-11 px-4 rounded-xl bg-[#0B0A09] border border-white/8 text-white text-sm font-mono placeholder:text-[#9B9691]/45 focus:outline-none focus:border-[#6366F1]/40"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleSaveByok()}
+                        disabled={byokSaving || !byokKeyInput.trim()}
+                        className="h-10 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white text-xs font-extrabold disabled:opacity-40 transition"
+                      >
+                        {byokSaving ? 'Saving…' : 'Save key'}
+                      </button>
+                      {hasByok && (
+                        <button
+                          type="button"
+                          onClick={() => setShowByokInput(false)}
+                          className="h-10 px-4 rounded-xl text-[#9B9691] text-xs font-extrabold hover:text-white transition"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
 
-                    <Stack spacing={3}>
-                        <Box sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            p: 2,
-                            borderRadius: '16px',
-                            bgcolor: INSET_ASH,
-                            border: BORDER
-                        }}>
-                            <Box>
-                                <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', fontFamily: fontUi }}>Vault Access</Typography>
-                                <Typography sx={{ color: TEXT_MUTED, fontSize: '0.8rem', fontFamily: fontUi }}>
-                                    {isUnlocked ? "Unlocked - private keys accessible" : "Locked - unlock to view or edit keys"}
-                                </Typography>
-                            </Box>
-                            <Button
-                                variant={isUnlocked ? 'outlined' : 'contained'}
-                                size="small"
-                                onClick={isUnlocked ? undefined : handleUnlockVault}
-                                disabled={isUnlocked}
-                                startIcon={isUnlocked ? <Lock size={16} /> : <Shield size={16} />}
-                                sx={{
-                                    borderRadius: '10px',
-                                    textTransform: 'none',
-                                    fontWeight: 700,
-                                    fontFamily: fontUi,
-                                    borderColor: isUnlocked ? 'rgba(255,255,255,0.15)' : SYSTEM_PRIMARY,
-                                    color: isUnlocked ? 'rgba(255,255,255,0.7)' : 'white',
-                                    bgcolor: isUnlocked ? 'transparent' : SYSTEM_PRIMARY,
-                                    '&:hover': {
-                                        bgcolor: isUnlocked ? 'rgba(255,255,255,0.05)' : '#4F46E5'
-                                    }
-                                }}
-                            >
-                                {isUnlocked ? "Unlocked" : "Unlock Vault"}
-                            </Button>
-                        </Box>
+          {/* Framework selection */}
+          <section className="rounded-[28px] border border-white/5 bg-[#161412] overflow-hidden">
+            <div className="px-5 md:px-6 pt-5 md:pt-6 pb-4 border-b border-white/5">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 text-[#6366F1] flex items-center justify-center flex-shrink-0">
+                  <Cpu size={18} />
+                </div>
+                <div className="min-w-0 flex flex-col gap-1">
+                  <h2 className="text-white text-base font-extrabold font-clash leading-tight">
+                    Assistant runtime
+                  </h2>
+                  <p className="text-[#9B9691] text-xs font-semibold leading-relaxed">
+                    Choose the stack that routes background automated work.
+                  </p>
+                </div>
+              </div>
+            </div>
 
-                        <Divider sx={{ borderColor: BORDER_HAIRLINE }} />
+            <div className="px-5 md:px-6 py-5 md:py-6 flex flex-col gap-3">
+              {FRAMEWORKS.map((fw) => {
+                const selected = selectedFramework === fw.id;
+                const disabled = fw.status !== 'Active';
 
-                        {/* Private AI Key Configuration */}
-                        <Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                                <Box>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: 1, fontFamily: fontDisplay }}>
-                                        <Key size={18} color={SYSTEM_PRIMARY} /> Private AI Key (Gemini)
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ color: TEXT_MUTED, mt: 0.5, fontFamily: fontUi, fontSize: '0.85rem' }}>
-                                        Power your assistants using a personal key, bypassing ecosystem resource controls.
-                                    </Typography>
-                                </Box>
-                                {hasByok && !showByokInput && (
-                                    <Button 
-                                        variant="outlined" 
-                                        color="error"
-                                        size="small" 
-                                        onClick={handleDeleteByok}
-                                        disabled={byokSaving}
-                                        sx={{ 
-                                            borderRadius: '10px',
-                                            textTransform: 'none',
-                                            fontWeight: 700,
-                                            fontFamily: fontUi,
-                                            borderColor: 'rgba(239, 68, 68, 0.3)',
-                                            color: '#EF4444',
-                                            '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.05)', borderColor: '#EF4444' }
-                                        }}
-                                    >
-                                        Remove Key
-                                    </Button>
-                                )}
-                            </Box>
-
-                            {byokLoading ? (
-                                <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}>
-                                    <CircularProgress size={20} sx={{ color: SYSTEM_PRIMARY }} />
-                                </Box>
-                            ) : !isUnlocked ? (
-                                <Box sx={{ p: 2, borderRadius: '16px', bgcolor: INSET_ASH, border: BORDER, textAlign: 'center' }}>
-                                    <Typography variant="body2" sx={{ color: TEXT_MUTED, fontFamily: fontUi, fontSize: '0.85rem' }}>
-                                        Unlock your security vault with MasterPass to configure or rotate private keys.
-                                    </Typography>
-                                </Box>
-                            ) : (
-                                <Stack spacing={2}>
-                                    {hasByok && !showByokInput ? (
-                                        <Box sx={{ 
-                                            p: 2, 
-                                            borderRadius: '16px', 
-                                            bgcolor: INSET_ASH, 
-                                            border: BORDER, 
-                                            display: 'flex', 
-                                            justifyContent: 'space-between', 
-                                            alignItems: 'center' 
-                                        }}>
-                                            <Typography variant="body2" sx={{ fontFamily: fontMono, color: SYSTEM_SUCCESS, fontWeight: 700, fontSize: '0.85rem' }}>
-                                                •••••••••••••••••••••••••••••••• (Encrypted in local vault)
-                                            </Typography>
-                                            <Button 
-                                                variant="text" 
-                                                size="small" 
-                                                onClick={() => setShowByokInput(true)}
-                                                sx={{ color: SYSTEM_PRIMARY, fontWeight: 700, textTransform: 'none', fontFamily: fontUi }}
-                                            >
-                                                Rotate Key
-                                            </Button>
-                                        </Box>
-                                    ) : (
-                                        <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
-                                            <TextField
-                                                fullWidth
-                                                type="password"
-                                                placeholder="Enter Gemini API Key (AIzaSy...)"
-                                                value={byokKeyInput}
-                                                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setByokKeyInput(e.target.value)}
-                                                variant="filled"
-                                                InputProps={{ 
-                                                    disableUnderline: true, 
-                                                    sx: { 
-                                                        borderRadius: '12px',
-                                                        bgcolor: INSET_ASH,
-                                                        color: 'white',
-                                                        fontFamily: fontMono,
-                                                        border: BORDER,
-                                                        '&:hover': { bgcolor: INSET_ASH, borderColor: '#34322F' }
-                                                    } 
-                                                }}
-                                            />
-                                            <Button
-                                                variant="contained"
-                                                onClick={handleSaveByok}
-                                                disabled={byokSaving || !byokKeyInput.trim()}
-                                                sx={{
-                                                    bgcolor: SYSTEM_PRIMARY,
-                                                    color: 'white',
-                                                    borderRadius: '12px',
-                                                    px: 3,
-                                                    fontWeight: 700,
-                                                    textTransform: 'none',
-                                                    fontFamily: fontUi,
-                                                    minWidth: 96,
-                                                    '&:hover': { bgcolor: '#4F46E5' },
-                                                    '&.ob-disabled': { bgcolor: INSET_ASH, color: '#34322F' }
-                                                }}
-                                            >
-                                                {byokSaving ? <CircularProgress size={18} color="inherit" /> : "Save"}
-                                            </Button>
-                                            {hasByok && (
-                                                <Button
-                                                    variant="text"
-                                                    onClick={() => setShowByokInput(false)}
-                                                    sx={{ color: TEXT_MUTED, textTransform: 'none', fontWeight: 700, fontFamily: fontUi }}
-                                                >
-                                                    Cancel
-                                                </Button>
-                                            )}
-                                        </Box>
-                                    )}
-                                </Stack>
-                            )}
-                        </Box>
-                    </Stack>
-                </Box>
-
-                {/* Assistant Systems Selection */}
-                <Box sx={{ bgcolor: SURFACE_ASH, borderRadius: '24px', p: 3, border: BORDER }}>
-                    <Typography variant="h6" sx={{ fontWeight: 900, mb: 1, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white', fontFamily: fontDisplay }}>
-                        <Cpu size={20} color={SYSTEM_PRIMARY} /> Assistant Systems Architecture
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: TEXT_MUTED, mb: 3, fontFamily: fontUi, fontSize: '0.85rem' }}>
-                        Select the technology stack that manages and routes your background automated processes.
-                    </Typography>
-
-                    <RadioGroup
-                        value={selectedFramework}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedFramework(e.target.value)}
+                return (
+                  <button
+                    key={fw.id}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => setSelectedFramework(fw.id)}
+                    className={`w-full text-left flex items-center gap-4 p-4 rounded-[20px] border transition ${
+                      selected
+                        ? 'bg-[#6366F1]/8 border-[#6366F1]/35'
+                        : 'bg-[#0B0A09] border-white/5 hover:border-white/10'
+                    } ${disabled ? 'opacity-55 cursor-not-allowed' : ''}`}
+                  >
+                    <div
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                        selected ? 'border-[#6366F1] bg-[#6366F1]' : 'border-white/20'
+                      }`}
                     >
-                        <Stack spacing={2}>
-                            {[
-                                { id: 'kylrix', title: 'Kylrix Internal', desc: 'Core native framework optimized for task tracking and calendar automation.', status: 'Active' },
-                                { id: 'openclaw', title: 'OpenClaw Platform', desc: 'Compatibility layers for external tools and third-party task agents.', status: 'Coming Soon' },
-                                { id: 'hermes', title: 'Hermes Orchestrator', desc: 'Lightweight, rapid response chat and dialogue flow coordinator.', status: 'Coming Soon' }
-                            ].map((fw) => (
-                                <Box 
-                                    key={fw.id}
-                                    sx={{
-                                        p: 2,
-                                        borderRadius: '16px',
-                                        bgcolor: INSET_ASH,
-                                        border: BORDER,
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        transition: BRAND_TRANSITION,
-                                        opacity: fw.status === 'Active' ? 1 : 0.6,
-                                        '&:hover': {
-                                            borderColor: fw.status === 'Active' ? '#4F46E5' : BORDER_HAIRLINE
-                                        }
-                                    }}
-                                >
-                                    <FormControlLabel
-                                        value={fw.id}
-                                        control={<Radio disabled={fw.status !== 'Active'} sx={{ color: 'rgba(255,255,255,0.3)', '&.ob-checked': { color: SYSTEM_PRIMARY } }} />}
-                                        label={
-                                            <Box sx={{ ml: 1 }}>
-                                                <Typography sx={{ fontWeight: 800, fontFamily: fontUi, fontSize: '0.95rem' }}>{fw.title}</Typography>
-                                                <Typography sx={{ color: TEXT_MUTED, fontSize: '0.8rem', fontFamily: fontUi, mt: 0.25 }}>{fw.desc}</Typography>
-                                            </Box>
-                                        }
-                                        sx={{ margin: 0 }}
-                                    />
-                                    <Box sx={{ 
-                                        px: 1.5, 
-                                        py: 0.5, 
-                                        borderRadius: '8px', 
-                                        bgcolor: fw.status === 'Active' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.05)',
-                                        color: fw.status === 'Active' ? SYSTEM_SUCCESS : TEXT_MUTED,
-                                        fontSize: '0.7rem',
-                                        fontWeight: 800,
-                                        fontFamily: fontMono
-                                    }}>
-                                        {fw.status}
-                                    </Box>
-                                </Box>
-                            ))}
-                        </Stack>
-                    </RadioGroup>
-                </Box>
-            </Stack>
-        </Box>
-    );
+                      {selected && <Check size={12} className="text-black" strokeWidth={3} />}
+                    </div>
+
+                    <div className="min-w-0 flex-1 flex flex-col gap-1 pr-2">
+                      <span className="text-white text-sm font-extrabold font-clash leading-tight">
+                        {fw.title}
+                      </span>
+                      <span className="text-[#9B9691] text-xs font-semibold leading-relaxed">
+                        {fw.description}
+                      </span>
+                    </div>
+
+                    <span
+                      className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md flex-shrink-0 ${
+                        fw.status === 'Active'
+                          ? 'bg-[#10B981]/12 text-[#10B981] border border-[#10B981]/25'
+                          : 'bg-white/[0.03] text-[#9B9691] border border-white/5'
+                      }`}
+                    >
+                      {fw.status}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
 }
