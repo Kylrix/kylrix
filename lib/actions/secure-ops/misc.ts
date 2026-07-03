@@ -1889,13 +1889,14 @@ export async function claimSendObjectSecure(payload: {
     const data = payload.decryptedData;
     await tables.createRow(
       APPWRITE_CONFIG.DATABASES.CHAT,
-      APPWRITE_CONFIG.TABLES.CHAT.PROJECTS || 'projects',
+      'projects',
       ID.unique(),
       {
-        name: note.title,
-        description: data?.description || '',
+        title: note.title,
+        summary: data?.description || '',
         status: data?.status || 'active',
-        userId: actor.$id,
+        ownerId: actor.$id,
+        visibility: 'private',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
@@ -2345,7 +2346,7 @@ export async function checkEmailAuthMethodAction(payload: { email: string }) {
   return { exists: true, hasPass };
 }
 
-export async function createStandaloneTagSecure(tagName: string, jwt: string) {
+export async function createStandaloneTagSecure(tagName: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 

@@ -151,7 +151,7 @@ export default function NoteEditorPageClient() {
     );
   }
 
-  const formattedDate = formatNoteUpdatedDate(rawNote.$updatedAt);
+  const formattedDate = formatNoteUpdatedDate(rawNote);
 
   return (
     <div className="bg-[#0A0908] text-white font-satoshi min-h-[calc(100dvh-72px)] pb-12 select-none">

@@ -72,9 +72,9 @@ export const ProjectsService = {
       
       history.unshift({
         id,
-        title: data.name || 'Untitled Project',
+        title: data.title || 'Untitled Project',
         content: JSON.stringify({
-          description: data.description || '',
+          description: data.summary || '',
           status: data.status || 'active'
         }),
         metadata,
@@ -84,7 +84,7 @@ export const ProjectsService = {
       
       localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
       import('react-hot-toast').then(t => t.default.success('Project saved locally.'));
-      return { $id: id, name: data.name, description: data.description, status: data.status } as any;
+      return { $id: id, title: data.title, summary: data.summary, status: data.status } as any;
     }
 
     if (typeof window !== 'undefined') {

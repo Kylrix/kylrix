@@ -173,8 +173,8 @@ export const GhostNoteClaimer = () => {
                             })();
                             const { ProjectsService } = await import('@/lib/appwrite/projects');
                             await ProjectsService.createProject({
-                                name: decryptedTitle,
-                                description: payload?.description || '',
+                                title: decryptedTitle,
+                                summary: payload?.description || '',
                                 status: payload?.status || 'active',
                             });
                         } else if (kind === 'tag') {

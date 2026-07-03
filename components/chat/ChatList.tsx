@@ -1566,6 +1566,7 @@ const SetupCountdownDrawer = ({
     callbackUrl: string; 
 }) => {
     const router = useRouter();
+    const { requestSudo } = useSudo();
     const [secondsLeft, setSecondsLeft] = useState(5);
     const [isCancelled, setIsCancelled] = useState(false);
 
