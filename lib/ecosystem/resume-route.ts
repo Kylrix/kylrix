@@ -4,6 +4,7 @@ const PUBLIC_PREFIXES = [
   '/send',
   '/i/',
   '/app/shared',
+  '/idea',
   '/u/',
   '/p/',
   '/call/',

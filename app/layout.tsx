@@ -103,7 +103,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                       var routes = JSON.parse(hist);
                       for (var i = 0; i < routes.length; i++) {
                         var p = routes[i] && routes[i].path;
-                        if (p && p !== '/' && p.indexOf('/send') !== 0 && p.indexOf('/app/shared') !== 0) {
+                        if (p && p !== '/' && p.indexOf('/send') !== 0 && p.indexOf('/app/shared') !== 0 && p.indexOf('/idea') !== 0) {
                           dest = p;
                           break;
                         }

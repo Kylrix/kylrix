@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import NoteEditorPageClient from './NoteEditorPageClient';
-import SharedNoteClient from '../../shared/[noteid]/SharedNoteClient';
 import { validatePublicNoteAccess } from '@/lib/appwrite';
 import { parseSendGhostMetadata } from '@/lib/send/metadata';
 import { createServerClient } from '@/lib/appwrite/server';
+import { redirect } from 'next/navigation';
 
 export async function generateMetadata({
   params,
@@ -152,10 +152,10 @@ export default async function IdeaPage({
       const user = await account.get();
       const isOwner = user?.$id && publicNote.userId === user.$id;
       if (!isOwner) {
-        return <SharedNoteClient noteId={id} initialKey={key} />;
+        redirect(`/idea/${id}${key ? `/${key}` : ''}`);
       }
     } catch {
-      return <SharedNoteClient noteId={id} initialKey={key} />;
+      redirect(`/idea/${id}${key ? `/${key}` : ''}`);
     }
   }
 

@@ -53,7 +53,7 @@ function routeLabelFromPath(pathname: string | null) {
   if (pathname === '/' || pathname === '/landing') return 'Landing';
   if (pathname === '/app' || pathname === '/app') return 'Notes';
   if (pathname.startsWith('/app/')) return 'Note';
-  if (pathname === '/app/shared' || pathname.startsWith('/app/shared/')) return 'Shared';
+  if (pathname === '/app/shared' || pathname.startsWith('/app/shared/') || pathname.startsWith('/idea/')) return 'Shared';
   if (pathname === '/tags') return 'Tags';
   if (pathname === '/app/extensions') return 'Extensions';
   if (pathname === '/app/settings') return 'Settings';
@@ -106,7 +106,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
       }];
   }
 
-  if (pathname === '/app/shared' || pathname.startsWith('/app/shared/')) {
+  if (pathname === '/app/shared' || pathname.startsWith('/app/shared/') || pathname.startsWith('/idea/')) {
     return [
       {
         id: 'shared-notes',

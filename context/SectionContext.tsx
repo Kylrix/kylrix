@@ -74,6 +74,7 @@ const DEFAULT_LAYOUTS: Record<string, PanelType[]> = {
   '/app': ['note', 'huddles', 'projects'],
   '/tags': ['note', 'huddles', 'projects'],
   '/app/shared': ['tags', 'huddles', 'projects'],
+  '/idea': ['tags', 'huddles', 'projects'],
   '/flow': ['forms', 'huddles', 'projects'],
   '/flow/forms': ['projects', 'huddles', 'goals'],
   '/flow/events': ['note', 'huddles', 'goals'],

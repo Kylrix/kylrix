@@ -42,6 +42,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         path === '/' ||
         path.startsWith('/send') ||
         path.startsWith('/app/shared') ||
+        path.startsWith('/idea') ||
         path.startsWith('/i/') ||
         path.startsWith('/u/') ||
         path.startsWith('/p/') ||

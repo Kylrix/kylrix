@@ -6,11 +6,11 @@ import { parseSendGhostMetadata } from '@/lib/send/metadata';
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ noteid: string; key?: string[] }>;
+  params: Promise<{ id: string; key?: string[] }>;
 }) {
   try {
-    const { noteid, key } = await params;
-    const note = await validatePublicNoteAccess(noteid);
+    const { id, key } = await params;
+    const note = await validatePublicNoteAccess(id);
     const fallbackImage = 'https://kylrix.space/logo_social.png';
 
     if (!note) {
@@ -41,7 +41,7 @@ export async function generateMetadata({
 
     if (isEncrypted) {
       if (!keyParam) {
-        const encryptedOgUrl = `${baseUrl}/app/shared/${noteid}/opengraph-image`;
+        const encryptedOgUrl = `${baseUrl}/idea/${id}/opengraph-image`;
         return {
           title: 'Protected Note · Kylrix',
           description: 'This note is secure and password-protected.',
@@ -64,7 +64,7 @@ export async function generateMetadata({
         decryptedContent = await decryptGhostData(note.content || '', keyParam);
       } catch (err) {
         console.warn('Failed server-side decryption of shared note metadata preview:', err);
-        const encryptedOgUrl = `${baseUrl}/app/shared/${noteid}/opengraph-image`;
+        const encryptedOgUrl = `${baseUrl}/idea/${id}/opengraph-image`;
         return {
           title: 'Protected Note · Kylrix',
           description: 'This note is secure and password-protected.',
@@ -88,7 +88,7 @@ export async function generateMetadata({
     const displayDesc = decryptedContent
       ? decryptedContent.substring(0, 160).trim() + '…'
       : 'View this note shared securely via Kylrix Note.';
-    const ogImage = `${baseUrl}/app/shared/${noteid}/opengraph-image${keyParam ? `?key=${encodeURIComponent(keyParam)}` : ''}`;
+    const ogImage = `${baseUrl}/idea/${id}/opengraph-image${keyParam ? `?key=${encodeURIComponent(keyParam)}` : ''}`;
 
     return {
       title: displayTitle,
@@ -134,7 +134,7 @@ export async function generateMetadata({
   }
 }
 
-export default async function SharedNotePage({ params }: { params: Promise<{ noteid: string; key?: string[] }> }) {
-   const { noteid, key } = await params;
-   return <SharedNoteClient noteId={noteid} initialKey={key?.join('/') || undefined} />;
+export default async function SharedNotePage({ params }: { params: Promise<{ id: string; key?: string[] }> }) {
+  const { id, key } = await params;
+  return <SharedNoteClient noteId={id} initialKey={key?.join('/') || undefined} />;
 }

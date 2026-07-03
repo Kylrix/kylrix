@@ -56,12 +56,22 @@ const nextConfig = {
       },
       {
         source: '/send/:noteId',
-        destination: '/app/shared/:noteId',
+        destination: '/idea/:noteId',
         permanent: true,
       },
       {
         source: '/send/:noteId/:key*',
-        destination: '/app/shared/:noteId/:key*',
+        destination: '/idea/:noteId/:key*',
+        permanent: true,
+      },
+      {
+        source: '/app/shared/:noteId',
+        destination: '/idea/:noteId',
+        permanent: true,
+      },
+      {
+        source: '/app/shared/:noteId/:key*',
+        destination: '/idea/:noteId/:key*',
         permanent: true,
       },
       {

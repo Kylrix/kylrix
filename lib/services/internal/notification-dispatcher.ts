@@ -39,7 +39,7 @@ export async function dispatchSecureNotification(input: SecureNotificationInput)
       // Invite link for project is /project/[id] (not /projects/[id])
       ctaUrl = `${appBaseUrl}/project/${input.resourceId}`;
     } else if (input.resourceType === 'note') {
-      ctaUrl = `${appBaseUrl}/app/shared/${input.resourceId}`;
+      ctaUrl = `${appBaseUrl}/idea/${input.resourceId}`;
     } else if (input.resourceType === 'task') {
       ctaUrl = `${appBaseUrl}/flow/${input.resourceId}`;
     }

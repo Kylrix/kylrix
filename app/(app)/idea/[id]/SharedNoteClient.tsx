@@ -1290,8 +1290,54 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="md" sx={{ pt: { xs: 11, md: 12 }, pb: 6 }}>
+      <Container maxWidth="md" sx={{ pt: { xs: 10, md: 11 }, pb: 6 }}>
         <SharedWorkspaceBar objectType="note" />
+        {!isAuthenticated && (
+          <Box 
+            sx={{ 
+              mb: 3, 
+              p: 2.5, 
+              borderRadius: '20px', 
+              border: '1px solid rgba(99, 102, 241, 0.2)', 
+              bgcolor: 'rgba(99, 102, 241, 0.05)',
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 2,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+            }}
+          >
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-clash)' }}>
+                Create & Share Your Own Ideas
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-satoshi)' }}>
+                Join Kylrix to securely write, organize, and share thoughts for free.
+              </Typography>
+            </Box>
+            <Button
+              component={NextLink}
+              href="/"
+              variant="contained"
+              size="small"
+              sx={{
+                borderRadius: '10px',
+                bgcolor: '#6366F1',
+                color: '#000',
+                fontWeight: 800,
+                px: 3,
+                py: 1,
+                textTransform: 'none',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                '&:hover': { bgcolor: alpha('#6366F1', 0.8) }
+              }}
+            >
+              Start Writing Free
+            </Button>
+          </Box>
+        )}
         <NoteContent />
 
         <Box sx={{ mt: 4 }}>
@@ -1300,44 +1346,6 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
 
         <Box sx={{ mt: 4 }}>
           <CommentsSection noteId={noteId} decryptionKey={key} />
-        </Box>
-
-        <Box sx={{ mt: 6, textAlign: 'center' }}>
-          <Paper
-            sx={{
-              p: { xs: 4, md: 5 },
-              borderRadius: '24px',
-              bgcolor: '#161412',
-              border: '1px solid rgba(99, 102, 241, 0.1)',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.02)'
-            }}
-          >
-            <Typography variant="h5" sx={{ fontWeight: 900, mb: 1.5, fontFamily: 'var(--font-clash)', color: 'white' }}>
-              Create Your Own Notes
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 3, maxWidth: 500, mx: 'auto' }}>
-              Join thousands of users who trust Kylrix Note to capture, organize, and share their thoughts.
-            </Typography>
-            <Button
-              component={ObLink}
-              href="/"
-              variant="contained"
-              size="large"
-              endIcon={<ArrowRightIcon />}
-              sx={{ 
-                borderRadius: '16px', 
-                px: 4, 
-                py: 1.5,
-                bgcolor: '#6366F1',
-                color: '#000',
-                fontWeight: 800,
-                boxShadow: '0 8px 24px rgba(99, 102, 241, 0.2)',
-                '&:hover': { bgcolor: alpha('#6366F1', 0.8) }
-              }}
-            >
-              Start Writing for Free
-            </Button>
-          </Paper>
         </Box>
       </Container>
     </Box>
