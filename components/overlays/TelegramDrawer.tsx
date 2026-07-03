@@ -14,7 +14,20 @@ import {
 } from '@/lib/openbricks/primitives';
 import { CheckCircle2, Copy, ExternalLink, X } from 'lucide-react';
 import { Telegram as TelegramIcon } from '@/lib/openbricks/icons';
-import { initializeTelegramConnection, checkTelegramConnection } from '@/lib/actions/telegram';
+import {
+  initializeTelegramConnection,
+  checkTelegramConnection,
+  getTelegramNotificationPreferences,
+  updateTelegramNotificationPreferences,
+} from '@/lib/actions/telegram';
+import {
+  defaultTelegramNotificationPreferences,
+  TELEGRAM_ACTION_LABELS,
+  TELEGRAM_OBJECT_LABELS,
+  type TelegramNotificationAction,
+  type TelegramNotificationObject,
+  type TelegramNotificationPreferences,
+} from '@/lib/telegram/notification-preferences';
 
 interface TelegramDrawerProps {
   open: boolean;
@@ -40,6 +53,13 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
   const [verifiedUsername, setVerifiedUsername] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [preferences, setPreferences] = useState<TelegramNotificationPreferences>(
+    defaultTelegramNotificationPreferences()
+  );
+  const [prefsLoading, setPrefsLoading] = useState(false);
+  const [prefsSaving, setPrefsSaving] = useState(false);
+  const [prefsSaved, setPrefsSaved] = useState(false);
+  const [watchedIdsInput, setWatchedIdsInput] = useState('');
 
   // Live timer states
   const [createdAt, setCreatedAt] = useState<string | null>(null);
@@ -301,6 +321,188 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
     }
   };
 
+  const loadPreferences = React.useCallback(async () => {
+    setPrefsLoading(true);
+    try {
+      const jwt = await getOrUpdateJWT();
+      const res = await getTelegramNotificationPreferences(jwt);
+      if (res.success && res.preferences) {
+        setPreferences(res.preferences);
+        setWatchedIdsInput(res.preferences.watchedResourceIds.join(', '));
+      }
+    } catch (err) {
+      console.error('Failed to load Telegram preferences:', err);
+    } finally {
+      setPrefsLoading(false);
+    }
+  }, [getOrUpdateJWT]);
+
+  const persistPreferences = React.useCallback(async (next: TelegramNotificationPreferences) => {
+    setPrefsSaving(true);
+    setPrefsSaved(false);
+    try {
+      const jwt = await getOrUpdateJWT();
+      const res = await updateTelegramNotificationPreferences(jwt, next);
+      if (res.success && res.preferences) {
+        setPreferences(res.preferences);
+        setPrefsSaved(true);
+        setTimeout(() => setPrefsSaved(false), 2000);
+      }
+    } catch (err) {
+      console.error('Failed to save Telegram preferences:', err);
+    } finally {
+      setPrefsSaving(false);
+    }
+  }, [getOrUpdateJWT]);
+
+  const updatePreference = React.useCallback((
+    patch: Partial<TelegramNotificationPreferences>
+  ) => {
+    setPreferences((current) => {
+      const next = {
+        ...current,
+        ...patch,
+        actions: { ...current.actions, ...(patch.actions || {}) },
+        objects: { ...current.objects, ...(patch.objects || {}) },
+      };
+      void persistPreferences(next);
+      return next;
+    });
+  }, [persistPreferences]);
+
+  const toggleAction = (action: TelegramNotificationAction) => {
+    setPreferences((current) => {
+      const next = {
+        ...current,
+        actions: { ...current.actions, [action]: !current.actions[action] },
+      };
+      void persistPreferences(next);
+      return next;
+    });
+  };
+
+  const toggleObject = (object: TelegramNotificationObject) => {
+    setPreferences((current) => {
+      const next = {
+        ...current,
+        objects: { ...current.objects, [object]: !current.objects[object] },
+      };
+      void persistPreferences(next);
+      return next;
+    });
+  };
+
+  const handleWatchedIdsBlur = () => {
+    const watchedResourceIds = watchedIdsInput
+      .split(/[\n,]+/)
+      .map((id) => id.trim())
+      .filter(Boolean);
+    setPreferences((current) => {
+      const next = { ...current, watchedResourceIds };
+      void persistPreferences(next);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (open) {
+      void loadPreferences();
+    }
+  }, [open, loadPreferences]);
+
+  const renderPreferences = () => (
+    <div className="flex flex-col gap-4 border-t border-white/5 pt-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-white text-sm font-black tracking-tight font-clash">
+            Notification rules
+          </h3>
+          <p className="text-white/45 text-[11px] font-semibold font-satoshi mt-0.5">
+            Choose which alerts reach Telegram and for which items.
+          </p>
+        </div>
+        {prefsSaving ? (
+          <span className="text-white/40 text-[10px] font-bold uppercase tracking-wider">Saving...</span>
+        ) : prefsSaved ? (
+          <span className="text-[#10B981] text-[10px] font-bold uppercase tracking-wider">Saved</span>
+        ) : null}
+      </div>
+
+      <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#0B0A09] border border-white/5">
+        <span className="text-white text-xs font-bold font-satoshi">Telegram alerts enabled</span>
+        <input
+          type="checkbox"
+          checked={preferences.enabled}
+          onChange={() => updatePreference({ enabled: !preferences.enabled })}
+          className="w-4 h-4 accent-[#F59E0B] cursor-pointer"
+        />
+      </label>
+
+      <div className="space-y-2">
+        <p className="text-white/50 text-[10px] font-black uppercase tracking-wider font-mono">Actions</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {(Object.keys(TELEGRAM_ACTION_LABELS) as TelegramNotificationAction[]).map((action) => (
+            <label
+              key={action}
+              className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-white/[0.02] border border-white/5"
+            >
+              <span className="text-white/80 text-[11px] font-semibold font-satoshi">
+                {TELEGRAM_ACTION_LABELS[action]}
+              </span>
+              <input
+                type="checkbox"
+                checked={preferences.actions[action]}
+                disabled={!preferences.enabled || prefsLoading}
+                onChange={() => toggleAction(action)}
+                className="w-3.5 h-3.5 accent-[#F59E0B] cursor-pointer"
+              />
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-white/50 text-[10px] font-black uppercase tracking-wider font-mono">Object types</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {(Object.keys(TELEGRAM_OBJECT_LABELS) as TelegramNotificationObject[]).map((object) => (
+            <label
+              key={object}
+              className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-white/[0.02] border border-white/5"
+            >
+              <span className="text-white/80 text-[11px] font-semibold font-satoshi">
+                {TELEGRAM_OBJECT_LABELS[object]}
+              </span>
+              <input
+                type="checkbox"
+                checked={preferences.objects[object]}
+                disabled={!preferences.enabled || prefsLoading}
+                onChange={() => toggleObject(object)}
+                className="w-3.5 h-3.5 accent-[#F59E0B] cursor-pointer"
+              />
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-white/50 text-[10px] font-black uppercase tracking-wider font-mono">
+          Specific items only (optional)
+        </p>
+        <textarea
+          value={watchedIdsInput}
+          onChange={(e) => setWatchedIdsInput(e.target.value)}
+          onBlur={handleWatchedIdsBlur}
+          disabled={!preferences.enabled || prefsLoading}
+          placeholder="Paste item IDs separated by commas or new lines. Leave blank to allow all items from the types above."
+          className="w-full min-h-[72px] rounded-xl bg-[#0B0A09] border border-white/5 px-3 py-2.5 text-white/80 text-xs font-mono outline-none focus:border-[#F59E0B]/40 resize-y"
+        />
+        <p className="text-white/35 text-[10px] font-semibold font-satoshi leading-relaxed">
+          Example: only notify me for one project, one idea, or one task by pasting its ID here.
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <Drawer
       anchor="bottom"
@@ -311,7 +513,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
       PaperProps={{
         sx: {
           height: 'auto',
-          maxHeight: '60vh',
+          maxHeight: '85vh',
           borderTopLeftRadius: '24px',
           borderTopRightRadius: '24px',
           bgcolor: '#161514',
@@ -333,7 +535,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
             <TelegramIcon sx={{ fontSize: 16 }} />
           </div>
           <h2 className="text-white text-lg font-black tracking-tight font-clash">
-            Telegram Link
+            Telegram Notifications
           </h2>
         </div>
         <button 
@@ -345,7 +547,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
       </div>
 
       {/* Main Content */}
-      <div className="p-5 flex flex-col gap-4 overflow-y-auto max-h-[calc(60vh-70px)]">
+      <div className="p-5 flex flex-col gap-4 overflow-y-auto max-h-[calc(85vh-70px)]">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
             <CircularProgress sx={{ color: '#F59E0B' }} size={28} />
@@ -354,19 +556,21 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
             </span>
           </div>
         ) : verifiedUsername ? (
-          // Success State
-          <div className="flex flex-col items-center justify-center py-8 text-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[#10B981]/10 border border-[#10B981]/30 flex items-center justify-center">
-              <CheckCircle2 size={24} className="text-[#10B981]" />
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col items-center justify-center py-6 text-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[#10B981]/10 border border-[#10B981]/30 flex items-center justify-center">
+                <CheckCircle2 size={24} className="text-[#10B981]" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-white text-lg font-black tracking-tight font-clash">
+                  Connected
+                </h3>
+                <p className="text-white/60 text-xs font-semibold font-satoshi max-w-sm mx-auto">
+                  Linked to Telegram as <span className="text-[#F59E0B] font-bold">@{verifiedUsername}</span>.
+                </p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <h3 className="text-white text-lg font-black tracking-tight font-clash">
-                Connected
-              </h3>
-              <p className="text-white/60 text-xs font-semibold font-satoshi max-w-sm mx-auto">
-                Linked to Telegram as <span className="text-[#F59E0B] font-bold">@{verifiedUsername}</span>.
-              </p>
-            </div>
+            {renderPreferences()}
           </div>
         ) : (
           // Pairing State
@@ -454,6 +658,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
                 </div>
               </div>
             )}
+            {renderPreferences()}
           </div>
         )}
       </div>

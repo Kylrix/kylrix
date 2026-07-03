@@ -1,14 +1,60 @@
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import {
+  parseTelegramNotificationPreferences,
+  resolveTelegramAction,
+  shouldDeliverTelegramNotification,
+  TELEGRAM_PREFS_KEY,
+  type TelegramNotificationAction,
+} from '@/lib/telegram/notification-preferences';
+
+export interface TelegramDispatchContext {
+  action?: TelegramNotificationAction;
+  resourceType?: string | null;
+  resourceId?: string | null;
+  notificationType?: 'invite' | 'standard';
+  title?: string;
+}
 
 /**
  * Stage 3: Active Notification Push (Blind Lookup Engine)
  * Attempts to deliver a notification to a target user via Telegram.
  * Silently drops if not linked or verified to preserve privacy.
  */
-export async function dispatchTelegramNotification(targetUserId: string, message: string) {
+export async function dispatchTelegramNotification(
+  targetUserId: string,
+  message: string,
+  context?: TelegramDispatchContext
+) {
   try {
-    const { databases } = createSystemClient();
+    const { databases, users } = createSystemClient();
+
+    let userPrefs: Record<string, unknown> = {};
+    try {
+      const userDoc = await users.get(targetUserId);
+      userPrefs = (userDoc.prefs || {}) as Record<string, unknown>;
+    } catch {
+      return false;
+    }
+
+    const preferences = parseTelegramNotificationPreferences(userPrefs[TELEGRAM_PREFS_KEY]);
+    const action =
+      context?.action ||
+      resolveTelegramAction({
+        type: context?.notificationType,
+        title: context?.title,
+        resourceType: context?.resourceType || undefined,
+      });
+
+    if (
+      !shouldDeliverTelegramNotification(preferences, {
+        action,
+        resourceType: context?.resourceType,
+        resourceId: context?.resourceId,
+      })
+    ) {
+      return false;
+    }
 
     // 1. Blind Lookup matching Target_UserID
     let doc = null;

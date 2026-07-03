@@ -10,7 +10,7 @@ export interface SecureNotificationInput {
   actorName?: string;
   resourceId?: string;
   resourceTitle?: string;
-  resourceType?: 'project' | 'note' | 'task';
+  resourceType?: 'project' | 'note' | 'task' | 'secret' | 'totp' | 'call' | 'huddle' | 'event' | 'form';
   permission?: string;
   ctaUrl?: string;
 }
@@ -77,7 +77,12 @@ export async function dispatchSecureNotification(input: SecureNotificationInput)
   // Prefer Telegram and ensure at most ONE channel gets the message (never send to both)
   let tgSuccess = false;
   try {
-    tgSuccess = await dispatchTelegramNotification(input.targetUserId, tgMessage);
+    tgSuccess = await dispatchTelegramNotification(input.targetUserId, tgMessage, {
+      notificationType: input.type,
+      title: input.title,
+      resourceType: input.resourceType,
+      resourceId: input.resourceId,
+    });
     if (tgSuccess) {
       console.log('[dispatchSecureNotification] Primary Telegram dispatch successful');
     }

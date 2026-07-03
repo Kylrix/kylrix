@@ -1082,7 +1082,7 @@ export default function NotesPage() {
                   Ideas
                 </button>
                 <button
-                  onClick={() => setActiveTab('projects')}
+                  onClick={() => router.push('/projects')}
                   className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                     activeTab === 'projects'
                       ? 'bg-[#6366F1] text-white shadow-[0_4px_12px_rgba(99,102,241,0.25)]'
@@ -1279,7 +1279,7 @@ export default function NotesPage() {
                   Ideas
                 </button>
                 <button
-                  onClick={() => setActiveTab('projects')}
+                  onClick={() => router.push('/projects')}
                   className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                     activeTab === 'projects'
                       ? 'bg-[#6366F1] text-white shadow-[0_4px_12px_rgba(99,102,241,0.25)]'

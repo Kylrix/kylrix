@@ -6,6 +6,11 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { Permission, Role, Query } from 'node-appwrite';
 import { z } from 'zod';
 import { JWTSchema } from '@/lib/validations/schemas';
+import {
+  TELEGRAM_PREFS_KEY,
+  parseTelegramNotificationPreferences,
+  type TelegramNotificationPreferences,
+} from '@/lib/telegram/notification-preferences';
 
 /**
  * Stage 1: Initial Connect
@@ -174,6 +179,59 @@ export async function checkTelegramConnection(jwt?: string) {
   } catch (error: any) {
     console.error('[telegram] Failed to check connection:', error);
     return { success: false, error: error?.message || 'Failed to check connection' };
+  }
+}
+
+export async function getTelegramNotificationPreferences(jwt?: string) {
+  const validatedJwt = JWTSchema.parse(jwt);
+
+  try {
+    const { getActor } = await import('./secure-ops');
+    const actor = await getActor(validatedJwt);
+    if (!actor?.$id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const { users } = createSystemClient();
+    const userDoc = await users.get(actor.$id);
+    const preferences = parseTelegramNotificationPreferences(
+      (userDoc.prefs as Record<string, unknown> | undefined)?.[TELEGRAM_PREFS_KEY]
+    );
+
+    return { success: true, preferences };
+  } catch (error: any) {
+    console.error('[telegram] Failed to load notification preferences:', error);
+    return { success: false, error: error?.message || 'Failed to load preferences' };
+  }
+}
+
+export async function updateTelegramNotificationPreferences(
+  jwt: string | undefined,
+  preferences: TelegramNotificationPreferences
+) {
+  const validatedJwt = JWTSchema.parse(jwt);
+
+  try {
+    const { getActor } = await import('./secure-ops');
+    const actor = await getActor(validatedJwt);
+    if (!actor?.$id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const { users } = createSystemClient();
+    const userDoc = await users.get(actor.$id);
+    const currentPrefs = (userDoc.prefs || {}) as Record<string, unknown>;
+    const normalized = parseTelegramNotificationPreferences(preferences);
+
+    await users.updatePrefs(actor.$id, {
+      ...currentPrefs,
+      [TELEGRAM_PREFS_KEY]: normalized,
+    });
+
+    return { success: true, preferences: normalized };
+  } catch (error: any) {
+    console.error('[telegram] Failed to update notification preferences:', error);
+    return { success: false, error: error?.message || 'Failed to update preferences' };
   }
 }
 

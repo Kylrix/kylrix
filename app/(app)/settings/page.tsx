@@ -615,7 +615,7 @@ export default function SettingsPage() {
                                     Telegram Notifications
                                 </h4>
                                 <p className="text-white/40 text-xs font-semibold mt-0.5 leading-relaxed">
-                                    Receive push notifications for calls and active chat threads.
+                                    Link Telegram and choose exactly which actions and items send alerts.
                                 </p>
                             </div>
                         </div>
