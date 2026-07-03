@@ -1562,14 +1562,18 @@ export async function initGoalDiscussionSecure(taskId: string, jwt?: string) {
 export async function approveProjectJoinRequestSecure(projectId: string, targetUserId: string, permissionLevel: 'admin' | 'editor' | 'viewer' = 'viewer', jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
-    throw new Error('Unauthorized');
+    throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const isAllowed = await verifyProjectPermission(projectId, actor.$id, 'admin');
+  if (!isAllowed) {
+    throw new Error('Forbidden: Only owners and admins can approve join requests');
   }
 
   const tables = createSystemTablesDB();
   const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
   const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
 
-  // 1. Get project
   const project = await tables.getRow({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
@@ -1577,29 +1581,6 @@ export async function approveProjectJoinRequestSecure(projectId: string, targetU
   }).catch(() => null);
 
   if (!project) throw new Error('Project not found');
-
-  // Verify requester is owner or admin of the project
-  const isOwner = project.ownerId === actor.$id;
-  let isAdmin = false;
-  if (!isOwner) {
-    const collabs = await tables.listRows({
-      databaseId: FLOW_DATABASE_ID,
-      tableId: COLLABORATORS_TABLE,
-      queries: [
-        Query.equal('resourceId', projectId),
-        Query.equal('resourceType', 'project'),
-        Query.equal('userId', actor.$id),
-        Query.equal('status', 'accepted')
-      ] as any
-    });
-    if (collabs.rows.length > 0 && collabs.rows[0].permission === 'admin') {
-      isAdmin = true;
-    }
-  }
-
-  if (!isOwner && !isAdmin) {
-    throw new Error('Forbidden: Only owners and admins can approve join requests');
-  }
 
   // 2. Find request row
   const existingCollab = await tables.listRows({

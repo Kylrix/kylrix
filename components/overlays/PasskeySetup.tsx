@@ -61,7 +61,7 @@ export function PasskeySetupPanel({
   const obTheme = useTheme();
   const isDesktop = useMediaQuery(obTheme.breakpoints.up('md'));
   const { setIsDrawerOpen } = useDrawerState();
-  const { openDrawer } = useUnifiedDrawer();
+  const { open: openDrawer } = useUnifiedDrawer();
 
   const handleAlsoUseForLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;

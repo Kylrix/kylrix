@@ -478,7 +478,7 @@ export async function getResourceCollaboratorsSecure(input: {
                 // Legacy fallback to metadata.collaborators
                 let meta: any = {};
                 try {
-                    meta = JSON.parse(row.metadata || '{}');
+                    meta = JSON.parse(String(row.metadata || '{}'));
                 } catch {}
                 const collaboratorsMap = meta.collaborators || {};
                 filteredCollabs = Object.entries(collaboratorsMap).map(([userId, level]) => ({

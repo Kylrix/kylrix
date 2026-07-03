@@ -228,13 +228,18 @@ export default function ProjectDetailPage() {
 
   const handleApproveJoinRequest = (req: any) => {
     if (!projectId) return;
+    const targetUserId = String(req.userId || req.$id || '').trim();
+    if (!targetUserId) {
+      showError('Failed to grant request', 'Could not identify the requester.');
+      return;
+    }
     openUnified('project-join-request-confirm', {
       action: 'grant',
       requesterName: req.displayName || req.name || req.email || 'Collaborator',
       projectName: project?.title || 'this project',
       onConfirm: async (selectedRole?: 'viewer' | 'editor' | 'admin') => {
         try {
-          await ProjectsService.approveJoinRequest(projectId as string, req.userId || req.$id, selectedRole || 'viewer');
+          await ProjectsService.approveJoinRequest(projectId as string, targetUserId, selectedRole || 'viewer');
           showSuccess('Access request granted successfully!');
           fetchProjectData();
         } catch (err: any) {
@@ -246,13 +251,18 @@ export default function ProjectDetailPage() {
 
   const handleRejectJoinRequest = (req: any) => {
     if (!projectId) return;
+    const targetUserId = String(req.userId || req.$id || '').trim();
+    if (!targetUserId) {
+      showError('Failed to deny request', 'Could not identify the requester.');
+      return;
+    }
     openUnified('project-join-request-confirm', {
       action: 'deny',
       requesterName: req.displayName || req.name || req.email || 'Collaborator',
       projectName: project?.title || 'this project',
       onConfirm: async () => {
         try {
-          await ProjectsService.removeCollaborator(projectId as string, req.userId || req.$id);
+          await ProjectsService.removeCollaborator(projectId as string, targetUserId);
           showSuccess('Access request denied.');
           fetchProjectData();
         } catch (err: any) {

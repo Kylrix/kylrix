@@ -60,6 +60,7 @@ import {
   detachObjectSecure,
   detachObjectByRelationSecure,
   getObjectsByParentSecure,
+  approveProjectJoinRequestSecure,
 } from './secure-ops';
 import { PublicResourceType } from '@/lib/share/resource-types';
 
@@ -129,6 +130,15 @@ export async function addProjectCollaborator(projectId: string, userId: string, 
 export async function removeProjectCollaborator(projectId: string, userId: string) {
   const jwt = await getJwt();
   return removeProjectCollaboratorSecure(projectId, userId, jwt);
+}
+
+export async function approveProjectJoinRequest(
+  projectId: string,
+  userId: string,
+  roleLevel: 'admin' | 'editor' | 'viewer' = 'viewer'
+) {
+  const jwt = await getJwt();
+  return approveProjectJoinRequestSecure(projectId, userId, roleLevel, jwt);
 }
 
 export async function addObjectToProject(projectId: string, entityKind: string, entityId: string, role?: string, metadata?: any) {

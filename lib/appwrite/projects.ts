@@ -85,6 +85,10 @@ export const ProjectsService = {
   },
 
   async approveJoinRequest(projectId: string, userId: string, role: 'admin' | 'editor' | 'viewer' = 'viewer') {
+    if (typeof window !== 'undefined') {
+      const { approveProjectJoinRequest } = await import('@/lib/actions/client-ops');
+      return await approveProjectJoinRequest(projectId, userId, role);
+    }
     const { approveProjectJoinRequestSecure } = await import('@/lib/actions/secure-ops');
     return await approveProjectJoinRequestSecure(projectId, userId, role);
   },

@@ -753,7 +753,7 @@ export default function SudoModal({
                             </div>
                             <div className="space-y-2">
                                 <span className="text-[10px] text-white/40 font-bold tracking-wider uppercase block">
-                                    TYPE "WIPE" TO CONFIRM
+                                    {`TYPE "WIPE" TO CONFIRM`}
                                 </span>
                                 <input
                                     type="text"
