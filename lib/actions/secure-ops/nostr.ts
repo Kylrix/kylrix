@@ -11,7 +11,13 @@ import { Databases, Query } from 'node-appwrite';
 export async function getNostrIdentityAction() {
   try {
     const { client, account } = await createServerClient();
-    const accountInfo = await account.get();
+    let accountInfo;
+    try {
+      accountInfo = await account.get();
+    } catch {
+      // Gracefully handle unauthenticated/guest users
+      return null;
+    }
     const userId = accountInfo.$id;
 
     const databases = new Databases(client);
@@ -33,6 +39,10 @@ export async function getNostrIdentityAction() {
       salt: row.salt
     };
   } catch (err: any) {
+    // If it's a guest account permission error, return null instead of throwing
+    if (err.message && err.message.includes('missing scopes')) {
+      return null;
+    }
     console.error('Failed to get Nostr identity row:', err);
     throw new Error(err.message || 'Failed to fetch Nostr identity');
   }

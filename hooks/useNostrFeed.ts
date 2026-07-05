@@ -133,10 +133,29 @@ export function useNostrFeed() {
     }
   }, [identity]);
 
+  const refresh = useCallback(() => {
+    if (poolRef.current) {
+      setLoading(true);
+      poolRef.current.close();
+      poolRef.current.connect();
+      const filters = [
+        {
+          kinds: [1],
+          '#t': FILTER_TAGS,
+          limit: 50
+        }
+      ];
+      poolRef.current.subscribe('kylrix-tech-feed', filters);
+      setLoading(false);
+      toast.success('Reconnecting to Nostr relays...');
+    }
+  }, []);
+
   return {
     feed,
     loading,
     publishPost,
+    refresh,
     filterTags: FILTER_TAGS
   };
 }

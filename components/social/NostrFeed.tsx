@@ -5,12 +5,12 @@ import { useNostrFeed } from '@/hooks/useNostrFeed';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import { resolveNostrPubkeysAction } from '@/lib/actions/secure-ops';
 import { bytesToNpub, hexToBytes } from '@/lib/tmp/crypto';
-import { Heart, MessageCircle, Repeat2, Send, ShieldAlert, Sparkles, Hash, Lock } from 'lucide-react';
+import { Heart, MessageCircle, Repeat2, Send, ShieldAlert, Sparkles, Hash, Lock, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export function NostrFeed() {
   const { identity, loading: identityLoading, isVaultLocked, unlockAndLoad } = useNostrIdentity();
-  const { feed, loading: feedLoading, publishPost, filterTags } = useNostrFeed();
+  const { feed, loading: feedLoading, publishPost, refresh, filterTags } = useNostrFeed();
   const [newPostText, setNewPostText] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [resolvedProfiles, setResolvedProfiles] = useState<Record<string, { username: string; avatarUrl?: string }>>({});
@@ -74,15 +74,26 @@ export function NostrFeed() {
   return (
     <div className="w-full flex flex-col gap-6 max-w-2xl mx-auto font-satoshi text-white select-none">
       {/* Curation Indicator */}
-      <div className="bg-[#1C1A17] border border-[#F59E0B]/20 rounded-2xl p-4 flex items-center gap-3 text-xs text-amber-200">
-        <Sparkles size={16} className="text-[#F59E0B] flex-shrink-0" />
-        <div>
-          <span className="font-bold">Agentic Curation Active:</span> Filtering global relays for tech-centric topics ({filterTags.map(t => `#${t}`).join(', ')}).
+      <div className="bg-[#1C1A17] border border-[#F59E0B]/20 rounded-2xl p-4 flex items-center justify-between gap-3 text-xs text-amber-200">
+        <div className="flex items-center gap-3">
+          <Sparkles size={16} className="text-[#F59E0B] flex-shrink-0" />
+          <div>
+            <span className="font-bold">Agentic Curation Active:</span> Filtering global relays for tech-centric topics ({filterTags.map(t => `#${t}`).join(', ')}).
+          </div>
         </div>
+        <button
+          onClick={refresh}
+          disabled={feedLoading}
+          type="button"
+          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all disabled:opacity-50 flex-shrink-0"
+          title="Refresh Relays"
+        >
+          <RefreshCw size={14} className={feedLoading ? 'animate-spin' : ''} />
+        </button>
       </div>
 
       {/* Write Post Box: Gated only for contributing, readable for all */}
-      {isVaultLocked || !identity ? (
+      {isVaultLocked ? (
         <div className="bg-[#161412] border border-white/5 rounded-3xl p-5 flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40">
@@ -99,6 +110,11 @@ export function NostrFeed() {
           >
             Unlock Vault
           </button>
+        </div>
+      ) : !identity ? (
+        <div className="bg-[#161412] border border-white/5 rounded-3xl p-5 flex items-center justify-center shadow-lg">
+          <span className="animate-spin inline-block w-4 h-4 border-2 border-[#F59E0B] border-t-transparent rounded-full mr-2" />
+          <span className="text-xs text-white/40 font-mono">Deriving sovereign key...</span>
         </div>
       ) : (
         <form onSubmit={handlePublish} className="bg-[#161412] border border-white/5 rounded-3xl p-5 flex flex-col gap-4 shadow-lg">
