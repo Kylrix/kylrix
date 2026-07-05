@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { Feed } from '@/components/social/Feed';
+import { NostrFeed } from '@/components/social/NostrFeed';
 import { ChatList } from '@/components/chat/ChatList';
 import { MailBox } from '@/components/connect/MailBox';
 import { useProjectsList } from '@/hooks/useProjectsList';
@@ -206,7 +206,7 @@ function ConnectHomeContent() {
                   Moments
                 </h2>
               </div>
-              <Feed view="personal" composeIntent={composeIntent} />
+              <NostrFeed />
             </div>
 
             {/* Right Column: Collaboration Sidebar */}
