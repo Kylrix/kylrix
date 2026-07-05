@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { NostrRelayPool, NostrEvent, signEvent } from '@/lib/tmp/nostr';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
+import { bytesToHex } from '@/lib/tmp/crypto';
+import * as secp256k1 from '@noble/secp256k1';
 import toast from 'react-hot-toast';
 
 const RELAYS = [
