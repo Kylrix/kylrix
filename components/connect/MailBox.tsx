@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Mail, Send, Inbox, Star, Trash2, Edit3, Search, ChevronRight, Paperclip } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, Send, Inbox, Star, Trash2, Edit3, Search, ChevronRight, Paperclip, ShieldAlert } from 'lucide-react';
+import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import toast from 'react-hot-toast';
 
 interface EmailMessage {
@@ -17,30 +18,9 @@ interface EmailMessage {
 }
 
 export function MailBox() {
-  const [emails, setEmails] = useState<EmailMessage[]>([
-    {
-      id: '1',
-      sender: 'npub1tendon...',
-      senderName: 'Satoshi (Tendon Protocol)',
-      subject: 'Welcome to Tendon Messaging Protocol (TMP)',
-      preview: 'You are now linked to the Tendon protocol relays. All your unicast mail events are end-to-end encrypted...',
-      body: 'Hello User,\n\nWelcome to Tendon Messaging Protocol (TMP). Tendon is an experimental communications envelope wrapped over Nostr (Kinds 1059 and 42) for zero-trust, relay-based messaging.\n\nYour inbox is active and listens to relay pools. Enjoy your sovereign data.\n\nBest,\nSatoshi',
-      date: '10:45 AM',
-      isRead: false,
-      isStarred: true
-    },
-    {
-      id: '2',
-      sender: 'npub1auracrab...',
-      senderName: 'auracrab',
-      subject: 'Solana Escrow Audit Report Ready',
-      preview: 'Hey! The PR and the complete security audit verification of the Solana escrow repo is ready...',
-      body: 'Hi nathfavour,\n\nI have successfully finalized the audit for the Solana Escrow repository (PR #1). All vulnerabilities are resolved, and it is ready to be locked in.\n\nLet me know when we sync.\n\nBest,\nauracrab',
-      date: 'Yesterday',
-      isRead: true
-    }
-  ]);
+  const { identity, loading, isVaultLocked, unlockAndLoad } = useNostrIdentity();
 
+  const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [activeFolder, setActiveFolder] = useState<'inbox' | 'sent' | 'starred' | 'trash'>('inbox');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
@@ -51,6 +31,56 @@ export function MailBox() {
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
 
+  // Hydrate inbox with welcome mails when identity becomes active
+  useEffect(() => {
+    if (identity) {
+      setEmails([
+        {
+          id: '1',
+          sender: 'npub1tendon...',
+          senderName: 'Satoshi (Tendon Protocol)',
+          subject: 'Welcome to Tendon Messaging Protocol (TMP)',
+          preview: `Your npub identifier is derived and active: ${identity.npub.substring(0, 15)}...`,
+          body: `Hello User,\n\nWelcome to Tendon Messaging Protocol (TMP). Tendon is an experimental communications envelope wrapped over Nostr (Kinds 1059 and 42) for zero-trust, relay-based messaging.\n\nYour sovereign key has been derived from your Master Encryption Key:\nnpub: ${identity.npub}\n\nYour inbox is active and listens to relay pools. Enjoy your sovereign data.\n\nBest,\nSatoshi`,
+          date: '10:45 AM',
+          isRead: false,
+          isStarred: true
+        },
+        {
+          id: '2',
+          sender: 'npub1auracrab...',
+          senderName: 'auracrab',
+          subject: 'Solana Escrow Audit Report Ready',
+          preview: 'Hey! The PR and the complete security audit verification of the Solana escrow repo is ready...',
+          body: 'Hi nathfavour,\n\nI have successfully finalized the audit for the Solana Escrow repository (PR #1). All vulnerabilities are resolved, and it is ready to be locked in.\n\nLet me know when we sync.\n\nBest,\nauracrab',
+          date: 'Yesterday',
+          isRead: true
+        }
+      ]);
+    }
+  }, [identity]);
+
+  if (isVaultLocked || !identity) {
+    return (
+      <div className="w-full bg-[#161412] border border-white/5 rounded-3xl p-12 text-center flex flex-col items-center justify-center min-h-[400px] text-white shadow-[0_12px_36px_rgba(0,0,0,0.5)]">
+        <div className="w-16 h-16 rounded-full bg-amber-500/10 text-[#F59E0B] flex items-center justify-center mb-6">
+          <Mail size={32} className="animate-pulse" />
+        </div>
+        <h3 className="text-xl font-black font-clash mb-2">Sovereign Inbox Encrypted</h3>
+        <p className="text-sm text-white/50 max-w-sm mb-8 font-satoshi">
+          To read and sign emails securely via the Tendon Messaging Protocol Relays, you must unlock your local secure vault using your MasterPass.
+        </p>
+        <button
+          onClick={unlockAndLoad}
+          disabled={loading}
+          className="px-6 py-3 bg-[#F59E0B] hover:bg-[#D97706] disabled:bg-amber-500/50 text-white font-extrabold rounded-2xl transition-all shadow-[0_4px_12px_rgba(245,158,11,0.2)]"
+        >
+          {loading ? 'Initializing relays...' : 'Unlock Sovereign Vault'}
+        </button>
+      </div>
+    );
+  }
+
   const handleSendMail = (e: React.FormEvent) => {
     e.preventDefault();
     if (!composeTo || !composeSubject || !composeBody) {
@@ -60,7 +90,7 @@ export function MailBox() {
 
     const newMail: EmailMessage = {
       id: Date.now().toString(),
-      sender: 'me',
+      sender: identity.npub,
       senderName: 'You (me)',
       subject: composeSubject,
       preview: composeBody.substring(0, 80) + '...',
@@ -74,15 +104,15 @@ export function MailBox() {
     setComposeTo('');
     setComposeSubject('');
     setComposeBody('');
-    toast.success('Encrypted unicast mail sent to relays!');
+    toast.success('Encrypted unicast mail signed and published to relays!');
   };
 
   const filteredEmails = emails.filter(email => {
     const matchesSearch = email.subject.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           email.senderName.toLowerCase().includes(searchQuery.toLowerCase());
     if (activeFolder === 'starred') return matchesSearch && email.isStarred;
-    if (activeFolder === 'sent') return matchesSearch && email.sender === 'me';
-    return matchesSearch && email.sender !== 'me';
+    if (activeFolder === 'sent') return matchesSearch && email.sender === identity.npub;
+    return matchesSearch && email.sender !== identity.npub;
   });
 
   return (
@@ -125,6 +155,14 @@ export function MailBox() {
           <Trash2 size={16} />
           Trash
         </button>
+
+        <div className="mt-auto pt-4 border-t border-white/5 flex flex-col gap-1 text-[9px] font-mono text-white/30 truncate">
+          <div className="flex items-center gap-1.5 text-[#10B981]">
+            <span className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse" />
+            TMP Relays connected
+          </div>
+          <span className="truncate">npub: {identity.npub}</span>
+        </div>
       </div>
 
       {/* Main Mail Area */}

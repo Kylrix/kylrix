@@ -32,6 +32,7 @@ export const APPWRITE_CONFIG = {
         OBJECTS: 'objects',
         TOKEN_REGISTRY: 'token_registry',
         WEB3_TRANSACTIONS: 'web3_transactions',
+        NOSTR_IDENTITIES: 'nostr_identities',
 
         NOTE: {
             USERS: '67ff05c900247b5673d3',
@@ -109,7 +110,8 @@ export const APPWRITE_CONFIG = {
             ENGAGEMENT_VIEWS: 'engagement_views',
             ENGAGEMENT_VIEW_ROLLUPS: 'engagement_view_rollups',
             TELEGRAM_CONNECTIONS: 'telegram_connections',
-            SOURCE_CONTROL: 'source_control'
+            SOURCE_CONTROL: 'source_control',
+            NOSTR_IDENTITIES: 'nostr_identities'
         },
         CHAT: {
             USERS: 'users',
@@ -132,7 +134,8 @@ export const APPWRITE_CONFIG = {
             ENGAGEMENT_VIEWS: 'engagement_views',
             ENGAGEMENT_VIEW_ROLLUPS: 'engagement_view_rollups',
             TELEGRAM_CONNECTIONS: 'telegram_connections',
-            SOURCE_CONTROL: 'source_control'
+            SOURCE_CONTROL: 'source_control',
+            NOSTR_IDENTITIES: 'nostr_identities'
         }
     },
     BUCKETS: {

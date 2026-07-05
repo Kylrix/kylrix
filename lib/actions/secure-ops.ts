@@ -138,6 +138,11 @@ import {
   createStandaloneTagSecure,
 } from './secure-ops/misc';
 
+import {
+  getNostrIdentityAction,
+  registerNostrIdentityAction,
+} from './secure-ops/nostr';
+
 export {
   cookies,
   getRowCached,
@@ -259,6 +264,8 @@ export {
   syncMasterpassToAccountPasswordAction,
   checkEmailAuthMethodAction,
   createStandaloneTagSecure,
+  getNostrIdentityAction,
+  registerNostrIdentityAction,
 };
 
 export type { PermissionLevel, PermissionChangeInput } from './secure-ops/shared';
