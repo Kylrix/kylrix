@@ -87,3 +87,54 @@ export async function registerNostrIdentityAction(params: {
     throw new Error(err.message || 'Failed to register Nostr identity');
   }
 }
+
+/**
+ * Resolves a list of Nostr npub identifiers to Kylrix profiles (userId, username, avatar).
+ */
+export async function resolveNostrPubkeysAction(npubs: string[]) {
+  try {
+    const { client } = await createServerClient();
+    const databases = new Databases(client);
+
+    if (!npubs || npubs.length === 0) return {};
+
+    // 1. Fetch matching identity rows
+    const res = await databases.listDocuments(
+      APPWRITE_CONFIG.DATABASE_ID,
+      APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
+      [Query.equal('npub', npubs), Query.limit(100)]
+    );
+
+    if (res.total === 0) return {};
+
+    // 2. Fetch corresponding profiles
+    const userIds = res.documents.map((doc) => doc.userId);
+    const profilesRes = await databases.listDocuments(
+      APPWRITE_CONFIG.DATABASE_ID,
+      APPWRITE_CONFIG.TABLES.CONNECT.PROFILES,
+      [Query.equal('userId', userIds), Query.limit(100)]
+    );
+
+    const profileMap: Record<string, { userId: string; username: string; avatarUrl?: string }> = {};
+    for (const doc of profilesRes.documents) {
+      profileMap[doc.userId] = {
+        userId: doc.userId,
+        username: doc.username,
+        avatarUrl: doc.avatarUrl || doc.avatar
+      };
+    }
+
+    // 3. Map npub to profile
+    const result: Record<string, { userId: string; username: string; avatarUrl?: string }> = {};
+    for (const doc of res.documents) {
+      if (profileMap[doc.userId]) {
+        result[doc.npub] = profileMap[doc.userId];
+      }
+    }
+
+    return result;
+  } catch (err: any) {
+    console.error('Failed to resolve Nostr pubkeys:', err);
+    return {};
+  }
+}

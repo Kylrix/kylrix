@@ -141,6 +141,7 @@ import {
 import {
   getNostrIdentityAction,
   registerNostrIdentityAction,
+  resolveNostrPubkeysAction,
 } from './secure-ops/nostr';
 
 export {
@@ -266,6 +267,7 @@ export {
   createStandaloneTagSecure,
   getNostrIdentityAction,
   registerNostrIdentityAction,
+  resolveNostrPubkeysAction,
 };
 
 export type { PermissionLevel, PermissionChangeInput } from './secure-ops/shared';

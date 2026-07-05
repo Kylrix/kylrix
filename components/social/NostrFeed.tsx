@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNostrFeed } from '@/hooks/useNostrFeed';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
-import { Heart, MessageCircle, Repeat2, Send, ShieldAlert, Sparkles, Hash, Search } from 'lucide-react';
+import { resolveNostrPubkeysAction } from '@/lib/actions/secure-ops';
+import { bytesToNpub, hexToBytes } from '@/lib/tmp/crypto';
+import { Heart, MessageCircle, Repeat2, Send, ShieldAlert, Sparkles, Hash, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export function NostrFeed() {
@@ -11,6 +13,30 @@ export function NostrFeed() {
   const { feed, loading: feedLoading, publishPost, filterTags } = useNostrFeed();
   const [newPostText, setNewPostText] = useState('');
   const [publishing, setPublishing] = useState(false);
+  const [resolvedProfiles, setResolvedProfiles] = useState<Record<string, { username: string; avatarUrl?: string }>>({});
+
+  // Resolve profiles from local database mappings asynchronously (UX alignment)
+  useEffect(() => {
+    if (feed.length === 0) return;
+
+    const unresolvedNpubs = feed
+      .map(event => {
+        try {
+          return bytesToNpub(hexToBytes(event.pubkey));
+        } catch {
+          return null;
+        }
+      })
+      .filter((n): n is string => !!n && !resolvedProfiles[n]);
+
+    if (unresolvedNpubs.length === 0) return;
+
+    resolveNostrPubkeysAction(unresolvedNpubs).then((res) => {
+      if (res && Object.keys(res).length > 0) {
+        setResolvedProfiles((prev) => ({ ...prev, ...res }));
+      }
+    });
+  }, [feed, resolvedProfiles]);
 
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,26 +50,26 @@ export function NostrFeed() {
     }
   };
 
-  if (isVaultLocked || !identity) {
-    return (
-      <div className="w-full bg-[#161412] border border-white/5 rounded-3xl p-12 text-center flex flex-col items-center justify-center min-h-[400px] text-white shadow-[0_12px_36px_rgba(0,0,0,0.5)]">
-        <div className="w-16 h-16 rounded-full bg-amber-500/10 text-[#F59E0B] flex items-center justify-center mb-6">
-          <Sparkles size={32} className="animate-pulse" />
-        </div>
-        <h3 className="text-xl font-black font-clash mb-2">Global Town Square Encrypted</h3>
-        <p className="text-sm text-white/50 max-w-sm mb-8 font-satoshi">
-          Unlock your local secure vault using your MasterPass to access, view, and sign messages in the global decentralized technical feed.
-        </p>
-        <button
-          onClick={unlockAndLoad}
-          disabled={identityLoading}
-          className="px-6 py-3 bg-[#F59E0B] hover:bg-[#D97706] disabled:bg-amber-500/50 text-white font-extrabold rounded-2xl transition-all shadow-[0_4px_12px_rgba(245,158,11,0.2)]"
-        >
-          {identityLoading ? 'Initializing WESP...' : 'Unlock Sovereign Vault'}
-        </button>
-      </div>
-    );
-  }
+  const getAuthorDisplay = (pubkeyHex: string) => {
+    try {
+      const npubStr = bytesToNpub(hexToBytes(pubkeyHex));
+      if (resolvedProfiles[npubStr]) {
+        return {
+          name: `@${resolvedProfiles[npubStr].username}`,
+          isEcosystem: true
+        };
+      }
+      return {
+        name: `npub...${npubStr.substring(npubStr.length - 8)}`,
+        isEcosystem: false
+      };
+    } catch {
+      return {
+        name: `npub...${pubkeyHex.substring(pubkeyHex.length - 8)}`,
+        isEcosystem: false
+      };
+    }
+  };
 
   return (
     <div className="w-full flex flex-col gap-6 max-w-2xl mx-auto font-satoshi text-white select-none">
@@ -55,36 +81,56 @@ export function NostrFeed() {
         </div>
       </div>
 
-      {/* Compose Form */}
-      <form onSubmit={handlePublish} className="bg-[#161412] border border-white/5 rounded-3xl p-5 flex flex-col gap-4 shadow-lg">
-        <textarea
-          value={newPostText}
-          onChange={e => setNewPostText(e.target.value)}
-          placeholder="Share your build, ideas, or engineering notes with the global Nostr network..."
-          className="w-full bg-white/[0.02] border border-white/5 rounded-2xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/10 resize-none min-h-[90px]"
-        />
-        <div className="flex justify-between items-center">
-          <div className="flex gap-1.5 flex-wrap">
-            {filterTags.slice(0, 3).map(tag => (
-              <span 
-                key={tag} 
-                onClick={() => setNewPostText(prev => prev + ` #${tag}`)}
-                className="text-[10px] font-mono text-[#F59E0B] bg-[#F59E0B]/5 hover:bg-[#F59E0B]/10 cursor-pointer border border-[#F59E0B]/10 px-2 py-0.5 rounded-md transition-all"
-              >
-                #{tag}
-              </span>
-            ))}
+      {/* Write Post Box: Gated only for contributing, readable for all */}
+      {isVaultLocked || !identity ? (
+        <div className="bg-[#161412] border border-white/5 rounded-3xl p-5 flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40">
+              <Lock size={16} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-white/80">Contribute to the Town Square</span>
+              <span className="text-[10px] text-white/40">Unlock your vault to write and sign encrypted moments.</span>
+            </div>
           </div>
           <button
-            type="submit"
-            disabled={publishing || !newPostText.trim()}
-            className="px-5 py-2 bg-white text-black font-extrabold text-xs rounded-xl hover:bg-white/90 disabled:bg-white/40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5"
+            onClick={unlockAndLoad}
+            className="px-4 py-2 bg-[#F59E0B]/10 hover:bg-[#F59E0B]/20 border border-[#F59E0B]/20 text-[#F59E0B] font-bold text-xs rounded-xl transition-all"
           >
-            {publishing ? 'Publishing...' : 'Publish Post'}
-            <Send size={12} />
+            Unlock Vault
           </button>
         </div>
-      </form>
+      ) : (
+        <form onSubmit={handlePublish} className="bg-[#161412] border border-white/5 rounded-3xl p-5 flex flex-col gap-4 shadow-lg">
+          <textarea
+            value={newPostText}
+            onChange={e => setNewPostText(e.target.value)}
+            placeholder="Share your build, ideas, or engineering notes with the global Nostr network..."
+            className="w-full bg-white/[0.02] border border-white/5 rounded-2xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/10 resize-none min-h-[90px]"
+          />
+          <div className="flex justify-between items-center">
+            <div className="flex gap-1.5 flex-wrap">
+              {filterTags.slice(0, 3).map(tag => (
+                <span 
+                  key={tag} 
+                  onClick={() => setNewPostText(prev => prev + ` #${tag}`)}
+                  className="text-[10px] font-mono text-[#F59E0B] bg-[#F59E0B]/5 hover:bg-[#F59E0B]/10 cursor-pointer border border-[#F59E0B]/10 px-2 py-0.5 rounded-md transition-all"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+            <button
+              type="submit"
+              disabled={publishing || !newPostText.trim()}
+              className="px-5 py-2 bg-white text-black font-extrabold text-xs rounded-xl hover:bg-white/90 disabled:bg-white/40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5"
+            >
+              {publishing ? 'Publishing...' : 'Publish Post'}
+              <Send size={12} />
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Feed Container */}
       <div className="flex flex-col gap-4">
@@ -102,56 +148,66 @@ export function NostrFeed() {
             </p>
           </div>
         ) : (
-          feed.map(event => (
-            <div 
-              key={event.id}
-              className="bg-[#161412] border border-white/5 rounded-3xl p-5 flex flex-col gap-4 transition-all hover:border-white/10 shadow-md"
-            >
-              {/* Card Header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#F59E0B] to-amber-700 flex items-center justify-center font-black font-mono text-xs text-white">
-                    {event.pubkey.substring(0, 2).toUpperCase()}
+          feed.map(event => {
+            const author = getAuthorDisplay(event.pubkey);
+            return (
+              <div 
+                key={event.id}
+                className="bg-[#161412] border border-white/5 rounded-3xl p-5 flex flex-col gap-4 transition-all hover:border-white/10 shadow-md"
+              >
+                {/* Card Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#F59E0B] to-amber-700 flex items-center justify-center font-black font-mono text-xs text-white">
+                      {author.name.substring(1, 3).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold truncate max-w-[150px]">
+                          {author.name}
+                        </span>
+                        {author.isEcosystem && (
+                          <span className="text-[8px] font-bold bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20 px-1 py-0.2 rounded font-mono uppercase">
+                            Kylrix User
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-white/30 font-mono">
+                        {new Date(event.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold truncate max-w-[150px]">
-                      npub...{event.pubkey.substring(event.pubkey.length - 8)}
-                    </span>
-                    <span className="text-[10px] text-white/30 font-mono">
-                      {new Date(event.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
+                  <span className="text-[9px] font-mono bg-white/5 text-white/40 px-2 py-0.5 rounded-full border border-white/5">
+                    Kind 1
+                  </span>
                 </div>
-                <span className="text-[9px] font-mono bg-white/5 text-white/40 px-2 py-0.5 rounded-full border border-white/5">
-                  Kind 1
-                </span>
-              </div>
 
-              {/* Card Content */}
-              <p className="text-sm text-white/80 leading-relaxed font-sans break-words whitespace-pre-wrap">
-                {event.content}
-              </p>
+                {/* Card Content */}
+                <p className="text-sm text-white/80 leading-relaxed font-sans break-words whitespace-pre-wrap">
+                  {event.content}
+                </p>
 
-              {/* Card Actions */}
-              <div className="flex items-center gap-6 border-t border-white/[0.03] pt-3 text-white/40 text-xs select-none">
-                <button 
-                  onClick={() => toast.success('Pulse logged locally!')}
-                  className="flex items-center gap-1.5 hover:text-[#F59E0B] transition-all"
-                >
-                  <Heart size={14} />
-                  <span>Pulse</span>
-                </button>
-                <button className="flex items-center gap-1.5 hover:text-white transition-all">
-                  <MessageCircle size={14} />
-                  <span>Reply</span>
-                </button>
-                <button className="flex items-center gap-1.5 hover:text-white transition-all">
-                  <Repeat2 size={14} />
-                  <span>Repost</span>
-                </button>
+                {/* Card Actions */}
+                <div className="flex items-center gap-6 border-t border-white/[0.03] pt-3 text-white/40 text-xs select-none">
+                  <button 
+                    onClick={() => toast.success('Pulse logged locally!')}
+                    className="flex items-center gap-1.5 hover:text-[#F59E0B] transition-all"
+                  >
+                    <Heart size={14} />
+                    <span>Pulse</span>
+                  </button>
+                  <button className="flex items-center gap-1.5 hover:text-white transition-all">
+                    <MessageCircle size={14} />
+                    <span>Reply</span>
+                  </button>
+                  <button className="flex items-center gap-1.5 hover:text-white transition-all">
+                    <Repeat2 size={14} />
+                    <span>Repost</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
