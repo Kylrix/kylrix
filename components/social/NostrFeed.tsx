@@ -5,22 +5,33 @@ import { useNostrFeed } from '@/hooks/useNostrFeed';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import { resolveNostrPubkeysAction } from '@/lib/actions/secure-ops';
 import { bytesToNpub, hexToBytes } from '@/lib/tmp/crypto';
-import { Heart, MessageCircle, Repeat2, Send, ShieldAlert, Sparkles, Hash, Lock, RefreshCw } from 'lucide-react';
+import { MomentComposer } from './MomentComposer';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { Heart, MessageCircle, Repeat2, Sparkles, Lock, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export function NostrFeed() {
   const { identity, loading: identityLoading, isVaultLocked, unlockAndLoad } = useNostrIdentity();
   const { feed, loading: feedLoading, publishPost, refresh, filterTags } = useNostrFeed();
-  const [newPostText, setNewPostText] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [resolvedProfiles, setResolvedProfiles] = useState<Record<string, { username: string; avatarUrl?: string }>>({});
+  const { open: openUnified } = useUnifiedDrawer();
+
+  // Listen to mobile FAB triggers to open the bottom drawer post composer
+  useEffect(() => {
+    const handleOpenComposer = () => {
+      openUnified('moment-composer');
+    };
+    window.addEventListener('kylrix:open-moment-composer', handleOpenComposer);
+    return () => window.removeEventListener('kylrix:open-moment-composer', handleOpenComposer);
+  }, [openUnified]);
 
   // Resolve profiles from local database mappings asynchronously (UX alignment)
   useEffect(() => {
     if (feed.length === 0) return;
 
     const unresolvedNpubs = feed
-      .map(event => {
+      .map((event) => {
         try {
           return bytesToNpub(hexToBytes(event.pubkey));
         } catch {
@@ -37,18 +48,6 @@ export function NostrFeed() {
       }
     });
   }, [feed, resolvedProfiles]);
-
-  const handlePublish = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPostText.trim()) return;
-
-    setPublishing(true);
-    const success = await publishPost(newPostText);
-    setPublishing(false);
-    if (success) {
-      setNewPostText('');
-    }
-  };
 
   const getAuthorDisplay = (pubkeyHex: string) => {
     try {
@@ -92,61 +91,47 @@ export function NostrFeed() {
         </button>
       </div>
 
-      {/* Write Post Box: Gated only for contributing, readable for all */}
-      {isVaultLocked ? (
-        <div className="bg-[#161412] border border-white/5 rounded-3xl p-5 flex items-center justify-between shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40">
-              <Lock size={16} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-white/80">Contribute to the Town Square</span>
-              <span className="text-[10px] text-white/40">Unlock your vault to write and sign public tech posts.</span>
-            </div>
-          </div>
-          <button
-            onClick={unlockAndLoad}
-            className="px-4 py-2 bg-[#F59E0B]/10 hover:bg-[#F59E0B]/20 border border-[#F59E0B]/20 text-[#F59E0B] font-bold text-xs rounded-xl transition-all"
-          >
-            Unlock Vault
-          </button>
-        </div>
-      ) : !identity ? (
-        <div className="bg-[#161412] border border-white/5 rounded-3xl p-5 flex items-center justify-center shadow-lg">
-          <span className="animate-spin inline-block w-4 h-4 border-2 border-[#F59E0B] border-t-transparent rounded-full mr-2" />
-          <span className="text-xs text-white/40 font-mono">Deriving sovereign key...</span>
-        </div>
-      ) : (
-        <form onSubmit={handlePublish} className="bg-[#161412] border border-white/5 rounded-3xl p-5 flex flex-col gap-4 shadow-lg">
-          <textarea
-            value={newPostText}
-            onChange={e => setNewPostText(e.target.value)}
-            placeholder="Share your build, ideas, or engineering notes with the global Nostr network..."
-            className="w-full bg-white/[0.02] border border-white/5 rounded-2xl px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/10 resize-none min-h-[90px]"
-          />
-          <div className="flex justify-between items-center">
-            <div className="flex gap-1.5 flex-wrap">
-              {filterTags.slice(0, 3).map(tag => (
-                <span 
-                  key={tag} 
-                  onClick={() => setNewPostText(prev => prev + ` #${tag}`)}
-                  className="text-[10px] font-mono text-[#F59E0B] bg-[#F59E0B]/5 hover:bg-[#F59E0B]/10 cursor-pointer border border-[#F59E0B]/10 px-2 py-0.5 rounded-md transition-all"
-                >
-                  #{tag}
-                </span>
-              ))}
+      {/* Write Post Box: Gated only for contributing, readable for all. Desktop-only (inmobile opens via FAB bottom drawer) */}
+      <div className="hidden md:block">
+        {isVaultLocked ? (
+          <div className="bg-[#161412] border border-white/5 rounded-3xl p-5 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40">
+                <Lock size={16} />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-white/80">Contribute to the Town Square</span>
+                <span className="text-[10px] text-white/40">Unlock your vault to write and sign public tech posts.</span>
+              </div>
             </div>
             <button
-              type="submit"
-              disabled={publishing || !newPostText.trim()}
-              className="px-5 py-2 bg-white text-black font-extrabold text-xs rounded-xl hover:bg-white/90 disabled:bg-white/40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5"
+              onClick={unlockAndLoad}
+              className="px-4 py-2 bg-[#F59E0B]/10 hover:bg-[#F59E0B]/20 border border-[#F59E0B]/20 text-[#F59E0B] font-bold text-xs rounded-xl transition-all"
             >
-              {publishing ? 'Publishing...' : 'Publish Post'}
-              <Send size={12} />
+              Unlock Vault
             </button>
           </div>
-        </form>
-      )}
+        ) : !identity ? (
+          <div className="bg-[#161412] border border-white/5 rounded-3xl p-5 flex items-center justify-center shadow-lg">
+            <span className="animate-spin inline-block w-4 h-4 border-2 border-[#F59E0B] border-t-transparent rounded-full mr-2" />
+            <span className="text-xs text-white/40 font-mono">Deriving sovereign key...</span>
+          </div>
+        ) : (
+          <MomentComposer
+            publishing={publishing}
+            onPublish={async (text) => {
+              setPublishing(true);
+              const success = await publishPost(text);
+              setPublishing(false);
+              if (success) {
+                toast.success('Post published successfully to Nostr!');
+              }
+              return success;
+            }}
+            filterTags={filterTags}
+          />
+        )}
+      </div>
 
       {/* Feed Container */}
       <div className="flex flex-col gap-4">

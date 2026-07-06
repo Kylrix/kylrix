@@ -27,6 +27,7 @@ const UnifiedFormContent = dynamic(() => import('../forms/UnifiedFormContent').t
 const GithubIntegrationDrawer = dynamic(() => import('./GithubIntegrationDrawer').then(mod => mod.GithubIntegrationDrawer), { ssr: false });
 const TaskAddToProjectDrawerHost = dynamic(() => import('./TaskAddToProjectDrawer').then(mod => mod.TaskAddToProjectDrawerHost), { ssr: false });
 const ResponseDetailDrawer = dynamic(() => import('../forms/ResponseDetailDrawer').then(mod => mod.ResponseDetailDrawer), { ssr: false });
+const MomentComposerDrawer = dynamic(() => import('./MomentComposerDrawer').then(mod => mod.MomentComposerDrawer), { ssr: false });
 const ProjectSettingsDrawer = dynamic(() => import('../projects/ProjectSettingsDrawer'), { ssr: false });
 const ProjectVisibilityDrawer = dynamic(() => import('../projects/ProjectVisibilityDrawer'), { ssr: false });
 const JoinRequestConfirmDrawer = dynamic(() => import('./JoinRequestConfirmDrawer').then(mod => mod.JoinRequestConfirmDrawer), { ssr: false });
@@ -111,6 +112,8 @@ export function UnifiedBottomDrawer() {
             return <ProjectSettingsDrawer isOpen={true} onClose={close} project={drawerData?.project} onSave={drawerData?.onSave} />;
         case 'project-visibility':
             return <ProjectVisibilityDrawer isOpen={true} onClose={close} project={drawerData?.project} onSave={drawerData?.onSave} />;
+        case 'moment-composer':
+            return <MomentComposerDrawer onClose={close} />;
         case 'project-join-request-confirm':
             return <JoinRequestConfirmDrawer />;
         default: return null;
