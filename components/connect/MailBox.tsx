@@ -1,8 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Mail, Send, Inbox, Star, Trash2, Edit3, Search, ChevronRight, Paperclip, ShieldAlert } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Mail, Send, Inbox, Star, Trash2, Edit3, Search, ChevronRight, Paperclip, Copy } from 'lucide-react';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
+import { NostrRelayPool, signEvent, NostrEvent } from '@/lib/tmp/nostr';
+import { buildEnvelope, wrapForNostr } from '@/lib/tmp/builder';
+import { resolveIdentifier } from '@/lib/tmp/resolver';
+import { decodeEnvelope } from '@/lib/tmp/codec';
+import { bytesToHex, hexToBytes } from '@/lib/tmp/crypto';
+import * as secp256k1 from '@noble/secp256k1';
 import toast from 'react-hot-toast';
 
 interface EmailMessage {
@@ -17,48 +23,176 @@ interface EmailMessage {
   body: string;
 }
 
+const RELAYS = [
+  'wss://nos.lol',
+  'wss://purplepag.es',
+  'wss://relay.damus.io',
+  'wss://relay.primal.net'
+];
+
 export function MailBox() {
-  const { identity, loading, isVaultLocked, unlockAndLoad } = useNostrIdentity();
+  const { identity, loading: identityLoading, isVaultLocked, unlockAndLoad } = useNostrIdentity();
 
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [activeFolder, setActiveFolder] = useState<'inbox' | 'sent' | 'starred' | 'trash'>('inbox');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
   const [isComposing, setIsComposing] = useState(false);
+  const [loadingMail, setLoadingMail] = useState(false);
 
   // Compose State
   const [composeTo, setComposeTo] = useState('');
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
 
-  // Hydrate inbox with welcome mails when identity becomes active
+  const poolRef = useRef<NostrRelayPool | null>(null);
+
+  // Setup relay pool and listen for Kind 1059 unicast mails
   useEffect(() => {
-    if (identity) {
-      setEmails([
-        {
-          id: '1',
-          sender: 'npub1tendon...',
-          senderName: 'Satoshi (Tendon Protocol)',
-          subject: 'Welcome to Tendon Messaging Protocol (TMP)',
-          preview: `Your npub identifier is derived and active: ${identity.npub.substring(0, 15)}...`,
-          body: `Hello User,\n\nWelcome to Tendon Messaging Protocol (TMP). Tendon is an experimental communications envelope wrapped over Nostr (Kinds 1059 and 42) for zero-trust, relay-based messaging.\n\nYour sovereign key has been derived from your Master Encryption Key:\nnpub: ${identity.npub}\n\nYour inbox is active and listens to relay pools. Enjoy your sovereign data.\n\nBest,\nSatoshi`,
-          date: '10:45 AM',
-          isRead: false,
-          isStarred: true
-        },
-        {
-          id: '2',
-          sender: 'npub1auracrab...',
-          senderName: 'auracrab',
-          subject: 'Solana Escrow Audit Report Ready',
-          preview: 'Hey! The PR and the complete security audit verification of the Solana escrow repo is ready...',
-          body: 'Hi nathfavour,\n\nI have successfully finalized the audit for the Solana Escrow repository (PR #1). All vulnerabilities are resolved, and it is ready to be locked in.\n\nLet me know when we sync.\n\nBest,\nauracrab',
-          date: 'Yesterday',
-          isRead: true
+    if (!identity) return;
+
+    setLoadingMail(true);
+    const pool = new NostrRelayPool(RELAYS);
+    poolRef.current = pool;
+    pool.connect();
+
+    const userHexPubkey = bytesToHex(secp256k1.schnorr.getPublicKey(identity.privateKeyBytes));
+
+    const handleMailEvent = (event: NostrEvent) => {
+      // Listen to Unicast Mail (Kind 1059) addressed to user
+      if (event.kind === 1059) {
+        const isRecipient = event.tags.some(tag => tag[0] === 'p' && tag[1] === userHexPubkey);
+        if (isRecipient) {
+          try {
+            // Decode Tendon envelope
+            const decoded = decodeEnvelope(event.content);
+            if (decoded && decoded.payload && decoded.payload.kind === 'unicast_mail') {
+              const mailVal = decoded.payload.value;
+              const newMail: EmailMessage = {
+                id: event.id,
+                sender: event.pubkey,
+                senderName: `npub...${event.pubkey.substring(event.pubkey.length - 8)}`,
+                subject: mailVal.subject || '(No Subject)',
+                preview: (mailVal.body_plaintext || '').substring(0, 80) + '...',
+                body: mailVal.body_plaintext || '',
+                date: new Date(event.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                isRead: false
+              };
+
+              setEmails(prev => {
+                if (prev.some(m => m.id === newMail.id)) return prev;
+                return [newMail, ...prev];
+              });
+            }
+          } catch (e) {
+            console.error('Failed to decode incoming unicast envelope:', e);
+          }
         }
-      ]);
-    }
+      }
+    };
+
+    pool.addListener(handleMailEvent);
+
+    // Subscribe to unicast mails addressed to our pubkey hex
+    pool.subscribe('tendon-inbox-subscription', [
+      {
+        kinds: [1059],
+        '#p': [userHexPubkey],
+        limit: 50
+      }
+    ]);
+    setLoadingMail(false);
+
+    return () => {
+      pool.removeListener(handleMailEvent);
+      pool.unsubscribe('tendon-inbox-subscription');
+      pool.close();
+    };
   }, [identity]);
+
+  const handleCopyNpub = () => {
+    if (identity) {
+      navigator.clipboard.writeText(identity.npub);
+      toast.success('Public key (npub) copied to clipboard!');
+    }
+  };
+
+  const handleSendMail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!composeTo || !composeSubject || !composeBody) {
+      toast.error('All fields are required');
+      return;
+    }
+
+    if (!identity || !poolRef.current) {
+      toast.error('Cryptographic identity not active');
+      return;
+    }
+
+    try {
+      toast.loading('Resolving recipient identifier...', { id: 'send-mail' });
+      // 1. Resolve recipient identifier (npub or email format) to hex public key
+      const resolved = await resolveIdentifier(composeTo, 'kylrix.space');
+
+      // 2. Build Tendon envelope
+      const tendonEnvelope = buildEnvelope({
+        kind: "unicast_mail",
+        value: {
+          message_id: crypto.randomUUID(),
+          thread_id: crypto.randomUUID(),
+          subject: composeSubject,
+          body_plaintext: composeBody,
+          cc_recipients_npub: [],
+          attachments: []
+        }
+      });
+
+      // 3. Wrap envelope for Nostr Kind 1059
+      const wrapped = wrapForNostr(tendonEnvelope, [["p", resolved.hex]]);
+
+      // 4. Sign the Nostr event using schnorr
+      const signed = signEvent({
+        pubkey: bytesToHex(secp256k1.schnorr.getPublicKey(identity.privateKeyBytes)),
+        created_at: wrapped.created_at_unix,
+        kind: wrapped.kind,
+        tags: wrapped.tags,
+        content: wrapped.content_base64
+      }, identity.privateKeyBytes);
+
+      // 5. Publish to Nostr relay pool
+      await poolRef.current.publish(signed);
+
+      // Optimistically add to sent list locally
+      const newMail: EmailMessage = {
+        id: signed.id,
+        sender: identity.npub,
+        senderName: 'You (me)',
+        subject: composeSubject,
+        preview: composeBody.substring(0, 80) + '...',
+        body: composeBody,
+        date: 'Just now',
+        isRead: true
+      };
+
+      setEmails(prev => [newMail, ...prev]);
+      setIsComposing(false);
+      setComposeTo('');
+      setComposeSubject('');
+      setComposeBody('');
+      toast.success('Encrypted unicast mail signed and published to relays!', { id: 'send-mail' });
+    } catch (err: any) {
+      console.error('Failed to send TMP mail:', err);
+      toast.error(err.message || 'Failed to send mail', { id: 'send-mail' });
+    }
+  };
+
+  const filteredEmails = emails.filter(email => {
+    const matchesSearch = email.subject.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          email.senderName.toLowerCase().includes(searchQuery.toLowerCase());
+    if (activeFolder === 'starred') return matchesSearch && email.isStarred;
+    if (activeFolder === 'sent') return matchesSearch && email.sender === identity?.npub;
+    return matchesSearch && email.sender !== identity?.npub;
+  });
 
   if (isVaultLocked || !identity) {
     return (
@@ -72,48 +206,14 @@ export function MailBox() {
         </p>
         <button
           onClick={unlockAndLoad}
-          disabled={loading}
+          disabled={identityLoading}
           className="px-6 py-3 bg-[#F59E0B] hover:bg-[#D97706] disabled:bg-amber-500/50 text-white font-extrabold rounded-2xl transition-all shadow-[0_4px_12px_rgba(245,158,11,0.2)]"
         >
-          {loading ? 'Initializing relays...' : 'Unlock Sovereign Vault'}
+          {identityLoading ? 'Initializing relays...' : 'Unlock Sovereign Vault'}
         </button>
       </div>
     );
   }
-
-  const handleSendMail = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!composeTo || !composeSubject || !composeBody) {
-      toast.error('All fields are required');
-      return;
-    }
-
-    const newMail: EmailMessage = {
-      id: Date.now().toString(),
-      sender: identity.npub,
-      senderName: 'You (me)',
-      subject: composeSubject,
-      preview: composeBody.substring(0, 80) + '...',
-      body: composeBody,
-      date: 'Just now',
-      isRead: true
-    };
-
-    setEmails([newMail, ...emails]);
-    setIsComposing(false);
-    setComposeTo('');
-    setComposeSubject('');
-    setComposeBody('');
-    toast.success('Encrypted unicast mail signed and published to relays!');
-  };
-
-  const filteredEmails = emails.filter(email => {
-    const matchesSearch = email.subject.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          email.senderName.toLowerCase().includes(searchQuery.toLowerCase());
-    if (activeFolder === 'starred') return matchesSearch && email.isStarred;
-    if (activeFolder === 'sent') return matchesSearch && email.sender === identity.npub;
-    return matchesSearch && email.sender !== identity.npub;
-  });
 
   return (
     <div className="w-full bg-[#161412] border border-white/5 rounded-3xl overflow-hidden min-h-[60vh] flex flex-col md:flex-row text-white font-satoshi shadow-[0_12px_36px_rgba(0,0,0,0.5)]">
@@ -156,12 +256,22 @@ export function MailBox() {
           Trash
         </button>
 
-        <div className="mt-auto pt-4 border-t border-white/5 flex flex-col gap-1 text-[9px] font-mono text-white/30 truncate">
+        <div className="mt-auto pt-4 border-t border-white/5 flex flex-col gap-1.5 text-[9px] font-mono text-white/30">
           <div className="flex items-center gap-1.5 text-[#10B981]">
             <span className="w-1.5 h-1.5 bg-[#10B981] rounded-full animate-pulse" />
             TMP Relays connected
           </div>
-          <span className="truncate">npub: {identity.npub}</span>
+          <div className="flex flex-col gap-1 bg-white/[0.02] border border-white/5 p-2 rounded-xl">
+            <span className="truncate text-white/50">My npub:</span>
+            <span className="truncate text-white/80">{identity.npub}</span>
+            <button
+              onClick={handleCopyNpub}
+              className="mt-1 py-1 px-2 bg-white/5 hover:bg-white/10 text-white hover:text-white/90 border border-white/10 rounded flex items-center justify-center gap-1 text-[8px] uppercase tracking-wider font-sans transition-all"
+            >
+              <Copy size={8} />
+              Copy npub
+            </button>
+          </div>
         </div>
       </div>
 
@@ -272,7 +382,12 @@ export function MailBox() {
 
             {/* Mail lists */}
             <div className="flex-1 overflow-y-auto">
-              {filteredEmails.length === 0 ? (
+              {loadingMail && emails.length === 0 ? (
+                <div className="text-center py-20 text-white/40">
+                  <span className="animate-spin inline-block w-6 h-6 border-2 border-[#F59E0B] border-t-transparent rounded-full mb-3" />
+                  <p className="text-xs font-mono">Syncing inbox from relays...</p>
+                </div>
+              ) : filteredEmails.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3 text-white/30 select-none">
                   <Mail size={40} className="stroke-[1.5]" />
                   <span className="text-xs font-mono uppercase tracking-wider">No mail messages found</span>
