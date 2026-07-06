@@ -61,7 +61,8 @@ export function useNostrIdentity() {
 
       if (existing) {
         // Decrypt the nsec using vault decrypt
-        const decryptedNsec = await ecosystemSecurity.decrypt(existing.encryptedNsec);
+        const decryptedNsecRaw = await ecosystemSecurity.decrypt(existing.encryptedNsec);
+        const decryptedNsec = JSON.parse(decryptedNsecRaw);
         const privateKeyBytes = hexToBytes(decryptedNsec);
         const derivedNsec = bytesToNsec(privateKeyBytes);
 
