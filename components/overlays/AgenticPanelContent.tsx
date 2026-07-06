@@ -62,6 +62,8 @@ import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { account } from '@/lib/appwrite/client';
+import { WalletService } from '@/lib/services/wallets';
+import { toast } from 'react-hot-toast';
 
 interface ChatMessage {
   id: string;
@@ -148,6 +150,59 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const [executing, setExecuting] = useState(false);
   const [runningWorkflowId, setRunningWorkflowId] = useState<string | null>(null);
   const [agentCount, setAgentCount] = useState(0);
+
+  const [pendingPayment, setPendingPayment] = useState<{ agentId: string; amount: number; intentId: string; chainId: number } | null>(null);
+  const [signing, setSigning] = useState(false);
+
+  useEffect(() => {
+    const handlePaymentRequest = (e: CustomEvent) => {
+      const { agentId, amount, intentId, chainId } = e.detail;
+      setPendingPayment({ agentId, amount, intentId, chainId });
+    };
+    window.addEventListener('kylrix:request-payment' as any, handlePaymentRequest);
+    return () => window.removeEventListener('kylrix:request-payment' as any, handlePaymentRequest);
+  }, []);
+
+  const handleApprovePayment = async () => {
+    if (!pendingPayment || !user?.$id) return;
+    setSigning(true);
+    try {
+      const privKey = await WalletService.derivePrivateKey(user.$id, 'arbitrum');
+      const signature = `0x${privKey.slice(0, 10)}...mock_signature...${Date.now()}`;
+      const { submitGasRelayAction } = await import('@/lib/actions/secure-ops/arbitrum-rail');
+      const { jwt } = await account.createJWT().catch(() => ({ jwt: null }));
+      
+      const result = await submitGasRelayAction({
+        jwt: jwt || undefined,
+        intentId: pendingPayment.intentId,
+        signature: signature,
+        userAddress: '0x' + user.$id.slice(-40),
+        targetAddress: '0x' + pendingPayment.agentId.slice(-40),
+        amount: pendingPayment.amount,
+        chainId: pendingPayment.chainId
+      });
+
+      toast.success('Agent funded successfully!');
+      window.dispatchEvent(new CustomEvent('kylrix:payment-completed', {
+        detail: {
+          intentId: pendingPayment.intentId,
+          txHash: result.txHash,
+          agentId: pendingPayment.agentId
+        }
+      }));
+
+      setMessages(prev => [...prev, {
+        id: Math.random().toString(),
+        role: 'assistant',
+        content: `✅ Agent payment of ${pendingPayment.amount} ARB approved. On-chain Stream funded! Tx: ${result.txHash}`
+      }]);
+      setPendingPayment(null);
+    } catch (err: any) {
+      toast.error(err.message || 'Payment approval failed');
+    } finally {
+      setSigning(false);
+    }
+  };
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -383,6 +438,40 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
 
       {/* Sticky composer */}
       <div className="flex-shrink-0 border-t border-white/5 bg-[#161412] px-5 pt-3 pb-4">
+        {pendingPayment ? (
+          <div className="mb-3 p-4 rounded-[18px] bg-white/[0.03] backdrop-blur-md border border-white/10 flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                <Wallet size={16} />
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="text-white text-xs font-bold leading-tight">Authorize Agent Funding</h3>
+                <p className="text-[#9B9691] text-[10px] leading-snug mt-0.5">
+                  Deposit {pendingPayment.amount} ARB to fund Agent {pendingPayment.agentId.substring(0, 8)}...
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={signing}
+                onClick={handleApprovePayment}
+                className="flex-1 py-2 px-3 rounded-xl bg-white text-black text-xs font-black hover:bg-zinc-200 transition disabled:opacity-50"
+              >
+                {signing ? 'Signing with MEK...' : 'Sign & Fund Stream'}
+              </button>
+              <button
+                type="button"
+                disabled={signing}
+                onClick={() => setPendingPayment(null)}
+                className="py-2 px-3 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/5 text-white text-xs font-bold transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         <form onSubmit={handleSubmit} className="flex flex-col gap-2">
           <div
             className="flex items-end gap-2 rounded-[18px] border border-white/8 bg-[#0B0A09] px-3 py-2.5 focus-within:border-white/15 transition-colors"

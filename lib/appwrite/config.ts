@@ -33,6 +33,7 @@ export const APPWRITE_CONFIG = {
         TOKEN_REGISTRY: 'token_registry',
         WEB3_TRANSACTIONS: 'web3_transactions',
         NOSTR_IDENTITIES: 'nostr_identities',
+        AGENT_PAYMENT_INTENTS: 'agent_payment_intents',
 
         NOTE: {
             USERS: '67ff05c900247b5673d3',
@@ -87,7 +88,8 @@ export const APPWRITE_CONFIG = {
             FORMS: 'forms',
             FORM_SUBMISSIONS: 'formSubmissions',
             AGENTS: 'agents',
-            OBJECTS: 'objects'
+            OBJECTS: 'objects',
+            AGENT_PAYMENT_INTENTS: 'agent_payment_intents'
         },
         CONNECT: {
             USERS: 'users',

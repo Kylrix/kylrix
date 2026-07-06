@@ -33,6 +33,7 @@ import { usePresence } from '@/components/providers/PresenceProvider';
 import { FlowPresenceFlapOver } from '@/components/LinkRenderer';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { ShareLockButton } from '../share/ShareLockButton';
 import { useAccessControlMenuItems } from '../share/AccessControlMenuItems';
@@ -97,6 +98,40 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
   const { openSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
   const { openMenu } = useContextMenu();
+  const { openAgenticDrawer } = useAgenticDrawer();
+
+  const handleHireAgentClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const { createKylrixTokenOperationsClient } = await import('@/lib/sdk/token/client');
+    const tokenClient = createKylrixTokenOperationsClient();
+    try {
+      const intentRes = await tokenClient.requestPaymentIntent(
+        task.id,
+        10.0,
+        { taskId: task.id, title: task.title }
+      );
+      if (intentRes.success && intentRes.intent) {
+        openAgenticDrawer({
+          prompt: `Confirming payment setup for task: ${task.title}.`,
+          autoRun: false
+        });
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('kylrix:request-payment', {
+            detail: {
+              agentId: task.id,
+              amount: 10.0,
+              intentId: intentRes.intent.id,
+              chainId: intentRes.intent.chainId
+            }
+          }));
+        }, 500);
+      }
+    } catch (err: any) {
+      console.error(err);
+    }
+  };
+
   const [isHovered, setIsHovered] = useState(false);
   const [isFlapOverOpen, setIsFlapOverOpen] = useState(false);
   const { resourcePresence } = usePresence();
@@ -429,6 +464,15 @@ const contextMenuItems = useMemo(() => ([
                     title={taskPinned ? 'Unpin' : 'Pin'}
                   >
                     <Pin size={16} className={taskPinned ? 'fill-[#F59E0B]' : ''} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleHireAgentClick}
+                    className="p-1 rounded-lg text-white/20 hover:text-indigo-400 hover:bg-indigo-500/5 transition-all duration-200"
+                    title="Hire Agent"
+                  >
+                    <Sparkles size={16} />
                   </button>
 
                   <ShareLockButton 

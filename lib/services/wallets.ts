@@ -430,9 +430,17 @@ export const WalletService = {
         const seed = await bip39.mnemonicToSeed(root.mnemonic);
         const rootKey = HDKey.fromMasterSeed(seed);
 
-        if (chain === 'eth') {
+        const rootChain = getRootChain(chain);
+        const family = NETWORKS[rootChain]?.family;
+
+        if (family === 'evm') {
             const child = rootKey.derive("m/44'/60'/0'/0/0");
             if (!child.privateKey) throw new Error('Failed to derive EVM key');
+            return Buffer.from(child.privateKey).toString('hex');
+        }
+        if (family === 'solana') {
+            const child = rootKey.derive("m/44'/501'/0'/0'");
+            if (!child.privateKey) throw new Error('Failed to derive Solana key');
             return Buffer.from(child.privateKey).toString('hex');
         }
         throw new Error(`Derivation for chain ${chain} not implemented`);

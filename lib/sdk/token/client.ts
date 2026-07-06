@@ -195,5 +195,17 @@ export function createKylrixTokenOperationsClient(options: KylrixTokenClientOpti
       execute({ action: 'lock_claim', ...request }),
     settleClaim: (request: Omit<SettleClaimRequest, 'action'>) =>
       execute({ action: 'settle_claim', ...request }),
+    requestPaymentIntent: async (agentId: string, amount: number, contextPayload: Record<string, any>, chainId?: number) => {
+      const { jwt } = await account.createJWT().catch(() => ({ jwt: null }));
+      const targetChainId = chainId || (typeof window !== 'undefined' && localStorage.getItem('kylrix_wallet_testnet_mode') === '1' ? 421614 : 42161);
+      const { createPaymentIntentAction } = await import('@/lib/actions/secure-ops/arbitrum-rail');
+      return createPaymentIntentAction({
+        jwt: jwt || undefined,
+        agentId,
+        amount,
+        contextPayload,
+        chainId: targetChainId
+      });
+    }
   };
 }

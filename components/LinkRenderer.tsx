@@ -1332,6 +1332,33 @@ export function FlowPresencePulseLink({ href, children }: { href: string; childr
     }
   }, [taskId, getCachedData, setCachedData]);
 
+  const [isFunded, setIsFunded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const fundedList = JSON.parse(localStorage.getItem('kylrix_funded_tasks') || '[]');
+      if (fundedList.includes(taskId)) {
+        setIsFunded(true);
+      }
+    } catch {}
+
+    const handlePaymentCompleted = (e: CustomEvent) => {
+      const { agentId } = e.detail;
+      if (agentId === taskId) {
+        setIsFunded(true);
+        try {
+          const fundedList = JSON.parse(localStorage.getItem('kylrix_funded_tasks') || '[]');
+          if (!fundedList.includes(taskId)) {
+            fundedList.push(taskId);
+            localStorage.setItem('kylrix_funded_tasks', JSON.stringify(fundedList));
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('kylrix:payment-completed' as any, handlePaymentCompleted);
+    return () => window.removeEventListener('kylrix:payment-completed' as any, handlePaymentCompleted);
+  }, [taskId]);
+
   useEffect(() => {
     loadTask();
   }, [loadTask]);
@@ -1339,7 +1366,7 @@ export function FlowPresencePulseLink({ href, children }: { href: string; childr
   // Check if teammates are active in task huddle or project thread
   const activeTeammates = resourcePresence[taskId] || [];
   const projectTeammates = task?.projectId ? (resourcePresence[task.projectId] || []) : [];
-  const hasPresence = activeTeammates.length > 0 || projectTeammates.length > 0;
+  const hasPresence = activeTeammates.length > 0 || projectTeammates.length > 0 || isFunded;
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
