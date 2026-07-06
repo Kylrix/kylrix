@@ -101,7 +101,7 @@ export function NostrFeed() {
             </div>
             <div className="flex flex-col">
               <span className="text-xs font-bold text-white/80">Contribute to the Town Square</span>
-              <span className="text-[10px] text-white/40">Unlock your vault to write and sign encrypted moments.</span>
+              <span className="text-[10px] text-white/40">Unlock your vault to write and sign public tech posts.</span>
             </div>
           </div>
           <button
