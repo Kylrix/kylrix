@@ -2,6 +2,9 @@ import * as secp256k1 from "@noble/secp256k1";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, hexToBytes } from "./crypto";
 
+// Configure secp256k1 with the sha256 hash function
+secp256k1.hashes.sha256 = (message) => sha256(message);
+
 export interface NostrEvent {
   id: string;
   pubkey: string;

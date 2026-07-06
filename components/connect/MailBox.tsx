@@ -45,6 +45,31 @@ export function MailBox() {
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
 
+  // Load draft on mount
+  useEffect(() => {
+    try {
+      const cachedDraft = localStorage.getItem('kylrix_mail_draft');
+      if (cachedDraft) {
+        const parsed = JSON.parse(cachedDraft);
+        setComposeTo(parsed.composeTo || '');
+        setComposeSubject(parsed.composeSubject || '');
+        setComposeBody(parsed.composeBody || '');
+        if (parsed.composeTo || parsed.composeSubject || parsed.composeBody) {
+          setIsComposing(true);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load mail draft:', e);
+    }
+  }, []);
+
+  // Save draft live on change
+  useEffect(() => {
+    try {
+      localStorage.setItem('kylrix_mail_draft', JSON.stringify({ composeTo, composeSubject, composeBody }));
+    } catch (e) {}
+  }, [composeTo, composeSubject, composeBody]);
+
   const poolRef = useRef<NostrRelayPool | null>(null);
 
   // Setup relay pool and listen for Kind 1059 unicast mails
@@ -179,6 +204,9 @@ export function MailBox() {
       setComposeTo('');
       setComposeSubject('');
       setComposeBody('');
+      try {
+        localStorage.removeItem('kylrix_mail_draft');
+      } catch (e) {}
       toast.success('Encrypted unicast mail signed and published to relays!', { id: 'send-mail' });
     } catch (err: any) {
       console.error('Failed to send TMP mail:', err);

@@ -1,6 +1,10 @@
 import * as secp256k1 from "@noble/secp256k1";
 import { sha256 } from "@noble/hashes/sha2.js";
 export { sha256 };
+
+// Configure secp256k1 with the sha256 hash function
+secp256k1.hashes.sha256 = (message) => sha256(message);
+
 import { bech32 } from "@scure/base";
 import { generateMnemonic, mnemonicToSeedSync } from "@scure/bip39";
 import { wordlist } from "@scure/bip39/wordlists/english.js";
