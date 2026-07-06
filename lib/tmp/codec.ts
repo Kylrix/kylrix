@@ -14,8 +14,12 @@ export function encodeEnvelope(envelope: TendonEnvelope): string {
   return toBase64(bytes);
 }
 
-export function decodeEnvelope(contentBase64: string): TendonEnvelope {
-  const bytes = fromBase64(contentBase64);
-  const jsonStr = new TextDecoder().decode(bytes);
-  return JSON.parse(jsonStr) as TendonEnvelope;
+export function decodeEnvelope(contentBase64: string): TendonEnvelope | null {
+  try {
+    const bytes = fromBase64(contentBase64);
+    const jsonStr = new TextDecoder().decode(bytes);
+    return JSON.parse(jsonStr) as TendonEnvelope;
+  } catch {
+    return null;
+  }
 }
