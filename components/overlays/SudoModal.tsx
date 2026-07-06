@@ -47,6 +47,14 @@ function useIsDesktop() {
     return isDesktop;
 }
 
+const SUDO_DETECT_CACHE = new Map<string, {
+    hasPass: boolean;
+    pending: boolean;
+    passkeyPresent: boolean;
+    timestamp: number;
+}>();
+const CACHE_TTL_MS = 60 * 1000; // 1 minute Cache TTL
+
 export default function SudoModal({
     isOpen: _isOpen,
     open,
@@ -202,9 +210,51 @@ export default function SudoModal({
         async function detect() {
             try {
                 setIsDetecting(true);
-                
-                // 1. Check if user has masterpass
-                const hasPass = await AppwriteService.hasMasterpass(user?.$id || '');
+                const userId = user?.$id || '';
+                const cached = SUDO_DETECT_CACHE.get(userId);
+                const now = Date.now();
+
+                let hasPass: boolean;
+                let pending: boolean;
+                let passkeyPresent = false;
+
+                if (cached && (now - cached.timestamp < CACHE_TTL_MS)) {
+                    hasPass = cached.hasPass;
+                    pending = cached.pending;
+                    passkeyPresent = cached.passkeyPresent;
+                } else {
+                    const [hasPassRes, pendingRes, entriesRes] = await Promise.all([
+                        AppwriteService.hasMasterpass(userId),
+                        masterPassCrypto.isMigrationInterrupted(userId),
+                        AppwriteService.listKeychainEntries(userId)
+                    ]);
+                    hasPass = hasPassRes;
+                    pending = pendingRes;
+
+                    const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+                    const isLocalHost = currentHost === 'localhost' || currentHost === '127.0.0.1';
+                    passkeyPresent = entriesRes.some((e: any) => {
+                        if (e.type !== "passkey") return false;
+                        let rpId = '';
+                        try {
+                            const parsed = typeof e.params === 'string' ? JSON.parse(e.params) : e.params;
+                            rpId = parsed?.rpId || '';
+                        } catch (err) {}
+                        if (isLocalHost) {
+                            return rpId === 'localhost' || rpId === '127.0.0.1';
+                        } else {
+                            return rpId !== 'localhost' && rpId !== '127.0.0.1';
+                        }
+                    });
+
+                    SUDO_DETECT_CACHE.set(userId, {
+                        hasPass,
+                        pending,
+                        passkeyPresent,
+                        timestamp: now
+                    });
+                }
+
                 if (!active) return;
                 setHasMasterpass(hasPass);
 
@@ -213,34 +263,13 @@ export default function SudoModal({
                     return;
                 }
 
-                // 2. Check if a vault migration was interrupted previously
-                const pending = await masterPassCrypto.isMigrationInterrupted(user?.$id || '');
-                if (!active) return;
                 setIsPendingVault(pending);
 
-                // 3. Check if user has passkeys configured
-                const entries = await AppwriteService.listKeychainEntries(user?.$id || '');
-                const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
-                const isLocalHost = currentHost === 'localhost' || currentHost === '127.0.0.1';
-                const passkeyPresent = entries.some((e: any) => {
-                    if (e.type !== "passkey") return false;
-                    let rpId = '';
-                    try {
-                        const parsed = typeof e.params === 'string' ? JSON.parse(e.params) : e.params;
-                        rpId = parsed?.rpId || '';
-                    } catch (err) {}
-                    if (isLocalHost) {
-                        return rpId === 'localhost' || rpId === '127.0.0.1';
-                    } else {
-                        return rpId !== 'localhost' && rpId !== '127.0.0.1';
-                    }
-                });
                 const passkeyAllowed = passkeyPresent && isKylrixDomain;
-                if (!active) return;
                 setHasPasskey(passkeyAllowed);
 
                 // Determine default mode
-                if (intent === "initialize" || hasPass === false) {
+                if (intent === "initialize") {
                     setMode("initialize");
                 } else if (intent === "reset") {
                     setMode("reset-confirm");
