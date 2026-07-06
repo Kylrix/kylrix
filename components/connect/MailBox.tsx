@@ -7,7 +7,7 @@ import { NostrRelayPool, signEvent, NostrEvent } from '@/lib/tmp/nostr';
 import { buildEnvelope, wrapForNostr } from '@/lib/tmp/builder';
 import { resolveIdentifier } from '@/lib/tmp/resolver';
 import { decodeEnvelope } from '@/lib/tmp/codec';
-import { bytesToHex, hexToBytes } from '@/lib/tmp/crypto';
+import { bytesToHex, hexToBytes, bytesToNpub } from '@/lib/tmp/crypto';
 import * as secp256k1 from '@noble/secp256k1';
 import toast from 'react-hot-toast';
 
@@ -45,7 +45,9 @@ export function MailBox() {
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
 
-  // Load draft on mount
+  const poolRef = useRef<NostrRelayPool | null>(null);
+
+  // Compose State live drafts sync
   useEffect(() => {
     try {
       const cachedDraft = localStorage.getItem('kylrix_mail_draft');
@@ -63,14 +65,30 @@ export function MailBox() {
     }
   }, []);
 
-  // Save draft live on change
   useEffect(() => {
     try {
       localStorage.setItem('kylrix_mail_draft', JSON.stringify({ composeTo, composeSubject, composeBody }));
     } catch (e) {}
   }, [composeTo, composeSubject, composeBody]);
 
-  const poolRef = useRef<NostrRelayPool | null>(null);
+  // Load emails from localStorage cache on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('tendon_emails_cache');
+      if (saved) {
+        setEmails(JSON.parse(saved));
+      }
+    } catch (e) {}
+  }, []);
+
+  // Save emails to localStorage cache when updated
+  useEffect(() => {
+    if (emails.length > 0) {
+      try {
+        localStorage.setItem('tendon_emails_cache', JSON.stringify(emails));
+      } catch (e) {}
+    }
+  }, [emails]);
 
   // Setup relay pool and listen for Kind 1059 unicast mails
   useEffect(() => {
@@ -84,10 +102,11 @@ export function MailBox() {
     const userHexPubkey = bytesToHex(secp256k1.schnorr.getPublicKey(identity.privateKeyBytes));
 
     const handleMailEvent = (event: NostrEvent) => {
-      // Listen to Unicast Mail (Kind 1059) addressed to user
       if (event.kind === 1059) {
         const isRecipient = event.tags.some(tag => tag[0] === 'p' && tag[1] === userHexPubkey);
-        if (isRecipient) {
+        const isSender = event.pubkey === userHexPubkey;
+
+        if (isRecipient || isSender) {
           try {
             // Decode Tendon envelope
             const decoded = decodeEnvelope(event.content);
@@ -95,13 +114,13 @@ export function MailBox() {
               const mailVal = decoded.payload.value;
               const newMail: EmailMessage = {
                 id: event.id,
-                sender: event.pubkey,
-                senderName: `npub...${event.pubkey.substring(event.pubkey.length - 8)}`,
+                sender: isSender ? identity.npub : bytesToNpub(hexToBytes(event.pubkey)),
+                senderName: isSender ? 'You (me)' : `User ${event.pubkey.substring(0, 6)}`,
                 subject: mailVal.subject || '(No Subject)',
                 preview: (mailVal.body_plaintext || '').substring(0, 80) + '...',
                 body: mailVal.body_plaintext || '',
-                date: new Date(event.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                isRead: false
+                date: new Date(decoded.dispatch_timestamp_utc || event.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                isRead: isSender
               };
 
               setEmails(prev => {
@@ -118,13 +137,10 @@ export function MailBox() {
 
     pool.addListener(handleMailEvent);
 
-    // Subscribe to unicast mails addressed to our pubkey hex
+    // Subscribe to unicast mails addressed to our pubkey hex or sent by us
     pool.subscribe('tendon-inbox-subscription', [
-      {
-        kinds: [1059],
-        '#p': [userHexPubkey],
-        limit: 50
-      }
+      { kinds: [1059], '#p': [userHexPubkey], limit: 50 },
+      { kinds: [1059], authors: [userHexPubkey], limit: 50 }
     ]);
     setLoadingMail(false);
 
@@ -156,8 +172,9 @@ export function MailBox() {
 
     try {
       toast.loading('Resolving recipient identifier...', { id: 'send-mail' });
-      // 1. Resolve recipient identifier (npub or email format) to hex public key
-      const resolved = await resolveIdentifier(composeTo, 'kylrix.space');
+      // 1. Resolve recipient identifier using active host environment
+      const defaultDomain = typeof window !== 'undefined' ? window.location.host : 'kylrix.space';
+      const resolved = await resolveIdentifier(composeTo, defaultDomain);
 
       // 2. Build Tendon envelope
       const tendonEnvelope = buildEnvelope({
