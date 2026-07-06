@@ -349,53 +349,55 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       </div>
 
       {/* Sticky quick actions — grid scrolls inside band; header + composer stay put */}
-      <div className="flex-shrink-0 border-b border-white/5 bg-[#161412] px-5 py-3 flex flex-col min-h-0 max-h-[min(240px,36%)]">
-        <div className="flex items-center justify-between gap-2 mb-2.5 flex-shrink-0">
-          <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#9B9691] font-clash">
-            Suggested here
-          </span>
-          <span className="text-[10px] font-semibold text-white/25">{workflows.length} actions</span>
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1 pb-0.5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {workflows.map((action) => {
-              const Icon = QUICK_ICON_MAP[action.icon] || Sparkles;
-              const isRunning = runningWorkflowId === action.id;
+      {messages.length === 0 && (
+        <div className="flex-shrink-0 border-b border-white/5 bg-[#161412] px-5 py-3 flex flex-col min-h-0 max-h-[min(240px,36%)]">
+          <div className="flex items-center justify-between gap-2 mb-2.5 flex-shrink-0">
+            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#9B9691] font-clash">
+              Suggested here
+            </span>
+            <span className="text-[10px] font-semibold text-white/25">{workflows.length} actions</span>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1 pb-0.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {workflows.map((action) => {
+                const Icon = QUICK_ICON_MAP[action.icon] || Sparkles;
+                const isRunning = runningWorkflowId === action.id;
 
-              return (
-                <button
-                  key={action.id}
-                  type="button"
-                  disabled={isRunning || executing}
-                  onClick={() => void handleWorkflow(action)}
-                  title={action.description}
-                  className="w-full flex items-center gap-3 px-3 py-3 rounded-[16px] bg-[#0B0A09] border border-white/5 hover:bg-[#1C1A18] hover:border-white/10 transition disabled:opacity-50 text-left"
-                >
-                  <div
-                    className="w-9 h-9 rounded-[11px] flex items-center justify-center flex-shrink-0 border"
-                    style={{ color: accent, borderColor: `${accent}30`, backgroundColor: `${accent}10` }}
+                return (
+                  <button
+                    key={action.id}
+                    type="button"
+                    disabled={isRunning || executing}
+                    onClick={() => void handleWorkflow(action)}
+                    title={action.description}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-[16px] bg-[#0B0A09] border border-white/5 hover:bg-[#1C1A18] hover:border-white/10 transition disabled:opacity-50 text-left"
                   >
-                    {isRunning ? (
-                      <RefreshCw size={15} className="animate-spin" />
-                    ) : (
-                      <Icon size={15} strokeWidth={2.2} />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1 flex flex-col gap-0.5">
-                    <span className="text-white text-[13px] font-extrabold font-clash leading-tight">
-                      {action.label}
-                    </span>
-                    <span className="text-[#9B9691] text-[11px] font-semibold leading-snug line-clamp-2">
-                      {action.description}
-                    </span>
-                  </div>
-                  <ChevronRight size={14} className="text-white/20 flex-shrink-0" />
-                </button>
-              );
-            })}
+                    <div
+                      className="w-9 h-9 rounded-[11px] flex items-center justify-center flex-shrink-0 border"
+                      style={{ color: accent, borderColor: `${accent}30`, backgroundColor: `${accent}10` }}
+                    >
+                      {isRunning ? (
+                        <RefreshCw size={15} className="animate-spin" />
+                      ) : (
+                        <Icon size={15} strokeWidth={2.2} />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                      <span className="text-white text-[13px] font-extrabold font-clash leading-tight">
+                        {action.label}
+                      </span>
+                      <span className="text-[#9B9691] text-[11px] font-semibold leading-snug line-clamp-2">
+                        {action.description}
+                      </span>
+                    </div>
+                    <ChevronRight size={14} className="text-white/20 flex-shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Scrollable chat only */}
       <div ref={chatScrollRef} className="flex-1 min-h-0 overflow-y-auto px-5 py-4 flex flex-col gap-3">

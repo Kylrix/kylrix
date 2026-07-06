@@ -456,4 +456,16 @@ export const WalletService = {
         }
         throw new Error(`Derivation for chain ${chain} not implemented`);
     },
+
+    async exportMnemonic(userId: string): Promise<string> {
+        if (!ecosystemSecurity.status.isUnlocked || !ecosystemSecurity.getMasterKey()) {
+            throw new Error('Wallet vault is locked');
+        }
+        const existingRows = await listWalletRows(userId);
+        if (!existingRows.length) {
+            throw new Error('No wallets found to export');
+        }
+        const root = await parseRootEnvelope(existingRows[0].encryptedSecret);
+        return root.mnemonic;
+    },
 };

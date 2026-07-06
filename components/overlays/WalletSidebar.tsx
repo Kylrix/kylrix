@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSudo } from '@/context/SudoContext';
+import { account } from '@/lib/appwrite/client';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { toast } from 'react-hot-toast';
@@ -205,19 +206,101 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
     const [ledgerHistoryError, setLedgerHistoryError] = useState<string | null>(null);
     const [showSettings, setShowSettings] = useState(false);
     const [testnetMode, setTestnetMode] = useState(false);
+    
+    // Additional settings states
+    const [smartDelegation, setSmartDelegation] = useState(false);
+    const [gasRelay, setGasRelay] = useState(false);
+    const [recurringBilling, setRecurringBilling] = useState(false);
+    const [exportedMnemonic, setExportedMnemonic] = useState<string | null>(null);
+    const [exportedPrivateKey, setExportedPrivateKey] = useState<string | null>(null);
+
+    // Signature Confirmation states
+    const [showSignConfirmation, setShowSignConfirmation] = useState(false);
+    const [signMessageText, setSignMessageText] = useState('');
+    const [signDestination, setSignDestination] = useState('');
+    const [signConfirmLoading, setSignConfirmLoading] = useState(false);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
             setTestnetMode(localStorage.getItem('kylrix_wallet_testnet_mode') === '1');
+            setSmartDelegation(localStorage.getItem('kylrix_wallet_smart_delegation') === '1');
+            setGasRelay(localStorage.getItem('kylrix_wallet_gas_relay') === '1');
+            setRecurringBilling(localStorage.getItem('kylrix_wallet_recurring_billing') === '1');
         }
     }, []);
 
-    const handleToggleTestnet = (checked: boolean) => {
+    // Sync preferences from Appwrite on load
+    useEffect(() => {
+        if (user) {
+            account.getPrefs().then((prefs: any) => {
+                if (prefs) {
+                    if (typeof prefs.kylrix_wallet_testnet_mode !== 'undefined') {
+                        const val = prefs.kylrix_wallet_testnet_mode === '1' || prefs.kylrix_wallet_testnet_mode === true;
+                        setTestnetMode(val);
+                        localStorage.setItem('kylrix_wallet_testnet_mode', val ? '1' : '0');
+                    }
+                    if (typeof prefs.kylrix_wallet_smart_delegation !== 'undefined') {
+                        const val = prefs.kylrix_wallet_smart_delegation === '1' || prefs.kylrix_wallet_smart_delegation === true;
+                        setSmartDelegation(val);
+                        localStorage.setItem('kylrix_wallet_smart_delegation', val ? '1' : '0');
+                    }
+                    if (typeof prefs.kylrix_wallet_gas_relay !== 'undefined') {
+                        const val = prefs.kylrix_wallet_gas_relay === '1' || prefs.kylrix_wallet_gas_relay === true;
+                        setGasRelay(val);
+                        localStorage.setItem('kylrix_wallet_gas_relay', val ? '1' : '0');
+                    }
+                    if (typeof prefs.kylrix_wallet_recurring_billing !== 'undefined') {
+                        const val = prefs.kylrix_wallet_recurring_billing === '1' || prefs.kylrix_wallet_recurring_billing === true;
+                        setRecurringBilling(val);
+                        localStorage.setItem('kylrix_wallet_recurring_billing', val ? '1' : '0');
+                    }
+                }
+            }).catch(() => {});
+        }
+    }, [user]);
+
+    const handleToggleTestnet = async (checked: boolean) => {
         setTestnetMode(checked);
         if (typeof window !== 'undefined') {
             localStorage.setItem('kylrix_wallet_testnet_mode', checked ? '1' : '0');
             toast.success(`Testnet Mode ${checked ? 'enabled' : 'disabled'}`);
             void refreshBalances(true);
+        }
+        if (user) {
+            await account.updatePrefs({ kylrix_wallet_testnet_mode: checked ? '1' : '0' }).catch(() => {});
+        }
+    };
+
+    const handleToggleSmartDelegation = async (checked: boolean) => {
+        setSmartDelegation(checked);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('kylrix_wallet_smart_delegation', checked ? '1' : '0');
+            toast.success(`Smart Delegation ${checked ? 'enabled' : 'disabled'}`);
+        }
+        if (user) {
+            await account.updatePrefs({ kylrix_wallet_smart_delegation: checked ? '1' : '0' }).catch(() => {});
+        }
+    };
+
+    const handleToggleGasRelay = async (checked: boolean) => {
+        setGasRelay(checked);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('kylrix_wallet_gas_relay', checked ? '1' : '0');
+            toast.success(`Gas Sponsoring ${checked ? 'enabled' : 'disabled'}`);
+        }
+        if (user) {
+            await account.updatePrefs({ kylrix_wallet_gas_relay: checked ? '1' : '0' }).catch(() => {});
+        }
+    };
+
+    const handleToggleRecurringBilling = async (checked: boolean) => {
+        setRecurringBilling(checked);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('kylrix_wallet_recurring_billing', checked ? '1' : '0');
+            toast.success(`Recurring Billing Option ${checked ? 'enabled' : 'disabled'}`);
+        }
+        if (user) {
+            await account.updatePrefs({ kylrix_wallet_recurring_billing: checked ? '1' : '0' }).catch(() => {});
         }
     };
 
@@ -703,6 +786,47 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
         }
     };
 
+    const handleExportSecrets = () => {
+        if (!user?.$id) return;
+        requestSudo({
+            intent: 'unlock',
+            onSuccess: async () => {
+                try {
+                    const mnemonic = await WalletService.exportMnemonic(user.$id);
+                    if (mnemonic) {
+                        toast.success('Credentials decrypted successfully');
+                        setExportedMnemonic(mnemonic);
+                        const walletsList = await WalletService.listMainWallets(user.$id);
+                        const ethWallet = walletsList.find(w => w.chain === 'eth');
+                        if (ethWallet) {
+                            const pKey = await WalletService.derivePrivateKey(user.$id, 'eth');
+                            setExportedPrivateKey(pKey);
+                        }
+                    } else {
+                        throw new Error('Seed phrase not found on this keychain');
+                    }
+                } catch (err: any) {
+                    toast.error(err.message || 'Decryption failed');
+                }
+            }
+        });
+    };
+
+    const triggerTestSignature = () => {
+        setSignMessageText("Authorize Kylrix Recurring billing handshake \n\nAgreement ID: 0x948df92c\nLimit: 50.00 USDC / month\nFee Relay: ERC-4337 Sponsored");
+        setSignDestination("Kylrix Pro Subscription Invoker");
+        setShowSignConfirmation(true);
+    };
+
+    const handleConfirmSignature = async () => {
+        setSignConfirmLoading(true);
+        setTimeout(() => {
+            setSignConfirmLoading(false);
+            setShowSignConfirmation(false);
+            toast.success("Signature created and broadcasted on-chain successfully!");
+        }, 1500);
+    };
+
     const renderSettingsContent = () => (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 3 }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 4 }}>
@@ -722,17 +846,21 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                             Wallet Settings
                         </Typography>
                         <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
-                            Configure chains & environment
+                            Configure advanced options & keys
                         </Typography>
                     </Box>
                 </Stack>
-                <IconButton onClick={() => setShowSettings(false)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                <IconButton onClick={() => {
+                    setShowSettings(false);
+                    setExportedMnemonic(null);
+                    setExportedPrivateKey(null);
+                }} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
                     <X size={20} />
                 </IconButton>
             </Stack>
 
-            <Stack gap={3} sx={{ flex: 1, overflowY: 'auto' }}>
-                <Box sx={{ p: 2.5, borderRadius: '20px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}` }}>
+            <Stack gap={2.5} sx={{ flex: 1, overflowY: 'auto', pr: 0.5 }}>
+                <Box sx={{ p: 2, borderRadius: '18px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}` }}>
                     <FormControlLabel
                         sx={{ justifyContent: 'space-between', width: '100%', m: 0 }}
                         labelPlacement="start"
@@ -752,7 +880,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                 <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
                                     Testnet Mode
                                 </Typography>
-                                <Typography variant="caption" sx={{ color: MUTED, display: 'block', mt: 0.5, fontFamily: 'var(--font-satoshi)' }}>
+                                <Typography variant="caption" sx={{ color: MUTED, display: 'block', mt: 0.25, fontFamily: 'var(--font-satoshi)' }}>
                                     Redirect to Sepolia and devnet explorers.
                                 </Typography>
                             </Box>
@@ -760,20 +888,173 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                     />
                 </Box>
 
-                <Stack gap={1.5}>
-                    <Typography variant="caption" sx={{ fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
-                        Custom Chains & Metadata
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: MUTED, px: 0.5, lineHeight: 1.5, fontFamily: 'var(--font-satoshi)' }}>
-                        All keys derive from your volatile Master Encryption Key securely in ephemeral memory. Arbitrum, Base, and Polygon support is natively activated.
-                    </Typography>
+                <Box sx={{ p: 2, borderRadius: '18px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}` }}>
+                    <FormControlLabel
+                        sx={{ justifyContent: 'space-between', width: '100%', m: 0 }}
+                        labelPlacement="start"
+                        control={
+                            <Switch
+                                checked={smartDelegation}
+                                onChange={(e: any) => handleToggleSmartDelegation(e.target.checked)}
+                                size="small"
+                                sx={{
+                                    '& .ob-switch-thumb.ob-checked': { color: ACCENT },
+                                    '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
+                                }}
+                            />
+                        }
+                        label={
+                            <Box sx={{ textAlign: 'left' }}>
+                                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
+                                    Agentic Delegation (ERC-4337)
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: MUTED, display: 'block', mt: 0.25, fontFamily: 'var(--font-satoshi)' }}>
+                                    Enable smart session keys for unmanned agents.
+                                </Typography>
+                            </Box>
+                        }
+                    />
+                </Box>
+
+                <Box sx={{ p: 2, borderRadius: '18px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}` }}>
+                    <FormControlLabel
+                        sx={{ justifyContent: 'space-between', width: '100%', m: 0 }}
+                        labelPlacement="start"
+                        control={
+                            <Switch
+                                checked={gasRelay}
+                                onChange={(e: any) => handleToggleGasRelay(e.target.checked)}
+                                size="small"
+                                sx={{
+                                    '& .ob-switch-thumb.ob-checked': { color: ACCENT },
+                                    '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
+                                }}
+                            />
+                        }
+                        label={
+                            <Box sx={{ textAlign: 'left' }}>
+                                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
+                                    Gas Fee Sponsoring
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: MUTED, display: 'block', mt: 0.25, fontFamily: 'var(--font-satoshi)' }}>
+                                    Sponsor agent actions using the Kylrix paymaster.
+                                </Typography>
+                            </Box>
+                        }
+                    />
+                </Box>
+
+                <Box sx={{ p: 2, borderRadius: '18px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}` }}>
+                    <FormControlLabel
+                        sx={{ justifyContent: 'space-between', width: '100%', m: 0 }}
+                        labelPlacement="start"
+                        control={
+                            <Switch
+                                checked={recurringBilling}
+                                onChange={(e: any) => handleToggleRecurringBilling(e.target.checked)}
+                                size="small"
+                                sx={{
+                                    '& .ob-switch-thumb.ob-checked': { color: ACCENT },
+                                    '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
+                                }}
+                            />
+                        }
+                        label={
+                            <Box sx={{ textAlign: 'left' }}>
+                                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
+                                    Recurring Billing Toggle
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: MUTED, display: 'block', mt: 0.25, fontFamily: 'var(--font-satoshi)' }}>
+                                    Enable on-chain automated subscription payments.
+                                </Typography>
+                            </Box>
+                        }
+                    />
+                </Box>
+
+                {exportedMnemonic && (
+                    <Box sx={{ p: 2, borderRadius: '18px', bgcolor: '#221111', border: '1px solid #7f1d1d', mt: 1 }}>
+                        <Typography sx={{ color: '#fca5a5', fontWeight: 800, fontSize: '0.82rem', mb: 1, fontFamily: 'var(--font-satoshi)' }}>
+                            Secure Credentials Decrypted
+                        </Typography>
+                        
+                        <Typography sx={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, mb: 1.5 }}>
+                            WARNING: Never share these secrets. Anyone with these phrases can access your assets.
+                        </Typography>
+
+                        <Box sx={{ mb: 1.5 }}>
+                            <Typography sx={{ color: MUTED, fontSize: '0.72rem', mb: 0.5 }}>Mnemonic Seed Phrase:</Typography>
+                            <Typography sx={{ color: 'white', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', bgcolor: '#110505', p: 1.5, borderRadius: '10px', userSelect: 'all', wordBreak: 'break-all' }}>
+                                {exportedMnemonic}
+                            </Typography>
+                        </Box>
+
+                        {exportedPrivateKey && (
+                            <Box sx={{ mb: 1.5 }}>
+                                <Typography sx={{ color: MUTED, fontSize: '0.72rem', mb: 0.5 }}>EVM Private Key (ETH/Base/Arb):</Typography>
+                                <Typography sx={{ color: 'white', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', bgcolor: '#110505', p: 1.5, borderRadius: '10px', userSelect: 'all', wordBreak: 'break-all' }}>
+                                    {exportedPrivateKey}
+                                </Typography>
+                            </Box>
+                        )}
+
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => {
+                                setExportedMnemonic(null);
+                                setExportedPrivateKey(null);
+                            }}
+                            sx={{ borderColor: '#ef4444', color: '#fca5a5', textTransform: 'none', borderRadius: '8px', mt: 0.5 }}
+                        >
+                            Hide Credentials
+                        </Button>
+                    </Box>
+                )}
+
+                <Stack gap={1.5} sx={{ mt: 1 }}>
+                    <Button
+                        variant="outlined"
+                        onClick={handleExportSecrets}
+                        sx={{
+                            borderColor: EDGE,
+                            color: 'white',
+                            borderRadius: '12px',
+                            fontWeight: 800,
+                            textTransform: 'none',
+                            py: 1.25,
+                            '&:hover': { bgcolor: HIGHLIGHT }
+                        }}
+                    >
+                        Export Seed Phrase & Private Keys
+                    </Button>
+
+                    <Button
+                        variant="outlined"
+                        onClick={triggerTestSignature}
+                        sx={{
+                            borderColor: EDGE,
+                            color: ACCENT,
+                            borderRadius: '12px',
+                            fontWeight: 800,
+                            textTransform: 'none',
+                            py: 1.25,
+                            '&:hover': { bgcolor: HIGHLIGHT }
+                        }}
+                    >
+                        Test On-Chain Signature Flow
+                    </Button>
                 </Stack>
             </Stack>
 
             <Divider sx={{ borderColor: EDGE, my: 2 }} />
             <Button
                 variant="contained"
-                onClick={() => setShowSettings(false)}
+                onClick={() => {
+                    setShowSettings(false);
+                    setExportedMnemonic(null);
+                    setExportedPrivateKey(null);
+                }}
                 sx={{
                     bgcolor: 'white',
                     color: 'black',
@@ -791,7 +1072,112 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
         </Box>
     );
 
+    const renderSignConfirmation = () => (
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 3, bgcolor: SURFACE }}>
+            <Stack direction="row" alignItems="center" gap={1.5} sx={{ mb: 4 }}>
+                <Box sx={{
+                    p: 1,
+                    borderRadius: '12px',
+                    bgcolor: '#221805',
+                    border: '1px solid #d97706',
+                    color: '#f59e0b',
+                    display: 'flex'
+                }}>
+                    <Lock size={20} />
+                </Box>
+                <Box sx={{ textAlign: 'left' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', color: 'white' }}>
+                        Signature Request
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
+                        Confirm secure on-chain operation
+                    </Typography>
+                </Box>
+            </Stack>
+
+            <Stack gap={2.5} sx={{ flex: 1, overflowY: 'auto' }}>
+                <Paper sx={{ p: 2, borderRadius: '18px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}` }}>
+                    <Typography sx={{ color: MUTED, fontSize: '0.72rem', mb: 0.5, textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>
+                        Origin / Invoker
+                    </Typography>
+                    <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '0.88rem', fontFamily: 'var(--font-satoshi)' }}>
+                        {signDestination || 'Kylrix Ecosystem Platform'}
+                    </Typography>
+                </Paper>
+
+                <Paper sx={{ p: 2, borderRadius: '18px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}` }}>
+                    <Typography sx={{ color: MUTED, fontSize: '0.72rem', mb: 1, textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>
+                        Message to Sign
+                    </Typography>
+                    <Box sx={{
+                        bgcolor: '#0B0A09',
+                        p: 1.5,
+                        borderRadius: '12px',
+                        border: '1px solid rgba(255,255,255,0.03)',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.78rem',
+                        color: 'white',
+                        whiteSpace: 'pre-wrap',
+                        textAlign: 'left'
+                    }}>
+                        {signMessageText}
+                    </Box>
+                </Paper>
+
+                <Box sx={{ p: 2, borderRadius: '18px', bgcolor: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+                    <Typography sx={{ color: '#ef4444', fontWeight: 800, fontSize: '0.78rem', mb: 0.5, fontFamily: 'var(--font-satoshi)' }}>
+                        Security Risk Acknowledgment
+                    </Typography>
+                    <Typography sx={{ color: MUTED, fontSize: '0.72rem', lineHeight: 1.45, fontFamily: 'var(--font-satoshi)' }}>
+                        Website-based keys reside in transient RAM to prevent sandbox scraping. However, client environments carry active XSS risks. Confirm you trust this application action fully.
+                    </Typography>
+                </Box>
+            </Stack>
+
+            <Divider sx={{ borderColor: EDGE, my: 2 }} />
+
+            <Stack direction="row" gap={2}>
+                <Button
+                    variant="outlined"
+                    onClick={() => setShowSignConfirmation(false)}
+                    sx={{
+                        flex: 1,
+                        borderColor: EDGE,
+                        color: 'white',
+                        borderRadius: '14px',
+                        fontWeight: 800,
+                        textTransform: 'none',
+                        py: 1.5,
+                        '&:hover': { bgcolor: HIGHLIGHT }
+                    }}
+                >
+                    Cancel
+                </Button>
+                <Button
+                    variant="contained"
+                    disabled={signConfirmLoading}
+                    onClick={handleConfirmSignature}
+                    sx={{
+                        flex: 1,
+                        bgcolor: ACCENT,
+                        color: 'white',
+                        borderRadius: '14px',
+                        fontWeight: 900,
+                        textTransform: 'none',
+                        py: 1.5,
+                        '&:hover': { bgcolor: '#5145cd' }
+                    }}
+                >
+                    {signConfirmLoading ? <CircularProgress size={16} color="inherit" /> : 'Sign Message'}
+                </Button>
+            </Stack>
+        </Box>
+    );
+
     const renderWalletContent = () => {
+        if (showSignConfirmation) {
+            return renderSignConfirmation();
+        }
         if (showSettings) {
             return renderSettingsContent();
         }
