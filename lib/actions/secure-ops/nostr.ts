@@ -9,15 +9,16 @@ import { Databases, Query } from 'node-appwrite';
  * Retrieves the encrypted Nostr identity for the logged-in user.
  * Conforms to the terminology mandate (Rows over Documents, Tables over Collections).
  */
-export async function getNostrIdentityAction() {
+export async function getNostrIdentityAction(params?: { jwt?: string }) {
   try {
-    const actor = await getActor();
+    const jwt = params?.jwt;
+    const actor = await getActor(jwt);
     if (!actor) {
       return null;
     }
     const userId = actor.$id;
 
-    const { client } = await createServerClient();
+    const { client } = await createServerClient(jwt);
     const databases = new Databases(client);
     const res = await databases.listDocuments(
       APPWRITE_CONFIG.DATABASE_ID,
@@ -50,15 +51,17 @@ export async function registerNostrIdentityAction(params: {
   encryptedNsec: string;
   iv: string;
   salt: string;
+  jwt?: string;
 }) {
   try {
-    const actor = await getActor();
+    const jwt = params.jwt;
+    const actor = await getActor(jwt);
     if (!actor) {
       throw new Error('Unauthorized: You must be logged in to register a Nostr identity');
     }
     const userId = actor.$id;
 
-    const { client } = await createServerClient();
+    const { client } = await createServerClient(jwt);
     const databases = new Databases(client);
     
     // Ensure uniqueness constraint

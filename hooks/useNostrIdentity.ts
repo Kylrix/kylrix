@@ -5,6 +5,7 @@ import { getNostrIdentityAction, registerNostrIdentityAction } from '@/lib/actio
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useSudo } from '@/context/SudoContext';
 import { useAuth } from '@/context/auth/AuthContext';
+import { account } from '@/lib/appwrite';
 import { sha256 } from '@noble/hashes/sha2.js';
 import * as secp256k1 from '@noble/secp256k1';
 import { bytesToNpub, bytesToNsec, bytesToHex, hexToBytes } from '@/lib/tmp/crypto';
@@ -46,8 +47,17 @@ export function useNostrIdentity() {
 
       setIsVaultLocked(false);
 
+      // Generate JWT for secure actions validation
+      let jwtToken: string | undefined;
+      try {
+        const jwtResponse = await account.createJWT();
+        jwtToken = jwtResponse.jwt;
+      } catch (err) {
+        console.warn('Failed to generate JWT (possible guest session):', err);
+      }
+
       // Check if identity already exists on server
-      const existing = await getNostrIdentityAction();
+      const existing = await getNostrIdentityAction({ jwt: jwtToken });
 
       if (existing) {
         // Decrypt the nsec using vault decrypt
@@ -81,8 +91,9 @@ export function useNostrIdentity() {
       await registerNostrIdentityAction({
         npub,
         encryptedNsec,
-        iv: 'aes-gcm-iv', // IV is handled internally by ecosystemSecurity.encrypt/decrypt
-        salt: 'mek-derived-salt'
+        iv: 'aes-gcm-iv',
+        salt: 'mek-derived-salt',
+        jwt: jwtToken
       });
 
       const newIdentity: NostrIdentity = {
