@@ -13,7 +13,7 @@ export function verifyVerification(username: string, npub: string, signature: st
   try {
     const encoder = new TextEncoder();
     const hash = sha256(encoder.encode(username + ":" + npub));
-    return secp256k1.schnorr.verify(new Uint8Array(Buffer.from(signature, "hex")), hash, new Uint8Array(Buffer.from(domainPubkey, "hex")));
+    return secp256k1.schnorr.verify(hexToBytes(signature), hash, hexToBytes(domainPubkey));
   } catch {
     return false;
   }
