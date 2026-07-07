@@ -7,14 +7,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function AgentsPage() {
   // Parallel Fetch: Auth check + Initial data
-  const [actor, agents] = await Promise.all([
-    getActor(),
-    listMyAgents()
-  ]);
-
+  const actor = await getActor();
   if (!actor) {
     redirect('/accounts/login');
   }
+
+  const agents = await listMyAgents();
 
   return <AgentsClient initialAgents={JSON.parse(JSON.stringify(agents))} />;
 }

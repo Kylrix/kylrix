@@ -808,7 +808,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
         boxShadow: '0 20px 40px -15px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.5)'
       }}
     >
-      <Box sx={{ p: { xs: 4, md: 6 }, borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
+      <Box sx={{ p: { xs: 2.25, md: 6 }, borderBottom: '1px solid rgba(255, 255, 255, 0.03)' }}>
         <Stack spacing={3}>
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 3 }}>
             <Typography 
@@ -1073,7 +1073,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
         </Stack>
       </Box>
 
-      <Box sx={{ position: 'relative', p: { xs: 4, md: 6 }, bgcolor: 'rgba(0, 0, 0, 0.1)' }}>
+      <Box sx={{ position: 'relative', p: { xs: 2.25, md: 6 }, bgcolor: 'rgba(0, 0, 0, 0.1)' }}>
         {shouldShowPaywall() ? (
           <PaywallDisplay 
             note={verifiedNote} 
@@ -1125,7 +1125,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
   if (isAuthenticated) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: 'white' }}>
-        <Container maxWidth="md" sx={{ py: 8, pt: 12 }}>
+        <Container maxWidth="md" sx={{ py: 4, pt: { xs: 2, md: 4 }, px: { xs: 1, sm: 2 } }}>
           <Box sx={{ mb: 2 }}>
             <Button
               component={NextLink}
@@ -1290,7 +1290,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="md" sx={{ pt: { xs: 10, md: 11 }, pb: 6 }}>
+      <Container maxWidth="md" sx={{ pt: { xs: 8, md: 9 }, pb: 6, px: { xs: 1, sm: 2 } }}>
         <SharedWorkspaceBar objectType="note" />
         {!isAuthenticated && (
           <Box 

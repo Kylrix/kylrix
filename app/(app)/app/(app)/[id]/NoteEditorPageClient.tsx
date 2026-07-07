@@ -154,8 +154,8 @@ export default function NoteEditorPageClient() {
   const formattedDate = formatNoteUpdatedDate(rawNote);
 
   return (
-    <div className="bg-[#0A0908] text-white font-satoshi min-h-[calc(100dvh-72px)] pb-12 select-none">
-      <div className="max-w-[800px] mx-auto w-full px-4 md:px-6">
+    <div className="text-white font-satoshi pb-12 select-none">
+      <div className="max-w-[800px] mx-auto w-full px-2 sm:px-4 md:px-6 pt-2">
         
         {/* Navigation & Action Header */}
         <div className="flex items-center justify-between gap-4 mb-6">
@@ -191,7 +191,7 @@ export default function NoteEditorPageClient() {
         </div>
 
         {/* Note Body Card */}
-        <div className="p-6 md:p-8 bg-[#161412] border border-white/5 rounded-[24px] shadow-xl relative overflow-hidden mb-6">
+        <div className="p-4 sm:p-6 md:p-8 bg-[#161412] border border-white/5 rounded-[24px] shadow-xl relative overflow-hidden mb-6">
           {/* Decorative glowing gradient overlay */}
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#6366F1]/5 blur-[60px] rounded-full pointer-events-none" />
 
