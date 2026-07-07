@@ -16,7 +16,11 @@ import {
   Globe,
   ArrowLeft,
   ShieldCheck,
-  Zap
+  Zap,
+  Github,
+  Linkedin,
+  Youtube,
+  Link as LinkIcon
 } from 'lucide-react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -83,6 +87,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
   const [followLoading, setFollowLoading] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [showAllLinks, setShowAllLinks] = useState(false);
   const [refreshNonce, setRefreshNonce] = useState(0);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { openTokenUserSearch } = useTokenOps();
@@ -116,6 +121,20 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
   });
 
   const joinedAt = formatJoinedAt(profile?.$createdAt || profile?.createdAt || null);
+
+  const preferences = useMemo(() => {
+    try {
+      return typeof profile?.preferences === 'string'
+        ? JSON.parse(profile.preferences)
+        : profile?.preferences || {};
+    } catch {
+      return {};
+    }
+  }, [profile?.preferences]);
+
+  const profileLinks: Array<{ title?: string; url: string }> = preferences.links || [];
+  const profileTags: string[] = preferences.tags || [];
+  const tipEnabled: boolean = preferences.tipEnabled ?? false;
 
   const categorized = useMemo(() => {
     const momentsList = moments.filter((moment) => {
@@ -533,13 +552,15 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
                   <span>{followLoading ? 'Updating...' : isFollowing ? 'Following' : 'Follow'}</span>
                 </button>
                 
-                <button
-                  onClick={handleTip}
-                  disabled={!currentUser}
-                  className="flex-1 md:flex-none py-2.5 px-6 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/8 font-black text-sm transition-all disabled:opacity-50"
-                >
-                  Tip
-                </button>
+                {tipEnabled && (
+                  <button
+                    onClick={handleTip}
+                    disabled={!currentUser}
+                    className="flex-1 md:flex-none py-2.5 px-6 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/8 font-black text-sm transition-all disabled:opacity-50"
+                  >
+                    Tip
+                  </button>
+                )}
 
                 <button
                   onClick={() => setIsReportModalOpen(true)}
@@ -557,7 +578,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
 
         {/* Bio, Joined date & Status */}
         <div className="flex flex-col md:flex-row justify-between gap-6">
-          <div className="flex-1 max-w-xl">
+          <div className="flex-1 max-w-xl space-y-4">
             {profile?.bio ? (
               <p className="text-white/70 text-sm leading-relaxed whitespace-pre-wrap">
                 {profile.bio}
@@ -565,6 +586,89 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
             ) : (
               <p className="text-white/30 text-xs italic">No bio configured yet.</p>
             )}
+
+            {/* Profile Tags */}
+            {profileTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {profileTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center py-1 px-2.5 rounded-lg bg-white/5 text-white/60 text-[10px] font-black tracking-wider uppercase font-satoshi border border-white/5"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Profile Links with favicon fetching and collapsible overflow */}
+            {profileLinks.length > 0 && (() => {
+              const getSocialDetails = (url: string) => {
+                const lower = url.toLowerCase();
+                if (lower.includes('github.com')) return { name: 'GitHub', icon: <Github size={12} /> };
+                if (lower.includes('twitter.com') || lower.includes('x.com')) return { name: 'Twitter', icon: <span className="font-bold text-[10px] leading-none">𝕏</span> };
+                if (lower.includes('linkedin.com')) return { name: 'LinkedIn', icon: <Linkedin size={12} /> };
+                if (lower.includes('youtube.com') || lower.includes('youtu.be')) return { name: 'YouTube', icon: <Youtube size={12} /> };
+                return null;
+              };
+
+              const renderLink = (link: { title?: string; url: string }, idx: number) => {
+                const social = getSocialDetails(link.url);
+                const displayTitle = link.title?.trim() || (social ? social.name : 'Link');
+                
+                // Manually resolve hostname and fetch favicon
+                let faviconUrl = '';
+                try {
+                  const domain = new URL(link.url).hostname;
+                  faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
+                } catch {
+                  faviconUrl = '';
+                }
+
+                return (
+                  <a
+                    key={idx}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/5 hover:border-white/10 text-[11px] font-semibold transition-all"
+                  >
+                    {social ? social.icon : faviconUrl && (
+                      <img src={faviconUrl} alt="" className="w-3.5 h-3.5 rounded-sm object-contain" />
+                    )}
+                    <span>{displayTitle}</span>
+                  </a>
+                );
+              };
+
+              return (
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  {showAllLinks ? (
+                    <>
+                      {profileLinks.map((link, idx) => renderLink(link, idx))}
+                      <button
+                        onClick={() => setShowAllLinks(false)}
+                        className="text-[10px] font-bold text-[#6366F1] hover:text-[#5254E8] py-1 px-2"
+                      >
+                        Show Less
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {renderLink(profileLinks[0], 0)}
+                      {profileLinks.length > 1 && (
+                        <button
+                          onClick={() => setShowAllLinks(true)}
+                          className="inline-flex items-center py-1 px-2 rounded-lg bg-[#6366F1]/10 hover:bg-[#6366F1]/20 text-[#6366F1] text-[10px] font-bold transition-all border border-[#6366F1]/15"
+                        >
+                          + {profileLinks.length - 1} more
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 text-xs text-white/50 shrink-0">

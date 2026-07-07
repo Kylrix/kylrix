@@ -88,12 +88,32 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // Extended profile preferences: links, tags, tipping
+    const [links, setLinks] = useState<Array<{ title?: string; url: string }>>([]);
+    const [tags, setTags] = useState<string[]>([]);
+    const [newTag, setNewTag] = useState('');
+    const [tipEnabled, setTipEnabled] = useState(false);
+    const [hasWallet, setHasWallet] = useState(false);
+    const [showAdvancedDiscovery, setShowAdvancedDiscovery] = useState(false);
+
     // Profile picture local state
     const [profilePic, setProfilePic] = useState<File | null>(null);
     const [profilePicUrl, setProfilePicUrl] = useState<string | null>(null);
     const [removePicRequested, setRemovePicRequested] = useState(false);
 
     const profileId = profile?.$id;
+    
+    // Check wallet status
+    useEffect(() => {
+        if (user?.$id) {
+            import('@/lib/services/wallets').then(({ WalletService }) => {
+                WalletService.listMainWallets(user.$id)
+                    .then(list => setHasWallet(list.length > 0))
+                    .catch(() => setHasWallet(false));
+            });
+        }
+    }, [user?.$id, open]);
+
     useEffect(() => {
         if (profile) {
             setUsername(profile.username || '');
@@ -107,6 +127,20 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
             setProfilePicUrl(null);
             setRemovePicRequested(false);
             
+            // Parse preferences JSON
+            try {
+                const prefsObj = typeof profile.preferences === 'string'
+                    ? JSON.parse(profile.preferences)
+                    : profile.preferences || {};
+                setLinks(prefsObj.links || []);
+                setTags(prefsObj.tags || []);
+                setTipEnabled(prefsObj.tipEnabled ?? false);
+            } catch (e) {
+                setLinks([]);
+                setTags([]);
+                setTipEnabled(false);
+            }
+
             // Set initial picture preview url if profile has avatar field
             const targetAvatarId = profile.userId || profile.$id;
             if (targetAvatarId) {
@@ -184,6 +218,42 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
         setRemovePicRequested(true);
     };
 
+    // Links & Tags helper functions
+    const handleAddLink = () => {
+        if (links.length >= 3) return;
+        setLinks([...links, { title: '', url: '' }]);
+    };
+
+    const handleLinkChange = (index: number, key: 'title' | 'url', value: string) => {
+        const updated = [...links];
+        updated[index] = { ...updated[index], [key]: value };
+        setLinks(updated);
+    };
+
+    const handleRemoveLink = (index: number) => {
+        setLinks(links.filter((_, i) => i !== index));
+    };
+
+    const handleAddTag = () => {
+        const tag = newTag.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!tag) return;
+        if (tags.length >= 5) {
+            setError('Maximum of 5 tags allowed.');
+            return;
+        }
+        if (tags.includes(tag)) {
+            setNewTag('');
+            return;
+        }
+        setTags([...tags, tag]);
+        setNewTag('');
+        setError('');
+    };
+
+    const handleRemoveTag = (tagToRemove: string) => {
+        setTags(tags.filter(t => t !== tagToRemove));
+    };
+
     const handleSave = async () => {
         if (!profile?.$id) return;
         
@@ -241,6 +311,24 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
                 console.warn("Could not sync public key during profile update", e);
             }
 
+            // Serialize preferences
+            const currentPrefsObj = (() => {
+                try {
+                    return typeof profile.preferences === 'string'
+                        ? JSON.parse(profile.preferences)
+                        : profile.preferences || {};
+                } catch {
+                    return {};
+                }
+            })();
+
+            const serializedPreferences = JSON.stringify({
+                ...currentPrefsObj,
+                links: links.filter(l => l.url.trim() !== ''),
+                tags,
+                tipEnabled: tipEnabled && hasWallet
+            });
+
             await UsersService.updateProfile(userId, {
                 username,
                 bio,
@@ -250,7 +338,8 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
                 isPublic,
                 isGuest,
                 isAvatar,
-                isContact
+                isContact,
+                preferences: serializedPreferences
             });
 
             try {
@@ -392,6 +481,114 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
 
                     <div className="h-px bg-white/8" />
 
+                    {/* Tags Section */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-black tracking-wider text-white/40 uppercase">Profile Tags (Max 5)</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={newTag}
+                                onChange={(e) => setNewTag(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
+                                className="flex-1 bg-white/4 border border-white/8 focus:border-[#6366F1] rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none"
+                                placeholder="Add custom tag (e.g. developer)"
+                            />
+                            <button
+                                type="button"
+                                onClick={handleAddTag}
+                                className="py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs transition-all border border-white/8"
+                            >
+                                Add
+                            </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                            {tags.map((tag) => (
+                                <span
+                                    key={tag}
+                                    className="inline-flex items-center gap-1 py-1 px-2.5 rounded-lg bg-[#6366F1]/10 text-[#6366F1] text-xs font-extrabold border border-[#6366F1]/20"
+                                >
+                                    #{tag}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveTag(tag)}
+                                        className="hover:text-white ml-0.5"
+                                    >
+                                        &times;
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Links Section */}
+                    <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                            <label className="text-xs font-black tracking-wider text-white/40 uppercase">Profile Links (Max 3)</label>
+                            {links.length < 3 && (
+                                <button
+                                    type="button"
+                                    onClick={handleAddLink}
+                                    className="text-xs font-bold text-[#6366F1] hover:text-[#5254E8]"
+                                >
+                                    + Add Link
+                                </button>
+                            )}
+                        </div>
+                        <div className="space-y-3">
+                            {links.map((link, idx) => (
+                                <div key={idx} className="p-3 bg-white/2 border border-white/5 rounded-xl space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] font-bold text-white/30">Link #{idx + 1}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveLink(idx)}
+                                            className="text-xs text-red-400 hover:text-red-300 font-bold"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={link.title || ''}
+                                        onChange={(e) => handleLinkChange(idx, 'title', e.target.value)}
+                                        className="w-full bg-white/4 border border-white/8 focus:border-[#6366F1] rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none"
+                                        placeholder="Title (optional, e.g. GitHub or My Blog)"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={link.url}
+                                        onChange={(e) => handleLinkChange(idx, 'url', e.target.value)}
+                                        className="w-full bg-white/4 border border-white/8 focus:border-[#6366F1] rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none"
+                                        placeholder="URL (e.g. https://github.com/username)"
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Tipping Section */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-bold text-white">Enable Tips</p>
+                                <p className="text-xs text-white/40 font-semibold">
+                                    {hasWallet 
+                                        ? 'Allow visitors to tip your wallet directly' 
+                                        : 'Please set up a wallet to enable tips'}
+                                </p>
+                            </div>
+                            <input
+                                type="checkbox"
+                                checked={tipEnabled && hasWallet}
+                                disabled={!hasWallet}
+                                onChange={(e) => setTipEnabled(e.target.checked)}
+                                className="w-9 h-5 bg-white/10 rounded-full appearance-none checked:bg-[#6366F1] cursor-pointer relative transition-all before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="h-px bg-white/8" />
+
                     {/* Privacy & Visibility */}
                     <div className="space-y-4">
                         <h4 className="text-xs font-black tracking-wider text-[#F59E0B] uppercase">Privacy & Visibility</h4>
@@ -405,25 +602,51 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
                                 </div>
                                 <input
                                     type="checkbox"
-                                    checked={isPublic}
-                                    onChange={(e) => setIsPublic(e.target.checked)}
-                                    className="w-9 h-5 bg-white/10 rounded-full appearance-none checked:bg-[#6366F1] cursor-pointer relative transition-all before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform"
+                                    checked={isPublic || isGuest}
+                                    disabled={isGuest}
+                                    onChange={(e) => {
+                                        setIsPublic(e.target.checked);
+                                        if (!e.target.checked) {
+                                            setIsGuest(false);
+                                        }
+                                    }}
+                                    className="w-9 h-5 bg-white/10 rounded-full appearance-none checked:bg-[#6366F1] cursor-pointer relative transition-all before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform disabled:opacity-50"
                                 />
                             </div>
 
-                            {/* Guest Visibility */}
-                            <div className="flex items-center justify-between opacity-80">
-                                <div>
-                                    <p className="text-sm font-bold text-white">Guest Visibility</p>
-                                    <p className="text-xs text-white/40 font-semibold">Allow non-logged in users to view details</p>
-                                </div>
-                                <input
-                                    type="checkbox"
-                                    checked={isGuest}
-                                    disabled={!isPublic}
-                                    onChange={(e) => setIsGuest(e.target.checked)}
-                                    className="w-9 h-5 bg-white/10 rounded-full appearance-none checked:bg-[#6366F1] cursor-pointer relative transition-all before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
-                                />
+                            {/* Contracted Advanced Discovery Section for Guest View */}
+                            <div className="border border-white/5 rounded-xl bg-white/[0.01] overflow-hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAdvancedDiscovery(!showAdvancedDiscovery)}
+                                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/2 transition-all text-xs font-black text-white/40 uppercase tracking-wider"
+                                >
+                                    <span>Profile Discoverability Options</span>
+                                    <span>{showAdvancedDiscovery ? 'Hide' : 'Show'}</span>
+                                </button>
+                                {showAdvancedDiscovery && (
+                                    <div className="px-4 pb-4 pt-2 border-t border-white/5 space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-xs font-bold text-white">Allow guest access</p>
+                                                <p className="text-[10px] text-white/40 font-semibold leading-normal">
+                                                    Allow people outside Kylrix to see your profile
+                                                </p>
+                                            </div>
+                                            <input
+                                                type="checkbox"
+                                                checked={isGuest}
+                                                onChange={(e) => {
+                                                    setIsGuest(e.target.checked);
+                                                    if (e.target.checked) {
+                                                        setIsPublic(true);
+                                                    }
+                                                }}
+                                                className="w-9 h-5 bg-white/10 rounded-full appearance-none checked:bg-[#6366F1] cursor-pointer relative transition-all before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Show Avatar */}
