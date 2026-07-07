@@ -860,139 +860,171 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             </Stack>
 
             <Stack gap={2.5} sx={{ flex: 1, overflowY: 'auto', pr: 0.5 }}>
-                <Box sx={{ p: 2, borderRadius: '18px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}` }}>
-                    <FormControlLabel
-                        sx={{ justifyContent: 'space-between', width: '100%', m: 0 }}
-                        labelPlacement="start"
-                        control={
-                            <Switch
-                                checked={testnetMode}
-                                onChange={(e: any) => handleToggleTestnet(e.target.checked)}
-                                size="small"
-                                sx={{
-                                    '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                    '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
-                                }}
-                            />
-                        }
-                        label={
-                            <Box sx={{ textAlign: 'left' }}>
-                                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
-                                    Testnet Mode
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: MUTED, display: 'block', mt: 0.25, fontFamily: 'var(--font-satoshi)' }}>
-                                    Redirect to Sepolia and devnet explorers.
-                                </Typography>
-                            </Box>
-                        }
-                    />
+                {/* Testnet Mode Toggle */}
+                <Box
+                    sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 2,
+                        px: 2.25,
+                        py: 1.5,
+                        borderRadius: '18px',
+                        bgcolor: HIGHLIGHT,
+                        border: `1px solid ${EDGE}`,
+                    }}
+                >
+                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
+                        <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
+                            Testnet Mode
+                        </Typography>
+                        <Typography component="span" sx={{ color: MUTED, fontSize: '0.76rem', lineHeight: 1.35, fontFamily: 'var(--font-satoshi)' }}>
+                            Redirect to Sepolia and devnet explorers.
+                        </Typography>
+                    </Box>
+                    <Box sx={{ flexShrink: 0 }}>
+                        <Switch
+                            checked={testnetMode}
+                            onChange={(e: any) => handleToggleTestnet(e.target.checked)}
+                            size="small"
+                            sx={{
+                                '& .ob-switch-thumb.ob-checked': { color: ACCENT },
+                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
+                            }}
+                        />
+                    </Box>
                 </Box>
 
-                <Box sx={{ p: 2, borderRadius: '18px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}` }}>
-                    <FormControlLabel
-                        sx={{ justifyContent: 'space-between', width: '100%', m: 0 }}
-                        labelPlacement="start"
-                        control={
-                            <Switch
-                                checked={smartDelegation}
-                                onChange={(e: any) => handleToggleSmartDelegation(e.target.checked)}
-                                size="small"
-                                sx={{
-                                    '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                    '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
-                                }}
-                            />
-                        }
-                        label={
-                            <Box sx={{ textAlign: 'left' }}>
-                                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
-                                    Agentic Delegation (ERC-4337)
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: MUTED, display: 'block', mt: 0.25, fontFamily: 'var(--font-satoshi)' }}>
-                                    Enable smart session keys for unmanned agents.
-                                </Typography>
-                            </Box>
-                        }
-                    />
+                {/* Agentic Delegation Toggle */}
+                <Box
+                    sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 2,
+                        px: 2.25,
+                        py: 1.5,
+                        borderRadius: '18px',
+                        bgcolor: HIGHLIGHT,
+                        border: `1px solid ${EDGE}`,
+                    }}
+                >
+                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
+                        <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
+                            Agentic Delegation (ERC-4337)
+                        </Typography>
+                        <Typography component="span" sx={{ color: MUTED, fontSize: '0.76rem', lineHeight: 1.35, fontFamily: 'var(--font-satoshi)' }}>
+                            Enable smart session keys for unmanned agents.
+                        </Typography>
+                    </Box>
+                    <Box sx={{ flexShrink: 0 }}>
+                        <Switch
+                            checked={smartDelegation}
+                            onChange={(e: any) => handleToggleSmartDelegation(e.target.checked)}
+                            size="small"
+                            sx={{
+                                '& .ob-switch-thumb.ob-checked': { color: ACCENT },
+                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
+                            }}
+                        />
+                    </Box>
                 </Box>
 
-                <Box sx={{ p: 2, borderRadius: '18px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}` }}>
-                    <FormControlLabel
-                        sx={{ justifyContent: 'space-between', width: '100%', m: 0 }}
-                        labelPlacement="start"
-                        control={
-                            <Switch
-                                checked={gasRelay}
-                                onChange={(e: any) => handleToggleGasRelay(e.target.checked)}
-                                size="small"
-                                sx={{
-                                    '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                    '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
-                                }}
-                            />
-                        }
-                        label={
-                            <Box sx={{ textAlign: 'left' }}>
-                                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
-                                    Gas Fee Sponsoring
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: MUTED, display: 'block', mt: 0.25, fontFamily: 'var(--font-satoshi)' }}>
-                                    Sponsor agent actions using the Kylrix paymaster.
-                                </Typography>
-                            </Box>
-                        }
-                    />
+                {/* Gas Fee Sponsoring Toggle */}
+                <Box
+                    sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 2,
+                        px: 2.25,
+                        py: 1.5,
+                        borderRadius: '18px',
+                        bgcolor: HIGHLIGHT,
+                        border: `1px solid ${EDGE}`,
+                    }}
+                >
+                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
+                        <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
+                            Gas Fee Sponsoring
+                        </Typography>
+                        <Typography component="span" sx={{ color: MUTED, fontSize: '0.76rem', lineHeight: 1.35, fontFamily: 'var(--font-satoshi)' }}>
+                            Sponsor agent actions using the Kylrix paymaster.
+                        </Typography>
+                    </Box>
+                    <Box sx={{ flexShrink: 0 }}>
+                        <Switch
+                            checked={gasRelay}
+                            onChange={(e: any) => handleToggleGasRelay(e.target.checked)}
+                            size="small"
+                            sx={{
+                                '& .ob-switch-thumb.ob-checked': { color: ACCENT },
+                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
+                            }}
+                        />
+                    </Box>
                 </Box>
 
-                <Box sx={{ p: 2, borderRadius: '18px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}` }}>
-                    <FormControlLabel
-                        sx={{ justifyContent: 'space-between', width: '100%', m: 0 }}
-                        labelPlacement="start"
-                        control={
-                            <Switch
-                                checked={recurringBilling}
-                                onChange={(e: any) => handleToggleRecurringBilling(e.target.checked)}
-                                size="small"
-                                sx={{
-                                    '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                    '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
-                                }}
-                            />
-                        }
-                        label={
-                            <Box sx={{ textAlign: 'left' }}>
-                                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
-                                    Recurring Billing Toggle
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: MUTED, display: 'block', mt: 0.25, fontFamily: 'var(--font-satoshi)' }}>
-                                    Enable on-chain automated subscription payments.
-                                </Typography>
-                            </Box>
-                        }
-                    />
+                {/* Recurring Billing Toggle */}
+                <Box
+                    sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 2,
+                        px: 2.25,
+                        py: 1.5,
+                        borderRadius: '18px',
+                        bgcolor: HIGHLIGHT,
+                        border: `1px solid ${EDGE}`,
+                    }}
+                >
+                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
+                        <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
+                            Recurring Billing Toggle
+                        </Typography>
+                        <Typography component="span" sx={{ color: MUTED, fontSize: '0.76rem', lineHeight: 1.35, fontFamily: 'var(--font-satoshi)' }}>
+                            Enable on-chain automated subscription payments.
+                        </Typography>
+                    </Box>
+                    <Box sx={{ flexShrink: 0 }}>
+                        <Switch
+                            checked={recurringBilling}
+                            onChange={(e: any) => handleToggleRecurringBilling(e.target.checked)}
+                            size="small"
+                            sx={{
+                                '& .ob-switch-thumb.ob-checked': { color: ACCENT },
+                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
+                            }}
+                        />
+                    </Box>
                 </Box>
 
                 {exportedMnemonic && (
-                    <Box sx={{ p: 2, borderRadius: '18px', bgcolor: '#221111', border: '1px solid #7f1d1d', mt: 1 }}>
-                        <Typography sx={{ color: '#fca5a5', fontWeight: 800, fontSize: '0.82rem', mb: 1, fontFamily: 'var(--font-satoshi)' }}>
+                    <Box sx={{ p: 2.25, borderRadius: '18px', bgcolor: '#221111', border: '1px solid #7f1d1d', mt: 1 }}>
+                        <Typography component="span" sx={{ color: '#fca5a5', fontWeight: 800, fontSize: '0.88rem', mb: 0.5, display: 'block', fontFamily: 'var(--font-satoshi)' }}>
                             Secure Credentials Decrypted
                         </Typography>
                         
-                        <Typography sx={{ color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, mb: 1.5 }}>
+                        <Typography component="span" sx={{ color: '#ef4444', fontSize: '0.76rem', fontWeight: 600, mb: 1.5, display: 'block' }}>
                             WARNING: Never share these secrets. Anyone with these phrases can access your assets.
                         </Typography>
 
                         <Box sx={{ mb: 1.5 }}>
-                            <Typography sx={{ color: MUTED, fontSize: '0.72rem', mb: 0.5 }}>Mnemonic Seed Phrase:</Typography>
-                            <Typography sx={{ color: 'white', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', bgcolor: '#110505', p: 1.5, borderRadius: '10px', userSelect: 'all', wordBreak: 'break-all' }}>
+                            <Typography component="span" sx={{ color: MUTED, fontSize: '0.72rem', display: 'block', mb: 0.5 }}>Mnemonic Seed Phrase:</Typography>
+                            <Typography component="span" sx={{ color: 'white', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', bgcolor: '#110505', p: 1.5, borderRadius: '10px', display: 'block', userSelect: 'all', wordBreak: 'break-all' }}>
                                 {exportedMnemonic}
                             </Typography>
                         </Box>
 
                         {exportedPrivateKey && (
                             <Box sx={{ mb: 1.5 }}>
-                                <Typography sx={{ color: MUTED, fontSize: '0.72rem', mb: 0.5 }}>EVM Private Key (ETH/Base/Arb):</Typography>
-                                <Typography sx={{ color: 'white', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', bgcolor: '#110505', p: 1.5, borderRadius: '10px', userSelect: 'all', wordBreak: 'break-all' }}>
+                                <Typography component="span" sx={{ color: MUTED, fontSize: '0.72rem', display: 'block', mb: 0.5 }}>EVM Private Key (ETH/Base/Arb):</Typography>
+                                <Typography component="span" sx={{ color: 'white', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', bgcolor: '#110505', p: 1.5, borderRadius: '10px', display: 'block', userSelect: 'all', wordBreak: 'break-all' }}>
                                     {exportedPrivateKey}
                                 </Typography>
                             </Box>
