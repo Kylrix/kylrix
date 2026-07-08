@@ -38,6 +38,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
+import { useAutosave } from '@/hooks/useAutosave';
 
 interface CreateNoteFormProps {
   onNoteCreated: (note: Notes) => void;
@@ -61,25 +62,6 @@ function isLiveDraftNoteId(noteId?: string | null): boolean {
   return Boolean(noteId?.startsWith('live-'));
 }
 
-function mergeSavedWithLiveDraft(saved: Notes, live: { title: string; content: string; tags: string[] }): Notes {
-  const savedContent = saved.content || '';
-  const liveContent = live.content || '';
-  const displayTitle = resolveNoteCardTitle(live.title, liveContent) || saved.title || '';
-  return {
-    ...saved,
-    title: displayTitle,
-    content: liveContent.length >= savedContent.length ? liveContent : savedContent,
-    tags: live.tags.length ? live.tags : (saved.tags as string[] | undefined) || [],
-  };
-}
-
-function buildLiveCardNote(
-  base: Notes,
-  live: { title: string; content: string; tags: string[] },
-): Notes {
-  return mergeSavedWithLiveDraft(base, live);
-}
-
 export default function CreateNoteForm({
   onNoteCreated,
   initialContent,
@@ -91,7 +73,7 @@ export default function CreateNoteForm({
 }: CreateNoteFormProps) {
   const { closeOverlay } = useOverlay();
   const { showSuccess, showError } = useToast();
-  const { notes: allNotes, pushLiveNote, removeNote, clearLiveNoteGuard } = useNotes();
+  const { notes: allNotes, pushLiveNote, removeNote, registerComposeSession, unregisterComposeSession } = useNotes();
   const { fetchOptimized, getCachedData, setCachedData } = useDataNexus();
   const { promptSudo } = useSudo();
   const { setActiveDetail } = useSection();
@@ -111,7 +93,6 @@ export default function CreateNoteForm({
   const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(false);
   const [currentTag, setCurrentTag] = useState('');
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [resolvedNoteId, setResolvedNoteId] = useState<string | undefined>(noteId);
   const [persistedIsPublic, setPersistedIsPublic] = useState(initialContent?.isPublic || false);
   const [persistedIsGuest, setPersistedIsGuest] = useState(initialContent?.isGuest || false);
@@ -128,16 +109,14 @@ export default function CreateNoteForm({
   }, [refreshEcosystemTags]);
 
   const createdToastShown = useRef(false);
-  const persistInFlightRef = useRef<Promise<Notes | null> | null>(null);
   const liveDraftIdRef = useRef<string | undefined>(noteId);
   const allNotesRef = useRef<Notes[]>([]);
-  const liveTitleRef = useRef(title);
-  const liveContentRef = useRef(content);
-  const liveTagsRef = useRef(tags);
+  const hasAnnouncedCreateRef = useRef(false);
   const isPastedRef = useRef(false);
   const pasteTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isRecording, setIsRecording] = useState(false);
+  const [isUploadingVoice, setIsUploadingVoice] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -209,7 +188,7 @@ export default function CreateNoteForm({
           stream.getTracks().forEach(track => track.stop());
 
           try {
-            setIsSaving(true);
+            setIsUploadingVoice(true);
             const uploaded = await StorageService.uploadFile(audioFile, 'voice');
             insertTextAtCursor(` [voice:${uploaded.$id}] `);
             showSuccess('Voice note recorded', 'Inserted into your note content.');
@@ -217,7 +196,7 @@ export default function CreateNoteForm({
             console.error('Failed to upload voice note:', error);
             showError('Recording failed', 'Could not save voice note.');
           } finally {
-            setIsSaving(false);
+            setIsUploadingVoice(false);
           }
         };
 
@@ -438,51 +417,29 @@ export default function CreateNoteForm({
   }, [fetchOptimized, getCachedData, noteId, noteKind]);
 
   useEffect(() => {
-    if (!isHydrated) return;
-    if (!isDirty) return;
-    const activeNoteId = resolvedNoteId || liveDraftIdRef.current;
-    if (!activeNoteId && !(title.trim() || content)) return;
-
-    const timer = window.setTimeout(() => {
-      void persist(false);
-    }, 150);
-
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot, isHydrated, isDirty]);
-
-  useEffect(() => {
-    liveTitleRef.current = title;
-  }, [title]);
-
-  useEffect(() => {
-    liveContentRef.current = content;
-  }, [content]);
-
-  useEffect(() => {
-    liveTagsRef.current = tags;
-  }, [tags]);
-
-  useEffect(() => {
     allNotesRef.current = Array.isArray(allNotes) ? allNotes : [];
   }, [allNotes]);
 
-  const publishLiveDraft = useCallback(() => {
+  useEffect(() => {
     if (!isHydrated) return;
     const hasDraftContent = Boolean(title || content || tags.length);
-    if (!resolvedNoteId && !liveDraftIdRef.current && !hasDraftContent) return;
+    if (!hasDraftContent) return;
+    if (resolvedNoteId || liveDraftIdRef.current) return;
 
-    let noteId = resolvedNoteId || liveDraftIdRef.current;
-    if (!noteId) {
-      noteId = `live-${crypto.randomUUID()}`;
-      liveDraftIdRef.current = noteId;
-      setResolvedNoteId(noteId);
-    }
+    const noteId = `live-${crypto.randomUUID()}`;
+    liveDraftIdRef.current = noteId;
+    registerComposeSession(noteId);
+    setResolvedNoteId(noteId);
+  }, [title, content, tags, isHydrated, resolvedNoteId, registerComposeSession]);
+
+  const candidateNote = useMemo((): Notes | null => {
+    const noteId = resolvedNoteId || liveDraftIdRef.current;
+    if (!isHydrated || !noteId) return null;
+    if (!title && !content && !tags.length) return null;
 
     const existing = allNotesRef.current.find((candidate) => candidate.$id === noteId);
     const normalizedTags = normalizeTags(tags);
-    const displayTitle = resolveNoteCardTitle(title, content);
-    const draftNote: Notes = {
+    return {
       ...(existing || {
         $id: noteId,
         format: 'text',
@@ -491,23 +448,38 @@ export default function CreateNoteForm({
         isGuest,
         $createdAt: new Date().toISOString(),
       } as Notes),
-      title: displayTitle,
+      $id: noteId,
+      title: resolveNoteCardTitle(title, content),
       content,
       tags: normalizedTags,
       format: 'text',
       isPublic,
       isGuest,
+    };
+  }, [title, content, tags, resolvedNoteId, isHydrated, isPublic, isGuest, user?.$id]);
+
+  const candidateNoteRef = useRef<Notes | null>(null);
+  candidateNoteRef.current = candidateNote;
+
+  // Mirror note detail: card always reflects editor keystrokes; server save is separate.
+  useEffect(() => {
+    if (!candidateNote?.$id) return;
+    registerComposeSession(candidateNote.$id);
+    const draftNote: Notes = {
+      ...candidateNote,
       $updatedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-
     pushLiveNote(draftNote);
-  }, [content, isGuest, isHydrated, isPublic, pushLiveNote, resolvedNoteId, tags, title, user?.$id]);
+    setCachedData(`note_${candidateNote.$id}`, draftNote);
+  }, [candidateNote, pushLiveNote, registerComposeSession, setCachedData]);
 
-  // Single live source of truth: note card + detail read from context on every keystroke.
   useEffect(() => {
-    publishLiveDraft();
-  }, [publishLiveDraft]);
+    return () => {
+      const noteId = liveDraftIdRef.current || resolvedNoteId;
+      if (noteId) unregisterComposeSession(noteId);
+    };
+  }, [resolvedNoteId, unregisterComposeSession]);
 
   const appendTag = useCallback((tag: string) => {
     const next = tag.trim();
@@ -548,278 +520,268 @@ export default function CreateNoteForm({
     });
   }, [content]);
 
-  const persist = useCallback(async (showToast = true) => {
-    if (persistInFlightRef.current) {
-      return persistInFlightRef.current;
-    }
-
-    const runPersist = (async () => {
-      const normalizedTags = normalizeTags(liveTagsRef.current);
-      const liveTitle = liveTitleRef.current;
-      const liveContent = liveContentRef.current;
-      const payload = {
-        title: liveTitle.trim(),
-        content: liveContent,
-        format: 'text' as const,
-        tags: normalizedTags,
-        kind: composerKind,
-        isPublic,
-        isGuest,
-        article: isArticle,
-        metadata: JSON.stringify({
-          paywall: hasPaywall && paywallAmount ? {
-            enabled: true,
-            amount: typeof paywallAmount === 'number' ? paywallAmount : parseFloat(paywallAmount as any) || 0,
-            currency: 'USD',
-          } : {
-            enabled: false,
-            amount: 0,
-            currency: 'USD',
-          },
-        }),
-      };
-
-      const activeNoteId = resolvedNoteId || liveDraftIdRef.current;
-      const hasMeaningfulContent = Boolean(payload.title || liveContent || (activeNoteId && payload.tags.length));
-      if (!activeNoteId && !hasMeaningfulContent) {
-        return null;
-      }
-
-      setIsSaving(true);
-      try {
-        let saved: Notes;
-        const generatedTitle = payload.title || (
-          buildAutoTitleFromContent(liveContent.trim()) || (composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought')
-        );
-
-        const publishCurrentLive = (serverNote: Notes, ephemeralId?: string) => {
-          const draftSourceId = ephemeralId && isLiveDraftNoteId(ephemeralId) ? ephemeralId : serverNote.$id;
-          const draft = allNotesRef.current.find((candidate) => candidate.$id === draftSourceId);
-          if (ephemeralId && isLiveDraftNoteId(ephemeralId) && ephemeralId !== serverNote.$id) {
-            removeNote(ephemeralId);
-            clearLiveNoteGuard(ephemeralId);
-          }
-          const live = {
-            title: draft?.title || liveTitle,
-            content: draft?.content || liveContent,
-            tags: (draft?.tags as string[] | undefined) || normalizedTags,
-          };
-          const cardNote = buildLiveCardNote(serverNote, live);
-          pushLiveNote(cardNote);
-          setCachedData(`note_${cardNote.$id}`, cardNote);
-          return cardNote;
-        };
-
-        if (!user?.$id) {
-          // Unauthenticated/offline ghost note creation
-          const secret = localStorage.getItem('kylrix_ghost_secret_v2') || crypto.randomUUID();
-          const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-          const deletionSecret = crypto.randomUUID();
-          const { sha256HexUtf8 } = await import('@/lib/crypto/sha256-hex');
-          const creatorDeletionProofHash = await sha256HexUtf8(deletionSecret);
-          
-          const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
-          const { encrypted: encTitle, key: noteKey } = await encryptGhostData(generatedTitle);
-          const { encrypted: encContent } = await encryptGhostData(payload.content, noteKey);
-
-          const id = resolvedNoteId || `ghost-${crypto.randomUUID()}`;
-          
-          saved = {
-            $id: id,
-            $createdAt: new Date().toISOString(),
-            $updatedAt: new Date().toISOString(),
-            title: generatedTitle,
-            content: payload.content,
-            format: 'text',
-            tags: payload.tags,
-            userId: 'ghost',
-            isPublic: false,
-            isGuest: false,
-            metadata: JSON.stringify({
-              isGhost: true,
-              ghostSecret: secret,
-              expiresAt,
-              isEncrypted: true,
-              creatorDeletionProofHash,
-              send_object: { kind: 'note' }
-            }),
-          } as any;
-
-          const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
-          let history = historyRaw ? JSON.parse(historyRaw) : [];
-          if (!Array.isArray(history)) history = [];
-
-          const existingIndex = history.findIndex((n: any) => n.id === id);
-          const newRef = {
-            id,
-            title: encTitle,
-            content: encContent,
-            metadata: saved.metadata,
-            createdAt: new Date().toISOString(),
-            expiresAt,
-            decryptionKey: noteKey,
-            deletionSecret,
-          };
-
-          if (existingIndex !== -1) {
-            history[existingIndex] = newRef;
-          } else {
-            history.unshift(newRef);
-          }
-
-          localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
-          setResolvedNoteId(id);
-          if (!resolvedNoteId && typeof window !== 'undefined') {
-            localStorage.removeItem('kylrix:draft:note');
-          }
-          onNoteCreated(buildLiveCardNote(saved, {
-            title: liveTitle,
-            content: liveContent,
-            tags: normalizedTags,
-          }));
-          pushLiveNote(buildLiveCardNote(saved, {
-            title: liveTitle,
-            content: liveContent,
-            tags: normalizedTags,
-          }));
-          setIsSaving(false);
-          if (showToast && !createdToastShown.current) {
-            createdToastShown.current = true;
-            showSuccess('Idea saved', 'Your idea has been saved offline.');
-          }
-          return saved;
-        }
-
-        const shouldCreate = !activeNoteId || isLiveDraftNoteId(activeNoteId);
-
-        if (!shouldCreate && activeNoteId) {
-          saved = (await updateNote(activeNoteId, {
-            ...payload,
-            isPublic: persistedIsPublic,
-            isGuest: persistedIsGuest,
-            title: generatedTitle,
-          })) as Notes;
-        } else {
-          const ephemeralId = activeNoteId;
-          saved = (await createNote({
-            ...payload,
-            isPublic: payload.isPublic,
-            isGuest: payload.isGuest,
-            title: generatedTitle,
-          })) as Notes;
-          liveDraftIdRef.current = saved.$id;
-          setResolvedNoteId(saved.$id);
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('kylrix:draft:note');
-          }
-          const cardNote = publishCurrentLive(saved, ephemeralId);
-          onNoteCreated(cardNote);
-          if (showToast && !createdToastShown.current) {
-            createdToastShown.current = true;
-            showSuccess('Idea saved', 'Your idea has been created.');
-          }
-        }
-
-        if (saved?.$id) {
-          if (isPublic !== persistedIsPublic) {
-            const applySecureVisibility = async (): Promise<Notes> => {
-              try {
-                const toggled = await toggleNoteVisibility(saved.$id);
-                if (!toggled) throw new Error('Failed to update note visibility.');
-                return toggled as Notes;
-              } catch (error: any) {
-                if (error?.message === 'VAULT_LOCKED') {
-                  const unlocked = await promptSudo();
-                  if (!unlocked) {
-                    throw new Error('Vault unlock required to make this note public.');
-                  }
-                  const retried = await toggleNoteVisibility(saved.$id);
-                  if (!retried) throw new Error('Failed to update note visibility.');
-                  return retried as Notes;
-                }
-                throw error;
-              }
-            };
-
-            saved = await applySecureVisibility();
-            onNoteCreated(buildLiveCardNote(saved, {
-              title: liveTitleRef.current,
-              content: liveContentRef.current,
-              tags: normalizeTags(liveTagsRef.current),
-            }));
-            showSuccess(
-              getNotePublicState(saved) ? 'Idea is now Public' : 'Idea is now Private',
-              getNotePublicState(saved)
-                ? 'Encrypted sharing is enabled for this idea.'
-                : 'This idea is now private.'
-            );
-          }
-
-          const livePublicState = getNotePublicState(saved);
-          const liveGuestState = !!(saved as any).isGuest;
-          setPersistedIsPublic(livePublicState);
-          setIsPublic(livePublicState);
-          setPersistedIsGuest(liveGuestState);
-          setIsGuest(liveGuestState);
-          const paywall = (() => {
-            try { return JSON.parse(saved.metadata || '{}')?.paywall; } catch { return undefined; }
-          })();
-          setLastSavedSnapshot(JSON.stringify({
-            title: liveTitleRef.current.trim(),
-            content: liveContentRef.current.trim(),
-            format: 'text',
-            tags: normalizedTags,
-            composerKind,
-            isPublic: livePublicState,
-            isGuest: liveGuestState,
-            hasPaywall: !!paywall?.enabled,
-            paywallAmount: paywall?.amount || 0,
-            resolvedNoteId: saved.$id,
-          }));
-        }
-
-        return saved || null;
-      } catch (error: any) {
-        console.error('Failed to persist note:', error);
-        if (showToast) {
-          showError('Could not save idea', error?.message || 'Please try again.');
-        }
-        throw error;
-      } finally {
-        setIsSaving(false);
-      }
+  const applyPersistSnapshot = useCallback((saved: Notes, source: Notes) => {
+    const livePublicState = getNotePublicState(saved);
+    const liveGuestState = !!(saved as any).isGuest;
+    setPersistedIsPublic(livePublicState);
+    setIsPublic(livePublicState);
+    setPersistedIsGuest(liveGuestState);
+    setIsGuest(liveGuestState);
+    const paywall = (() => {
+      try { return JSON.parse(saved.metadata || '{}')?.paywall; } catch { return undefined; }
     })();
+    setLastSavedSnapshot(JSON.stringify({
+      title: (source.title || '').trim(),
+      content: (source.content || '').trim(),
+      format: 'text',
+      tags: normalizeTags((source.tags || []) as string[]),
+      composerKind,
+      isPublic: livePublicState,
+      isGuest: liveGuestState,
+      hasPaywall: !!paywall?.enabled,
+      paywallAmount: paywall?.amount || 0,
+      resolvedNoteId: saved.$id,
+    }));
+  }, [composerKind]);
 
-    persistInFlightRef.current = runPersist;
-    try {
-      return await runPersist;
-    } finally {
-      persistInFlightRef.current = null;
+  const migrateDraftId = useCallback((savedId: string, ephemeralId: string | undefined, source?: Notes | null) => {
+    if (!ephemeralId || !isLiveDraftNoteId(ephemeralId) || ephemeralId === savedId) {
+      if (savedId) registerComposeSession(savedId);
+      liveDraftIdRef.current = savedId;
+      setResolvedNoteId(savedId);
+      return;
     }
-  }, [composerKind, content, clearLiveNoteGuard, hasPaywall, isPublic, isGuest, persistedIsGuest, onNoteCreated, paywallAmount, persistedIsPublic, promptSudo, pushLiveNote, removeNote, resolvedNoteId, setCachedData, showError, showSuccess, tags, title, user?.$id]);
+    if (source) {
+      pushLiveNote({ ...source, $id: savedId });
+      setCachedData(`note_${savedId}`, { ...source, $id: savedId });
+    }
+    removeNote(ephemeralId);
+    unregisterComposeSession(ephemeralId);
+    registerComposeSession(savedId);
+    liveDraftIdRef.current = savedId;
+    setResolvedNoteId(savedId);
+  }, [pushLiveNote, registerComposeSession, removeNote, setCachedData, unregisterComposeSession]);
+
+  const saveComposerNote = useCallback(async (source: Notes): Promise<Notes> => {
+    if (!source.$id) {
+      throw new Error('Missing note id for save');
+    }
+
+    const normalizedTags = normalizeTags((source.tags || []) as string[]);
+    const payload = {
+      title: (source.title || '').trim(),
+      content: source.content || '',
+      format: 'text' as const,
+      tags: normalizedTags,
+      kind: composerKind,
+      isPublic,
+      isGuest,
+      article: isArticle,
+      metadata: JSON.stringify({
+        paywall: hasPaywall && paywallAmount ? {
+          enabled: true,
+          amount: typeof paywallAmount === 'number' ? paywallAmount : parseFloat(paywallAmount as any) || 0,
+          currency: 'USD',
+        } : {
+          enabled: false,
+          amount: 0,
+          currency: 'USD',
+        },
+      }),
+    };
+
+    const generatedTitle = payload.title || (
+      buildAutoTitleFromContent(payload.content.trim()) || (composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought')
+    );
+
+    if (!user?.$id) {
+      const secret = localStorage.getItem('kylrix_ghost_secret_v2') || crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const deletionSecret = crypto.randomUUID();
+      const { sha256HexUtf8 } = await import('@/lib/crypto/sha256-hex');
+      const creatorDeletionProofHash = await sha256HexUtf8(deletionSecret);
+      const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+      const { encrypted: encTitle, key: noteKey } = await encryptGhostData(generatedTitle);
+      const { encrypted: encContent } = await encryptGhostData(payload.content, noteKey);
+      const id = source.$id.startsWith('live-') ? `ghost-${crypto.randomUUID()}` : source.$id;
+
+      const saved = {
+        $id: id,
+        $createdAt: new Date().toISOString(),
+        $updatedAt: new Date().toISOString(),
+        title: generatedTitle,
+        content: payload.content,
+        format: 'text',
+        tags: payload.tags,
+        userId: 'ghost',
+        isPublic: false,
+        isGuest: false,
+        metadata: JSON.stringify({
+          isGhost: true,
+          ghostSecret: secret,
+          expiresAt,
+          isEncrypted: true,
+          creatorDeletionProofHash,
+          send_object: { kind: 'note' },
+        }),
+      } as Notes;
+
+      const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+      let history = historyRaw ? JSON.parse(historyRaw) : [];
+      if (!Array.isArray(history)) history = [];
+      const existingIndex = history.findIndex((n: any) => n.id === id);
+      const newRef = {
+        id,
+        title: encTitle,
+        content: encContent,
+        metadata: saved.metadata,
+        createdAt: new Date().toISOString(),
+        expiresAt,
+        decryptionKey: noteKey,
+        deletionSecret,
+      };
+      if (existingIndex !== -1) history[existingIndex] = newRef;
+      else history.unshift(newRef);
+      localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+      migrateDraftId(id, source.$id, source);
+      if (!hasAnnouncedCreateRef.current) {
+        hasAnnouncedCreateRef.current = true;
+        onNoteCreated(saved);
+      }
+      applyPersistSnapshot(saved, source);
+      return saved;
+    }
+
+    let saved: Notes;
+    const shouldCreate = isLiveDraftNoteId(source.$id);
+
+    if (!shouldCreate) {
+      saved = (await updateNote(source.$id, {
+        ...payload,
+        isPublic: persistedIsPublic,
+        isGuest: persistedIsGuest,
+        title: generatedTitle,
+      })) as Notes;
+    } else {
+      const ephemeralId = source.$id;
+      saved = (await createNote({
+        ...payload,
+        isPublic: payload.isPublic,
+        isGuest: payload.isGuest,
+        title: generatedTitle,
+      })) as Notes;
+      migrateDraftId(saved.$id, ephemeralId, source);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('kylrix:draft:note');
+      }
+      if (!hasAnnouncedCreateRef.current) {
+        hasAnnouncedCreateRef.current = true;
+        onNoteCreated(saved);
+      }
+    }
+
+    if (isPublic !== persistedIsPublic) {
+      try {
+        saved = (await toggleNoteVisibility(saved.$id)) as Notes;
+      } catch (error: any) {
+        if (error?.message === 'VAULT_LOCKED') {
+          const unlocked = await promptSudo();
+          if (!unlocked) throw new Error('Vault unlock required to make this note public.');
+          saved = (await toggleNoteVisibility(saved.$id)) as Notes;
+        } else {
+          throw error;
+        }
+      }
+      showSuccess(
+        getNotePublicState(saved) ? 'Idea is now Public' : 'Idea is now Private',
+        getNotePublicState(saved)
+          ? 'Encrypted sharing is enabled for this idea.'
+          : 'This idea is now private.'
+      );
+    }
+
+    applyPersistSnapshot(saved, source);
+    return saved;
+  }, [
+    applyPersistSnapshot,
+    composerKind,
+    hasPaywall,
+    isArticle,
+    isGuest,
+    isPublic,
+    migrateDraftId,
+    onNoteCreated,
+    paywallAmount,
+    persistedIsGuest,
+    persistedIsPublic,
+    promptSudo,
+    pushLiveNote,
+    setCachedData,
+    showSuccess,
+    user?.$id,
+  ]);
+
+  const { isSaving: isAutosaving, forceSave } = useAutosave(candidateNote, {
+    enabled: Boolean(candidateNote?.$id) && isDirty,
+    isDirty,
+    debounceMs: 500,
+    save: saveComposerNote,
+    onSave: () => {
+      if (!createdToastShown.current) {
+        createdToastShown.current = true;
+        showSuccess('Idea saved', 'Your idea has been saved.');
+      }
+    },
+    onError: () => {
+      showError('Could not save idea', 'Your changes are still on screen.');
+    },
+  });
+
+  const persist = useCallback(async (showToast = true) => {
+    if (!candidateNoteRef.current?.$id) return null;
+    try {
+      const saved = await saveComposerNote(candidateNoteRef.current);
+      if (showToast && !createdToastShown.current) {
+        createdToastShown.current = true;
+        showSuccess('Idea saved', 'Your idea has been saved.');
+      }
+      return saved;
+    } catch (error) {
+      console.error('Failed to persist note:', error);
+      if (showToast) {
+        showError('Could not save idea', (error as Error)?.message || 'Please try again.');
+      }
+      throw error;
+    }
+  }, [saveComposerNote, showError, showSuccess]);
+
+  useEffect(() => {
+    return () => {
+      if (!isDirty || !candidateNoteRef.current?.$id) return;
+      void forceSave(candidateNoteRef.current);
+    };
+  }, [forceSave, isDirty]);
+
+  const isSaving = isAutosaving || isUploadingVoice;
 
   const handleMorphToDetail = useCallback(() => {
-    publishLiveDraft();
     const noteId = resolvedNoteId || liveDraftIdRef.current;
     if (noteId) {
       setActiveDetail({ type: 'note', id: noteId });
     }
-    void persist(false).catch((error) => {
-      console.error('Background note persist failed on morph:', error);
-    });
+    if (candidateNoteRef.current) {
+      void forceSave(candidateNoteRef.current);
+    }
     if (onClose) {
       onClose();
     } else {
       closeOverlay();
     }
-  }, [publishLiveDraft, persist, setActiveDetail, closeOverlay, onClose, resolvedNoteId]);
+  }, [forceSave, setActiveDetail, closeOverlay, onClose, resolvedNoteId]);
 
   const handleClose = useCallback(() => {
-    const shouldPersist = Boolean((resolvedNoteId && isDirty) || (!resolvedNoteId && (title.trim() || content)));
-    if (shouldPersist) {
-      void persist(false).catch((error) => {
-        console.error('Background note persist failed on close:', error);
-      });
+    if (isDirty && candidateNoteRef.current?.$id) {
+      void forceSave(candidateNoteRef.current);
     }
     if (typeof window !== 'undefined') {
       localStorage.removeItem('kylrix:draft:note');
@@ -829,7 +791,7 @@ export default function CreateNoteForm({
     } else {
       closeOverlay();
     }
-  }, [closeOverlay, content, isDirty, onClose, persist, resolvedNoteId, title]);
+  }, [closeOverlay, isDirty, onClose, forceSave]);
 
   const handlePaste = useCallback(() => {
     isPastedRef.current = true;

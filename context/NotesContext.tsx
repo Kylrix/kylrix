@@ -21,7 +21,7 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useDataNexus } from './DataNexusContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
-import { buildAutoTitleFromContent, isGenericNoteTitle, resolveNoteCardTitle } from '@/constants/noteTitle';
+import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
 
 type LiveEditGuard = {
   title: string;
@@ -44,35 +44,6 @@ function mergeServerWithLiveGuard(serverNote: Notes, guard: LiveEditGuard): Note
   });
 }
 
-function coalesceLiveFields(
-  noteId: string,
-  incoming: { title?: string; content?: string; tags?: string[] },
-  notes: Notes[],
-  prevGuard?: LiveEditGuard | null,
-): LiveEditGuard {
-  const listed = notes.find((item) => item.$id === noteId);
-  const prevContent = prevGuard?.content ?? listed?.content ?? '';
-  const prevTitle = prevGuard?.title ?? listed?.title ?? '';
-  const prevTags = prevGuard?.tags ?? (Array.isArray(listed?.tags) ? listed.tags as string[] : []);
-
-  const incomingContent = incoming.content ?? '';
-  const mergedContent = incomingContent.length >= prevContent.length ? incomingContent : prevContent;
-
-  const incomingTitle = (incoming.title ?? '').trim();
-  const meaningfulPrevTitle = isGenericNoteTitle(prevTitle) ? '' : prevTitle.trim();
-  const mergedTitle = incomingTitle || meaningfulPrevTitle || buildAutoTitleFromContent(mergedContent) || '';
-
-  const incomingTags = incoming.tags ?? [];
-  const mergedTags = incomingTags.length > 0 ? incomingTags : prevTags;
-
-  return {
-    title: mergedTitle,
-    content: mergedContent,
-    tags: mergedTags,
-    at: Date.now(),
-  };
-}
-
 interface NotesContextType {
   notes: Notes[];
   totalNotes: number;
@@ -83,6 +54,8 @@ interface NotesContextType {
   refetchNotes: () => void;
   upsertNote: (note: Notes) => void;
   pushLiveNote: (note: Notes) => void;
+  registerComposeSession: (noteId: string) => void;
+  unregisterComposeSession: (noteId: string) => void;
   clearLiveNoteGuard: (noteId: string) => void;
   removeNote: (noteId: string) => void;
   pinnedIds: string[];
@@ -101,6 +74,8 @@ const NotesContext = createContext<NotesContextType>({
   refetchNotes: () => {},
   upsertNote: () => {},
   pushLiveNote: () => {},
+  registerComposeSession: () => {},
+  unregisterComposeSession: () => {},
   clearLiveNoteGuard: () => {},
   removeNote: () => {},
   pinnedIds: [],
@@ -513,6 +488,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated]);
 
   const liveEditGuardsRef = useRef(new Map<string, LiveEditGuard>());
+  const activeComposeNoteIdsRef = useRef(new Set<string>());
 
   const upsertNote = useCallback((note: Notes) => {
     const normalized = normalizeVisibility(note);
@@ -533,28 +509,34 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
   const pushLiveNote = useCallback((note: Notes) => {
     if (!note?.$id) return;
-    const prevGuard = liveEditGuardsRef.current.get(note.$id) ?? null;
-    const merged = coalesceLiveFields(
-      note.$id,
-      {
-        title: note.title ?? undefined,
-        content: note.content ?? undefined,
-        tags: Array.isArray(note.tags) ? note.tags : [],
-      },
-      notesRef.current,
-      prevGuard,
-    );
-    liveEditGuardsRef.current.set(note.$id, merged);
+    const tags = Array.isArray(note.tags) ? note.tags : [];
+    liveEditGuardsRef.current.set(note.$id, {
+      title: note.title || '',
+      content: note.content || '',
+      tags,
+      at: Date.now(),
+    });
     const stamped: Notes = {
       ...note,
-      title: merged.title,
-      content: merged.content,
-      tags: merged.tags,
-      $updatedAt: note.$updatedAt || new Date().toISOString(),
-      updatedAt: note.updatedAt || note.$updatedAt || new Date().toISOString(),
+      title: note.title || '',
+      content: note.content || '',
+      tags,
+      $updatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     upsertNote(stamped);
   }, [upsertNote]);
+
+  const registerComposeSession = useCallback((noteId: string) => {
+    if (!noteId) return;
+    activeComposeNoteIdsRef.current.add(noteId);
+  }, []);
+
+  const unregisterComposeSession = useCallback((noteId: string) => {
+    if (!noteId) return;
+    activeComposeNoteIdsRef.current.delete(noteId);
+    liveEditGuardsRef.current.delete(noteId);
+  }, []);
 
   const clearLiveNoteGuard = useCallback((noteId: string) => {
     liveEditGuardsRef.current.delete(noteId);
@@ -619,6 +601,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       const isDelete = response.events.some(e => e.endsWith('.delete'));
 
       if (isCreate) {
+        if (activeComposeNoteIdsRef.current.has(payload.$id)) {
+          const guard = liveEditGuardsRef.current.get(payload.$id);
+          if (!guard) return;
+        }
         const alreadyListed = notesRef.current.some(n => n.$id === payload.$id);
         setNotes(prev => {
           const guard = liveEditGuardsRef.current.get(payload.$id);
@@ -637,6 +623,9 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
         void opportunisticallyDecryptNote(payload);
       } else if (isUpdate) {
+        if (activeComposeNoteIdsRef.current.has(payload.$id) && !liveEditGuardsRef.current.has(payload.$id)) {
+          return;
+        }
         setNotes(prev => prev.map(n => {
           if (n.$id !== payload.$id) return n;
           const guard = liveEditGuardsRef.current.get(payload.$id);
@@ -863,6 +852,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       refetchNotes,
       upsertNote,
       pushLiveNote,
+      registerComposeSession,
+      unregisterComposeSession,
       clearLiveNoteGuard,
       removeNote,
       pinnedIds: effectivePinnedIds,
@@ -880,6 +871,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       refetchNotes,
       upsertNote,
       pushLiveNote,
+      registerComposeSession,
+      unregisterComposeSession,
       clearLiveNoteGuard,
       removeNote,
       effectivePinnedIds,

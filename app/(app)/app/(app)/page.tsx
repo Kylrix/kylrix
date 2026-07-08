@@ -87,6 +87,7 @@ export default function NotesPage() {
     totalNotes, 
     isLoading: isInitialLoading, 
     upsertNote, 
+    registerComposeSession,
     pushLiveNote,
     removeNote,
     refetchNotes,
@@ -334,10 +335,12 @@ export default function NotesPage() {
   }, [paginatedNotes]);
 
   const handleNoteCreated = useCallback((newNote: Notes) => {
-    pushLiveNote(newNote);
+    if (newNote.$id) {
+      registerComposeSession(newNote.$id);
+    }
     clearSearch();
     goToPage(1);
-  }, [pushLiveNote, clearSearch, goToPage]);
+  }, [clearSearch, goToPage, registerComposeSession]);
 
   const openComposer = useCallback((kind: 'note' | 'project') => {
     openOverlay(
