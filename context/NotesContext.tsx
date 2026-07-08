@@ -22,6 +22,34 @@ import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useDataNexus } from './DataNexusContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 
+type LiveEditGuard = {
+  title: string;
+  content: string;
+  tags: string[];
+  at: number;
+};
+
+function isLiveDraftNoteId(noteId?: string | null): boolean {
+  return Boolean(noteId?.startsWith('live-'));
+}
+
+function mergeServerWithLiveGuard(serverNote: Notes, guard: LiveEditGuard): Notes {
+  const serverContent = serverNote.content || '';
+  const localContent = guard.content || '';
+  const localAhead = localContent.length > serverContent.length || localContent !== serverContent;
+
+  if (!localAhead) {
+    return normalizeVisibility(serverNote);
+  }
+
+  return normalizeVisibility({
+    ...serverNote,
+    title: guard.title || serverNote.title,
+    content: guard.content,
+    tags: guard.tags.length ? guard.tags : serverNote.tags,
+  });
+}
+
 interface NotesContextType {
   notes: Notes[];
   totalNotes: number;
@@ -31,6 +59,8 @@ interface NotesContextType {
   loadMore: () => Promise<void>;
   refetchNotes: () => void;
   upsertNote: (note: Notes) => void;
+  pushLiveNote: (note: Notes) => void;
+  clearLiveNoteGuard: (noteId: string) => void;
   removeNote: (noteId: string) => void;
   pinnedIds: string[];
   pinNote: (noteId: string) => Promise<void>;
@@ -47,6 +77,8 @@ const NotesContext = createContext<NotesContextType>({
   loadMore: async () => {},
   refetchNotes: () => {},
   upsertNote: () => {},
+  pushLiveNote: () => {},
+  clearLiveNoteGuard: () => {},
   removeNote: () => {},
   pinnedIds: [],
   pinNote: async () => {},
@@ -457,6 +489,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', () => { void handleStorage(); });
   }, [isAuthenticated]);
 
+  const liveEditGuardsRef = useRef(new Map<string, LiveEditGuard>());
+
   const upsertNote = useCallback((note: Notes) => {
     const normalized = normalizeVisibility(note);
     const existed = notesRef.current.some((n) => n.$id === note.$id);
@@ -473,6 +507,28 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     // Update individual note cache
     setCachedData(`note_${normalized.$id}`, normalized);
   }, [setCachedData, INITIAL_NOTES_CACHE_KEY, invalidate]);
+
+  const pushLiveNote = useCallback((note: Notes) => {
+    if (!note?.$id) return;
+    const tags = Array.isArray(note.tags) ? note.tags : [];
+    liveEditGuardsRef.current.set(note.$id, {
+      title: note.title || '',
+      content: note.content || '',
+      tags,
+      at: Date.now(),
+    });
+    const stamped: Notes = {
+      ...note,
+      tags,
+      $updatedAt: note.$updatedAt || new Date().toISOString(),
+      updatedAt: note.updatedAt || note.$updatedAt || new Date().toISOString(),
+    };
+    upsertNote(stamped);
+  }, [upsertNote]);
+
+  const clearLiveNoteGuard = useCallback((noteId: string) => {
+    liveEditGuardsRef.current.delete(noteId);
+  }, []);
 
   const opportunisticallyDecryptNote = useCallback(async (note: Notes) => {
     if (!note?.$id) return;
@@ -533,17 +589,33 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       const isDelete = response.events.some(e => e.endsWith('.delete'));
 
       if (isCreate) {
+        const alreadyListed = notesRef.current.some(n => n.$id === payload.$id);
         setNotes(prev => {
-          if (prev.some(n => n.$id === payload.$id)) return prev;
-          return [payload, ...prev];
+          const guard = liveEditGuardsRef.current.get(payload.$id);
+          const merged = guard ? mergeServerWithLiveGuard(payload, guard) : normalizeVisibility(payload);
+          if (prev.some(n => n.$id === payload.$id)) {
+            return prev.map(n => n.$id === payload.$id ? merged : n);
+          }
+          return [merged, ...prev];
         });
-        setTotalNotes(prev => prev + 1);
-        setCachedData(`note_${payload.$id}`, payload);
+        const guard = liveEditGuardsRef.current.get(payload.$id);
+        const merged = guard ? mergeServerWithLiveGuard(payload, guard) : normalizeVisibility(payload);
+        if (!alreadyListed) {
+          setTotalNotes(prev => prev + 1);
+        }
+        setCachedData(`note_${payload.$id}`, merged);
         if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
         void opportunisticallyDecryptNote(payload);
       } else if (isUpdate) {
-        setNotes(prev => prev.map(n => n.$id === payload.$id ? payload : n));
-        setCachedData(`note_${payload.$id}`, payload);
+        setNotes(prev => prev.map(n => {
+          if (n.$id !== payload.$id) return n;
+          const guard = liveEditGuardsRef.current.get(payload.$id);
+          if (!guard) return normalizeVisibility(payload);
+          return mergeServerWithLiveGuard(payload, guard);
+        }));
+        const guard = liveEditGuardsRef.current.get(payload.$id);
+        const merged = guard ? mergeServerWithLiveGuard(payload, guard) : normalizeVisibility(payload);
+        setCachedData(`note_${payload.$id}`, merged);
         scheduleInvalidateInitialNotesPage();
         void opportunisticallyDecryptNote(payload);
       } else if (isDelete) {
@@ -760,6 +832,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       loadMore,
       refetchNotes,
       upsertNote,
+      pushLiveNote,
+      clearLiveNoteGuard,
       removeNote,
       pinnedIds: effectivePinnedIds,
       pinNote,
@@ -775,6 +849,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       loadMore,
       refetchNotes,
       upsertNote,
+      pushLiveNote,
+      clearLiveNoteGuard,
       removeNote,
       effectivePinnedIds,
       pinNote,

@@ -87,6 +87,7 @@ export default function NotesPage() {
     totalNotes, 
     isLoading: isInitialLoading, 
     upsertNote, 
+    pushLiveNote,
     removeNote,
     refetchNotes,
     isPinned,
@@ -333,10 +334,10 @@ export default function NotesPage() {
   }, [paginatedNotes]);
 
   const handleNoteCreated = useCallback((newNote: Notes) => {
-    upsertNote(newNote);
+    pushLiveNote(newNote);
     clearSearch();
     goToPage(1);
-  }, [upsertNote, clearSearch, goToPage]);
+  }, [pushLiveNote, clearSearch, goToPage]);
 
   const openComposer = useCallback((kind: 'note' | 'project') => {
     openOverlay(
@@ -395,8 +396,8 @@ export default function NotesPage() {
       console.error('Cannot update note: missing ID');
       return;
     }
-    upsertNote(updatedNote);
-  }, [upsertNote]);
+    pushLiveNote(updatedNote);
+  }, [pushLiveNote]);
 
   const handleToggleSidebar = useCallback(() => {
     setIsCollapsed((prev: boolean) => !prev);

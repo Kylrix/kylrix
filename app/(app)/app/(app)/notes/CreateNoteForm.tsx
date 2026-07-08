@@ -57,6 +57,21 @@ interface CreateNoteFormProps {
 
 const normalizeTags = (tags: string[] = []) => Array.from(new Set(tags.map((tag) => tag.trim()).filter(Boolean)));
 
+function isLiveDraftNoteId(noteId?: string | null): boolean {
+  return Boolean(noteId?.startsWith('live-'));
+}
+
+function mergeSavedWithLiveDraft(saved: Notes, live: { title: string; content: string; tags: string[] }): Notes {
+  const savedContent = saved.content || '';
+  const liveContent = live.content || '';
+  return {
+    ...saved,
+    title: live.title.trim() || saved.title || '',
+    content: liveContent.length >= savedContent.length ? liveContent : savedContent,
+    tags: live.tags.length ? live.tags : (saved.tags as string[] | undefined) || [],
+  };
+}
+
 export default function CreateNoteForm({
   onNoteCreated,
   initialContent,
@@ -68,7 +83,7 @@ export default function CreateNoteForm({
 }: CreateNoteFormProps) {
   const { closeOverlay } = useOverlay();
   const { showSuccess, showError } = useToast();
-  const { notes: allNotes, upsertNote } = useNotes();
+  const { notes: allNotes, pushLiveNote, removeNote, clearLiveNoteGuard } = useNotes();
   const { fetchOptimized, getCachedData, setCachedData } = useDataNexus();
   const { promptSudo } = useSudo();
   const { setActiveDetail } = useSection();
@@ -106,6 +121,8 @@ export default function CreateNoteForm({
 
   const createdToastShown = useRef(false);
   const persistInFlightRef = useRef<Promise<Notes | null> | null>(null);
+  const liveDraftIdRef = useRef<string | undefined>(noteId);
+  const allNotesRef = useRef<Notes[]>([]);
   const isPastedRef = useRef(false);
   const pasteTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -412,7 +429,8 @@ export default function CreateNoteForm({
   useEffect(() => {
     if (!isHydrated) return;
     if (!isDirty) return;
-    if (!resolvedNoteId && !(title.trim() || content.trim())) return;
+    const activeNoteId = resolvedNoteId || liveDraftIdRef.current;
+    if (!activeNoteId && !(title.trim() || content)) return;
 
     const timer = window.setTimeout(() => {
       void persist(false);
@@ -422,36 +440,50 @@ export default function CreateNoteForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot, isHydrated, isDirty]);
 
-  const syncNoteInMemory = useCallback((nextTitle: string, nextContent: string, nextTags: string[]) => {
-    if (!resolvedNoteId) return;
-    const existing = (allNotes || []).find(n => n.$id === resolvedNoteId);
-    if (existing) {
-      upsertNote({
-        ...existing,
-        title: nextTitle,
-        content: nextContent,
-        tags: nextTags,
-        format: 'text',
-        $updatedAt: new Date().toISOString(),
-      });
-    }
-  }, [resolvedNoteId, allNotes, upsertNote]);
-
-  // Instant in-memory sync to note card while typing
   useEffect(() => {
-    if (!resolvedNoteId) return;
-    
-    const existing = (allNotes || []).find(n => n.$id === resolvedNoteId);
-    if (!existing) return;
-    
-    const hasDiff = existing.title !== title.trim() ||
-                    existing.content !== content.trim() ||
-                    JSON.stringify(existing.tags) !== JSON.stringify(tags);
-                    
-    if (hasDiff) {
-      syncNoteInMemory(title, content, tags);
+    allNotesRef.current = Array.isArray(allNotes) ? allNotes : [];
+  }, [allNotes]);
+
+  const publishLiveDraft = useCallback(() => {
+    if (!isHydrated) return;
+    const hasDraftContent = Boolean(title || content || tags.length);
+    if (!resolvedNoteId && !liveDraftIdRef.current && !hasDraftContent) return;
+
+    let noteId = resolvedNoteId || liveDraftIdRef.current;
+    if (!noteId) {
+      noteId = `live-${crypto.randomUUID()}`;
+      liveDraftIdRef.current = noteId;
+      setResolvedNoteId(noteId);
     }
-  }, [resolvedNoteId, title, content, tags, allNotes, syncNoteInMemory]);
+
+    const existing = allNotesRef.current.find((candidate) => candidate.$id === noteId);
+    const normalizedTags = normalizeTags(tags);
+    const draftNote: Notes = {
+      ...(existing || {
+        $id: noteId,
+        format: 'text',
+        userId: user?.$id || '',
+        isPublic,
+        isGuest,
+        $createdAt: new Date().toISOString(),
+      } as Notes),
+      title,
+      content,
+      tags: normalizedTags,
+      format: 'text',
+      isPublic,
+      isGuest,
+      $updatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    pushLiveNote(draftNote);
+  }, [content, isGuest, isHydrated, isPublic, pushLiveNote, resolvedNoteId, tags, title, user?.$id]);
+
+  // Single live source of truth: note card + detail read from context on every keystroke.
+  useEffect(() => {
+    publishLiveDraft();
+  }, [publishLiveDraft]);
 
   const appendTag = useCallback((tag: string) => {
     const next = tag.trim();
@@ -499,9 +531,11 @@ export default function CreateNoteForm({
 
     const runPersist = (async () => {
       const normalizedTags = normalizeTags(tags);
+      const liveTitle = title;
+      const liveContent = content;
       const payload = {
-        title: title.trim(),
-        content: content.trim(),
+        title: liveTitle.trim(),
+        content: liveContent,
         format: 'text' as const,
         tags: normalizedTags,
         kind: composerKind,
@@ -521,8 +555,9 @@ export default function CreateNoteForm({
         }),
       };
 
-      const hasMeaningfulContent = Boolean(payload.title || payload.content || (resolvedNoteId && payload.tags.length));
-      if (!resolvedNoteId && !hasMeaningfulContent) {
+      const activeNoteId = resolvedNoteId || liveDraftIdRef.current;
+      const hasMeaningfulContent = Boolean(payload.title || liveContent || (activeNoteId && payload.tags.length));
+      if (!activeNoteId && !hasMeaningfulContent) {
         return null;
       }
 
@@ -530,8 +565,19 @@ export default function CreateNoteForm({
       try {
         let saved: Notes;
         const generatedTitle = payload.title || (
-          buildAutoTitleFromContent(payload.content) || (composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought')
+          buildAutoTitleFromContent(liveContent.trim()) || (composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought')
         );
+
+        const applyLiveMerge = (serverNote: Notes) => {
+          const merged = mergeSavedWithLiveDraft(serverNote, {
+            title: liveTitle,
+            content: liveContent,
+            tags: normalizedTags,
+          });
+          pushLiveNote(merged);
+          setCachedData(`note_${merged.$id}`, merged);
+          return merged;
+        };
 
         if (!user?.$id) {
           // Unauthenticated/offline ghost note creation
@@ -596,7 +642,7 @@ export default function CreateNoteForm({
             localStorage.removeItem('kylrix:draft:note');
           }
           onNoteCreated(saved);
-          upsertNote(saved);
+          pushLiveNote(saved);
           setIsSaving(false);
           if (showToast && !createdToastShown.current) {
             createdToastShown.current = true;
@@ -605,25 +651,34 @@ export default function CreateNoteForm({
           return saved;
         }
 
-        if (resolvedNoteId) {
-          saved = (await updateNote(resolvedNoteId, {
+        const shouldCreate = !activeNoteId || isLiveDraftNoteId(activeNoteId);
+
+        if (!shouldCreate && activeNoteId) {
+          saved = (await updateNote(activeNoteId, {
             ...payload,
             isPublic: persistedIsPublic,
             isGuest: persistedIsGuest,
             title: generatedTitle,
           })) as Notes;
-          upsertNote(saved);
+          saved = applyLiveMerge(saved);
         } else {
+          const ephemeralId = activeNoteId;
           saved = (await createNote({
             ...payload,
             isPublic: payload.isPublic,
             isGuest: payload.isGuest,
             title: generatedTitle,
           })) as Notes;
+          if (ephemeralId && isLiveDraftNoteId(ephemeralId) && ephemeralId !== saved.$id) {
+            removeNote(ephemeralId);
+            clearLiveNoteGuard(ephemeralId);
+          }
+          liveDraftIdRef.current = saved.$id;
           setResolvedNoteId(saved.$id);
           if (typeof window !== 'undefined') {
             localStorage.removeItem('kylrix:draft:note');
           }
+          saved = applyLiveMerge(saved);
           onNoteCreated(saved);
           if (showToast && !createdToastShown.current) {
             createdToastShown.current = true;
@@ -668,13 +723,14 @@ export default function CreateNoteForm({
           setIsPublic(livePublicState);
           setPersistedIsGuest(liveGuestState);
           setIsGuest(liveGuestState);
-          setCachedData(`note_${saved.$id}`, saved);
-          const paywall = (saved as any).metadata?.paywall;
+          const paywall = (() => {
+            try { return JSON.parse(saved.metadata || '{}')?.paywall; } catch { return undefined; }
+          })();
           setLastSavedSnapshot(JSON.stringify({
-            title: saved.title || '',
-            content: saved.content || '',
+            title: liveTitle.trim(),
+            content: liveContent.trim(),
             format: 'text',
-            tags: normalizeTags((saved.tags || []) as string[]),
+            tags: normalizedTags,
             composerKind,
             isPublic: livePublicState,
             isGuest: liveGuestState,
@@ -702,26 +758,26 @@ export default function CreateNoteForm({
     } finally {
       persistInFlightRef.current = null;
     }
-  }, [composerKind, content, hasPaywall, isPublic, isGuest, persistedIsGuest, onNoteCreated, paywallAmount, persistedIsPublic, promptSudo, resolvedNoteId, setCachedData, showError, showSuccess, tags, title]);
+  }, [composerKind, content, clearLiveNoteGuard, hasPaywall, isPublic, isGuest, persistedIsGuest, onNoteCreated, paywallAmount, persistedIsPublic, promptSudo, pushLiveNote, removeNote, resolvedNoteId, setCachedData, showError, showSuccess, tags, title, user?.$id]);
 
-  const handleMorphToDetail = useCallback(async () => {
-    try {
-      const saved = await persist(false);
-      if (saved && saved.$id) {
-        setActiveDetail({ type: 'note', id: saved.$id });
-      }
-      if (onClose) {
-        onClose();
-      } else {
-        closeOverlay();
-      }
-    } catch (err) {
-      console.error('Failed to morph note to detail', err);
+  const handleMorphToDetail = useCallback(() => {
+    publishLiveDraft();
+    const noteId = resolvedNoteId || liveDraftIdRef.current;
+    if (noteId) {
+      setActiveDetail({ type: 'note', id: noteId });
     }
-  }, [persist, setActiveDetail, closeOverlay, onClose]);
+    void persist(false).catch((error) => {
+      console.error('Background note persist failed on morph:', error);
+    });
+    if (onClose) {
+      onClose();
+    } else {
+      closeOverlay();
+    }
+  }, [publishLiveDraft, persist, setActiveDetail, closeOverlay, onClose, resolvedNoteId]);
 
   const handleClose = useCallback(() => {
-    const shouldPersist = Boolean((resolvedNoteId && isDirty) || (!resolvedNoteId && (title.trim() || content.trim())));
+    const shouldPersist = Boolean((resolvedNoteId && isDirty) || (!resolvedNoteId && (title.trim() || content)));
     if (shouldPersist) {
       void persist(false).catch((error) => {
         console.error('Background note persist failed on close:', error);
@@ -833,7 +889,6 @@ export default function CreateNoteForm({
                 const val = event.target.value;
                 setTitle(val);
                 setIsTitleManuallyEdited(true);
-                syncNoteInMemory(val, content, tags);
               }}
               placeholder="Title"
               className="w-full bg-white/[0.02] text-white placeholder-white/20 border border-white/5 focus:border-pink-500/30 rounded-xl px-3 py-2 text-xl font-black focus:outline-none transition-all font-space-grotesk shrink-0"
@@ -857,7 +912,6 @@ export default function CreateNoteForm({
               onChange={(event) => {
                 const val = event.target.value;
                 setContent(val);
-                syncNoteInMemory(title, val, tags);
               }}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey && !isExpanded && !isPastedRef.current) {
@@ -1083,11 +1137,9 @@ export default function CreateNoteForm({
                       const end = textarea.selectionEnd;
                       if (start === 0 && end === textarea.value.length) {
                         setContent(text);
-                        syncNoteInMemory(title, text, tags);
                       } else {
                         const nextContent = content.substring(0, start) + text + content.substring(end);
                         setContent(nextContent);
-                        syncNoteInMemory(title, nextContent, tags);
                         setTimeout(() => {
                           textarea.focus();
                           textarea.setSelectionRange(start + text.length, start + text.length);

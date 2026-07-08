@@ -146,16 +146,21 @@ export function NoteDetailSidebar({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { setCachedData } = useDataNexus();
-  const { notes: allNotes, isPinned, pinNote, unpinNote } = useNotes();
+  const { notes: allNotes, isPinned, pinNote, unpinNote, pushLiveNote } = useNotes();
   const isPinnedFunc = useMemo(() => typeof isPinned === 'function' ? isPinned : () => false, [isPinned]);
   const pinNoteFunc = useMemo(() => typeof pinNote === 'function' ? pinNote : async () => {}, [pinNote]);
   const unpinNoteFunc = useMemo(() => typeof unpinNote === 'function' ? unpinNote : async () => {}, [unpinNote]);
   const [realtimeNote, setRealtimeNote] = useState<Notes | null>(null);
   const noteRef = useRef(note);
+  const allNotesRef = useRef<Notes[]>([]);
   const liveNote = useMemo(
     () => (realtimeNote?.$id === note.$id ? realtimeNote : (allNotes || []).find((candidate: any) => candidate.$id === note.$id) || note),
     [allNotes, note, realtimeNote]
   );
+
+  useEffect(() => {
+    allNotesRef.current = Array.isArray(allNotes) ? allNotes : [];
+  }, [allNotes]);
 
   useEffect(() => {
     if (scrollContainerRef.current && liveNote?.$id) {
@@ -181,10 +186,19 @@ export function NoteDetailSidebar({
   }, [liveNote?.$id, refreshEcosystemTags]);
 
   useEffect(() => {
+    if (note.$id?.startsWith('live-')) {
+      const fromContext = allNotesRef.current.find((candidate) => candidate.$id === note.$id);
+      if (fromContext && !isDirtyRef.current) {
+        updateLocalAndParentNote(fromContext);
+      }
+      return;
+    }
+
     setRealtimeNote(null);
     let active = true;
     const fetchFullNote = async () => {
       try {
+        const contextNote = allNotesRef.current.find((candidate) => candidate.$id === note.$id);
         const full = await getNote(note.$id);
         if (active && full) {
           let resolved = full as Notes;
@@ -196,7 +210,21 @@ export function NoteDetailSidebar({
             const decrypted = await decryptPublicEncryptedNote(full);
             if (decrypted) resolved = decrypted;
           }
-          updateLocalAndParentNote(resolved);
+          if (contextNote) {
+            const contextContent = contextNote.content || '';
+            const resolvedContent = resolved.content || '';
+            if (contextContent.length > resolvedContent.length || contextContent !== resolvedContent) {
+              resolved = {
+                ...resolved,
+                title: contextNote.title ?? resolved.title,
+                content: contextNote.content,
+                tags: contextNote.tags ?? resolved.tags,
+              };
+            }
+          }
+          if (!isDirtyRef.current) {
+            updateLocalAndParentNote(resolved);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch full note:', err);
@@ -301,26 +329,23 @@ export function NoteDetailSidebar({
     setIsPublic(getNotePublicState(liveNote));
   }, [liveNote]);
 
-  // Synchronize candidate note changes to the local cache and parent notes list in real-time (keystroke buffering)
+  // Live sync: note card + list read the same draft on every keystroke (save stays debounced separately).
   useEffect(() => {
     if (!isDirtyRef.current || !liveNote.$id) return;
 
-    const handler = setTimeout(() => {
-      const draftNote: Notes = {
-        ...liveNote,
-        title,
-        content,
-        tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
-        updatedAt: new Date().toISOString(), // Fresh timestamp for sorting/caching
-      };
-      
-      // Update local cache and notify the parent list instantly
-      void setCachedData(`note_${liveNote.$id}`, draftNote);
-      onUpdate(draftNote);
-    }, 150); // 150ms debounce on keystrokes to prevent database lock congestion
+    const draftNote: Notes = {
+      ...liveNote,
+      title,
+      content,
+      tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
+      updatedAt: new Date().toISOString(),
+      $updatedAt: new Date().toISOString(),
+    };
 
-    return () => clearTimeout(handler);
-  }, [title, content, tags, liveNote, onUpdate, setCachedData]);
+    void setCachedData(`note_${liveNote.$id}`, draftNote);
+    pushLiveNote(draftNote);
+    onUpdate(draftNote);
+  }, [title, content, tags, liveNote, onUpdate, pushLiveNote, setCachedData]);
 
   // Automatically heal T4 encrypted state if vault is unlocked
   useEffect(() => {

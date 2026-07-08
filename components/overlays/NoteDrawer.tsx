@@ -20,7 +20,7 @@ const DRAWER_SX = {
 
 export function NoteDrawer() {
   const { isOpen, close } = useNoteDrawer();
-  const { upsertNote } = useNotes();
+  const { pushLiveNote } = useNotes();
   const { setIsDrawerOpen } = useDrawerState();
   const [isExpanded, setIsExpanded] = React.useState(false);
 
@@ -79,9 +79,8 @@ export function NoteDrawer() {
 
         <CreateNoteForm
             onNoteCreated={(newNote) => {
-              upsertNote(newNote);
+              pushLiveNote(newNote);
               setIsExpanded(false);
-              close();
             }}
             isExpanded={isExpanded}
             onToggleExpand={() => setIsExpanded(!isExpanded)}
