@@ -34,7 +34,8 @@ import {
   Bold,
   Italic,
   Heading1,
-  Code2
+  Code2,
+  Info
 } from 'lucide-react';
 
 import { 
@@ -684,6 +685,7 @@ export function NoteDetailSidebar({
 
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [isContextDrawerOpen, setIsContextDrawerOpen] = useState(false);
+  const [isObjectPermissionInfoOpen, setIsObjectPermissionInfoOpen] = useState(false);
   const [pendingBlockDelete, setPendingBlockDelete] = useState<ParsedObjectBlock | null>(null);
   const [isAttachingObject, setIsAttachingObject] = useState(false);
   const objectUploadInputRef = useRef<HTMLInputElement | null>(null);
@@ -701,6 +703,11 @@ export function NoteDetailSidebar({
     setIsDrawerOpen(isContextDrawerOpen);
     return () => setIsDrawerOpen(false);
   }, [isContextDrawerOpen, setIsDrawerOpen]);
+
+  useEffect(() => {
+    setIsDrawerOpen(isObjectPermissionInfoOpen);
+    return () => setIsDrawerOpen(false);
+  }, [isObjectPermissionInfoOpen, setIsDrawerOpen]);
 
   const displayTags = useMemo(() => tags.split(',').map((t: string) => t.trim()).filter(Boolean), [tags]);
 
@@ -1440,9 +1447,20 @@ export function NoteDetailSidebar({
 
         {/* Attachments */}
         <div className="shrink-0">
-          <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6366F1] font-clash block mb-2.5">
-            Attachments
-          </span>
+          <div className="flex items-center gap-2 mb-2.5">
+            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6366F1] font-clash block">
+              Attachments
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsObjectPermissionInfoOpen(true)}
+              className="w-5 h-5 rounded-md flex items-center justify-center text-white/45 hover:text-white hover:bg-white/5 transition-colors"
+              title="Attachment permission info"
+              aria-label="Attachment permission info"
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
+          </div>
           {currentAttachments.length > 0 ? (
             <div className="flex flex-col gap-2">
               {currentAttachments.map((file: any) => (
@@ -2072,6 +2090,36 @@ export function NoteDetailSidebar({
                 }}
               >
                 Remove
+              </button>
+            </div>
+          </div>
+        </Drawer>
+      )}
+
+      {isObjectPermissionInfoOpen && (
+        <Drawer
+          anchor="bottom"
+          open={isObjectPermissionInfoOpen}
+          onClose={() => setIsObjectPermissionInfoOpen(false)}
+          ModalProps={{ keepMounted: false, disablePortal: true }}
+          PaperProps={{ sx: { bgcolor: '#161412', borderTop: '1px solid #34322F', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', p: 2.25 } }}
+        >
+          <div className="space-y-2.5">
+            <p className="text-sm font-black text-white">Attached object permissions</p>
+            <p className="text-xs text-white/70 leading-relaxed">
+              Every secondary object attached to this note keeps the permission system of its own primary object.
+              If someone cannot access that primary object, they will see no access here too.
+            </p>
+            <p className="text-xs text-white/55 leading-relaxed">
+              Projects are the only place with granular overrides. Notes do not override attached object permissions.
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                className="h-9 px-3 rounded-lg border border-white/10 text-white/80 hover:text-white hover:bg-white/5"
+                onClick={() => setIsObjectPermissionInfoOpen(false)}
+              >
+                Close
               </button>
             </div>
           </div>
