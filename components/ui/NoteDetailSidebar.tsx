@@ -88,6 +88,8 @@ import { pickNoteAutosavePayload } from '@/lib/appwrite/note';
 import { attachObject } from '@/lib/actions/client-ops';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 
+export type NoteAccessRole = 'owner' | 'write-collab' | 'read-collab' | 'guest' | 'public';
+
 export interface NoteDetailSidebarProps {
   note: Notes;
   onUpdate: (updatedNote: Notes) => void;
@@ -97,6 +99,10 @@ export interface NoteDetailSidebarProps {
   showExpandButton?: boolean;
   showHeaderDeleteButton?: boolean;
   isLoading?: boolean;
+  /** When true, hides all write/edit/delete controls and forces preview mode */
+  readOnly?: boolean;
+  /** The resolved access role for this viewer */
+  accessRole?: NoteAccessRole;
 }
 
 export function NoteDetailSidebar({
@@ -108,6 +114,8 @@ export function NoteDetailSidebar({
   showExpandButton = true,
   showHeaderDeleteButton = true,
   isLoading = false,
+  readOnly = false,
+  accessRole,
 }: NoteDetailSidebarProps) {
   const successColor = '#10B981';
   const { open: openUnified } = useUnifiedDrawer();
@@ -505,7 +513,7 @@ export function NoteDetailSidebar({
   const candidateNoteRef = useRef(candidateNote);
   candidateNoteRef.current = candidateNote;
 
-  const canEditNote = Boolean(liveNote.$id) && !shouldMaskEncrypted && !isLoading;
+  const canEditNote = Boolean(liveNote.$id) && !shouldMaskEncrypted && !isLoading && !readOnly;
 
   const { isSaving: isAutosaving, forceSave } = useAutosave(candidateNote, {
     onSave: (savedNote: Notes) => {
@@ -519,7 +527,7 @@ export function NoteDetailSidebar({
     onError: () => {
       showError('Save failed', 'Your changes are still on screen. We will retry automatically.');
     },
-    enabled: canEditNote && isDirty,
+    enabled: canEditNote && isDirty && !readOnly,
     isDirty: isDirty,
   });
 
@@ -664,7 +672,12 @@ export function NoteDetailSidebar({
 
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [isContextDrawerOpen, setIsContextDrawerOpen] = useState(false);
-  const [contentMode, setContentMode] = useState<'edit' | 'preview'>('edit');
+  const [contentMode, setContentMode] = useState<'edit' | 'preview'>(readOnly ? 'preview' : 'edit');
+
+  // Force preview mode when readOnly
+  useEffect(() => {
+    if (readOnly) setContentMode('preview');
+  }, [readOnly]);
   const isPageLayout = layout === 'page';
 
   useEffect(() => {
@@ -849,6 +862,10 @@ export function NoteDetailSidebar({
                   {vaultUnlocked ? 'Decrypting secure note…' : 'Locked note'}
                 </span>
               </button>
+            ) : readOnly ? (
+              <span className="w-full min-w-0 text-[#6366F1] font-extrabold text-lg font-clash tracking-tight leading-tight truncate block">
+                {title || 'Untitled note'}
+              </span>
             ) : (
               <input
                 type="text"
@@ -877,29 +894,33 @@ export function NoteDetailSidebar({
 
         {/* Row 2: Action Buttons Row */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {/* Public/Private visibility status toggle */}
-          <ShareLockButton 
-            resourceType="note"
-            resourceId={note.$id}
-            isPublic={!!isPublic}
-            isGuest={!!(note as any).isGuest}
-            accentColor={isPublic ? '#10B981' : '#A855F7'}
-            onPublished={({ isPublic, isGuest }) => {
-                const updated = { ...note, isPublic, isGuest };
-                onUpdate(updated);
-            }}
-            canPublish={true}
-          />
+          {/* Public/Private visibility status toggle — only for owner */}
+          {!readOnly && (
+            <ShareLockButton 
+              resourceType="note"
+              resourceId={note.$id}
+              isPublic={!!isPublic}
+              isGuest={!!(note as any).isGuest}
+              accentColor={isPublic ? '#10B981' : '#A855F7'}
+              onPublished={({ isPublic, isGuest }) => {
+                  const updated = { ...note, isPublic, isGuest };
+                  onUpdate(updated);
+              }}
+              canPublish={true}
+            />
+          )}
 
-          {/* Action Hub */}
-          <button 
-            type="button"
-            onClick={() => setShowActionHub(true)} 
-            className="p-1.5 rounded-lg bg-pink-500/15 border border-pink-500/25 text-pink-400 hover:bg-pink-500/25 transition-colors flex items-center justify-center"
-            title="Action Hub"
-          >
-            <ActionIcon className="w-4 h-4" />
-          </button>
+          {/* Action Hub — only for editors */}
+          {!readOnly && (
+            <button 
+              type="button"
+              onClick={() => setShowActionHub(true)} 
+              className="p-1.5 rounded-lg bg-pink-500/15 border border-pink-500/25 text-pink-400 hover:bg-pink-500/25 transition-colors flex items-center justify-center"
+              title="Action Hub"
+            >
+              <ActionIcon className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Start Huddle */}
           <button 
@@ -911,8 +932,8 @@ export function NoteDetailSidebar({
             <VideoCallIcon className="w-4 h-4" />
           </button>
 
-          {/* Voice recorder top fallback bar button */}
-          {!shouldMaskEncrypted && (
+          {/* Voice recorder — only for editors */}
+          {!readOnly && !shouldMaskEncrypted && (
             <button 
               type="button"
               onClick={toggleRecording} 
@@ -927,7 +948,7 @@ export function NoteDetailSidebar({
             </button>
           )}
 
-          {/* Copy link */}
+          {/* Copy link — available to all (share link reading) */}
           {showExpandButton && isPublic && (
             <button
               type="button"
@@ -939,32 +960,43 @@ export function NoteDetailSidebar({
             </button>
           )}
 
-          {/* Pin */}
-          <button 
-            type="button"
-            onClick={handlePinToggle} 
-            className={`p-1.5 rounded-lg transition-colors flex items-center justify-center border ${
-              isPinnedFunc(liveNote.$id) 
-                ? 'bg-indigo-500/15 border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/25' 
-                : 'bg-white/5 border-white/5 text-white/60 hover:text-white hover:bg-white/10'
-            }`}
-            title={isPinnedFunc(liveNote.$id) ? 'Unpin' : 'Pin'}
-          >
-            <PinIcon className="w-4 h-4" />
-          </button>
+          {/* Pin — only for editors */}
+          {!readOnly && (
+            <button 
+              type="button"
+              onClick={handlePinToggle} 
+              className={`p-1.5 rounded-lg transition-colors flex items-center justify-center border ${
+                isPinnedFunc(liveNote.$id) 
+                  ? 'bg-indigo-500/15 border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/25' 
+                  : 'bg-white/5 border-white/5 text-white/60 hover:text-white hover:bg-white/10'
+              }`}
+              title={isPinnedFunc(liveNote.$id) ? 'Unpin' : 'Pin'}
+            >
+              <PinIcon className="w-4 h-4" />
+            </button>
+          )}
 
-          {/* More actions (three dots) */}
-          <button 
-            type="button"
-            onClick={() => setIsContextDrawerOpen(true)} 
-            className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
-            title="More Actions"
-          >
-            <MoreVertical className="w-4 h-4" />
-          </button>
+          {/* More actions — only for editors */}
+          {!readOnly && (
+            <button 
+              type="button"
+              onClick={() => setIsContextDrawerOpen(true)} 
+              className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
+              title="More Actions"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+          )}
 
-          {/* Header Delete */}
-          {showHeaderDeleteButton && (
+          {/* Read-only badge */}
+          {readOnly && (
+            <span className="ml-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/8 text-[10px] font-black text-white/40 tracking-wider uppercase">
+              Read only
+            </span>
+          )}
+
+          {/* Header Delete — only for owner */}
+          {!readOnly && showHeaderDeleteButton && (
             <button 
               type="button"
               onClick={() => setShowDeleteConfirm(true)} 
@@ -1002,7 +1034,8 @@ export function NoteDetailSidebar({
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              {!shouldMaskEncrypted && (
+              {/* Write/Preview switcher — hidden in readOnly mode */}
+              {!shouldMaskEncrypted && !readOnly && (
                 <div className="flex rounded-xl border border-white/8 bg-[#0B0A09] p-0.5">
                   <button
                     type="button"
@@ -1029,6 +1062,7 @@ export function NoteDetailSidebar({
                 </div>
               )}
 
+              {/* Copy button — always visible */}
               {!shouldMaskEncrypted && content && (
                 <button
                   type="button"
@@ -1044,7 +1078,8 @@ export function NoteDetailSidebar({
                 </button>
               )}
 
-              {!shouldMaskEncrypted && contentMode === 'edit' && (
+              {/* Voice recorder in content area — editors only */}
+              {!readOnly && !shouldMaskEncrypted && contentMode === 'edit' && (
                 <button
                   type="button"
                   onClick={toggleRecording}
@@ -1131,14 +1166,16 @@ export function NoteDetailSidebar({
         <div className="shrink-0">
           <div className="flex items-center justify-between mb-2.5">
             <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6366F1] font-clash">Tags</span>
-            <button
-              type="button"
-              onClick={() => setIsTagSelectorOpen(true)}
-              className="w-7 h-7 rounded-lg hover:bg-white/[0.04] text-[#6366F1]/60 hover:text-[#6366F1] transition-colors flex items-center justify-center"
-              title="Edit tags"
-            >
-              <Plus size={14} />
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={() => setIsTagSelectorOpen(true)}
+                className="w-7 h-7 rounded-lg hover:bg-white/[0.04] text-[#6366F1]/60 hover:text-[#6366F1] transition-colors flex items-center justify-center"
+                title="Edit tags"
+              >
+                <Plus size={14} />
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             {displayTags.length > 0 ? (
@@ -1148,17 +1185,19 @@ export function NoteDetailSidebar({
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#6366F1]/10 border border-[#6366F1]/20 text-[#6366F1] text-xs font-extrabold"
                 >
                   {tag}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newTags = displayTags.filter((t) => t !== tag);
-                      setTags(newTags.join(', '));
-                      markDirty();
-                    }}
-                    className="hover:text-white"
-                  >
-                    <CloseIcon size={10} />
-                  </button>
+                  {!readOnly && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newTags = displayTags.filter((t) => t !== tag);
+                        setTags(newTags.join(', '));
+                        markDirty();
+                      }}
+                      className="hover:text-white"
+                    >
+                      <CloseIcon size={10} />
+                    </button>
+                  )}
                 </span>
               ))
             ) : (
