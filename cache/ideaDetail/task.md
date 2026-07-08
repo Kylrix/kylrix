@@ -148,5 +148,5 @@ Once `IdeaPageClient.tsx` is working, the old body of `SharedNoteClient.tsx` is 
 - [x] Step 1: NoteDetailSidebar readOnly prop (+ accessRole) — DONE
 - [x] Step 2: IdeaPageClient.tsx created — DONE
 - [x] Step 3: SharedNoteClient.tsx delegated — DONE
-- [ ] Step 4: pnpm lint passed — running…
-- [ ] Step 5: committed + pushed
+- [x] Step 4: pnpm lint passed — DONE (clean, 0 warnings)
+- [x] Step 5: committed + pushed — DONE (f1e2cc5a)
