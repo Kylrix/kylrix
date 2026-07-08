@@ -21,6 +21,7 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useDataNexus } from './DataNexusContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
+import { buildAutoTitleFromContent, isGenericNoteTitle, resolveNoteCardTitle } from '@/constants/noteTitle';
 
 type LiveEditGuard = {
   title: string;
@@ -34,20 +35,42 @@ function isLiveDraftNoteId(noteId?: string | null): boolean {
 }
 
 function mergeServerWithLiveGuard(serverNote: Notes, guard: LiveEditGuard): Notes {
-  const serverContent = serverNote.content || '';
-  const localContent = guard.content || '';
-  const localAhead = localContent.length > serverContent.length || localContent !== serverContent;
-
-  if (!localAhead) {
-    return normalizeVisibility(serverNote);
-  }
-
+  const displayTitle = resolveNoteCardTitle(guard.title, guard.content) || serverNote.title || '';
   return normalizeVisibility({
     ...serverNote,
-    title: guard.title || serverNote.title,
+    title: displayTitle,
     content: guard.content,
     tags: guard.tags.length ? guard.tags : serverNote.tags,
   });
+}
+
+function coalesceLiveFields(
+  noteId: string,
+  incoming: { title?: string; content?: string; tags?: string[] },
+  notes: Notes[],
+  prevGuard?: LiveEditGuard | null,
+): LiveEditGuard {
+  const listed = notes.find((item) => item.$id === noteId);
+  const prevContent = prevGuard?.content ?? listed?.content ?? '';
+  const prevTitle = prevGuard?.title ?? listed?.title ?? '';
+  const prevTags = prevGuard?.tags ?? (Array.isArray(listed?.tags) ? listed.tags as string[] : []);
+
+  const incomingContent = incoming.content ?? '';
+  const mergedContent = incomingContent.length >= prevContent.length ? incomingContent : prevContent;
+
+  const incomingTitle = (incoming.title ?? '').trim();
+  const meaningfulPrevTitle = isGenericNoteTitle(prevTitle) ? '' : prevTitle.trim();
+  const mergedTitle = incomingTitle || meaningfulPrevTitle || buildAutoTitleFromContent(mergedContent) || '';
+
+  const incomingTags = incoming.tags ?? [];
+  const mergedTags = incomingTags.length > 0 ? incomingTags : prevTags;
+
+  return {
+    title: mergedTitle,
+    content: mergedContent,
+    tags: mergedTags,
+    at: Date.now(),
+  };
 }
 
 interface NotesContextType {
@@ -510,16 +533,23 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
   const pushLiveNote = useCallback((note: Notes) => {
     if (!note?.$id) return;
-    const tags = Array.isArray(note.tags) ? note.tags : [];
-    liveEditGuardsRef.current.set(note.$id, {
-      title: note.title || '',
-      content: note.content || '',
-      tags,
-      at: Date.now(),
-    });
+    const prevGuard = liveEditGuardsRef.current.get(note.$id) ?? null;
+    const merged = coalesceLiveFields(
+      note.$id,
+      {
+        title: note.title ?? undefined,
+        content: note.content ?? undefined,
+        tags: Array.isArray(note.tags) ? note.tags : [],
+      },
+      notesRef.current,
+      prevGuard,
+    );
+    liveEditGuardsRef.current.set(note.$id, merged);
     const stamped: Notes = {
       ...note,
-      tags,
+      title: merged.title,
+      content: merged.content,
+      tags: merged.tags,
       $updatedAt: note.$updatedAt || new Date().toISOString(),
       updatedAt: note.updatedAt || note.$updatedAt || new Date().toISOString(),
     };

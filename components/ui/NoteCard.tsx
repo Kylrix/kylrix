@@ -34,6 +34,7 @@ import { useSection } from '@/context/SectionContext';
 import { ShareLockButton } from '../share/ShareLockButton';
 import { useAccessControlMenuItems } from '../share/AccessControlMenuItems';
 
+import { resolveNoteCardTitle } from '@/constants/noteTitle';
 import { toggleNoteVisibility, rotatePublicNoteLink, createTaskFromNote, getShareableUrl, getCurrentPublicNoteShareUrl, getNotePublicState, lockNote, unlockNote } from '@/lib/appwrite';
 import { createNote, updateNote } from '@/lib/actions/client-ops';
 import { useToast } from './Toast';
@@ -77,7 +78,11 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   
   const { openMenu } = useContextMenu();
   const { openSidebar } = useDynamicSidebar();
-  const { isPinned, pinNote, unpinNote, upsertNote } = useNotes();
+  const { isPinned, pinNote, unpinNote, upsertNote, notes: contextNotes } = useNotes();
+  const liveNote = React.useMemo(
+    () => contextNotes?.find((candidate) => candidate.$id === note.$id) || note,
+    [contextNotes, note],
+  );
   const { user } = useAuth();
   const { setActiveDetail } = useSection();
   
@@ -317,6 +322,11 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     { label: 'Delete', icon: <TrashIcon size={16} className="text-red-500" />, onClick: openDelete, variant: 'destructive' as const }
   ], [pinned, accessControlItems, isPro, handlePinToggle, handleDuplicate, isLockedT5, handleLockToggle, setIsPaywallDialogOpen, handleAIAction, handleCreateTodo, openShare, openDelete]);
 
+  const cardTitle = React.useMemo(
+    () => (isLockedT5 ? '🔒 Locked Note' : isEncryptedNote ? '🔒 Encrypted note' : resolveNoteCardTitle(liveNote.title, liveNote.content) || 'Untitled Note'),
+    [isEncryptedNote, isLockedT5, liveNote.content, liveNote.title],
+  );
+
   return (
     <>
       {!mounted ? (
@@ -339,7 +349,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
                   <PinIcon size={14} className="text-[#EC4899] fill-[#EC4899] rotate-45 flex-shrink-0" />
                 )}
                 <h3 className="text-white text-base font-black tracking-tight leading-tight truncate flex-1 min-w-0 font-mono">
-                  {isLockedT5 ? '🔒 Locked Note' : isEncryptedNote ? '🔒 Encrypted note' : note.title || 'Untitled Note'}
+                  {cardTitle}
                 </h3>
               </div>
 
@@ -350,7 +360,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
                     ? (isLockedT5 ? '🔒 Locked Note' : '🔒 Encrypted note') 
                     : note.format === 'doodle'
                       ? 'Sketch note (no longer supported)'
-                      : (note.content || '').replace(/\[voice:[a-zA-Z0-9_-]+\]/g, '🎙️ Voice Note')
+                      : (liveNote.content || '').replace(/\[voice:[a-zA-Z0-9_-]+\]/g, '🎙️ Voice Note')
                   }
                 </p>
               </div>

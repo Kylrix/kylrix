@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { Drawer, Box, Typography } from '@/lib/openbricks/primitives';
 import { StorageService } from '@/lib/services/storage';
-import { buildAutoTitleFromContent } from '@/constants/noteTitle';
+import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useToast } from '@/components/ui/Toast';
 import { getNote, getNotePublicState, toggleNoteVisibility, getAllTags } from '@/lib/appwrite';
@@ -64,12 +64,20 @@ function isLiveDraftNoteId(noteId?: string | null): boolean {
 function mergeSavedWithLiveDraft(saved: Notes, live: { title: string; content: string; tags: string[] }): Notes {
   const savedContent = saved.content || '';
   const liveContent = live.content || '';
+  const displayTitle = resolveNoteCardTitle(live.title, liveContent) || saved.title || '';
   return {
     ...saved,
-    title: live.title.trim() || saved.title || '',
+    title: displayTitle,
     content: liveContent.length >= savedContent.length ? liveContent : savedContent,
     tags: live.tags.length ? live.tags : (saved.tags as string[] | undefined) || [],
   };
+}
+
+function buildLiveCardNote(
+  base: Notes,
+  live: { title: string; content: string; tags: string[] },
+): Notes {
+  return mergeSavedWithLiveDraft(base, live);
 }
 
 export default function CreateNoteForm({
@@ -123,6 +131,9 @@ export default function CreateNoteForm({
   const persistInFlightRef = useRef<Promise<Notes | null> | null>(null);
   const liveDraftIdRef = useRef<string | undefined>(noteId);
   const allNotesRef = useRef<Notes[]>([]);
+  const liveTitleRef = useRef(title);
+  const liveContentRef = useRef(content);
+  const liveTagsRef = useRef(tags);
   const isPastedRef = useRef(false);
   const pasteTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -441,6 +452,18 @@ export default function CreateNoteForm({
   }, [snapshot, isHydrated, isDirty]);
 
   useEffect(() => {
+    liveTitleRef.current = title;
+  }, [title]);
+
+  useEffect(() => {
+    liveContentRef.current = content;
+  }, [content]);
+
+  useEffect(() => {
+    liveTagsRef.current = tags;
+  }, [tags]);
+
+  useEffect(() => {
     allNotesRef.current = Array.isArray(allNotes) ? allNotes : [];
   }, [allNotes]);
 
@@ -458,6 +481,7 @@ export default function CreateNoteForm({
 
     const existing = allNotesRef.current.find((candidate) => candidate.$id === noteId);
     const normalizedTags = normalizeTags(tags);
+    const displayTitle = resolveNoteCardTitle(title, content);
     const draftNote: Notes = {
       ...(existing || {
         $id: noteId,
@@ -467,7 +491,7 @@ export default function CreateNoteForm({
         isGuest,
         $createdAt: new Date().toISOString(),
       } as Notes),
-      title,
+      title: displayTitle,
       content,
       tags: normalizedTags,
       format: 'text',
@@ -530,9 +554,9 @@ export default function CreateNoteForm({
     }
 
     const runPersist = (async () => {
-      const normalizedTags = normalizeTags(tags);
-      const liveTitle = title;
-      const liveContent = content;
+      const normalizedTags = normalizeTags(liveTagsRef.current);
+      const liveTitle = liveTitleRef.current;
+      const liveContent = liveContentRef.current;
       const payload = {
         title: liveTitle.trim(),
         content: liveContent,
@@ -568,15 +592,22 @@ export default function CreateNoteForm({
           buildAutoTitleFromContent(liveContent.trim()) || (composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought')
         );
 
-        const applyLiveMerge = (serverNote: Notes) => {
-          const merged = mergeSavedWithLiveDraft(serverNote, {
-            title: liveTitle,
-            content: liveContent,
-            tags: normalizedTags,
-          });
-          pushLiveNote(merged);
-          setCachedData(`note_${merged.$id}`, merged);
-          return merged;
+        const publishCurrentLive = (serverNote: Notes, ephemeralId?: string) => {
+          const draftSourceId = ephemeralId && isLiveDraftNoteId(ephemeralId) ? ephemeralId : serverNote.$id;
+          const draft = allNotesRef.current.find((candidate) => candidate.$id === draftSourceId);
+          if (ephemeralId && isLiveDraftNoteId(ephemeralId) && ephemeralId !== serverNote.$id) {
+            removeNote(ephemeralId);
+            clearLiveNoteGuard(ephemeralId);
+          }
+          const live = {
+            title: draft?.title || liveTitle,
+            content: draft?.content || liveContent,
+            tags: (draft?.tags as string[] | undefined) || normalizedTags,
+          };
+          const cardNote = buildLiveCardNote(serverNote, live);
+          pushLiveNote(cardNote);
+          setCachedData(`note_${cardNote.$id}`, cardNote);
+          return cardNote;
         };
 
         if (!user?.$id) {
@@ -641,8 +672,16 @@ export default function CreateNoteForm({
           if (!resolvedNoteId && typeof window !== 'undefined') {
             localStorage.removeItem('kylrix:draft:note');
           }
-          onNoteCreated(saved);
-          pushLiveNote(saved);
+          onNoteCreated(buildLiveCardNote(saved, {
+            title: liveTitle,
+            content: liveContent,
+            tags: normalizedTags,
+          }));
+          pushLiveNote(buildLiveCardNote(saved, {
+            title: liveTitle,
+            content: liveContent,
+            tags: normalizedTags,
+          }));
           setIsSaving(false);
           if (showToast && !createdToastShown.current) {
             createdToastShown.current = true;
@@ -660,7 +699,6 @@ export default function CreateNoteForm({
             isGuest: persistedIsGuest,
             title: generatedTitle,
           })) as Notes;
-          saved = applyLiveMerge(saved);
         } else {
           const ephemeralId = activeNoteId;
           saved = (await createNote({
@@ -669,17 +707,13 @@ export default function CreateNoteForm({
             isGuest: payload.isGuest,
             title: generatedTitle,
           })) as Notes;
-          if (ephemeralId && isLiveDraftNoteId(ephemeralId) && ephemeralId !== saved.$id) {
-            removeNote(ephemeralId);
-            clearLiveNoteGuard(ephemeralId);
-          }
           liveDraftIdRef.current = saved.$id;
           setResolvedNoteId(saved.$id);
           if (typeof window !== 'undefined') {
             localStorage.removeItem('kylrix:draft:note');
           }
-          saved = applyLiveMerge(saved);
-          onNoteCreated(saved);
+          const cardNote = publishCurrentLive(saved, ephemeralId);
+          onNoteCreated(cardNote);
           if (showToast && !createdToastShown.current) {
             createdToastShown.current = true;
             showSuccess('Idea saved', 'Your idea has been created.');
@@ -708,7 +742,11 @@ export default function CreateNoteForm({
             };
 
             saved = await applySecureVisibility();
-            onNoteCreated(saved);
+            onNoteCreated(buildLiveCardNote(saved, {
+              title: liveTitleRef.current,
+              content: liveContentRef.current,
+              tags: normalizeTags(liveTagsRef.current),
+            }));
             showSuccess(
               getNotePublicState(saved) ? 'Idea is now Public' : 'Idea is now Private',
               getNotePublicState(saved)
@@ -727,8 +765,8 @@ export default function CreateNoteForm({
             try { return JSON.parse(saved.metadata || '{}')?.paywall; } catch { return undefined; }
           })();
           setLastSavedSnapshot(JSON.stringify({
-            title: liveTitle.trim(),
-            content: liveContent.trim(),
+            title: liveTitleRef.current.trim(),
+            content: liveContentRef.current.trim(),
             format: 'text',
             tags: normalizedTags,
             composerKind,

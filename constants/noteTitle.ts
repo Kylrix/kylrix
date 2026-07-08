@@ -56,3 +56,16 @@ export const buildAutoTitleFromContent = (rawContent: string): string => {
 
   return titleCandidate;
 };
+
+const GENERIC_NOTE_TITLES = new Set(['Untitled Thought', 'Untitled Note', 'Untitled Project']);
+
+export const isGenericNoteTitle = (title?: string | null): boolean => {
+  if (!title?.trim()) return true;
+  return GENERIC_NOTE_TITLES.has(title.trim());
+};
+
+export const resolveNoteCardTitle = (title?: string | null, content?: string | null): string => {
+  const trimmed = title?.trim() || '';
+  if (trimmed && !isGenericNoteTitle(trimmed)) return trimmed;
+  return buildAutoTitleFromContent(content || '') || trimmed;
+};
