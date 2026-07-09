@@ -85,6 +85,11 @@ const nextConfig = {
         permanent: true,
       },
       {
+        source: '/app/:id/opengraph-image',
+        destination: '/idea/:id/opengraph-image',
+        permanent: true,
+      },
+      {
         source: '/vault/dashboard',
         destination: '/vault',
         permanent: true,

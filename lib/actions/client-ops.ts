@@ -96,6 +96,35 @@ export async function sharePublicNoteAsMoment(noteId: string, text?: string) {
   return sharePublicNoteAsMomentSecure({ noteId, text, jwt });
 }
 
+export async function getSharedNoteData(noteId: string) {
+  const jwt = await getJwt();
+  const { getSharedNoteDataSecure } = await import('./secure-ops');
+  return getSharedNoteDataSecure(noteId, jwt);
+}
+
+export async function getNoteSecondaryObjectPreview(input: {
+  noteId: string;
+  childKind: string;
+  childId: string;
+  bucketId?: string;
+  label?: string;
+  href?: string;
+}) {
+  const jwt = await getJwt();
+  const { getNoteSecondaryObjectPreviewSecure } = await import('./secure-ops');
+  return getNoteSecondaryObjectPreviewSecure(input, jwt);
+}
+
+export async function getNoteInheritedFileBlob(
+  noteId: string,
+  fileId: string,
+  bucketId: string,
+) {
+  const jwt = await getJwt();
+  const { getNoteInheritedFileBlobSecure } = await import('./secure-ops');
+  return getNoteInheritedFileBlobSecure(noteId, fileId, bucketId, jwt);
+}
+
 export async function grantPermission(input: any) {
   const jwt = await getJwt();
   return grantPermissionSecure({ ...input, jwt });

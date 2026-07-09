@@ -602,7 +602,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                         {notes.map((note) => (
                           <Box
                             key={note.$id}
-                            onClick={() => router.push(`/app/${note.$id}`)}
+                            onClick={() => router.push(`/idea/${note.$id}`)}
                             sx={{
                               display: 'flex',
                               gap: 1.5,

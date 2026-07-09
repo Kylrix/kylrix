@@ -93,7 +93,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
 
   // Smart responsive Left Sidebar visibility
   const isNoteFullPageDetail = useMemo(
-    () => Boolean(pathname?.match(/^\/app\/(?!shared|landing|admin|pitch|popout|notes|extensions)[^/]+$/)),
+    () => Boolean(pathname?.match(/^\/idea\/[^/]+$/)),
     [pathname],
   );
   const isConnectCallDetail = useMemo(() => Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/)), [pathname]);

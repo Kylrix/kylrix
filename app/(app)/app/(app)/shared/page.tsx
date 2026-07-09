@@ -56,7 +56,7 @@ export default function SharedIdeasPage() {
     const handleClose = () => {
       closeOverlay();
       if (createdNoteId) {
-        const shareUrl = `${window.location.origin}/app/shared/${createdNoteId}`;
+        const shareUrl = `${window.location.origin}/idea/${createdNoteId}`;
         navigator.clipboard.writeText(shareUrl);
         import('react-hot-toast').then(({ default: toast }) => {
           toast.success('Public link copied to clipboard!');

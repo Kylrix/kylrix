@@ -94,7 +94,7 @@ export const NoteViewDrawer = ({ open, onClose, note }: NoteViewDrawerProps) => 
                         variant="contained" 
                         color="primary"
                         component="a"
-                        href={`/app/${note.$id || note.id}`}
+                        href={`/idea/${note.$id || note.id}`}
                         target="_blank"
                         sx={{ borderRadius: 3, py: 1.5, fontWeight: 800, color: 'black' }}
                     >

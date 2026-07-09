@@ -134,8 +134,8 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
     }
 
     try {
-      const { getPublicNoteDataSecure } = await import('@/lib/actions/secure-ops');
-      const raw = await getPublicNoteDataSecure(noteId);
+      const { getSharedNoteData } = await import('@/lib/actions/client-ops');
+      const raw = await getSharedNoteData(noteId);
 
       if (!raw) {
         setAccess({ role: 'none', reason: 'not-found' });

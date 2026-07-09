@@ -75,6 +75,21 @@ export function middleware(request: NextRequest) {
   }
 
   // Instant Route Forwards (Legacy -> Canonical)
+  const APP_NOTE_RESERVED = new Set([
+    'shared', 'landing', 'admin', 'pitch', 'popout', 'notes', 'extensions', 'settings', 'api',
+  ]);
+
+  const legacyAppNote = pathname.match(/^\/app\/([^/]+)(?:\/(.*))?$/);
+  if (legacyAppNote) {
+    const [, segment, rest] = legacyAppNote;
+    if (!APP_NOTE_RESERVED.has(segment)) {
+      const targetPath = rest ? `/idea/${segment}/${rest}` : `/idea/${segment}`;
+      const target = new URL(targetPath, request.url);
+      target.search = request.nextUrl.search;
+      return NextResponse.redirect(target, 308);
+    }
+  }
+
   if (pathname.startsWith('/note/notes') || pathname.startsWith('/app/notes')) {
     const subPath = pathname.startsWith('/note/notes') 
       ? pathname.replace('/note/notes', '') 

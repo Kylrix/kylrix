@@ -32,7 +32,7 @@ export function buildPublicResourcePath(
 
   switch (type) {
     case 'note':
-      return `/app/${id}`;
+      return `/idea/${id}`;
     case 'credential':
       return `/vault/${id}`;
     case 'totp':

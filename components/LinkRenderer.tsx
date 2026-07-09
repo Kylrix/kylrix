@@ -21,13 +21,13 @@ import { getRowSecure } from '@/lib/actions/secure-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
-export function VoiceNotePlayer({ fileId }: { fileId: string }) {
+export function VoiceNotePlayer({ fileId, audioSrc }: { fileId: string; audioSrc?: string }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const audioUrl = StorageService.getFileView(fileId, 'voice').toString();
+  const audioUrl = audioSrc || StorageService.getFileView(fileId, 'voice').toString();
 
   useEffect(() => {
     const audio = new Audio(audioUrl);

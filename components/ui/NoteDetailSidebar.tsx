@@ -1391,11 +1391,15 @@ export function NoteDetailSidebar({
                 </p>
               </button>
             ) : liveNote.format === 'doodle' ? (
-              <NoteContentRenderer content={content} format="doodle" />
+              <NoteContentRenderer content={content} format="doodle" primaryNoteId={liveNote.$id} />
             ) : contentMode === 'preview' ? (
               <div className="note-markdown-preview min-h-[240px]">
                 {content.trim() ? (
-                  <NoteContentRenderer content={content} format={liveNote.format || 'markdown'} />
+                  <NoteContentRenderer
+                    content={content}
+                    format={liveNote.format || 'markdown'}
+                    primaryNoteId={liveNote.$id}
+                  />
                 ) : (
                   <p className="text-[#9B9691] text-sm font-semibold italic leading-relaxed">
                     Nothing to preview yet. Switch to Write and add markdown.

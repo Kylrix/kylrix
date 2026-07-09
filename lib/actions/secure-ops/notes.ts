@@ -310,11 +310,55 @@ export async function consumeEphemeralNoteSecure(params: any, jwt?: string) {
   return { success: true };
 }
 
-export async function getPublicNoteDataSecure(noteId: string) {
-  const note = await validatePublicNoteAccess(noteId);
-  if (!note) return null;
+const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
+const NOTES_TABLE_ID = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
 
-  // Stale call cleanup
+async function hydrateSharedNoteRow(noteId: string) {
+  const tables = createSystemTablesDB();
+  const doc = await tables.getRow({
+    databaseId: NOTE_DB_ID,
+    tableId: NOTES_TABLE_ID,
+    rowId: noteId,
+  }) as any;
+
+  try {
+    const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
+    const pivot = await tables.listRows({
+      databaseId: NOTE_DB_ID,
+      tableId: noteTagsTable,
+      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any,
+    });
+    if (pivot.rows.length) {
+      const tags = Array.from(new Set(pivot.rows.map((p: any) => p.tag).filter(Boolean)));
+      doc.tags = tags;
+    }
+  } catch {}
+
+  if (!doc.attachments || !Array.isArray(doc.attachments)) {
+    doc.attachments = [];
+  }
+
+  return doc;
+}
+
+export async function canReadSharedNoteSecure(noteId: string, actorId?: string | null) {
+  if (actorId) {
+    const allowed = await verifyNotePermission(noteId, actorId, 'viewer');
+    if (allowed) return true;
+  }
+  const publicNote = await validatePublicNoteAccess(noteId);
+  return !!publicNote;
+}
+
+export async function getSharedNoteDataSecure(noteId: string, jwt?: string) {
+  const validatedJwt = JWTSchema.parse(jwt);
+  const actor = await getActor(validatedJwt).catch(() => null);
+
+  const canRead = await canReadSharedNoteSecure(noteId, actor?.$id);
+  if (!canRead) return null;
+
+  const note = await hydrateSharedNoteRow(noteId);
+
   const metadata = JSON.parse(String((note as any).metadata || '{}'));
   const huddleCallId = (note as any).huddleCallId || metadata.huddleCallId;
   if (huddleCallId) {
@@ -325,6 +369,130 @@ export async function getPublicNoteDataSecure(noteId: string) {
   }
 
   return note;
+}
+
+export async function getNoteSecondaryObjectPreviewSecure(
+  input: {
+    noteId: string;
+    childKind: string;
+    childId: string;
+    bucketId?: string;
+    label?: string;
+    href?: string;
+  },
+  jwt?: string,
+) {
+  const validatedJwt = JWTSchema.parse(jwt);
+  const actor = await getActor(validatedJwt).catch(() => null);
+  const canRead = await canReadSharedNoteSecure(input.noteId, actor?.$id);
+  if (!canRead) {
+    return { ok: false as const };
+  }
+
+  const childKind = String(input.childKind || '').trim();
+  const childId = String(input.childId || '').trim();
+  const fallbackTitle = String(input.label || input.href || childId || 'Attached object').trim();
+
+  if (childKind === 'link') {
+    const href = String(input.href || childId || '').trim();
+    return {
+      ok: true as const,
+      title: fallbackTitle,
+      href,
+      previewDataUrl: null as string | null,
+      childKind,
+    };
+  }
+
+  if (childKind === 'file' || childKind === 'image' || childKind === 'voice') {
+    const bucketId = input.bucketId || (childKind === 'voice' ? 'voice' : APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE);
+    const { getFilePreviewSecure } = await import('./misc');
+    const previewDataUrl =
+      childKind === 'image'
+        ? await getFilePreviewSecure(bucketId, childId, 960, 540)
+        : null;
+    return {
+      ok: true as const,
+      title: fallbackTitle,
+      href: null as string | null,
+      previewDataUrl,
+      childKind,
+      bucketId,
+      fileId: childId,
+    };
+  }
+
+  const map: Record<string, { db: string; table: string }> = {
+    task: { db: APPWRITE_CONFIG.DATABASES.FLOW, table: APPWRITE_CONFIG.TABLES.FLOW.TASKS },
+    form: { db: APPWRITE_CONFIG.DATABASES.FLOW, table: APPWRITE_CONFIG.TABLES.FLOW.FORMS },
+    note: { db: NOTE_DB_ID, table: NOTES_TABLE_ID },
+    vault: { db: APPWRITE_CONFIG.DATABASES.VAULT, table: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS },
+  };
+  const target = map[childKind];
+  if (!target) {
+    return {
+      ok: true as const,
+      title: fallbackTitle,
+      href: null as string | null,
+      previewDataUrl: null as string | null,
+      childKind,
+    };
+  }
+
+  try {
+    const tables = createSystemTablesDB();
+    const row = await tables.getRow({
+      databaseId: target.db,
+      tableId: target.table,
+      rowId: childId,
+    }) as any;
+    return {
+      ok: true as const,
+      title: String(row?.title || row?.name || fallbackTitle).trim(),
+      href: null as string | null,
+      previewDataUrl: null as string | null,
+      childKind,
+    };
+  } catch {
+    return {
+      ok: true as const,
+      title: fallbackTitle,
+      href: null as string | null,
+      previewDataUrl: null as string | null,
+      childKind,
+    };
+  }
+}
+
+export async function getNoteInheritedFileBlobSecure(
+  noteId: string,
+  fileId: string,
+  bucketId: string,
+  jwt?: string,
+) {
+  const validatedJwt = JWTSchema.parse(jwt);
+  const actor = await getActor(validatedJwt).catch(() => null);
+  const canRead = await canReadSharedNoteSecure(noteId, actor?.$id);
+  if (!canRead) {
+    throw new Error('Forbidden');
+  }
+
+  const { storage } = createSystemClient();
+  const [buffer, fileMeta] = await Promise.all([
+    storage.getFileDownload(bucketId, fileId),
+    storage.getFile(bucketId, fileId).catch(() => null),
+  ]);
+  const mimeType = fileMeta?.mimeType || 'application/octet-stream';
+  const base64 = Buffer.from(buffer).toString('base64');
+  return {
+    dataUrl: `data:${mimeType};base64,${base64}`,
+    mimeType,
+    name: fileMeta?.name || fileId,
+  };
+}
+
+export async function getPublicNoteDataSecure(noteId: string, jwt?: string) {
+  return getSharedNoteDataSecure(noteId, jwt);
 }
 
 export async function getPublicNoteCommentsSecure(noteId: string) {

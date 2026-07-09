@@ -61,8 +61,8 @@ export default function NoteEditorPageClient() {
         try {
           fetched = await fetchOptimized(CACHE_KEY, () => getNote(id as string));
         } catch {
-          const { getPublicNoteDataSecure } = await import('@/lib/actions/secure-ops');
-          fetched = await getPublicNoteDataSecure(id as string);
+      const { getSharedNoteData } = await import('@/lib/actions/client-ops');
+          fetched = await getSharedNoteData(id as string);
         }
         if (mounted && fetched) {
           setRawNote(fetched);

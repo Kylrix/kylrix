@@ -24,7 +24,7 @@ export function detectCurrentApp(): AppName | null {
 
   const pathname = window.location.pathname.toLowerCase();
   if (pathname === '/accounts' || pathname.startsWith('/accounts/')) return 'accounts';
-  if (pathname === '/app' || pathname.startsWith('/app/')) return 'note';
+  if (pathname === '/app' || pathname.startsWith('/app/') || pathname.startsWith('/idea/')) return 'note';
   if (pathname === '/vault' || pathname.startsWith('/vault/')) return 'vault';
   if (pathname === '/flow' || pathname.startsWith('/flow/')) return 'flow';
   if (pathname === '/connect' || pathname.startsWith('/connect/')) return 'connect';

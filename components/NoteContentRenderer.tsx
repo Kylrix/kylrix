@@ -9,7 +9,7 @@ import { VoiceNotePlayer } from '@/components/LinkRenderer';
 import { parseObjectBlocks, type SecondaryObjectPayload } from '@/lib/note-object-secondary';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { StorageService } from '@/lib/services/storage';
-import { getRowSecure } from '@/lib/actions/secure-ops';
+import { getNoteInheritedFileBlob, getNoteSecondaryObjectPreview } from '@/lib/actions/client-ops';
 
 marked.setOptions({
   gfm: true,
@@ -21,12 +21,15 @@ interface NoteContentRendererProps {
   format?: string | null;
   emptyFallback?: React.ReactNode;
   preview?: boolean;
+  /** When set, attached objects inherit this note's read permission. */
+  primaryNoteId?: string;
 }
 
 export function NoteContentRenderer({
   content,
   format = 'text',
   emptyFallback = <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'rgba(255, 255, 255, 0.3)' }}>This note is empty.</Typography>,
+  primaryNoteId,
 }: NoteContentRendererProps) {
   const objectBlocks = useMemo(() => {
     const blocks = parseObjectBlocks(content || '');
@@ -189,69 +192,131 @@ export function NoteContentRenderer({
         if (node.type === 'text') {
           return <React.Fragment key={`node-${index}`}>{renderMarkdownText(node.content, `node-${index}`)}</React.Fragment>;
         }
-        return <SecondaryObjectShell key={`obj-${index}`} payload={node.payload} />;
+        return (
+          <SecondaryObjectShell
+            key={`obj-${index}`}
+            payload={node.payload}
+            primaryNoteId={primaryNoteId}
+          />
+        );
       })}
     </Box>
   );
 }
 
-function SecondaryObjectShell({ payload }: { payload: SecondaryObjectPayload }) {
-  const [title, setTitle] = useState(payload.label || payload.href || `${payload.childKind}:${payload.childId}`);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'no-access'>('loading');
+function SecondaryObjectShell({
+  payload,
+  primaryNoteId,
+}: {
+  payload: SecondaryObjectPayload;
+  primaryNoteId?: string;
+}) {
+  const fallbackTitle = payload.label || payload.href || `${payload.childKind}:${payload.childId}`;
+  const [title, setTitle] = useState(fallbackTitle);
+  const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
+  const [href, setHref] = useState<string | null>(payload.href || (payload.childKind === 'link' ? payload.childId : null));
+  const [status, setStatus] = useState<'loading' | 'ready'>('loading');
+  const [opening, setOpening] = useState(false);
   const bucketId = payload.bucketId || APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE;
   const isImage = payload.childKind === 'image';
+  const isVoice = payload.childKind === 'voice';
+  const inheritsPrimary = Boolean(primaryNoteId);
 
   useEffect(() => {
     let active = true;
-    const hydrate = async () => {
+
+    const hydrateInherited = async () => {
+      if (!primaryNoteId) return false;
+      const preview = await getNoteSecondaryObjectPreview({
+        noteId: primaryNoteId,
+        childKind: payload.childKind,
+        childId: payload.childId,
+        bucketId: payload.bucketId,
+        label: payload.label,
+        href: payload.href,
+      });
+      if (!active) return true;
+      if (!preview.ok) {
+        setTitle(fallbackTitle);
+        setStatus('ready');
+        return true;
+      }
+      setTitle(preview.title || fallbackTitle);
+      if (preview.href) setHref(preview.href);
+      if (preview.previewDataUrl) setPreviewDataUrl(preview.previewDataUrl);
+      setStatus('ready');
+      return true;
+    };
+
+    const hydrateLegacy = async () => {
       if (payload.childKind === 'link') {
-        if (!active) return;
         setStatus('ready');
         return;
       }
       if (payload.childKind === 'file' || payload.childKind === 'image' || payload.childKind === 'voice') {
-        if (!active) return;
         setStatus('ready');
         return;
       }
-      try {
-        const map: Record<string, { db: string; table: string }> = {
-          task: { db: APPWRITE_CONFIG.DATABASES.FLOW, table: APPWRITE_CONFIG.TABLES.FLOW.TASKS },
-          form: { db: APPWRITE_CONFIG.DATABASES.FLOW, table: APPWRITE_CONFIG.TABLES.FLOW.FORMS },
-          note: { db: APPWRITE_CONFIG.DATABASES.NOTE, table: APPWRITE_CONFIG.TABLES.NOTE.NOTES },
-          vault: { db: APPWRITE_CONFIG.DATABASES.VAULT, table: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS },
-        };
-        const target = map[payload.childKind];
-        if (!target) {
-          setStatus('ready');
-          return;
-        }
-        const row = await getRowSecure(target.db, target.table, payload.childId);
-        if (!active) return;
-        setTitle(row?.title || row?.name || title);
-        setStatus('ready');
-      } catch {
-        if (!active) return;
-        setStatus('no-access');
-      }
+      setTitle(fallbackTitle);
+      setStatus('ready');
     };
-    void hydrate();
+
+    void (async () => {
+      const usedInherited = await hydrateInherited();
+      if (!usedInherited) await hydrateLegacy();
+    })();
+
     return () => {
       active = false;
     };
-  }, [payload.childId, payload.childKind, title]);
+  }, [primaryNoteId, payload, fallbackTitle]);
 
   const themeColor = payload.appTheme === 'vault' ? '#10B981' : payload.appTheme === 'flow' ? '#22C55E' : '#6366F1';
 
+  const imageSrc = previewDataUrl
+    || (!inheritsPrimary && isImage
+      ? StorageService.getFilePreview(payload.childId, bucketId, 720, 420).toString()
+      : null);
+
+  const openInheritedFile = async () => {
+    if (!primaryNoteId || opening) return;
+    setOpening(true);
+    try {
+      const blob = await getNoteInheritedFileBlob(primaryNoteId, payload.childId, bucketId);
+      const link = document.createElement('a');
+      link.href = blob.dataUrl;
+      link.download = blob.name || payload.label || 'attachment';
+      link.target = '_blank';
+      link.rel = 'noreferrer';
+      link.click();
+    } catch (err) {
+      console.error('[SecondaryObjectShell] Failed to open inherited file:', err);
+    } finally {
+      setOpening(false);
+    }
+  };
+
   return (
     <Box sx={{ my: 2, p: 1.5, border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.02)' }}>
-      {isImage ? (
+      {isImage && imageSrc ? (
         <Box
           component="img"
-          src={StorageService.getFilePreview(payload.childId, bucketId, 720, 420).toString()}
+          src={imageSrc}
           alt={payload.label || 'Attached image'}
           sx={{ maxWidth: '100%', borderRadius: '10px', display: 'block' }}
         />
+      ) : isVoice ? (
+        <Box onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
+          {inheritsPrimary ? (
+            <InheritedVoicePlayer
+              noteId={primaryNoteId!}
+              fileId={payload.childId}
+              bucketId={bucketId}
+            />
+          ) : (
+            <VoiceNotePlayer fileId={payload.childId} />
+          )}
+        </Box>
       ) : (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
           <Box sx={{ minWidth: 0 }}>
@@ -259,22 +324,41 @@ function SecondaryObjectShell({ payload }: { payload: SecondaryObjectPayload }) 
               {payload.childKind}
             </Typography>
             <Typography sx={{ fontSize: '0.92rem', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {status === 'loading' ? 'Loading preview...' : status === 'no-access' ? 'No access to this object' : title}
+              {status === 'loading' ? 'Loading preview...' : title}
             </Typography>
           </Box>
           {(payload.childKind === 'file' || payload.childKind === 'voice') && (
-            <Box
-              component="a"
-              href={StorageService.getFileView(payload.childId, bucketId).toString()}
-              target="_blank"
-              rel="noreferrer"
-              sx={{ color: themeColor, fontSize: '0.8rem', fontWeight: 700 }}
-            >
-              Open
-            </Box>
+            inheritsPrimary ? (
+              <Box
+                component="button"
+                type="button"
+                onClick={() => void openInheritedFile()}
+                disabled={opening}
+                sx={{
+                  color: themeColor,
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  background: 'none',
+                  border: 'none',
+                  cursor: opening ? 'wait' : 'pointer',
+                }}
+              >
+                {opening ? 'Opening...' : 'Open'}
+              </Box>
+            ) : (
+              <Box
+                component="a"
+                href={StorageService.getFileView(payload.childId, bucketId).toString()}
+                target="_blank"
+                rel="noreferrer"
+                sx={{ color: themeColor, fontSize: '0.8rem', fontWeight: 700 }}
+              >
+                Open
+              </Box>
+            )
           )}
-          {payload.childKind === 'link' && payload.href && (
-            <Box component="a" href={payload.href} target="_blank" rel="noreferrer" sx={{ color: themeColor, fontSize: '0.8rem', fontWeight: 700 }}>
+          {payload.childKind === 'link' && href && (
+            <Box component="a" href={href} target="_blank" rel="noreferrer" sx={{ color: themeColor, fontSize: '0.8rem', fontWeight: 700 }}>
               Visit
             </Box>
           )}
@@ -282,6 +366,42 @@ function SecondaryObjectShell({ payload }: { payload: SecondaryObjectPayload }) 
       )}
     </Box>
   );
+}
+
+function InheritedVoicePlayer({
+  noteId,
+  fileId,
+  bucketId,
+}: {
+  noteId: string;
+  fileId: string;
+  bucketId: string;
+}) {
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void getNoteInheritedFileBlob(noteId, fileId, bucketId)
+      .then((blob) => {
+        if (active) setAudioUrl(blob.dataUrl);
+      })
+      .catch((err) => {
+        console.error('[InheritedVoicePlayer] Failed to load voice note:', err);
+      });
+    return () => {
+      active = false;
+    };
+  }, [noteId, fileId, bucketId]);
+
+  if (!audioUrl) {
+    return (
+      <Typography sx={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
+        Loading voice note...
+      </Typography>
+    );
+  }
+
+  return <VoiceNotePlayer fileId={fileId} audioSrc={audioUrl} />;
 }
 
 export default NoteContentRenderer;

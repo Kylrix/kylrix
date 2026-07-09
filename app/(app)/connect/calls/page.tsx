@@ -77,7 +77,7 @@ function NotesFeed() {
                     notes.map((note) => (
                         <div
                             key={note.$id}
-                            onClick={() => router.push(`/app/${note.$id}`)}
+                            onClick={() => router.push(`/idea/${note.$id}`)}
                             className="flex gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.03] cursor-pointer hover:bg-white/[0.04] hover:border-white/[0.08] hover:translate-x-1 transition-all duration-200"
                         >
                             <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-pink-500/10 text-pink-500 flex-shrink-0">
