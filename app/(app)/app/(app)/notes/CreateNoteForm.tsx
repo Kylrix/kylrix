@@ -352,8 +352,7 @@ export default function CreateNoteForm({
       return; // Reject the mutation — show confirm drawer instead
     }
     setContent(nextValue);
-    markDirty();
-  }, [content, markDirty]);
+  }, [content]);
 
   const insertTextAtCursor = (text: string) => {
     const textarea = contentRef.current;
@@ -1440,7 +1439,6 @@ export default function CreateNoteForm({
                     const block = pendingBlockDelete;
                     const next = content.slice(0, block.start) + content.slice(block.end);
                     setContent(next.replace(/\n{3,}/g, '\n\n'));
-                    markDirty();
                     setPendingBlockDelete(null);
                   }}
                 >
