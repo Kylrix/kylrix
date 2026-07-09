@@ -717,7 +717,9 @@ export function NoteDetailSidebar({
   const [isAttachingObject, setIsAttachingObject] = useState(false);
   const objectUploadInputRef = useRef<HTMLInputElement | null>(null);
   const [contentMode, setContentMode] = useState<'edit' | 'preview'>(readOnly ? 'preview' : 'edit');
-  const canAttachSecondaryObject = !readOnly && (accessRole === 'owner' || accessRole === 'write-collab');
+  // Allow attachment when: not readOnly AND (no role set = own-notes drawer context, OR explicitly owner/write-collab).
+  // accessRole is only set by IdeaPageClient for shared/public note views — undefined means user is in their own notes.
+  const canAttachSecondaryObject = !readOnly && (!accessRole || accessRole === 'owner' || accessRole === 'write-collab');
   const previousContentRef = useRef(content);
 
   // Force preview mode when readOnly
