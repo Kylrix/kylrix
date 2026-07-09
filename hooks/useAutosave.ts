@@ -76,6 +76,7 @@ export function useAutosave(note: Notes | null, options: AutosaveOptions = {}) {
   const isSavingRef = useRef(false);
   const pendingPayloadRef = useRef<Notes | null>(null);
   const rateLimitUntilRef = useRef<number>(0);
+  const lastErrorToastAtRef = useRef<number>(0);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -121,7 +122,11 @@ export function useAutosave(note: Notes | null, options: AutosaveOptions = {}) {
         if (isRateLimit) {
           rateLimitUntilRef.current = Date.now() + 30000;
         }
-        onError?.(error as Error);
+        const now = Date.now();
+        if (now - lastErrorToastAtRef.current >= 8000) {
+          lastErrorToastAtRef.current = now;
+          onError?.(error as Error);
+        }
       } finally {
         isSavingRef.current = false;
         if (isMountedRef.current) {

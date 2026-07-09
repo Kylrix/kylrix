@@ -3,7 +3,7 @@
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { getActor } from './secure-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { hasPaidKylrixPlan } from '@/lib/utils';
+import { hasPaidKylrixPlanServer } from '@/lib/services/internal/subscription-entitlement';
 import { ID, Permission, Role } from 'node-appwrite';
 import { Registry } from '@/lib/core/di/registry';
 import { InputFile } from 'node-appwrite/file';
@@ -78,8 +78,9 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
     APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES,
   ];
 
-  if (!allowedFreeBuckets.includes(bucketId) && actor) {
-    if (!hasPaidKylrixPlan(actor)) {
+  if (!allowedFreeBuckets.includes(bucketId) && actor?.$id) {
+    const isPro = await hasPaidKylrixPlanServer(actor.$id);
+    if (!isPro) {
       throw new Error('Forbidden: Pro subscription required for this upload operation.');
     }
   }

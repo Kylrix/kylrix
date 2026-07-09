@@ -7,12 +7,46 @@ export const AUTO_TITLE_CONFIG = {
   maxWords: 8
 };
 
+/** Appwrite notes.title column max length */
+export const NOTE_TITLE_MAX_LENGTH = 256;
+
+const OBJECT_BLOCK_REGEX = /\[\[kylrix-object:(\{.*?\})\]\]/g;
+
+/** Replace inline object blocks with human labels before deriving a title. */
+export function stripObjectBlocksForTitleSource(rawContent: string): string {
+  if (!rawContent) return '';
+  const replaced = rawContent.replace(OBJECT_BLOCK_REGEX, (_match, json: string) => {
+    try {
+      const payload = JSON.parse(json) as { label?: string; href?: string; childId?: string };
+      const label = typeof payload.label === 'string' ? payload.label.trim() : '';
+      if (label) return label;
+      const href = typeof payload.href === 'string' ? payload.href.trim() : '';
+      if (href) return href;
+      const childId = typeof payload.childId === 'string' ? payload.childId.trim() : '';
+      if (childId && !childId.startsWith('{')) return childId;
+    } catch {
+      // ignore malformed blocks
+    }
+    return '';
+  });
+  return replaced.replace(/\s+/g, ' ').trim();
+}
+
+export function clampNoteTitle(value: unknown, fallback = ''): string {
+  const base = typeof value === 'string' ? value : value == null ? '' : String(value);
+  const trimmed = base.trim();
+  if (!trimmed) return fallback;
+  return trimmed.length > NOTE_TITLE_MAX_LENGTH
+    ? trimmed.slice(0, NOTE_TITLE_MAX_LENGTH)
+    : trimmed;
+}
+
 /**
  * Intelligent title generation logic shared across the ecosystem.
  * Stops at word boundaries and follows dynamic character limits.
  */
 export const buildAutoTitleFromContent = (rawContent: string): string => {
-  const normalized = rawContent.trim().replace(/\s+/g, ' ');
+  const normalized = stripObjectBlocksForTitleSource(rawContent);
   if (!normalized) return '';
 
   const words = normalized.split(' ').filter(Boolean);
@@ -54,7 +88,7 @@ export const buildAutoTitleFromContent = (rawContent: string): string => {
     }
   }
 
-  return titleCandidate;
+  return clampNoteTitle(titleCandidate);
 };
 
 const GENERIC_NOTE_TITLES = new Set(['Untitled Thought', 'Untitled Note', 'Untitled Project']);
@@ -65,7 +99,7 @@ export const isGenericNoteTitle = (title?: string | null): boolean => {
 };
 
 export const resolveNoteCardTitle = (title?: string | null, content?: string | null): string => {
-  const trimmed = title?.trim() || '';
+  const trimmed = clampNoteTitle(title);
   if (trimmed && !isGenericNoteTitle(trimmed)) return trimmed;
   return buildAutoTitleFromContent(content || '') || trimmed;
 };

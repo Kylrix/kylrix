@@ -10255,16 +10255,12 @@
         },
         {
             "$id": "general_storage",
-            "$permissions": [
-                "read(\"any\")"
-            ],
+            "$permissions": [],
             "fileSecurity": true,
             "name": "General Storage",
             "enabled": true,
             "maximumFileSize": 104857600,
-            "allowedFileExtensions": [
-                "[]"
-            ],
+            "allowedFileExtensions": [],
             "compression": "zstd",
             "encryption": true,
             "antivirus": true

@@ -23,6 +23,7 @@ import {
 import { Drawer, Box, Typography } from '@/lib/openbricks/primitives';
 import { StorageService } from '@/lib/services/storage';
 import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
+import { pickNoteAutosavePayload } from '@/lib/appwrite/note';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useToast } from '@/components/ui/Toast';
 import { getNote, getNotePublicState, toggleNoteVisibility, getAllTags } from '@/lib/appwrite';
@@ -727,8 +728,18 @@ export default function CreateNoteForm({
     }
 
     const normalizedTags = normalizeTags((source.tags || []) as string[]);
+    const autosaveFields = pickNoteAutosavePayload({
+      title: isTitleManuallyEdited ? title : '',
+      content: source.content || '',
+      format: 'text',
+      tags: normalizedTags,
+    });
+    const generatedTitle = autosaveFields.title || (
+      composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought'
+    );
+
     const payload = {
-      title: (source.title || '').trim(),
+      title: generatedTitle,
       content: source.content || '',
       format: 'text' as const,
       tags: normalizedTags,
@@ -748,10 +759,6 @@ export default function CreateNoteForm({
         },
       }),
     };
-
-    const generatedTitle = payload.title || (
-      buildAutoTitleFromContent(payload.content.trim()) || (composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought')
-    );
 
     if (!user?.$id) {
       const secret = localStorage.getItem('kylrix_ghost_secret_v2') || crypto.randomUUID();
@@ -868,6 +875,7 @@ export default function CreateNoteForm({
     isArticle,
     isGuest,
     isPublic,
+    isTitleManuallyEdited,
     migrateDraftId,
     onNoteCreated,
     paywallAmount,
@@ -875,6 +883,7 @@ export default function CreateNoteForm({
     persistedIsPublic,
     promptSudo,
     showSuccess,
+    title,
     user?.$id,
   ]);
 

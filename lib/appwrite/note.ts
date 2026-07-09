@@ -20,7 +20,7 @@ import { APPWRITE_CONFIG } from './config';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { sendKylrixEmailNotification } from '@/lib/email-notifications';
 import { createNoteCreationService } from '@/lib/sdk';
-import { buildAutoTitleFromContent } from '@/constants/noteTitle';
+import { buildAutoTitleFromContent, clampNoteTitle } from '@/constants/noteTitle';
 import { buildSourceNoteTags } from '@/lib/sdk/crosslinks';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { invalidateTablesDbRowCache } from '@/lib/ecosystem/tablesdb-row-cache';
@@ -343,7 +343,7 @@ export function pickNoteUpdatePayload(
   const payload: Record<string, unknown> = {};
 
   if (data.title !== undefined) {
-    payload.title = String(data.title).trim();
+    payload.title = clampNoteTitle(data.title);
   }
   if (data.content !== undefined) {
     payload.content = data.content;
@@ -375,7 +375,7 @@ export function pickNoteAutosavePayload(data: {
   tags?: string[] | null;
 }): Partial<Notes> {
   const content = data.content ?? '';
-  const trimmedTitle = (data.title ?? '').trim();
+  const trimmedTitle = clampNoteTitle(data.title);
 
   return {
     title: trimmedTitle || buildAutoTitleFromContent(content) || 'Untitled Thought',
