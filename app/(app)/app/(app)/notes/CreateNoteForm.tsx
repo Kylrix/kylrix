@@ -964,7 +964,7 @@ export default function CreateNoteForm({
       };
       pushLiveNote(finalDraft);
       setCachedData(`note_${noteId}`, finalDraft);
-      if (!hasAnnouncedDraftRef.current) {
+      if (!hasAnnouncedDraftRef.current && !hasAnnouncedCreateRef.current) {
         hasAnnouncedDraftRef.current = true;
         onNoteCreated(finalDraft);
       }
