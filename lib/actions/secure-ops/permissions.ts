@@ -453,7 +453,22 @@ export async function getResourceCollaboratorsSecure(input: {
     
     let filteredCollabs: Array<{ userId: string, level: string, status: string, accepted: boolean }> = [];
     
-    if (resourceType === 'note' || resourceType === 'project' || resourceType === 'event' || resourceType === 'form' || resourceType === 'huddle' || resourceType === 'call' || resourceType === 'secret' || resourceType === 'totp') {
+    if (resourceType === 'project') {
+        // Query native Appwrite Team members directly
+        try {
+            const { teams } = createSystemClient();
+            // Project ID is the Team ID
+            const memberships = await teams.listMemberships(input.resourceId);
+            filteredCollabs = memberships.memberships.map((m: any) => ({
+                userId: m.userId,
+                level: m.roles.includes('admin') ? 'admin' : (m.roles.includes('write') ? 'editor' : 'viewer'),
+                status: m.confirm ? 'accepted' : 'pending',
+                accepted: m.confirm
+            }));
+        } catch (teamErr: any) {
+            console.warn('[getResourceCollaboratorsSecure] Failed to query native team:', teamErr?.message);
+        }
+    } else if (resourceType === 'note' || resourceType === 'event' || resourceType === 'form' || resourceType === 'huddle' || resourceType === 'call' || resourceType === 'secret' || resourceType === 'totp') {
         // Query polymorphic collaborators table as the single source of truth
         try {
             const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
@@ -580,47 +595,24 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
     throw new Error('Project collaboration is limited to TEAMS plan. Upgrade the project owner to TEAMS for unlimited team members.');
   }
 
-  // 2. Create polymorphic collaborator row with status: 'pending' and accepted: false!
-  const existingCollab = await tables.listRows({
-    databaseId: FLOW_DATABASE_ID,
-    tableId: COLLABORATORS_TABLE,
-    queries: [
-      Query.equal('resourceId', projectId),
-      Query.equal('resourceType', 'project'),
-      Query.equal('userId', targetUserId)
-    ] as any
-  });
-
-  if (existingCollab.rows.length > 0) {
-    await tables.updateRow({
-      databaseId: FLOW_DATABASE_ID,
-      tableId: COLLABORATORS_TABLE,
-      rowId: existingCollab.rows[0].$id,
-      data: {
-        permission: permissionLevel === 'admin' ? 'admin' : (permissionLevel === 'editor' ? 'write' : 'read'),
-        status: 'pending',
-        accepted: false,
-        role: 'collaborator',
-        inviterId: actor.$id
-      }
-    });
-  } else {
-    await tables.createRow({
-      databaseId: FLOW_DATABASE_ID,
-      tableId: COLLABORATORS_TABLE,
-      rowId: ID.unique(),
-      data: {
-        resourceId: projectId,
-        resourceType: 'project',
-        userId: targetUserId,
-        permission: permissionLevel === 'admin' ? 'admin' : (permissionLevel === 'editor' ? 'write' : 'read'),
-        invitedAt: new Date().toISOString(),
-        accepted: false,
-        status: 'pending',
-        role: 'collaborator',
-        inviterId: actor.$id
-      }
-    });
+  // Create native Appwrite Team membership directly (discards polymorphic table for projects)
+  try {
+    const inviteUrl = `${window.location.origin}/project/${projectId}`;
+    try {
+      await teams.get(projectId);
+    } catch {
+      await teams.create(projectId, project.title || 'Project Team');
+    }
+    await teams.createMembership(
+      projectId,
+      [role],
+      inviteUrl,
+      undefined,
+      targetUserId
+    );
+  } catch (err: any) {
+    console.error('[addProjectCollaboratorSecure] Appwrite Team membership creation failed:', err?.message);
+    throw err;
   }
 
   // 3. Dispatch structured notification email + companion Telegram alert
@@ -659,7 +651,7 @@ export async function removeProjectCollaboratorSecure(projectId: string, targetU
 
   // 1. Sync to native Appwrite Team for optimized read-access
   try {
-      const teamId = `rt_${projectId.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 30)}`;
+      const teamId = projectId;
       const memberships = await teams.listMemberships(teamId);
       const membership = memberships.memberships.find(m => m.userId === targetUserId);
       if (membership) {

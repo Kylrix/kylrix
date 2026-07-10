@@ -2,6 +2,7 @@ export { cookies } from 'next/headers';
 import { createHmac, randomBytes } from 'node:crypto';
 import { ID, Permission, Query, Role, Databases, TablesDB, Account } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { getUserSubscriptionTier } from '@/lib/utils';
 import {
   allowsCollaboratorSharing,
   getCollaboratorCap,
@@ -564,17 +565,61 @@ export async function verifyResourcePermissionSecure(params: {
     return false;
   }
   
-  let isOwner = false;
+  let ownerId = '';
   for (const field of ownerFields) {
     const val = String(row[field] || '').trim();
-    if (val && val === actorId) {
-      isOwner = true;
+    if (val) {
+      ownerId = val;
       break;
     }
   }
 
+  const isOwner = ownerId && ownerId === actorId;
+
   if (isOwner) {
     return true;
+  }
+
+  // Check if collaboration is suspended due to owner losing Pro/Teams plan
+  let isCollaborationSuspended = false;
+  if (ownerId && actorId !== ownerId) {
+    try {
+      const { users } = createSystemClient();
+      const ownerUser = await users.get(ownerId).catch(() => null);
+      if (ownerUser) {
+        const ownerTier = getUserSubscriptionTier(ownerUser);
+        const isProject = tableId === 'projects' || row.resourceType === 'project';
+        if (isProject) {
+          const isTeams = ownerTier === 'TEAMS' || ownerTier === 'ORG' || ownerTier === 'LIFETIME';
+          if (!isTeams) {
+            isCollaborationSuspended = true;
+          }
+        } else {
+          const isProOrTeams = ownerTier === 'PRO' || ownerTier === 'TEAMS' || ownerTier === 'ORG' || ownerTier === 'LIFETIME';
+          if (!isProOrTeams) {
+            isCollaborationSuspended = true;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[verifyResourcePermissionSecure] Failed to check owner plan:', e);
+    }
+  }
+
+  if (isCollaborationSuspended) {
+    // Non-owner collaborators lose write access immediately
+    if (action !== 'read') {
+      return false;
+    }
+    // For reads: allow standalone projects to render (so they can see details/disabled banner in UI)
+    const isProject = tableId === 'projects' || row.resourceType === 'project';
+    if (!isProject) {
+      // For objects (notes, tasks, etc.): only allowed if the resource is public/guest
+      const isPublic = row.isPublic === true || row.isGuest === true;
+      if (!isPublic) {
+        return false;
+      }
+    }
   }
 
   // 0. Inherited Project Ownership
@@ -693,7 +738,20 @@ export async function verifyResourcePermissionSecure(params: {
   // 3. Discrete Access Control: Collaborators table / legacy metadata.collaborators
   let matchedCollabRole: 'viewer' | 'editor' | 'admin' | null = null;
 
-  if (actorId && rowId) {
+  if (actorId && rowId && (tableId === 'projects' || row.resourceType === 'project')) {
+    try {
+      const { teams } = createSystemClient();
+      const memberships = await teams.listMemberships(rowId).catch(() => ({ memberships: [] }));
+      const membership = memberships.memberships.find((m: any) => m.userId === actorId);
+      if (membership) {
+        if (membership.roles.includes('admin')) matchedCollabRole = 'admin';
+        else if (membership.roles.includes('write')) matchedCollabRole = 'editor';
+        else matchedCollabRole = 'viewer';
+      }
+    } catch (teamErr: any) {
+      console.warn('[verifyResourcePermissionSecure] Failed to check Appwrite team memberships:', teamErr?.message);
+    }
+  } else if (actorId && rowId) {
     try {
       const tables = createSystemTablesDB();
       const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;

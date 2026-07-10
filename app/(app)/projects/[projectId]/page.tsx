@@ -371,6 +371,13 @@ export default function ProjectDetailPage() {
   const currentCollaborator = useMemo(() => collaborators.find(c => (c.userId || c.$id) === user?.$id), [collaborators, user?.$id]);
   const isAdmin = isOwner || currentCollaborator?.permissionLevel === 'admin' || currentCollaborator?.level === 'admin';
 
+  const isCollaborationSuspended = useMemo(() => {
+    if (!project || !ownerProfile) return false;
+    const tier = getUserSubscriptionTier(ownerProfile);
+    const isTeams = tier === 'TEAMS' || tier === 'ORG' || tier === 'LIFETIME';
+    return !isTeams;
+  }, [project, ownerProfile]);
+
   const joinRequests = useMemo(() => collaborators.filter(c => c.status === 'requested'), [collaborators]);
   const activeCollaborators = useMemo(() => collaborators.filter(c => c.status !== 'requested'), [collaborators]);
   const [subProjects, setSubProjects] = useState<Projects[]>([]);
@@ -862,6 +869,33 @@ export default function ProjectDetailPage() {
       <MultiSectionContainer panels={['note', 'huddles', 'goals']} contextId={projectId as string}>
         <div className="w-full">
         
+        {isCollaborationSuspended && !isOwner && ownerProfile && (
+            <div className="mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
+                        <Users size={18} />
+                    </div>
+                    <div>
+                        <p className="text-sm font-bold text-white">Collaboration Suspended</p>
+                        <p className="text-xs text-white/60">
+                            The project owner does not have an active Teams plan. Collaboration is currently disabled.
+                        </p>
+                    </div>
+                </div>
+                {ownerProfile.username && (
+                    <button
+                        onClick={() => {
+                            router.push(`/app?chat=${ownerProfile.username}`);
+                        }}
+                        className="h-9 px-4 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-white hover:bg-white/10 transition-colors flex items-center gap-1.5"
+                    >
+                        <MessageSquare size={14} />
+                        <span>Message @{ownerProfile.username}</span>
+                    </button>
+                )}
+            </div>
+        )}
+
         {/* Modern Breadcrumb / Top Bar */}
         <div className="flex flex-col md:flex-row gap-4 md:gap-0 items-start md:items-center justify-between mb-8 select-none">
             <div className="flex items-center gap-3.5 w-full md:w-auto min-w-0">
