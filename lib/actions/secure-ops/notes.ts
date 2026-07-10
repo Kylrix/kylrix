@@ -1440,6 +1440,7 @@ export async function createGhostNoteForResourceSecure(
 export async function createGhostNoteChatSecure(data: {
   title: string;
   participants: string[];
+  customRowId?: string;
   jwt?: string;
 }) {
   const actor = await getActor(data.jwt);
@@ -1461,7 +1462,7 @@ export async function createGhostNoteChatSecure(data: {
   const result = await tables.createRow({
     databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
     tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-    rowId: ID.unique(),
+    rowId: data.customRowId || ID.unique(),
     data: {
       title: data.title,
       content: '',

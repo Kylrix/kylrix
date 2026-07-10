@@ -5,9 +5,16 @@ import { Send, CheckCircle2, Upload as UploadIcon, X as XIcon, ChevronDown, Arro
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';
 import { useDataNexus } from '@/context/DataNexusContext';
-import { secureUploadFile } from '@/lib/actions/client-ops';
+import { secureUploadFile, createGhostNoteChat } from '@/lib/actions/client-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { SharedWorkspaceBar } from '@/components/common/SharedWorkspaceBar';
+import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
+import UserSearch from '@/components/UserSearch';
+import { UsersService } from '@/lib/services/users';
+import { ChatService } from '@/lib/services/chat';
+import { createComment } from '@/lib/appwrite/note';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import toast from 'react-hot-toast';
 
 export default function PublicFormPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = use(params);
@@ -19,6 +26,8 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
     const [error, setError] = useState<string | null>(null);
     const [formData, setFormData] = useState<Record<string, any>>({});
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [showSendSelector, setShowSendSelector] = useState(false);
+    const [isSendingResponse, setIsSendingResponse] = useState(false);
 
     useEffect(() => {
         const fetchForm = async () => {
@@ -133,6 +142,26 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
     }
 
     const visibleFields = schema.filter(isFieldVisible);
+    const formatResponseMarkdown = () => {
+        let md = `# Form Submission: ${form?.title || 'Form'}\n\n`;
+        md += `**Submitted At:** ${new Date().toLocaleString()}\n\n`;
+        md += `## Responses\n\n`;
+        
+        schema.forEach((field: any) => {
+            const val = formData[field.id];
+            if (val !== undefined && val !== null) {
+                md += `### ${field.label || 'Question'}\n`;
+                if (typeof val === 'object' && val.originalName) {
+                    md += `Uploaded File: ${val.originalName}\n\n`;
+                } else if (Array.isArray(val)) {
+                    md += `${val.join(', ')}\n\n`;
+                } else {
+                    md += `${val}\n\n`;
+                }
+            }
+        });
+        return md;
+    };
     const [currentStep, setCurrentStep] = useState(0);
 
     // Adjust step if out of bounds due to conditional changes
@@ -435,7 +464,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
             {/* Main Content card */}
             <div className="max-w-2xl w-full mx-auto px-6 py-8 flex-1 flex flex-col justify-center relative z-10">
                 {submitted ? (
-                    <div className="p-8 md:p-16 text-center rounded-[28px] bg-[#161412] border border-white/5 flex flex-col items-center">
+                    <div className="p-8 md:p-12 text-center rounded-[28px] bg-[#161412] border border-white/5 flex flex-col items-center w-full">
                         <div className="w-16 h-16 rounded-full bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center mb-6">
                             <CheckCircle2 className="w-8 h-8 text-[#6366F1]" />
                         </div>
@@ -443,13 +472,112 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                         <p className="text-[#9B9691] mb-8 font-medium font-satoshi text-sm md:text-base">
                             Your data has been securely injected into the Kylrix Flow nexus.
                         </p>
-                        <button 
-                            type="button" 
-                            onClick={() => window.location.reload()}
-                            className="px-6 py-3 rounded-xl border border-white/5 text-white font-bold hover:bg-[#1C1A18] hover:border-[#6366F1] hover:text-white transition-all font-satoshi text-sm"
-                        >
-                            Submit New Entry
-                        </button>
+                        
+                        <div className="flex flex-col sm:flex-row gap-3 w-full justify-center mb-6">
+                            <button 
+                                type="button" 
+                                onClick={() => window.location.reload()}
+                                className="px-5 py-2.5 rounded-xl bg-[#6366F1] border border-transparent text-white font-bold hover:bg-[#4F46E5] transition-all font-satoshi text-xs"
+                            >
+                                Submit New Entry
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => {
+                                    exportToMarkdown(form?.title || 'Form Response', formatResponseMarkdown());
+                                }}
+                                className="px-5 py-2.5 rounded-xl border border-white/5 bg-white/[0.02] text-zinc-300 font-bold hover:bg-white/5 transition-all font-satoshi text-xs"
+                            >
+                                Export MD
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => {
+                                    exportToPDF(form?.title || 'Form Response', formatResponseMarkdown());
+                                }}
+                                className="px-5 py-2.5 rounded-xl border border-white/5 bg-white/[0.02] text-zinc-300 font-bold hover:bg-white/5 transition-all font-satoshi text-xs"
+                            >
+                                Export PDF
+                            </button>
+                            {currentUser && (
+                                <button 
+                                    type="button" 
+                                    onClick={() => setShowSendSelector(!showSendSelector)}
+                                    className="px-5 py-2.5 rounded-xl border border-white/5 bg-white/[0.02] text-zinc-300 font-bold hover:bg-white/5 hover:border-[#6366F1]/40 transition-all font-satoshi text-xs"
+                                >
+                                    Send Response
+                                </button>
+                            )}
+                        </div>
+
+                        {showSendSelector && currentUser && (
+                            <div className="w-full mt-4 p-4 border border-white/5 bg-black/40 rounded-2xl text-left">
+                                {isSendingResponse ? (
+                                    <div className="flex items-center justify-center py-6 gap-2 text-zinc-400 font-satoshi text-xs">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-400 border-t-transparent" />
+                                        <span>Injecting response into recipient stream...</span>
+                                    </div>
+                                ) : (
+                                    <UserSearch
+                                        label="SEND TO KYLRIX USER"
+                                        placeholder="Type @username to search..."
+                                        selectedUsers={[]}
+                                        inlineResults={true}
+                                        onSelect={async (targetUser) => {
+                                            setIsSendingResponse(true);
+                                            try {
+                                                const responseMarkdown = formatResponseMarkdown();
+                                                const targetProfile = await UsersService.getProfileById(targetUser.id).catch(() => null);
+                                                
+                                                if (targetProfile) {
+                                                    const hasLocalKeys = ecosystemSecurity.status.hasIdentity && ecosystemSecurity.status.isUnlocked;
+                                                    const targetHasPublicKey = !!targetProfile.publicKey;
+
+                                                    if (hasLocalKeys && targetHasPublicKey) {
+                                                        // E2EE Chat
+                                                        const conv = await ChatService.createConversation([currentUser.$id, targetProfile.$id]);
+                                                        if (conv) {
+                                                            await ChatService.sendMessage(conv.$id || conv.id, currentUser.$id, responseMarkdown, 'text');
+                                                            toast.success(`Response transmitted to @${targetProfile.username}'s secure chat!`);
+                                                            setShowSendSelector(false);
+                                                            return;
+                                                        }
+                                                    }
+                                                }
+
+                                                // Discussion thread fallback
+                                                const sorted = [currentUser.$id, targetUser.id].sort();
+                                                const deterministicId = `gchat-${sorted[0].slice(0, 14)}-${sorted[1].slice(0, 14)}`;
+
+                                                let threadExists = false;
+                                                try {
+                                                    await getNote(deterministicId);
+                                                    threadExists = true;
+                                                } catch {}
+
+                                                if (!threadExists) {
+                                                    await createGhostNoteChat(
+                                                        `@${targetUser.title || 'user'}'s Discussion`,
+                                                        [currentUser.$id, targetUser.id],
+                                                        deterministicId
+                                                    );
+                                                }
+
+                                                await createComment(deterministicId, responseMarkdown);
+                                                toast.success(`Response injected into @${targetUser.title || 'user'}'s discussion thread!`);
+                                                setShowSendSelector(false);
+                                            } catch (err: any) {
+                                                console.error('Send failed:', err);
+                                                toast.error(err.message || 'Transmission failed.');
+                                            } finally {
+                                                setIsSendingResponse(false);
+                                            }
+                                        }}
+                                        onRemove={() => {}}
+                                    />
+                                )}
+                            </div>
+                        )}
                     </div>
                 ) : visibleFields.length === 0 ? (
                     <div className="p-8 text-center rounded-[28px] bg-[#161412] border border-white/5">

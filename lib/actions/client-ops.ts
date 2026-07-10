@@ -399,9 +399,9 @@ export async function getResourceTags(
   return getResourceTagsSecure(resourceId, resourceType, jwt);
 }
 
-export async function createGhostNoteChat(title: string, participants: string[]) {
+export async function createGhostNoteChat(title: string, participants: string[], customRowId?: string) {
   const jwt = await getJwt();
-  return createGhostNoteChatSecure({ title, participants, jwt });
+  return createGhostNoteChatSecure({ title, participants, customRowId, jwt });
 }
 
 export async function listGhostNoteChats() {
