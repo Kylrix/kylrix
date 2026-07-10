@@ -43,11 +43,24 @@ export default function UserSearch({
   const [isSearching, setIsSearching] = useState(false);
 
   const results = useMemo(() => {
-    return rawResults.filter((u: any) => 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const items = rawResults.filter((u: any) => 
       !selectedUsers.some(s => s.id === u.id) && 
       !excludeIds.includes(u.id)
     );
-  }, [rawResults, selectedUsers, excludeIds]);
+    if (emailRegex.test(query.trim())) {
+      items.unshift({
+        id: query.trim(),
+        title: query.trim(),
+        subtitle: 'Invite via Email',
+        avatar: null,
+        profilePicId: null,
+        email: query.trim(),
+        isEmailInvite: true
+      } as any);
+    }
+    return items;
+  }, [rawResults, selectedUsers, excludeIds, query]);
 
   const debouncedSearch = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim() || searchQuery.length < 2) {

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, MapPin, Share2, Video, ExternalLink } from 'lucide-react';
 import { formatTime } from '@/lib/time-util';
 import { useLayout } from '@/context/LayoutContext';
+import { exportToICS } from '@/lib/utils/export';
 import { events as eventApi } from '@/lib/kylrixflow';
 import { generateEventPattern } from '@/utils/patternGenerator';
 import { Event as AppwriteEvent } from '@/types/kylrixflow';
@@ -259,6 +260,17 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
           >
             <Share2 className="w-4 h-4" />
             <span>Copy Link</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              exportToICS(event.title, event.description || '', event.startTime, event.endTime);
+              toast.success('Calendar event (.ics) downloaded!');
+            }}
+            className="w-full py-3 px-4 rounded-[14px] bg-[#1C1A18] hover:bg-[#242220] border border-[#34322F] hover:border-[#F59E0B] text-white font-bold text-sm text-center font-satoshi transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Calendar className="w-4 h-4 text-[#F59E0B]" />
+            <span>Export Calendar Event (.ICS)</span>
           </button>
         </div>
       </div>

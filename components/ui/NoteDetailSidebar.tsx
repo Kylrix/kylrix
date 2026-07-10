@@ -56,6 +56,7 @@ import { useSudo } from '@/context/SudoContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { exportToMarkdown, exportToPDF, exportToDOCX } from '@/lib/utils/export';
 import { useAuth } from '@/lib/auth';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
@@ -1243,17 +1244,15 @@ export function NoteDetailSidebar({
             </button>
           )}
 
-          {/* More actions — only for editors */}
-          {!readOnly && (
-            <button 
-              type="button"
-              onClick={() => setIsContextDrawerOpen(true)} 
-              className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
-              title="More Actions"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
-          )}
+          {/* More actions — always available for export / details */}
+          <button 
+            type="button"
+            onClick={() => setIsContextDrawerOpen(true)} 
+            className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
+            title="More Actions"
+          >
+            <MoreVertical className="w-4 h-4" />
+          </button>
 
           {/* Read-only badge */}
           {readOnly && (
@@ -2100,6 +2099,41 @@ export function NoteDetailSidebar({
                 <span>Attach link</span>
               </button>
             </>
+
+            <div className="h-px bg-white/5 my-3" />
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-black text-white/30 tracking-wider uppercase px-4 pt-1 font-mono">Export Document</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsContextDrawerOpen(false);
+                  exportToMarkdown(liveNote.title || 'Note', content || '');
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+              >
+                <span>Export as Markdown (.md)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsContextDrawerOpen(false);
+                  exportToPDF(liveNote.title || 'Note', content || '');
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+              >
+                <span>Export as PDF (.pdf)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsContextDrawerOpen(false);
+                  exportToDOCX(liveNote.title || 'Note', content || '');
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+              >
+                <span>Export as Word (.doc)</span>
+              </button>
+            </div>
           </Box>
         </Drawer>
       )}

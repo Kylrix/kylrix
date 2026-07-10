@@ -146,15 +146,32 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
 
   const { client, users, teams } = createSystemClient();
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  let targetUserIdToUse = input.targetUserId;
+  let isEcosystemUser = true;
+
+  if (emailRegex.test(input.targetUserId)) {
+    isEcosystemUser = false;
+    try {
+      const userList = await users.list([Query.equal('email', input.targetUserId)]);
+      if (userList.users.length > 0) {
+        targetUserIdToUse = userList.users[0].$id;
+        isEcosystemUser = true;
+      }
+    } catch (e) {
+      console.warn('[grantPermissionSecure] Failed to check user by email:', e);
+    }
+  }
+
   // Handle Project Team synchronization
   if (resourceType === 'project') {
     try {
-        // Sync to native Appwrite Team for optimized read-access
         await teams.createMembership(
             input.resourceId, 
             [input.permission], 
-            undefined, 
-            input.targetUserId
+            `${window.location.origin}/project/${input.resourceId}`, 
+            !isEcosystemUser ? input.targetUserId : undefined, 
+            isEcosystemUser ? targetUserIdToUse : undefined
         );
     } catch (teamErr: any) {
         console.warn('[grantPermissionSecure] Team membership sync skipped or failed:', teamErr?.message);
@@ -172,17 +189,19 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
                   resourceType === 'totp' ? 'totpSecrets' :
                   APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 
-  // 1. Grant physical READ permission only!
-  await permissionsInternal('POST', {
-    action: 'grant',
-    permission: 'read',
-    targetUserId: input.targetUserId,
-    resourceId: input.resourceId,
-    resourceType: resourceType === 'note' ? 'ghost_note' : (resourceType === 'secret' || resourceType === 'totp' ? 'secret' : 'task'),
-    databaseId: dbId,
-    tableId: tableId,
-    rowId: input.resourceId,
-  }, requester.$id);
+  // 1. Grant physical READ permission only for ecosystem users
+  if (isEcosystemUser) {
+    await permissionsInternal('POST', {
+      action: 'grant',
+      permission: 'read',
+      targetUserId: targetUserIdToUse,
+      resourceId: input.resourceId,
+      resourceType: resourceType === 'note' ? 'ghost_note' : (resourceType === 'secret' || resourceType === 'totp' ? 'secret' : 'task'),
+      databaseId: dbId,
+      tableId: tableId,
+      rowId: input.resourceId,
+    }, requester.$id);
+  }
 
   // 2. Set virtual permission in polymorphic flow.collaborators table
   if (resourceType === 'note' || resourceType === 'project' || resourceType === 'secret' || resourceType === 'totp') {
@@ -228,7 +247,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
       queries: [
         Query.equal('resourceId', input.resourceId),
         collabTypeFilter,
-        Query.equal('userId', input.targetUserId)
+        Query.equal('userId', targetUserIdToUse)
       ] as any
     });
 
@@ -241,8 +260,8 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
         rowId: existingCollab.rows[0].$id,
         data: {
           permission,
-          status: 'accepted',
-          accepted: true
+          status: isEcosystemUser ? 'accepted' : 'pending',
+          accepted: isEcosystemUser
         }
       });
     } else {
@@ -253,22 +272,41 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
         data: {
           resourceId: input.resourceId,
           resourceType,
-          userId: input.targetUserId,
+          userId: targetUserIdToUse,
           permission,
           invitedAt: new Date().toISOString(),
-          accepted: true,
-          status: 'accepted',
+          accepted: isEcosystemUser,
+          status: isEcosystemUser ? 'accepted' : 'pending',
           role: 'collaborator'
         }
       });
     }
   }
 
-  // 3. Structured Notification Layer (Optional)
-  if (!input.skipEmail) {
+  // 3. Structured Email Invitation for non-ecosystem email targets
+  if (!isEcosystemUser) {
+    try {
+      await dispatchEmail({
+        eventType: 'invite',
+        sourceApp: 'kylrix',
+        actorName: input.actorName || requester.name || 'A teammate',
+        actorId: requester.$id,
+        recipientEmails: [input.targetUserId],
+        resourceId: input.resourceId,
+        resourceTitle: input.resourceTitle,
+        resourceType: resourceType,
+        rightsLabel: input.permission,
+        metadata: {
+          customSubject: `${input.actorName || requester.name || 'A teammate'} invited you to collaborate on '${input.resourceTitle || 'Resource'}' [${resourceType}]`
+        }
+      });
+    } catch (emailErr) {
+      console.error('[grantPermissionSecure] Failed to send email invite:', emailErr);
+    }
+  } else if (!input.skipEmail) {
     try {
       await dispatchSecureNotification({
-        targetUserId: input.targetUserId,
+        targetUserId: targetUserIdToUse,
         type: 'invite',
         title: 'New Invitation',
         body: `${input.actorName} has invited you to collaborate.`,

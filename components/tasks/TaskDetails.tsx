@@ -38,6 +38,7 @@ import { formatNoteCreatedDate } from '@/lib/date-utils';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useLayout } from '@/context/LayoutContext';
+import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
 import { useTask } from '@/context/TaskContext';
 import { useAI } from '@/hooks/useAI';
 import { client } from '@/lib/appwrite/client';
@@ -151,6 +152,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const [pendingCollaborators, setPendingCollaborators] = useState<any[]>([]);
   const [showProjectLinker, setShowProjectLinker] = useState(false);
   const [pendingCollaboratorPermission, setPendingCollaboratorPermission] = useState<CollaboratorPermission>('write');
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   // High-Fidelity Discussion State & Effects
   const { showSuccess, showError } = useToast();
@@ -557,6 +559,44 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             >
               <Edit3 className="w-4 h-4" />
             </button>
+            <div className="relative inline-block">
+              <button
+                type="button"
+                onClick={() => setIsExportOpen(!isExportOpen)}
+                className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-all"
+                title="Export Goal"
+              >
+                <FileText className="w-4 h-4" />
+              </button>
+              {isExportOpen && (
+                <>
+                  <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsExportOpen(false)} />
+                  <div className="absolute right-0 mt-1 w-44 rounded-2xl bg-[#161412] border border-[#34322F] shadow-2xl p-1 z-50 font-satoshi flex flex-col gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsExportOpen(false);
+                        exportToMarkdown(task.title, task.description || '');
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold rounded-xl transition-colors text-[#F5F2ED] hover:bg-white/5"
+                    >
+                      Export as Markdown
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsExportOpen(false);
+                        exportToPDF(task.title, task.description || '');
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold rounded-xl transition-colors text-[#F5F2ED] hover:bg-white/5"
+                    >
+                      Export as PDF
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
             <button
               type="button"
               onClick={() => {
