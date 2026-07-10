@@ -57,20 +57,31 @@ export function effectiveTierHasPaidAccess(tier?: BillingUiTier | string | null)
   return billingTierHasPaidAccess(tier || 'FREE');
 }
 
-export function allowsCollaboratorSharing(tier: BillingUiTier | string): boolean {
+export function allowsCollaboratorSharing(tier: BillingUiTier | string, resourceType?: string): boolean {
   if (isSelfHostedDeployment()) {
     return true;
   }
   const normalized = String(tier || 'FREE').toUpperCase();
-  return normalized === 'TEAMS' || normalized === 'ORG' || normalized === 'LIFETIME';
+  if (resourceType === 'project') {
+    return normalized === 'TEAMS' || normalized === 'ORG' || normalized === 'LIFETIME';
+  }
+  // Objects (notes, tasks, etc.) unlock for PRO and higher
+  return normalized === 'PRO' || normalized === 'TEAMS' || normalized === 'ORG' || normalized === 'LIFETIME';
 }
 
-export function getCollaboratorCap(tier: BillingUiTier | string): number {
+export function getCollaboratorCap(tier: BillingUiTier | string, resourceType?: string): number {
   if (isSelfHostedDeployment()) {
     return Number.POSITIVE_INFINITY;
   }
   const normalized = String(tier || 'FREE').toUpperCase();
-  if (normalized === 'TEAMS' || normalized === 'ORG' || normalized === 'LIFETIME') {
+  if (resourceType === 'project') {
+    if (normalized === 'TEAMS' || normalized === 'ORG' || normalized === 'LIFETIME') {
+      return Number.POSITIVE_INFINITY;
+    }
+    return 0;
+  }
+  // Objects (notes, tasks, etc.) unlock unlimited for PRO and higher
+  if (normalized === 'PRO' || normalized === 'TEAMS' || normalized === 'ORG' || normalized === 'LIFETIME') {
     return Number.POSITIVE_INFINITY;
   }
   return 0;

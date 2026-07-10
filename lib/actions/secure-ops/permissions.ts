@@ -208,12 +208,18 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     });
 
     const userTier = getUserSubscriptionTier(requester);
-    if (!allowsCollaboratorSharing(userTier)) {
+    if (!allowsCollaboratorSharing(userTier, resourceType)) {
+      if (resourceType === 'project') {
+        throw new Error('Project collaboration is a TEAMS feature. Upgrade to TEAMS to collaborate on projects.');
+      }
       throw new Error(`Adding collaborators is a premium feature. Upgrade to PRO or TEAMS to collaborate on your ${resourceType}.`);
     }
-    const maxCollabs = getCollaboratorCap(userTier);
+    const maxCollabs = getCollaboratorCap(userTier, resourceType);
     if (existingCollabsRes.rows.length >= maxCollabs) {
-      throw new Error(`Limit reached: PRO tier is limited to 3 collaborators per ${resourceType}. Upgrade to TEAMS for unlimited team members.`);
+      if (resourceType === 'project') {
+        throw new Error('Project collaboration is limited to TEAMS plan. Upgrade to TEAMS for unlimited team members.');
+      }
+      throw new Error(`Limit reached. Upgrade to PRO or TEAMS for unlimited collaborators on your ${resourceType}.`);
     }
 
     const existingCollab = await tables.listRows({
@@ -565,13 +571,13 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
   const owner = await users.get(project.ownerId);
   const ownerTier = getUserSubscriptionTier(owner);
 
-  if (!allowsCollaboratorSharing(ownerTier)) {
-    throw new Error('Adding collaborators is a premium feature. Upgrade the project owner to PRO or TEAMS to add collaborators.');
+  if (!allowsCollaboratorSharing(ownerTier, 'project')) {
+    throw new Error('Project collaboration is a TEAMS feature. Upgrade the project owner to TEAMS to collaborate on projects.');
   }
 
-  const maxCollabs = getCollaboratorCap(ownerTier);
+  const maxCollabs = getCollaboratorCap(ownerTier, 'project');
   if (existingCollabsRes.rows.length >= maxCollabs) {
-    throw new Error(`Limit reached: PRO tier is limited to 3 collaborators. Upgrade the project owner to TEAMS for unlimited team members.`);
+    throw new Error('Project collaboration is limited to TEAMS plan. Upgrade the project owner to TEAMS for unlimited team members.');
   }
 
   // 2. Create polymorphic collaborator row with status: 'pending' and accepted: false!
