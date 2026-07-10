@@ -114,7 +114,7 @@ export default function NotesPage() {
   // Collapsible accordion state for the desktop right pane
   const [sharedNotesOpen, setSharedNotesOpen] = useState(true);
   const [projectsOpen, setProjectsOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'notes' | 'projects' | 'tags'>('notes');
+  const [activeTab, setActiveTab] = useState<'notes' | 'tags'>('notes');
 
   // Tags data state
   const [globalTags, setGlobalTags] = useState<any[]>([]);
@@ -499,117 +499,6 @@ export default function NotesPage() {
     const existingTags = Array.from(new Set(visibleNotes.flatMap(note => note.tags || [])));
     return existingTags.length > 0 ? existingTags.slice(0, 8) : ['Personal', 'Work', 'Ideas', 'To-Do'];
   }, [visibleNotes]);
-
-  const projectsGridContent = (
-    <div className="flex flex-col gap-6">
-      {/* Desktop Header */}
-      <header className="hidden md:flex items-center justify-between p-5 bg-white/[0.01] border border-white/8 rounded-[32px] shadow-2xl relative select-none">
-        <div className="absolute top-[-1px] left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-transparent via-[#6366F1] to-transparent" />
-        <div>
-          <h1 className="text-white font-black text-2xl md:text-3xl tracking-tight leading-tight mb-1 font-mono tracking-tighter">
-            Projects
-          </h1>
-          <p className="text-white/40 text-xs font-semibold leading-normal font-sans">
-            Manage your active execution containers and collaborative workspaces.
-          </p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => openOverlay(<CreateNoteForm onNoteCreated={handleNoteCreated} noteKind="project" />)}
-            className="h-10 px-4 rounded-xl bg-[#6366F1]/10 hover:bg-[#6366F1]/20 border border-[#6366F1]/20 hover:border-[#6366F1]/40 flex items-center justify-center text-[#818CF8] font-bold text-xs gap-1.5 transition-all"
-          >
-            <PlusCircleIcon size={16} />
-            <span>Create Project</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Projects Grid */}
-      {projectsLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[1, 2, 3, 4].map((n) => (
-            <div key={n} className="p-6 rounded-[28px] bg-[#161412] border border-white/5 animate-pulse h-[180px]">
-              <div className="w-12 h-12 rounded-2xl bg-white/5 mb-4" />
-              <div className="h-5 bg-white/5 rounded w-3/4 mb-2" />
-              <div className="h-4 bg-white/5 rounded w-1/2" />
-            </div>
-          ))}
-        </div>
-      ) : projects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center select-none">
-          <div className="w-24 h-24 bg-white/5 border border-white/10 rounded-[28px] flex items-center justify-center mb-6 shadow-2xl">
-            <ProjectIcon size={38} className="text-white/30" />
-          </div>
-          <h4 className="text-white font-black text-lg tracking-tight mb-2">No Projects Yet</h4>
-          <p className="text-white/40 text-xs font-semibold max-w-xs leading-relaxed mb-6">
-            Create a project container to bundle notes, tasks, and team huddles.
-          </p>
-          <Button onClick={() => openOverlay(<CreateNoteForm onNoteCreated={handleNoteCreated} noteKind="project" />)}>
-            Create Project
-          </Button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {projects.map((proj) => {
-            const projColor = proj.color || '#6366F1';
-            return (
-              <div
-                key={proj.$id}
-                onClick={() => router.push(`/projects/${proj.$id}`)}
-                className="relative flex flex-col justify-between gap-5 p-6 w-full min-h-[180px] rounded-[28px] bg-[#161412] border transition-all duration-300 ease-out cursor-pointer overflow-hidden group select-none"
-                style={{ borderColor: 'rgba(255, 255, 255, 0.06)' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = `${projColor}66`;
-                  e.currentTarget.style.boxShadow = `0 0 20px ${projColor}08`;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
-                <div className="flex items-start gap-4 flex-1 min-w-0 w-full">
-                  <div
-                    className="flex-shrink-0 w-12 h-12 rounded-2xl grid place-items-center border transition-all duration-300 group-hover:scale-105"
-                    style={{
-                      backgroundColor: `${projColor}1A`,
-                      color: projColor,
-                      borderColor: `${projColor}33`,
-                    }}
-                  >
-                    <ProjectIcon size={20} strokeWidth={1.5} />
-                  </div>
-                  <div className="flex-1 min-w-0 flex flex-col gap-1">
-                    <h3 className="text-white text-base font-black tracking-tight leading-tight truncate">
-                      {proj.title || proj.name}
-                    </h3>
-                    <p className="text-sm text-white/50 font-medium leading-relaxed line-clamp-2 break-words mt-1">
-                      {proj.summary || 'Unified ecosystem project container.'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/4">
-                  <span className="text-[10px] text-white/30 font-medium">
-                    {proj.updatedAt ? new Date(proj.updatedAt).toLocaleDateString() : 'Active'}
-                  </span>
-                  <span
-                    className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border"
-                    style={{
-                      backgroundColor: `${projColor}1A`,
-                      color: projColor,
-                      borderColor: `${projColor}33`,
-                    }}
-                  >
-                    {proj.status || 'Active'}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
 
   const tagsGridContent = (
     <div className="flex flex-col gap-6">
@@ -1087,16 +976,6 @@ export default function NotesPage() {
                   Ideas
                 </button>
                 <button
-                  onClick={() => router.push('/projects')}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
-                    activeTab === 'projects'
-                      ? 'bg-[#6366F1] text-white shadow-[0_4px_12px_rgba(99,102,241,0.25)]'
-                      : 'text-white/50 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  Projects
-                </button>
-                <button
                   onClick={() => setActiveTab('tags')}
                   className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                     activeTab === 'tags'
@@ -1108,7 +987,7 @@ export default function NotesPage() {
                 </button>
               </div>
 
-              {activeTab === 'notes' ? mainNotesContent : activeTab === 'projects' ? projectsGridContent : tagsGridContent}
+              {activeTab === 'notes' ? mainNotesContent : tagsGridContent}
             </div>
 
             {/* Right Pane: Sticky side column */}
@@ -1284,16 +1163,6 @@ export default function NotesPage() {
                   Ideas
                 </button>
                 <button
-                  onClick={() => router.push('/projects')}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
-                    activeTab === 'projects'
-                      ? 'bg-[#6366F1] text-white shadow-[0_4px_12px_rgba(99,102,241,0.25)]'
-                      : 'text-white/50 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  Projects
-                </button>
-                <button
                   onClick={() => setActiveTab('tags')}
                   className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                     activeTab === 'tags'
@@ -1316,7 +1185,7 @@ export default function NotesPage() {
               )}
             </div>
 
-            {activeTab === 'notes' ? mainNotesContent : activeTab === 'projects' ? projectsGridContent : tagsGridContent}
+            {activeTab === 'notes' ? mainNotesContent : tagsGridContent}
           </>
         )}
       </div>

@@ -36,6 +36,10 @@ const featureDescriptions: Record<string, { desc: string; fix: string }> = {
   'Collaborators': {
     desc: 'Collaborative projects and shared resources require a premium tier.',
     fix: 'Upgrade to Pro to add up to 3 collaborators per resource, or Teams for unlimited peers.'
+  },
+  'Project Collaboration': {
+    desc: 'Project-level collaboration requires a Teams subscription.',
+    fix: 'Upgrade to Teams to collaborate on projects. Pro users can collaborate directly on non-project objects (e.g. notes/ideas, tasks).'
   }
 };
 

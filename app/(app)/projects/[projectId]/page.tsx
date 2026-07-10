@@ -43,11 +43,12 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { Projects, ProjectObjects, Notes, Tasks, Credentials, Users as UserType } from '@/types/appwrite';
 import { listNotes, listFlowTasks, listKeepCredentials, Query, AppwriteService, listTags } from '@/lib/appwrite';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
 import ProjectExtractGoalsModal from '@/components/projects/ProjectExtractGoalsModal';
 import ProjectAddSubProjectModal from '@/components/projects/ProjectAddSubProjectModal';
 import { databases, storage } from '@/lib/appwrite/client';
-import { hasPaidKylrixPlan } from '@/lib/utils';
+import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
 import { useAuth } from '@/context/auth/AuthContext';
 import {
   createGhostNoteForProject,
@@ -137,6 +138,7 @@ export default function ProjectDetailPage() {
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openSecondarySidebar } = useLayout();
   const { openOverlay, closeOverlay } = useOverlay();
+  const { openProUpgrade } = useProUpgrade();
   const { fetchOptimized, getCachedDataAsync, setCachedData } = useDataNexus();
 
   useEffect(() => {
@@ -819,11 +821,12 @@ export default function ProjectDetailPage() {
   };
 
   const handleAddCollaborator = () => {
-      // Check limit of 3 collaborators for free plans
-      const isPaid = hasPaidKylrixPlan(user);
-      if (!isPaid && collaborators.length >= 3) {
-          showError('Free plan is limited to 3 total collaborators. Upgrade to Pro to add more!');
-          openUnified('pro-upgrade', {});
+      // Project collaboration requires a Teams tier subscription
+      const tier = getUserSubscriptionTier(user);
+      const isTeams = tier === 'TEAMS' || tier === 'ORG' || tier === 'LIFETIME';
+      if (!isTeams) {
+          showError('Project collaboration requires a Teams subscription.');
+          openProUpgrade('Project Collaboration');
           return;
       }
 

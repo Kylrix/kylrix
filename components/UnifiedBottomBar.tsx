@@ -13,6 +13,7 @@ import {
   Lock as VaultIcon,
   CheckSquare as FlowIcon,
   MessageCircle as ConnectIcon,
+  FolderKanban as ProjectsIcon,
 } from 'lucide-react';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -23,7 +24,7 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 
 /**
  * Persistent unified app-specific bottom bar.
- * Shows exactly four item icons: note, flow, vault, connect in that order.
+ * Shows five item icons: note, flow, vault, connect, projects in that order.
  * Attached to bottom with full width, curved top corners.
  */
 export function UnifiedBottomBar() {
@@ -40,7 +41,7 @@ export function UnifiedBottomBar() {
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/flow')) return 'flow';
     if (pathname?.startsWith('/connect')) return 'connect';
-    if (pathname?.startsWith('/projects')) return 'note';
+    if (pathname?.startsWith('/projects')) return 'projects';
     return null;
   }, [pathname]);
 
@@ -52,6 +53,8 @@ export function UnifiedBottomBar() {
         return '#A855F7';
       case 'connect':
         return '#F59E0B';
+      case 'projects':
+        return '#6366F1';
       case 'note':
       default:
         return '#EC4899';
@@ -59,10 +62,11 @@ export function UnifiedBottomBar() {
   }, [appContext]);
 
   const getCurrentTab = () => {
-    if (pathname?.startsWith('/app') || pathname?.startsWith('/projects')) return 'note';
+    if (pathname?.startsWith('/app')) return 'note';
     if (pathname?.startsWith('/flow')) return 'flow';
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/connect')) return 'connect';
+    if (pathname?.startsWith('/projects')) return 'projects';
     return null;
   };
 
@@ -72,6 +76,7 @@ export function UnifiedBottomBar() {
       flow: '/flow',
       vault: '/vault',
       connect: '/connect',
+      projects: '/projects',
     };
     
     const target = routes[newValue];
@@ -91,6 +96,7 @@ export function UnifiedBottomBar() {
       <BottomNavigationAction key="flow" value="flow" icon={<FlowIcon size={24} strokeWidth={1.5} className="lucide" />} />,
       <BottomNavigationAction key="vault" value="vault" icon={<VaultIcon size={24} strokeWidth={1.5} className="lucide" />} />,
       <BottomNavigationAction key="connect" value="connect" icon={<ConnectIcon size={24} strokeWidth={1.5} className="lucide" />} />,
+      <BottomNavigationAction key="projects" value="projects" icon={<ProjectsIcon size={24} strokeWidth={1.5} className="lucide" />} />,
     ];
   };
 
