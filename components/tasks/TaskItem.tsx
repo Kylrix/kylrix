@@ -90,12 +90,6 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
       showError(err.message || 'Failed to toggle reminder');
     }
   };
-
-  useEffect(() => {
-    if (isMenuDrawerOpen) {
-      setDrawerMenuStack([contextMenuItems]);
-    }
-  }, [isMenuDrawerOpen, contextMenuItems]);
   const { isPinned: isResourcePinned } = useResourcePins();
   const { showSuccess, showError } = useToast();
   const taskPinned = isResourcePinned('task', task.id, task.creatorId, task.isPinned);
@@ -364,6 +358,12 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
     event.stopPropagation();
     setIsMenuDrawerOpen(true);
   };
+
+  useEffect(() => {
+    if (isMenuDrawerOpen) {
+      setDrawerMenuStack([contextMenuItems]);
+    }
+  }, [isMenuDrawerOpen, contextMenuItems]);
 
   const handleComplete = (event: React.MouseEvent) => {
     event.stopPropagation();

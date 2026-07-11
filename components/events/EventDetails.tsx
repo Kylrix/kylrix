@@ -264,7 +264,12 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
           <button
             type="button"
             onClick={() => {
-              exportToICS(event.title, event.description || '', event.startTime, event.endTime);
+              exportToICS(
+                event.title,
+                event.description || '',
+                typeof event.startTime === 'string' ? event.startTime : event.startTime?.toISOString() || '',
+                typeof event.endTime === 'string' ? event.endTime : event.endTime?.toISOString() || ''
+              );
               toast.success('Calendar event (.ics) downloaded!');
             }}
             className="w-full py-3 px-4 rounded-[14px] bg-[#1C1A18] hover:bg-[#242220] border border-[#34322F] hover:border-[#F59E0B] text-white font-bold text-sm text-center font-satoshi transition-all flex items-center justify-center gap-2 cursor-pointer"

@@ -434,6 +434,8 @@ export type Projects = Models.Row & {
     updatedAt: string | null;
     isDeleted?: boolean;
     isPinned?: boolean;
+    isGuest?: boolean;
+    isPublic?: boolean;
 }
 
 export type ProjectObjects = Models.Row & {

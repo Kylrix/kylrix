@@ -633,6 +633,11 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
     throw new Error('Project collaboration is limited to TEAMS plan. Upgrade the project owner to TEAMS for unlimited team members.');
   }
 
+  const { teams } = createSystemClient();
+  const teamRole = permissionLevel === 'admin'
+    ? 'admin'
+    : (permissionLevel === 'editor' || permissionLevel === 'write' ? 'editor' : 'viewer');
+
   // Create native Appwrite Team membership directly (discards polymorphic table for projects)
   try {
     const inviteUrl = `${window.location.origin}/project/${projectId}`;
@@ -643,7 +648,7 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
     }
     await teams.createMembership(
       projectId,
-      [role],
+      [teamRole],
       inviteUrl,
       undefined,
       targetUserId

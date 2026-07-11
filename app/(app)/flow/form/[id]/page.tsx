@@ -12,7 +12,7 @@ import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
 import UserSearch from '@/components/UserSearch';
 import { UsersService } from '@/lib/services/users';
 import { ChatService } from '@/lib/services/chat';
-import { createComment } from '@/lib/appwrite/note';
+import { createComment, getNote } from '@/lib/appwrite/note';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import toast from 'react-hot-toast';
 

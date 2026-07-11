@@ -1319,7 +1319,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
             id,
             updates: {
               scheduled: updatedDoc.scheduled,
-              recurrenceRule: updatedDoc.recurrenceRule,
             }
           }
         });
