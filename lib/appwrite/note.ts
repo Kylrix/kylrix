@@ -3514,9 +3514,14 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
       Query.or([
         Query.equal('userId', effectiveUserId),
         Query.equal('creatorId', effectiveUserId),
-      ]),
-      Query.notEqual('isTrash', true),
+      ])
     ];
+  }
+
+  // Ensure isTrash: true notes are always filtered out cleanly unless explicitly requested
+  const hasIsTrashFilter = baseQueries.some((q: any) => String(q).includes('isTrash'));
+  if (!hasIsTrashFilter) {
+    baseQueries.push(Query.notEqual('isTrash', true));
   }
 
   const finalQueries: any[] = [
