@@ -315,12 +315,16 @@ export async function executeInstantRequestAction(
 
     // 2. Fetch basic structural context for Notes/Goals/Projects to allow AI to know about active records
     const [notesRes, tasksRes, projectsRes] = await Promise.all([
-      databases.listRows('passwordManagerDb', '67ff05f3002502ef239e', [Query.equal('userId', user.$id), Query.notEqual('isTrash', true), Query.limit(5)]),
+      databases.listRows('passwordManagerDb', '67ff05f3002502ef239e', [Query.equal('userId', user.$id), Query.limit(5)]),
       databases.listRows('passwordManagerDb', 'tasks', [Query.equal('userId', user.$id), Query.notEqual('isTrash', true), Query.limit(5)]),
       databases.listRows('passwordManagerDb', 'projects', [Query.equal('ownerId', user.$id), Query.notEqual('isTrash', true), Query.limit(5)])
-    ]).catch(() => [[], [], []]);
+    ]).catch(() => [
+      { rows: [], total: 0 },
+      { rows: [], total: 0 },
+      { rows: [], total: 0 },
+    ]);
 
-    const activeNotes = (notesRes.rows || []).map((n: any) => `- Note ID: ${n.$id}, Title: "${n.title}"`).join('\n');
+    const activeNotes = (notesRes.rows || []).filter((n: any) => n.isTrash !== true).map((n: any) => `- Note ID: ${n.$id}, Title: "${n.title}"`).join('\n');
     const activeTasks = (tasksRes.rows || []).map((t: any) => `- Goal/Task ID: ${t.$id}, Title: "${t.title}" (Status: ${t.status})`).join('\n');
     const activeProjects = (projectsRes.rows || []).map((p: any) => `- Project ID: ${p.$id}, Title: "${p.title}"`).join('\n');
 
@@ -388,7 +392,7 @@ ${userResourceSummaries}
 
   // Log this interaction to telemetry
   try {
-    const { TelemetryService } = await import('./telemetry');
+    const { TelemetryService } = await import('@/lib/services/telemetry');
     await TelemetryService.recordTelemetry({
       niche: 'intelligence',
       app: 'agentic',

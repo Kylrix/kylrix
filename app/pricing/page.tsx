@@ -248,6 +248,18 @@ export default function PricingPage() {
           </div>
         </div>
 
+        <div className="mt-8 rounded-[20px] border border-white/8 bg-[#161514] px-5 py-4 md:px-6 md:py-5">
+          <p className="text-[11px] font-black uppercase tracking-wider text-[#6366F1] mb-2 font-mono">
+            Plan switching
+          </p>
+          <p className="text-sm text-white/70 font-medium leading-relaxed">
+            Pro and Teams do not run at the same time on one account. If you are on Pro and upgrade to Teams,
+            Teams time starts when your current Pro period ends—not alongside it. The same applies in reverse:
+            Pro purchased while Teams is active begins after Teams ends. You can always create a separate account
+            for a second plan, but one account holds only one active paid tier at a time, billed sequentially.
+          </p>
+        </div>
+
         <div className="mt-12 text-center">
           <div className="inline-flex flex-col sm:flex-row items-center gap-6 sm:gap-8 px-10 py-6 rounded-[24px] bg-[#1F1D1B] border border-white/8 max-w-2xl mx-auto">
             <div className="text-left sm:text-left flex flex-col gap-1">

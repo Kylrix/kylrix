@@ -3518,11 +3518,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     ];
   }
 
-  // Ensure isTrash: true notes are always filtered out cleanly unless explicitly requested
   const hasIsTrashFilter = baseQueries.some((q: any) => String(q).includes('isTrash'));
-  if (!hasIsTrashFilter) {
-    baseQueries.push(Query.notEqual('isTrash', true));
-  }
 
   const finalQueries: any[] = [
     ...baseQueries,
@@ -3538,26 +3534,8 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
       finalQueries
     );
   } catch (err: any) {
-    const errMessage = String(err.message || '');
-    
-    // Fall back to querying without the isTrash constraint if it causes any index or schema execution errors, filtering client-side
-    if (!hasIsTrashFilter) {
-      console.warn('[listNotesPaginated] Query failed, retrying without isTrash database constraint and filtering client-side...', errMessage);
-      const fallbackQueries = finalQueries.filter((q: any) => !String(q).includes('isTrash'));
-      try {
-        res = await databases.listRows(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_TABLE_ID_NOTES,
-          fallbackQueries
-        );
-        // Client-side filter out trashed rows
-        res.rows = res.rows.filter((row: any) => row.isTrash !== true);
-      } catch (retryErr: any) {
-        throw retryErr;
-      }
-    } else {
-      const isNetworkError = !err.status || err.code === 'network_error' || err.message?.includes('fetch') || err.message?.includes('NetworkError');
-      if (isNetworkError && typeof window !== 'undefined') {
+    const isNetworkError = !err.status || err.code === 'network_error' || err.message?.includes('fetch') || err.message?.includes('NetworkError');
+    if (isNetworkError && typeof window !== 'undefined') {
         console.log('[listNotesPaginated] Network error detected. Falling back to RxDB local notes...');
         let effectiveUserId = userId;
         if (!effectiveUserId) {
@@ -3597,9 +3575,8 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
             hasMore: false
           };
         }
-      }
-      throw err;
     }
+    throw err;
   }
 
   const notes = (res.rows as any[]).map(doc => hydrateVirtualAttributes(doc)) as unknown as Notes[];
@@ -3634,6 +3611,9 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
   }
 
   let filteredNotes = notes;
+  if (!hasIsTrashFilter) {
+    filteredNotes = filteredNotes.filter((n) => (n as any).isTrash !== true);
+  }
   if (!includeStories) {
     filteredNotes = filteredNotes.filter(n => !(n as any).isStory);
   }

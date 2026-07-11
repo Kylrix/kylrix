@@ -1120,7 +1120,7 @@ export async function deleteRowSecure(
   ];
 
   if (trashSupportedTables.includes(tblId)) {
-    await Registry.getDatabase().updateRow(dbId, tblId, rId, { isTrash: true }, { forceSystem: true });
+    await Registry.getDatabase().updateRow(dbId, tblId, rId, { isTrash: true }, undefined, { forceSystem: true });
     return JSON.parse(JSON.stringify({ success: true, softDeleted: true }));
   }
 
