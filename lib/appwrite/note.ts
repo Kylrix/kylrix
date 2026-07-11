@@ -3538,49 +3538,69 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
       finalQueries
     );
   } catch (err: any) {
-    const isNetworkError = !err.status || err.code === 'network_error' || err.message?.includes('fetch') || err.message?.includes('NetworkError');
-    if (isNetworkError && typeof window !== 'undefined') {
-      console.log('[listNotesPaginated] Network error detected. Falling back to RxDB local notes...');
-      let effectiveUserId = userId;
-      if (!effectiveUserId) {
-        const user = await getCurrentUser();
-        effectiveUserId = user?.$id;
+    const errMessage = String(err.message || '');
+    const isIndexMissingError = errMessage.includes('index') || errMessage.includes('Index');
+    
+    // If the index on isTrash is missing or causing database query failures, retry without the isTrash constraint and filter client-side
+    if (isIndexMissingError && !hasIsTrashFilter) {
+      console.warn('[listNotesPaginated] Query failed due to index constraint on isTrash. Retrying without isTrash query constraint and filtering client-side...');
+      const fallbackQueries = finalQueries.filter((q: any) => !String(q).includes('isTrash'));
+      try {
+        res = await databases.listRows(
+          APPWRITE_DATABASE_ID,
+          APPWRITE_TABLE_ID_NOTES,
+          fallbackQueries
+        );
+        // Client-side filter out trashed rows since database index was missing
+        res.rows = res.rows.filter((row: any) => row.isTrash !== true);
+      } catch (retryErr: any) {
+        throw retryErr;
       }
-      if (effectiveUserId) {
-        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-        const db = await getRxDB();
-        const docs = await db.notes.find({
-          selector: {
-            userId: effectiveUserId,
-            _deleted: { $ne: true }
-          }
-        }).exec();
-        
-        const sortedDocs = docs.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        
-        const rows = sortedDocs.map(doc => ({
-          $id: doc.id,
-          $createdAt: doc.updatedAt,
-          $updatedAt: doc.updatedAt,
-          title: doc.title,
-          content: doc.content,
-          format: 'text',
-          tags: [],
-          userId: doc.userId,
-          isPublic: false,
-          isGuest: false,
-          metadata: doc.metadata || '{}',
-        })) as any[];
-        
-        return {
-          rows,
-          total: rows.length,
-          nextCursor: null,
-          hasMore: false
-        };
+    } else {
+      const isNetworkError = !err.status || err.code === 'network_error' || err.message?.includes('fetch') || err.message?.includes('NetworkError');
+      if (isNetworkError && typeof window !== 'undefined') {
+        console.log('[listNotesPaginated] Network error detected. Falling back to RxDB local notes...');
+        let effectiveUserId = userId;
+        if (!effectiveUserId) {
+          const user = await getCurrentUser();
+          effectiveUserId = user?.$id;
+        }
+        if (effectiveUserId) {
+          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+          const db = await getRxDB();
+          const docs = await db.notes.find({
+            selector: {
+              userId: effectiveUserId,
+              _deleted: { $ne: true }
+            }
+          }).exec();
+          
+          const sortedDocs = docs.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+          
+          const rows = sortedDocs.map(doc => ({
+            $id: doc.id,
+            $createdAt: doc.updatedAt,
+            $updatedAt: doc.updatedAt,
+            title: doc.title,
+            content: doc.content,
+            format: 'text',
+            tags: [],
+            userId: doc.userId,
+            isPublic: false,
+            isGuest: false,
+            metadata: doc.metadata || '{}',
+          })) as any[];
+          
+          return {
+            rows,
+            total: rows.length,
+            nextCursor: null,
+            hasMore: false
+          };
+        }
       }
+      throw err;
     }
-    throw err;
   }
 
   const notes = (res.rows as any[]).map(doc => hydrateVirtualAttributes(doc)) as unknown as Notes[];

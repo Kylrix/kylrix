@@ -709,16 +709,18 @@ export default function CreateNoteForm({
     }));
   }, [composerKind]);
 
+  const { notes: currentNotes, setNotes } = useNotes() as any;
+
   const migrateDraftId = useCallback((savedId: string, ephemeralId: string | undefined) => {
     if (savedId) registerComposeSession(savedId);
     if (ephemeralId && ephemeralId !== savedId) {
-      // Direct in-place migration in NotesContext to avoid duplicates
-      removeNote(ephemeralId);
+      // In-place replacement of ephemeral card with server saved note to prevent reloading glitch
+      setNotes((prev: Notes[]) => prev.map(n => n.$id === ephemeralId ? { ...n, $id: savedId } : n));
       unregisterComposeSession(ephemeralId);
     }
     liveDraftIdRef.current = savedId;
     setResolvedNoteId(savedId);
-  }, [registerComposeSession, removeNote, unregisterComposeSession]);
+  }, [registerComposeSession, unregisterComposeSession, setNotes]);
 
   const saveComposerNote = useCallback(async (source: Notes): Promise<Notes> => {
     if (!source.$id) {
