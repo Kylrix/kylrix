@@ -108,11 +108,20 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
   ): Promise<T> {
     const { ID } = await import('node-appwrite');
     const tables = await this.getClientTables(options?.jwt, options?.forceSystem);
+    const cleanedData = { ...data } as any;
+    if (tableId === 'settings' && cleanedData.settings) {
+      if (typeof cleanedData.settings === 'object') {
+        cleanedData.settings = JSON.stringify(cleanedData.settings);
+      }
+      if (typeof cleanedData.settings === 'string' && cleanedData.settings.length > 1000) {
+        cleanedData.settings = cleanedData.settings.slice(0, 1000);
+      }
+    }
     const res = await tables.createRow({
       databaseId,
       tableId,
       rowId: rowId || ID.unique(),
-      data: data as any,
+      data: cleanedData,
       permissions,
     });
     return JSON.parse(JSON.stringify(res)) as T;
@@ -127,11 +136,20 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
     options?: { jwt?: string; forceSystem?: boolean }
   ): Promise<T> {
     const tables = await this.getClientTables(options?.jwt, options?.forceSystem);
+    const cleanedData = { ...data } as any;
+    if (tableId === 'settings' && cleanedData.settings) {
+      if (typeof cleanedData.settings === 'object') {
+        cleanedData.settings = JSON.stringify(cleanedData.settings);
+      }
+      if (typeof cleanedData.settings === 'string' && cleanedData.settings.length > 1000) {
+        cleanedData.settings = cleanedData.settings.slice(0, 1000);
+      }
+    }
     const res = await tables.updateRow({
       databaseId,
       tableId,
       rowId,
-      data: data as any,
+      data: cleanedData,
       permissions,
     });
     return JSON.parse(JSON.stringify(res)) as T;

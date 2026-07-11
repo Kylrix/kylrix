@@ -3539,11 +3539,10 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     );
   } catch (err: any) {
     const errMessage = String(err.message || '');
-    const isIndexMissingError = errMessage.includes('index') || errMessage.includes('Index');
     
-    // If the index on isTrash is missing or causing database query failures, retry without the isTrash constraint and filter client-side
-    if (isIndexMissingError && !hasIsTrashFilter) {
-      console.warn('[listNotesPaginated] Query failed due to index constraint on isTrash. Retrying without isTrash query constraint and filtering client-side...');
+    // Fall back to querying without the isTrash constraint if it causes any index or schema execution errors, filtering client-side
+    if (!hasIsTrashFilter) {
+      console.warn('[listNotesPaginated] Query failed, retrying without isTrash database constraint and filtering client-side...', errMessage);
       const fallbackQueries = finalQueries.filter((q: any) => !String(q).includes('isTrash'));
       try {
         res = await databases.listRows(
@@ -3551,7 +3550,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
           APPWRITE_TABLE_ID_NOTES,
           fallbackQueries
         );
-        // Client-side filter out trashed rows since database index was missing
+        // Client-side filter out trashed rows
         res.rows = res.rows.filter((row: any) => row.isTrash !== true);
       } catch (retryErr: any) {
         throw retryErr;
