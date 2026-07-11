@@ -496,6 +496,13 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "isTrash",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -1354,6 +1361,13 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "isTrash",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -2174,6 +2188,13 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "isTrash",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -3244,6 +3265,13 @@
                     "default": 0,
                     "min": -9223372036854775808,
                     "max": 9223372036854775807
+                },
+                {
+                    "key": "isTrash",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -6907,6 +6935,13 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "isTrash",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -7847,6 +7882,13 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "isTrash",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -8231,6 +8273,13 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "isTrash",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -8425,6 +8474,13 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "isTrash",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -8562,6 +8618,13 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isTrash",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [

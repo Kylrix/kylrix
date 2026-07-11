@@ -1722,7 +1722,10 @@ export async function listTags(queries: any[] = [], limit: number = 100) {
       if (!user || !user.$id) {
         return { rows: [], total: 0 };
       }
-      queries = [Query.equal("userId", user.$id)];
+      queries = [
+        Query.equal("userId", user.$id),
+        Query.notEqual("isTrash", true)
+      ];
     }
     
     const finalQueries = [
@@ -1753,6 +1756,7 @@ export async function getAllTags(): Promise<{ rows: Tags[], total: number }> {
   while (true) {
     const queries = [
       Query.equal("userId", user.$id),
+      Query.notEqual("isTrash", true),
       Query.limit(batchSize),
       Query.orderDesc("$createdAt")
     ];
@@ -3511,6 +3515,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
         Query.equal('userId', effectiveUserId),
         Query.equal('creatorId', effectiveUserId),
       ]),
+      Query.notEqual('isTrash', true),
     ];
   }
 

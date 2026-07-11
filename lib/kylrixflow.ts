@@ -50,9 +50,19 @@ const CACHE_TTL = FLOW_TTL;
 const queryCache = new Map<string, { data: unknown; expires: number }>();
 
 async function listRows<T extends Models.Row>(tableId: string, queries: string[] = []): Promise<Models.RowList<T>> {
-    const key = `list:${tableId}:${JSON.stringify(queries)}`;
+    const finalQueries = [...queries];
+    // Check if isTrash check is already present or if table is in trash-supported list
+    const trashSupported = [
+        TABLES.CALENDARS,
+        TABLES.TASKS,
+        TABLES.EVENTS,
+    ];
+    if (trashSupported.includes(tableId) && !queries.some(q => q.includes('isTrash'))) {
+        finalQueries.push(Query.notEqual('isTrash', true));
+    }
+    const key = `list:${tableId}:${JSON.stringify(finalQueries)}`;
     return await fetchOptimized(key, async () => {
-        return await tablesDB.listRows<T>({ databaseId: FLOW_DATABASE_ID, tableId, queries });
+        return await tablesDB.listRows<T>({ databaseId: FLOW_DATABASE_ID, tableId, queries: finalQueries });
     }, FLOW_TTL);
 }
 

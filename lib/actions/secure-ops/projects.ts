@@ -152,7 +152,10 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
     tables.listRows({
         databaseId: CHAT_DATABASE_ID,
         tableId: 'projects',
-        queries: [Query.equal('ownerId', actor.$id)],
+        queries: [
+          Query.equal('ownerId', actor.$id),
+          Query.notEqual('isTrash', true)
+        ],
     }),
     tables.listRows({
         databaseId: FLOW_DATABASE_ID,
@@ -332,19 +335,12 @@ export async function deleteProjectSecure(
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
 
-  // Cascade delete all object links
-  try {
-    await executeCascadeDeleteSecure(APPWRITE_CONFIG.DATABASES.CHAT, 'projects', projectId, deleteMode);
-  } catch (err: any) {
-    console.error('deleteProjectSecure cascade objects cleanup failed:', err);
-  }
-
-  const result = await tables.deleteRow({
+  const result = await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: 'projects',
       rowId: projectId,
+      data: { isTrash: true }
     });
 
   return JSON.parse(JSON.stringify(result));
@@ -969,10 +965,11 @@ export async function deleteFormSecure(formId: string, jwt?: string) {
     console.error('deleteFormSecure cascade cleanup failed:', err);
   }
 
-  const result = await systemTables.deleteRow({
+  const result = await systemTables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
       rowId: formId,
+      data: { isTrash: true }
     });
 
   // Also remove the cache entry post-delete
@@ -1098,10 +1095,11 @@ export async function deleteEventSecure(eventId: string, jwt?: string) {
     console.error('deleteEventSecure cascade guests cleanup failed:', err);
   }
 
-  const result = await tables.deleteRow({
+  const result = await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
       rowId: eventId,
+      data: { isTrash: true }
     });
 
   return JSON.parse(JSON.stringify(result));

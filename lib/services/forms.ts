@@ -72,6 +72,7 @@ export const FormsService = {
             tableId: FORMS_TABLE,
             queries: [
                 Query.equal('userId', userId),
+                Query.notEqual('isTrash', true),
                 Query.orderDesc('$createdAt'),
                 Query.limit(50),
                 Query.select(['$id', 'userId', 'status', 'settings', 'title', 'description', 'schema', 'isPublic', 'isGuest', '$createdAt'])
@@ -399,6 +400,7 @@ export const FormsService = {
             tableId: SUBMISSIONS_TABLE,
             queries: [
                 Query.equal('formId', formId),
+                Query.notEqual('isTrash', true),
                 Query.orderDesc('$createdAt')
             ]
         });

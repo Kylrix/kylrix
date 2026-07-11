@@ -779,6 +779,28 @@ export default function SettingsPage() {
                                 <ChevronRight size={20} className="text-white/30 group-hover:text-white transition-colors" />
                             </button>
 
+                            {/* Trash Management Card */}
+                            <button
+                                type="button"
+                                onClick={() => router.push('/trash')}
+                                className="w-full text-left p-6 bg-[#161412] border border-white/5 hover:border-white/10 hover:bg-[#1C1A18] rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group"
+                            >
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-11 h-11 rounded-xl bg-[#EF4444]/10 text-[#EF4444] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                        <Trash2 size={22} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h4 className="text-white font-black text-base leading-tight font-mono">
+                                            Trash bin
+                                        </h4>
+                                        <p className="text-white/40 text-xs font-semibold mt-0.5 leading-relaxed">
+                                            Review and manage recently soft-deleted notes, credentials, tags, forms, events, and tasks.
+                                        </p>
+                                    </div>
+                                </div>
+                                <ChevronRight size={20} className="text-white/30 group-hover:text-white transition-colors" />
+                            </button>
+
                             {/* Telegram panel */}
                             <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-5">
                                 <div className="flex items-center justify-between border-b border-white/5 pb-3">

@@ -82,7 +82,14 @@ const secureDatabases = {
     updateRow: secureUpdateRow,
     deleteRow: secureDeleteRow,
     getRow: (dbId: string, collId: string, docId: string) => originalAppwriteDatabases.getRow(dbId, collId, docId),
-    listRows: (dbId: string, collId: string, queries?: string[]) => originalAppwriteDatabases.listRows(dbId, collId, queries),
+    listRows: (dbId: string, collId: string, queries?: string[]) => {
+        const finalQueries = queries ? [...queries] : [];
+        const trashSupported = ['credentials', 'totpSecrets'];
+        if (trashSupported.includes(collId) && !finalQueries.some(q => q.includes('isTrash'))) {
+            finalQueries.push(Query.notEqual('isTrash', true));
+        }
+        return originalAppwriteDatabases.listRows(dbId, collId, finalQueries);
+    },
 };
 
 const appwriteDatabases = secureDatabases;

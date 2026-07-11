@@ -1206,18 +1206,12 @@ export async function deleteNoteSecure(noteId: string, jwt?: string) {
   const tables = createSystemTablesDB();
   const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
   const APPWRITE_TABLE_ID_NOTES = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
-  const APPWRITE_TABLE_ID_COMMENTS = APPWRITE_CONFIG.TABLES.NOTE.COMMENTS;
 
-  try {
-    await executeCascadeDeleteSecure(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId);
-  } catch (err: any) {
-    console.error('deleteNoteSecure cascade cleanup failed:', err);
-  }
-
-  const result = await tables.deleteRow({
+  const result = await tables.updateRow({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: APPWRITE_TABLE_ID_NOTES,
       rowId: noteId,
+      data: { isTrash: true }
     });
   return JSON.parse(JSON.stringify(result));
 }

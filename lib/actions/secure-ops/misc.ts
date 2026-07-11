@@ -1107,6 +1107,23 @@ export async function deleteRowSecure(
 
   if (!isAllowed) throw new Error('Forbidden');
 
+  const trashSupportedTables = [
+    '67ff05f3002502ef239e', 'notes',
+    '67ff06280034908cf08a', 'tags',
+    'tasks',
+    'events',
+    'forms',
+    'formSubmissions',
+    'credentials',
+    'totpSecrets',
+    'projects'
+  ];
+
+  if (trashSupportedTables.includes(tblId)) {
+    await Registry.getDatabase().updateRow(dbId, tblId, rId, { isTrash: true }, { forceSystem: true });
+    return JSON.parse(JSON.stringify({ success: true, softDeleted: true }));
+  }
+
   try {
     await executeCascadeDeleteSecure(dbId, tblId, rId);
   } catch (err: any) {
