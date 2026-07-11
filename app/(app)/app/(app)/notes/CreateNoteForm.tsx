@@ -1090,7 +1090,7 @@ export default function CreateNoteForm({
               event.stopPropagation();
               setIsContextDrawerOpen(true);
             }}
-            className="w-full flex-1 flex flex-col"
+            className="w-full flex-1 flex flex-col relative"
           >
             <textarea
               ref={contentRef}
@@ -1110,6 +1110,57 @@ export default function CreateNoteForm({
               placeholder="Write your idea..."
               className="w-full h-full min-h-[160px] resize-none bg-white/[0.03] text-white placeholder-white/20 border border-white/[0.06] hover:border-white/10 focus:border-pink-500/30 rounded-xl px-3 py-2 text-lg focus:outline-none transition-all scrollbar-thin"
             />
+
+            {/* Offline fast suggestion system matching goals or tags as user types */}
+            {content.trim().length > 4 && (() => {
+              const lower = content.toLowerCase();
+              const matchedGoals = (ecosystemTags as any[]).filter(g => g.name && lower.includes(g.name.toLowerCase()));
+              const suggestions = [];
+
+              if (matchedGoals.length > 0) {
+                matchedGoals.forEach(g => {
+                  if (!tags.includes(g.name)) {
+                    suggestions.push({
+                      type: 'tag',
+                      label: `Add tag: ${g.name.toUpperCase()}`,
+                      action: () => appendTag(g.name)
+                    });
+                  }
+                });
+              }
+
+              // Instant uncanny prompt recommendation engine:
+              if (lower.startsWith('create a note') || lower.includes('summarize') || lower.includes('goal')) {
+                suggestions.push({
+                  type: 'prompt',
+                  label: '💡 Execute with Smart System',
+                  action: () => {
+                    if (onClose) onClose();
+                    closeOverlay();
+                    window.dispatchEvent(new CustomEvent('kylrix:open-agentic-drawer', {
+                      detail: { prompt: content, autoRun: true }
+                    }));
+                  }
+                });
+              }
+
+              if (suggestions.length === 0) return null;
+
+              return (
+                <div className="absolute bottom-2 left-2 right-2 z-10 flex flex-wrap gap-1.5 p-2 bg-[#0B0A09]/95 backdrop-blur border border-white/10 rounded-xl max-h-[80px] overflow-y-auto">
+                  {suggestions.map((s, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={s.action}
+                      className="px-2.5 py-1 rounded-lg bg-pink-500/10 border border-pink-500/20 hover:bg-pink-500/20 text-pink-400 font-mono text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
 
           <div className="text-[10px] text-white/30 font-mono select-none mt-auto pt-1">

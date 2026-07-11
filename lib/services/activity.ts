@@ -77,17 +77,48 @@ export const ActivityService = {
         }, force);
     },
 
-    /**
-     * Log an activity from any app in the ecosystem.
-     */
     async logActivity(activity: AppActivity) {
-        // Here we might use a different table if 'AppActivity' is overloaded for presence.
-        // But based on the schema I saw earlier (userId, status, lastSeen, customStatus), 
-        // it seems AppActivity is primarily for presence. 
-        // If there's another table for logs, we'd use that.
-        // Let's assume for now AppActivity IS the presence table.
         const res = await this.updatePresence(activity.userId, 'online', activity.action);
         activityCache.invalidate();
+
+        // Physically record anonymized telemetry and user activity via TelemetryService
+        try {
+            const { TelemetryService } = await import('./telemetry');
+            // Priority engine: prioritize recording long-running actions, creations, or deletions
+            const isPriorityAction = 
+                activity.action.includes('create') || 
+                activity.action.includes('delete') || 
+                activity.action.includes('update') || 
+                activity.action.includes('publish') ||
+                activity.action.includes('sync') ||
+                activity.action.includes('import');
+
+            await TelemetryService.recordTelemetry({
+                niche: activity.appId === 'kylrixnote' ? 'workspace' : activity.appId === 'kylrixflow' ? 'productivity' : activity.appId === 'kylrixvault' ? 'security' : 'system',
+                app: activity.appId,
+                action: activity.action,
+                metadata: {
+                    ...activity.metadata,
+                    isPriorityAction,
+                    timestamp: activity.timestamp || new Date().toISOString()
+                }
+            });
+
+            await TelemetryService.recordActivity({
+                userId: activity.userId,
+                niche: activity.appId === 'kylrixnote' ? 'workspace' : activity.appId === 'kylrixflow' ? 'productivity' : activity.appId === 'kylrixvault' ? 'security' : 'system',
+                app: activity.appId,
+                action: activity.action,
+                metadata: {
+                    ...activity.metadata,
+                    isPriorityAction,
+                    timestamp: activity.timestamp || new Date().toISOString()
+                }
+            });
+        } catch (e) {
+            console.error('[ActivityService] Failed to record telemetry background logs:', e);
+        }
+
         return res;
     },
 

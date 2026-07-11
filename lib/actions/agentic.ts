@@ -296,6 +296,67 @@ export async function executeInstantRequestAction(
   }
 
   const balanceRow = await checkComputeBalance(user.$id);
+  const { databases } = createSystemClient();
+
+  // Load dynamic ecosystem database information and telemetry background for contextual reasoning
+  let telemetrySnippet = "No recent behavior patterns logged.";
+  let userResourceSummaries = "No active resources loaded.";
+
+  try {
+    // 1. Fetch recent activity for anonymized pattern matches
+    const recentActivity = await databases.listRows(
+      'passwordManagerDb',
+      'app_activity_logs',
+      [Query.equal('userId', user.$id), Query.orderDesc('$createdAt'), Query.limit(8)]
+    );
+    if (recentActivity.rows.length > 0) {
+      telemetrySnippet = recentActivity.rows.map((r: any) => `- Action: ${r.action} in Niche: ${r.niche} (${r.$createdAt})`).join('\n');
+    }
+
+    // 2. Fetch basic structural context for Notes/Goals/Projects to allow AI to know about active records
+    const [notesRes, tasksRes, projectsRes] = await Promise.all([
+      databases.listRows('passwordManagerDb', '67ff05f3002502ef239e', [Query.equal('userId', user.$id), Query.notEqual('isTrash', true), Query.limit(5)]),
+      databases.listRows('passwordManagerDb', 'tasks', [Query.equal('userId', user.$id), Query.notEqual('isTrash', true), Query.limit(5)]),
+      databases.listRows('passwordManagerDb', 'projects', [Query.equal('ownerId', user.$id), Query.notEqual('isTrash', true), Query.limit(5)])
+    ]).catch(() => [[], [], []]);
+
+    const activeNotes = (notesRes.rows || []).map((n: any) => `- Note ID: ${n.$id}, Title: "${n.title}"`).join('\n');
+    const activeTasks = (tasksRes.rows || []).map((t: any) => `- Goal/Task ID: ${t.$id}, Title: "${t.title}" (Status: ${t.status})`).join('\n');
+    const activeProjects = (projectsRes.rows || []).map((p: any) => `- Project ID: ${p.$id}, Title: "${p.title}"`).join('\n');
+
+    userResourceSummaries = `
+Active Notes:
+${activeNotes || "None"}
+Active Goals/Tasks:
+${activeTasks || "None"}
+Active Projects:
+${activeProjects || "None"}
+`;
+  } catch (err) {
+    console.error('[executeInstantRequestAction] Failed to retrieve context details:', err);
+  }
+
+  // Inject ecosystem data structures / RLS guidelines
+  const DATA_STRUCTURES_GUIDE = `
+[KYLRIX DATA ECOSYSTEM STRUCTURES & SCHEMAS]
+1. Database Consolidation: All tables live in database: "passwordManagerDb".
+2. Tables available:
+   - "67ff05f3002502ef239e" (Notes): fields { userId, title, content, isTrash, isPublic, isGuest }
+   - "67ff06280034908cf08a" (Tags): fields { userId, name, color, isTrash }
+   - "tasks" (Goals / Tasks): fields { userId, title, status, priority, isTrash }
+   - "events" (Calendar events): fields { userId, title, startTime, endTime, isTrash }
+   - "forms" (Dynamic Forms): fields { userId, title, schema, settings, isTrash }
+   - "formSubmissions" (Responses): fields { submitterId, formId, status, payload, isTrash }
+   - "credentials" (Secrets): fields { userId, name, login, password, url, isTrash }
+   - "totpSecrets" (TOTP tokens): fields { userId, issuer, secret, isTrash }
+   - "projects" (Shared work spaces): fields { ownerId, title, summary, isTrash }
+
+[USER RECENT TELEMETRY HISTORY]
+${telemetrySnippet}
+
+[USER DATA CONTEXT SUMMARY]
+${userResourceSummaries}
+`;
 
   const contextBlock = pageContext
     ? [
@@ -315,6 +376,7 @@ export async function executeInstantRequestAction(
       'You are the Kylrix Smart System assistant embedded in the user workspace.',
       'Respond with concise, actionable output. Prefer bullet steps when planning.',
       'Stay grounded in the current page context and Kylrix apps: Ideas, Flow, Vault, Connect, Projects.',
+      DATA_STRUCTURES_GUIDE,
       contextBlock || 'No page context supplied.',
     ].join('\n'),
   });
@@ -323,6 +385,24 @@ export async function executeInstantRequestAction(
   const responseText = response.response.text().trim();
 
   await debitComputeBalance(user.$id, balanceRow, prompt, responseText);
+
+  // Log this interaction to telemetry
+  try {
+    const { TelemetryService } = await import('./telemetry');
+    await TelemetryService.recordTelemetry({
+      niche: 'intelligence',
+      app: 'agentic',
+      action: 'instant_request',
+      intent: pageContext?.zone || 'workspace',
+      metadata: {
+        promptLength: prompt.length,
+        responseLength: responseText.length,
+        pageContext: pageContext || null
+      }
+    });
+  } catch (err) {
+    console.error('Failed to log instant request telemetry:', err);
+  }
 
   return {
     success: true,

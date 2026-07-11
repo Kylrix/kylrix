@@ -148,6 +148,16 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     }
   }, [isLoading, user, isAppRoute, isSharedPage, openUnified]);
 
+  // Wire up programmatically opening the agentic drawer via custom event listeners
+  const { openAgenticDrawer } = useAgenticDrawer();
+  useEffect(() => {
+    const handleOpenAgentic = (e: CustomEvent<{ prompt?: string; autoRun?: boolean }>) => {
+      openAgenticDrawer(e.detail);
+    };
+    window.addEventListener('kylrix:open-agentic-drawer' as any, handleOpenAgentic);
+    return () => window.removeEventListener('kylrix:open-agentic-drawer' as any, handleOpenAgentic);
+  }, [openAgenticDrawer]);
+
   const lastPathnameRef = useRef(pathname);
   useEffect(() => {
     // Single-batch UI reset on navigation - ONLY call if currently open to prevent cascading update loops!
