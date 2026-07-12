@@ -1,0 +1,56 @@
+name: Ota governance
+
+on:
+  push:
+    branches:
+      - bobai/kylrix-ota-pressure
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sqlite-verification:
+    name: ${{ matrix.os }} SQLite verification
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Enable pinned pnpm
+        shell: bash
+        run: corepack enable
+
+      - uses: ota-run/setup@v1.0.8
+        with:
+          source: contract
+
+      - name: Validate contract
+        run: ota validate .
+
+      - name: Diagnose readiness
+        run: ota doctor --json
+
+      - name: Discover safe execution surface
+        run: ota tasks --safe --use --json
+
+      - name: Preview agent verification task
+        run: ota run verify --agent --dry-run --json
+
+      - name: Preview agent verification workflow
+        run: ota up --workflow verify --agent --dry-run --json
+
+      - name: Run agent verification workflow
+        run: ota up --workflow verify --agent --archive --json
+
+      - name: Prove isolated native runtime
+        run: ota proof runtime --workflow sqlite-dev --archive --json
