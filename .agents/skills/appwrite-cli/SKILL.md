@@ -11,8 +11,12 @@ description: Appwrite CLI skill. Use when managing Appwrite projects from the co
 > Manually editing database configurations/schemas inside `appwrite.config.json` can cause catastrophic state mismatches or accidental destruction/overwrite of production database tables.
 > Always pull the latest schema first using `appwrite pull tables`, perform database schema manipulations using the proper Appwrite CLI commands (e.g. `appwrite tables-db create-integer-column ...`), and then generate types using `appwrite generate --language typescript`.
 > 
-> **NEVER USE `appwrite push tables --all --force` UNLESS EXPLICITLY DIRECTED.**
-> Forcing database configurations updates can trigger remote table recreations or drops, causing production data loss. Only use incremental CLI column commands when mutating schemas in an active database environment.
+> **STRICT ECOSYSTEM POLICY: WE NEVER PUSH TABLES.**
+> Running `appwrite push tables` is strictly prohibited. Pushing table schemas will destroy user data and overwrite database configurations. Instead, when introducing changes:
+> 1. Use incremental Appwrite CLI commands to create tables, columns, or indexes on the remote server (e.g., `appwrite tables-db create-table --database-id ...`).
+> 2. Run `appwrite pull tables` to sync those changes back to your local `appwrite.config.json`.
+> 3. Generate TypeScript SDK files with `appwrite generate --language typescript`.
+> 4. NEVER use push commands.
 
 ## Installation
 
