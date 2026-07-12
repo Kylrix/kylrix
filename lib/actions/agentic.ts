@@ -372,7 +372,12 @@ ${activeProjects || "None"}
     console.error('[executeInstantRequestAction] Failed to retrieve context details:', err);
   }
 
-  // Inject ecosystem data structures / RLS guidelines
+  // Redact potentially sensitive details (passwords, PINs, auth keys) in prompt
+  const redactedPrompt = prompt
+    .replace(/(password|pass|pin|secret|key|private)\s*[:=]\s*[^\s]+/gi, '$1: [REDACTED]')
+    .replace(/(?<=^|\s)[A-Za-z0-9+/]{40,}(?=$|\s)/g, '[REDACTED_HASH]');
+
+  // Inject ecosystem data structures / RLS guidelines, explicitly redacting or dropping security models
   const DATA_STRUCTURES_GUIDE = `
 [KYLRIX DATA ECOSYSTEM STRUCTURES & SCHEMAS]
 1. Database Consolidation: All tables live in database: "passwordManagerDb".
@@ -383,9 +388,10 @@ ${activeProjects || "None"}
    - "events" (Calendar events): fields { userId, title, startTime, endTime, isTrash }
    - "forms" (Dynamic Forms): fields { userId, title, schema, settings, isTrash }
    - "formSubmissions" (Responses): fields { submitterId, formId, status, payload, isTrash }
-   - "credentials" (Secrets): fields { userId, name, login, password, url, isTrash }
-   - "totpSecrets" (TOTP tokens): fields { userId, issuer, secret, isTrash }
    - "projects" (Shared work spaces): fields { ownerId, title, summary, isTrash }
+
+[SECURITY ACCESS CONTROL]
+- Secrets, TOTP Secrets, Logins, and Passwords tables are mathematically EXCLUDED from the agent context. You do not have access to these and should never ask for or handle credentials.
 
 [USER RECENT TELEMETRY HISTORY]
 ${telemetrySnippet}
@@ -430,6 +436,7 @@ ${lifetimeMemoryContext}
       'Respond with concise, actionable output. Prefer bullet steps when planning.',
       'Stay grounded in the current page context and Kylrix apps: Ideas, Flow, Vault, Connect, Projects.',
       'NEVER suggest that the user manually create resources, schedule, or guess parameters if they can be scheduled directly.',
+      'You can suggest actions to create notes, goals, or projects, link objects together, toggle their visibility (isPublic/isGuest), or share links (e.g. share path `/projects/[id]` or invite link). Use session history memory to reference last-created elements.',
       'You MUST return your response as a valid, stringified JSON object matching this schema:',
       '{',
       '  "response": "Your visible workspace reply to the user (contains markdown). Required.",',
@@ -446,7 +453,7 @@ ${lifetimeMemoryContext}
     }
   });
 
-  const response = await model.generateContent(prompt);
+  const response = await model.generateContent(redactedPrompt);
   const responseTextRaw = response.response.text().trim();
 
   let visibleResponse = responseTextRaw;
