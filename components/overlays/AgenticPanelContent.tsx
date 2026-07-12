@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent, type KeyboardEvent } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   AlarmClock,
   BarChart3,
@@ -592,9 +593,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             </div>
             <div className="text-[9px] text-left text-[#9B9691]/50 px-1">
               You can adjust sweeps and permanent rules in{' '}
-              <a href="/settings/agents" className="text-white hover:underline">
+              <Link href="/settings/agents" className="text-white hover:underline">
                 agent permissions settings
-              </a>
+              </Link>
             </div>
           </div>
         ) : null}

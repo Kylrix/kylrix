@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { AppwriteService } from '@/lib/appwrite';
 import { account } from '@/lib/appwrite/client';
 import { useTheme } from '@/lib/theme-context';
+import Link from 'next/link';
 
 interface PrefsData {
   language?: string;
@@ -326,12 +327,12 @@ export default function PreferencesManager({ onSave }: PreferencesManagerProps) 
                   View and manage authorization rules and sweeps for agentic actions
                 </p>
               </div>
-              <a 
+              <Link 
                 href="/settings/agents"
                 className="px-3 py-1.5 text-xs font-bold text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all border border-white/5"
               >
                 Configure
-              </a>
+              </Link>
             </div>
 
             <div className="flex items-center justify-between gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-[#1F1D1B] hover:border-white/10 transition-all">
