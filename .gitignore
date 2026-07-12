@@ -28,6 +28,11 @@ yarn-error.log*
 .env*.local
 .env
 *.env*
+sqlite.json
+.ota/state/
+.ota/contracts/
+.ota/receipts/
+.ota/proof/
 
 # vercel
 .vercel

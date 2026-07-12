@@ -1,0 +1,240 @@
+version: 1
+
+project:
+  name: kylrix
+  description: Kylrix contributor verification and offline SQLite development contract
+
+execution:
+  default_context: host
+  contexts:
+    host:
+      backend: native
+
+toolchains:
+  node:
+    version: ">=22"
+    package_managers:
+      pnpm: 11.5.1
+
+tasks:
+  setup:
+    context: host
+    description: Materialize the offline SQLite env profile and hydrate pinned pnpm dependencies
+    category: setup
+    prepare:
+      kind: sequence
+      steps:
+        - kind: ensure_env_file
+          path: .env
+          template: env.sample
+          vars:
+            PORT:
+              value: "3005"
+              mode: replace
+            DOMAIN:
+              value: localhost
+              mode: replace
+            NEXT_PUBLIC_APP_URL:
+              value: http://localhost:3005
+              mode: replace
+            NEXT_PUBLIC_APP_URI:
+              value: http://localhost:3005
+              mode: replace
+            NEXT_PUBLIC_ORIGIN:
+              value: http://localhost:3005
+              mode: replace
+            DATABASE_PROVIDER:
+              value: sqlite
+              mode: replace
+            NEXT_PUBLIC_DATABASE_PROVIDER:
+              value: sqlite
+              mode: replace
+            SELFHOST_MODE:
+              value: "true"
+              mode: replace
+            APPWRITE_ENDPOINT:
+              value: http://127.0.0.1/v1
+              mode: replace
+            NEXT_PUBLIC_APPWRITE_ENDPOINT:
+              value: http://127.0.0.1/v1
+              mode: replace
+            APPWRITE_PROJECT_ID:
+              value: kylrix-local
+              mode: replace
+            NEXT_PUBLIC_APPWRITE_PROJECT_ID:
+              value: kylrix-local
+              mode: replace
+            KYLRIX_INTERNAL_JOBS_SECRET:
+              random:
+                bytes: 32
+                encoding: hex
+            ATTACHMENT_URL_SIGNING_SECRET:
+              random:
+                bytes: 32
+                encoding: hex
+        - kind: dependency_hydration
+          medium: package_dependencies
+          source:
+            kind: node_package_manager
+            cwd: .
+            manager: pnpm
+            mode: install
+            frozen_lockfile: true
+    requirements:
+      toolchains:
+        - node
+    effects:
+      writes:
+        - .env
+        - node_modules
+      network: true
+      network_kind: dependency_hydration
+    safe_for_agent: true
+
+  test:
+    context: host
+    description: Run the deterministic Vitest suite against the local SQLite profile
+    command:
+      exe: pnpm
+      args: [exec, vitest, run]
+    env_files: [.env]
+    depends_on: [setup]
+    requirements:
+      toolchains:
+        - node
+    safe_for_agent: true
+
+  lint:
+    context: host
+    description: Run the repository ESLint verification lane
+    command:
+      exe: pnpm
+      args: [lint]
+    env_files: [.env]
+    depends_on: [setup]
+    requirements:
+      toolchains:
+        - node
+    safe_for_agent: true
+
+  build:
+    context: host
+    description: Build the Next.js application with the deterministic SQLite profile
+    command:
+      exe: pnpm
+      args: [build]
+    env_files: [.env]
+    depends_on: [setup]
+    requirements:
+      toolchains:
+        - node
+    effects:
+      writes: [.next]
+    safe_for_agent: true
+
+  verify:
+    description: Run the complete finite SQLite-backed verification surface
+    aggregate:
+      tasks: [test, lint, build]
+    safe_for_agent: true
+
+  dev:
+    context: host
+    description: Start Kylrix locally with runtime-owned Next.js bind truth and SQLite storage
+    launch:
+      kind: command
+      exe: pnpm
+      args: [exec, next, dev, --turbopack]
+      runtime_projection:
+        listener: web:http
+        adapter: nextjs
+    env_files: [.env]
+    depends_on: [setup]
+    requirements:
+      toolchains:
+        - node
+    runtime:
+      kind: service
+      listeners:
+        web:http:
+          protocol: http
+          bind:
+            address: 127.0.0.1
+            port:
+              mode: fixed
+              value: 3005
+          project:
+            host:
+              address: 127.0.0.1
+              port:
+                mode: fixed
+                value: 3005
+              path: /
+              primary: true
+      readiness:
+        kind: http
+        listener: web:http
+        path: /
+
+workflows:
+  default: sqlite-dev
+  sqlite-dev:
+    intent: local_development
+    description: Prepare the deterministic offline SQLite profile and start the local Next.js runtime
+    setup:
+      task: setup
+    run:
+      task: dev
+  verify:
+    intent: verification
+    description: Run the finite SQLite-backed test, lint, and build verification surface
+    setup:
+      task: setup
+    run:
+      task: verify
+
+agent:
+  bootstrap:
+    ota:
+      note: Only install Ota if it is missing and installation is approved.
+      source:
+        kind: branch
+        branch: 1.6.24-implementation
+  entrypoint: setup
+  default_task: verify
+  safe_tasks: [setup, test, lint, build, verify]
+  verify_after_changes: [verify]
+  writable_paths:
+    - .env
+    - .next
+    - app
+    - components
+    - constants
+    - context
+    - docs
+    - functions
+    - hooks
+    - lib
+    - public
+    - scripts
+    - theme
+    - types
+    - utils
+    - node_modules
+  exceptions:
+    sensitive_writes: [.env]
+  protected_paths:
+    - .github/workflows
+    - AGENTS.md
+    - docker-compose.app-only.yml
+    - docker-compose.yml
+    - env.sample
+    - ota.yaml
+    - package.json
+    - pnpm-lock.yaml
+  notes: |
+    Start with `ota validate`, then `ota doctor`, then `ota tasks --use`.
+    Use `ota up --workflow verify --agent` for the finite SQLite-backed verification path.
+    Use `ota up --workflow sqlite-dev` for local development. The interactive setup script and
+    Appwrite Cloud/local schema provisioning are intentionally outside this contract because they
+    require operator-selected topology or credentials.
