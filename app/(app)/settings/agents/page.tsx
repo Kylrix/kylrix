@@ -19,6 +19,7 @@ import { useAuth } from '@/lib/auth';
 import { useSudo } from '@/context/SudoContext';
 import { toast } from 'react-hot-toast';
 import { BYOKManager } from '@/lib/ai/byok';
+import { account } from '@/lib/appwrite/client';
 
 const FRAMEWORKS = [
   {
@@ -349,8 +350,153 @@ export default function AssistantSettingsPage() {
               })}
             </div>
           </section>
+
+          {/* Agent Permissions Allowlist Settings */}
+          <AgentPermissionsAllowlist />
         </div>
       </div>
     </div>
+  );
+}
+
+function AgentPermissionsAllowlist() {
+  const [whitelist, setWhitelist] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchWhitelist = async () => {
+      try {
+        const current = await account.getPrefs();
+        setWhitelist(Array.isArray(current?.authorizedTools) ? current.authorizedTools : []);
+      } catch (err) {
+        console.error('Failed to load whitelisted preferences:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void fetchWhitelist();
+  }, []);
+
+  const handleToggleAllowAll = async () => {
+    try {
+      const current = await account.getPrefs();
+      let nextList = [...whitelist];
+      if (nextList.includes('allow_all')) {
+        nextList = nextList.filter(item => item !== 'allow_all');
+      } else {
+        nextList.push('allow_all');
+      }
+      await account.updatePrefs({ ...current, authorizedTools: nextList });
+      setWhitelist(nextList);
+      toast.success(nextList.includes('allow_all') ? 'Full Agent access sweeping enabled.' : 'Custom permissions mode active.');
+    } catch {
+      toast.error('Failed to update settings preferences.');
+    }
+  };
+
+  const handleToggleTool = async (toolKey: string) => {
+    try {
+      const current = await account.getPrefs();
+      let nextList = [...whitelist];
+      if (nextList.includes(toolKey)) {
+        nextList = nextList.filter(item => item !== toolKey);
+      } else {
+        nextList.push(toolKey);
+      }
+      await account.updatePrefs({ ...current, authorizedTools: nextList });
+      setWhitelist(nextList);
+      toast.success('Agent permission updated.');
+    } catch {
+      toast.error('Failed to update settings preferences.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="py-6 flex justify-center border border-white/5 rounded-[28px] bg-[#161412]">
+        <RefreshCw size={18} className="animate-spin text-[#6366F1]" />
+      </div>
+    );
+  }
+
+  const isAllowAll = whitelist.includes('allow_all');
+
+  return (
+    <section className="rounded-[28px] border border-white/5 bg-[#161412] overflow-hidden">
+      <div className="px-5 md:px-6 pt-5 md:pt-6 pb-4 border-b border-white/5">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center flex-shrink-0">
+            <Shield size={18} />
+          </div>
+          <div className="min-w-0 flex flex-col gap-1">
+            <h2 className="text-white text-base font-extrabold font-clash leading-tight">
+              Agent action permissions
+            </h2>
+            <p className="text-[#9B9691] text-xs font-semibold leading-relaxed">
+              Define which tools assistants are whitelisted to execute automatically.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-5 md:px-6 py-5 md:py-6 flex flex-col gap-4 text-left">
+        <div className="flex items-center justify-between p-4 rounded-[20px] bg-[#0B0A09] border border-white/5 hover:border-white/10 transition">
+          <div className="flex-1 min-w-0 pr-4">
+            <span className="text-white text-sm font-extrabold leading-tight block">Sweep Allow All</span>
+            <span className="text-[#9B9691] text-xs leading-relaxed block mt-0.5">
+              Allow agents to execute all ecosystem actions automatically without prompt authorizations.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleAllowAll}
+            className={`h-9 px-4 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition ${
+              isAllowAll
+                ? 'bg-amber-500 hover:bg-amber-600 text-black'
+                : 'border border-white/10 text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            {isAllowAll ? 'Enabled (Sweeping)' : 'Enable Sweep'}
+          </button>
+        </div>
+
+        {!isAllowAll && (
+          <div className="space-y-3">
+            <div className="text-xs font-black uppercase text-[#9B9691]/60 px-1">
+              Custom Whitelists
+            </div>
+            {[
+              { key: 'create_note', name: 'Create Notes', desc: 'Allows agents to write new ideas context notes.' },
+              { key: 'update_note', name: 'Update Notes', desc: 'Allows agents to edit titles/content of notes.' },
+              { key: 'create_goal', name: 'Create Goals', desc: 'Allows agents to schedule tasks/due dates.' },
+              { key: 'update_goal', name: 'Update Goals', desc: 'Allows agents to modify task parameters.' },
+              { key: 'create_project', name: 'Create Projects', desc: 'Allows agents to create旗舰 projects workspaces.' },
+              { key: 'toggle_privacy', name: 'Toggle Visibility', desc: 'Allows visibility settings sweeps (requires secure confirmations).' }
+            ].map(t => {
+              const allowed = whitelist.includes(t.key);
+              return (
+                <div key={t.key} className="flex items-center justify-between p-4 rounded-[18px] bg-[#0B0A09] border border-white/5 hover:border-white/10 transition">
+                  <div className="flex-1 min-w-0 pr-4">
+                    <span className="text-white text-xs font-extrabold leading-tight block">{t.name}</span>
+                    <span className="text-[#9B9691] text-[10px] leading-relaxed block mt-0.5">{t.desc}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTool(t.key)}
+                    className={`h-8 px-3 rounded-lg text-xs font-extrabold flex items-center justify-center transition ${
+                      allowed
+                        ? 'bg-white text-black hover:bg-zinc-200'
+                        : 'border border-white/10 text-white/60 hover:bg-white/[0.03]'
+                    }`}
+                  >
+                    {allowed ? 'Allowed' : 'Authorize'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

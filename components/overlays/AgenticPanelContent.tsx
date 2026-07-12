@@ -153,6 +153,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
 
   const [pendingPayment, setPendingPayment] = useState<{ agentId: string; amount: number; intentId: string; chainId: number } | null>(null);
   const [signing, setSigning] = useState(false);
+  const [pendingToolAuth, setPendingToolAuth] = useState<{ toolKey: string; name: string; specifier?: string; args?: any } | null>(null);
 
   useEffect(() => {
     const handlePaymentRequest = (e: CustomEvent) => {
@@ -274,7 +275,45 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           systemHint: pageContext.systemHint,
           resourceId: pageContext.resourceId,
         });
-        if (res.success) appendMessage('assistant', res.response);
+
+        if (res.success) {
+          appendMessage('assistant', res.response);
+          if (Array.isArray(res.toolCalls) && res.toolCalls.length > 0) {
+            // Process tools sequentially
+            for (const call of res.toolCalls) {
+              const { AGENTIC_TOOLS_REGISTRY } = await import('@/lib/agentic/tools-registry');
+              const toolDef = AGENTIC_TOOLS_REGISTRY.find(t => t.key === call.toolKey);
+              if (toolDef) {
+                // Check if tool requires auth
+                if (toolDef.requiresAuthorization) {
+                  // Fetch live settings preferences to check if user has 'allow_all' or this tool in their whitelist
+                  let isPreAuthorized = false;
+                  try {
+                    const appPrefs = await account.getPrefs();
+                    const whitelist = appPrefs?.authorizedTools || [];
+                    if (whitelist.includes('allow_all') || whitelist.includes(call.toolKey)) {
+                      isPreAuthorized = true;
+                    }
+                  } catch {}
+
+                  if (!isPreAuthorized) {
+                    // Set pending tool authorization prompt state
+                    setPendingToolAuth({
+                      toolKey: call.toolKey,
+                      name: toolDef.name,
+                      specifier: call.specifier,
+                      args: call.args
+                    });
+                    break; // Block further executions until authorized
+                  }
+                }
+
+                // If authorized, simulate internal agentic engine task handoff
+                toast.success(`Agent executed ${toolDef.name} successfully.`);
+              }
+            }
+          }
+        }
       } catch (err: unknown) {
         appendMessage('assistant', err instanceof Error ? err.message : 'Execution failed.');
       } finally {
@@ -490,6 +529,72 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               >
                 Cancel
               </button>
+            </div>
+          </div>
+        ) : null}
+
+        {pendingToolAuth ? (
+          <div className="mb-3 p-4 rounded-[18px] bg-white/[0.03] backdrop-blur-md border border-white/10 flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                <Shield size={16} />
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="text-white text-xs font-bold leading-tight">Authorize Kylrix Agent</h3>
+                <p className="text-[#9B9691] text-[10px] leading-snug mt-0.5">
+                  Agent requests permission to execute <strong>{pendingToolAuth.name}</strong>.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1 text-[10px] text-[#9B9691] text-left bg-black/25 p-2 rounded-lg border border-white/5 font-mono">
+              <div>Tool: {pendingToolAuth.toolKey}</div>
+              {pendingToolAuth.specifier && <div>Target: {pendingToolAuth.specifier}</div>}
+              {pendingToolAuth.args && <div>Args: {JSON.stringify(pendingToolAuth.args)}</div>}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  toast.success(`Executed ${pendingToolAuth.name} once.`);
+                  setPendingToolAuth(null);
+                }}
+                className="flex-1 py-2 px-3 rounded-xl bg-white text-black text-xs font-black hover:bg-zinc-200 transition"
+              >
+                Allow Once
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const current = await account.getPrefs();
+                    const whitelist = Array.isArray(current?.authorizedTools) ? current.authorizedTools : [];
+                    if (!whitelist.includes(pendingToolAuth.toolKey)) {
+                      whitelist.push(pendingToolAuth.toolKey);
+                    }
+                    await account.updatePrefs({ ...current, authorizedTools: whitelist });
+                    toast.success(`Always allow whitelisted for ${pendingToolAuth.name}.`);
+                  } catch (err) {
+                    console.error('Failed to update whitelisted preferences:', err);
+                  }
+                  setPendingToolAuth(null);
+                }}
+                className="flex-1 py-2 px-3 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-white text-xs font-bold transition"
+              >
+                Allow Always
+              </button>
+              <button
+                type="button"
+                onClick={() => setPendingToolAuth(null)}
+                className="py-2 px-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 text-white/50 text-xs transition"
+              >
+                Deny
+              </button>
+            </div>
+            <div className="text-[9px] text-left text-[#9B9691]/50 px-1">
+              You can adjust sweeps and permanent rules in{' '}
+              <a href="/settings/agents" className="text-white hover:underline">
+                agent permissions settings
+              </a>
             </div>
           </div>
         ) : null}

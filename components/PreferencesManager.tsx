@@ -320,6 +320,23 @@ export default function PreferencesManager({ onSave }: PreferencesManagerProps) 
             <div className="flex items-center justify-between gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-[#1F1D1B] hover:border-white/10 transition-all">
               <div className="space-y-1">
                 <h4 className="text-sm font-extrabold text-white">
+                  Agent Permissions & Settings
+                </h4>
+                <p className="text-xs text-[#9B9691]">
+                  View and manage authorization rules and sweeps for agentic actions
+                </p>
+              </div>
+              <a 
+                href="/settings/agents"
+                className="px-3 py-1.5 text-xs font-bold text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all border border-white/5"
+              >
+                Configure
+              </a>
+            </div>
+
+            <div className="flex items-center justify-between gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-[#1F1D1B] hover:border-white/10 transition-all">
+              <div className="space-y-1">
+                <h4 className="text-sm font-extrabold text-white">
                   Marketing Emails
                 </h4>
                 <p className="text-xs text-[#9B9691]">

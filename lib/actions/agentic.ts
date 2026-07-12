@@ -288,7 +288,7 @@ export async function executeInstantRequestAction(
     systemHint: string;
     resourceId?: string;
   },
-): Promise<{ success: boolean; response: string }> {
+): Promise<{ success: boolean; response: string; toolCalls?: any[] }> {
   const user = await requireUser(jwt);
   const apiKey = process.env.GOOGLE_API_KEY;
   if (!apiKey) {
@@ -428,6 +428,11 @@ ${lifetimeMemoryContext}
 `
     : "";
 
+  const { AGENTIC_TOOLS_REGISTRY } = await import('@/lib/agentic/tools-registry');
+  const toolsSnippet = AGENTIC_TOOLS_REGISTRY.map(t => 
+    `- Key: "${t.key}" (${t.name}): ${t.description}. Params: ${t.parameters.join(', ')}`
+  ).join('\n');
+
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: process.env.GEMINI_MODEL_NAME || 'gemini-2.0-flash',
@@ -441,8 +446,18 @@ ${lifetimeMemoryContext}
       '{',
       '  "response": "Your visible workspace reply to the user (contains markdown). Required.",',
       '  "sessionContextUpdate": "Additional context facts to append to the current active session. Optional.",',
-      '  "lifetimeMemoryUpdate": "HIGH QUALITY memory to persist FOREVER about the user (e.g. name, work preferences, recurring systems). Be extremely strict. Leave empty/blank if no high-quality insights exist. Optional."',
+      '  "lifetimeMemoryUpdate": "HIGH QUALITY memory to persist FOREVER about the user (e.g. name, work preferences, recurring systems). Be extremely strict. Leave empty/blank if no high-quality insights exist. Optional.",',
+      '  "toolCalls": [',
+      '     {',
+      '        "toolKey": "key of the tool to execute. e.g. update_note",',
+      '        "specifier": "e.g. note_id if updating a note, or route_path. Optional.",',
+      '        "subSpecifier": "e.g. field name being updated. Optional.",',
+      '        "args": { "paramName": "paramValue" }',
+      '     }',
+      '  ]',
       '}',
+      '[AVAILABLE TOOLS]',
+      toolsSnippet,
       DATA_STRUCTURES_GUIDE,
       contextBlock || 'No page context supplied.',
       sessionBlock,
@@ -459,12 +474,16 @@ ${lifetimeMemoryContext}
   let visibleResponse = responseTextRaw;
   let sessionUpdate = "";
   let memoryUpdate = "";
+  let parsedToolCalls: any[] | undefined = undefined;
 
   try {
     const parsed = JSON.parse(responseTextRaw);
     visibleResponse = parsed.response || responseTextRaw;
     sessionUpdate = parsed.sessionContextUpdate || "";
     memoryUpdate = parsed.lifetimeMemoryUpdate || "";
+    if (Array.isArray(parsed.toolCalls)) {
+      parsedToolCalls = parsed.toolCalls;
+    }
   } catch {
     // Fallback if AI output doesn't match JSON structure perfectly
     visibleResponse = responseTextRaw;
@@ -541,6 +560,7 @@ ${historyArr.slice(-6).map((m: any) => `${m.role === 'user' ? 'User' : 'Agent'}:
 
   return {
     success: true,
-    response: visibleResponse
+    response: visibleResponse,
+    toolCalls: parsedToolCalls
   };
 }
