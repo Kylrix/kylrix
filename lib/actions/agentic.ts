@@ -295,15 +295,41 @@ export async function executeInstantRequestAction(
     throw new Error('Gemini is not configured on this deployment.');
   }
 
+  const { TelemetryService } = await import('@/lib/services/telemetry');
   const balanceRow = await checkComputeBalance(user.$id);
   const { databases } = createSystemClient();
+
+  // 1. Fetch preferences to see if chat history is allowed
+  let historyEnabled = true;
+  try {
+    const appPrefs = await account.getPrefs();
+    if (appPrefs?.smartSystemHistory === false) {
+      historyEnabled = false;
+    }
+  } catch {}
+
+  // 2. Load historical compressed session context and recent messages
+  let sessionContext = "";
+  let recentMessagesStr = "";
+  let sessionData: any = null;
+
+  if (historyEnabled) {
+    sessionData = await TelemetryService.loadSession(user.$id);
+    sessionContext = sessionData.context || "";
+    try {
+      const historyArr = JSON.parse(sessionData.chatHistory || '[]');
+      // Only append the last 15 chats for context to avoid overloading the model
+      const tail = historyArr.slice(-15);
+      recentMessagesStr = tail.map((m: any) => `${m.role === 'user' ? 'User' : 'Agent'}: ${m.content}`).join('\n');
+    } catch {}
+  }
 
   // Load dynamic ecosystem database information and telemetry background for contextual reasoning
   let telemetrySnippet = "No recent behavior patterns logged.";
   let userResourceSummaries = "No active resources loaded.";
 
   try {
-    // 1. Fetch recent activity for anonymized pattern matches
+    // Fetch recent activity for anonymized pattern matches
     const recentActivity = await databases.listRows(
       'passwordManagerDb',
       'app_activity_logs',
@@ -313,7 +339,7 @@ export async function executeInstantRequestAction(
       telemetrySnippet = recentActivity.rows.map((r: any) => `- Action: ${r.action} in Niche: ${r.niche} (${r.$createdAt})`).join('\n');
     }
 
-    // 2. Fetch basic structural context for Notes/Goals/Projects to allow AI to know about active records
+    // Fetch basic structural context for Notes/Goals/Projects to allow AI to know about active records
     const [notesRes, tasksRes, projectsRes] = await Promise.all([
       databases.listRows('passwordManagerDb', '67ff05f3002502ef239e', [Query.equal('userId', user.$id), Query.limit(5)]),
       databases.listRows('passwordManagerDb', 'tasks', [Query.equal('userId', user.$id), Query.notEqual('isTrash', true), Query.limit(5)]),
@@ -373,6 +399,16 @@ ${userResourceSummaries}
         .join('\n')
     : null;
 
+  const sessionBlock = historyEnabled && (sessionContext || recentMessagesStr)
+    ? `
+[SESSION COMPRESSED CONTEXT]
+${sessionContext}
+
+[RECENT MESSAGES CHAT HISTORY]
+${recentMessagesStr}
+`
+    : "";
+
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: process.env.GEMINI_MODEL_NAME || 'gemini-2.0-flash',
@@ -380,8 +416,10 @@ ${userResourceSummaries}
       'You are the Kylrix Smart System assistant embedded in the user workspace.',
       'Respond with concise, actionable output. Prefer bullet steps when planning.',
       'Stay grounded in the current page context and Kylrix apps: Ideas, Flow, Vault, Connect, Projects.',
+      'NEVER suggest that the user manually create resources, schedule, or guess parameters if they can be scheduled directly.',
       DATA_STRUCTURES_GUIDE,
       contextBlock || 'No page context supplied.',
+      sessionBlock,
     ].join('\n'),
   });
 
@@ -390,22 +428,59 @@ ${userResourceSummaries}
 
   await debitComputeBalance(user.$id, balanceRow, prompt, responseText);
 
-  // Log this interaction to telemetry
+  // 3. Compact and update session data
+  if (historyEnabled) {
+    try {
+      let historyArr = [];
+      try {
+        historyArr = JSON.parse(sessionData?.chatHistory || '[]');
+      } catch {}
+
+      historyArr.push({ role: 'user', content: prompt });
+      historyArr.push({ role: 'assistant', content: responseText });
+
+      let nextContext = sessionContext;
+      // Metamorphose / Compact context if message queue exceeds 6 items (using old_context * new_chats formula)
+      if (historyArr.length >= 6) {
+        const compactModel = genAI.getGenerativeModel({
+          model: 'gemini-2.0-flash',
+          systemInstruction: 'You are the context compactor engine. Merge the old context with the new user interactions, keeping only crucial rules, parameters, outcomes, and progress details. Output clean compressed text.'
+        });
+        const compactorPrompt = `
+Old Context:
+${sessionContext}
+
+New Chats Added:
+${historyArr.slice(-6).map((m: any) => `${m.role === 'user' ? 'User' : 'Agent'}: ${m.content}`).join('\n')}
+`;
+        const compactRes = await compactModel.generateContent(compactorPrompt);
+        nextContext = compactRes.response.text().trim();
+        // Clear historic chats after compaction to keep it scalable, keeping only final trailing chats
+        historyArr = historyArr.slice(-4);
+      }
+
+      await TelemetryService.saveSession(user.$id, nextContext, JSON.stringify(historyArr), false);
+    } catch (err) {
+      console.error('[executeInstantRequestAction] Failed to update session:', err);
+    }
+  }
+
+  // Log highly anonymized stripped telemetry
   try {
-    const { TelemetryService } = await import('@/lib/services/telemetry');
-    await TelemetryService.recordTelemetry({
-      niche: 'intelligence',
-      app: 'agentic',
+    const activeRoutePointers = pageContext ? `${pageContext.zone}:${pageContext.resourceId || 'none'}` : 'workspace';
+    await TelemetryService.recordAgenticTelemetry({
+      userId: user.$id,
       action: 'instant_request',
-      intent: pageContext?.zone || 'workspace',
+      zone: pageContext?.zone || 'workspace',
+      pointers: activeRoutePointers,
       metadata: {
         promptLength: prompt.length,
         responseLength: responseText.length,
-        pageContext: pageContext || null
+        historyEnabled
       }
     });
   } catch (err) {
-    console.error('Failed to log instant request telemetry:', err);
+    console.error('Failed to log anonymized agentic telemetry:', err);
   }
 
   return {

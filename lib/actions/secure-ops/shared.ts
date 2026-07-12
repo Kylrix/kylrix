@@ -2,7 +2,7 @@ export { cookies } from 'next/headers';
 import { createHmac, randomBytes } from 'node:crypto';
 import { ID, Permission, Query, Role, Databases, TablesDB, Account } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { getUserSubscriptionTier } from '@/lib/utils';
+import { getUserSubscriptionTierServer } from '@/lib/services/internal/subscription-entitlement';
 import {
   allowsCollaboratorSharing,
   getCollaboratorCap,
@@ -587,7 +587,7 @@ export async function verifyResourcePermissionSecure(params: {
       const { users } = createSystemClient();
       const ownerUser = await users.get(ownerId).catch(() => null);
       if (ownerUser) {
-        const ownerTier = getUserSubscriptionTier(ownerUser);
+        const ownerTier = await getUserSubscriptionTierServer(ownerId);
         const isProject = tableId === 'projects' || row.resourceType === 'project';
         if (isProject) {
           const isTeams = ownerTier === 'TEAMS' || ownerTier === 'ORG' || ownerTier === 'LIFETIME';

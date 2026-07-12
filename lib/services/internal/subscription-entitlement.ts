@@ -3,7 +3,10 @@ import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitlements';
 import { pickLatestSubscription, type SubscriptionRow } from '@/lib/billing/subscription-helpers';
-import type { BillingUiTier } from '@/lib/subscription/tier-resolution';
+import {
+  normalizeBillingPrefsTier,
+  type BillingUiTier,
+} from '@/lib/subscription/tier-resolution';
 
 const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 const SUBSCRIPTIONS_TABLE_ID = APPWRITE_CONFIG.TABLES.NOTE.SUBSCRIPTIONS;
@@ -78,5 +81,31 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
 export async function hasPaidKylrixPlanServer(userId: string): Promise<boolean> {
   const ent = await getVerifiedProEntitlementForUser(userId).catch(() => null);
   return !!(ent && ent.active && ent.uiTier !== 'FREE');
+}
+
+/** Server-authoritative tier for collaboration and billing gates (ledger + prefs). */
+export async function getUserSubscriptionTierServer(userId: string): Promise<BillingUiTier> {
+  if (isSelfHostedDeployment()) {
+    return getOpenSuiteEntitlement().uiTier;
+  }
+
+  const ent = await getVerifiedProEntitlementForUser(userId).catch(() => null);
+  if (ent?.active && ent.uiTier !== 'FREE') {
+    return ent.uiTier;
+  }
+
+  try {
+    const { users } = createSystemClient();
+    const user = await users.get(userId);
+    let prefs: Record<string, unknown> = {};
+    if (user.prefs) {
+      prefs = typeof user.prefs === 'string'
+        ? JSON.parse(user.prefs)
+        : (user.prefs as Record<string, unknown>);
+    }
+    return normalizeBillingPrefsTier(prefs);
+  } catch {
+    return 'FREE';
+  }
 }
 

@@ -242,9 +242,104 @@ export const TelemetryService = {
             targets: remainingTargets
           }
         });
+  },
+
+  /**
+   * Retrieves the interactive context and message history session for the user.
+   */
+  async loadSession(userId: string): Promise<{ context: string; chatHistory: string; seen: boolean; rowId?: string }> {
+    try {
+      const tables = createSystemTablesDB();
+      const res = await tables.listRows({
+        databaseId: DATABASE_ID,
+        tableId: 'agentic_sessions',
+        queries: [Query.equal('userId', userId), Query.limit(1)]
+      });
+      const row = res.rows[0];
+      if (row) {
+        return {
+          context: row.context || '',
+          chatHistory: row.chatHistory || '[]',
+          seen: row.seen !== false,
+          rowId: row.$id
+        };
+      }
+      return { context: '', chatHistory: '[]', seen: true };
+    } catch (err) {
+      console.error('[TelemetryService] Failed to load session:', err);
+      return { context: '', chatHistory: '[]', seen: true };
+    }
+  },
+
+  /**
+   * Persists or updates the context and chat history session.
+   */
+  async saveSession(userId: string, context: string, chatHistory: string, seen = true): Promise<void> {
+    try {
+      const tables = createSystemTablesDB();
+      const session = await this.loadSession(userId);
+      
+      const payload = {
+        userId,
+        context,
+        chatHistory,
+        seen
+      };
+
+      if (session.rowId) {
+        await tables.updateRow({
+          databaseId: DATABASE_ID,
+          tableId: 'agentic_sessions',
+          rowId: session.rowId,
+          data: payload
+        });
+      } else {
+        await tables.createRow({
+          databaseId: DATABASE_ID,
+          tableId: 'agentic_sessions',
+          rowId: ID.unique(),
+          data: payload
+        });
       }
     } catch (err) {
-      console.error('[TelemetryService] Failed to read/dismiss notification:', err);
+      console.error('[TelemetryService] Failed to save session:', err);
+    }
+  },
+
+  /**
+   * Record highly anonymized telemetry with stripped pointers.
+   */
+  async recordAgenticTelemetry(params: {
+    userId?: string;
+    action: string;
+    zone?: string;
+    pointers?: string;
+    metadata?: Record<string, any>;
+  }): Promise<void> {
+    try {
+      const tables = createSystemTablesDB();
+      // Strips any potential user identifying tags from metadata object
+      const cleanMeta: Record<string, any> = { ...params.metadata };
+      delete cleanMeta.userId;
+      delete cleanMeta.email;
+      delete cleanMeta.name;
+      delete cleanMeta.username;
+
+      await tables.createRow({
+        databaseId: DATABASE_ID,
+        tableId: 'agentic_telemetry',
+        rowId: ID.unique(),
+        data: {
+          userId: params.userId || 'anonymous',
+          action: params.action,
+          zone: params.zone || 'unknown',
+          pointers: params.pointers || null,
+          metadata: Object.keys(cleanMeta).length > 0 ? JSON.stringify(cleanMeta) : null,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (err) {
+      console.error('[TelemetryService] Failed to record agentic telemetry:', err);
     }
   }
 };

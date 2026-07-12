@@ -14,6 +14,7 @@ interface PrefsData {
   dataCollection?: boolean;
   marketingEmails?: boolean;
   publicProfile?: boolean;
+  smartSystemHistory?: boolean;
 }
 
 interface PreferencesManagerProps {
@@ -78,6 +79,7 @@ export default function PreferencesManager({ onSave }: PreferencesManagerProps) 
     dataCollection: false,
     marketingEmails: false,
     publicProfile: true,
+    smartSystemHistory: true,
   });
 
   useEffect(() => {
@@ -99,6 +101,7 @@ export default function PreferencesManager({ onSave }: PreferencesManagerProps) 
         dataCollection: appPrefs?.dataCollection === true,
         marketingEmails: appPrefs?.marketingEmails === true,
         publicProfile: appPrefs?.publicProfile !== false,
+        smartSystemHistory: appPrefs?.smartSystemHistory !== false,
       });
     } catch (err: unknown) {
       setError((err as Error).message);
@@ -296,6 +299,21 @@ export default function PreferencesManager({ onSave }: PreferencesManagerProps) 
               <Switch
                 checked={prefs.dataCollection === true}
                 onChange={(checked) => updatePreference('dataCollection', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-[#1F1D1B] hover:border-white/10 transition-all">
+              <div className="space-y-1">
+                <h4 className="text-sm font-extrabold text-white">
+                  Smart System Chat History
+                </h4>
+                <p className="text-xs text-[#9B9691]">
+                  Keep a local-first interactive history of Smart System chats & requests
+                </p>
+              </div>
+              <Switch
+                checked={prefs.smartSystemHistory !== false}
+                onChange={(checked) => updatePreference('smartSystemHistory', checked)}
               />
             </div>
 

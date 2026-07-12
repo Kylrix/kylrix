@@ -98,6 +98,8 @@ tableIdMap["passwordManagerDb"]["Token Registry"] = "token_registry";
 tableIdMap["passwordManagerDb"]["Web3 Transactions"] = "web3_transactions";
 tableIdMap["passwordManagerDb"]["nostr_identities"] = "nostr_identities";
 tableIdMap["passwordManagerDb"]["Agent Payment Intents"] = "agent_payment_intents";
+tableIdMap["passwordManagerDb"]["Agentic Sessions"] = "agentic_sessions";
+tableIdMap["passwordManagerDb"]["Agentic Telemetry"] = "agentic_telemetry";
 
 const tablesWithRelationships = new Set<string>();
 

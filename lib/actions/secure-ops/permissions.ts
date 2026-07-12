@@ -3,7 +3,7 @@ import {
   ID, Permission, Query, Role, Databases, TablesDB, Account
 } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
+import { getUserSubscriptionTierServer } from '@/lib/services/internal/subscription-entitlement';
 import {
   allowsCollaboratorSharing,
   getCollaboratorCap,
@@ -204,7 +204,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
   }
 
   // 2. Set virtual permission in polymorphic flow.collaborators table
-  if (resourceType === 'note' || resourceType === 'project' || resourceType === 'secret' || resourceType === 'totp') {
+  if (resourceType === 'note' || resourceType === 'task' || resourceType === 'project' || resourceType === 'secret' || resourceType === 'totp') {
     const tables = createSystemTablesDB();
     const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
     const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
@@ -226,7 +226,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
       ] as any
     });
 
-    const userTier = getUserSubscriptionTier(requester);
+    const userTier = await getUserSubscriptionTierServer(requester.$id);
     if (!allowsCollaboratorSharing(userTier, resourceType)) {
       if (resourceType === 'project') {
         throw new Error('Project collaboration is a TEAMS feature. Upgrade to TEAMS to collaborate on projects.');
@@ -619,10 +619,7 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
     ] as any
   });
 
-  // Fetch owner to check plan
-  const { users } = createSystemClient();
-  const owner = await users.get(project.ownerId);
-  const ownerTier = getUserSubscriptionTier(owner);
+  const ownerTier = await getUserSubscriptionTierServer(project.ownerId);
 
   if (!allowsCollaboratorSharing(ownerTier, 'project')) {
     throw new Error('Project collaboration is a TEAMS feature. Upgrade the project owner to TEAMS to collaborate on projects.');

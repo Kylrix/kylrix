@@ -215,6 +215,26 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     void AgenticService.listMyAgents(user.$id)
       .then((rows) => setAgentCount(rows.length))
       .catch(() => setAgentCount(0));
+
+    // Load session chat history on panel open
+    const loadSessionHistory = async () => {
+      try {
+        const { TelemetryService } = await import('@/lib/services/telemetry');
+        const session = await TelemetryService.loadSession(user.$id);
+        const historyArr = JSON.parse(session.chatHistory || '[]');
+        if (Array.isArray(historyArr) && historyArr.length > 0) {
+          const formatted = historyArr.map((h: any, idx: number) => ({
+            id: `${Date.now()}-hist-${idx}`,
+            role: h.role,
+            content: h.content
+          }));
+          setMessages(formatted);
+        }
+      } catch (err) {
+        console.error('Failed to load session history on client:', err);
+      }
+    };
+    void loadSessionHistory();
   }, [user?.$id]);
 
   useEffect(() => {
