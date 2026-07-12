@@ -49,7 +49,13 @@ jobs:
         run: ota up --workflow verify --agent --dry-run --json
 
       - name: Run agent verification workflow
-        run: ota up --workflow verify --agent --archive --json
+        run: ota up --workflow verify --agent --json
+
+      - name: Archive verification receipt
+        run: ota receipt --workflow verify --archive --json
 
       - name: Prove isolated native runtime
-        run: ota proof runtime --workflow sqlite-dev --archive --json
+        run: ota proof runtime --workflow sqlite-dev --json
+
+      - name: Archive runtime receipt
+        run: ota receipt --workflow sqlite-dev --archive --json
