@@ -37,6 +37,7 @@ import {
   Activity,
   RefreshCw,
   ChevronRight,
+  Settings,
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';

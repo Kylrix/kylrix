@@ -242,6 +242,10 @@ export const TelemetryService = {
             targets: remainingTargets
           }
         });
+      }
+    } catch (err) {
+      console.error('[TelemetryService] Failed to read/dismiss notification:', err);
+    }
   },
 
   /**
