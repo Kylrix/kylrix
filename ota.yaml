@@ -6,15 +6,60 @@ project:
 
 execution:
   default_context: host
+  lifecycle: persistent
+  backends:
+    container:
+      image: node@sha256:a25c9934ff6382cd4f08b6bc26c82bf4ea69b1e6f8dabfb2ead457374127c365
+      engines: [docker]
   contexts:
     host:
       backend: native
+    contributor:container:
+      backend: container
+      lifecycle: persistent
+      container:
+        image: node@sha256:a25c9934ff6382cd4f08b6bc26c82bf4ea69b1e6f8dabfb2ead457374127c365
+      attachments:
+        isolated_paths: [node_modules, .next, .pnpm-store]
 
 toolchains:
   node:
     version: ">=22"
     package_managers:
       pnpm: 11.5.1
+    fulfillment:
+      source: corepack
+      mode: run
+
+surfaces:
+  contributor:web:
+    kind: http
+    port: 3005
+    path: /
+    readiness:
+      kind: http
+      method: GET
+      path: /?stay=1
+      headers:
+        Accept: text/html
+      success:
+        status: [200]
+      body:
+        contains: "<!DOCTYPE html>"
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+  selfhost:web:
+    kind: https
+    port: 443
+    path: /
+    readiness:
+      kind: tcp
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
 
 tasks:
   setup:
@@ -87,9 +132,14 @@ tasks:
       writes:
         - .env
         - node_modules
+        - .pnpm-store
       network: true
       network_kind: dependency_hydration
     safe_for_agent: true
+    execution:
+      modes:
+        container:
+          context: contributor:container
 
   test:
     context: host
@@ -103,6 +153,10 @@ tasks:
       toolchains:
         - node
     safe_for_agent: true
+    execution:
+      modes:
+        container:
+          context: contributor:container
 
   lint:
     context: host
@@ -116,6 +170,10 @@ tasks:
       toolchains:
         - node
     safe_for_agent: true
+    execution:
+      modes:
+        container:
+          context: contributor:container
 
   build:
     context: host
@@ -131,6 +189,10 @@ tasks:
     effects:
       writes: [.next]
     safe_for_agent: true
+    execution:
+      modes:
+        container:
+          context: contributor:container
 
   verify:
     description: Run the complete finite SQLite-backed verification surface
@@ -146,7 +208,7 @@ tasks:
       exe: pnpm
       args: [exec, next, dev, --turbopack]
       runtime_projection:
-        listener: web:http
+        listener: contributor:web
         adapter: nextjs
     env_files: [.env]
     depends_on: [setup]
@@ -155,26 +217,156 @@ tasks:
         - node
     runtime:
       kind: service
-      listeners:
-        web:http:
-          protocol: http
-          bind:
-            address: 127.0.0.1
-            port:
-              mode: fixed
-              value: 3005
+      surfaces:
+        contributor:web:
           project:
             host:
-              address: 127.0.0.1
-              port:
-                mode: fixed
-                value: 3005
-              path: /
               primary: true
-      readiness:
-        kind: http
-        listener: web:http
-        path: /
+    execution:
+      modes:
+        container:
+          context: contributor:container
+          runtime:
+            kind: service
+            surfaces:
+              contributor:web:
+                bind:
+                  address: 0.0.0.0
+
+  selfhost:env:
+    context: host
+    description: Materialize the isolated self-hosted Compose interpolation profile
+    notes: |
+      Keeps the self-hosted container topology separate from the contributor SQLite `.env`.
+      Generated secret values are retained on later runs; Ota never replaces them implicitly.
+    action:
+      kind: ensure_env_file
+      path: .ota/kylrix.selfhost.env
+      vars:
+        KYLRIX_ENV_FILE:
+          value: .ota/kylrix.selfhost.env
+          mode: replace
+        DOMAIN:
+          value: localhost
+          mode: replace
+        NEXT_PUBLIC_APP_URL:
+          value: https://localhost
+          mode: replace
+        NEXT_PUBLIC_APP_URI:
+          value: https://localhost
+          mode: replace
+        NEXT_PUBLIC_ORIGIN:
+          value: https://localhost
+          mode: replace
+        APPWRITE_ENDPOINT:
+          value: http://appwrite/v1
+          mode: replace
+        APPWRITE_PROJECT_ID:
+          value: kylrix-selfhost
+          mode: replace
+        APPWRITE_DOMAIN:
+          value: api.localhost
+          mode: replace
+        APPWRITE_OPENSSL_KEY:
+          random:
+            bytes: 32
+            encoding: hex
+        MARIADB_USER:
+          value: appwrite
+          mode: replace
+        MARIADB_PASSWORD:
+          random:
+            bytes: 32
+            encoding: hex
+        MARIADB_ROOT_PASSWORD:
+          random:
+            bytes: 32
+            encoding: hex
+        SELFHOST_MODE:
+          value: "true"
+          mode: replace
+        KYLRIX_INTERNAL_JOBS_SECRET:
+          random:
+            bytes: 32
+            encoding: hex
+        ATTACHMENT_URL_SIGNING_SECRET:
+          random:
+            bytes: 32
+            encoding: hex
+    effects:
+      writes: [.ota/kylrix.selfhost.env]
+    safe_for_agent: false
+
+  selfhost:build:
+    context: host
+    description: Build the documented self-hosted Kylrix production image
+    notes: |
+      Uses the repository Dockerfile and isolated self-hosted interpolation profile. This is an
+      image-build proof only; it does not claim Appwrite schema provisioning or application-level
+      functional verification.
+    adapter_inputs:
+      overlays:
+        compose:
+          files: [docker-compose.yml]
+          env_files: [.ota/kylrix.selfhost.env]
+    compose:
+      kind: build
+      services: [kylrix]
+    depends_on: [selfhost:env]
+    requirements:
+      tools:
+        docker: "*"
+    effects:
+      network: true
+      network_kind: container_image_hydration
+      external_state: [docker]
+    safe_for_agent: false
+
+  selfhost:up:
+    context: host
+    description: Start the documented full self-hosted Kylrix Compose topology
+    notes: |
+      Starts Kylrix, Appwrite, MariaDB, Redis, and Caddy through the documented Compose stack.
+      This owns container lifecycle only. The interactive setup wizard and Appwrite schema
+      provisioning still require explicit operator credentials and remain outside this workflow.
+    adapter_inputs:
+      overlays:
+        compose:
+          files: [docker-compose.yml]
+          env_files: [.ota/kylrix.selfhost.env]
+    launch:
+      kind: compose
+      action: up
+      detach: true
+    runtime:
+      kind: service
+      surfaces: [selfhost:web]
+    depends_on: [selfhost:build]
+    requirements:
+      tools:
+        docker: "*"
+    effects:
+      network: true
+      network_kind: container_image_hydration
+      external_state: [docker, appwrite, mariadb, redis, caddy]
+    safe_for_agent: false
+
+  selfhost:down:
+    context: host
+    description: Stop the self-hosted Compose topology without deleting persistent volumes
+    adapter_inputs:
+      overlays:
+        compose:
+          files: [docker-compose.yml]
+          env_files: [.ota/kylrix.selfhost.env]
+    compose:
+      kind: down
+    requirements:
+      tools:
+        docker: "*"
+    effects:
+      external_state: [docker]
+    safe_for_agent: false
 
 workflows:
   default: sqlite-dev
@@ -192,6 +384,13 @@ workflows:
       task: setup
     run:
       task: verify
+  selfhost:
+    intent: production_runtime
+    description: Build and start the documented self-hosted Compose topology
+    setup:
+      task: selfhost:env
+    run:
+      task: selfhost:up
 
 agent:
   bootstrap:
@@ -221,6 +420,7 @@ agent:
     - types
     - utils
     - node_modules
+    - .pnpm-store
   exceptions:
     sensitive_writes: [.env]
   protected_paths:
@@ -236,5 +436,6 @@ agent:
     Start with `ota validate`, then `ota doctor`, then `ota tasks --use`.
     Use `ota up --workflow verify --agent` for the finite SQLite-backed verification path.
     Use `ota up --workflow sqlite-dev` for local development. The interactive setup script and
-    Appwrite Cloud/local schema provisioning are intentionally outside this contract because they
-    require operator-selected topology or credentials.
+    Appwrite schema provisioning are intentionally outside this contract because they require
+    operator credentials. Use `ota up --workflow selfhost` for the documented full Compose
+    topology; it is intentionally not agent-callable and does not claim schema provisioning.

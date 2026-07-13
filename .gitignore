@@ -33,10 +33,12 @@ sqlite.json
 .ota/contracts/
 .ota/receipts/
 .ota/proof/
+# Ota-generated self-hosted Compose profile; contains local secrets.
+.ota/kylrix.selfhost.env
+.pnpm-store/
 
 # vercel
 .vercel
-
 # security & data
 .data/
 *.txt

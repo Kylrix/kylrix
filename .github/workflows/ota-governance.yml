@@ -59,3 +59,37 @@ jobs:
 
       - name: Archive runtime receipt
         run: ota receipt --workflow sqlite-dev --archive --json
+
+  container-verification:
+    name: Ubuntu container verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ota-run/setup@v1.0.8
+        with:
+          source: contract
+
+      - name: Validate container contract surface
+        run: ota validate .
+
+      - name: Diagnose container readiness
+        run: ota doctor --container --json
+
+      - name: Discover safe execution surface
+        run: ota tasks --safe --use --json
+
+      - name: Preview agent container verification workflow
+        run: ota up --workflow verify --container --agent --dry-run --json
+
+      - name: Run agent container verification workflow
+        run: ota up --workflow verify --container --agent --json
+
+      - name: Archive container verification receipt
+        run: ota receipt --workflow verify --archive --json
+
+      - name: Prove isolated container runtime
+        run: ota proof runtime --workflow sqlite-dev --container --json
+
+      - name: Archive container runtime receipt
+        run: ota receipt --workflow sqlite-dev --archive --json

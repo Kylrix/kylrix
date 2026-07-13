@@ -53,7 +53,8 @@ services:
     expose:
       - "3000"
     env_file:
-      - .env
+      # Defaults to the contributor profile; Ota's self-hosted workflow selects its isolated file.
+      - ${KYLRIX_ENV_FILE:-.env}
     environment:
       - NODE_ENV=production
       - PORT=3000
