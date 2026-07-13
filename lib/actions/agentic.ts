@@ -302,6 +302,7 @@ export async function executeInstantRequestAction(
   // 1. Fetch preferences to see if chat history is allowed
   let historyEnabled = true;
   try {
+    const { account } = await createServerClient(jwt);
     const appPrefs = await account.getPrefs();
     if (appPrefs?.smartSystemHistory === false) {
       historyEnabled = false;

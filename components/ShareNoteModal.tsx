@@ -190,12 +190,12 @@ export function ShareNoteModal({ isOpen, onOpenChange, noteId, noteTitle }: Shar
       const docs = await searchGlobalUsers(query);
 
       const filtered = docs
-        .filter(u => {
+        .filter((u: any) => {
           if (currentUserId && u.id === currentUserId) return false;
-          if (sharedUsers.some(s => s.id === u.id)) return false;
+          if (sharedUsers.some((s: any) => s.id === u.id)) return false;
           return true;
         })
-        .map(u => ({
+        .map((u: any) => ({
           id: u.id,
           name: u.title,
           email: u.subtitle.startsWith('@') ? undefined : u.subtitle,
