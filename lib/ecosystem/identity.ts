@@ -133,6 +133,35 @@ export async function searchGlobalUsers(query: string, limit = 10) {
     const cleaned = query.trim().replace(/^@/, '');
     if (!query || cleaned.length < 1) return [];
 
+    const isEmailQuery = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned);
+    if (isEmailQuery) {
+        try {
+            const { searchGlobalUsersSecure } = await import('@/lib/actions/secure-ops');
+            const rows = await searchGlobalUsersSecure(cleaned, limit);
+            return rows.map((doc: any) => ({
+                id: doc.$id || doc.id || doc.userId,
+                userId: doc.userId || doc.$id || doc.id,
+                type: 'user' as const,
+                displayName: doc.displayName || null,
+                username: doc.username || null,
+                title: doc.displayName || (doc.username ? `@${doc.username}` : 'Kylrix User'),
+                subtitle: doc.email || cleaned,
+                email: doc.email || cleaned,
+                icon: 'person',
+                avatar: doc.avatar || null,
+                createdAt: doc.$createdAt || doc.createdAt || null,
+                lastUsernameEdit: doc.last_username_edit || null,
+                bio: doc.bio || null,
+                tier: doc.tier || null,
+                publicKey: doc.publicKey || null,
+                apps: doc.appsActive || [],
+            }));
+        } catch (error: any) {
+            console.warn('[Identity] Email search failed:', error?.message);
+            return [];
+        }
+    }
+
     try {
         // 1. Primary search: ONLY username (indexed)
         let results: any[] = [];
@@ -153,9 +182,11 @@ export async function searchGlobalUsers(query: string, limit = 10) {
             );
             results = res.rows.map(doc => ({
                 id: doc.$id,
+                userId: doc.$id,
                 type: 'user' as const,
-                title: doc.displayName || doc.username,
-                subtitle: `@${doc.username}`,
+                displayName: doc.displayName || null,
+                title: doc.displayName || (doc.username ? `@${doc.username}` : 'Kylrix User'),
+                subtitle: doc.username ? `@${doc.username}` : '',
                 icon: 'person',
                 avatar: doc.avatar,
                 createdAt: doc.$createdAt || doc.createdAt || null,
@@ -181,9 +212,11 @@ export async function searchGlobalUsers(query: string, limit = 10) {
                 );
                 results = res.rows.map(doc => ({
                     id: doc.$id,
+                    userId: doc.$id,
                     type: 'user' as const,
-                    title: doc.displayName || doc.username,
-                    subtitle: `@${doc.username}`,
+                    displayName: doc.displayName || null,
+                    title: doc.displayName || (doc.username ? `@${doc.username}` : 'Kylrix User'),
+                    subtitle: doc.username ? `@${doc.username}` : '',
                     icon: 'person',
                     avatar: doc.avatar,
                     createdAt: doc.$createdAt || doc.createdAt || null,
@@ -213,9 +246,11 @@ export async function searchGlobalUsers(query: string, limit = 10) {
                     if (!results.find(r => r.id === doc.$id)) {
                         results.push({
                             id: doc.$id,
+                            userId: doc.$id,
                             type: 'user' as const,
-                            title: doc.name || doc.email?.split('@')[0] || doc.$id.slice(0, 8),
-                            subtitle: doc.username ? `@${doc.username}` : doc.email,
+                            displayName: doc.displayName || null,
+                            title: doc.displayName || (doc.username ? `@${doc.username}` : 'Kylrix User'),
+                            subtitle: doc.username ? `@${doc.username}` : '',
                             icon: 'person',
                             avatar: doc.avatar || null,
                             createdAt: doc.$createdAt || doc.createdAt || null,

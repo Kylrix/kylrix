@@ -37,7 +37,6 @@ import {
   Activity,
   RefreshCw,
   ChevronRight,
-  Settings,
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
@@ -2539,9 +2538,6 @@ export default function ConnectTopbar({
                   <>
                     <IconButton onClick={openAgenticFromTopbar} sx={{ color: appAccent, bgcolor: '#0B0A09', border: '1px solid', borderColor: alpha(appAccent, 0.35), borderRadius: '14px', width: 44, height: 44, boxShadow: `0 8px 24px ${alpha(appAccent, 0.25)}`, '&:hover': { bgcolor: '#1C1A18', transform: 'scale(1.05)' }, transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
                       <Bot size={20} strokeWidth={2.2} />
-                    </IconButton>
-                    <IconButton onClick={() => router.push('/settings')} sx={{ color: 'rgba(255, 255, 255, 0.45)', bgcolor: '#0B0A09', border: '1px solid', borderColor: 'rgba(255, 255, 255, 0.08)', borderRadius: '14px', width: 44, height: 44, '&:hover': { color: '#FFF', bgcolor: '#1C1A18', transform: 'scale(1.05)', borderColor: 'rgba(255, 255, 255, 0.15)' }, transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                      <Settings size={20} strokeWidth={1.8} />
                     </IconButton>
                     <ButtonBase onClick={openProfileMenu} sx={{ borderRadius: '50%', transition: 'all 0.2s', '&:hover': { transform: 'scale(1.05)' } }}>
                       <IdentityAvatar 

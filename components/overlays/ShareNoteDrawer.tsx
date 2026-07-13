@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { X, ArrowLeft, Trash2, ChevronDown, ShieldCheck, Link, Copy, Check, Info } from 'lucide-react';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -549,17 +550,17 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
 
   if (!isOpen) return null;
 
-  return (
+  const drawerLayer = (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — above note detail sidebar (10001) */}
       <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity duration-300 animate-in fade-in"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10002] transition-opacity duration-300 animate-in fade-in"
         onClick={onClose}
       />
 
       {/* Drawer Container */}
       <div 
-        className={`fixed bg-[#161412] border-[#34322F] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 z-50 ${
+        className={`fixed bg-[#161412] border-[#34322F] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 z-[10003] ${
           isDesktop 
             ? 'top-0 right-0 h-screen w-[480px] border-l rounded-l-none'
             : 'bottom-0 left-0 right-0 max-h-[90dvh] h-auto border-t rounded-t-[28px] max-w-[720px] mx-auto'
@@ -617,13 +618,13 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
         <>
           {/* Nested Backdrop */}
           <div 
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] transition-opacity duration-300 animate-in fade-in"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10004] transition-opacity duration-300 animate-in fade-in"
             onClick={() => setIsPermissionDrawerOpen(false)}
           />
 
           {/* Nested Drawer Container */}
           <div 
-            className={`fixed bg-[#0A0908] border-[#34322F] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 z-[60] ${
+            className={`fixed bg-[#0A0908] border-[#34322F] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 z-[10004] ${
               isDesktop 
                 ? 'top-0 right-0 h-screen w-[480px] border-l rounded-l-none'
                 : 'bottom-0 left-0 right-0 max-h-[80dvh] h-auto border-t rounded-t-[24px] max-w-[720px] mx-auto'
@@ -682,4 +683,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
       )}
     </>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(drawerLayer, document.body);
 }

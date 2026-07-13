@@ -6,6 +6,48 @@ import { fetchProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar, computeIdentityFlags } from './common/IdentityBadge';
 import { seedIdentityCache } from '@/lib/identity-cache';
 
+function isEmailLike(value?: string | null): boolean {
+  if (!value) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function resolveAccountName(user: Record<string, any>): string | null {
+  for (const raw of [user.displayName, user.name, user.title]) {
+    const value = typeof raw === 'string' ? raw.trim() : '';
+    if (!value || isEmailLike(value) || value.startsWith('@')) continue;
+    return value;
+  }
+  return null;
+}
+
+function normalizeHandle(raw?: string | null): string | null {
+  if (!raw) return null;
+  const cleaned = String(raw).trim().replace(/^@+/, '');
+  return cleaned || null;
+}
+
+function buildCollaboratorSearchLabels(user: Record<string, any>, searchQuery: string) {
+  const query = searchQuery.trim();
+  const isEmailQuery = isEmailLike(query);
+
+  if ((user as any).isEmailInvite) {
+    return { primary: query, secondary: 'Invite via Email' };
+  }
+
+  const handle = normalizeHandle(user.username);
+  const accountName = resolveAccountName(user);
+  const primary = handle || accountName || 'Kylrix User';
+
+  if (isEmailQuery) {
+    const email =
+      typeof user.email === 'string' && user.email.trim() ? user.email.trim() : query;
+    return { primary, secondary: email };
+  }
+
+  const secondary = handle && accountName ? accountName : '';
+  return { primary, secondary };
+}
+
 interface User {
   id: string;
   title: string;
@@ -48,19 +90,20 @@ export default function UserSearch({
       !selectedUsers.some(s => s.id === u.id) && 
       !excludeIds.includes(u.id)
     );
-    if (emailRegex.test(query.trim())) {
+    const trimmedQuery = query.trim();
+    if (emailRegex.test(trimmedQuery) && !isSearching && items.length === 0) {
       items.unshift({
-        id: query.trim(),
-        title: query.trim(),
+        id: trimmedQuery,
+        title: trimmedQuery,
         subtitle: 'Invite via Email',
         avatar: null,
         profilePicId: null,
-        email: query.trim(),
+        email: trimmedQuery,
         isEmailInvite: true
       } as any);
     }
     return items;
-  }, [rawResults, selectedUsers, excludeIds, query]);
+  }, [rawResults, selectedUsers, excludeIds, query, isSearching]);
 
   const debouncedSearch = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim() || searchQuery.length < 2) {
@@ -77,14 +120,20 @@ export default function UserSearch({
       // Seed identity cache
       nextRows.forEach((u: any) => seedIdentityCache(u));
 
-      const normalized = nextRows.map((u: any) => ({
-        id: u.id || u.userId || u.$id,
-        title: u.displayName || u.username || u.title || 'Kylrix User',
-        subtitle: u.username ? `@${u.username}` : u.userId || u.$id || u.subtitle || '',
-        avatar: u.avatar || null,
-        profilePicId: u.avatar || null,
-        ...u // Preserve original for identity flags
-      }));
+      const normalized = nextRows.map((u: any) => {
+        const labels = buildCollaboratorSearchLabels(u, searchQuery);
+        return {
+          ...u,
+          id: u.id || u.userId || u.$id,
+          title: labels.primary,
+          subtitle: labels.secondary,
+          displayName: resolveAccountName(u) || undefined,
+          username: normalizeHandle(u.username) || undefined,
+          avatar: u.avatar || null,
+          profilePicId: u.avatar || null,
+          email: isEmailLike(searchQuery) ? (u.email || undefined) : undefined,
+        };
+      });
       setRawResults(normalized as User[]);
     } catch (err) {
       console.error('User search failed:', err);
@@ -246,11 +295,13 @@ export default function UserSearch({
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                     <span className="font-extrabold text-xs text-white truncate font-satoshi">
-                      {user.displayName || user.username || user.title}
+                      {user.title}
                     </span>
-                    <span className="text-[10px] text-white/45 truncate font-bold font-satoshi">
-                      {user.username ? `@${user.username}` : user.subtitle}
-                    </span>
+                    {user.subtitle ? (
+                      <span className="text-[10px] text-white/45 truncate font-bold font-satoshi">
+                        {user.subtitle}
+                      </span>
+                    ) : null}
                   </div>
                 </button>
               ))}

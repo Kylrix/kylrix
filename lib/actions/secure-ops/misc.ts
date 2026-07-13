@@ -1143,6 +1143,54 @@ export async function searchGlobalUsersSecure(query: string, limit = 10) {
   const tables = createSystemTablesDB();
   const databaseId = APPWRITE_CONFIG.DATABASES.CHAT;
   const tableId = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
+  const isEmailQuery = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned);
+
+  if (isEmailQuery) {
+    try {
+      const { users } = createSystemClient();
+      const userList = await users.list([
+        Query.equal('email', cleaned.toLowerCase()),
+        Query.limit(1),
+      ]).catch(() => ({ users: [] as any[] }));
+
+      const authUser = userList.users?.[0];
+      if (!authUser) return [];
+
+      let profile: any = null;
+      try {
+        profile = await tables.getRow({
+          databaseId,
+          tableId,
+          rowId: authUser.$id,
+        });
+      } catch {
+        const profRes = await tables.listRows({
+          databaseId,
+          tableId,
+          queries: [Query.equal('userId', authUser.$id), Query.limit(1)] as any,
+        });
+        profile = profRes.rows?.[0] || null;
+      }
+
+      return [JSON.parse(JSON.stringify({
+        $id: authUser.$id,
+        id: authUser.$id,
+        userId: authUser.$id,
+        username: profile?.username || null,
+        displayName: profile?.displayName || authUser.name || null,
+        avatar: profile?.avatar || null,
+        bio: profile?.bio || null,
+        publicKey: profile?.publicKey || null,
+        email: authUser.email,
+        $createdAt: profile?.$createdAt || null,
+        last_username_edit: profile?.last_username_edit || null,
+        tier: profile?.tier || null,
+      }))];
+    } catch (error: any) {
+      console.warn('[searchGlobalUsersSecure] Email search failed:', error?.message);
+      return [];
+    }
+  }
 
   try {
     const res = await tables.listRows({
