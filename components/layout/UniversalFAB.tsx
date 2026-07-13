@@ -41,7 +41,7 @@ export default function UniversalFAB() {
     pathname.startsWith('/app') ||
     (pathname.startsWith('/flow') && !pathname.startsWith('/flow/form/')) ||
     pathname.startsWith('/vault') ||
-    (pathname.startsWith('/connect') && pathname !== '/connect' && !pathname.includes('/invite/') && !pathname.startsWith('/connect/chat/'))
+    (pathname.startsWith('/connect') && pathname !== '/connect' && !pathname.includes('/invite/'))
   );
 
   if (isDrawerOpen || isAgenticDrawerOpen || isDesktop) return null;
