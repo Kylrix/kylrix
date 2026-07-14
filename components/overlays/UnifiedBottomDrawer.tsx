@@ -30,6 +30,7 @@ const ResponseDetailDrawer = dynamic(() => import('../forms/ResponseDetailDrawer
 const MomentComposerDrawer = dynamic(() => import('./MomentComposerDrawer').then(mod => mod.MomentComposerDrawer), { ssr: false });
 const ProjectSettingsDrawer = dynamic(() => import('../projects/ProjectSettingsDrawer'), { ssr: false });
 const ProjectVisibilityDrawer = dynamic(() => import('../projects/ProjectVisibilityDrawer'), { ssr: false });
+const ProjectAutoSweepDrawer = dynamic(() => import('../projects/ProjectAutoSweepDrawer'), { ssr: false });
 const JoinRequestConfirmDrawer = dynamic(() => import('./JoinRequestConfirmDrawer').then(mod => mod.JoinRequestConfirmDrawer), { ssr: false });
 
 export function UnifiedBottomDrawer() {
@@ -112,6 +113,16 @@ export function UnifiedBottomDrawer() {
             return <ProjectSettingsDrawer isOpen={true} onClose={close} project={drawerData?.project} onSave={drawerData?.onSave} />;
         case 'project-visibility':
             return <ProjectVisibilityDrawer isOpen={true} onClose={close} project={drawerData?.project} onSave={drawerData?.onSave} />;
+        case 'project-auto-sweep':
+            return (
+              <ProjectAutoSweepDrawer
+                isOpen={true}
+                onClose={close}
+                projectId={drawerData?.projectId as string}
+                projectTitle={drawerData?.projectTitle as string}
+                onSaved={drawerData?.onSaved}
+              />
+            );
         case 'moment-composer':
             return <MomentComposerDrawer onClose={close} />;
         case 'project-join-request-confirm':

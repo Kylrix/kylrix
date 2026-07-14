@@ -176,6 +176,9 @@ export const GhostNoteClaimer = () => {
                                 title: decryptedTitle,
                                 summary: payload?.description || '',
                                 status: payload?.status || 'active',
+                                visibility: 'public',
+                                isPublic: true,
+                                isGuest: true,
                             });
                         } else if (kind === 'tag') {
                             const { createStandaloneTag } = await import('@/lib/actions/client-ops');

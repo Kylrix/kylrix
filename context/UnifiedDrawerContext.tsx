@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
-type DrawerContent = 'navbar' | 'login' | 'agentic' | 'note' | 'wallet' | 'masterpass' | 'share-note' | 'delete-note' | 'assign-goal' | 'task-add-to-project' | 'new-chat' | 'new-channel' | 'new-tag' | 'tag-selector' | 'new-project' | 'secure-chat-setup' | 'passkey-setup' | 'delete-confirm' | 'security-confirm' | 'pro-upgrade' | 'project-invite' | 'form' | 'github-integration' | 'form-response-detail' | 'project-settings' | 'project-visibility' | 'project-join-request-confirm' | 'moment-composer';
+type DrawerContent = 'navbar' | 'login' | 'agentic' | 'note' | 'wallet' | 'masterpass' | 'share-note' | 'delete-note' | 'assign-goal' | 'task-add-to-project' | 'new-chat' | 'new-channel' | 'new-tag' | 'tag-selector' | 'new-project' | 'secure-chat-setup' | 'passkey-setup' | 'delete-confirm' | 'security-confirm' | 'pro-upgrade' | 'project-invite' | 'form' | 'github-integration' | 'form-response-detail' | 'project-settings' | 'project-visibility' | 'project-auto-sweep' | 'project-join-request-confirm' | 'moment-composer';
 
 interface UnifiedDrawerContextType {
   activeContent: DrawerContent;

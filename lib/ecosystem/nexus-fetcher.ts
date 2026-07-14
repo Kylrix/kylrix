@@ -66,6 +66,31 @@ export async function fetchOptimized<T>(
     }
 }
 
+function isRxConflictError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const code = String((error as { code?: string }).code || '');
+    if (code.includes('CONFLICT')) return true;
+    const status = (error as { parameters?: { writeError?: { status?: number } } }).parameters?.writeError?.status;
+    return status === 409;
+}
+
+async function safeRemoveCacheDoc(doc: { id: string; _deleted?: boolean; remove: () => Promise<unknown>; collection: { findOne: (id: string) => { exec: () => Promise<{ _deleted?: boolean; remove: () => Promise<unknown> } | null> } } }) {
+    if (doc._deleted) return;
+    try {
+        await doc.remove();
+    } catch (error) {
+        if (!isRxConflictError(error)) throw error;
+        const latest = await doc.collection.findOne(doc.id).exec();
+        if (latest && !latest._deleted) {
+            try {
+                await latest.remove();
+            } catch (retryError) {
+                if (!isRxConflictError(retryError)) throw retryError;
+            }
+        }
+    }
+}
+
 /**
  * Manually invalidate a cache key across all layers.
  */
@@ -74,12 +99,21 @@ export async function invalidateCache(key: string) {
     
     try {
         const db = await getRxDB();
-        const doc = await db.cache.findOne(key).exec();
-        if (key.includes("*")) { const prefix = key.split("*")[0]; const docs = await db.cache.find({ selector: { id: { $regex: `^${prefix}` } } }).exec(); await Promise.all(docs.map(d => d.remove())); } else { const doc = await db.cache.findOne(key).exec(); if (doc) await doc.remove(); }
+        if (key.includes('*')) {
+            const prefix = key.split('*')[0];
+            const docs = await db.cache.find({ selector: { id: { $regex: `^${prefix}` } } }).exec();
+            for (const doc of docs) {
+                await safeRemoveCacheDoc(doc as any);
+            }
+        } else {
+            const doc = await db.cache.findOne(key).exec();
+            if (doc) await safeRemoveCacheDoc(doc as any);
+        }
         
-        // Notify React components to clear memory mirror
         publishNexusInvalidate(key);
     } catch (e) {
-        console.error(`[Nexus Bridge] Invalidation failed for ${key}`, e);
+        if (!isRxConflictError(e)) {
+            console.error(`[Nexus Bridge] Invalidation failed for ${key}`, e);
+        }
     }
 }

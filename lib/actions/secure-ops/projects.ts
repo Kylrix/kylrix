@@ -238,8 +238,13 @@ export async function createProjectSecure(data: any, jwt?: string) {
   }
 
   // Mathematically tie the create operation to the current user
+  const visibility = validated.visibility ?? 'public';
   const projectData: any = {
     ...validated,
+    status: validated.status ?? 'active',
+    visibility,
+    isPublic: validated.isPublic ?? visibility === 'public',
+    isGuest: validated.isGuest ?? visibility === 'public',
     ownerId: actor.$id,
   };
 
@@ -300,19 +305,38 @@ export async function updateProjectSecure(projectId: string, data: any, permissi
     delete patch.isPinned;
   }
 
-  // Rigorous runtime validation (partial since it's an update)
   const validated = ProjectSchema.partial().parse(patch);
   const { databases } = createSystemClient();
   const now = new Date().toISOString();
+
+  const updateData: Record<string, unknown> = { updatedAt: now };
+  for (const key of Object.keys(patch)) {
+    if (key in validated && validated[key as keyof typeof validated] !== undefined) {
+      updateData[key] = validated[key as keyof typeof validated];
+    }
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(updateData, 'visibility') ||
+    Object.prototype.hasOwnProperty.call(updateData, 'isPublic') ||
+    Object.prototype.hasOwnProperty.call(updateData, 'isGuest')
+  ) {
+    const existingRow = existing as { visibility?: string; isPublic?: boolean; isGuest?: boolean };
+    const visibility = (updateData.visibility as string | undefined) ?? existingRow.visibility ?? 'public';
+    const isPublic = (updateData.isPublic as boolean | undefined) ?? existingRow.isPublic ?? visibility === 'public';
+    const isGuest = (updateData.isGuest as boolean | undefined) ?? existingRow.isGuest ?? false;
+    const isWorldVisible = visibility === 'public' || isPublic || isGuest;
+
+    updateData.visibility = isWorldVisible ? 'public' : 'private';
+    updateData.isPublic = isWorldVisible;
+    updateData.isGuest = isWorldVisible ? isGuest : false;
+  }
   
   const project = await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: 'projects',
       rowId: projectId,
-      data: {
-      ...validated,
-      updatedAt: now,
-    },
+      data: updateData,
       permissions: permissions,
     });
 
@@ -762,6 +786,14 @@ export async function addObjectToProjectSecure(
   });
   if (duplicateRes.rows.length > 0) {
     throw new Error('ALREADY_ADDED: This item is already linked to the project.');
+  }
+
+  if (entityKind === 'project') {
+    const { getUserSubscriptionTierServer } = await import('@/lib/services/internal/subscription-entitlement');
+    const tier = await getUserSubscriptionTierServer(actor.$id);
+    if (!allowsCollaboratorSharing(tier, 'project')) {
+      throw new Error('Sub-projects require a TEAMS subscription.');
+    }
   }
 
   const permissions = [

@@ -6,6 +6,7 @@ import {
   isSelfHostedDeployment,
   resolveEffectiveBillingTier,
 } from '@/lib/entitlements';
+import { BillingCacheService } from '@/lib/services/billing';
 
 // Safely get a user field preferring top-level value, then legacy prefs
 // Example: getUserField(user, 'profilePicId') will return user.profilePicId || user.prefs?.profilePicId
@@ -81,6 +82,18 @@ export function hasPaidKylrixPlan(user: any): boolean {
 
 const TEAMS_TIERS = new Set(['TEAMS', 'ORG', 'LIFETIME']);
 
+function cachedEntitlementGrantsTeams(
+  ent: { uiTier?: string; active?: boolean; expiresAt?: string | null },
+): boolean {
+  const tier = String(ent.uiTier || 'FREE').trim().toUpperCase();
+  if (!TEAMS_TIERS.has(tier)) return false;
+  if (ent.expiresAt) {
+    const end = new Date(ent.expiresAt);
+    return !Number.isNaN(end.getTime()) && end > new Date();
+  }
+  return ent.active !== false;
+}
+
 /** Project collaboration, group channels, and team workspaces require Teams (or higher). */
 export function hasTeamsKylrixPlan(
   user: any,
@@ -92,7 +105,22 @@ export function hasTeamsKylrixPlan(
   if (subscriptionTier && TEAMS_TIERS.has(String(subscriptionTier).trim().toUpperCase())) {
     return true;
   }
-  return TEAMS_TIERS.has(getUserSubscriptionTier(user));
+  if (user?.$id && typeof window !== 'undefined') {
+    const peeked = BillingCacheService.peekEntitlement(user.$id);
+    if (peeked && cachedEntitlementGrantsTeams(peeked)) {
+      return true;
+    }
+  }
+  if (TEAMS_TIERS.has(getUserSubscriptionTier(user))) {
+    return true;
+  }
+  if (user?.prefs) {
+    const prefsTier = resolveEffectiveBillingTier(user.prefs);
+    if (TEAMS_TIERS.has(prefsTier)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /** Paid access from subscription context and/or user prefs/cache. */

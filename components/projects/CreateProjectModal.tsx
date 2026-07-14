@@ -67,7 +67,7 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
   const { showSuccess, showError } = useToast();
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
-  const [visibility, setVisibility] = useState<'private' | 'shared' | 'public'>('private');
+  const [visibility, setVisibility] = useState<'private' | 'shared' | 'public'>('public');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -77,7 +77,9 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
       const project = await ProjectsService.createProject({
         title: title.trim(),
         summary: summary.trim(),
-        visibility,
+        visibility: visibility === 'shared' ? 'public' : visibility,
+        isPublic: visibility !== 'private',
+        isGuest: visibility !== 'private',
         status: 'active',
       });
       showSuccess('Project created');
@@ -93,7 +95,7 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
   const handleClose = () => {
     setTitle('');
     setSummary('');
-    setVisibility('private');
+    setVisibility('public');
     onClose();
   };
 

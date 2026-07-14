@@ -1129,3 +1129,32 @@ export type AgentPaymentIntents = Models.Row & {
     chainId: number;
     amount: number;
 }
+
+export type AgenticTelemetry = Models.Row & {
+    userId: string | null;
+    action: string;
+    zone: string | null;
+    pointers: string | null;
+    metadata: string | null;
+    timestamp: string;
+}
+
+export type AgenticSessions = Models.Row & {
+    userId: string;
+    context: string | null;
+    seen: boolean;
+    chatHistory: string | null;
+    isMemory: boolean;
+}
+
+export type Swept = Models.Row & {
+    userId: string;
+    projectId: string;
+    enabled: boolean;
+    scopeType: string;
+    anchorKind: string;
+    anchors: string | null;
+    policy: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+}

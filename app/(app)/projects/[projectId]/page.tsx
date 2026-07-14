@@ -48,7 +48,7 @@ import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
 import ProjectExtractGoalsModal from '@/components/projects/ProjectExtractGoalsModal';
 import ProjectAddSubProjectModal from '@/components/projects/ProjectAddSubProjectModal';
 import { databases, storage } from '@/lib/appwrite/client';
-import { hasPaidKylrixPlan, getUserSubscriptionTier, hasTeamsKylrixPlan } from '@/lib/utils';
+import { getUserSubscriptionTier, hasTeamsKylrixPlan } from '@/lib/utils';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import {
@@ -93,6 +93,8 @@ import {
   EMPTY_TAGGED_RESOURCES,
   type ProjectDetailCache,
 } from '@/lib/projects/projects-cache';
+import { normalizeProjectVisibility } from '@/lib/projects/normalize-project';
+import { SweptService } from '@/lib/services/swept';
 import { MultiSectionContainer } from '@/context/SectionContext';
 import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
 import FormDialog from '@/components/forms/FormDialog';
@@ -180,6 +182,27 @@ export default function ProjectDetailPage() {
   const [tabMenuAnchorEl, setTabMenuAnchorEl] = useState<{ x: number, y: number } | null>(null);
   const [activeTabMenuIndex, setActiveTabMenuIndex] = useState<number | null>(null);
   const [ownerProfile, setOwnerProfile] = useState<any | null>(null);
+  const [autoSweepEnabled, setAutoSweepEnabled] = useState(true);
+
+  useEffect(() => {
+    if (!projectId) return;
+    SweptService.getConfig(projectId as string)
+      .then((config) => setAutoSweepEnabled(config.enabled !== false))
+      .catch(() => setAutoSweepEnabled(true));
+  }, [projectId]);
+
+  const handleOpenAutoSweepSettings = () => {
+    openUnified('project-auto-sweep', {
+      projectId: projectId as string,
+      projectTitle: project?.title || 'Project',
+      onSaved: async (enabled: boolean) => {
+        setAutoSweepEnabled(enabled);
+        invalidate(projectTaggedCacheKey(projectId as string, tags.map((t) => t.$id)));
+        showSuccess(enabled ? 'Auto-sweep enabled' : 'Auto-sweep disabled');
+        fetchProjectData();
+      },
+    });
+  };
 
   const handleSaveSettings = async (title: string, summary: string, status: 'active' | 'completed' | 'archived' | 'paused' | 'on_hold') => {
     if (!project) return;
@@ -204,7 +227,8 @@ export default function ProjectDetailPage() {
       invalidate(projectMetaCacheKey(project.$id));
       await ProjectsService.updateProject(project.$id, {
         visibility,
-        isGuest
+        isPublic: visibility === 'public',
+        isGuest: visibility === 'public' ? isGuest : false,
       });
       showSuccess('Project visibility updated successfully!');
       fetchProjectData();
@@ -412,7 +436,7 @@ export default function ProjectDetailPage() {
   const [resolving, setResolving] = useState(false);
 
   const applyProjectDetailCache = useCallback((parsed: ProjectDetailCache) => {
-    setRawProject(parsed.project);
+    setRawProject(normalizeProjectVisibility(parsed.project) as Projects);
     setProjectObjects(parsed.projectObjects || []);
     setCollaborators(parsed.collaborators || []);
     setNotes(parsed.notes || []);
@@ -471,7 +495,7 @@ export default function ProjectDetailPage() {
         () => ProjectsService.getProject(projectId as string),
         PROJECT_META_TTL,
       );
-      setRawProject(p);
+      setRawProject(normalizeProjectVisibility(p) as Projects);
 
       // Resolve owner profile securely
       let resolvedOwner: any = null;
@@ -1144,8 +1168,8 @@ export default function ProjectDetailPage() {
                             <div className="flex justify-end mb-4">
                                 <button
                                     onClick={() => {
-                                        if (!hasPaidKylrixPlan(user)) {
-                                            openUnified('pro-upgrade', {});
+                                        if (!hasTeamsKylrixPlan(user, currentTier)) {
+                                            openProUpgrade('Project Collaboration');
                                         } else {
                                             setIsAddSubProjectModalOpen(true);
                                         }
@@ -1303,9 +1327,23 @@ export default function ProjectDetailPage() {
                                 Tagged Resources
                             </span>
                           </div>
-                          <span className="bg-[#6366F1]/10 text-[#6366F1] text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-[#6366F1]/20">
-                              AUTO-SWEPT
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={handleOpenAutoSweepSettings}
+                              title="Auto-sweep settings"
+                              className="p-1.5 rounded-lg text-white/40 hover:text-white bg-white/2 hover:bg-white/5 border border-white/6 transition-all duration-200"
+                            >
+                              <SettingsIcon size={16} />
+                            </button>
+                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
+                              autoSweepEnabled
+                                ? 'bg-[#6366F1]/10 text-[#6366F1] border-[#6366F1]/20'
+                                : 'bg-white/5 text-white/35 border-white/10'
+                            }`}>
+                              {autoSweepEnabled ? 'AUTO-SWEPT' : 'SWEEP OFF'}
+                            </span>
+                          </div>
                       </div>
                       
                       <div className="px-6 py-3 bg-[#6366F1]/5 border-b border-white/4 flex items-center gap-2.5">
@@ -1726,8 +1764,8 @@ export default function ProjectDetailPage() {
               <button
                 onClick={() => {
                   setTabMenuAnchorEl(null);
-                  if (!hasPaidKylrixPlan(user)) {
-                    openUnified('pro-upgrade', {});
+                  if (!hasTeamsKylrixPlan(user, currentTier)) {
+                    openProUpgrade('Project Collaboration');
                   } else {
                     setIsAddSubProjectModalOpen(true);
                   }

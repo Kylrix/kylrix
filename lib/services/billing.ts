@@ -142,6 +142,22 @@ export const BillingCacheService = {
         return entitlementInFlight;
     },
 
+    /** Synchronous read of cached entitlement (memory → localStorage). */
+    peekEntitlement(userId: string): EntitlementData | null {
+        const now = Date.now();
+        if (entitlementCache && entitlementCache.expiresAt > now) {
+            return entitlementCache.data;
+        }
+        if (typeof window === 'undefined') return null;
+        try {
+            const raw = localStorage.getItem(`kylrix_entitlement_${userId}`);
+            if (!raw) return null;
+            return JSON.parse(raw) as EntitlementData;
+        } catch {
+            return null;
+        }
+    },
+
     async hydrate(userId: string, force = false) {
         if (hydrationInFlight) return hydrationInFlight;
 

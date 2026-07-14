@@ -63,11 +63,34 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
         active: true,
         expiresAt: latest.currentPeriodEnd || null,
         source: 'subscription_row',
-        uiTier: plan === 'TEAMS' ? 'TEAMS' : 'PRO',
+        uiTier: plan.startsWith('TEAMS') ? 'TEAMS' : 'PRO',
       };
     }
   } catch {
     // fall through to prefs
+  }
+
+  try {
+    const { users } = createSystemClient();
+    const user = await users.get(userId);
+    let prefs: Record<string, unknown> = {};
+    if (user.prefs) {
+      prefs = typeof user.prefs === 'string'
+        ? JSON.parse(user.prefs)
+        : (user.prefs as Record<string, unknown>);
+    }
+    const prefsTier = normalizeBillingPrefsTier(prefs);
+    if (prefsTier !== 'FREE') {
+      const expRaw = prefs.subscriptionExpiresAt;
+      return {
+        active: true,
+        expiresAt: typeof expRaw === 'string' ? expRaw : null,
+        source: prefsTier === 'LIFETIME' ? 'prefs_lifetime' : prefsTier === 'ORG' ? 'prefs_org' : 'none',
+        uiTier: prefsTier,
+      };
+    }
+  } catch {
+    // fall through
   }
 
   return {

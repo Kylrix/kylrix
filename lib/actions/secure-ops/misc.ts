@@ -2097,7 +2097,10 @@ export async function toggleResourcePublicGuestSecure(params: {
   }
 
   if (resourceType === 'project') {
-    updateData.visibility = isPublic ? 'public' : 'private';
+    updateData.visibility = isPublic || isGuest ? 'public' : 'private';
+    if (!isPublic && !isGuest) {
+      updateData.isGuest = false;
+    }
   }
 
   if (resourceType === 'form' && mode === 'publish') {
