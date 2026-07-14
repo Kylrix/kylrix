@@ -28,7 +28,7 @@ toolchains:
   node:
     version: ">=22"
     package_managers:
-      pnpm: 11.5.1
+      pnpm: ">=11.5.1"
     fulfillment:
       source: corepack
       mode: run

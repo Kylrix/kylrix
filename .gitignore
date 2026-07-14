@@ -64,3 +64,4 @@ functions/**/.env.*
 # Added by Autocommiter SECURE_MODE:
 app/(app)/note/shared/[noteid]/[[...key]]/page.tsx
 /.idea/*
+/=11.5.1
