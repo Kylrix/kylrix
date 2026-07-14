@@ -319,14 +319,14 @@ export const ChatList = ({
         }
     }, [user?.$id]);
 
-    // Secure tab setup redirection countdown trigger
+    // Secure tab setup redirection countdown trigger (mobile tabbed view only)
     useEffect(() => {
-        if (activeTab === 'secure' && hasMasterpass === false) {
+        if (!hideTabs && activeTab === 'secure' && hasMasterpass === false) {
             setShowCountdownDrawer(true);
         } else {
             setShowCountdownDrawer(false);
         }
-    }, [activeTab, hasMasterpass]);
+    }, [activeTab, hasMasterpass, hideTabs]);
 
     // Active secure query 800ms grace timeout to show cache
     useEffect(() => {
@@ -1594,17 +1594,18 @@ const SetupCountdownDrawer = ({
     }, [secondsLeft, isCancelled, router, callbackUrl]);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
+        <div className="fixed inset-0 z-[1550] flex items-end justify-center pointer-events-none">
             {/* Backdrop */}
             <div 
-                className="absolute inset-0 bg-black/60 transition-opacity duration-300"
+                className="absolute inset-0 bg-black/60 transition-opacity duration-300 pointer-events-auto"
+                style={{ top: '88px' }}
                 onClick={() => {
                     setIsCancelled(true);
                     onCancel();
                 }}
             />
             {/* Content panel */}
-            <div className="relative w-full max-w-[600px] bg-[#161412] border-t border-white/8 rounded-t-3xl p-6 text-center text-white shadow-2xl transition-transform duration-300 transform translate-y-0 z-10">
+            <div className="relative w-full max-w-[600px] bg-[#161412] border-t border-white/8 rounded-t-3xl p-6 text-center text-white shadow-2xl transition-transform duration-300 transform translate-y-0 z-10 pointer-events-auto">
                 {/* Drag handle line */}
                 <div className="mx-auto w-12 h-1 bg-white/10 rounded-full mb-6 animate-pulse" />
                 

@@ -60,6 +60,7 @@ export function ProUpgradeDrawer() {
       ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
       slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
       sx={{
+        zIndex: 14000,
         '& .ob-drawer-panel': {
           bgcolor: '#161412',
           backgroundImage: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(236, 72, 153, 0.02) 100%)',

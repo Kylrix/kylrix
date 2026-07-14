@@ -41,10 +41,10 @@ export default function UniversalFAB() {
     pathname.startsWith('/app') ||
     (pathname.startsWith('/flow') && !pathname.startsWith('/flow/form/')) ||
     pathname.startsWith('/vault') ||
-    (pathname.startsWith('/connect') && pathname !== '/connect' && !pathname.includes('/invite/'))
+    (pathname.startsWith('/connect') && !pathname.includes('/invite/'))
   );
 
-  if (isDrawerOpen || isAgenticDrawerOpen || isDesktop) return null;
+  if (isDrawerOpen || isAgenticDrawerOpen) return null;
   if (!config.isVisible && !isAppRoute) return null;
 
   const actions = config.actions || [];
@@ -52,11 +52,14 @@ export default function UniversalFAB() {
   const mainColor = config.mainColor || '#6366F1';
   const onMainClick = config.onMainClick;
 
+  // Speed-dial stays mobile-only; direct-action FABs (onMainClick) work on desktop too.
+  if (isDesktop && !onMainClick) return null;
+
   const anchorSx = {
     position: 'fixed' as const,
     bottom: isLandingPage ? FAB_BOTTOM.landing : (isDesktop ? 32 : FAB_BOTTOM.app),
     right: { xs: 16, md: 32 },
-    zIndex: 1310,
+    zIndex: 1505,
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'flex-end',

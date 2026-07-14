@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Close as CloseIcon } from './icons';
 
 const OPENBRICKS_TOKENS = {
@@ -1010,28 +1011,52 @@ export const DialogActions = ({ children, className, ...props }: any) => (
 export const Drawer = React.forwardRef(({ open, onClose, anchor = 'right', children, PaperProps, keepMounted, disablePortal, ModalProps, slotProps, sx, ...props }: any, ref) => {
   if (!open) return null;
   const isBottom = anchor === 'bottom';
-  const justifyClass = anchor === 'left' ? 'justify-start' : anchor === 'bottom' ? 'items-end justify-center' : 'justify-end';
-  const borderClass = anchor === 'left' ? 'border-r border-[#23211F]' : anchor === 'bottom' ? 'border-t border-[#23211F]' : 'border-l border-[#23211F]';
-  const posClass = anchor === 'left' ? 'left-0' : anchor === 'bottom' ? 'bottom-0 left-0 right-0' : 'right-0';
-  
+  const isLeft = anchor === 'left';
+  const borderClass = isLeft ? 'border-r border-[#23211F]' : isBottom ? 'border-t border-[#23211F]' : 'border-l border-[#23211F]';
+  const panelPositionClass = isLeft
+    ? 'left-0 top-0 bottom-0 h-full w-80 max-w-[90vw]'
+    : isBottom
+      ? 'left-0 right-0 bottom-0 w-full max-h-[86vh] rounded-t-[24px]'
+      : 'right-0 top-0 bottom-0 h-full w-80 max-w-[90vw]';
+
   const drawerRootSx = sx || {};
-  const nestedPaperSx = drawerRootSx?.['& .ob-drawer-panel'] || drawerRootSx?.['& .ob-drawer-panel'] || {};
+  const nestedPaperSx = drawerRootSx?.['& .ob-drawer-panel'] || {};
   const paperSx = { ...(PaperProps?.sx || {}), ...nestedPaperSx };
   const paperStyle = cleanSx(paperSx);
-  
-  return (
-    <div className={`ob-drawer-root fixed inset-0 z-[1400] flex ${justifyClass} bg-black/70 backdrop-blur-sm`} style={cleanSx(drawerRootSx)}>
-      <div className="ob-backdrop fixed inset-0" onClick={onClose} />
+  const backdropStyle = cleanSx(
+    slotProps?.backdrop?.sx ||
+    ModalProps?.slotProps?.backdrop?.sx || {}
+  );
+
+  const drawerTree = (
+    <div
+      className="ob-drawer-root fixed inset-0 z-[1600] pointer-events-none"
+      style={cleanSx(drawerRootSx)}
+      data-keep-mounted={keepMounted ? 'true' : 'false'}
+    >
+      <div
+        className="ob-backdrop fixed inset-0 z-0 bg-black/70 backdrop-blur-sm pointer-events-auto"
+        style={backdropStyle}
+        onClick={onClose}
+        aria-hidden="true"
+      />
       <div
         ref={ref}
-        className={`ob-drawer-panel relative z-10 ${isBottom ? 'w-full h-auto max-h-[86vh] rounded-t-[24px]' : 'w-80 h-full'} bg-[#161412] ${borderClass} shadow-2xl p-6 overflow-y-auto ${posClass}`}
+        className={`ob-drawer-panel fixed z-20 pointer-events-auto bg-[#161412] ${borderClass} shadow-2xl overflow-y-auto ${panelPositionClass}`}
         style={paperStyle}
+        onClick={(e: React.MouseEvent) => e.stopPropagation()}
         {...props}
       >
         {children}
       </div>
     </div>
   );
+
+  if (disablePortal || typeof document === 'undefined') {
+    return drawerTree;
+  }
+
+  return createPortal(drawerTree, document.body);
 });
 Drawer.displayName = 'Drawer';
 

@@ -8,7 +8,7 @@ import { useProjectsList } from '@/hooks/useProjectsList';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { MessageSquare, Phone, Plus, ChevronDown, ChevronUp, Maximize2, FolderKanban, Bookmark } from 'lucide-react';
+import { MessageSquare, Phone, Plus, ChevronDown, ChevronUp, Maximize2, FolderKanban, Bookmark, Hash } from 'lucide-react';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { useSection } from '@/context/SectionContext';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -81,6 +81,33 @@ function ConnectHomeContent() {
   }, [pinSets.moment, user?.$id]);
 
   useEffect(() => {
+    if (activeTab === 'chats') {
+      if (chatsActiveTab === 'public') {
+        setConfiguration({
+          isVisible: true,
+          mainColor: '#F59E0B',
+          mainIcon: <Plus size={32} strokeWidth={3} />,
+          onMainClick: () => openUnified('new-chat', { mode: 'thread' }),
+          actions: [
+            { id: 'new-thread', label: 'NEW THREAD', icon: <Hash size={20} />, onClick: () => openUnified('new-chat', { mode: 'thread' }) },
+          ],
+        });
+      } else {
+        setConfiguration({
+          isVisible: true,
+          mainColor: '#F59E0B',
+          mainIcon: <Plus size={32} strokeWidth={3} />,
+          onMainClick: () => openUnified('new-chat', { mode: 'secure' }),
+          actions: [
+            { id: 'secret-chat', label: 'SECURE CHAT', icon: <MessageSquare size={20} />, onClick: () => openUnified('new-chat', { mode: 'secure' }) },
+            { id: 'channel', label: 'NEW CHANNEL', icon: <Plus size={20} />, onClick: () => openUnified('new-channel') },
+            { id: 'huddle', label: 'START HUDDLE', icon: <Phone size={20} />, onClick: () => router.push('/connect/calls?start=1') },
+          ],
+        });
+      }
+      return () => resetConfiguration();
+    }
+
     setConfiguration({
       isVisible: true,
       mainColor: '#F59E0B',
@@ -90,10 +117,11 @@ function ConnectHomeContent() {
         { id: 'moment', label: 'CREATE MOMENT', icon: <Plus size={20} />, onClick: () => window.dispatchEvent(new CustomEvent('kylrix:open-moment-composer')) },
         { id: 'chat', label: 'SECURE CHAT', icon: <MessageSquare size={20} />, onClick: () => openUnified('new-chat', { mode: 'secure' }) },
         { id: 'channel', label: 'NEW CHANNEL', icon: <Plus size={20} />, onClick: () => openUnified('new-channel') },
-        { id: 'huddle', label: 'START HUDDLE', icon: <Phone size={20} />, onClick: () => router.push('/connect/calls?start=1') }]
+        { id: 'huddle', label: 'START HUDDLE', icon: <Phone size={20} />, onClick: () => router.push('/connect/calls?start=1') },
+      ],
     });
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, router, openUnified]);
+  }, [activeTab, chatsActiveTab, setConfiguration, resetConfiguration, router, openUnified]);
 
   const shouldCompose = useMemo(() => searchParams.get('compose') === '1', [searchParams]);
 
@@ -434,16 +462,36 @@ function ConnectHomeContent() {
             {/* Desktop Stacked View */}
             <div className="hidden lg:flex flex-col gap-8">
               <div>
-                <h2 className="text-lg font-black font-clash text-white mb-4">
-                  Secret Chats
-                </h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-black font-clash text-white">
+                    Secret Chats
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => openUnified('new-chat', { mode: 'secure' })}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold hover:brightness-110 transition"
+                  >
+                    <Plus size={14} strokeWidth={3} />
+                    New secure chat
+                  </button>
+                </div>
                 <ChatList activeTab="secure" hideTabs={true} skipThreadsLoad />
               </div>
               <hr className="border-white/5 my-4" />
               <div>
-                <h2 className="text-lg font-black font-clash text-white mb-4">
-                  Threads
-                </h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-black font-clash text-white">
+                    Threads
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => openUnified('new-chat', { mode: 'thread' })}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold hover:brightness-110 transition"
+                  >
+                    <Plus size={14} strokeWidth={3} />
+                    New thread
+                  </button>
+                </div>
                 <ChatList activeTab="public" hideTabs={true} skipSecureLoad />
               </div>
             </div>

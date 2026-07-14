@@ -715,6 +715,9 @@ export default function CreateNoteForm({
       migrateDraftNoteId(ephemeralId, savedId);
       unregisterComposeSession(ephemeralId);
     }
+    // Deregister the saved id from compose session mapping immediately so the realtime subscription 
+    // knows this is a saved copy and is allowed to insert the card instantly without filtering it.
+    if (savedId) unregisterComposeSession(savedId);
     liveDraftIdRef.current = savedId;
     setResolvedNoteId(savedId);
   }, [registerComposeSession, unregisterComposeSession, migrateDraftNoteId]);

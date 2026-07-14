@@ -175,16 +175,36 @@ export default function Home() {
           {/* Desktop Stacked View */}
           <div className="hidden lg:flex flex-col gap-8">
             <div>
-              <h2 className="text-lg font-black font-clash text-white mb-4">
-                Secret Chats
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-black font-clash text-white">
+                  Secret Chats
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => openUnified('new-chat', { mode: 'secure' })}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold hover:brightness-110 transition"
+                >
+                  <Plus size={14} strokeWidth={3} />
+                  New secure chat
+                </button>
+              </div>
               <ChatList activeTab="secure" hideTabs={true} skipThreadsLoad />
             </div>
             <hr className="border-white/5 my-4" />
             <div>
-              <h2 className="text-lg font-black font-clash text-white mb-4">
-                Threads
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-black font-clash text-white">
+                  Threads
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => openUnified('new-chat', { mode: 'thread' })}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold hover:brightness-110 transition"
+                >
+                  <Plus size={14} strokeWidth={3} />
+                  New thread
+                </button>
+              </div>
               <ChatList activeTab="public" hideTabs={true} skipSecureLoad />
             </div>
           </div>

@@ -500,7 +500,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(168,85,247,0.12),transparent_60%)] pointer-events-none" />
 
       {/* Header - Sticky/Fixed at Top */}
-      <div className="relative z-10 flex flex-col gap-3 p-5 md:p-6 border-b border-white/5 bg-[#161412]/60 backdrop-blur-md shrink-0">
+      <div className="relative z-20 flex flex-col gap-3 p-5 md:p-6 border-b border-white/5 bg-[#161412]/60 backdrop-blur-md shrink-0">
         {/* Row 1: Title & Close Action Buttons */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -618,7 +618,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               <button
                 type="button"
                 onClick={handleClose}
-                className="hidden md:inline-flex p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-all"
+                className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-all"
                 title="Close"
               >
                 <X className="w-4 h-4" />

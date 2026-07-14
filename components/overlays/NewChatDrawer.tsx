@@ -22,6 +22,8 @@ import UserSearch from '@/components/UserSearch';
 import { createGhostNoteChat, listGhostNoteChats } from '@/lib/actions/client-ops';
 import { isValidX25519PublicKey, formatSecureChatStartError } from '@/lib/crypto/public-key';
 import { UsersService } from '@/lib/services/users';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 const DRAWER_SX = {
     borderTopLeftRadius: '26px',
@@ -49,6 +51,7 @@ export function NewChatDrawer({
     const theme = useTheme();
     const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
     const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
+    const { setIsDrawerOpen } = useDrawerState();
 
     const copy = useMemo(() => {
         if (mode === 'thread') {
@@ -167,6 +170,12 @@ export function NewChatDrawer({
         }
     }, [selectedUsers, startChat]);
 
+    useEffect(() => {
+        if (!isOpen) return;
+        setIsDrawerOpen(true);
+        return () => setIsDrawerOpen(false);
+    }, [isOpen, setIsDrawerOpen]);
+
     if (!isOpen) return null;
 
     return (
@@ -176,15 +185,17 @@ export function NewChatDrawer({
             onClose={onClose}
             keepMounted={false}
             disablePortal={true}
+            slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
             PaperProps={{
                 sx: {
                     ...DRAWER_SX,
+                    p: 0,
                     borderTopLeftRadius: isDesktop ? 0 : DRAWER_SX.borderTopLeftRadius,
                     borderTopRightRadius: isDesktop ? 0 : DRAWER_SX.borderTopRightRadius,
                     borderLeft: isDesktop ? '1px solid #34322F' : undefined,
                     width: isDesktop ? 'min(480px, 90vw)' : DRAWER_SX.width,
-                    maxHeight: isDesktop ? '100dvh' : DRAWER_SX.maxHeight,
-                    height: isDesktop ? '100dvh' : 'auto',
+                    maxHeight: isDesktop ? 'calc(100dvh - 88px)' : DRAWER_SX.maxHeight,
+                    height: isDesktop ? 'calc(100dvh - 88px)' : 'auto',
                 },
             }}
         >

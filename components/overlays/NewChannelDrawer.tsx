@@ -34,6 +34,8 @@ import UserSearch from '@/components/UserSearch';
 import { isValidX25519PublicKey } from '@/lib/crypto/public-key';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 const DRAWER_SX = {
     borderTopLeftRadius: '26px',
@@ -54,9 +56,18 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
     const { currentTier } = useSubscription();
     const isTeams = currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
 
+    const theme = useTheme();
+    const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+    const { setIsDrawerOpen } = useDrawerState();
     const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
     const [channelName, setChannelName] = useState('');
     const [creating, setCreating] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        setIsDrawerOpen(true);
+        return () => setIsDrawerOpen(false);
+    }, [isOpen, setIsDrawerOpen]);
 
     const handleCreateChannel = async () => {
         if (!user) return;
@@ -100,13 +111,28 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
         });
     };
 
+    if (!isOpen) return null;
+
     return (
         <Drawer
-            anchor="bottom"
+            anchor={isDesktop ? 'right' : 'bottom'}
             open={isOpen}
             onClose={onClose}
-            PaperProps={{ sx: DRAWER_SX }}
-            ModalProps={{ keepMounted: false, disablePortal: true }}
+            keepMounted={false}
+            disablePortal={true}
+            slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
+            PaperProps={{
+                sx: {
+                    ...DRAWER_SX,
+                    p: 0,
+                    borderTopLeftRadius: isDesktop ? 0 : DRAWER_SX.borderTopLeftRadius,
+                    borderTopRightRadius: isDesktop ? 0 : DRAWER_SX.borderTopRightRadius,
+                    borderLeft: isDesktop ? '1px solid #34322F' : undefined,
+                    width: isDesktop ? 'min(480px, 90vw)' : DRAWER_SX.width,
+                    maxHeight: isDesktop ? 'calc(100dvh - 88px)' : DRAWER_SX.maxHeight,
+                    height: isDesktop ? 'calc(100dvh - 88px)' : 'auto',
+                },
+            }}
         >
             <Box sx={{ p: 2.75, pb: 'calc(2.75rem + env(safe-area-inset-bottom))' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
