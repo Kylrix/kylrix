@@ -50,6 +50,18 @@ import { IdentityAvatar } from '@/components/IdentityBadge';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
+import {
+  Drawer,
+  Box,
+  Typography,
+  Stack,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  alpha,
+} from '@/lib/openbricks/primitives';
 
 const priorityColors: Record<Priority, string> = {
   low: '#A1A1AA',
@@ -141,7 +153,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const [noteResults, setNoteResults] = useState<any[]>([]);
   const [isSearchingNotes, setIsSearchingNotes] = useState(false);
   const [linkedNoteTitles, setLinkedNoteTitles] = useState<Record<string, string>>({});
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [isStatusOpen, setIsStatusOpen] = useState(false);
@@ -153,6 +166,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const [showProjectLinker, setShowProjectLinker] = useState(false);
   const [pendingCollaboratorPermission, setPendingCollaboratorPermission] = useState<CollaboratorPermission>('write');
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isTagSelectorOpen, setIsTagSelectorOpen] = useState(false);
+  const { ecosystemTags, refreshEcosystemTags } = useTask();
 
   // High-Fidelity Discussion State & Effects
   const { showSuccess, showError } = useToast();
@@ -320,22 +335,38 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
     }
   };
 
-  const handleStartEdit = () => {
+  const handleStartEditTitle = () => {
     const currentTask = task;
     if (!currentTask) return;
     setEditTitle(currentTask.title);
-    setEditDescription(currentTask.description || '');
-    setIsEditing(true);
+    setIsEditingTitle(true);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEditTitle = () => {
+    const currentTask = task;
+    if (!currentTask) return;
+    if (editTitle.trim() && editTitle.trim() !== currentTask.title) {
+      updateTask(currentTask.id, {
+        title: editTitle.trim(),
+      });
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleStartEditDescription = () => {
+    const currentTask = task;
+    if (!currentTask) return;
+    setEditDescription(currentTask.description || '');
+    setIsEditingDescription(true);
+  };
+
+  const handleSaveEditDescription = () => {
     const currentTask = task;
     if (!currentTask) return;
     updateTask(currentTask.id, {
-      title: editTitle,
-      description: editDescription || undefined,
+      description: editDescription.trim() || undefined,
     });
-    setIsEditing(false);
+    setIsEditingDescription(false);
   };
 
   const handleAddSubtask = async () => {
@@ -522,19 +553,19 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               </button>
             )}
 
-            {isEditing ? (
+            {isEditingTitle ? (
               <input
                 type="text"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                onBlur={handleSaveEdit}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit()}
+                onBlur={handleSaveEditTitle}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveEditTitle()}
                 autoFocus
                 className="w-full bg-transparent border-0 outline-none text-base md:text-lg font-extrabold font-clash text-white tracking-tight uppercase border-b border-white/10 focus:border-[#A855F7] transition-all py-0.5"
               />
             ) : (
               <h2
-                onClick={handleStartEdit}
+                onClick={handleStartEditTitle}
                 className="text-base md:text-lg font-extrabold font-clash text-[#A855F7] tracking-tight uppercase flex-1 min-w-0 break-words [overflow-wrap:anywhere] cursor-pointer hover:text-[#b975ff] transition-colors"
               >
                 {task.title}
@@ -553,9 +584,9 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             </button>
             <button
               type="button"
-              onClick={handleStartEdit}
+              onClick={handleStartEditTitle}
               className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-all"
-              title="Edit Goal"
+              title="Edit Title"
             >
               <Edit3 className="w-4 h-4" />
             </button>
@@ -711,7 +742,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
         <div className="p-5 rounded-[28px] bg-[#0A0908] border border-white/5 shadow-[0_12px_32px_rgba(0,0,0,0.4)] flex flex-col">
           <div className="flex items-center justify-between mb-2.5">
             <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider font-mono">Objective details</span>
-            {task.description && !isEditing && (
+            {task.description && !isEditingDescription && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -727,18 +758,19 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             )}
           </div>
           <div className="min-h-[100px] md:min-h-[140px] flex">
-            {isEditing ? (
+            {isEditingDescription ? (
               <textarea
                 rows={5}
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                onBlur={handleSaveEdit}
+                onBlur={handleSaveEditDescription}
                 className="w-full bg-transparent border-0 outline-none text-sm text-[#F5F2ED]/90 leading-relaxed resize-none focus:ring-0 focus:outline-none"
                 placeholder="Provide detailed parameters for this goal..."
+                autoFocus
               />
             ) : (
               <p
-                onClick={handleStartEdit}
+                onClick={handleStartEditDescription}
                 className="text-sm text-[#9B9691] leading-relaxed font-satoshi whitespace-pre-wrap cursor-text w-full"
               >
                 {task.description || 'No detailed parameters provided. Click to add.'}
@@ -820,31 +852,52 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             </div>
           </div>
           <div>
-            <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider mb-1.5 block font-mono">Urgency Level</span>
-            <div className="flex items-center gap-2 text-[#F5F2ED]">
-              <Flag className="w-4 h-4" style={{ color: priorityColors[task.priority] }} />
-              <span className="text-sm font-bold capitalize" style={{ color: priorityColors[task.priority] }}>{task.priority}</span>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsPriorityOpen(!isPriorityOpen);
+                setIsStatusOpen(false);
+              }}
+              className="flex flex-col items-start gap-1 w-full text-left bg-transparent border-0 outline-none p-0 cursor-pointer group"
+            >
+              <span className="text-[10px] font-black text-[#A855F7] group-hover:text-[#b975ff] transition-colors uppercase tracking-wider block font-mono">Urgency Level</span>
+              <div className="flex items-center gap-2 text-[#F5F2ED]">
+                <Flag className="w-4 h-4" style={{ color: priorityColors[task.priority] }} />
+                <span className="text-sm font-bold capitalize group-hover:underline" style={{ color: priorityColors[task.priority] }}>{task.priority}</span>
+              </div>
+            </button>
           </div>
         </div>
 
         {/* Tags Section */}
-        {task.labels.length > 0 && (
-            <div className="px-1">
-                <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider mb-2.5 block font-mono">Ecosystem Tags</span>
-                <div className="flex flex-wrap gap-2">
-                    {taskLabels.map((label) => (
-                            <div 
-                                key={label.name}
-                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/5 text-[11px] font-bold text-white/60"
-                            >
-                                <TagIcon size={10} style={{ color: label.color || '#9B9691' }} />
-                                <span>{label.name}</span>
-                            </div>
-                    ))}
+        <div className="px-1">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider block font-mono">Ecosystem Tags</span>
+            <button
+              type="button"
+              onClick={() => setIsTagSelectorOpen(true)}
+              className="p-1 text-[#A855F7] hover:text-white rounded-lg hover:bg-[#A855F7]/10 transition-colors flex shrink-0"
+              title="Edit Tags"
+            >
+              <Plus size={14} strokeWidth={3} />
+            </button>
+          </div>
+          {taskLabels.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {taskLabels.map((label) => (
+                <div 
+                  key={label.name}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/5 text-[11px] font-bold text-white/60"
+                >
+                  <TagIcon size={10} style={{ color: label.color || '#9B9691' }} />
+                  <span>{label.name}</span>
                 </div>
+              ))}
             </div>
-        )}
+          ) : (
+            <div className="text-xs text-white/20 italic">No tags associated with this goal. Click '+' to add tags.</div>
+          )}
+        </div>
 
         {/* Discussion Section */}
         <div className="p-5 rounded-[28px] bg-[#0A0908] border border-white/5 shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
@@ -964,6 +1017,135 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             // refresh projects list inside context or parent if needed
           }}
         />
+      )}
+
+      {/* Ecosystem Tags Selection Drawer */}
+      {isTagSelectorOpen && (
+        <Drawer
+          anchor="bottom"
+          open={isTagSelectorOpen}
+          onClose={() => setIsTagSelectorOpen(false)}
+          ModalProps={{ keepMounted: false, disablePortal: true }}
+          sx={{
+            zIndex: 15000,
+            '& .ob-drawer-panel': {
+              bgcolor: '#161412',
+              backgroundImage: 'linear-gradient(135deg, rgba(168, 85, 247, 0.05) 0%, rgba(10, 9, 8, 0.02) 100%)',
+              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+              maxHeight: '60vh',
+              width: '100%',
+              p: 3,
+            },
+          }}
+        >
+          <Stack direction="row" alignItems="center" justifyContent="between" sx={{ mb: 3 }}>
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <TagIcon size={20} color="#A855F7" />
+              <Typography sx={{ color: '#fff', fontWeight: 900, fontSize: '1.1rem', fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
+                Select Tags
+              </Typography>
+            </Stack>
+            <IconButton
+              onClick={() => setIsTagSelectorOpen(false)}
+              sx={{
+                color: '#E8E6E3',
+                bgcolor: '#0A0908',
+                border: '1px solid #34322F',
+                '&:hover': { bgcolor: '#1C1A18' },
+              }}
+            >
+              <X size={18} />
+            </IconButton>
+          </Stack>
+
+          <Box sx={{ maxHeight: '40dvh', overflowY: 'auto', pr: 0.5 }}>
+            <List sx={{ py: 0 }}>
+              <ListItem disablePadding sx={{ mb: 1 }}>
+                <ListItemButton 
+                  onClick={() => {
+                    setIsTagSelectorOpen(false);
+                    openUnified('new-tag', { 
+                      onSuccess: async () => {
+                        await refreshEcosystemTags();
+                        setIsTagSelectorOpen(true);
+                      } 
+                    });
+                  }}
+                  sx={{ 
+                    borderRadius: '12px', 
+                    bgcolor: alpha('#A855F7', 0.1),
+                    border: `1px dashed ${alpha('#A855F7', 0.3)}`,
+                    py: 1.5,
+                    '&:hover': { bgcolor: alpha('#A855F7', 0.15) }
+                  }}
+                >
+                  <Plus size={18} color="#A855F7" style={{ marginRight: '12px' }} />
+                  <ListItemText 
+                    primary="Create New Tag" 
+                    primaryTypographyProps={{ sx: { color: '#A855F7', fontWeight: 800, fontSize: '0.9rem' } }}
+                  />
+                </ListItemButton>
+              </ListItem>
+
+              {ecosystemTags.map((tag) => {
+                const isSelected = task.labels.includes(tag.name || '');
+                const color = (tag as any).color || '#9B9691';
+
+                return (
+                  <ListItem key={tag.$id} disablePadding sx={{ mb: 0.5 }}>
+                    <ListItemButton 
+                      onClick={async () => {
+                        let nextLabels = [...task.labels];
+                        if (!isSelected && tag.name) {
+                          nextLabels.push(tag.name);
+                        } else if (isSelected && tag.name) {
+                          nextLabels = nextLabels.filter(n => n !== tag.name);
+                        }
+                        await updateTask(task.id, { labels: nextLabels });
+                      }}
+                      sx={{ 
+                        borderRadius: '12px', 
+                        py: 1.5,
+                        border: '1px solid transparent',
+                        borderColor: isSelected ? color : 'transparent',
+                        bgcolor: isSelected ? alpha(color, 0.1) : 'transparent',
+                        '&:hover': { bgcolor: '#1C1A18' }
+                      }}
+                    >
+                      <Box 
+                        sx={{ 
+                          width: 12, 
+                          height: 12, 
+                          borderRadius: '4px', 
+                          bgcolor: color, 
+                          mr: 2,
+                          boxShadow: `0 0 10px ${alpha(color, 0.4)}`
+                        }} 
+                      />
+                      <ListItemText 
+                        primary={(tag.name || '').toUpperCase()} 
+                        primaryTypographyProps={{ 
+                          sx: { 
+                            color: isSelected ? 'white' : '#9B9691', 
+                            fontWeight: 900, 
+                            fontSize: '0.8rem',
+                            fontFamily: 'var(--font-mono)',
+                            letterSpacing: '0.05em'
+                          } 
+                        }}
+                      />
+                      {isSelected && (
+                        <Typography sx={{ color: color, fontWeight: 900, fontSize: '0.7rem', opacity: 0.8 }}>
+                          SELECTED
+                        </Typography>
+                      )}
+                    </ListItemButton>
+                  </ListItem>
+                );
+              })}
+            </List>
+          </Box>
+        </Drawer>
       )}
     </div>
   );
