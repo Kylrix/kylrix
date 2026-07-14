@@ -10129,74 +10129,6 @@
             "indexes": []
         },
         {
-            "$id": "agentic_sessions",
-            "$permissions": [
-                "read(\"users\")",
-                "create(\"users\")",
-                "update(\"users\")",
-                "delete(\"users\")"
-            ],
-            "databaseId": "passwordManagerDb",
-            "name": "Agentic Sessions",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "userId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 255,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "context",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 16383,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "seen",
-                    "type": "boolean",
-                    "required": false,
-                    "array": false,
-                    "default": true
-                },
-                {
-                    "key": "chatHistory",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 16383,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "isMemory",
-                    "type": "boolean",
-                    "required": false,
-                    "array": false,
-                    "default": false
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "user_idx",
-                    "type": "key",
-                    "attributes": [
-                        "userId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
             "$id": "agentic_telemetry",
             "$permissions": [
                 "read(\"users\")",
@@ -10263,6 +10195,75 @@
                 }
             ],
             "indexes": []
+        },
+        {
+            "$id": "agentic_sessions",
+            "$permissions": [
+                "read(\"users\")",
+                "create(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "Agentic Sessions",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "context",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 16383,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "seen",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "chatHistory",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 16383,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "isMemory",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "user_idx",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         }
     ],
     "buckets": [
