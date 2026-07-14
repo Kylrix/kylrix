@@ -10,7 +10,9 @@ import UserSearch from '@/components/UserSearch';
 import { useAuth } from '@/context/auth/AuthContext';
 import { account } from '@/lib/appwrite/client';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
-import { hasPaidKylrixPlan } from '@/lib/utils';
+import { hasPaidKylrixPlan, hasTeamsKylrixPlan } from '@/lib/utils';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import toast from 'react-hot-toast';
 
 // Unified config builder for dynamic resource terminology & branding
@@ -122,6 +124,8 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
   const { setIsDrawerOpen } = useDrawerState();
   const { drawerData, open } = useUnifiedDrawer();
   const { user } = useAuth();
+  const { openProUpgrade } = useProUpgrade();
+  const { currentTier } = useSubscription();
   
   const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
   const [collaboratorProfiles, setCollaboratorProfiles] = useState<any[]>([]);
@@ -216,11 +220,17 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
   const handleGrant = async () => {
     if (selectedUsers.length === 0 || !user?.$id) return;
 
+    if (resourceType === 'project' && !hasTeamsKylrixPlan(user, currentTier)) {
+      toast.error('Project collaboration requires a Teams subscription.');
+      openProUpgrade('Project Collaboration');
+      return;
+    }
+
     // Collaborator count ceiling gating
-    const isPaid = hasPaidKylrixPlan(user);
+    const isPaid = hasPaidKylrixPlan(user) || currentTier === 'PRO' || currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
     if (!isPaid && collaboratorProfiles.length + selectedUsers.length >= 3) {
       toast.error(`Limit reached: Free plans are limited to 3 collaborators per resource. Upgrade to PRO to add more!`);
-      open('pro-upgrade', {});
+      openProUpgrade(resourceType === 'project' ? 'Project Collaboration' : 'Collaborators');
       return;
     }
 

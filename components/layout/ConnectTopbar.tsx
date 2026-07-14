@@ -42,7 +42,7 @@ import {
 import Logo from '@/components/common/Logo';
 import { useAuth } from '@/lib/auth';
 import { getProfilePicturePreview } from '@/lib/appwrite';
-import { getUserProfilePicId, hasPaidKylrixPlan } from '@/lib/utils';
+import { getUserProfilePicId, hasEffectivePaidAccess } from '@/lib/utils';
 import { getEcosystemUrl, APP_BASE_PATHS } from '@/lib/constants';
 import { TOPBAR_LAYOUT, getAppTone, type KylrixApp } from '@/lib/sdk/design';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
@@ -215,7 +215,7 @@ export default function ConnectTopbar({
   const { open: openUnified } = useUnifiedDrawer();
   const { openProUpgrade } = useProUpgrade();
   const { currentTier } = useSubscription();
-  const isPro = hasPaidKylrixPlan(user) || currentTier === 'PRO';
+  const isPro = hasEffectivePaidAccess(user, currentTier);
   const router = useRouter();
   const pathname = usePathname();
   const { notes = [] } = useNotes();

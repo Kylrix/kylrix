@@ -201,9 +201,16 @@ export const ProjectsService = {
     return await removeObjectFromProjectSecure(objectId);
   },
 
-  async listTaggedResources(tagIds: string[]) {
+  async listTaggedResources(tagIds: string[], projectId?: string) {
     if (!tagIds || tagIds.length === 0) {
       return { notes: [], tasks: [], credentials: [], totps: [], events: [], forms: [], moments: [] };
+    }
+
+    if (typeof window !== 'undefined' && projectId) {
+      const { account } = await import('./client');
+      const { jwt } = await account.createJWT();
+      const { listProjectTaggedResourcesSecure } = await import('@/lib/actions/secure-ops');
+      return listProjectTaggedResourcesSecure(projectId, tagIds, jwt);
     }
 
     const databaseId = APPWRITE_CONFIG.DATABASES.NOTE;

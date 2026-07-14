@@ -48,7 +48,7 @@ import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
 import ProjectExtractGoalsModal from '@/components/projects/ProjectExtractGoalsModal';
 import ProjectAddSubProjectModal from '@/components/projects/ProjectAddSubProjectModal';
 import { databases, storage } from '@/lib/appwrite/client';
-import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
+import { hasPaidKylrixPlan, getUserSubscriptionTier, hasTeamsKylrixPlan } from '@/lib/utils';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import {
@@ -653,7 +653,7 @@ export default function ProjectDetailPage() {
         try {
           resolvedTagged = await fetchOptimized(
             projectTaggedCacheKey(projectId as string, tagIds),
-            () => ProjectsService.listTaggedResources(tagIds),
+            () => ProjectsService.listTaggedResources(tagIds, projectId as string),
             PROJECT_TAGGED_TTL,
           );
           
@@ -833,15 +833,7 @@ export default function ProjectDetailPage() {
   };
 
   const handleAddCollaborator = () => {
-      const isTeams =
-        currentTier === 'TEAMS' ||
-        currentTier === 'ORG' ||
-        currentTier === 'LIFETIME' ||
-        getUserSubscriptionTier(user) === 'TEAMS' ||
-        getUserSubscriptionTier(user) === 'ORG' ||
-        getUserSubscriptionTier(user) === 'LIFETIME';
-
-      if (!isTeams) {
+      if (!hasTeamsKylrixPlan(user, currentTier)) {
           showError('Project collaboration requires a Teams subscription.');
           openProUpgrade('Project Collaboration');
           return;
@@ -1645,6 +1637,18 @@ export default function ProjectDetailPage() {
           projectId={projectId as string}
           onAdded={fetchProjectData}
           initialTab={addModalTab}
+          linkedObjects={projectObjects.map((o) => ({
+            entityKind: o.entityKind,
+            entityId: o.entityId,
+          }))}
+          linkedTags={tags}
+          onRemoveLinked={async (entityId) => {
+            const obj = projectObjects.find((o) => o.entityId === entityId && o.entityKind === 'tag');
+            if (!obj) return;
+            await ProjectsService.removeObjectFromProject(obj.$id);
+            showSuccess('Tag removed from project');
+            fetchProjectData();
+          }}
         />
 
       )}

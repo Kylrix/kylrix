@@ -750,6 +750,20 @@ export async function addObjectToProjectSecure(
   const { databases } = createSystemClient();
   const now = new Date().toISOString();
 
+  const duplicateRes = await tables.listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+    tableId: 'project_objects',
+    queries: [
+      Query.equal('projectId', projectId),
+      Query.equal('entityKind', entityKind),
+      Query.equal('entityId', entityId),
+      Query.limit(1),
+    ] as any,
+  });
+  if (duplicateRes.rows.length > 0) {
+    throw new Error('ALREADY_ADDED: This item is already linked to the project.');
+  }
+
   const permissions = [
     Permission.read(Role.user(actor.$id))];
 
@@ -797,6 +811,281 @@ export async function addObjectToProjectSecure(
   }
 
   return JSON.parse(JSON.stringify(obj));
+}
+
+type TaggedResourceBundle = {
+  notes: any[];
+  tasks: any[];
+  credentials: any[];
+  totps: any[];
+  events: any[];
+  forms: any[];
+  moments: any[];
+};
+
+const EMPTY_TAGGED: TaggedResourceBundle = {
+  notes: [],
+  tasks: [],
+  credentials: [],
+  totps: [],
+  events: [],
+  forms: [],
+  moments: [],
+};
+
+export async function listProjectTaggedResourcesSecure(
+  projectId: string,
+  tagIds: string[],
+  jwt?: string,
+): Promise<TaggedResourceBundle> {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) {
+    throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const hasAccess = await verifyProjectPermission(projectId, actor.$id, 'viewer').catch(() => false);
+  if (!hasAccess) {
+    throw new Error('Forbidden: Insufficient permissions to view this project');
+  }
+
+  if (!tagIds?.length) {
+    return { ...EMPTY_TAGGED };
+  }
+
+  const tables = createSystemTablesDB();
+  const databaseId = APPWRITE_CONFIG.DATABASE_ID;
+  const pivotTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'resource_tags';
+  const tagsTable = APPWRITE_CONFIG.TABLES.NOTE.TAGS;
+
+  const tagsRes = await tables.listRows({
+    databaseId,
+    tableId: tagsTable,
+    queries: [Query.equal('$id', tagIds), Query.limit(100)] as any,
+  });
+  const tagNames = tagsRes.rows.map((t: any) => t.name).filter(Boolean);
+
+  const sweptRes = await tables.listRows({
+    databaseId,
+    tableId: APPWRITE_CONFIG.TABLES.SWEPT || 'swept',
+    queries: [Query.equal('projectId', projectId), Query.limit(500)] as any,
+  });
+  const sweptByUser = new Map<string, boolean>(
+    sweptRes.rows.map((row: any) => [row.userId, row.enabled !== false]),
+  );
+  const isSweepEnabled = (ownerId?: string | null) => {
+    if (!ownerId) return true;
+    return sweptByUser.has(ownerId) ? sweptByUser.get(ownerId)! : true;
+  };
+
+  const [pivotById, pivotByName] = await Promise.all([
+    tables.listRows({
+      databaseId,
+      tableId: pivotTable,
+      queries: [Query.equal('tagId', tagIds), Query.limit(5000)] as any,
+    }),
+    tagNames.length
+      ? tables.listRows({
+          databaseId,
+          tableId: pivotTable,
+          queries: [Query.equal('tag', tagNames), Query.limit(5000)] as any,
+        })
+      : Promise.resolve({ rows: [] as any[] }),
+  ]);
+
+  const seenPivotIds = new Set<string>();
+  const allPivotRows = [...pivotById.rows, ...pivotByName.rows].filter((p: any) => {
+    if (seenPivotIds.has(p.$id)) return false;
+    seenPivotIds.add(p.$id);
+    return isSweepEnabled(p.userId);
+  });
+
+  if (!allPivotRows.length) {
+    return { ...EMPTY_TAGGED };
+  }
+
+  const resourceIdsByType: Record<string, Set<string>> = {};
+  allPivotRows.forEach((p: any) => {
+    const type = p.resourceType;
+    const id = p.resourceId;
+    if (!type || !id) return;
+
+    let normalized = type;
+    if (type === 'productivity.task' || type === 'goal') normalized = 'task';
+    if (type === 'password' || type === 'secret') normalized = 'credential';
+
+    if (!resourceIdsByType[normalized]) resourceIdsByType[normalized] = new Set();
+    resourceIdsByType[normalized].add(id);
+  });
+
+  const notesPromise = resourceIdsByType.note?.size
+    ? tables.listRows({
+        databaseId,
+        tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+        queries: [Query.equal('$id', Array.from(resourceIdsByType.note)), Query.limit(500)] as any,
+      }).then((r) => r.rows).catch(() => [])
+    : Promise.resolve([]);
+
+  const tasksPromise = resourceIdsByType.task?.size
+    ? tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+        queries: [Query.equal('$id', Array.from(resourceIdsByType.task)), Query.limit(500)] as any,
+      }).then((r) => r.rows).catch(() => [])
+    : Promise.resolve([]);
+
+  const credentialsPromise = resourceIdsByType.credential?.size
+    ? tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+        queries: [Query.equal('$id', Array.from(resourceIdsByType.credential)), Query.limit(500)] as any,
+      }).then((r) => r.rows).catch(() => [])
+    : Promise.resolve([]);
+
+  const totpsPromise = resourceIdsByType.totp?.size
+    ? tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
+        queries: [Query.equal('$id', Array.from(resourceIdsByType.totp)), Query.limit(500)] as any,
+      }).then((r) => r.rows).catch(() => [])
+    : Promise.resolve([]);
+
+  const eventsPromise = resourceIdsByType.event?.size
+    ? tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
+        queries: [Query.equal('$id', Array.from(resourceIdsByType.event)), Query.limit(500)] as any,
+      }).then((r) => r.rows).catch(() => [])
+    : Promise.resolve([]);
+
+  const formsPromise = resourceIdsByType.form?.size
+    ? tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+        queries: [Query.equal('$id', Array.from(resourceIdsByType.form)), Query.limit(500)] as any,
+      }).then((r) => r.rows).catch(() => [])
+    : Promise.resolve([]);
+
+  const momentsPromise = resourceIdsByType.moment?.size
+    ? tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+        tableId: APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS,
+        queries: [Query.equal('$id', Array.from(resourceIdsByType.moment)), Query.limit(500)] as any,
+      }).then((r) => r.rows).catch(() => [])
+    : Promise.resolve([]);
+
+  const [notes, tasks, credentials, totps, events, forms, moments] = await Promise.all([
+    notesPromise,
+    tasksPromise,
+    credentialsPromise,
+    totpsPromise,
+    eventsPromise,
+    formsPromise,
+    momentsPromise,
+  ]);
+
+  return JSON.parse(JSON.stringify({ notes, tasks, credentials, totps, events, forms, moments }));
+}
+
+export async function getSweptConfigSecure(projectId: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) {
+    throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const hasAccess = await verifyProjectPermission(projectId, actor.$id, 'viewer').catch(() => false);
+  if (!hasAccess) {
+    throw new Error('Forbidden: Insufficient permissions to view this project');
+  }
+
+  const tables = createSystemTablesDB();
+  const existing = await tables.listRows({
+    databaseId: APPWRITE_CONFIG.DATABASE_ID,
+    tableId: APPWRITE_CONFIG.TABLES.SWEPT || 'swept',
+    queries: [
+      Query.equal('userId', actor.$id),
+      Query.equal('projectId', projectId),
+      Query.limit(1),
+    ] as any,
+  });
+
+  if (existing.rows[0]) {
+    return JSON.parse(JSON.stringify(existing.rows[0]));
+  }
+
+  return {
+    userId: actor.$id,
+    projectId,
+    enabled: true,
+    scopeType: 'project',
+    anchorKind: 'tag',
+    anchors: null,
+    policy: null,
+  };
+}
+
+export async function upsertSweptConfigSecure(
+  projectId: string,
+  patch: { enabled?: boolean; scopeType?: string; anchorKind?: string; anchors?: string | null; policy?: string | null },
+  jwt?: string,
+) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) {
+    throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const hasAccess = await verifyProjectPermission(projectId, actor.$id, 'editor').catch(() => false);
+  if (!hasAccess) {
+    throw new Error('Forbidden: Insufficient permissions to update project settings');
+  }
+
+  const tables = createSystemTablesDB();
+  const tableId = APPWRITE_CONFIG.TABLES.SWEPT || 'swept';
+  const now = new Date().toISOString();
+  const existing = await tables.listRows({
+    databaseId: APPWRITE_CONFIG.DATABASE_ID,
+    tableId,
+    queries: [
+      Query.equal('userId', actor.$id),
+      Query.equal('projectId', projectId),
+      Query.limit(1),
+    ] as any,
+  });
+
+  if (existing.rows[0]) {
+    const row = await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASE_ID,
+      tableId,
+      rowId: existing.rows[0].$id,
+      data: {
+        ...patch,
+        updatedAt: now,
+      },
+    });
+    return JSON.parse(JSON.stringify(row));
+  }
+
+  const row = await tables.createRow({
+    databaseId: APPWRITE_CONFIG.DATABASE_ID,
+    tableId,
+    rowId: ID.unique(),
+    data: {
+      userId: actor.$id,
+      projectId,
+      enabled: patch.enabled ?? true,
+      scopeType: patch.scopeType ?? 'project',
+      anchorKind: patch.anchorKind ?? 'tag',
+      anchors: patch.anchors ?? null,
+      policy: patch.policy ?? null,
+      createdAt: now,
+      updatedAt: now,
+    },
+    permissions: [
+      Permission.read(Role.user(actor.$id)),
+      Permission.update(Role.user(actor.$id)),
+      Permission.delete(Role.user(actor.$id)),
+    ],
+  });
+  return JSON.parse(JSON.stringify(row));
 }
 
 export async function removeObjectFromProjectSecure(objectId: string, jwt?: string) {

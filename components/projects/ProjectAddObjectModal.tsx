@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Drawer,
   Box,
@@ -72,6 +72,31 @@ interface ProjectAddObjectModalProps {
   title?: string;
   onAttachResource?: (payload: { kind: string; entityId: string; item: any }) => Promise<void> | void;
   initialTab?: number;
+  linkedObjects?: Array<{ entityKind: string; entityId: string }>;
+  linkedTags?: any[];
+  onRemoveLinked?: (entityId: string) => Promise<void> | void;
+}
+
+function normalizeEntityKind(kind: string): string {
+  const k = kind.toLowerCase();
+  if (k === 'goal' || k === 'task') return 'goal';
+  if (k === 'password' || k === 'credential' || k === 'secret') return 'password';
+  return k;
+}
+
+function kindForTab(tab: number): string {
+  switch (tab) {
+    case 0: return 'note';
+    case 1: return 'goal';
+    case 2: return 'password';
+    case 3: return 'form';
+    case 4: return 'event';
+    case 5: return 'tag';
+    case 6: return 'totp';
+    case 7: return 'moment';
+    case 8: return 'call';
+    default: return 'note';
+  }
 }
 
 function CreateMomentDialog({ 
@@ -180,6 +205,9 @@ export default function ProjectAddObjectModal({
   title,
   onAttachResource,
   initialTab = 0,
+  linkedObjects = [],
+  linkedTags = [],
+  onRemoveLinked,
 }: ProjectAddObjectModalProps) {
   const theme = useTheme();
   const { showSuccess, showError } = useToast();
@@ -195,7 +223,17 @@ export default function ProjectAddObjectModal({
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [adding, setAdding] = useState<string | null>(null);
+  const [removingTagId, setRemovingTagId] = useState<string | null>(null);
   const [isMomentDialogOpen, setIsMomentDialogOpen] = useState(false);
+
+  const linkedIdsForTab = useMemo(() => {
+    const kind = kindForTab(tab);
+    return new Set(
+      linkedObjects
+        .filter((o) => normalizeEntityKind(o.entityKind) === normalizeEntityKind(kind))
+        .map((o) => o.entityId),
+    );
+  }, [linkedObjects, tab]);
 
   useEffect(() => {
     if (open) {
@@ -326,19 +364,15 @@ export default function ProjectAddObjectModal({
   }, [open, tab, query, fetchResults]);
 
   const handleAdd = async (entityId: string) => {
+    const kind = kindForTab(tab);
+
+    if (mode === 'project' && linkedIdsForTab.has(entityId)) {
+      showError('Already added', 'This item is already linked to the project.');
+      return;
+    }
+
     setAdding(entityId);
     try {
-      let kind = 'note';
-      if (tab === 0) kind = 'note';
-      else if (tab === 1) kind = 'goal';
-      else if (tab === 2) kind = 'password';
-      else if (tab === 3) kind = 'form';
-      else if (tab === 4) kind = 'event';
-      else if (tab === 5) kind = 'tag';
-      else if (tab === 6) kind = 'totp';
-      else if (tab === 7) kind = 'moment';
-      else if (tab === 8) kind = 'call';
-
       const selectedItem = results.find((row) => row?.$id === entityId) || null;
       if (mode === 'project') {
         if (!projectId) throw new Error('Project id is required');
@@ -352,9 +386,26 @@ export default function ProjectAddObjectModal({
       }
       onClose();
     } catch (err: any) {
-      showError(mode === 'project' ? 'Failed to add object' : 'Failed to attach object', err.message);
+      const msg = err?.message || '';
+      if (msg.includes('ALREADY_ADDED') || msg.toLowerCase().includes('already linked')) {
+        showError('Already added', 'This item is already linked to the project.');
+      } else {
+        showError(mode === 'project' ? 'Failed to add object' : 'Failed to attach object', msg);
+      }
     } finally {
       setAdding(null);
+    }
+  };
+
+  const handleRemoveLinkedTag = async (entityId: string) => {
+    if (!onRemoveLinked) return;
+    setRemovingTagId(entityId);
+    try {
+      await onRemoveLinked(entityId);
+    } catch (err: any) {
+      showError('Failed to remove tag', err?.message || '');
+    } finally {
+      setRemovingTagId(null);
     }
   };
 
@@ -610,29 +661,76 @@ export default function ProjectAddObjectModal({
       </Stack>
 
       <Box sx={{ flex: 1, overflowY: 'auto' }}>
+        {mode === 'project' && tab === 5 && linkedTags.length > 0 && (
+          <Box sx={{ px: 3, pt: 2, pb: 1 }}>
+            <Typography variant="caption" sx={{ display: 'block', mb: 1.5, color: 'rgba(255,255,255,0.45)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.65rem' }}>
+              Linked Tags
+            </Typography>
+            <List sx={{ py: 0, mb: 1 }}>
+              {linkedTags.map((tag) => (
+                <ListItem key={tag.$id} disablePadding sx={{ mb: 0.5 }}>
+                  <ListItemButton
+                    disabled={removingTagId === tag.$id}
+                    onClick={() => handleRemoveLinkedTag(tag.$id)}
+                    sx={{
+                      px: 2,
+                      py: 1.25,
+                      borderRadius: '12px',
+                      bgcolor: 'rgba(99,102,241,0.08)',
+                      border: '1px solid rgba(99,102,241,0.18)',
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 32 }}>
+                      <TagIcon size={16} color="#6366F1" />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={`# ${(tag.name || 'Tag').toUpperCase()}`}
+                      primaryTypographyProps={{ sx: { fontWeight: 800, fontSize: '0.85rem', color: tag.color || '#6366F1', fontFamily: 'monospace' } }}
+                      secondary="Tap to remove from project"
+                      secondaryTypographyProps={{ sx: { fontSize: '0.7rem', opacity: 0.55 } }}
+                    />
+                    {removingTagId === tag.$id ? <CircularProgress size={16} /> : <X size={16} color="rgba(255,255,255,0.5)" />}
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+            <Typography variant="caption" sx={{ display: 'block', mb: 1, color: 'rgba(255,255,255,0.35)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.65rem' }}>
+              Add More Tags
+            </Typography>
+          </Box>
+        )}
+
         {loading ? (
             <Box sx={{ display: 'grid', placeItems: 'center', py: 4 }}><CircularProgress size={20} /></Box>
         ) : results.length === 0 ? (
             <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', py: 6, color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>No resources found matching your query.</Typography>
         ) : (
             <List sx={{ py: 0 }}>
-                {results.map((item) => (
+                {results.map((item) => {
+                    const alreadyLinked = mode === 'project' && linkedIdsForTab.has(item.$id);
+                    return (
                     <ListItem key={item.$id} disablePadding>
                         <ListItemButton 
-                            onClick={() => handleAdd(item.$id)}
-                            disabled={!!adding}
-                            sx={{ px: 3, py: 1.5, borderBottom: '1px solid rgba(255,255,255,0.02)' }}
+                            onClick={() => !alreadyLinked && handleAdd(item.$id)}
+                            disabled={!!adding || alreadyLinked}
+                            sx={{ px: 3, py: 1.5, borderBottom: '1px solid rgba(255,255,255,0.02)', opacity: alreadyLinked ? 0.55 : 1 }}
                         >
                             <ListItemText 
                                 primary={item.title || item.name || item.issuer || item.caption || 'System Object'} 
                                 primaryTypographyProps={{ sx: { fontWeight: 700, fontSize: '0.9rem', color: '#fff' } }}
-                                secondary={item.summary || item.username || item.description || item.accountName || 'System Object'}
-                                secondaryTypographyProps={{ sx: { fontSize: '0.75rem', opacity: 0.5 } }}
+                                secondary={alreadyLinked ? 'Already added' : (item.summary || item.username || item.description || item.accountName || 'System Object')}
+                                secondaryTypographyProps={{ sx: { fontSize: '0.75rem', opacity: alreadyLinked ? 0.85 : 0.5, color: alreadyLinked ? '#10B981' : undefined } }}
                             />
-                            {adding === item.$id ? <CircularProgress size={16} /> : <Plus size={16} color={theme.palette.primary.main} />}
+                            {alreadyLinked ? (
+                              <Typography variant="caption" sx={{ color: '#10B981', fontWeight: 800, fontSize: '0.65rem' }}>ADDED</Typography>
+                            ) : adding === item.$id ? (
+                              <CircularProgress size={16} />
+                            ) : (
+                              <Plus size={16} color={theme.palette.primary.main} />
+                            )}
                         </ListItemButton>
                     </ListItem>
-                ))}
+                );})}
             </List>
         )}
       </Box>

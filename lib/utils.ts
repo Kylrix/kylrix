@@ -79,6 +79,33 @@ export function hasPaidKylrixPlan(user: any): boolean {
   return effectiveTierHasPaidAccess(getUserSubscriptionTier(user));
 }
 
+const TEAMS_TIERS = new Set(['TEAMS', 'ORG', 'LIFETIME']);
+
+/** Project collaboration, group channels, and team workspaces require Teams (or higher). */
+export function hasTeamsKylrixPlan(
+  user: any,
+  subscriptionTier?: string | null,
+): boolean {
+  if (isSelfHostedDeployment()) {
+    return true;
+  }
+  if (subscriptionTier && TEAMS_TIERS.has(String(subscriptionTier).trim().toUpperCase())) {
+    return true;
+  }
+  return TEAMS_TIERS.has(getUserSubscriptionTier(user));
+}
+
+/** Paid access from subscription context and/or user prefs/cache. */
+export function hasEffectivePaidAccess(user: any, subscriptionTier?: string | null): boolean {
+  if (isSelfHostedDeployment()) {
+    return true;
+  }
+  if (subscriptionTier && effectiveTierHasPaidAccess(subscriptionTier)) {
+    return true;
+  }
+  return hasPaidKylrixPlan(user);
+}
+
 export function getUserSubscriptionExpiresAt(user: any): string | null {
   if (!user) return null;
   if (typeof window !== 'undefined') {
