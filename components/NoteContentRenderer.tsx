@@ -13,6 +13,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { Box, Typography, alpha } from '@/lib/openbricks/primitives';
+import { isEphemeralComposeNoteId } from '@/lib/notes/compose-draft-registry';
 import { preProcessMarkdown } from '@/lib/markdown';
 import { VoiceNotePlayer } from '@/components/LinkRenderer';
 import { parseObjectBlocks, type SecondaryObjectPayload } from '@/lib/note-object-secondary';
@@ -47,7 +48,7 @@ interface NoteContentRendererProps {
 }
 
 function isEphemeralNoteId(noteId?: string) {
-  return !noteId || noteId.startsWith('live-') || noteId.startsWith('ghost-');
+  return !noteId || noteId.startsWith('ghost-') || isEphemeralComposeNoteId(noteId);
 }
 
 export function NoteContentRenderer({

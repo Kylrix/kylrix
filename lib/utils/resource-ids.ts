@@ -3,7 +3,9 @@
  */
 export function isLocalOnlyResourceId(id: string | null | undefined): boolean {
   const trimmed = String(id || '').trim();
-  return !trimmed || trimmed === 'ghost' || trimmed.startsWith('ghost-');
+  if (!trimmed || trimmed === 'ghost' || trimmed.startsWith('ghost-')) return true;
+  if (trimmed.startsWith('live-')) return true;
+  return false;
 }
 
 export function isValidAppwriteRowId(id: string | null | undefined): boolean {

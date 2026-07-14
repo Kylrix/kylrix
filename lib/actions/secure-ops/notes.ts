@@ -777,6 +777,11 @@ export async function createNoteSecure(data: any, jwt?: string) {
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
+  const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
+  const reservedRowId = [data?.$id, data?.id].find(
+    (id) => typeof id === 'string' && isValidAppwriteRowId(id),
+  ) as string | undefined;
+
   // Rigorous runtime validation
   const validated = NoteSchema.parse(data);
 
@@ -915,7 +920,7 @@ export async function createNoteSecure(data: any, jwt?: string) {
   const noteCreationServiceServer = createNoteCreationService({
     databaseId: APPWRITE_DATABASE_ID,
     tableId: APPWRITE_TABLE_ID_NOTES,
-    generateId: () => ID.unique(),
+    generateId: () => reservedRowId || ID.unique(),
     getCurrentUser: async () => ({ $id: actor.$id }),
     createRow: async (databaseId, tableId, data, rowId, permissions) => {
       return tables.createRow({
@@ -1196,6 +1201,11 @@ export async function deleteNoteSecure(noteId: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
+  if (!isValidAppwriteRowId(noteId)) {
+    throw new Error('This idea has not been saved yet.');
   }
 
   const isAllowed = await verifyNotePermission(noteId, actor.$id, 'admin');

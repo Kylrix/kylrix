@@ -1348,6 +1348,15 @@ export async function updateNoteIsomorphicLegacy(noteId: string, data: Partial<N
 }
 
 export async function deleteNote(noteId: string, jwt?: string) {
+  if (typeof window !== 'undefined') {
+    const { isEphemeralComposeNoteId, markComposePersisted } = await import('@/lib/notes/compose-draft-registry');
+    if (isEphemeralComposeNoteId(noteId)) {
+      markComposePersisted(noteId);
+      invalidateNoteRowClientCache(noteId);
+      return { success: true };
+    }
+  }
+
   if (noteId.startsWith('ghost-') && typeof window !== 'undefined') {
     const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
     if (historyRaw) {

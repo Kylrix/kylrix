@@ -22,6 +22,12 @@ import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useDataNexus } from './DataNexusContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
+import {
+  isEphemeralComposeNoteId,
+  markComposeDraft,
+  markComposePersisted,
+  isUnpersistedComposeDraft,
+} from '@/lib/notes/compose-draft-registry';
 
 type LiveEditGuard = {
   title: string;
@@ -31,8 +37,10 @@ type LiveEditGuard = {
 };
 
 export function isLiveDraftNoteId(noteId?: string | null): boolean {
-  return Boolean(noteId?.startsWith('live-'));
+  return isEphemeralComposeNoteId(noteId);
 }
+
+export { isUnpersistedComposeDraft };
 
 function dedupeNotesById(rows: Notes[]): Notes[] {
   const seen = new Set<string>();
@@ -511,6 +519,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       activeComposeNoteIdsRef.current.delete(ephemeralId);
     }
     activeComposeNoteIdsRef.current.add(savedId);
+    markComposePersisted(ephemeralId);
+    markComposePersisted(savedId);
   }, []);
 
   const upsertNote = useCallback((note: Notes) => {
@@ -553,12 +563,14 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const registerComposeSession = useCallback((noteId: string) => {
     if (!noteId) return;
     activeComposeNoteIdsRef.current.add(noteId);
+    markComposeDraft(noteId);
   }, []);
 
   const unregisterComposeSession = useCallback((noteId: string) => {
     if (!noteId) return;
     activeComposeNoteIdsRef.current.delete(noteId);
     liveEditGuardsRef.current.delete(noteId);
+    markComposePersisted(noteId);
   }, []);
 
   const clearLiveNoteGuard = useCallback((noteId: string) => {
@@ -674,7 +686,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         }
 
         const liveComposeId = [...activeComposeNoteIdsRef.current].find(
-          (id) => isLiveDraftNoteId(id) && notesRef.current.some((n) => n.$id === id),
+          (id) => isUnpersistedComposeDraft(id) && notesRef.current.some((n) => n.$id === id),
         );
         if (liveComposeId) {
           transferComposeSession(liveComposeId, payload.$id);

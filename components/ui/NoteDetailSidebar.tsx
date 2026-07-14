@@ -61,6 +61,7 @@ import { useAuth } from '@/lib/auth';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useNotes } from '@/context/NotesContext';
+import { isEphemeralComposeNoteId } from '@/lib/notes/compose-draft-registry';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { useSection } from '@/context/SectionContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
@@ -187,7 +188,7 @@ export function NoteDetailSidebar({
   }, [liveNote?.$id, refreshEcosystemTags]);
 
   useEffect(() => {
-    if (note.$id?.startsWith('live-')) {
+    if (note.$id && isEphemeralComposeNoteId(note.$id)) {
       const fromContext = allNotesRef.current.find((candidate) => candidate.$id === note.$id);
       if (fromContext && !isDirtyRef.current) {
         updateLocalAndParentNote(fromContext);

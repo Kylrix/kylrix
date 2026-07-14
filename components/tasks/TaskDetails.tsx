@@ -895,7 +895,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               ))}
             </div>
           ) : (
-            <div className="text-xs text-white/20 italic">No tags associated with this goal. Click '+' to add tags.</div>
+            <div className="text-xs text-white/20 italic">No tags associated with this goal. Click + to add tags.</div>
           )}
         </div>
 

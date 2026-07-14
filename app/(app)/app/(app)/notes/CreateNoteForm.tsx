@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ID } from 'appwrite';
 import { 
   Check, 
   ArrowUpRight, 
@@ -46,6 +47,8 @@ import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
 import { useAutosave } from '@/hooks/useAutosave';
+import { isEphemeralComposeNoteId, isUnpersistedComposeDraft, markComposePersisted } from '@/lib/notes/compose-draft-registry';
+import { isValidAppwriteRowId } from '@/lib/utils/resource-ids';
 
 interface CreateNoteFormProps {
   onNoteCreated: (note: Notes) => void;
@@ -64,10 +67,6 @@ interface CreateNoteFormProps {
 }
 
 const normalizeTags = (tags: string[] = []) => Array.from(new Set(tags.map((tag) => tag.trim()).filter(Boolean)));
-
-function isLiveDraftNoteId(noteId?: string | null): boolean {
-  return Boolean(noteId?.startsWith('live-'));
-}
 
 export default function CreateNoteForm({
   onNoteCreated,
@@ -145,7 +144,7 @@ export default function CreateNoteForm({
   const ensureLiveDraftId = useCallback(() => {
     const existingId = resolvedNoteId || liveDraftIdRef.current;
     if (existingId) return existingId;
-    const noteId = `live-${crypto.randomUUID()}`;
+    const noteId = ID.unique();
     liveDraftIdRef.current = noteId;
     registerComposeSession(noteId);
     setResolvedNoteId(noteId);
@@ -565,7 +564,7 @@ export default function CreateNoteForm({
     if (!hasDraftContent) return;
     if (resolvedNoteId || liveDraftIdRef.current) return;
 
-    const noteId = `live-${crypto.randomUUID()}`;
+    const noteId = ID.unique();
     liveDraftIdRef.current = noteId;
     registerComposeSession(noteId);
     setResolvedNoteId(noteId);
@@ -577,7 +576,7 @@ export default function CreateNoteForm({
     hasAnnouncedCreateRef.current = false;
 
     const noteId = liveDraftIdRef.current;
-    if (!noteId || !isLiveDraftNoteId(noteId)) return;
+    if (!noteId || !isEphemeralComposeNoteId(noteId)) return;
 
     removeNote(noteId);
     unregisterComposeSession(noteId);
@@ -715,9 +714,10 @@ export default function CreateNoteForm({
       migrateDraftNoteId(ephemeralId, savedId);
       unregisterComposeSession(ephemeralId);
     }
-    // Deregister the saved id from compose session mapping immediately so the realtime subscription 
-    // knows this is a saved copy and is allowed to insert the card instantly without filtering it.
-    if (savedId) unregisterComposeSession(savedId);
+    if (savedId) {
+      markComposePersisted(savedId);
+      unregisterComposeSession(savedId);
+    }
     liveDraftIdRef.current = savedId;
     setResolvedNoteId(savedId);
   }, [registerComposeSession, unregisterComposeSession, migrateDraftNoteId]);
@@ -769,7 +769,7 @@ export default function CreateNoteForm({
       const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
       const { encrypted: encTitle, key: noteKey } = await encryptGhostData(generatedTitle);
       const { encrypted: encContent } = await encryptGhostData(payload.content, noteKey);
-      const id = source.$id.startsWith('live-') ? `ghost-${crypto.randomUUID()}` : source.$id;
+      const id = isEphemeralComposeNoteId(source.$id) ? `ghost-${crypto.randomUUID()}` : source.$id;
 
       const saved = {
         $id: id,
@@ -819,7 +819,7 @@ export default function CreateNoteForm({
     }
 
     let saved: Notes;
-    const shouldCreate = isLiveDraftNoteId(source.$id);
+    const shouldCreate = isUnpersistedComposeDraft(source.$id) || source.$id.startsWith('live-');
 
     if (!shouldCreate) {
       saved = (await updateNote(source.$id, {
@@ -832,10 +832,12 @@ export default function CreateNoteForm({
       const ephemeralId = source.$id;
       saved = (await createNote({
         ...payload,
+        $id: isValidAppwriteRowId(source.$id) ? source.$id : undefined,
         isPublic: payload.isPublic,
         isGuest: payload.isGuest,
         title: generatedTitle,
       })) as Notes;
+      markComposePersisted(saved.$id);
       migrateDraftId(saved.$id, ephemeralId);
       if (typeof window !== 'undefined') {
         localStorage.removeItem('kylrix:draft:note');
