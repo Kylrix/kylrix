@@ -11,6 +11,10 @@ execution:
     container:
       image: node@sha256:a25c9934ff6382cd4f08b6bc26c82bf4ea69b1e6f8dabfb2ead457374127c365
       engines: [docker]
+      resources:
+        memory:
+          minimum: 3GiB
+          default: 4GiB
   contexts:
     host:
       backend: native
@@ -127,10 +131,7 @@ tasks:
       toolchains:
         - node
     effects:
-      writes:
-        - .env
-        - node_modules
-        - .pnpm-store
+      writes: [.env, node_modules, .pnpm-store]
       network: true
       network_kind: dependency_hydration
     safe_for_agent: true
