@@ -171,8 +171,7 @@ export function NewChatDrawer({
     }, [selectedUsers, startChat]);
 
     useEffect(() => {
-        if (!isOpen) return;
-        setIsDrawerOpen(true);
+        setIsDrawerOpen(isOpen);
         return () => setIsDrawerOpen(false);
     }, [isOpen, setIsDrawerOpen]);
 

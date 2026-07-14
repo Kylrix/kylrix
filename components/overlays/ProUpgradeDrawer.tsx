@@ -43,6 +43,20 @@ const featureDescriptions: Record<string, { desc: string; fix: string }> = {
   }
 };
 
+const TEAMS_ONLY_FEATURES = new Set(['Project Collaboration', 'New Channel']);
+
+const TEAMS_BENEFITS = [
+  'Unlimited projects and team workspaces',
+  'Project-level collaboration and member invites',
+  'Group channels and advanced team coordination',
+];
+
+const PRO_BENEFITS = [
+  'Unlimited storage & file uploads',
+  'Ecosystem AI access & advanced automation',
+  'Temporal masterpass encryption options',
+];
+
 export function ProUpgradeDrawer() {
   const router = useRouter();
   const { showProUpgrade, closeProUpgrade, feature } = useProUpgrade();
@@ -51,6 +65,10 @@ export function ProUpgradeDrawer() {
 
   const featureName = feature ? ` ${feature}` : '';
   const spec = feature ? featureDescriptions[feature] : null;
+  const isTeamsUpgrade = Boolean(feature && TEAMS_ONLY_FEATURES.has(feature));
+  const accent = isTeamsUpgrade ? '#F59E0B' : '#6366F1';
+  const benefits = isTeamsUpgrade ? TEAMS_BENEFITS : PRO_BENEFITS;
+  const upgradeLabel = isTeamsUpgrade ? 'Upgrade to Teams' : 'Upgrade to Pro';
 
   return (
     <Drawer
@@ -63,7 +81,9 @@ export function ProUpgradeDrawer() {
         zIndex: 14000,
         '& .ob-drawer-panel': {
           bgcolor: '#161412',
-          backgroundImage: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(236, 72, 153, 0.02) 100%)',
+          backgroundImage: isTeamsUpgrade
+            ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(99, 102, 241, 0.02) 100%)'
+            : 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(236, 72, 153, 0.02) 100%)',
           borderTop: isMobile ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(255, 255, 255, 0.1)',
           borderLeft: !isMobile ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
           maxHeight: isMobile ? '60vh' : '100vh',
@@ -89,15 +109,15 @@ export function ProUpgradeDrawer() {
               width: 44,
               height: 44,
               borderRadius: '12px',
-              bgcolor: alpha('#6366F1', 0.1),
-              border: '1px solid rgba(99, 102, 241, 0.3)',
+              bgcolor: alpha(accent, 0.1),
+              border: `1px solid ${alpha(accent, 0.3)}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               mb: 2,
             }}
           >
-            <Zap size={22} color="#6366F1" />
+            <Zap size={22} color={accent} />
           </Box>
           <Typography
             sx={{
@@ -109,7 +129,7 @@ export function ProUpgradeDrawer() {
               fontFamily: 'monospace',
             }}
           >
-            Upgrade to Pro
+            {upgradeLabel}
           </Typography>
           <Typography
             sx={{
@@ -126,24 +146,23 @@ export function ProUpgradeDrawer() {
               </>
             ) : (
               <>
-                {featureName ? `${featureName} is a Pro feature.` : 'This feature requires a Pro subscription.'} Unlock full premium capabilities.
+                {featureName
+                  ? `${featureName} is a ${isTeamsUpgrade ? 'Teams' : 'Pro'} feature.`
+                  : `This feature requires a ${isTeamsUpgrade ? 'Teams' : 'Pro'} subscription.`}{' '}
+                Unlock full premium capabilities.
               </>
             )}
           </Typography>
 
           <Stack spacing={1.5} sx={{ mb: 2 }}>
-            {[
-              'Unlimited storage & file uploads',
-              'Ecosystem AI access & advanced automation',
-              'Temporal masterpass encryption options'
-            ].map((benefit) => (
+            {benefits.map((benefit) => (
               <Box key={benefit} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <Box
                   sx={{
                     width: 6,
                     height: 6,
                     borderRadius: '50%',
-                    bgcolor: '#6366F1',
+                    bgcolor: accent,
                     flexShrink: 0,
                   }}
                 />
@@ -161,8 +180,8 @@ export function ProUpgradeDrawer() {
             fullWidth
             variant="contained"
             sx={{
-              bgcolor: '#6366F1',
-              color: '#fff',
+              bgcolor: accent,
+              color: isTeamsUpgrade ? '#111' : '#fff',
               fontWeight: 900,
               py: 1.25,
               fontSize: '0.9rem',
@@ -170,16 +189,16 @@ export function ProUpgradeDrawer() {
               letterSpacing: '0.05em',
               borderRadius: '12px',
               '&:hover': {
-                bgcolor: '#818CF8',
+                bgcolor: isTeamsUpgrade ? '#D97706' : '#818CF8',
               },
             }}
             onClick={() => {
               closeProUpgrade();
-              router.push('/pricing');
+              router.push(isTeamsUpgrade ? '/pricing?tier=teams' : '/pricing');
             }}
             endIcon={<ExternalLink size={16} />}
           >
-            Upgrade Now
+            {isTeamsUpgrade ? 'View Teams Plans' : 'Upgrade Now'}
           </Button>
           <Button
             fullWidth

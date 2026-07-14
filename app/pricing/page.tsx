@@ -29,6 +29,14 @@ export default function PricingPage() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const resumeAttemptedRef = useRef(false);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const tier = new URLSearchParams(window.location.search).get('tier');
+    if (tier?.toLowerCase() === 'teams') {
+      setSelectedTier('TEAMS');
+    }
+  }, []);
+
   const yearlyListPrice = useMemo(() => getYearlyListPrice(selectedTier), [selectedTier]);
   const yearlyDiscountedPrice = useMemo(() => getYearlyDiscountedPrice(selectedTier), [selectedTier]);
 

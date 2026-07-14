@@ -50,6 +50,7 @@ import ProjectAddSubProjectModal from '@/components/projects/ProjectAddSubProjec
 import { databases, storage } from '@/lib/appwrite/client';
 import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import {
   createGhostNoteForProject,
   promoteGhostThreadToStory,
@@ -139,6 +140,7 @@ export default function ProjectDetailPage() {
   const { openSecondarySidebar } = useLayout();
   const { openOverlay, closeOverlay } = useOverlay();
   const { openProUpgrade } = useProUpgrade();
+  const { currentTier } = useSubscription();
   const { fetchOptimized, getCachedDataAsync, setCachedData, invalidate } = useDataNexus();
 
   useEffect(() => {
@@ -831,9 +833,14 @@ export default function ProjectDetailPage() {
   };
 
   const handleAddCollaborator = () => {
-      // Project collaboration requires a Teams tier subscription
-      const tier = getUserSubscriptionTier(user);
-      const isTeams = tier === 'TEAMS' || tier === 'ORG' || tier === 'LIFETIME';
+      const isTeams =
+        currentTier === 'TEAMS' ||
+        currentTier === 'ORG' ||
+        currentTier === 'LIFETIME' ||
+        getUserSubscriptionTier(user) === 'TEAMS' ||
+        getUserSubscriptionTier(user) === 'ORG' ||
+        getUserSubscriptionTier(user) === 'LIFETIME';
+
       if (!isTeams) {
           showError('Project collaboration requires a Teams subscription.');
           openProUpgrade('Project Collaboration');

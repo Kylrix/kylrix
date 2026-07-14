@@ -45,6 +45,7 @@ import { getProfilePicturePreview } from '@/lib/appwrite';
 import { getUserProfilePicId, hasPaidKylrixPlan } from '@/lib/utils';
 import { getEcosystemUrl, APP_BASE_PATHS } from '@/lib/constants';
 import { TOPBAR_LAYOUT, getAppTone, type KylrixApp } from '@/lib/sdk/design';
+import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 import { createEcosystemPanelItems, createTopbarPanelMotion, createTopbarSearchSurface, isTopbarScrollAtBottom, isTopbarScrollAtTop } from '@/lib/sdk/topbar';
 import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePicId } from '@/lib/sdk/appwrite';
 import { stageProfileView } from '@/lib/profile-handoff';
@@ -58,10 +59,8 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { useProfile } from '@/components/providers/ProfileProvider';
 import { useLocalContext } from '@/lib/context-engine';
-import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useNotes } from '@/context/NotesContext';
 import { useTask } from '@/context/TaskContext';
-import { useSidebar } from '@/components/ui/SidebarContext';
 
 interface PageMatch {
   text: string;
@@ -219,11 +218,8 @@ export default function ConnectTopbar({
   const isPro = hasPaidKylrixPlan(user) || currentTier === 'PRO';
   const router = useRouter();
   const pathname = usePathname();
-  const { isDrawerOpen } = useDrawerState();
   const { notes = [] } = useNotes();
   const { tasks = [], projects = [] } = useTask();
-  const { setIsCollapsed } = useSidebar();
-  
   // To let any drawer communicate full state expansion globally:
   const isDrawerExpanded = typeof window !== 'undefined' && document.body.classList.contains('drawer-expanded');
   
@@ -604,9 +600,18 @@ export default function ConnectTopbar({
   useEffect(() => {
     if (!activePanel) return;
 
+    const isInsideTopbarSurface = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return false;
+      if (headerRef.current?.contains(target)) return true;
+      return Boolean(
+        target.closest(
+          '[data-kylrix-topbar-panel], .ob-drawer-root, .ob-drawer-panel, .kylrix-sidebar',
+        ),
+      );
+    };
+
     const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as Node | null;
-      if (!target || (headerRef.current && headerRef.current.contains(target))) return;
+      if (isInsideTopbarSurface(event.target)) return;
       handleCloseAll();
     };
 
@@ -849,7 +854,8 @@ export default function ConnectTopbar({
           open={notificationsOpen}
           onClose={() => setNotificationsOpen(false)}
           keepMounted={false}
-          disablePortal={false} 
+          disablePortal={true}
+          slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
           PaperProps={{
             sx: {
               bgcolor: '#161412',
@@ -870,6 +876,7 @@ export default function ConnectTopbar({
 
     return (
       <Box
+        data-kylrix-topbar-panel
         sx={{
           width: '100%',
           borderTop: '1px solid rgba(255,255,255,0.05)',
@@ -1419,7 +1426,8 @@ export default function ConnectTopbar({
           open={searchOpen}
           onClose={handleCloseAll}
           keepMounted={false}
-          disablePortal={false}
+          disablePortal={true}
+          slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
           PaperProps={{
             sx: {
               bgcolor: '#161412',
@@ -1499,6 +1507,7 @@ export default function ConnectTopbar({
 
     return (
       <Box
+        data-kylrix-topbar-panel
         data-note-search-surface="true"
         sx={{
           width: '100%',
@@ -1728,7 +1737,8 @@ export default function ConnectTopbar({
           open={Boolean(profileMenuAnchorEl)}
           onClose={() => setProfileMenuAnchorEl(null)}
           keepMounted={false}
-          disablePortal={false}
+          disablePortal={true}
+          slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
           PaperProps={{
             sx: {
               bgcolor: '#161412',
@@ -1749,6 +1759,7 @@ export default function ConnectTopbar({
 
     return (
       <Box
+        data-kylrix-topbar-panel
         sx={{
           width: '100%',
           borderTop: '1px solid rgba(255,255,255,0.04)',
@@ -1774,7 +1785,8 @@ export default function ConnectTopbar({
           open={Boolean(appMenuAnchorEl)}
           onClose={() => setAppMenuAnchorEl(null)}
           keepMounted={false}
-          disablePortal={false}
+          disablePortal={true}
+          slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
           PaperProps={{
             sx: {
               bgcolor: '#161412',
@@ -1868,6 +1880,7 @@ export default function ConnectTopbar({
         style={{ width: '100%', transformOrigin: 'top center' }}
       >
         <Box 
+          data-kylrix-topbar-panel
           sx={{ 
             width: '100%', 
             bgcolor: '#161412', 
@@ -2079,7 +2092,8 @@ export default function ConnectTopbar({
           open={shortcutsOpen}
           onClose={handleCloseAll}
           keepMounted={false}
-          disablePortal={false}
+          disablePortal={true}
+          slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
           PaperProps={{
             sx: {
               bgcolor: '#161412',
@@ -2115,6 +2129,7 @@ export default function ConnectTopbar({
 
     return (
       <Box
+        data-kylrix-topbar-panel
         sx={{
           width: '100%',
           borderTop: '1px solid rgba(255,255,255,0.05)',
@@ -2163,13 +2178,11 @@ export default function ConnectTopbar({
             <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
               <Box 
                 onClick={(e: React.MouseEvent<HTMLElement>) => {
-                  if (isDesktop) {
-                    setIsCollapsed(prev => !prev);
-                  } else if (user) {
-                    openAppMenu(e);
-                  } else {
+                  if (!user) {
                     openUnified('login');
+                    return;
                   }
+                  openAppMenu(e);
                 }} 
                 sx={{ cursor: 'pointer', flexShrink: 0 }}
               >
