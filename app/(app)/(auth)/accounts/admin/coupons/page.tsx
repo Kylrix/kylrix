@@ -454,6 +454,11 @@ export default function AdminCouponsPage() {
                     <p className="text-xs text-white/40 mt-1 font-mono">
                       /accounts/coupon/{coupon.$id}
                     </p>
+                    {coupon.$createdAt && (
+                      <p className="text-[10px] text-white/30 mt-1 font-mono">
+                        Issued: {new Date(coupon.$createdAt).toLocaleString()}
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <span className="px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border bg-white/5 border-white/10 text-white/60">
