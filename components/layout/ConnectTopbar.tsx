@@ -1562,6 +1562,22 @@ export default function ConnectTopbar({
               </Box>
 
                 <Box sx={{ display: 'grid', gap: 1.25, maxHeight: isDesktop ? 'none' : '58vh', overflowY: isDesktop ? 'visible' : 'auto', pr: 0.5, pb: 0.5 }}>
+                  {/* Join Discord CTA */}
+                  <a
+                    href="https://discord.gg/kylrix"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-[#5865F2]/20 bg-[#5865F2]/5 hover:bg-[#5865F2]/10 transition-all font-satoshi text-xs font-bold text-[#5865F2]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 fill-current" viewBox="0 0 127.14 96.36">
+                        <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36c2.65-3.6,5-7.46,7-11.5a68.88,68.88,0,0,1-11-5.26c.92-.68,1.82-1.39,2.69-2.13A75.14,75.14,0,0,0,96.5,77.47c.87.74,1.77,1.45,2.69,2.13a68.88,68.88,0,0,1-11,5.26c2,4,4.35,7.9,7,11.5a105.73,105.73,0,0,0,31-18.83C129,54.65,122.68,31.58,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.9,46,53.9,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.14,46,96.14,53,91,65.69,84.69,65.69Z"/>
+                      </svg>
+                      <span>Join our Discord Community</span>
+                    </div>
+                    <span className="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-md bg-[#5865F2]/10 border border-[#5865F2]/25">Join Discord</span>
+                  </a>
+
                 <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'center', p: 0.75 }}>
                   <IdentityAvatar
                     userId={user?.$id}

@@ -85,13 +85,7 @@ export function UnifiedLeftSidebar() {
 
   if (
     isConnectChatPage ||
-    mode === 'compact' ||
-    isDrawerOpen ||
-    isNoteFullPageDetail ||
-    isConnectCallDetail ||
-    isCallLauncherOpen ||
-    isOverlayOpen ||
-    !appContext
+    mode === 'compact'
   ) return null;
 
   const currentTab = getCurrentTab();

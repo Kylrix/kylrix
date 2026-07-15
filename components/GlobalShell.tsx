@@ -106,15 +106,13 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     !isSharedPage &&
     !isVaultResetRoute &&
     !isLandingPage &&
-    !isConnectChatPage &&
-    !isSpecificPostPage
+    !isConnectChatPage
   ), [
     isAppRoute,
     isSharedPage,
     isVaultResetRoute,
     isLandingPage,
-    isConnectChatPage,
-    isSpecificPostPage
+    isConnectChatPage
   ]);
 
   const mainClassName = useMemo(() => {
