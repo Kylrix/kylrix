@@ -36,6 +36,25 @@ export class ErrorBoundary extends Component<Props, State> {
       errorInfo
     });
 
+    // Auto-Recovery Strategy: Bust caches and reload if it looks like a build chunk load error
+    const isChunkError = /loading.*chunk|failed to fetch.*dynamically|import.*failed/i.test(error?.message || '');
+    if (isChunkError && typeof window !== 'undefined') {
+      try {
+        // Clear caches to force fetch of fresh assets
+        if ('caches' in window) {
+          caches.keys().then((keys) => {
+            keys.forEach((key) => caches.delete(key));
+          });
+        }
+        // Force full reload bypassing cache
+        setTimeout(() => {
+          window.location.reload();
+        }, 800);
+      } catch (e) {
+        console.error('Failed auto-recovery cache bust:', e);
+      }
+    }
+
     // Call optional error handler
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
@@ -43,6 +62,10 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleRetry = () => {
+    // Clear storage cache items on retry click to guarantee recoverability
+    try {
+      localStorage.removeItem('kylrix:draft:note');
+    } catch {}
     this.setState({ hasError: false, error: undefined, errorInfo: undefined });
   };
 
