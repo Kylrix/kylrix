@@ -13,6 +13,12 @@
       "skillPath": "skills/appwrite-typescript/SKILL.md",
       "computedHash": "abf6b3631d6aea32fa83c682c9c54881fbe13d81908d1a934be6a13809b3ff61"
     },
+    "ota": {
+      "source": "ota-run/skills",
+      "sourceType": "github",
+      "skillPath": "skills/ota/SKILL.md",
+      "computedHash": "0865bb205d1bdae2767b32c347a573f958f2045970eaaa9bd0b85193db5984ee"
+    },
     "upstash": {
       "source": "upstash/skills",
       "sourceType": "github",
