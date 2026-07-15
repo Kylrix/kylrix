@@ -40,7 +40,7 @@ import {
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/context/auth/AuthContext';
 import { getProfilePicturePreview } from '@/lib/appwrite';
 import { getUserProfilePicId, hasEffectivePaidAccess } from '@/lib/utils';
 import { getEcosystemUrl, APP_BASE_PATHS } from '@/lib/constants';
@@ -1174,11 +1174,11 @@ export default function ConnectTopbar({
                 </Box>
               )}
 
-              {/* Local Tasks & Projects Matches */}
+              {/* Local Tasks & Workspaces Matches */}
               {(localTaskResults.length > 0 || localProjectResults.length > 0) && (
                 <Box sx={{ display: 'grid', gap: 0.75 }}>
                   <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
-                    Flow & Projects
+                    Flow & Workspaces
                   </Typography>
                   <Box sx={{ display: 'grid', gap: 0.75 }}>
                     {localProjectResults.slice(0, 2).map((proj) => (
@@ -1916,7 +1916,10 @@ export default function ConnectTopbar({
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
-                  void updatePreferences({ discordJoined: true }).catch(() => {});
+                  handleCloseAll();
+                  if (typeof updatePreferences === 'function') {
+                    void updatePreferences({ discordJoined: true }).catch(() => {});
+                  }
                 }}
                 className="flex items-center justify-between gap-3 px-4 py-3 mb-3 rounded-2xl border border-[#5865F2]/20 bg-[#5865F2]/5 hover:bg-[#5865F2]/10 transition-all font-satoshi text-xs font-bold text-[#5865F2]"
               >
@@ -1999,7 +2002,7 @@ export default function ConnectTopbar({
       { key: 'Ctrl + M', desc: 'Profile System Panel' },
       { key: 'Ctrl + A', desc: 'Agentic Assistant' },
       { key: 'Ctrl + K', desc: 'Keyboard Shortcuts Console' },
-      { key: 'Ctrl + P', desc: 'Navigate to Projects' },
+      { key: 'Ctrl + P', desc: 'Navigate to Workspaces' },
       { key: 'Ctrl + N', desc: 'Navigate to Notes' },
       { key: 'Ctrl + T', desc: 'Navigate to Tags' },
       { key: 'Ctrl + X', desc: 'Navigate to Settings' },

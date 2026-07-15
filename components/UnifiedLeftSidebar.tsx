@@ -97,7 +97,7 @@ export function UnifiedLeftSidebar() {
     { id: 'flow', label: 'Flow', icon: FlowIcon },
     { id: 'vault', label: 'Vault', icon: VaultIcon },
     { id: 'connect', label: 'Connect', icon: ConnectIcon },
-    { id: 'projects', label: 'Projects', icon: ProjectsIcon },
+    { id: 'projects', label: 'Workspaces', icon: ProjectsIcon },
     { id: 'tags', label: 'Tags', icon: TagsIcon },
   ];
 
@@ -229,7 +229,9 @@ export function UnifiedLeftSidebar() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
-                  void updatePreferences({ discordJoined: true }).catch(() => {});
+                  if (typeof updatePreferences === 'function') {
+                    void updatePreferences({ discordJoined: true }).catch(() => {});
+                  }
                 }}
                 style={{
                   display: 'flex',
