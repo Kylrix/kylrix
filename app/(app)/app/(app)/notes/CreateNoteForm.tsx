@@ -652,6 +652,13 @@ export default function CreateNoteForm({
     const existing = allNotesRef.current.find((candidate) => candidate.$id === noteId);
     const normalizedTags = normalizeTags(tags);
     const fallbackTitle = '';
+    // When auto-title is active (title not manually edited), derive card title directly from
+    // the current `content` state instead of the stale `title` state (which lags one render
+    // behind content due to the auto-title effect). This eliminates the card preview lag.
+    const previewTitle = resolveNoteCardTitle(
+      isTitleManuallyEdited ? title : null,
+      content,
+    ) || fallbackTitle;
     return {
       ...(existing || {
         $id: noteId,
@@ -662,14 +669,14 @@ export default function CreateNoteForm({
         $createdAt: new Date().toISOString(),
       } as Notes),
       $id: noteId,
-      title: resolveNoteCardTitle(title, content) || fallbackTitle,
+      title: previewTitle,
       content,
       tags: normalizedTags,
       format: 'text',
       isPublic,
       isGuest,
     };
-  }, [title, content, tags, resolvedNoteId, isHydrated, isPublic, isGuest, composerKind, user?.$id]);
+  }, [title, content, tags, resolvedNoteId, isHydrated, isPublic, isGuest, composerKind, user?.$id, isTitleManuallyEdited]);
 
   const candidateNoteRef = useRef<Notes | null>(null);
   candidateNoteRef.current = candidateNote;
