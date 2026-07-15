@@ -91,15 +91,14 @@ export const buildAutoTitleFromContent = (rawContent: string): string => {
   return clampNoteTitle(titleCandidate);
 };
 
-const GENERIC_NOTE_TITLES = new Set(['Untitled Thought', 'Untitled Note', 'Untitled Project']);
+const GENERIC_NOTE_TITLES = new Set<string>();
 
 export const isGenericNoteTitle = (title?: string | null): boolean => {
-  if (!title?.trim()) return true;
-  return GENERIC_NOTE_TITLES.has(title.trim());
+  return false;
 };
 
 export const resolveNoteCardTitle = (title?: string | null, content?: string | null): string => {
   const trimmed = clampNoteTitle(title);
-  if (trimmed && !isGenericNoteTitle(trimmed)) return trimmed;
-  return buildAutoTitleFromContent(content || '') || trimmed;
+  if (trimmed && trimmed.trim() !== '') return trimmed;
+  return buildAutoTitleFromContent(content || '') || 'New Note';
 };

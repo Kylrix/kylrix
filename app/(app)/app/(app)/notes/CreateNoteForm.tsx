@@ -590,7 +590,7 @@ export default function CreateNoteForm({
     setResolvedNoteId(id);
     registerComposeSession(id);
 
-    const shellTitle = composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought';
+    const shellTitle = '';
     const now = new Date().toISOString();
     const shell = {
       $id: id,
@@ -646,7 +646,7 @@ export default function CreateNoteForm({
 
     const existing = allNotesRef.current.find((candidate) => candidate.$id === noteId);
     const normalizedTags = normalizeTags(tags);
-    const fallbackTitle = composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought';
+    const fallbackTitle = '';
     return {
       ...(existing || {
         $id: noteId,
@@ -677,7 +677,7 @@ export default function CreateNoteForm({
     const hasAnyDraft = Boolean(editor.title.trim() || editor.content.trim() || editor.tags.length);
     if (!hasAnyDraft) return null;
 
-    const fallbackTitle = editor.composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought';
+    const fallbackTitle = '';
     const draftNote: Notes = {
       ...(candidateNoteRef.current || ({} as Notes)),
       $id: noteId,
@@ -965,7 +965,7 @@ export default function CreateNoteForm({
 
     applyPersistSnapshot(saved, source);
 
-    const fallbackTitle = composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought';
+    const fallbackTitle = '';
     const cardTitle = resolveNoteCardTitle(source.title || title, source.content) || fallbackTitle;
     const localNote: Notes = {
       ...saved,
