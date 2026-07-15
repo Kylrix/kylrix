@@ -36,7 +36,8 @@ export default function ChatPage() {
                     if (hasLocalKeys && targetHasPublicKey) {
                         // Standard E2EE chat
                         try {
-                            const conv = await ChatService.createConversation([user.$id, targetProfile.$id]);
+                            const participants = targetProfile.$id === user.$id ? [user.$id] : [user.$id, targetProfile.$id];
+                            const conv = await ChatService.createConversation(participants);
                             if (conv) {
                                 router.replace(`/connect/chat/${conv.$id || conv.id}`);
                                 return;

@@ -1780,19 +1780,44 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
             return val.length > 40 && !val.includes(' ');
         };
 
-        if (msg.type === MessagesType.TEXT && !isUnlocked && isLikelyEncrypted(msg.content as string)) {
-            return (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, opacity: 0.8 }}>
-                    <Lock size={14} strokeWidth={2.5} />
-                    <Typography variant="body2" sx={{ fontStyle: 'italic', fontWeight: 500 }}>
-                        Encrypted message
-                    </Typography>
-                </Box>
-            );
+        let displayedContent = msg.content as string;
+        const isEncrypted = isLikelyEncrypted(displayedContent);
+
+        if (msg.type === MessagesType.TEXT && isEncrypted) {
+            if (!isUnlocked) {
+                return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, opacity: 0.8 }}>
+                        <Lock size={14} strokeWidth={2.5} />
+                        <Typography variant="body2" sx={{ fontStyle: 'italic', fontWeight: 500 }}>
+                            Encrypted message
+                        </Typography>
+                    </Box>
+                );
+            } else {
+                // Dynamically decrypt using memory cache to prevent render loop execution bottlenecks
+                const cacheKey = `decrypted_msg_${msg.$id || msg.id}`;
+                const cachedDecrypted = (window as any)[cacheKey];
+                if (cachedDecrypted) {
+                    displayedContent = cachedDecrypted;
+                } else {
+                    // Start async decryption task and trigger render state updates dynamically
+                    ecosystemSecurity.decrypt(displayedContent)
+                        .then((decrypted) => {
+                            (window as any)[cacheKey] = decrypted;
+                            setMessages((prev) => prev.map((m) => {
+                                if ((m.$id || m.id) === (msg.$id || msg.id)) {
+                                    return { ...m, content: decrypted };
+                                }
+                                return m;
+                            }));
+                        })
+                        .catch(() => {});
+                }
+            }
         }
 
         const fileId = msg.attachments && msg.attachments[0];
-        if (!fileId) return <FormattedText text={msg.content as string} />;
+        if (!fileId) return <FormattedText text={displayedContent} />;
 
         const bucketId = StorageService.getBucketForType(msg.type);
         const viewUrl = StorageService.getFileView(fileId, bucketId);
