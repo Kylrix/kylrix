@@ -140,6 +140,16 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('kylrix:open-agentic-drawer' as any, handleOpenAgentic);
   }, [openAgenticDrawer]);
 
+  // Autonomic global sync engine initializer
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('@/lib/services/sync-engine').then(({ autonomicSyncEngine }) => {
+        // Spin up first cycle to sync outstanding local drafts on boot
+        void autonomicSyncEngine.runCycle();
+      });
+    }
+  }, []);
+
   const lastPathnameRef = useRef(pathname);
   useEffect(() => {
     // Single-batch UI reset on navigation - ONLY call if currently open to prevent cascading update loops!
