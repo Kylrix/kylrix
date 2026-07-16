@@ -731,17 +731,28 @@ export default function CreateNoteForm({
       hasBootstrappedDraftRef.current = true;
     }
 
-    if (!candidateNote?.$id) return;
-    registerComposeSession(candidateNote.$id);
+    const previewTitle = resolveNoteCardTitle(
+      isTitleManuallyEdited ? title : null,
+      content,
+    ) || '';
+
     const draftNote: Notes = {
-      ...candidateNote,
       $id: draftId,
+      title: previewTitle,
+      content,
+      tags: normalizeTags(tags),
+      format: 'text',
+      isPublic,
+      isGuest,
+      userId: user?.$id || '',
+      $createdAt: new Date().toISOString(),
       $updatedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    };
+    } as Notes;
+
     pushLiveNote(draftNote);
     setCachedData(`note_${draftId}`, draftNote);
-  }, [candidateNote, title, content, tags, resolvedNoteId, pushLiveNote, registerComposeSession, setCachedData]);
+  }, [title, content, tags, resolvedNoteId, isPublic, isGuest, user?.$id, isTitleManuallyEdited, pushLiveNote, registerComposeSession, setCachedData]);
 
   useEffect(() => {
     return () => {
