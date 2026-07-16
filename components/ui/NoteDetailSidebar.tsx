@@ -331,23 +331,7 @@ export function NoteDetailSidebar({
     setIsPublic(getNotePublicState(liveNote));
   }, [liveNote]);
 
-  // Live sync: note card + list read the same draft on every keystroke (save stays debounced separately).
-  useEffect(() => {
-    if (!isDirtyRef.current || !liveNote.$id) return;
 
-    const draftNote: Notes = {
-      ...liveNote,
-      title,
-      content,
-      tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
-      updatedAt: new Date().toISOString(),
-      $updatedAt: new Date().toISOString(),
-    };
-
-    void setCachedData(`note_${liveNote.$id}`, draftNote);
-    pushLiveNote(draftNote);
-    onUpdate(draftNote);
-  }, [title, content, tags, liveNote, onUpdate, pushLiveNote, setCachedData]);
 
   // Automatically heal T4 encrypted state if vault is unlocked
   useEffect(() => {
@@ -1140,8 +1124,23 @@ export function NoteDetailSidebar({
                 type="text"
                 value={title}
                 onChange={(e) => {
-                  setTitle(e.target.value);
+                  const nextTitle = e.target.value;
+                  setTitle(nextTitle);
                   markDirty();
+
+                  if (liveNote.$id) {
+                    const draftNote: Notes = {
+                      ...liveNote,
+                      title: nextTitle,
+                      content,
+                      tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
+                      updatedAt: new Date().toISOString(),
+                      $updatedAt: new Date().toISOString(),
+                    };
+                    pushLiveNote(draftNote);
+                    void setCachedData(`note_${liveNote.$id}`, draftNote);
+                    onUpdate(draftNote);
+                  }
                 }}
                 className="w-full min-w-0 bg-transparent text-[#6366F1] font-extrabold text-lg font-clash tracking-tight leading-tight border-none focus:outline-none placeholder:text-white/25"
                 placeholder="Untitled note"
@@ -1423,8 +1422,23 @@ export function NoteDetailSidebar({
                   <textarea
                     value={content}
                     onChange={(e) => {
-                      setContent(e.target.value);
+                      const nextContent = e.target.value;
+                      setContent(nextContent);
                       markDirty();
+
+                      if (liveNote.$id) {
+                        const draftNote: Notes = {
+                          ...liveNote,
+                          title,
+                          content: nextContent,
+                          tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
+                          updatedAt: new Date().toISOString(),
+                          $updatedAt: new Date().toISOString(),
+                        };
+                        pushLiveNote(draftNote);
+                        void setCachedData(`note_${liveNote.$id}`, draftNote);
+                        onUpdate(draftNote);
+                      }
                     }}
                     ref={contentTextareaRef}
                     onKeyDown={onEditorKeyDown}
