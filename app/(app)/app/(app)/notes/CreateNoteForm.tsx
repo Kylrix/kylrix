@@ -1043,26 +1043,14 @@ export default function CreateNoteForm({
     user?.$id,
   ]);
 
-  const { isSaving: isAutosaving, forceSave } = useAutosave(candidateNote, {
-    enabled: Boolean(candidateNote?.$id) && isDirty,
-    isDirty,
-    debounceMs: 500,
-    save: saveComposerNote,
-    onSave: () => {
-      if (!createdToastShown.current) {
-        createdToastShown.current = true;
-        showSuccess('Idea saved', 'Your idea has been saved.');
-      }
-    },
-    onError: () => {
-      showError('Could not save idea', 'Your changes are still on screen.');
-    },
-  });
+  const [isSaving, setIsSaving] = useState(false);
 
   const persist = useCallback(async (showToast = true) => {
-    if (!candidateNoteRef.current?.$id) return null;
+    const finalDraft = flushLiveNoteDraft();
+    if (!finalDraft?.$id) return null;
+    setIsSaving(true);
     try {
-      const saved = await saveComposerNote(candidateNoteRef.current);
+      const saved = await saveComposerNote(finalDraft);
       if (showToast && !createdToastShown.current) {
         createdToastShown.current = true;
         showSuccess('Idea saved', 'Your idea has been saved.');
@@ -1074,39 +1062,40 @@ export default function CreateNoteForm({
         showError('Could not save idea', (error as Error)?.message || 'Please try again.');
       }
       throw error;
+    } finally {
+      setIsSaving(false);
     }
-  }, [saveComposerNote, showError, showSuccess]);
+  }, [flushLiveNoteDraft, saveComposerNote, showError, showSuccess]);
 
   useEffect(() => {
     return () => {
       if (composeCloseHandledRef.current) return;
-      const finalDraft = flushLiveNoteDraftRef.current() || candidateNoteRef.current;
+      const finalDraft = flushLiveNoteDraftRef.current();
       if (!finalDraft?.$id) return;
       const editor = editorStateRef.current;
       const hasAnyDraft = Boolean(editor.title.trim() || editor.content.trim() || editor.tags.length);
       if (!hasAnyDraft) return;
-      void forceSave(finalDraft);
+      void saveComposerNote(finalDraft).catch((e) => console.error('Failed to persist draft on unmount', e));
     };
-  }, [forceSave]);
+  }, [saveComposerNote]);
 
-  const isSaving = isAutosaving || isUploadingVoice;
-
-  const handleMorphToDetail = useCallback(() => {
+  const handleMorphToDetail = useCallback(async () => {
     const noteId = resolvedNoteId || liveDraftIdRef.current;
     if (noteId) {
       setActiveDetail({ type: 'note', id: noteId });
     }
-    if (candidateNoteRef.current) {
-      void forceSave(candidateNoteRef.current);
+    const finalDraft = flushLiveNoteDraft();
+    if (finalDraft) {
+      await saveComposerNote(finalDraft).catch(() => {});
     }
     if (onClose) {
       onClose();
     } else {
       closeOverlay();
     }
-  }, [forceSave, setActiveDetail, closeOverlay, onClose, resolvedNoteId]);
+  }, [flushLiveNoteDraft, saveComposerNote, setActiveDetail, closeOverlay, onClose, resolvedNoteId]);
 
-  const handleClose = useCallback(() => {
+  const handleClose = useCallback(async () => {
     composeCloseHandledRef.current = true;
     const finalDraft = flushLiveNoteDraft();
     if (finalDraft) {
@@ -1114,7 +1103,7 @@ export default function CreateNoteForm({
         hasAnnouncedDraftRef.current = true;
         onNoteCreated(finalDraft);
       }
-      void forceSave(finalDraft);
+      await saveComposerNote(finalDraft).catch(() => {});
     } else {
       const draftId = liveDraftIdRef.current || resolvedNoteId;
       if (draftId && isUnpersistedComposeDraft(draftId)) {
@@ -1123,10 +1112,8 @@ export default function CreateNoteForm({
         liveDraftIdRef.current = undefined;
         setResolvedNoteId(undefined);
         setLastSavedSnapshot('');
-        hasBootstrappedDraftRef.current = false;
-        hasAnnouncedDraftRef.current = false;
-      } else if (isDirty && candidateNoteRef.current?.$id) {
-        void forceSave(candidateNoteRef.current);
+      } else if (isDirty) {
+        await saveComposerNote(finalDraft || (candidateNoteRef.current as Notes)).catch(() => {});
       }
     }
     if (typeof window !== 'undefined') {
@@ -1137,7 +1124,7 @@ export default function CreateNoteForm({
     } else {
       closeOverlay();
     }
-  }, [closeOverlay, flushLiveNoteDraft, forceSave, isDirty, onClose, onNoteCreated, removeNote, resolvedNoteId, unregisterComposeSession]);
+  }, [closeOverlay, flushLiveNoteDraft, isDirty, onClose, onNoteCreated, removeNote, resolvedNoteId, unregisterComposeSession, saveComposerNote]);
 
   useEffect(() => {
     onRegisterClose?.(handleClose);
