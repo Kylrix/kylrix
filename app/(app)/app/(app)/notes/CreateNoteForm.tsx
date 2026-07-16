@@ -366,7 +366,39 @@ export default function CreateNoteForm({
       return; // Reject the mutation — show confirm drawer instead
     }
     setContent(nextValue);
-  }, [content]);
+
+    // Propagate character directly to RxDB/Context local state instantly
+    let draftId = resolvedNoteId || liveDraftIdRef.current;
+    if (!draftId) {
+      draftId = ID.unique();
+      liveDraftIdRef.current = draftId;
+      setResolvedNoteId(draftId);
+      registerComposeSession(draftId);
+      hasBootstrappedDraftRef.current = true;
+    }
+
+    const previewTitle = resolveNoteCardTitle(
+      isTitleManuallyEdited ? title : null,
+      nextValue,
+    ) || '';
+
+    const draftNote: Notes = {
+      $id: draftId,
+      title: previewTitle,
+      content: nextValue,
+      tags: normalizeTags(tags),
+      format: 'text',
+      isPublic,
+      isGuest,
+      userId: user?.$id || '',
+      $createdAt: new Date().toISOString(),
+      $updatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } as Notes;
+
+    pushLiveNote(draftNote);
+    setCachedData(`note_${draftId}`, draftNote);
+  }, [content, resolvedNoteId, title, isTitleManuallyEdited, tags, isPublic, isGuest, user?.$id, pushLiveNote, registerComposeSession, setCachedData]);
 
   const insertTextAtCursor = (text: string) => {
     const textarea = contentRef.current;
@@ -383,52 +415,6 @@ export default function CreateNoteForm({
       setContent(prev => prev + text);
     }
   };
-
-  // Load draft on mount
-  useEffect(() => {
-    if (typeof window === 'undefined' || noteId) {
-      setIsHydrated(true);
-      return;
-    }
-    const raw = localStorage.getItem('kylrix:draft:note');
-    if (raw) {
-      try {
-        const draft = JSON.parse(raw);
-        if (draft.title) setTitle(draft.title);
-        if (draft.content) setContent(draft.content);
-        if (draft.tags) setTags(draft.tags);
-        setIsTitleManuallyEdited(draft.isTitleManuallyEdited || false);
-      } catch (e) {
-        console.error('Failed to parse draft', e);
-      }
-    }
-    setIsHydrated(true);
-  }, [noteId]);
-
-  // Save draft on change
-  useEffect(() => {
-    if (typeof window === 'undefined' || !isHydrated || resolvedNoteId || noteId) return;
-    const draft = {
-      title,
-      content,
-      tags,
-      isTitleManuallyEdited
-    };
-    if (title.trim() || content.trim() || tags.length > 0) {
-      localStorage.setItem('kylrix:draft:note', JSON.stringify(draft));
-    } else {
-      localStorage.removeItem('kylrix:draft:note');
-    }
-  }, [title, content, tags, isTitleManuallyEdited, resolvedNoteId, noteId, isHydrated]);
-
-  // Clear draft on unmount if the note has been saved
-  useEffect(() => {
-    return () => {
-      if (resolvedNoteId && typeof window !== 'undefined') {
-        localStorage.removeItem('kylrix:draft:note');
-      }
-    };
-  }, [resolvedNoteId]);
 
   // Seamless auto-title logic
   useEffect(() => {
