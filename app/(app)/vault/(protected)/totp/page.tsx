@@ -224,6 +224,20 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
 
     const handleShareDecryptedKey = async () => {
       try {
+        if (!totp.isPublic) {
+          const { toggleResourcePublicGuest } = await import('@/lib/actions/client-ops');
+          const res = await toggleResourcePublicGuest({
+            resourceType: 'totp',
+            resourceId: totp.$id,
+            mode: 'publish'
+          });
+          if (!res?.success) {
+            toast.error('Failed to make TOTP public.');
+            return;
+          }
+          totp.isPublic = true;
+        }
+
         let keyFragment = '';
         if ((totp as any).dek) {
           const { decryptField } = await import('@/lib/masterpass-crypto');
@@ -242,6 +256,20 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
 
     const handleShareSixtySeconds = async () => {
       try {
+        if (!totp.isPublic) {
+          const { toggleResourcePublicGuest } = await import('@/lib/actions/client-ops');
+          const res = await toggleResourcePublicGuest({
+            resourceType: 'totp',
+            resourceId: totp.$id,
+            mode: 'publish'
+          });
+          if (!res?.success) {
+            toast.error('Failed to make TOTP public.');
+            return;
+          }
+          totp.isPublic = true;
+        }
+
         // Build sixty seconds TOTP share parameters containing key metrics: start unix timestamp, digits, step, algorithm
         const now = Math.floor(Date.now() / 1000);
         const seedValue = totp.secretKey; // Already client-decrypted in list mapping

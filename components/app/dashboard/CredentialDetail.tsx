@@ -19,6 +19,7 @@ import {
   Share2
 } from 'lucide-react';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
+import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
 import toast from 'react-hot-toast';
 
 export default function CredentialDetail({
@@ -35,10 +36,27 @@ export default function CredentialDetail({
   const [showPassword, setShowPassword] = useState(false);
   const [showProjectLinker, setShowProjectLinker] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [isPublic, setIsPublic] = useState(!!credential.isPublic);
   const { requestSudo } = useSudo();
 
   const handleShareLink = useCallback(async () => {
     try {
+      if (!isPublic) {
+        const res = await toggleResourcePublicGuest({
+          resourceType: 'credential',
+          resourceId: credential.$id,
+          mode: 'publish'
+        });
+        if (!res?.success) {
+          toast.error('Failed to make credential public for sharing.');
+          return;
+        }
+        setIsPublic(true);
+        if (credential) {
+          credential.isPublic = true;
+        }
+      }
+
       let keyFragment = '';
       if (credential.dek) {
         // If DEK exists, decrypt the DEK value using user masterpass structure
@@ -54,7 +72,7 @@ export default function CredentialDetail({
     } catch (err: any) {
       toast.error('Failed to copy share link: ' + err.message);
     }
-  }, [credential]);
+  }, [credential, isPublic]);
 
   const { analyze } = useAI();
   const [urlSafety, setUrlSafety] = useState<{ safe: boolean; riskLevel: string; reason: string } | null>(null);
@@ -174,8 +192,12 @@ export default function CredentialDetail({
         </h3>
         <button 
           onClick={handleShareLink}
-          className="p-2 rounded-lg text-emerald-500 bg-[#10B981]/5 border border-[#10B981]/20 hover:bg-[#10B981]/15 transition-all mr-1"
-          title="Share Password"
+          className={`p-2 rounded-lg transition-all mr-1 border ${
+            isPublic 
+              ? 'text-emerald-500 bg-[#10B981]/15 border-[#10B981]/30 hover:bg-[#10B981]/25' 
+              : 'text-white/40 bg-white/5 border-white/[0.08] hover:bg-white/10 hover:text-white'
+          }`}
+          title={isPublic ? "Copy Sharing Link" : "Publish & Share Link"}
         >
           <Share2 className="w-[18px] h-[18px]" />
         </button>

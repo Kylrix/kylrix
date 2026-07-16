@@ -64,6 +64,21 @@ export default function CredentialItem({
 
   const handleShareLink = async () => {
     try {
+      if (!credential.isPublic) {
+        const { toggleResourcePublicGuest } = await import('@/lib/actions/client-ops');
+        const res = await toggleResourcePublicGuest({
+          resourceType: 'credential',
+          resourceId: credential.$id,
+          mode: 'publish'
+        });
+        if (!res?.success) {
+          const t = await import('react-hot-toast');
+          t.default.error('Failed to make credential public.');
+          return;
+        }
+        credential.isPublic = true;
+      }
+
       let keyFragment = '';
       if (credential.dek) {
         const { decryptField } = await import('@/lib/masterpass-crypto');
@@ -74,9 +89,11 @@ export default function CredentialItem({
       const baseUrl = buildPublicResourceUrl('credential', credential.$id);
       const fullUrl = keyFragment ? `${baseUrl}${keyFragment}` : baseUrl;
       await navigator.clipboard.writeText(fullUrl);
-      import('react-hot-toast').then((t) => t.default.success('Public sharing link copied.'));
+      const t = await import('react-hot-toast');
+      t.default.success('Public sharing link copied with DEK.');
     } catch (err: any) {
-      import('react-hot-toast').then((t) => t.default.error('Failed to copy share link: ' + err.message));
+      const t = await import('react-hot-toast');
+      t.default.error('Failed to copy share link: ' + err.message);
     }
   };
 
