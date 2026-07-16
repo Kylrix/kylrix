@@ -2,18 +2,21 @@
 
 This blueprint serves as the single, authoritative architectural guide and features manifest for the Kylrix ecosystem. It defines the core security boundaries, cryptographic protocols, data infrastructure models, and execution flows within the codebase. It acts as an active conceptual ingest for engineers and agentic AI systems to understand the codebase's mechanics, synergies, and future expansion paths.
 
-> **Last major sync (Jul 2026):** Consolidated settings tabs layout, BillingDrawer overlays, Passkey login + dual-role vault credentials, MasterPass↔account password sync, offline ghost CRUD, Ideas `/app` routing, contextual Agentic drawer, multi-step security confirmations, Telegram granular prefs, project join approval workflow.
+> **Last major sync (16 Jul 2026):** Local-first Ideas compose (`ID.unique()` + compose-draft registry + live card flush), Teams vs Pro entitlement merge (ledger ∪ prefs max tier), project collaborator pending sync (Collaborators table + Appwrite Teams), per-user per-project auto-sweep (`swept`, no row = off), single-database `passwordManagerDb` mandate, Table/Row terminology, OpenBricks + Tailwind v4 chrome, secure-ops module split.
 
 ---
 
 ## 🏗️ Core Architectural Mandates & Design Patterns
 
-All operations in the Kylrix ecosystem must adhere to four foundational architectural paradigms:
+All operations in the Kylrix ecosystem must adhere to these foundational architectural paradigms:
 
-1.  **Web Ecosystem Security Protocol (WESP)**: We mathematically isolate active keys and decryption contexts in ephemeral, tab-scoped RAM. We enforce a zero-leak policy; no key material ever touches the database in plaintext, and all product chrome avoids opaque or solid gradients to maintain visual velocity.
-2.  **Cascading-on-Demand (CoD) CRUD & Data Nexus**: A hybrid offline-first design. We aggressively minimize remote database reads using a high-performance in-memory and `localStorage` caching layer (Data Nexus). Any write operations asynchronously escalate privileges server-side while keeping the client snappier than traditional SPAs.
-3.  **Global Unmount & Portal Containment**: To prevent hidden DOM trees from capturing mouse clicks or causing layout thrashing, all overlays, drawers, and sidebars are physically unmounted from the DOM when closed (`{isOpen && <Component />}`). We disable standard portal extraction (`disablePortal: true`) to keep components contextually native.
-4.  **Least Privilege & Sovereign Data Control**: Database tables are configured with read-only RLS default policies. Client-side SDK calls cannot modify records directly. All modifications are routed through verified Server Actions which perform server-side verification before executing mutations via the Admin SDK context.
+1.  **Web Ecosystem Security Protocol (WESP)**: We mathematically isolate active keys and decryption contexts in ephemeral, tab-scoped RAM. We enforce a zero-leak policy; no key material ever touches the database in plaintext. Product chrome uses **opaque surfaces** (no translucent/gradient chrome) per OpenBricks.
+2.  **Cascading-on-Demand (CoD) CRUD & Data Nexus**: A hybrid local-first design. The Nexus / RxDB layer sits between UI and Appwrite: UI reads and optimistic writes hit local cache first; network sync is asynchronous. Writes escalate privileges server-side via Server Actions.
+3.  **Global Unmount & Portal Containment**: Overlays, drawers, and sidebars are physically unmounted when closed (`{isOpen && <Component />}`). OpenBricks drawers/modals use `keepMounted: false` and `disablePortal: true`.
+4.  **Least Privilege & Sovereign Data Control**: Database tables use read-only RLS by default. Client SDK mutations are proxied into verified Server Actions (`lib/actions/client-ops.ts` → `lib/actions/secure-ops/*`) which elevate to the Admin / TablesDB context after ownership and collaborator checks.
+5.  **Single Database Mandate**: All product tables live in one Appwrite database ID: **`passwordManagerDb`** (`lib/appwrite/config.ts`). Legacy names like `whisperrflow` are invalid at runtime.
+6.  **Table / Row Terminology**: Appwrite TablesDB vocabulary is canonical. Prefer **Table** and **Row** in code, logs, and docs — never reintroduce Collection / Document naming.
+7.  **Canonical App Tree**: Implement against the live Next app under this repo root (`app/`, `lib/`, `components/`). Do not introduce new in-app HTTP API routes (`app/api/*`) for product flows; use Server Actions and in-process helpers.
 
 ---
 
@@ -119,8 +122,38 @@ Beyond RxDB replication for authenticated users, Kylrix supports full local CRUD
 - **Flow Tasks**: `context/TaskContext.tsx` mirrors the same pattern for ghost tasks.
 - **Vault**: `lib/appwrite/vault.ts`, `app/(app)/vault/(protected)/page.tsx`, and credential dialogs support ghost passwords/TOTPs in local storage until login.
 - **Claim on Login**: `components/landing/GhostNoteClaimer.tsx` automatically claims and migrates all ghost artifacts (notes, tasks, credentials, TOTPs) into official `passwordManagerDb` rows upon authentication.
-- **Network Recovery**: `bd15455` — automatic refresh and ghost claiming when connectivity returns.
-- **Public App Access**: `app/(app)/layout.tsx` allows unauthenticated access to `/app`, `/flow`, `/vault`, and `/connect` for zero-idle onboarding; protected dashboards still gate to `/send?login=1`.
+- **Network Recovery**: Automatic refresh and ghost claiming when connectivity returns.
+- **Public App Access**: `app/(app)/layout.tsx` allows unauthenticated access to `/app`, `/flow`, `/vault`, and `/connect` for zero-idle onboarding.
+
+### 8. Local-First Ideas Compose (Authenticated Vertical Path)
+Authenticated note creation is **local-first with one Appwrite ID**:
+
+```
+Open composer → ID.unique() → pushLiveNote + Nexus cache
+  → user types (card mirrors editor synchronously)
+  → autosave / close flush → createNoteSecure($id) once
+  → markNotePersistedRemote → subsequent saves are updateNoteSecure
+```
+
+- **Bootstrap**: `CreateNoteForm.tsx` allocates `ID.unique()` on hydrate for new notes, registers a compose session, and immediately pushes an "Untitled Thought" / "Untitled Project" shell into `NotesContext` + Nexus (`note_${id}`).
+- **Compose draft registry** (`lib/notes/compose-draft-registry.ts`):
+  - `markComposeDraft` / `isUnpersistedComposeDraft` — UI-only until first successful remote write.
+  - `markNotePersistedRemote` / `isNotePersistedRemote` — session-backed IDs Appwrite has accepted.
+  - `shouldCreateComposeNote` — create vs update gate (no parallel `live-*` identity system).
+  - `withNotePersistLock` — serializes persist per note ID to prevent duplicate-create races.
+- **Live card integrity**: `pushLiveNote` stores resolved titles via `resolveNoteCardTitle`. Live-edit guards survive composer close until server content catches up. List refetches merge via `mergeFetchedNotesWithLocalDrafts` so background fetches cannot stomp unpersisted drafts.
+- **Idempotent create**: `createNoteSecure` accepts reserved `$id`; existing actor-owned rows fall through to `updateNoteSecure`.
+- **Delete**: Unpersisted compose IDs delete locally only; persisted IDs soft-trash via `deleteNoteSecure`.
+- **Hard rule**: Never reintroduce client-only pseudo IDs as a second tracking system. One Appwrite-format ID from card → cache → row.
+
+### 9. Mutation Path (Live Wiring)
+```
+UI / client SDK Proxy
+  → lib/actions/client-ops.ts (JWT)
+  → lib/actions/secure-ops/{notes,projects,permissions,chats,misc,shared,...}.ts
+  → createSystemTablesDB() / Admin SDK
+```
+`lib/actions/secure-ops.ts` re-exports the split modules. Product flows must not add new in-app `app/api/*` endpoints.
 
 ---
 
@@ -187,14 +220,21 @@ The codebase implements a modular SDK facade (`lib/sdk/`, 48 files) that wraps a
 
 ## VII. SUBSCRIPTION & BILLING TIER SYSTEM
 
-- **Tier Resolution**: `lib/subscription/tier-resolution.ts` normalizes subscription states across `FREE`, `PRO`, `TEAMS`, `ORG`, and `LIFETIME` tiers with expiry validation.
-- **Pricing Engine**: `lib/subscription/ppp.ts` — fixed global USD pricing with a bundled yearly discount (see below). `calculateSubscriptionPrice` is the single canonical charge calculator for UI, BlockBee, and IPN verification.
-- **Purchasing Power Parity (PPP)**: Geo multipliers are deprecated; pricing is a flat global rate surfaced through `SubscriptionContext`.
-- **Payment Providers**: BlockBee (cryptocurrency via hosted checkout) and Stripe.
-- **Entitlement Resolution**: `lib/services/internal/subscription-entitlement.ts` maps subscription tiers to feature entitlements.
-- **Prefs Merging**: `lib/services/internal/subscription-prefs-merge.ts` merges subscription preferences across user profile updates.
-- **UI Components**: `SubscriptionBadge` and `PaywallWrapper` gate premium features visually.
-- **Coupon System**: Full coupon management with redemption limits in the admin console.
+- **Tier vocabulary**: `FREE` | `PRO` | `TEAMS` | `ORG` | `LIFETIME` (`lib/subscription/tier-resolution.ts`).
+- **Client helpers** (`lib/utils.ts`):
+  - `hasPaidKylrixPlan` — Pro-and-higher (PRO/TEAMS/ORG/LIFETIME).
+  - `hasTeamsKylrixPlan(user, currentTier?)` — Teams-and-higher only; peeks `BillingCacheService` + prefs.
+  - `getUserSubscriptionTier` — merges billing cache + synced prefs via `maxBillingUiTier` (highest wins).
+- **Server authority** (`lib/services/internal/subscription-entitlement.ts`):
+  - `getVerifiedProEntitlementForUser` reads active `subscriptions` ledger rows **and** synced user prefs, maps plan labels via `planLabelToUiTier` (`TEAMS_MONTH`, `teams`, etc.), and returns the **max** active tier so a leftover PRO row cannot mask an active Teams prefs sync.
+  - `getUserSubscriptionTierServer` / `hasTeamsKylrixPlanServer` are the gates used by secure-ops.
+- **Policy tablecloth** (`lib/entitlements/policy.ts`):
+  - Object collaboration (notes, tasks, vault items): `allowsCollaboratorSharing` for PRO+.
+  - **Project collaboration / sub-projects / group calls**: Teams+ only (`allowsCollaboratorSharing(tier, 'project')`, `getCollaboratorCap(..., 'project')` → 0 on Free/Pro, unlimited on Teams+).
+- **Pricing Engine**: `lib/subscription/ppp.ts` — fixed global USD with yearly 10-for-12 bundle. `calculateSubscriptionPrice` is the single charge calculator for UI, BlockBee, and IPN.
+- **Payment Providers**: BlockBee hosted checkout (primary crypto) and Stripe paths where wired.
+- **UI**: `SubscriptionContext` + `BillingCacheService`; ProUpgradeDrawer distinguishes Teams-only features (`Project Collaboration`, `New Channel`).
+- **Coupon System**: Admin coupon management with redemption limits.
 
 ### VII.A. BlockBee Hosted Checkout (Current Architecture)
 
@@ -456,7 +496,7 @@ Centralized server-side Appwrite client factory using React's `cache()` for requ
 Elevated-privilege clients that mandate a non-empty `actorEmail` parameter. Instantly throw if the email is not in the `ADMINS` environment variable. Used exclusively by admin console Server Actions.
 
 ### Configuration Hub (`lib/appwrite/config.ts`)
-Central registry of all database IDs, table IDs, bucket IDs, and function IDs. Under the **Single Database Mandate**, all tables across all platform workloads (such as `compute_balances`, `compute_ledger`, `notes`, `tasks`, etc.) reside within a single consolidated database ID: `passwordManagerDb`. Direct hardcoding of alternative database IDs (e.g. `whisperrflow`) is strictly prohibited.
+Central registry of all database IDs, table IDs, bucket IDs, and function IDs. Under the **Single Database Mandate**, all tables across all platform workloads (notes, tasks, vault, connect, billing, `swept`, etc.) reside in one consolidated database ID: `passwordManagerDb`. Direct hardcoding of alternative database IDs (e.g. `whisperrflow`) is strictly prohibited. Prefer **Table/Row** vocabulary when documenting TablesDB operations.
 
 ### Keychain Service (`lib/appwrite/keychain.ts`)
 `KeychainService` with deduplication guard that blocks duplicate master password entries, preventing keychain bloat from repeated setup calls.
@@ -468,12 +508,14 @@ Database migration system for `system_pulse` metrics substrate.
 
 ## XIX. THE UNIFIED APPS SUITE
 
-The mono-app is partitioned into four core workspaces that share the centralized WESP and identity frameworks:
+The mono-app is partitioned into four core workspaces that share WESP and identity:
 
-1.  **Kylrix Ideas** (canonical route `/app`, legacy `/note` redirects): A markdown-first knowledge base branded "Ideas" in UI copy. Features Write/Preview markdown toggle on full-page detail (`NoteEditorPageClient`, `NoteDetailSidebar`), Doodle Canvas sketches, ephemeral Ghost Notes, and automatic 7-day recursive purges. Full-page editor at `/app/[id]` with reactions/comments sections below the editor shell.
-2.  **Kylrix Vault**: High-security login, credential, and TOTP key manager with client-side zero-knowledge shared key mapping tables.
-3.  **Kylrix Flow**: Productive checklist, task, and ingestion form manager. Enforces a strict limit of 8 collaborators per resource on the free tier to protect against WebSocket lag and concurrency conflicts.
-4.  **Kylrix Connect**: Secure messaging and P2P video/audio huddles. Live group calls are strictly capped at 16 concurrent members to prevent database read permission overhead and WebSocket performance degradation.
+1.  **Kylrix Ideas** (`/app`, legacy `/note` → `/app`): Markdown knowledge base. Local-first compose, doodle canvas, ghost notes, shared `/app/shared`, full-page `/app/[id]`.
+2.  **Kylrix Vault**: Zero-knowledge credentials + TOTP with keychain / key_mapping.
+3.  **Kylrix Flow**: Goals, forms, calendar/events. Object collaborators at Pro+; project nesting/collaboration at Teams+.
+4.  **Kylrix Connect**: Messaging, Moments, Hangouts, WebRTC huddles (group calls Teams+; mesh capped at 16).
+
+**Projects** (`/projects/[projectId]`) are the flagship cross-app gravity well — not a fifth silo, but the orchestration surface over Ideas/Flow/Vault/Connect objects, tags, auto-sweep, and Teams members.
 
 ---
 
@@ -481,22 +523,21 @@ The mono-app is partitioned into four core workspaces that share the centralized
 
 ### 1. Technical Stack
 - **Frontend Framework**: Next.js 16 (Turbopack), React 19, TypeScript.
-- **BaaS Substrate**: Appwrite (Authentication, Database with Tables DB, Buckets, Functions, Realtime).
-- **Styling & Theme**: Tailwind CSS 4 and Vanilla CSS. MUI and its co-dependencies are deprecated.
+- **BaaS Substrate**: Appwrite (Auth, **TablesDB**, Buckets, Functions, Realtime, Teams). Single database ID `passwordManagerDb`.
+- **Styling & Theme**: Tailwind CSS 4 + Vanilla CSS. **OpenBricks** primitives (`lib/openbricks/`) replace MUI. Opaque product chrome (e.g. note cards `#161412`).
 - **Package Management**: PNPM only.
-- **Offline-First**: RxDB (with CRDT plugin) on Dexie/IndexedDB storage backend. RxJS for reactive streams.
-- **Validation**: Zod 4 for input schema validation at Server Action boundaries.
+- **Offline-First**: RxDB (CRDT) on IndexedDB + Data Nexus memory tier; Ideas compose is local-first before Appwrite sync.
+- **Validation**: Zod at Server Action boundaries (`lib/validations/schemas.ts`).
 - **Animation**: Framer Motion with reduced-motion awareness.
 - **Notifications**: react-hot-toast for in-app toasts.
-- **DnD**: @dnd-kit (core, sortable, modifiers, utilities) for drag-and-drop interactions.
-- **Markdown**: marked + DOMPurify for safe markdown rendering.
-- **WebAuthn**: @simplewebauthn/browser for biometric authentication.
-- **Cryptography**: @noble/ed25519, @noble/hashes, @noble/secp256k1, @scure/base, @scure/bip32, @scure/bip39, hash-wasm.
-- **Web3**: viem for EVM blockchain interactions.
-- **AI**: @google/generative-ai for AI content generation.
-- **Rate Limiting**: @upstash/ratelimit + @upstash/redis for server-side rate limiting.
-- **Export**: html-to-image for visual exports.
-- **Build**: `output: 'standalone'` for Docker-optimized builds. `experimental.taint: true` for React Taint API. `optimizePackageImports` for tree-shaking (lucide-react, lodash, date-fns). Webpack fallbacks disable client-side `crypto`, `fs`, `path`, `stream`.
+- **DnD**: @dnd-kit for drag-and-drop.
+- **Markdown**: marked + DOMPurify.
+- **WebAuthn**: @simplewebauthn/browser + server verification.
+- **Cryptography**: @noble/*, @scure/*, hash-wasm (Argon2id).
+- **Web3**: viem for EVM.
+- **AI**: @google/generative-ai.
+- **Rate Limiting**: @upstash/ratelimit + Redis where configured.
+- **Build**: `output: 'standalone'`, `experimental.taint: true`, `optimizePackageImports`.
 - **License**: AGPL-3.0-or-later.
 
 ### 2. Stacking Context & Interactivity Safety
@@ -509,28 +550,23 @@ To prevent 'Non-Responsive UI' locks caused by hidden DOM structures capturing c
 
 ## XXI. VERIFIED DIRECTORY LAYOUT
 
-- `app/`: Next.js App Router mapping path-based routes (e.g. `/app` [Ideas], `/vault`, `/flow`, `/connect`, `/accounts`).
-- `components/`: 80+ specialized React UI widgets and dashboard elements grouped by function (e.g. `tasks/`, `chat/`, `calendar/`, `call/`, `projects/`, `social/`, `send/`, `ai/`, `ui/`, `overlays/`, `layout/`, `onboarding/`).
-- `context/`: 27+ centralized React Context providers coordinating state (e.g. `AuthContext.tsx`, `DataNexusContext.tsx`, `SudoContext.tsx`, `TaskContext.tsx`, `NotesContext.tsx`, `AIContext.tsx`, `TokenOpsContext.tsx`, `NotificationContext.tsx`).
-- `hooks/`: 16 custom state helpers and listeners (e.g. `useAutosave.ts`, `useRealtimeTable.ts`, `useWebRTC.ts`, `useCollaborativeNote.ts`, `useServiceWorker.ts`, `useEcosystemNode.ts`, `useEcosystemIntents.ts`).
-- `lib/`: Core service logic and server-side utilities:
-  - `lib/actions/`: High-privilege Server Actions (e.g. `secure-ops.ts`, `cascade-delete.ts`, `telegram.ts`, `chat.ts`, `call.ts`, `workflows.ts`, `ai.ts`, `permissions.ts`).
-  - `lib/appwrite/`: Client/server Appwrite SDK factories, configuration hub, keychain service, auth helpers, and database migrations.
-  - `lib/sdk/`: 48-file modular SDK abstraction layer over all core services.
-  - `lib/services/`: Domain services (social, chat, drafts, billing, forms, collaboration, presence, contacts, wallets, storage, telemetry, tokens, activity, ecosystem).
-  - `lib/services/internal/`: Server-side internal services (admin, billing, chat, calls, telegram, join requests, engagement views/analyzers, notification dispatcher, token operations, thermal scoring, feed ranking, email dispatch, permissions).
-  - `lib/encryption/`: Dual cryptographic layer — `masterpass-crypto.ts` (client-side SubtleCrypto), `ghost-crypto.ts` (server-side Node crypto), `crypto.ts` (RSA-4096 hybrid).
-  - `lib/ecosystem/`: Centralized WESP security, broadcast channels, identity contexts, and nexus fetcher.
-  - `lib/subscription/`: Subscription tier resolution, PPP pricing, entitlement management.
-  - `lib/connect/`: Identity services and OG image generation.
-  - `lib/validations/`: Zod schema library for Server Action input validation.
-- `functions/`: 16 Appwrite serverless functions for background jobs, cleanup, notifications, and orchestration.
-- `theme/`: Theme tokens and ThemeProvider.
-- `public/`: Static brand assets, SVG illustrations, and Service Worker (`sw.js`).
-- `selfhost/`: Self-hosting infrastructure (Caddyfile, setup wizard, health checks).
-- `scripts/`: Maintenance and deployment scripts.
-- `types/`: 9 TypeScript type definition files.
-- `__tests__/`: Vitest test suite (14 test files targeting SDK layer).
+- `app/`: Next.js App Router (`/app` Ideas, `/vault`, `/flow`, `/connect`, `/projects`, `/accounts`, `/pricing`, public `/idea`, `/project`, `/u`).
+- `components/`: UI by domain (`projects/`, `chat/`, `call/`, `overlays/`, `ui/`, `share/`, `landing/`, …).
+- `context/`: Providers including `AuthContext`, `DataNexusContext`, `NotesContext`, `SubscriptionContext`, `SudoContext`, `UnifiedDrawerContext`, `TaskContext`, `ProUpgradeContext`.
+- `hooks/`: `useAutosave`, `useRealtimeTable`, `useWebRTC`, `useCollaborativeNote`, …
+- `lib/`:
+  - `lib/actions/client-ops.ts` + `lib/actions/secure-ops/{notes,projects,permissions,chats,misc,shared,...}.ts` — write escalation surface.
+  - `lib/notes/` — compose-draft registry and note-local helpers.
+  - `lib/appwrite/` — client/server factories, `config.ts` (single DB), domain modules.
+  - `lib/sdk/` — modular SDK facade.
+  - `lib/services/` + `lib/services/internal/` — domain and server internals (billing, notifications, tokens, swept, …).
+  - `lib/entitlements/` + `lib/subscription/` — policy + tier resolution.
+  - `lib/openbricks/` — design-system primitives.
+  - `lib/share/` — public URL builders (`buildPublicResourceUrl`).
+  - `lib/encryption/`, `lib/ecosystem/`, `lib/validations/`.
+- `functions/`: Appwrite serverless jobs.
+- `public/`: Static assets + Service Worker.
+- `selfhost/`, `scripts/`, `types/`, `__tests__/`.
 
 ---
 
@@ -724,16 +760,16 @@ The following catalog provides a highly detailed engineering breakdown of the ac
 ### II. KYLRIX NOTE (KNOWLEDGE MANAGEMENT)
 
 #### 15. Rich Markdown Editor (Ideas)
-*   **Mechanics & Substrate**: GitHub Flavored Markdown (GFM) via `marked` + DOMPurify in `components/NoteContentRenderer.tsx`. Full-page editor at `app/(app)/app/(app)/[id]/NoteEditorPageClient.tsx`; sidebar editor in `components/ui/NoteDetailSidebar.tsx`.
-*   **Write / Preview Toggle**: Note detail supports dual modes — raw markdown textarea (Write) and rendered preview (Preview) with `.note-markdown-preview` typography in `app/globals.css`. Autosave preserves `format: markdown` via `pickNoteAutosavePayload`.
-*   **Zero-Knowledge Boundary**: Note contents are encrypted client-side using GCM before save operations.
-*   **Acute Architectural Rationale**: Combines absolute server-blindness with readable rendered output. Users edit markdown but can verify formatting without leaving the editor.
+*   **Mechanics & Substrate**: GFM via `marked` + DOMPurify (`NoteContentRenderer`). Full-page editor at `NoteEditorPageClient`; sidebar at `NoteDetailSidebar`. New ideas compose via `CreateNoteForm` (overlay / drawer) with **local-first** `ID.unique()` bootstrap — see §II.8.
+*   **Write / Preview Toggle**: Dual modes on detail; autosave via `useAutosave` + `pickNoteAutosavePayload`.
+*   **Zero-Knowledge Boundary**: Locked / public-encrypted notes use client-side GCM (T4/T5) before/after transport.
+*   **Acute Architectural Rationale**: Card list and editor share one ID through Nexus/`NotesContext`; remote sync must never invent a second identity.
 *   **Vivid End-to-End Execution Flow**:
-    1.  User types markdown in Write mode or switches to Preview.
-    2.  `useAutosave` hook tracks modifications in `NoteDetailSidebar`.
-    3.  Preview renders headings, lists, blockquotes, code fences, and `[voice:fileId]` embeds.
-*   **Ecosystem Synergy**: Forms the primary interface for guides, checklists, and ideas.
-*   **Next-Gen Optimizations**: Inline LaTeX formatting and Mermaid diagrams parsed on the fly with GPU-accelerated transition animations.
+    1.  User opens New Idea → shell card appears instantly.
+    2.  Keystrokes update the same card synchronously; close flushes final draft.
+    3.  First persist creates Appwrite row with reserved `$id`; later persists update.
+*   **Ecosystem Synergy**: Primary surface for guides, checklists, and project-tagged ideas.
+*   **Next-Gen Optimizations**: Inline LaTeX / Mermaid where product allows.
 
 #### 16. Doodle Canvas
 *   **Mechanics & Substrate**: HTML5 Canvas vector-based drawing board implemented in `components/DoodleCanvas.tsx`.
@@ -955,15 +991,18 @@ The following catalog provides a highly detailed engineering breakdown of the ac
 *   **Next-Gen Optimizations**: Bi-directional external sync (iCal/Google Calendar) using zero-knowledge sync channels.
 
 #### 33. Project Gravity Wells
-*   **Mechanics & Substrate**: The flagship unified workspace dashboard implemented in `lib/services/workflows.ts` and `lib/actions/workflows.ts`.
-*   **Zero-Knowledge Boundary**: Links notes, tasks, credentials, and huddle threads into a single, cohesive dashboard, where project owners inherit full read/write CRUD over child resources.
-*   **Acute Architectural Rationale**: We build **retention through utility** rather than gimmicky paywalls, locking in users by providing an elite, zero-dependency collaborative workspace experience.
+*   **Mechanics & Substrate**: Unified project workspace at `app/(app)/projects/[projectId]/page.tsx` with object links via `project_objects`, polymorphic `Collaborators` rows (`FLOW.Collaborators`), and optional native Appwrite Teams memberships (team ID = project ID).
+*   **Collaboration gate**: Adding project members requires **Teams+** on the **project owner** account (`grantPermissionSecure` resolves billing user to `project.ownerId`; `addProjectCollaboratorSecure` uses `getUserSubscriptionTierServer(ownerId)`).
+*   **Pending members**: Ecosystem invites write Collaborators rows as `status: pending` until the invitee accepts. `getResourceCollaboratorsSecure` **merges** Collaborators table + Teams `listMemberships` so pending invites appear in Project Members. Invite URLs use `buildPublicResourceUrl` (never `window` in Server Actions).
+*   **Auto-sweep (`swept` table)**: **Per-user, per-project only**. There is no global toggle and no project-admin force-on for all members. Absence of a row = **off** (privacy default). Enabling creates `{ userId, projectId, enabled: true }`; disabling **deletes** the row. Tagged Resources listing only includes objects whose owner has an enabled sweep row for that project (`listProjectTaggedResourcesSecure`). UI: `ProjectAutoSweepDrawer` with explicit enable confirmation.
+*   **Sub-projects**: Nested projects are Teams-gated server-side in `addObjectToProjectSecure` when `entityKind === 'project'`.
+*   **Acute Architectural Rationale**: Projects lock retention through utility — notes, goals, vault items, events, tags, and discussion in one gravity well — without inventing a second permission OS.
 *   **Vivid End-to-End Execution Flow**:
-    1.  User opens a Project workspace.
-    2.  `getProjectContext` fetches the project row and all related resource mappings in parallel.
-    3.  Dashboard populates tasks, notes, and huddle feeds contextually.
-*   **Ecosystem Synergy**: The ultimate glue that synergizes the entire Kylrix product suite.
-*   **Next-Gen Optimizations**: Drag-and-drop file organization, instantly generating a `/send` ghost link when dropping an external file into the workspace.
+    1.  Owner opens Project → cold hydrate from Nexus/session cache, then network sweep.
+    2.  Add collaborator → share drawer → `grantPermissionSecure` + optional `ProjectsService.addCollaborator`.
+    3.  Pending badge until membership confirmed; Tagged Resources respect each member's auto-sweep preference.
+*   **Ecosystem Synergy**: Flagship glue across Ideas, Flow, Vault, and Connect.
+*   **Next-Gen Optimizations**: Drag-and-drop file organization into project object slots.
 
 ---
 
@@ -1252,19 +1291,18 @@ The following catalog provides a highly detailed engineering breakdown of the ac
 *   **Next-Gen Optimizations**: High-velocity visual indicator displaying tiny participant avatars inside the cell hovering state without triggering network overhead.
 
 #### 58. Three-Tier Pricing and Resource Restructure
-*   **Mechanics & Substrate**: Gating variables checked at the Server Action and client rendering boundaries. Restructures limits into three distinct tiers: Free, Pro, and Teams.
+*   **Mechanics & Substrate**: Gating at Server Actions + client UI. Tiers: Free, Pro, Teams (+ ORG/LIFETIME as Teams-class for collaboration).
 *   **Rules & Architectural Mandates**:
-    1.  **Binary Feature Access**: No discrete/numerical limits on features (e.g. no "X minutes of audio" or "Y collaborators" rules). Features are strictly available or unavailable.
-    2.  **Zero Database Gating (Except Scaling Risks)**: The database remains 100% free and unlimited for solo personal use. Multi-user collaboration (shared databases/collaborators) introduces exponential synchronous hit risks and is restricted to the Teams tier.
-    3.  **Resource-Heavy Storage Gating**: Storage of profile pictures is free. Arbitrary file storage and audio recordings are gated to paid tiers (Pro/Teams).
-    4.  **Permissive Community & Communication Features**: Access to Moments, secure chats, Hangouts (groups), and 1-on-1 direct voice/video calls is universally free.
-    5.  **Democratic Call Gating**: One-on-one direct calls are free to preserve the baseline right of direct communication. Group calls (anything beyond 2 participants) are restricted to the Teams tier because multi-peer SFU/WebRTC bridging incurs external Cloudflare Calls bandwidth billing. Gating group calls ensures the infrastructure remains self-sustaining without threatening bankruptcy.
-    6.  **Duplication & Import Gating**: Duplicating or claiming shared resources (e.g. duplicating a shared note to a personal collection or claiming an ephemeral Send object) is strictly gated to the Pro/Teams tiers. This prevents database and storage bloat from free users attempting to bypass the collaboration locks by creating redundant copies of assets.
-    7.  **Edit Access Request Gating**: Requesting edit access on shared screens (which triggers a join request) is strictly gated to the Teams tier. Sharing is globally read-only by default; real-time edit collaboration utilizes synchronous database updates and CRDT operations that have a tendency to heavily pound database resources. Restricting edit requests to Teams protects infrastructure performance and maintains system stability.
+    1.  **Binary Feature Access**: Prefer on/off gates over discrete numeric quotas where possible.
+    2.  **Solo DB free**: Personal rows remain usable on Free; **project collaboration** and group calls are Teams+.
+    3.  **Object collaborators**: Notes/tasks/vault sharing unlocks at Pro+ (`allowsCollaboratorSharing` without `project`).
+    4.  **Storage / audio**: Arbitrary file storage and voice recording are paid (Pro+).
+    5.  **Permissive baseline**: Moments, DMs, Hangouts, and 1:1 calls stay widely available; group calls (3+) are Teams+.
+    6.  **Entitlement merge**: Server and client must resolve the **highest** active tier across ledger + prefs — never Pro-only string compares that hide Teams.
 *   **Tier Definitions**:
-    *   **Free**: Full personal database (zero collaborators), secure chats, hangouts, moments, profile picture storage, and 1-on-1 direct calls. Audio recording features, shared note duplication, shared Send claiming, and edit access requests are excluded.
-    *   **Pro**: Adds arbitrary file storage, audio messages, shared note duplication, and shared Send claiming.
-    *   **Teams**: Enables multi-user collaboration (shared databases with unlimited collaborators), WebRTC group calls, shared note duplication, shared Send claiming, and edit access requests.
+    *   **Free**: Personal workspace; no project members; no group calls.
+    *   **Pro**: Paid storage/audio; object-level collaborators.
+    *   **Teams**: Project members, sub-projects, group channels/calls, Teams-class entitlements.
 
 #### 59. Native Passkey Login (Passwordless Appwrite Session)
 *   **shipped Mechanism**: `LoginDrawer` → `POST/PUT /api/auth/passkey` → `getPasskeyLoginOptionsAction` / `verifyPasskeyLoginAction` → `account.createSession({ userId, secret })`.
@@ -1293,6 +1331,18 @@ The following catalog provides a highly detailed engineering breakdown of the ac
 
 #### 66. Note Detail Page Layout & Markdown Preview
 *   **shipped Mechanism**: Full-page `/app/[id]` with `layout="page"` on `NoteDetailSidebar`, reduced top padding via `.note-detail` shell class, Write/Preview toggle, `.note-markdown-preview` styles, back navigation to `/app`.
+
+#### 67. Local-First Compose Vertical Integration
+*   **shipped Mechanism**: `CreateNoteForm` + `compose-draft-registry` + `NotesContext.pushLiveNote`. Instant card with `ID.unique()`; synchronous editor→card mirror; persist lock; idempotent create/update; no zombie `live-*` IDs.
+
+#### 68. Project Member Invite Pipeline
+*   **shipped Mechanism**: `grantPermissionSecure` + `addProjectCollaboratorSecure` + Teams membership + Collaborators pending rows. Listing merges both sources. Server invite URLs via `buildPublicResourceUrl`.
+
+#### 69. Per-User Per-Project Auto-Sweep
+*   **shipped Mechanism**: `swept` table + `SweptService` / `getSweptConfigSecure` / `upsertSweptConfigSecure`. Default off (no row). Enable creates row; disable deletes row. Owner-scoped listing filter in tagged resources. Confirmation UX in `ProjectAutoSweepDrawer`.
+
+#### 70. Teams Entitlement Coherence
+*   **shipped Mechanism**: `planLabelToUiTier`, `maxBillingUiTier`, ledger∪prefs merge in `getVerifiedProEntitlementForUser`. Project gates check **owner** Teams entitlement, not stale Pro-only filters.
 
 ---
 
