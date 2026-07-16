@@ -29,6 +29,7 @@ import { useContextMenu } from './ui/ContextMenuContext';
 import { useDynamicSidebar } from './ui/DynamicSidebar';
 import { NoteDetailSidebar } from './ui/NoteDetailSidebar';
 import { useNotes } from '@/context/NotesContext';
+import { isUnpersistedComposeDraft } from '@/lib/notes/compose-draft-registry';
 import type { Notes } from '@/types/appwrite';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
 import { ShareNoteDrawer } from './overlays/ShareNoteDrawer';
@@ -403,7 +404,28 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           </div>
 
           {/* Bottom Action Bar */}
-          <div className="flex items-center justify-end mt-3 pt-3 border-t border-white/4 flex-shrink-0 select-none">
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/4 flex-shrink-0 select-none">
+            {/* Sync Status Dot */}
+            <div className="flex items-center gap-1.5">
+              {(() => {
+                const isSynced = !note.$id || !note.$id.startsWith('live-') && !note.$id.startsWith('ghost-') && !isUnpersistedComposeDraft(note.$id);
+                if (isSynced) {
+                  return (
+                    <span 
+                      className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" 
+                      title="Synced to database"
+                    />
+                  );
+                } else {
+                  return (
+                    <span 
+                      className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" 
+                      title="Local-only draft"
+                    />
+                  );
+                }
+              })()}
+            </div>
 
             {/* Attachments / Tag Badges */}
             <div className="flex items-center gap-1.5 overflow-hidden max-w-[60%] justify-end">
