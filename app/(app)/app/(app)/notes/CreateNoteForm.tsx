@@ -512,7 +512,12 @@ export default function CreateNoteForm({
       }
 
       try {
-        const loaded = await fetchOptimized(cacheKey, () => getNote(noteId));
+        let loaded = null;
+        try {
+          loaded = await fetchOptimized(cacheKey, () => getNote(noteId));
+        } catch (err) {
+          console.warn('[CreateNoteForm] Safe bypass: note not found in remote Appwrite database during hydration:', err);
+        }
         if (cancelled || !loaded) return;
         const nextComposerKind = (loaded as any).kind === 'project' ? 'project' : noteKind;
         setResolvedNoteId(loaded.$id);
@@ -1070,14 +1075,14 @@ export default function CreateNoteForm({
     };
   }, [saveComposerNote]);
 
-  const handleMorphToDetail = useCallback(async () => {
+  const handleMorphToDetail = useCallback(() => {
     const noteId = resolvedNoteId || liveDraftIdRef.current;
     if (noteId) {
       setActiveDetail({ type: 'note', id: noteId });
     }
     const finalDraft = flushLiveNoteDraft();
     if (finalDraft) {
-      await saveComposerNote(finalDraft).catch(() => {});
+      void saveComposerNote(finalDraft).catch(() => {});
     }
     if (onClose) {
       onClose();
@@ -1086,7 +1091,7 @@ export default function CreateNoteForm({
     }
   }, [flushLiveNoteDraft, saveComposerNote, setActiveDetail, closeOverlay, onClose, resolvedNoteId]);
 
-  const handleClose = useCallback(async () => {
+  const handleClose = useCallback(() => {
     composeCloseHandledRef.current = true;
     const finalDraft = flushLiveNoteDraft();
     if (finalDraft) {
@@ -1094,7 +1099,7 @@ export default function CreateNoteForm({
         hasAnnouncedDraftRef.current = true;
         onNoteCreated(finalDraft);
       }
-      await saveComposerNote(finalDraft).catch(() => {});
+      void saveComposerNote(finalDraft).catch(() => {});
     } else {
       const draftId = liveDraftIdRef.current || resolvedNoteId;
       if (draftId && isUnpersistedComposeDraft(draftId)) {
@@ -1104,7 +1109,7 @@ export default function CreateNoteForm({
         setResolvedNoteId(undefined);
         setLastSavedSnapshot('');
       } else if (isDirty) {
-        await saveComposerNote(finalDraft || (candidateNoteRef.current as Notes)).catch(() => {});
+        void saveComposerNote(finalDraft || (candidateNoteRef.current as Notes)).catch(() => {});
       }
     }
     if (typeof window !== 'undefined') {
