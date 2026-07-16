@@ -511,7 +511,7 @@ export default function CreateNoteForm({
         setHasPaywall(!!paywall?.enabled);
         setPaywallAmount(paywall?.amount || 0);
         setLastSavedSnapshot(JSON.stringify({
-          title: cached.title || '',
+          title: cached.isTitleManuallyEdited || isTitleManuallyEdited ? (cached.title || '').trim() : '',
           content: cached.content || '',
           format: 'text',
           tags: normalizeTags(cached.tags || []),
@@ -546,7 +546,7 @@ export default function CreateNoteForm({
         setHasPaywall(!!paywall?.enabled);
         setPaywallAmount(paywall?.amount || 0);
         setLastSavedSnapshot(JSON.stringify({
-          title: loaded.title || '',
+          title: (loaded as any).isTitleManuallyEdited || isTitleManuallyEdited ? (loaded.title || '').trim() : '',
           content: loaded.content || '',
           format: 'text',
           tags: normalizeTags(loaded.tags || []),
@@ -804,7 +804,7 @@ export default function CreateNoteForm({
       try { return JSON.parse(saved.metadata || '{}')?.paywall; } catch { return undefined; }
     })();
     setLastSavedSnapshot(JSON.stringify({
-      title: (source.title || '').trim(),
+      title: isTitleManuallyEdited ? (source.title || '').trim() : '',
       content: (source.content || '').trim(),
       format: 'text',
       tags: normalizeTags((source.tags || []) as string[]),
@@ -815,7 +815,7 @@ export default function CreateNoteForm({
       paywallAmount: paywall?.amount || 0,
       resolvedNoteId: saved.$id,
     }));
-  }, [composerKind]);
+  }, [composerKind, isTitleManuallyEdited]);
 
   const migrateDraftId = useCallback((savedId: string, ephemeralId: string | undefined) => {
     if (savedId) registerComposeSession(savedId);
