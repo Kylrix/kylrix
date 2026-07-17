@@ -697,6 +697,7 @@ export function NoteDetailSidebar({
 
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [isContextDrawerOpen, setIsContextDrawerOpen] = useState(false);
+  const [isExportDrawerOpen, setIsExportDrawerOpen] = useState(false);
   const [isAttachObjectPickerOpen, setIsAttachObjectPickerOpen] = useState(false);
   const [isObjectPermissionInfoOpen, setIsObjectPermissionInfoOpen] = useState(false);
   const [pendingBlockDelete, setPendingBlockDelete] = useState<ParsedObjectBlock | null>(null);
@@ -1989,6 +1990,10 @@ export function NoteDetailSidebar({
           anchor="bottom"
           open={isContextDrawerOpen}
           onClose={() => setIsContextDrawerOpen(false)}
+          // Portal above DynamicSidebar (z 10001); in-tree disablePortal clips under transform+overflow.
+          disablePortal={false}
+          keepMounted={false}
+          sx={{ zIndex: 11000 }}
           PaperProps={{
             sx: {
               position: 'fixed !important',
@@ -2011,7 +2016,6 @@ export function NoteDetailSidebar({
           ModalProps={{
             keepMounted: false,
             disableScrollLock: false,
-            disablePortal: true,
           }}
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pointerEvents: 'auto' }}>
@@ -2115,40 +2119,88 @@ export function NoteDetailSidebar({
               </button>
             </>
 
-            <div className="h-px bg-white/5 my-3" />
-            <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-black text-white/30 tracking-wider uppercase px-4 pt-1 font-mono">Export Document</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsContextDrawerOpen(false);
-                  exportToMarkdown(liveNote.title || 'Note', content || '');
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
-              >
-                <span>Export as Markdown (.md)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsContextDrawerOpen(false);
-                  exportToPDF(liveNote.title || 'Note', content || '');
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
-              >
-                <span>Export as PDF (.pdf)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsContextDrawerOpen(false);
-                  exportToDOCX(liveNote.title || 'Note', content || '');
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
-              >
-                <span>Export as Word (.doc)</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsContextDrawerOpen(false);
+                setIsExportDrawerOpen(true);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+            >
+              <OpenIcon className="w-5 h-5 text-amber-400" />
+              <span>Export</span>
+            </button>
+          </Box>
+        </Drawer>
+      )}
+
+      {isExportDrawerOpen && (
+        <Drawer
+          anchor="bottom"
+          open={isExportDrawerOpen}
+          onClose={() => setIsExportDrawerOpen(false)}
+          disablePortal={false}
+          keepMounted={false}
+          sx={{ zIndex: 11000 }}
+          PaperProps={{
+            sx: {
+              position: 'fixed !important',
+              bottom: '0 !important',
+              left: '0 !important',
+              right: '0 !important',
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
+              bgcolor: '#161412',
+              borderTop: '1px solid #34322F',
+              backgroundImage: 'none',
+              maxWidth: 720,
+              width: '100%',
+              mx: 'auto',
+              p: 2,
+              pb: 4,
+              pointerEvents: 'auto',
+            }
+          }}
+          ModalProps={{
+            keepMounted: false,
+            disableScrollLock: false,
+          }}
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pointerEvents: 'auto' }}>
+            <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36', mx: 'auto', mb: 1 }} aria-hidden />
+            <Typography sx={{ fontSize: '0.9rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', tracking: '0.05em', fontFamily: 'var(--font-mono)', mb: 1, textAlign: 'center' }}>
+              Export
+            </Typography>
+            <button
+              type="button"
+              onClick={() => {
+                setIsExportDrawerOpen(false);
+                exportToMarkdown(liveNote.title || 'Note', content || '');
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+            >
+              <span>Markdown (.md)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsExportDrawerOpen(false);
+                exportToPDF(liveNote.title || 'Note', content || '');
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+            >
+              <span>PDF (.pdf)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsExportDrawerOpen(false);
+                exportToDOCX(liveNote.title || 'Note', content || '');
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+            >
+              <span>Word (.doc)</span>
+            </button>
           </Box>
         </Drawer>
       )}
