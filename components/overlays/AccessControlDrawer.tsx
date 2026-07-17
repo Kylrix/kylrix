@@ -74,6 +74,7 @@ export function AccessControlDrawer({
         setLocalIsPublic(enable);
         if (!enable) {
           setLocalIsGuest(false);
+          onClose();
         }
         onUpdate?.();
       }
@@ -97,6 +98,9 @@ export function AccessControlDrawer({
       if (res.success) {
         showSuccess(enable ? 'Guest access enabled' : 'Guest access disabled');
         setLocalIsGuest(enable);
+        if (!enable) {
+          onClose();
+        }
         onUpdate?.();
       }
     } catch (err: any) {
