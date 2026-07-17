@@ -42,6 +42,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     sharedFrom?: string | null;
     url?: string | null;
     isPublic?: boolean | null;
+    isGuest?: boolean | null;
     isPinned?: boolean | null;
     dek?: string | null;
   };
@@ -271,8 +272,8 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
           await VaultService.updateTOTPSecret(totp.$id, {
             dek: wrappedDek,
             secretKey: decryptedSecret,
-            issuer: decryptedIssuer,
-            accountName: decryptedAccount
+            issuer: decryptedIssuer ?? undefined,
+            accountName: decryptedAccount ?? undefined,
           });
           
           totp.dek = wrappedDek;
@@ -524,8 +525,8 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
                     await VaultService.updateTOTPSecret(totp.$id, {
                       dek: wrappedDek,
                       secretKey: decryptedSecret,
-                      issuer: decryptedIssuer,
-                      accountName: decryptedAccount
+                      issuer: decryptedIssuer ?? undefined,
+                      accountName: decryptedAccount ?? undefined,
                     });
                     
                     totp.dek = wrappedDek;
