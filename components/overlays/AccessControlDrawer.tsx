@@ -16,7 +16,7 @@ interface AccessControlDrawerProps {
   isGuest: boolean;
   resourceTitle: string;
   projectId?: string;
-  onUpdate?: () => void;
+  onUpdate?: (updatedFields?: { isPublic: boolean; isGuest: boolean }) => void;
 }
 
 export function AccessControlDrawer({
@@ -71,12 +71,14 @@ export function AccessControlDrawer({
       });
       if (res.success) {
         showSuccess(enable ? 'Public access enabled' : 'Public access disabled');
-        setLocalIsPublic(enable);
+        const nextPublic = enable;
+        const nextGuest = enable ? localIsGuest : false;
+        setLocalIsPublic(nextPublic);
+        setLocalIsGuest(nextGuest);
+        onUpdate?.({ isPublic: nextPublic, isGuest: nextGuest });
         if (!enable) {
-          setLocalIsGuest(false);
           onClose();
         }
-        onUpdate?.();
       }
     } catch (err: any) {
       showError('Failed to update public access: ' + err.message);
@@ -98,10 +100,10 @@ export function AccessControlDrawer({
       if (res.success) {
         showSuccess(enable ? 'Guest access enabled' : 'Guest access disabled');
         setLocalIsGuest(enable);
+        onUpdate?.({ isPublic: localIsPublic, isGuest: enable });
         if (!enable) {
           onClose();
         }
-        onUpdate?.();
       }
     } catch (err: any) {
       showError('Failed to update guest access: ' + err.message);
