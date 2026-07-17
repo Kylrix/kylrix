@@ -492,6 +492,8 @@ export default function ProjectAddObjectModal({
                   recurrenceRule: eventData.recurrenceRule || '',
                   calendarId: calendarId,
                   userId: user.$id,
+                  isPublic: visibility === 'public',
+                  isGuest: visibility === 'public',
                 }, eventPermissions);
 
                 showSuccess('Event created');

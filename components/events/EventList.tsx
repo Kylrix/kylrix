@@ -140,6 +140,8 @@ export default function EventList() {
           recurrenceRule: eventData.recurrenceRule || '',
           calendarId: calendarId,
           userId: currentUserId,
+          isPublic: visibility === 'public',
+          isGuest: visibility === 'public',
         },
         eventPermissions
       );

@@ -413,10 +413,9 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
               Event Visibility
             </span>
             <div className="flex gap-2 w-full">
-              {(['public', 'unlisted', 'private'] as const).map((v) => {
+              {(['public', 'private'] as const).map((v) => {
                 const isActive = visibility === v;
                 let Icon = Globe;
-                if (v === 'unlisted') Icon = Link2;
                 if (v === 'private') Icon = Lock;
 
                 return (
