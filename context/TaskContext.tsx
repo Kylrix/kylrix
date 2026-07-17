@@ -533,7 +533,7 @@ interface TaskContextType extends TaskState {
   togglePinTask: (id: string) => Promise<void>;
   toggleTaskReminder: (id: string, enabled: boolean) => Promise<void>;
   // Subtask actions
-  addSubtask: (taskId: string, title: string) => void;
+  addSubtask: (taskId: string, title: string, description?: string) => void;
   updateSubtask: (taskId: string, subtaskId: string, updates: Partial<Subtask>) => void;
   deleteSubtask: (taskId: string, subtaskId: string) => void;
   toggleSubtask: (taskId: string, subtaskId: string) => void;
@@ -1472,7 +1472,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Subtask actions (Local only for now)
-  const addSubtask = useCallback(async (taskId: string, title: string) => {
+  const addSubtask = useCallback(async (taskId: string, title: string, description: string = '') => {
     const parentTask = state.tasks.find(task => task.id === taskId);
     if (!parentTask) return;
 
@@ -1480,7 +1480,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       const creatorId = state.userId || parentTask.creatorId || 'guest';
       const childTask = await taskApi.create({
         title,
-        description: '',
+        description,
         status: 'todo',
         priority: parentTask.priority,
         dueDate: parentTask.dueDate ? parentTask.dueDate.toISOString() : null,

@@ -86,7 +86,7 @@ interface TaskDetailsProps {
 export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const { user } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
-  const { closeSecondarySidebar } = useLayout();
+  const { closeSecondarySidebar, openSecondarySidebar } = useLayout();
 
   const handleClose = () => {
     if (onBack) {
@@ -372,8 +372,13 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const handleAddSubtask = async () => {
     const currentTask = task;
     if (!currentTask) return;
-    if (newSubtask.trim()) {
-      await addSubtask(currentTask.id, newSubtask.trim());
+    const rawInput = newSubtask.trim();
+    if (rawInput) {
+      let title = rawInput.split('\n')[0].trim();
+      if (title.length > 50) {
+        title = title.substring(0, 50) + '...';
+      }
+      await addSubtask(currentTask.id, title, rawInput);
       setNewSubtask('');
     }
   };
@@ -780,67 +785,74 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
         </div>
 
         {/* Milestones Box */}
-        <div className="p-5 rounded-[28px] bg-[#0A0908] border border-white/5 shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider font-mono">Milestones</span>
-            <span className="text-xs font-bold text-[#9B9691] font-mono">{completedSubtasks} / {task.subtasks.length}</span>
-          </div>
-          <div className="w-full h-1 bg-white/5 rounded-full mb-4 overflow-hidden">
-            <div className="h-full bg-[#A855F7] transition-all duration-500" style={{ width: `${subtaskProgress}%` }} />
-          </div>
+        {!task.parentTaskId && (
+          <div className="p-5 rounded-[28px] bg-[#0A0908] border border-white/5 shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider font-mono">Milestones</span>
+              <span className="text-xs font-bold text-[#9B9691] font-mono">{completedSubtasks} / {task.subtasks.length}</span>
+            </div>
+            <div className="w-full h-1 bg-white/5 rounded-full mb-4 overflow-hidden">
+              <div className="h-full bg-[#A855F7] transition-all duration-500" style={{ width: `${subtaskProgress}%` }} />
+            </div>
 
-          <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
-            {task.subtasks.length === 0 ? (
-              <div className="text-xs text-white/30 italic py-2">No milestones yet.</div>
-            ) : (
-              task.subtasks.map((subtask) => (
-                <div key={subtask.id} className="flex items-start gap-3 py-1 group">
-                  <input
-                    type="checkbox"
-                    checked={subtask.completed}
-                    onChange={() => toggleSubtask(task.id, subtask.id)}
-                    className="w-4 h-4 mt-0.5 rounded border-[#34322F] bg-transparent text-[#A855F7] focus:ring-0 focus:ring-offset-0 focus:outline-none cursor-pointer shrink-0"
-                  />
-                  <span className={`text-sm flex-1 min-w-0 break-words [overflow-wrap:anywhere] ${subtask.completed ? 'text-[#9B9691] line-through' : 'text-[#F5F2ED]'}`}>
-                    {subtask.title}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => deleteSubtask(task.id, subtask.id)}
-                    className="text-[#9B9691] hover:text-red-400 p-1 rounded transition-colors opacity-0 group-hover:opacity-100"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Add Milestone Bar */}
-          <div className="flex gap-2 mt-4 p-1 bg-white/[0.02] rounded-xl border border-white/5 items-center">
-            <input
-              type="text"
-              placeholder="Add milestone..."
-              value={newSubtask}
-              onChange={(e) => setNewSubtask(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
-              className="w-full bg-transparent border-0 outline-none px-3 py-1.5 text-xs text-[#F5F2ED] focus:ring-0 focus:outline-none font-satoshi"
-            />
-            <button
-              type="button"
-              onClick={handleGenerateSubtasks}
-              disabled={isGeneratingSubtasks}
-              className="p-1.5 text-[#A855F7] hover:text-white rounded-lg hover:bg-[#A855F7]/10 transition-colors flex shrink-0"
-              title="AI Autocomplete Milestones"
-            >
-              {isGeneratingSubtasks ? (
-                <div className="w-4 h-4 border-2 border-[#A855F7] border-t-transparent rounded-full animate-spin" />
+            <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
+              {task.subtasks.length === 0 ? (
+                <div className="text-xs text-white/30 italic py-2">No milestones yet.</div>
               ) : (
-                <Sparkles className="w-4 h-4" />
+                task.subtasks.map((subtask) => (
+                  <div key={subtask.id} className="flex items-start gap-3 py-1 group">
+                    <input
+                      type="checkbox"
+                      checked={subtask.completed}
+                      onChange={() => toggleSubtask(task.id, subtask.id)}
+                      className="w-4 h-4 mt-0.5 rounded border-[#34322F] bg-transparent text-[#A855F7] focus:ring-0 focus:ring-offset-0 focus:outline-none cursor-pointer shrink-0"
+                    />
+                    <span 
+                      onClick={() => openSecondarySidebar('task', subtask.id)}
+                      className={`text-sm flex-1 min-w-0 break-words [overflow-wrap:anywhere] hover:underline cursor-pointer ${
+                        subtask.completed ? 'text-[#9B9691] line-through' : 'text-[#F5F2ED]'
+                      }`}
+                    >
+                      {subtask.title}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => deleteSubtask(task.id, subtask.id)}
+                      className="text-[#9B9691] hover:text-red-400 p-1 rounded transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))
               )}
-            </button>
+            </div>
+
+            {/* Add Milestone Bar */}
+            <div className="flex gap-2 mt-4 p-1 bg-white/[0.02] rounded-xl border border-white/5 items-center">
+              <input
+                type="text"
+                placeholder="Add milestone..."
+                value={newSubtask}
+                onChange={(e) => setNewSubtask(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                className="w-full bg-transparent border-0 outline-none px-3 py-1.5 text-xs text-[#F5F2ED] focus:ring-0 focus:outline-none font-satoshi"
+              />
+              <button
+                type="button"
+                onClick={handleGenerateSubtasks}
+                disabled={isGeneratingSubtasks}
+                className="p-1.5 text-[#A855F7] hover:text-white rounded-lg hover:bg-[#A855F7]/10 transition-colors flex shrink-0"
+                title="AI Autocomplete Milestones"
+              >
+                {isGeneratingSubtasks ? (
+                  <div className="w-4 h-4 border-2 border-[#A855F7] border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Actionable Meta Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 px-1">
