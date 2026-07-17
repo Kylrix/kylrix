@@ -106,6 +106,14 @@ export function AccessControlDrawer({
     }
   };
 
+  const handleStopSharingGuests = async () => {
+    await handleToggleGuest(false);
+  };
+
+  const handleStopSharingEntirely = async () => {
+    await handleTogglePublic(false);
+  };
+
   const isActive = localIsPublic || localIsGuest;
 
   if (!isOpen) return null;
