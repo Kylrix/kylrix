@@ -14,7 +14,7 @@ interface AccessControlMenuItemsProps {
   isGuest: boolean;
   resourceTitle?: string;
   projectId?: string;
-  onUpdate?: () => void;
+  onUpdate?: (updatedFields?: { isPublic: boolean; isGuest: boolean }) => void;
 }
 
 export function useAccessControlMenuItems({
@@ -51,7 +51,7 @@ export function useAccessControlMenuItems({
                 const publicUrl = buildPublicResourceUrl(resourceType, resourceId, { projectId });
                 await navigator.clipboard.writeText(publicUrl);
               } catch {}
-              onUpdate?.();
+              onUpdate?.({ isPublic: true, isGuest: true });
             }
           } catch (err: any) {
             showError('Failed to publish: ' + err.message);
