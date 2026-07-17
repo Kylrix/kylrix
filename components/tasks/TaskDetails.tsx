@@ -843,7 +843,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
         </div>
 
         {/* Actionable Meta Grid */}
-        <div className="grid grid-cols-2 gap-4 px-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 px-1">
           <div>
             <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider mb-1.5 block font-mono">Project Domain</span>
             <div className="flex items-center gap-2">
@@ -867,6 +867,21 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               </div>
             </button>
           </div>
+          {task.dueDate && (
+            <div>
+              <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider mb-1.5 block font-mono">Target Deadline</span>
+              <div className="flex items-center gap-2 text-[#F5F2ED]">
+                <Calendar className="w-4 h-4 text-[#A855F7]" />
+                <span className="text-sm font-bold text-[#F5F2ED]">
+                  {new Date(task.dueDate).toLocaleDateString(undefined, { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  })}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tags Section */}
