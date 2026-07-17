@@ -1,22 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Box, Typography, IconButton, Button, Stack } from '@/lib/openbricks/primitives';
-import { X, Globe, ShieldCheck, Ban } from 'lucide-react';
-import { Drawer } from '@/lib/openbricks/primitives';
+import React, { useState, useEffect } from 'react';
+import { X, Globe, ShieldCheck, Ban, Copy, Check } from 'lucide-react';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
 import { useToast } from '@/hooks/useToast';
-
-const DRAWER_SX = {
-  borderTopLeftRadius: '24px',
-  borderTopRightRadius: '24px',
-  bgcolor: '#161412',
-  borderTop: '1px solid #34322F',
-  maxWidth: 720,
-  width: '100%',
-  mx: 'auto'
-};
+import { buildPublicResourceUrl } from '@/lib/share/public-url';
 
 interface AccessControlDrawerProps {
   isOpen: boolean;
@@ -44,19 +33,32 @@ export function AccessControlDrawer({
   const { setIsDrawerOpen } = useDrawerState();
   const { showSuccess, showError } = useToast();
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const [localIsPublic, setLocalIsPublic] = useState(initialIsPublic);
   const [localIsGuest, setLocalIsGuest] = useState(initialIsGuest);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setIsDrawerOpen(isOpen);
     return () => setIsDrawerOpen(false);
   }, [isOpen, setIsDrawerOpen]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setLocalIsPublic(initialIsPublic);
     setLocalIsGuest(initialIsGuest);
   }, [initialIsPublic, initialIsGuest]);
+
+  const handleCopyLink = async () => {
+    try {
+      const publicUrl = buildPublicResourceUrl(resourceType, resourceId, { projectId });
+      await navigator.clipboard.writeText(publicUrl);
+      setCopied(true);
+      showSuccess('Link copied');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err: unknown) {
+      showError('Could not copy link');
+    }
+  };
 
   const handleTogglePublic = async (enable: boolean) => {
     setLoading(true);
@@ -104,139 +106,128 @@ export function AccessControlDrawer({
     }
   };
 
-  const handleStopSharingGuests = async () => {
-    await handleToggleGuest(false);
-  };
-
-  const handleStopSharingEntirely = async () => {
-    await handleTogglePublic(false);
-  };
-
   const isActive = localIsPublic || localIsGuest;
 
+  if (!isOpen) return null;
+
   return (
-    <Drawer 
-      anchor="bottom" 
-      open={isOpen} 
-      onClose={onClose} 
-      PaperProps={{ sx: DRAWER_SX }} 
-      ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
-    >
-      <Box sx={{ p: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography sx={{ fontWeight: 900, fontSize: '1.2rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
-            {isActive ? 'Stop Sharing' : 'Share'} - {resourceTitle}
-          </Typography>
-          <IconButton onClick={onClose} sx={{ color: '#9B9691' }}><X size={20} /></IconButton>
-        </Box>
+    <>
+      {/* 1. Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity duration-300 ease-in-out cursor-default"
+        onClick={onClose}
+      />
+      
+      {/* 2. Slide-up Panel */}
+      <div className="fixed bottom-0 left-0 right-0 max-h-[85vh] md:max-h-[60vh] bg-[#161412] border-t border-white/8 rounded-t-[28px] z-[100] text-white p-6 md:p-8 flex flex-col gap-6 overflow-y-auto">
+        {/* Drag handle */}
+        <div className="w-10 h-1 bg-white/12 rounded-[2px] mx-auto mb-2 flex-shrink-0" />
+        
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-white text-lg font-black tracking-tight leading-tight font-clash">
+              {isActive ? 'Stop Sharing' : 'Share'}
+            </h3>
+            <p className="text-white/40 text-[11px] font-bold mt-1">
+              Configure visibility settings for "{resourceTitle}"
+            </p>
+          </div>
+          <button 
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white bg-white/2 hover:bg-white/5 transition-all"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-        <Typography sx={{ color: '#9B9691', fontSize: '0.85rem', mb: 4 }}>
-          Manage guest and public access for this {resourceType}.
-        </Typography>
+        {/* Access controls */}
+        <div className="flex flex-col gap-4">
+          {/* Public Link Copy Button if shared */}
+          {isActive && (
+            <button
+              onClick={handleCopyLink}
+              className="flex items-center justify-between w-full p-3 bg-white/3 hover:bg-white/6 border border-white/6 rounded-xl transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <Globe size={18} className="text-[#10B981]" />
+                <span className="text-xs font-bold text-white/85">Copy public sharing link</span>
+              </div>
+              {copied ? <Check size={16} className="text-[#10B981]" /> : <Copy size={16} className="text-white/40" />}
+            </button>
+          )}
 
-        <Stack spacing={3} sx={{ mb: 4 }}>
-          {/* Public Access Toggle */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2, bg: '#1C1A18', borderRadius: '16px', border: '1px solid #34322F' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Globe size={20} className={localIsPublic ? 'text-[#10B981]' : 'text-[#9B9691]'} />
-              <Box>
-                <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.9rem' }}>Public Access</Typography>
-                <Typography sx={{ color: '#9B9691', fontSize: '0.75rem' }}>Anyone with the link can view this.</Typography>
-              </Box>
-            </Box>
-            <Button
+          {/* Public Access Panel */}
+          <div className="flex items-center justify-between p-4 bg-white/2 border border-white/5 rounded-2xl">
+            <div className="flex items-center gap-3">
+              <Globe size={20} className={localIsPublic ? 'text-[#10B981]' : 'text-white/20'} />
+              <div className="flex flex-col">
+                <span className="text-sm font-extrabold text-white">Public Access</span>
+                <span className="text-[11px] text-white/40 font-semibold mt-0.5">Anyone with the link can view this.</span>
+              </div>
+            </div>
+            <button
               onClick={() => handleTogglePublic(!localIsPublic)}
               disabled={loading}
-              sx={{
-                bgcolor: localIsPublic ? '#10B981' : '#34322F',
-                color: '#fff',
-                fontWeight: 'bold',
-                px: 3,
-                py: 1,
-                borderRadius: '12px',
-                '&:hover': { bgcolor: localIsPublic ? '#0D9488' : '#45423E' }
-              }}
+              className={`px-4 py-1.5 rounded-xl text-xs font-black transition-all ${
+                localIsPublic 
+                  ? 'bg-[#10B981] text-black hover:bg-[#0D9488]' 
+                  : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+              }`}
             >
               {localIsPublic ? 'Enabled' : 'Enable'}
-            </Button>
-          </Box>
+            </button>
+          </div>
 
-          {/* Guest Access Toggle */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            p: 2, 
-            bg: '#1C1A18', 
-            borderRadius: '16px', 
-            border: '1px solid #34322F',
-            opacity: localIsPublic ? 1 : 0.5
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <ShieldCheck size={20} className={localIsGuest && localIsPublic ? 'text-[#10B981]' : 'text-[#9B9691]'} />
-              <Box>
-                <Typography sx={{ color: '#fff', fontWeight: 'bold', fontSize: '0.9rem' }}>Guest Access</Typography>
-                <Typography sx={{ color: '#9B9691', fontSize: '0.75rem' }}>Allow guests to collaborate or comment.</Typography>
-              </Box>
-            </Box>
-            <Button
+          {/* Guest Access Panel */}
+          <div className={`flex items-center justify-between p-4 bg-white/2 border border-white/5 rounded-2xl transition-all ${
+            !localIsPublic ? 'opacity-40 cursor-not-allowed' : ''
+          }`}>
+            <div className="flex items-center gap-3">
+              <ShieldCheck size={20} className={localIsGuest && localIsPublic ? 'text-[#10B981]' : 'text-white/20'} />
+              <div className="flex flex-col">
+                <span className="text-sm font-extrabold text-white">Guest Access</span>
+                <span className="text-[11px] text-white/40 font-semibold mt-0.5">Allows anonymous visitors guest interaction rights.</span>
+              </div>
+            </div>
+            <button
               onClick={() => handleToggleGuest(!localIsGuest)}
               disabled={loading || !localIsPublic}
-              sx={{
-                bgcolor: localIsGuest && localIsPublic ? '#10B981' : '#34322F',
-                color: '#fff',
-                fontWeight: 'bold',
-                px: 3,
-                py: 1,
-                borderRadius: '12px',
-                '&:hover': { bgcolor: localIsGuest && localIsPublic ? '#0D9488' : '#45423E' }
-              }}
+              className={`px-4 py-1.5 rounded-xl text-xs font-black transition-all ${
+                localIsGuest && localIsPublic 
+                  ? 'bg-[#10B981] text-black hover:bg-[#0D9488]' 
+                  : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
+              }`}
             >
               {localIsGuest && localIsPublic ? 'Enabled' : 'Enable'}
-            </Button>
-          </Box>
-        </Stack>
+            </button>
+          </div>
+        </div>
 
+        {/* Destructive / Quick Actions */}
         {isActive && (
-          <Stack spacing={2}>
+          <div className="flex flex-col gap-3 mt-2">
             {localIsGuest && (
-              <Button
-                fullWidth
+              <button
                 onClick={handleStopSharingGuests}
                 disabled={loading}
-                startIcon={<Ban size={16} />}
-                sx={{
-                  bgcolor: 'rgba(239, 68, 68, 0.1)',
-                  color: '#EF4444',
-                  border: '1px solid rgba(239, 68, 68, 0.2)',
-                  fontWeight: 'bold',
-                  py: 1.5,
-                  borderRadius: '14px',
-                  '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.2)' }
-                }}
+                className="flex items-center justify-center gap-2 w-full py-3.5 bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 text-red-500 text-xs font-black rounded-2xl transition-all"
               >
-                Stop sharing to guests
-              </Button>
+                <Ban size={15} />
+                <span>Stop sharing to guests</span>
+              </button>
             )}
-            <Button
-              fullWidth
+            <button
               onClick={handleStopSharingEntirely}
               disabled={loading}
-              startIcon={<X size={16} />}
-              sx={{
-                bgcolor: '#EF4444',
-                color: '#000',
-                fontWeight: 'bold',
-                py: 1.5,
-                borderRadius: '14px',
-                '&:hover': { bgcolor: '#DC2626' }
-              }}
+              className="flex items-center justify-center gap-2 w-full py-3.5 bg-red-500 text-black hover:bg-red-500/90 text-xs font-black rounded-2xl transition-all"
             >
-              Stop sharing entirely
-            </Button>
-          </Stack>
+              <X size={15} />
+              <span>Stop sharing entirely</span>
+            </button>
+          </div>
         )}
-      </Box>
-    </Drawer>
+      </div>
+    </>
   );
 }
