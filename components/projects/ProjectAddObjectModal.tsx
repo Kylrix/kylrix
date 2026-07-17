@@ -489,7 +489,7 @@ export default function ProjectAddObjectModal({
                   status: 'confirmed',
                   coverImageId: eventData.coverImage || '',
                   maxAttendees: 0,
-                  recurrenceRule: '',
+                  recurrenceRule: eventData.recurrenceRule || '',
                   calendarId: calendarId,
                   userId: user.$id,
                 }, eventPermissions);

@@ -62,6 +62,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
   const [visibility, setVisibility] = useState<EventVisibility>('public');
   const [selectedGuests, setSelectedGuests] = useState<User[]>([]);
   const [autoCreateCall, setAutoCreateCall] = useState(false);
+  const [recurrenceRule, setRecurrenceRule] = useState('');
   const [isHydrated, setIsHydrated] = useState(false);
 
   // Viewport observer
@@ -95,6 +96,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
         if (draft.coverImage) setCoverImage(draft.coverImage);
         if (draft.visibility) setVisibility(draft.visibility);
         if (draft.autoCreateCall !== undefined) setAutoCreateCall(draft.autoCreateCall);
+        if (draft.recurrenceRule) setRecurrenceRule(draft.recurrenceRule);
         if (draft.startTime) setStartTime(new Date(draft.startTime));
         if (draft.endTime) setEndTime(new Date(draft.endTime));
         if (draft.guests) setSelectedGuests(draft.guests);
@@ -116,6 +118,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
       coverImage,
       visibility,
       autoCreateCall,
+      recurrenceRule,
       startTime: startTime ? startTime.toISOString() : null,
       endTime: endTime ? endTime.toISOString() : null,
       guests: selectedGuests,
@@ -125,7 +128,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
     } else {
       localStorage.removeItem('kylrix:draft:event');
     }
-  }, [open, isHydrated, title, description, location, url, coverImage, visibility, autoCreateCall, startTime, endTime, selectedGuests]);
+  }, [open, isHydrated, title, description, location, url, coverImage, visibility, autoCreateCall, recurrenceRule, startTime, endTime, selectedGuests]);
 
   const handleSubmit = () => {
     if (!title.trim() || !startTime || !endTime) return;
@@ -140,7 +143,8 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
       coverImage,
       visibility,
       guests: selectedGuests.map(g => g.id),
-      autoCreateCall
+      autoCreateCall,
+      recurrenceRule
     });
 
     if (typeof window !== 'undefined') {
@@ -160,6 +164,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
     setVisibility('public');
     setSelectedGuests([]);
     setAutoCreateCall(false);
+    setRecurrenceRule('');
   };
 
   const handleClose = () => {
@@ -185,7 +190,8 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
       coverImage,
       visibility,
       guests: selectedGuests.map(g => g.id),
-      autoCreateCall
+      autoCreateCall,
+      recurrenceRule
     });
 
     if (result && (result.id || result.$id)) {
@@ -303,8 +309,8 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
 
           <div className="h-px bg-[#34322F]" />
 
-          {/* Starts At / Ends At Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Starts At / Ends At / Repeat Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-mono font-bold tracking-wider text-[#8E8A86] uppercase font-satoshi">
                 Starts At
@@ -326,6 +332,20 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
                 onChange={(e) => setEndTime(fromLocalISO(e.target.value))}
                 className="w-full bg-[#000000] px-4 py-3 rounded-xl border border-[#34322F] text-sm font-semibold text-white focus:outline-none focus:border-[#6366F1] transition-colors cursor-pointer"
               />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-mono font-bold tracking-wider text-[#8E8A86] uppercase font-satoshi">
+                Repeat
+              </label>
+              <select
+                value={recurrenceRule}
+                onChange={(e) => setRecurrenceRule(e.target.value)}
+                className="w-full bg-[#000000] px-4 py-3 rounded-xl border border-[#34322F] text-sm font-semibold text-white focus:outline-none focus:border-[#6366F1] transition-colors cursor-pointer"
+              >
+                <option value="">Does not repeat</option>
+                <option value="FREQ=DAILY">Daily</option>
+                <option value="FREQ=WEEKLY">Weekly</option>
+              </select>
             </div>
           </div>
 
