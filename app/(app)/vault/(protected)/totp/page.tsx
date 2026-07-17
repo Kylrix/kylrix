@@ -238,11 +238,51 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
           totp.isPublic = true;
         }
 
+        let currentDek = (totp as any).dek;
+        if (!currentDek) {
+          const { decryptField, encryptField } = await import('@/lib/masterpass-crypto');
+          const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
+          const { VaultService } = await import('@/lib/appwrite/vault');
+          
+          const newDek = await ecosystemSecurity.generateRandomMEK();
+          const rawKey = await crypto.subtle.exportKey("raw", newDek);
+          const dekBase64 = btoa(String.fromCharCode(...new Uint8Array(rawKey)));
+          const wrappedDek = await encryptField(dekBase64);
+          
+          let decryptedSecret = totp.secretKey;
+          if (decryptedSecret && typeof decryptedSecret === 'string' && decryptedSecret.length > 20 && /^[A-Za-z0-9+/=]+$/.test(decryptedSecret)) {
+            decryptedSecret = await decryptField(decryptedSecret);
+          }
+          
+          let decryptedIssuer = totp.issuer;
+          if (decryptedIssuer && typeof decryptedIssuer === 'string' && decryptedIssuer.length > 20 && /^[A-Za-z0-9+/=]+$/.test(decryptedIssuer)) {
+            decryptedIssuer = await decryptField(decryptedIssuer);
+          }
+
+          let decryptedAccount = totp.accountName;
+          if (decryptedAccount && typeof decryptedAccount === 'string' && decryptedAccount.length > 20 && /^[A-Za-z0-9+/=]+$/.test(decryptedAccount)) {
+            decryptedAccount = await decryptField(decryptedAccount);
+          }
+          
+          // Pass plaintext fields + wrappedDek; VaultService will encrypt with new DEK
+          await VaultService.updateTOTPSecret(totp.$id, {
+            dek: wrappedDek,
+            secretKey: decryptedSecret,
+            issuer: decryptedIssuer,
+            accountName: decryptedAccount
+          });
+          
+          totp.dek = wrappedDek;
+          totp.secretKey = decryptedSecret;
+          currentDek = wrappedDek;
+        }
+
         let keyFragment = '';
-        if ((totp as any).dek) {
+        if (currentDek) {
           const { decryptField } = await import('@/lib/masterpass-crypto');
-          const dekBase64 = await decryptField((totp as any).dek);
-          keyFragment = `/${encodeURIComponent(dekBase64)}`;
+          const dekBase64 = await decryptField(currentDek);
+          const urlSafeDek = dekBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+          keyFragment = `/${urlSafeDek}`;
         }
         const { buildPublicResourceUrl } = await import('@/lib/share/public-url');
         const baseUrl = buildPublicResourceUrl('totp', totp.$id);
@@ -446,11 +486,61 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
             <ShareLockButton 
                 resourceType="totp"
                 resourceId={totp.$id}
-                isPublic={false}
-                isGuest={false}
+                isPublic={!!totp.isPublic}
+                isGuest={!!totp.isGuest}
                 accentColor="#10B981"
-                canPublish={false}
-                blockReason="TOTP codes cannot be shared publicly"
+                canPublish={true}
+                getCustomShareUrl={async () => {
+                  let currentDek = (totp as any).dek;
+                  if (!currentDek) {
+                    const { decryptField, encryptField } = await import('@/lib/masterpass-crypto');
+                    const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
+                    const { VaultService } = await import('@/lib/appwrite/vault');
+                    
+                    const newDek = await ecosystemSecurity.generateRandomMEK();
+                    const rawKey = await crypto.subtle.exportKey("raw", newDek);
+                    const dekBase64 = btoa(String.fromCharCode(...new Uint8Array(rawKey)));
+                    const wrappedDek = await encryptField(dekBase64);
+                    
+                    let decryptedSecret = totp.secretKey;
+                    if (decryptedSecret && typeof decryptedSecret === 'string' && decryptedSecret.length > 20 && /^[A-Za-z0-9+/=]+$/.test(decryptedSecret)) {
+                      decryptedSecret = await decryptField(decryptedSecret);
+                    }
+                    
+                    let decryptedIssuer = totp.issuer;
+                    if (decryptedIssuer && typeof decryptedIssuer === 'string' && decryptedIssuer.length > 20 && /^[A-Za-z0-9+/=]+$/.test(decryptedIssuer)) {
+                      decryptedIssuer = await decryptField(decryptedIssuer);
+                    }
+
+                    let decryptedAccount = totp.accountName;
+                    if (decryptedAccount && typeof decryptedAccount === 'string' && decryptedAccount.length > 20 && /^[A-Za-z0-9+/=]+$/.test(decryptedAccount)) {
+                      decryptedAccount = await decryptField(decryptedAccount);
+                    }
+                    
+                    // Pass plaintext fields + wrappedDek; VaultService will encrypt with new DEK
+                    await VaultService.updateTOTPSecret(totp.$id, {
+                      dek: wrappedDek,
+                      secretKey: decryptedSecret,
+                      issuer: decryptedIssuer,
+                      accountName: decryptedAccount
+                    });
+                    
+                    totp.dek = wrappedDek;
+                    totp.secretKey = decryptedSecret;
+                    currentDek = wrappedDek;
+                  }
+
+                  let keyFragment = '';
+                  if (currentDek) {
+                    const { decryptField } = await import('@/lib/masterpass-crypto');
+                    const dekBase64 = await decryptField(currentDek);
+                    const urlSafeDek = dekBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+                    keyFragment = `/${urlSafeDek}`;
+                  }
+                  const { buildPublicResourceUrl } = await import('@/lib/share/public-url');
+                  const baseUrl = buildPublicResourceUrl('totp', totp.$id);
+                  return keyFragment ? `${baseUrl}${keyFragment}` : baseUrl;
+                }}
             />
           </div>
         </div>

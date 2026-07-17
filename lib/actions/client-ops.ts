@@ -459,7 +459,34 @@ export async function toggleResourcePublicGuest(params: {
   projectId?: string;
 }) {
   const jwt = await getJwt();
-  return toggleResourcePublicGuestSecure({ ...params, jwt });
+  const res = await toggleResourcePublicGuestSecure({ ...params, jwt });
+
+  try {
+    if (typeof window !== 'undefined') {
+      const { getCurrentUser } = await import('@/lib/appwrite/client');
+      const currentUser = await getCurrentUser().catch(() => null);
+      
+      if (params.resourceType === 'note') {
+        const { invalidateNoteRowClientCache } = await import('@/lib/appwrite/note');
+        invalidateNoteRowClientCache(params.resourceId);
+      } else if (params.resourceType === 'credential' || params.resourceType === 'totp') {
+        const { VaultService } = await import('@/lib/appwrite/vault');
+        if (currentUser?.$id) {
+          (VaultService as any).clearCredentialCache(currentUser.$id);
+        }
+        const { invalidateCache } = await import('@/lib/ecosystem/nexus-fetcher');
+        if (currentUser?.$id) {
+          invalidateCache(`v_creds_total_${currentUser.$id}`);
+          invalidateCache(`v_recent_creds_window_${currentUser.$id}`);
+          invalidateCache(`v_totp_total_${currentUser.$id}`);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to invalidate sharing toggle cache:', err);
+  }
+
+  return res;
 }
 
 export async function getResourcePublicGuest(params: {

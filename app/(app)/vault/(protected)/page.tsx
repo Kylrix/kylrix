@@ -506,6 +506,11 @@ function DashboardPageContent() {
                           isSelectMode={isSelectMode}
                           isSelected={selectedIds.includes(cred.$id)}
                           onToggleSelect={() => toggleSelection(cred.$id)}
+                          onShared={(id) => {
+                            setAllCredentials(prev =>
+                              prev.map(c => c.$id === id ? { ...c, isPublic: true, isGuest: true } : c)
+                            );
+                          }}
                           onClick={() => {
                             setSelectedCredential(cred);
                             setActiveDetail({ type: 'secret', id: cred.$id, data: cred });

@@ -82,8 +82,12 @@ function decodeBase64Safe(str: string): string {
   }
 }
 
-async function importDek(dekBase64: string): Promise<CryptoKey> {
-  const raw = Uint8Array.from(atob(dekBase64), (c) => c.charCodeAt(0));
+async function importDek(dekBase64Safe: string): Promise<CryptoKey> {
+  // Input is URL-safe base64 (- → +, _ → /, no padding) — do NOT decodeURIComponent
+  const base64 = dekBase64Safe.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = (4 - (base64.length % 4)) % 4;
+  const rawString = atob(base64 + '='.repeat(pad));
+  const raw = Uint8Array.from(rawString, (c) => c.charCodeAt(0));
   return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
 }
 
@@ -94,7 +98,8 @@ async function decryptWithDek(ciphertext: string, dek: CryptoKey): Promise<strin
     const data = buf.slice(12);
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, dek, data);
     return new TextDecoder().decode(plain);
-  } catch {
+  } catch (e) {
+    console.error('Decryption failed:', e);
     throw new Error('Decryption failed — the key may be invalid or expired.');
   }
 }
@@ -190,8 +195,8 @@ export default function SharedTotpClient({ totpId, keySegments, rawTotp }: Share
         const algo = raw.algorithm || 'SHA1';
 
         if (dekRaw) {
-          const dekBase64 = decodeURIComponent(dekRaw);
-          const dek = await importDek(dekBase64);
+          // dekRaw is already URL-decoded by Next.js — pass directly to importDek
+          const dek = await importDek(dekRaw);
           if (secretKey && looksEncrypted(secretKey)) secretKey = await decryptWithDek(secretKey, dek);
           if (issuer && looksEncrypted(issuer)) issuer = await decryptWithDek(issuer, dek);
           if (accountName && looksEncrypted(accountName)) accountName = await decryptWithDek(accountName, dek);

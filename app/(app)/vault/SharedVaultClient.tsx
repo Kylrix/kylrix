@@ -40,8 +40,12 @@ interface DecryptedCredential {
 
 const ENCRYPTED_FIELDS_CREDENTIALS = ['name', 'url', 'username', 'password', 'notes', 'customFields'];
 
-async function importDek(dekBase64: string): Promise<CryptoKey> {
-  const raw = Uint8Array.from(atob(dekBase64), (c) => c.charCodeAt(0));
+async function importDek(dekBase64Safe: string): Promise<CryptoKey> {
+  // Input is URL-safe base64 (- → +, _ → /, no padding)
+  const base64 = dekBase64Safe.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = (4 - (base64.length % 4)) % 4;
+  const rawString = atob(base64 + '='.repeat(pad));
+  const raw = Uint8Array.from(rawString, (c) => c.charCodeAt(0));
   return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
 }
 
@@ -53,7 +57,8 @@ async function decryptWithDek(ciphertext: string, dek: CryptoKey): Promise<strin
     const data = buf.slice(12);
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, dek, data);
     return new TextDecoder().decode(plain);
-  } catch {
+  } catch (e) {
+    console.error('Decryption error:', e);
     return '[DECRYPTION_FAILED]';
   }
 }
@@ -107,9 +112,8 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
           return;
         }
 
-        // Decode the DEK from URL
-        const dekBase64 = decodeURIComponent(dekFragment);
-        const dek = await importDek(dekBase64);
+        // Decode the DEK from URL — importDek handles URL-safe base64 decoding internally
+        const dek = await importDek(dekFragment);
 
         // Decrypt all encrypted fields
         const decrypt = async (val: string | null | undefined): Promise<string | null> => {

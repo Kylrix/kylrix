@@ -57,12 +57,49 @@ export default function CredentialDetail({
         }
       }
 
+      let currentDek = credential.dek;
+      if (!currentDek) {
+        const { decryptField, encryptField } = await import('@/lib/masterpass-crypto');
+        const { VaultService } = await import('@/lib/appwrite/vault');
+        
+        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
+        const newDek = await ecosystemSecurity.generateRandomMEK();
+        const rawKey = await crypto.subtle.exportKey("raw", newDek);
+        const dekBase64 = btoa(String.fromCharCode(...new Uint8Array(rawKey)));
+        const wrappedDek = await encryptField(dekBase64);
+        
+        // Decrypt fields currently encrypted with MEK
+        const plaintextFields: Record<string, any> = { dek: wrappedDek };
+        const fieldsToProcess = ['name', 'url', 'username', 'password', 'notes', 'customFields'];
+        for (const field of fieldsToProcess) {
+          const val = (credential as any)[field];
+          if (val && typeof val === 'string' && val.length > 20 && /^[A-Za-z0-9+/=]+$/.test(val)) {
+            try {
+              plaintextFields[field] = await decryptField(val);
+            } catch {
+              plaintextFields[field] = val;
+            }
+          } else {
+            plaintextFields[field] = val;
+          }
+        }
+        
+        // Pass plaintext + new wrappedDek — VaultService.updateCredential will re-encrypt with new DEK
+        await VaultService.updateCredential(credential.$id, plaintextFields as any);
+        credential.dek = wrappedDek;
+        for (const field of fieldsToProcess) {
+          if (plaintextFields[field] !== undefined) (credential as any)[field] = plaintextFields[field];
+        }
+        currentDek = wrappedDek;
+      }
+
       let keyFragment = '';
-      if (credential.dek) {
+      if (currentDek) {
         // If DEK exists, decrypt the DEK value using user masterpass structure
         const { decryptField } = await import('@/lib/masterpass-crypto');
-        const dekBase64 = await decryptField(credential.dek);
-        keyFragment = `/${encodeURIComponent(dekBase64)}`;
+        const dekBase64 = await decryptField(currentDek);
+        const urlSafeDek = dekBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        keyFragment = `/${urlSafeDek}`;
       }
       
       const baseUrl = buildPublicResourceUrl('credential', credential.$id);

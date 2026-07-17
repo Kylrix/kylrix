@@ -2108,7 +2108,8 @@ export async function toggleResourcePublicGuestSecure(params: {
       databaseId: config.databaseId,
       tableId: config.tableId,
       rowId: resourceId,
-      data: updateData
+      data: updateData,
+      permissions: row.$permissions || []
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Could not save sharing settings';

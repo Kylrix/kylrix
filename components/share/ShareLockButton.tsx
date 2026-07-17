@@ -18,6 +18,7 @@ interface ShareLockButtonProps {
   onPublished?: (result: { isPublic: boolean; isGuest: boolean; publicUrl: string }) => void;
   canPublish?: boolean;
   blockReason?: string;
+  getCustomShareUrl?: () => Promise<string>;
 }
 
 /**
@@ -32,7 +33,8 @@ export function ShareLockButton({
   projectId,
   onPublished,
   canPublish = true,
-  blockReason
+  blockReason,
+  getCustomShareUrl
 }: ShareLockButtonProps) {
   const [loading, setLoading] = useState(false);
   const { showSuccess, showError } = useToast();
@@ -49,8 +51,12 @@ export function ShareLockButton({
   const errorMessage = (err: unknown, fallback: string) =>
     err instanceof Error && err.message ? err.message : fallback;
 
-  const getClipboardUrl = () =>
-    buildPublicResourceUrl(resourceType, resourceId, { projectId });
+  const getClipboardUrl = async () => {
+    if (getCustomShareUrl) {
+      return await getCustomShareUrl();
+    }
+    return buildPublicResourceUrl(resourceType, resourceId, { projectId });
+  };
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -68,7 +74,7 @@ export function ShareLockButton({
     if (isPublic || isGuest) {
       setLoading(true);
       try {
-        const publicUrl = getClipboardUrl();
+        const publicUrl = await getClipboardUrl();
         const copied = await copyPublicUrl(publicUrl);
         if (copied) {
           showSuccess('Link copied');
@@ -97,7 +103,7 @@ export function ShareLockButton({
         return;
       }
 
-      const publicUrl = getClipboardUrl();
+      const publicUrl = await getClipboardUrl();
 
       onPublished?.({
         isPublic: !!res.isPublic,
