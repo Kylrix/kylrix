@@ -779,10 +779,10 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
           </div>
         </div>
 
-        {/* Execution Track Box */}
+        {/* Milestones Box */}
         <div className="p-5 rounded-[28px] bg-[#0A0908] border border-white/5 shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider font-mono">Execution Track</span>
+            <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider font-mono">Milestones</span>
             <span className="text-xs font-bold text-[#9B9691] font-mono">{completedSubtasks} / {task.subtasks.length}</span>
           </div>
           <div className="w-full h-1 bg-white/5 rounded-full mb-4 overflow-hidden">
@@ -791,7 +791,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
 
           <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
             {task.subtasks.length === 0 ? (
-              <div className="text-xs text-white/30 italic py-2">No sub-tasks yet.</div>
+              <div className="text-xs text-white/30 italic py-2">No milestones yet.</div>
             ) : (
               task.subtasks.map((subtask) => (
                 <div key={subtask.id} className="flex items-start gap-3 py-1 group">
@@ -816,11 +816,11 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             )}
           </div>
 
-          {/* Add Sub-task Bar */}
+          {/* Add Milestone Bar */}
           <div className="flex gap-2 mt-4 p-1 bg-white/[0.02] rounded-xl border border-white/5 items-center">
             <input
               type="text"
-              placeholder="Add sub-task..."
+              placeholder="Add milestone..."
               value={newSubtask}
               onChange={(e) => setNewSubtask(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
@@ -831,7 +831,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               onClick={handleGenerateSubtasks}
               disabled={isGeneratingSubtasks}
               className="p-1.5 text-[#A855F7] hover:text-white rounded-lg hover:bg-[#A855F7]/10 transition-colors flex shrink-0"
-              title="AI Autocomplete Subtasks"
+              title="AI Autocomplete Milestones"
             >
               {isGeneratingSubtasks ? (
                 <div className="w-4 h-4 border-2 border-[#A855F7] border-t-transparent rounded-full animate-spin" />
