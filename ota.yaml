@@ -396,8 +396,8 @@ agent:
     ota:
       note: Only install Ota if it is missing and installation is approved.
       source:
-        kind: branch
-        branch: 1.6.25-implementation
+        kind: version
+        version: v1.6.24
   entrypoint: setup
   default_task: verify
   safe_tasks: [setup, test, lint, build, verify]

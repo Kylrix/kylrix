@@ -110,15 +110,12 @@ jobs:
       - name: Enable pinned pnpm
         run: corepack enable
 
-      - uses: ota-run/setup@v1.0.8
-        with:
-          source: contract
-
       - name: Fail on contract-to-CI workflow drift
         uses: ota-run/action@1.6.25-implementation
         with:
           command: doctor
-          install: never
+          source: contract
+          contract-path: ota.yaml
           fail-on-ci-drift: true
           comment-pr: false
           artifact-name: ota-contract-ci-drift
