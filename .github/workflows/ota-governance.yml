@@ -79,6 +79,9 @@ jobs:
       - name: Discover safe execution surface
         run: ota tasks --safe --use --json
 
+      - name: Preview self-hosted Compose workflow
+        run: ota up --workflow selfhost --dry-run --json
+
       - name: Preview agent container verification workflow
         run: ota up --workflow verify --container --agent --dry-run --json
 
@@ -93,3 +96,29 @@ jobs:
 
       - name: Archive container runtime receipt
         run: ota receipt --workflow sqlite-dev --archive --json
+
+  contract-ci-drift:
+    name: Contract-to-CI drift gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable pinned pnpm
+        run: corepack enable
+
+      - uses: ota-run/setup@v1.0.8
+        with:
+          source: contract
+
+      - name: Fail on contract-to-CI workflow drift
+        uses: ota-run/action@1.6.25-implementation
+        with:
+          command: doctor
+          install: never
+          fail-on-ci-drift: true
+          comment-pr: false
+          artifact-name: ota-contract-ci-drift
