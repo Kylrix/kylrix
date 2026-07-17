@@ -235,6 +235,35 @@ Open your browser to **`http://localhost:3005`**. For a deeper guide on contribu
 
 ---
 
+## Ota
+
+This repository includes an [`ota.yaml`](./ota.yaml) contract for the deterministic SQLite
+contributor path and the isolated container equivalent. Install Ota from the
+[official installation guide](https://ota.run/docs/install), then start by inspecting the
+declared task surface rather than choosing scripts manually.
+
+```bash
+# validate the contract, inspect readiness, and discover runnable lanes
+ota validate .
+ota doctor
+ota tasks --use
+ota tasks --safe --use
+
+# run the finite SQLite-backed verification surface on the host
+ota up --workflow verify --native
+
+# run that same verification surface in Ota's isolated container context
+ota up --workflow verify --container
+
+# start the local SQLite-backed development runtime
+ota up --workflow sqlite-dev --native
+```
+
+Use `ota tasks --use` for the authoritative mode-specific commands and inputs. The self-hosted
+Appwrite topology is a separate workflow: `ota up --workflow selfhost`.
+
+---
+
 <h2 align="center">📥 Downloads</h2>
 
 The full suite is available at **[www.kylrix.space](https://www.kylrix.space)**.
