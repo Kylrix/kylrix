@@ -39,6 +39,11 @@ export default function CredentialItem({
   const [localIsPublic, setLocalIsPublic] = useState(!!credential.isPublic);
   const [localIsGuest, setLocalIsGuest] = useState(!!credential.isGuest);
 
+  useEffect(() => {
+    setLocalIsPublic(!!credential.isPublic);
+    setLocalIsGuest(!!credential.isGuest);
+  }, [credential.isPublic, credential.isGuest]);
+
   const handleCopy = (value: string) => {
     onCopy(value);
   };
@@ -58,11 +63,17 @@ export default function CredentialItem({
   const accessControlItems = useAccessControlMenuItems({
     resourceType: 'credential',
     resourceId: credential.$id,
-    isPublic: !!credential.isPublic,
-    isGuest: !!credential.isGuest,
+    isPublic: localIsPublic,
+    isGuest: localIsGuest,
     resourceTitle: credential.name,
-    onUpdate: () => {
-      // Parent handles refresh
+    onUpdate: (updatedFields?: { isPublic: boolean; isGuest: boolean }) => {
+      if (updatedFields) {
+        setLocalIsPublic(updatedFields.isPublic);
+        setLocalIsGuest(updatedFields.isGuest);
+        credential.isPublic = updatedFields.isPublic;
+        credential.isGuest = updatedFields.isGuest;
+        onShared?.(credential.$id);
+      }
     }
   });
 

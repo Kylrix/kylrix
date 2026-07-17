@@ -292,9 +292,10 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     isPublic: !!note.isPublic,
     isGuest: !!note.isGuest,
     resourceTitle: note.title || 'Untitled Note',
-    onUpdate: () => {
-      // Invalidate local cache and let realtime/refetch handle it
-      onUpdate?.(note);
+    onUpdate: (updatedFields?: { isPublic: boolean; isGuest: boolean }) => {
+      const updated = updatedFields ? { ...note, ...updatedFields } : note;
+      upsertNote(updated);
+      onUpdate?.(updated);
     }
   });
 
