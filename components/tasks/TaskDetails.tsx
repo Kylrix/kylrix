@@ -965,7 +965,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
           )}
         </div>
 
-        {/* Discussion Section */}
+        {/* Discussion Section — goals only; milestones hide this */}
+        {!task.parentTaskId && (
         <div className="p-5 rounded-[28px] bg-[#0A0908] border border-white/5 shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
@@ -1065,6 +1066,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             </div>
           )}
         </div>
+        )}
 
         {/* Metadata */}
         <div className="pt-4 border-t border-white/5">

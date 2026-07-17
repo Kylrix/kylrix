@@ -1450,6 +1450,29 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
     try {
       await taskApi.update(id, { status: newStatus });
+
+      if (newStatus === 'done') {
+        const collectDescendants = (taskId: string): string[] => {
+          const directChildren = state.tasks.filter(task => task.parentTaskId === taskId).map(task => task.id);
+          const descendantIds: string[] = [];
+          directChildren.forEach((childId) => {
+            descendantIds.push(childId, ...collectDescendants(childId));
+          });
+          return descendantIds;
+        };
+        const descendantIds = collectDescendants(id);
+        for (const childId of descendantIds) {
+          const childTask = state.tasks.find(t => t.id === childId);
+          if (childTask && childTask.status !== 'done') {
+            dispatch({
+              type: 'UPDATE_TASK',
+              payload: { id: childId, updates: { status: 'done', completedAt: new Date() } },
+            });
+            await taskApi.update(childId, { status: 'done' });
+          }
+        }
+      }
+
       invalidateTasksNexus(state.userId || 'guest');
     } catch (error: unknown) {
       pendingStatusPatchesRef.current.delete(id);

@@ -33,6 +33,7 @@ const ProjectVisibilityDrawer = dynamic(() => import('../projects/ProjectVisibil
 const ProjectAutoSweepDrawer = dynamic(() => import('../projects/ProjectAutoSweepDrawer'), { ssr: false });
 const JoinRequestConfirmDrawer = dynamic(() => import('./JoinRequestConfirmDrawer').then(mod => mod.JoinRequestConfirmDrawer), { ssr: false });
 const AccessControlDrawer = dynamic(() => import('./AccessControlDrawer').then(mod => mod.AccessControlDrawer), { ssr: false });
+const TaskDetails = dynamic(() => import('../tasks/TaskDetails'), { ssr: false });
 
 
 export function UnifiedBottomDrawer() {
@@ -156,7 +157,11 @@ export function UnifiedBottomDrawer() {
         anchor="bottom"
         open={true}
         onClose={close}
-        ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
+        disablePortal={false}
+        keepMounted={false}
+        // Above Overlay TaskDetails (z≈9999) / DynamicSidebar (z≈10001)
+        sx={{ zIndex: 11000 }}
+        ModalProps={{ keepMounted: false, disableScrollLock: false }}
         PaperProps={{
           sx: {
             borderTopLeftRadius: '24px',
