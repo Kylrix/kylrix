@@ -69,7 +69,6 @@ import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { formatNoteCreatedDate, formatNoteUpdatedDate } from '@/lib/date-utils';
 import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
 import { 
-  getNote,
   listFlowTasks, 
   listFlowEvents, 
   listKeepCredentials, 
@@ -152,13 +151,21 @@ export function NoteDetailSidebar({
   const isPinnedFunc = useMemo(() => typeof isPinned === 'function' ? isPinned : () => false, [isPinned]);
   const pinNoteFunc = useMemo(() => typeof pinNote === 'function' ? pinNote : async () => {}, [pinNote]);
   const unpinNoteFunc = useMemo(() => typeof unpinNote === 'function' ? unpinNote : async () => {}, [unpinNote]);
-  const [realtimeNote, setRealtimeNote] = useState<Notes | null>(null);
   const noteRef = useRef(note);
   const allNotesRef = useRef<Notes[]>([]);
+  /** Single source of truth: NotesContext local copy; prop is only a fallback seed. */
   const liveNote = useMemo(
-    () => (realtimeNote?.$id === note.$id ? realtimeNote : (allNotes || []).find((candidate: any) => candidate.$id === note.$id) || note),
-    [allNotes, note, realtimeNote]
+    () => (allNotes || []).find((candidate: any) => candidate.$id === note.$id) || note,
+    [allNotes, note]
   );
+  const awaitingLocalCopy = useMemo(() => {
+    if (!note?.$id || isEphemeralComposeNoteId(note.$id)) return false;
+    const inContext = (allNotes || []).some((candidate) => candidate.$id === note.$id);
+    if (inContext) return false;
+    // Prop may already carry a seed (card / idea page). Only wait when we truly have an empty stub.
+    const hasSeedBody = Boolean(String(note.title || '').trim() || String(note.content || '').trim());
+    return !hasSeedBody;
+  }, [allNotes, note]);
 
   useEffect(() => {
     allNotesRef.current = Array.isArray(allNotes) ? allNotes : [];
@@ -172,69 +179,33 @@ export function NoteDetailSidebar({
   }, [liveNote?.$id, getScrollPosition]);
 
   const updateLocalAndParentNote = useCallback((updated: Notes) => {
+    if (updated?.$id) {
+      pushLiveNote(updated);
+      void setCachedData(`note_${updated.$id}`, updated);
+    }
     onUpdate(updated);
-    setRealtimeNote(updated);
-  }, [onUpdate]);
+  }, [onUpdate, pushLiveNote, setCachedData]);
 
   useEffect(() => {
     noteRef.current = note;
   }, [note]);
 
-  // Fetch note fully on mount/change
+  // Seed local copy once per id when sync has not delivered it yet (no network in detail).
+  useEffect(() => {
+    const seed = noteRef.current;
+    if (!seed?.$id || isEphemeralComposeNoteId(seed.$id)) return;
+    const exists = allNotesRef.current.some((candidate) => candidate.$id === seed.$id);
+    if (!exists) {
+      pushLiveNote(seed);
+      void setCachedData(`note_${seed.$id}`, seed);
+    }
+  }, [note.$id, pushLiveNote, setCachedData]);
+
   useEffect(() => {
     if (liveNote?.$id) {
       void refreshEcosystemTags();
     }
   }, [liveNote?.$id, refreshEcosystemTags]);
-
-  useEffect(() => {
-    if (note.$id && isEphemeralComposeNoteId(note.$id)) {
-      const fromContext = allNotesRef.current.find((candidate) => candidate.$id === note.$id);
-      if (fromContext && !isDirtyRef.current) {
-        updateLocalAndParentNote(fromContext);
-      }
-      return;
-    }
-
-    setRealtimeNote(null);
-    let active = true;
-    const fetchFullNote = async () => {
-      try {
-        const contextNote = allNotesRef.current.find((candidate) => candidate.$id === note.$id);
-        const full = await getNote(note.$id);
-        if (active && full) {
-          let resolved = full as Notes;
-          const meta = (() => {
-            try { return JSON.parse(full.metadata || '{}'); } catch { return {}; }
-          })();
-          const isT4 = (meta?.isEncrypted === true || meta?.isEncrypted === 'true') && (meta?.encryptionVersion === 'T4' || meta?.encryptionVersion === 'T5') || !!full.dek;
-          if (isT4 && ecosystemSecurity.status.isUnlocked && !meta?.clientDecrypted) {
-            const decrypted = await decryptPublicEncryptedNote(full);
-            if (decrypted) resolved = decrypted;
-          }
-          if (contextNote) {
-            const contextContent = contextNote.content || '';
-            const resolvedContent = resolved.content || '';
-            if (contextContent.length > resolvedContent.length || contextContent !== resolvedContent) {
-              resolved = {
-                ...resolved,
-                title: contextNote.title ?? resolved.title,
-                content: contextNote.content,
-                tags: contextNote.tags ?? resolved.tags,
-              };
-            }
-          }
-          if (!isDirtyRef.current) {
-            updateLocalAndParentNote(resolved);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch full note:', err);
-      }
-    };
-    fetchFullNote();
-    return () => { active = false; };
-  }, [note.$id, updateLocalAndParentNote]);
   
   const noteMeta = useMemo(() => {
     try {
@@ -472,7 +443,6 @@ export function NoteDetailSidebar({
     if (!liveNote.$id) return;
     if (isLoadingCollaborators) return;
     if (!hasCollaborators) {
-      setRealtimeNote(null);
       return;
     }
 
@@ -486,17 +456,16 @@ export function NoteDetailSidebar({
       const isDelete = response.events.some((event) => event.includes('.delete'));
 
       if (isDelete) {
-        setRealtimeNote(null);
         return;
       }
 
       if (!isCreate && !isUpdate) return;
-
-      setRealtimeNote((current) => {
-        if (isDirtyRef.current) return current;
-        const base = current || noteRef.current;
-        return base ? { ...base, ...payload } : payload;
-      });
+      // Collaborator remote edits enter the unified local copy — never a detail-only overlay.
+      if (isDirtyRef.current) return;
+      const base = allNotesRef.current.find((n) => n.$id === payload.$id) || noteRef.current;
+      const merged = base ? { ...base, ...payload } : payload;
+      pushLiveNote(merged);
+      onUpdate(merged);
     });
 
     return () => {
@@ -506,7 +475,7 @@ export function NoteDetailSidebar({
         (unsubscribe as any).unsubscribe();
       }
     };
-  }, [liveNote.$id, hasCollaborators, isLoadingCollaborators]);
+  }, [liveNote.$id, hasCollaborators, isLoadingCollaborators, pushLiveNote, onUpdate]);
 
   useEffect(() => {
     let active = true;
@@ -1082,6 +1051,24 @@ export function NoteDetailSidebar({
   }, [content, liveNote.$id]);
 
   // --- RENDER ---
+  if (awaitingLocalCopy || isLoading) {
+    return (
+      <div
+        className={`note-detail-sidebar-root flex flex-col bg-[#0A0908] overflow-hidden text-white w-full ${
+          isPageLayout ? 'min-h-0' : 'h-full bg-[#161412]'
+        }`}
+      >
+        <div className="flex-1 flex flex-col gap-3 p-5 animate-pulse">
+          <div className="h-8 w-2/3 rounded-xl bg-white/[0.06]" />
+          <div className="h-4 w-full rounded-lg bg-white/[0.04]" />
+          <div className="h-4 w-5/6 rounded-lg bg-white/[0.04]" />
+          <div className="h-4 w-4/6 rounded-lg bg-white/[0.04]" />
+          <p className="mt-4 text-[#9B9691] text-xs font-semibold">Waiting for local copy…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`note-detail-sidebar-root flex flex-col bg-[#0A0908] overflow-hidden text-white w-full ${

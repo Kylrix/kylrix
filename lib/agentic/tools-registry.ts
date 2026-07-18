@@ -86,6 +86,14 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     requiresAuthorization: false,
     parameters: ['route'],
   },
+  {
+    key: 'delete_resource',
+    name: 'Delete Resource',
+    description:
+      'Delete an Idea (Note), Goal (Task), or Project. Specifier REQUIRED: resource $id. Args REQUIRED: type ("note"|"goal"|"project").',
+    requiresAuthorization: true,
+    parameters: ['type'],
+  },
 ];
 
 export interface AgenticToolCallPayload {
@@ -152,6 +160,13 @@ export const NOTE_TOOL_PAYLOAD_SCHEMA = `{
     "args": {
       "objectType": "note|goal",
       "objectId": "string — required"
+    }
+  },
+  "delete_resource": {
+    "toolKey": "delete_resource",
+    "specifier": "resource_$id — required",
+    "args": {
+      "type": "note|goal|project — required"
     }
   }
 }`;

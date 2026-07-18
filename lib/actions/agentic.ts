@@ -446,6 +446,58 @@ ${activeProjects || 'None'}
     console.error('[executeInstantRequestAction] Failed to retrieve context details:', err);
   }
 
+  // Pre-analyze delete/modify intent to feed the AI hint context
+  let hintContext = "";
+  const userMsgText = String(meta?.userMessage || "").trim();
+  const isDeleteIntent = /\b(delete|remove|trash|purge|discard|destroy|clear)\b/i.test(userMsgText);
+  if (isDeleteIntent) {
+    const matchedResources: string[] = [];
+    const lowerMessage = userMsgText.toLowerCase();
+    
+    // Check notes
+    if (notesRes && notesRes.rows) {
+      for (const note of notesRes.rows) {
+        const title = String(note.title || "").toLowerCase();
+        if (title && (lowerMessage.includes(title) || (note.$id && lowerMessage.includes(note.$id.toLowerCase())))) {
+          matchedResources.push(`- Note ID: ${note.$id}, Title: "${note.title}"`);
+        }
+      }
+    }
+    // Check tasks
+    if (tasksRes && tasksRes.rows) {
+      for (const task of tasksRes.rows) {
+        const title = String(task.title || "").toLowerCase();
+        if (title && (lowerMessage.includes(title) || (task.$id && lowerMessage.includes(task.$id.toLowerCase())))) {
+          matchedResources.push(`- Goal/Task ID: ${task.$id}, Title: "${task.title}"`);
+        }
+      }
+    }
+    // Check projects
+    if (projectsRes && projectsRes.rows) {
+      for (const project of projectsRes.rows) {
+        const title = String(project.title || "").toLowerCase();
+        if (title && (lowerMessage.includes(title) || (project.$id && lowerMessage.includes(project.$id.toLowerCase())))) {
+          matchedResources.push(`- Project ID: ${project.$id}, Title: "${project.title}"`);
+        }
+      }
+    }
+
+    if (matchedResources.length > 0) {
+      hintContext = `
+[FRAMEWORK DELETE PRE-ANALYSIS]
+The user prompt indicates a delete/removal request. The framework pre-scan matched these potential target resources:
+${matchedResources.join('\n')}
+If one of these matches the user's request, you should output a toolCall for delete_resource targeting that resource ID with the correct type.
+`;
+    } else {
+      hintContext = `
+[FRAMEWORK DELETE PRE-ANALYSIS]
+The user prompt indicates a delete/removal request, but no exact matching resource title or ID was found in the recent list.
+If the target is ambiguous, ask the user to clarify or list the available titles for them to choose from, or suggest next steps.
+`;
+    }
+  }
+
   // Redact potentially sensitive details (passwords, PINs, auth keys) in prompt
   const redactedPrompt = prompt
     .replace(/(password|pass|pin|secret|key|private)\s*[:=]\s*[^\s]+/gi, '$1: [REDACTED]')
@@ -554,10 +606,10 @@ ${lifetimeMemoryContext}
       '  "lifetimeMemoryUpdate": "Optional high-quality lifelong memory. Leave blank if none.",',
       '  "toolCalls": [',
       '     {',
-      '        "toolKey": "create_note | update_note | get_note | create_goal | update_goal | create_project | link_to_project | suggest_next_steps | toggle_privacy | navigate_workspace",',
+      '        "toolKey": "create_note | update_note | get_note | create_goal | update_goal | create_project | link_to_project | suggest_next_steps | toggle_privacy | navigate_workspace | delete_resource",',
       '        "specifier": "note/goal/project id or route when required; null otherwise",',
       '        "subSpecifier": "optional field name",',
-      '        "args": { "title": "...", "content": "...", "tags": [], "isPublic": false, "isAgentic": true, "suggestions": [{ "label": "...", "prompt": "..." }], "objectType": "note", "objectId": "..." }',
+      '        "args": { "title": "...", "content": "...", "tags": [], "isPublic": false, "isAgentic": true, "suggestions": [{ "label": "...", "prompt": "..." }], "objectType": "note", "objectId": "...", "type": "note" }',
       '     }',
       '  ]',
       '}',
@@ -569,6 +621,7 @@ ${lifetimeMemoryContext}
       contextBlock || 'No page context supplied.',
       sessionBlock,
       memoryBlock,
+      hintContext,
     ].join('\n'),
     generationConfig: {
       responseMimeType: 'application/json'
