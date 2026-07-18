@@ -410,6 +410,8 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       }
     };
     void loadSessionHistory();
+  }, [user?.$id]);
+
   // Load local copy of draft prompt instantly on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -732,13 +734,11 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                     resultSummary = `Updated goal: ${call.specifier}`;
                   } else if (call.toolKey === 'create_project') {
                     const { ProjectsService } = await import('@/lib/appwrite/projects');
-                    const project = await ProjectsService.createProject(user?.$id || 'guest', {
+                    const project = await ProjectsService.createProject({
+                      ownerId: user?.$id || 'guest',
                       title: call.args.title || 'Untitled Project',
                       summary: call.args.summary || '',
-                      status: 'active'
                     });
-                    const { warmProjectsList } = await import('@/lib/projects/warm-projects-list');
-                    await warmProjectsList.warm();
                     if (project?.$id) {
                       await recordSessionObject({
                         objectId: project.$id,

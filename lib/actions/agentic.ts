@@ -317,10 +317,10 @@ export async function executeInstantRequestAction(
   try {
     const { account } = await createServerClient(jwt);
     const appPrefs = await account.getPrefs();
-    if (appPrefs?.smartSystemHistory === false) {
+    if ((appPrefs as any)?.smartSystemHistory === false) {
       historyEnabled = false;
     }
-    activeSessionId = appPrefs?.activeAgentSessionId;
+    activeSessionId = (appPrefs as any)?.activeAgentSessionId;
   } catch {}
 
   // 2. Load historical compressed session context, recent messages, and lifetime Memory (C0)
@@ -731,7 +731,7 @@ export async function getAgentSession(jwt?: string) {
   const user = await requireUser(jwt);
   const { account } = await createServerClient(jwt);
   const prefs = await account.getPrefs().catch(() => ({}));
-  let activeSessionId = prefs?.activeAgentSessionId;
+  let activeSessionId = (prefs as any)?.activeAgentSessionId;
 
   const { TelemetryService } = await import('@/lib/services/telemetry');
   
@@ -877,10 +877,9 @@ export async function deleteAgentSession(sessionId: string, jwt?: string) {
     rowId: sessionId
   });
 
-  const { createServerClient } = await import('@/lib/appwrite');
   const { account } = await createServerClient(jwt);
   const prefs = await account.getPrefs().catch(() => ({}));
-  if (prefs?.activeAgentSessionId === sessionId) {
+  if ((prefs as any)?.activeAgentSessionId === sessionId) {
     const listRes = await tables.listRows({
       databaseId: 'passwordManagerDb',
       tableId: 'agentic_sessions',
@@ -911,7 +910,6 @@ export async function selectAgentSession(sessionId: string, jwt?: string) {
     throw new Error('Unauthorized');
   }
 
-  const { createServerClient } = await import('@/lib/appwrite');
   const { account } = await createServerClient(jwt);
   const prefs = await account.getPrefs().catch(() => ({}));
   await account.updatePrefs({ ...prefs, activeAgentSessionId: sessionId }).catch(() => {});
