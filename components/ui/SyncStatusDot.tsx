@@ -3,10 +3,10 @@
 import { useSyncExternalStore } from 'react';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 
-function useEnginePending(noteId?: string | null) {
+function useEnginePending(resourceId?: string | null) {
   return useSyncExternalStore(
     (onStoreChange) => autonomicSyncEngine.subscribe(onStoreChange),
-    () => autonomicSyncEngine.isPending(noteId),
+    () => autonomicSyncEngine.isPending(resourceId),
     () => false,
   );
 }
@@ -14,9 +14,16 @@ function useEnginePending(noteId?: string | null) {
 /**
  * Amber/green from the sync engine pending queue only.
  * Same authority that flushes live copy → Appwrite (never UI theater).
+ * Pass `resourceId` (e.g. goal:xxx) or legacy `noteId` (bare note id).
  */
-export function SyncStatusDot({ noteId }: { noteId?: string | null }) {
-  const pending = useEnginePending(noteId);
+export function SyncStatusDot({
+  noteId,
+  resourceId,
+}: {
+  noteId?: string | null;
+  resourceId?: string | null;
+}) {
+  const pending = useEnginePending(resourceId ?? noteId);
 
   if (pending) {
     return (
@@ -36,8 +43,14 @@ export function SyncStatusDot({ noteId }: { noteId?: string | null }) {
 }
 
 /** Layman label bound to the same engine pending queue as SyncStatusDot. */
-export function SyncStatusLabel({ noteId }: { noteId?: string | null }) {
-  const pending = useEnginePending(noteId);
+export function SyncStatusLabel({
+  noteId,
+  resourceId,
+}: {
+  noteId?: string | null;
+  resourceId?: string | null;
+}) {
+  const pending = useEnginePending(resourceId ?? noteId);
   return (
     <span className="text-[10px] font-semibold text-[#9B9691]">
       {pending ? 'Not saved yet' : 'Saved'}

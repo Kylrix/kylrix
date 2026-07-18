@@ -41,6 +41,8 @@ import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { ShareLockButton } from '../share/ShareLockButton';
 import { useAccessControlMenuItems } from '../share/AccessControlMenuItems';
 import { useToast } from '@/components/ui/Toast';
+import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
+import { goalPendingKey } from '@/lib/sync/goal-keys';
 import TaskDetails from './TaskDetails';
 
 interface TaskItemProps {
@@ -449,6 +451,7 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
                     <Pin className="h-3.5 w-3.5 text-[#F59E0B] rotate-45 shrink-0 mt-0.5" style={{ color: '#F59E0B' }} />
                   )}
                   <span>{task.title}</span>
+                  <SyncStatusDot resourceId={goalPendingKey(task.id)} />
                   {hasPresence && (
                     <span
                       onClick={(e) => {

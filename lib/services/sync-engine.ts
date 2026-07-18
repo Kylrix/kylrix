@@ -9,8 +9,11 @@ import { markNotePersistedRemote, markComposePersisted, markComposeDraft } from 
 import { updateNote, createNote } from '@/lib/actions/client-ops';
 import { getNote, getNotePublicState } from '@/lib/appwrite';
 import { pickNoteAutosavePayload } from '@/lib/appwrite/note';
-import { getLiveNoteForSync } from '@/lib/sync/pending-sync-bridge';
+import { getLiveNoteForSync, getLiveGoalForSync } from '@/lib/sync/pending-sync-bridge';
+import { parseGoalPendingKey } from '@/lib/sync/goal-keys';
+import { pickGoalAutosavePayload } from '@/lib/goals/pick-goal-autosave-payload';
 import type { Notes } from '@/types/appwrite';
+import type { Task } from '@/types';
 
 const PENDING_QUEUE_KEY = 'kylrix:sync:pending-queue';
 
@@ -143,6 +146,192 @@ function revisionOf(note: Notes | null | undefined): string {
   return String(note.updatedAt || note.$updatedAt || '').trim();
 }
 
+function goalRevisionOf(task: Task | null | undefined): string {
+  if (!task) return '';
+  const u = task.updatedAt;
+  if (u instanceof Date) return u.toISOString();
+  return String(u || '').trim();
+}
+
+async function flushGoalPending(
+  pendingKey: string,
+  goalId: string,
+  queuedRevision: string,
+  db: Awaited<ReturnType<typeof import('@/lib/webrtc/RxDBManager').getRxDB>> | null,
+) {
+  let payload: Task | null = getLiveGoalForSync(goalId);
+
+  if (!payload && db) {
+    try {
+      const doc = await db.cache.findOne(`goal_${goalId}`).exec();
+      payload = (doc?.data as Task) || null;
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (!payload) {
+    console.warn(`[SyncEngine] No live payload for pending goal: ${goalId}`);
+    return;
+  }
+
+  if (goalId.startsWith('ghost-') || goalId.startsWith('live-')) {
+    // Guest/ephemeral — stay pending until claimed/migrated; do not hit Appwrite.
+    return;
+  }
+
+  const dataPayload = pickGoalAutosavePayload(payload);
+  if (!String(dataPayload.title || '').trim() && !String(dataPayload.description || '').trim()) {
+    console.warn(`[SyncEngine] Ignored empty pending goal: ${goalId}`);
+    return;
+  }
+
+  const flushRevision = goalRevisionOf(payload) || queuedRevision;
+  const { tasks: taskApi, buildTaskPermissions } = await import('@/lib/kylrixflow');
+
+  let remote: Awaited<ReturnType<typeof taskApi.get>> | null = null;
+  try {
+    remote = await taskApi.get(goalId);
+  } catch {
+    remote = null;
+  }
+
+  const creatorId = payload.creatorId || (remote as any)?.userId || '';
+  const assignees = (payload.assigneeIds || []).filter(Boolean);
+  let permissions: string[] | undefined;
+  try {
+    const collab = remote ? await (await import('@/lib/kylrixflow')).taskCollaborators.list(goalId).catch(() => []) : [];
+    permissions = buildTaskPermissions(creatorId, assignees, collab as any);
+  } catch {
+    permissions = buildTaskPermissions(creatorId, assignees, []);
+  }
+
+  let synced: Awaited<ReturnType<typeof taskApi.update>>;
+  if (remote) {
+    synced = await taskApi.update(goalId, dataPayload as any, permissions);
+  } else {
+    synced = await taskApi.create(
+      {
+        ...(dataPayload as any),
+        $id: goalId,
+        userId: creatorId || 'guest',
+      },
+      permissions,
+    );
+  }
+
+  if (db) {
+    await db.cache
+      .upsert({
+        id: `goal_${goalId}`,
+        data: { ...payload, id: synced.$id, updatedAt: new Date(synced.$updatedAt || Date.now()) },
+        timestamp: Date.now(),
+      })
+      .catch(() => {});
+  }
+
+  const liveAfter = getLiveGoalForSync(goalId);
+  const liveRev = goalRevisionOf(liveAfter);
+  if (liveRev && flushRevision && liveRev !== flushRevision) {
+    pendingById.set(pendingKey, liveRev);
+    writePersistedQueue();
+    notifyStatusListeners();
+    console.log(`[SyncEngine] Re-queued goal after concurrent edit: ${goalId}`);
+    window.dispatchEvent(
+      new CustomEvent('kylrix:sync-pending', { detail: { noteId: pendingKey, goalId, kind: 'goal' } }),
+    );
+  } else {
+    autonomicSyncEngine.ack(pendingKey, flushRevision);
+    window.dispatchEvent(
+      new CustomEvent('kylrix:sync-complete', {
+        detail: { noteId: pendingKey, goalId, syncedGoal: synced, revision: flushRevision, kind: 'goal' },
+      }),
+    );
+  }
+  console.log(`[SyncEngine] Successfully synced goal: ${goalId}`);
+}
+
+async function flushNotePending(
+  noteId: string,
+  queuedRevision: string,
+  db: Awaited<ReturnType<typeof import('@/lib/webrtc/RxDBManager').getRxDB>> | null,
+) {
+  let payload: Notes | null = getLiveNoteForSync(noteId);
+
+  if (!payload && db) {
+    try {
+      const doc = await db.cache.findOne(`note_${noteId}`).exec();
+      payload = (doc?.data as Notes) || null;
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (!payload) {
+    console.warn(`[SyncEngine] No live payload for pending id: ${noteId}`);
+    return;
+  }
+
+  const dataPayload = {
+    ...pickNoteAutosavePayload(payload),
+    isPublic: getNotePublicState(payload),
+    isGuest: !!payload.isGuest,
+  };
+
+  if (!String(dataPayload.content || '').trim() && !String(dataPayload.title || '').trim()) {
+    console.warn(`[SyncEngine] Ignored empty pending note: ${noteId}`);
+    return;
+  }
+
+  const flushRevision = revisionOf(payload) || queuedRevision;
+
+  let remoteNote: Notes | null = null;
+  try {
+    remoteNote = await getNote(noteId);
+  } catch {
+    remoteNote = null;
+  }
+
+  let syncedNote: Notes;
+  if (remoteNote) {
+    syncedNote = await updateNote(noteId, dataPayload);
+  } else {
+    syncedNote = await createNote({
+      ...dataPayload,
+      $id: noteId,
+    });
+  }
+
+  if (db) {
+    await db.cache
+      .upsert({
+        id: `note_${noteId}`,
+        data: syncedNote as any,
+        timestamp: Date.now(),
+      })
+      .catch(() => {});
+  }
+
+  const liveAfter = getLiveNoteForSync(noteId);
+  const liveRev = revisionOf(liveAfter);
+  if (liveRev && flushRevision && liveRev !== flushRevision) {
+    pendingById.set(noteId, liveRev);
+    markComposeDraft(noteId);
+    writePersistedQueue();
+    notifyStatusListeners();
+    console.log(`[SyncEngine] Re-queued note after concurrent edit: ${noteId}`);
+    window.dispatchEvent(new CustomEvent('kylrix:sync-pending', { detail: { noteId } }));
+  } else {
+    autonomicSyncEngine.ack(noteId, flushRevision);
+    window.dispatchEvent(
+      new CustomEvent('kylrix:sync-complete', {
+        detail: { noteId, syncedNote, revision: flushRevision },
+      }),
+    );
+  }
+  console.log(`[SyncEngine] Successfully synced note: ${noteId}`);
+}
+
 export const autonomicSyncEngine = {
   subscribeToActivity(callback: (intensity: number) => void) {
     activityListeners.add(callback);
@@ -184,7 +373,9 @@ export const autonomicSyncEngine = {
     if (!id) return;
     const rev = String(revision || Date.now()).trim() || String(Date.now());
     pendingById.set(id, rev);
-    markComposeDraft(id);
+    if (!parseGoalPendingKey(id)) {
+      markComposeDraft(id);
+    }
     writePersistedQueue();
     notifyStatusListeners();
     triggerAutonomicSyncScheduler();
@@ -214,15 +405,17 @@ export const autonomicSyncEngine = {
       return;
     }
     pendingById.delete(id);
-    markComposePersisted(id);
-    markNotePersistedRemote(id);
+    if (!parseGoalPendingKey(id)) {
+      markComposePersisted(id);
+      markNotePersistedRemote(id);
+    }
     writePersistedQueue();
     notifyStatusListeners();
   },
 
   /**
-   * Push pending live-copy notes to Appwrite.
-   * Payload = pickNoteAutosavePayload only (no pending flags).
+   * Push pending live-copy notes + goals to Appwrite.
+   * Payload = pick*AutosavePayload only (no pending flags).
    */
   async runCycle() {
     if (isSyncing) return;
@@ -232,93 +425,24 @@ export const autonomicSyncEngine = {
       const pendingIds = Array.from(pendingById.keys());
       if (pendingIds.length === 0) return;
 
-      console.log(`[SyncEngine] Spun up. Found ${pendingIds.length} pending live notes.`);
+      console.log(`[SyncEngine] Spun up. Found ${pendingIds.length} pending live rows.`);
 
       const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
       const db = await getRxDB().catch(() => null);
 
-      for (const noteId of pendingIds) {
-        if (!pendingById.has(noteId)) continue;
-        const queuedRevision = pendingById.get(noteId) || '';
-
-        let payload: Notes | null = getLiveNoteForSync(noteId);
-
-        if (!payload && db) {
-          try {
-            const doc = await db.cache.findOne(`note_${noteId}`).exec();
-            payload = (doc?.data as Notes) || null;
-          } catch {
-            payload = null;
-          }
-        }
-
-        if (!payload) {
-          console.warn(`[SyncEngine] No live payload for pending id: ${noteId}`);
-          continue;
-        }
-
-        const dataPayload = {
-          ...pickNoteAutosavePayload(payload),
-          isPublic: getNotePublicState(payload),
-          isGuest: !!payload.isGuest,
-        };
-
-        if (!String(dataPayload.content || '').trim() && !String(dataPayload.title || '').trim()) {
-          console.warn(`[SyncEngine] Ignored empty pending note: ${noteId}`);
-          continue;
-        }
-
-        const flushRevision = revisionOf(payload) || queuedRevision;
+      for (const pendingId of pendingIds) {
+        if (!pendingById.has(pendingId)) continue;
+        const queuedRevision = pendingById.get(pendingId) || '';
 
         try {
-          let remoteNote: Notes | null = null;
-          try {
-            remoteNote = await getNote(noteId);
-          } catch {
-            remoteNote = null;
-          }
-
-          let syncedNote: Notes;
-          if (remoteNote) {
-            syncedNote = await updateNote(noteId, dataPayload);
+          const goalId = parseGoalPendingKey(pendingId);
+          if (goalId) {
+            await flushGoalPending(pendingId, goalId, queuedRevision, db);
           } else {
-            syncedNote = await createNote({
-              ...dataPayload,
-              $id: noteId,
-            });
+            await flushNotePending(pendingId, queuedRevision, db);
           }
-
-          if (db) {
-            await db.cache.upsert({
-              id: `note_${noteId}`,
-              data: syncedNote as any,
-              timestamp: Date.now(),
-            }).catch(() => {});
-          }
-
-          const liveAfter = getLiveNoteForSync(noteId);
-          const liveRev = revisionOf(liveAfter);
-          if (liveRev && flushRevision && liveRev !== flushRevision) {
-            pendingById.set(noteId, liveRev);
-            markComposeDraft(noteId);
-            writePersistedQueue();
-            notifyStatusListeners();
-            console.log(`[SyncEngine] Re-queued note after concurrent edit: ${noteId}`);
-            window.dispatchEvent(
-              new CustomEvent('kylrix:sync-pending', { detail: { noteId } }),
-            );
-          } else {
-            autonomicSyncEngine.ack(noteId, flushRevision);
-            window.dispatchEvent(
-              new CustomEvent('kylrix:sync-complete', {
-                detail: { noteId, syncedNote, revision: flushRevision },
-              }),
-            );
-          }
-          console.log(`[SyncEngine] Successfully synced note: ${noteId}`);
         } catch (err) {
-          console.error(`[SyncEngine] Sync failed for item ${noteId}:`, err);
-          // Stay pending — amber remains trustworthy.
+          console.error(`[SyncEngine] Sync failed for item ${pendingId}:`, err);
           notifyStatusListeners();
         }
       }

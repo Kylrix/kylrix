@@ -62,6 +62,8 @@ import {
   ListItemText,
   alpha,
 } from '@/lib/openbricks/primitives';
+import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
+import { goalPendingKey } from '@/lib/sync/goal-keys';
 
 const priorityColors: Record<Priority, string> = {
   low: '#A1A1AA',
@@ -110,6 +112,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const {
     tasks,
     updateTask,
+    pushLiveGoal,
     completeTask,
     deleteTask,
     addSubtask,
@@ -343,13 +346,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   };
 
   const handleSaveEditTitle = () => {
-    const currentTask = task;
-    if (!currentTask) return;
-    if (editTitle.trim() && editTitle.trim() !== currentTask.title) {
-      updateTask(currentTask.id, {
-        title: editTitle.trim(),
-      });
-    }
+    // Live copy already mirrored via pushLiveGoal while typing (notes 1:1).
     setIsEditingTitle(false);
   };
 
@@ -361,13 +358,38 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   };
 
   const handleSaveEditDescription = () => {
-    const currentTask = task;
-    if (!currentTask) return;
-    updateTask(currentTask.id, {
-      description: editDescription.trim() || undefined,
-    });
     setIsEditingDescription(false);
   };
+
+  // 1:1 NoteDetailSidebar: dirty editor → pushLiveGoal (engine enqueues amber).
+  useEffect(() => {
+    if (!task) return;
+    if (!isEditingTitle && !isEditingDescription) return;
+    const nextTitle = isEditingTitle ? editTitle.trim() : task.title;
+    const nextDescription = isEditingDescription
+      ? editDescription.trim()
+      : (task.description || '');
+    if (
+      nextTitle === task.title &&
+      nextDescription === (task.description || '')
+    ) {
+      return;
+    }
+    if (!nextTitle) return;
+    pushLiveGoal({
+      ...task,
+      title: nextTitle,
+      description: nextDescription || undefined,
+      updatedAt: new Date(),
+    });
+  }, [
+    editTitle,
+    editDescription,
+    isEditingTitle,
+    isEditingDescription,
+    task,
+    pushLiveGoal,
+  ]);
 
   const handleAddSubtask = async () => {
     const currentTask = task;
@@ -571,9 +593,11 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             ) : (
               <h2
                 onClick={handleStartEditTitle}
-                className="text-base md:text-lg font-extrabold font-clash text-[#A855F7] tracking-tight uppercase flex-1 min-w-0 break-words [overflow-wrap:anywhere] cursor-pointer hover:text-[#b975ff] transition-colors"
+                className="text-base md:text-lg font-extrabold font-clash text-[#A855F7] tracking-tight uppercase flex-1 min-w-0 break-words [overflow-wrap:anywhere] cursor-pointer hover:text-[#b975ff] transition-colors inline-flex items-center gap-2"
               >
-                {task.title}
+                <span className="min-w-0 break-words [overflow-wrap:anywhere]">{task.title}</span>
+                <SyncStatusDot resourceId={goalPendingKey(task.id)} />
+                <SyncStatusLabel resourceId={goalPendingKey(task.id)} />
               </h2>
             )}
           </div>

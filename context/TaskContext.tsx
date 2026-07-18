@@ -29,6 +29,9 @@ import {
   TaskCollaborator,
   CollaboratorPermission,
 } from '@/types';
+import { registerLiveGoalGetter } from '@/lib/sync/pending-sync-bridge';
+import { goalPendingKey } from '@/lib/sync/goal-keys';
+import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 
 // Mappers
 const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
@@ -246,6 +249,7 @@ type TaskAction =
   | { type: 'SET_DATA'; payload: { tasks: Task[]; projects: Project[] } }
   | { type: 'SET_USER'; payload: string }
   | { type: 'ADD_TASK'; payload: Task }
+  | { type: 'UPSERT_TASK'; payload: Task }
   | { type: 'UPDATE_TASK'; payload: { id: string; updates: Partial<Task> } }
   | { type: 'DELETE_TASK'; payload: string }
   | { type: 'COMPLETE_TASK'; payload: string }
@@ -307,6 +311,19 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         return state;
       }
       return { ...state, tasks: [...state.tasks, action.payload] };
+
+    case 'UPSERT_TASK':
+      {
+        const next = action.payload;
+        const exists = state.tasks.some((task) => task.id === next.id);
+        if (exists) {
+          return {
+            ...state,
+            tasks: state.tasks.map((task) => (task.id === next.id ? { ...task, ...next, updatedAt: next.updatedAt || new Date() } : task)),
+          };
+        }
+        return { ...state, tasks: [...state.tasks, next] };
+      }
 
     case 'UPDATE_TASK':
       return {
@@ -527,6 +544,8 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
 interface TaskContextType extends TaskState {
   // Task actions
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'position'>) => Promise<Task | null>;
+  /** Live-copy upsert. Default enqueues engine flush (amber). `pending: false` after remote confirm. */
+  pushLiveGoal: (task: Task, options?: { pending?: boolean }) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   completeTask: (id: string) => void;
@@ -648,11 +667,18 @@ async function syncTaskAccess(taskId: string, creatorId: string, assigneeIds: st
 export function TaskProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(taskReducer, initialState);
   const ghostTasksRef = useRef<Task[]>([]);
+  const tasksRef = useRef<Task[]>(state.tasks);
+  tasksRef.current = state.tasks;
   const { fetchOptimized, invalidate, getCachedData, getCachedDataAsync, setCachedData, refreshInBackground } = useDataNexus();
   const { user: authUser, isLoading: isAuthLoading } = useAuth();
   const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
   const flowWarmOwnerRef = useRef<string | null>(null);
   const pendingStatusPatchesRef = useRef<Map<string, PendingStatusPatch>>(new Map());
+
+  useEffect(() => {
+    registerLiveGoalGetter((goalId) => tasksRef.current.find((t) => t.id === goalId) || null);
+    return () => registerLiveGoalGetter(null);
+  }, []);
 
   const clearStalePendingPatches = useCallback(() => {
     const now = Date.now();
@@ -756,15 +782,41 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       } catch {}
     }
 
+    // Same shape as pre-port hydrate: ghosts + server page (restores list).
     const mergedTasks = [
       ...ghostTasksRef.current,
-      ...data.tasks.filter(t => !deletedIds.has(t.id))
+      ...data.tasks.filter((t) => !deletedIds.has(t.id)),
     ];
+
+    // 1:1 with notes live guards: prefer in-memory live copy when engine still owes a flush
+    // or local updatedAt is newer; keep local-only ids missing from this page.
+    const liveById = new Map(tasksRef.current.map((t) => [t.id, t]));
+    const byId = new Map<string, Task>();
+
+    for (const row of mergedTasks) {
+      const live = liveById.get(row.id);
+      if (
+        live &&
+        (autonomicSyncEngine.isPending(goalPendingKey(row.id)) ||
+          (live.updatedAt instanceof Date &&
+            row.updatedAt instanceof Date &&
+            live.updatedAt.getTime() > row.updatedAt.getTime()))
+      ) {
+        byId.set(row.id, live);
+      } else {
+        byId.set(row.id, row);
+      }
+    }
+
+    for (const live of tasksRef.current) {
+      if (deletedIds.has(live.id)) continue;
+      if (!byId.has(live.id)) byId.set(live.id, live);
+    }
 
     dispatch({
       type: 'SET_DATA',
       payload: {
-        tasks: applyPendingPatches(mergedTasks),
+        tasks: applyPendingPatches(Array.from(byId.values())),
         projects: data.projects,
       },
     });
@@ -1066,6 +1118,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           };
 
           dispatch({ type: 'ADD_TASK', payload: mappedTask });
+          autonomicSyncEngine.markPending(goalPendingKey(id), mappedTask.updatedAt.toISOString());
+          void setCachedData(`goal_${id}`, mappedTask);
           return mappedTask;
         }
 
@@ -1099,6 +1153,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
         const mapped = mapAppwriteTaskToTask(newTask);
         dispatch({ type: 'ADD_TASK', payload: mapped });
+        void setCachedData(`goal_${mapped.id}`, mapped);
+        autonomicSyncEngine.ack(goalPendingKey(mapped.id), mapped.updatedAt.toISOString());
         return mapped;
       } catch (error: unknown) {
         console.error('Failed to create task', error);
@@ -1106,7 +1162,23 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         return null;
       }
     },
-    [state.userId, invalidateTasksNexus]
+    [state.userId, invalidateTasksNexus, setCachedData]
+  );
+
+  const pushLiveGoal = useCallback(
+    (task: Task, options?: { pending?: boolean }) => {
+      if (!task?.id) return;
+      const stamped: Task = {
+        ...task,
+        updatedAt: new Date(),
+      };
+      dispatch({ type: 'UPSERT_TASK', payload: stamped });
+      void setCachedData(`goal_${stamped.id}`, stamped);
+      if (options?.pending !== false) {
+        autonomicSyncEngine.markPending(goalPendingKey(stamped.id), stamped.updatedAt.toISOString());
+      }
+    },
+    [setCachedData],
   );
 
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
@@ -1186,6 +1258,12 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         }
       }
       dispatch({ type: 'UPDATE_TASK', payload: { id, updates } });
+      const current = tasksRef.current.find((t) => t.id === id);
+      if (current) {
+        pushLiveGoal({ ...current, ...updates, id, updatedAt: new Date() });
+      } else {
+        autonomicSyncEngine.markPending(goalPendingKey(id), new Date().toISOString());
+      }
       return;
     }
 
@@ -1200,9 +1278,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const previousStatus = currentTask.status;
-    const previousCompletedAt = currentTask.completedAt;
-
     if (updates.status !== undefined) {
       registerPendingStatus(
         id,
@@ -1211,76 +1286,14 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       );
     }
 
-    // Optimistic update
-    dispatch({ type: 'UPDATE_TASK', payload: { id, updates } });
-
-    try {
-
-      const apiUpdates: any = {};
-      if (updates.title !== undefined) apiUpdates.title = updates.title;
-      if (updates.description !== undefined) apiUpdates.description = updates.description;
-      if (updates.status !== undefined) apiUpdates.status = updates.status;
-      if (updates.priority !== undefined) apiUpdates.priority = updates.priority;
-      if (updates.dueDate !== undefined) {
-        apiUpdates.dueDate = updates.dueDate 
-          ? (typeof updates.dueDate === 'string' ? updates.dueDate : updates.dueDate.toISOString()) 
-          : null;
-      }
-      if (updates.parentTaskId !== undefined) {
-        apiUpdates.parentId = updates.parentTaskId || null;
-      }
-      if (updates.assigneeIds !== undefined) {
-        apiUpdates.assigneeIds = updates.assigneeIds;
-      }
-      if (updates.attachments !== undefined) {
-        apiUpdates.attachmentIds = updates.attachments;
-      }
-      if (updates.isPinned !== undefined) apiUpdates.isPinned = updates.isPinned;
-      if (updates.isPublic !== undefined) apiUpdates.isPublic = updates.isPublic;
-      if (updates.isGuest !== undefined) apiUpdates.isGuest = updates.isGuest;
-      if (updates.scheduled !== undefined) apiUpdates.scheduled = updates.scheduled;
-
-      if (updates.labels !== undefined || updates.linkedNotes !== undefined || updates.projectId !== undefined) {
-        const projectId = updates.projectId || currentTask.projectId;
-
-        const finalTags = updates.labels !== undefined ? [...updates.labels] : [...(currentTask.labels || [])];
-
-        const notesToLink = updates.linkedNotes !== undefined ? updates.linkedNotes : (currentTask.linkedNotes || []);
-        notesToLink.forEach(noteId => {
-          const tag = `source:kylrixnote:${noteId}`;
-          if (!finalTags.includes(tag)) finalTags.push(tag);
-        });
-
-        if (projectId && projectId !== 'inbox') {
-          const projectTag = `project:${projectId}`;
-          if (!finalTags.includes(projectTag)) finalTags.push(projectTag);
-        }
-
-        apiUpdates.tags = finalTags;
-      }
-
-      const nextAssignees = updates.assigneeIds ?? currentTask.assigneeIds;
-      const currentCollaborators = await taskCollaborators.list(id);
-      await taskApi.update(id, apiUpdates, buildTaskPermissions(currentTask.creatorId, nextAssignees, currentCollaborators));
-      await syncTaskAccess(id, currentTask.creatorId, nextAssignees || [], currentTask.title, currentTask.assigneeIds || []);
-      invalidateTasksNexus(state.userId || 'guest');
-    } catch (error: unknown) {
-      if (updates.status !== undefined) {
-        pendingStatusPatchesRef.current.delete(id);
-        dispatch({
-          type: 'UPDATE_TASK',
-          payload: {
-            id,
-            updates: {
-              status: previousStatus,
-              completedAt: previousCompletedAt,
-            },
-          },
-        });
-      }
-      console.error('Failed to update task', error);
-    }
-  }, [state.tasks, state.userId, invalidateTasksNexus, registerPendingStatus]);
+    // 1:1 notes: mutate live copy + engine pending — no detail-owned Appwrite write.
+    pushLiveGoal({
+      ...currentTask,
+      ...updates,
+      id,
+      updatedAt: new Date(),
+    });
+  }, [state.tasks, registerPendingStatus, pushLiveGoal]);
 
   const togglePinTask = useCallback(async (id: string) => {
     const task = state.tasks.find(t => t.id === id);
@@ -1862,6 +1875,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const value = useMemo<TaskContextType>(() => ({
     ...state,
     addTask,
+    pushLiveGoal,
     updateTask,
     deleteTask,
     completeTask,
@@ -1904,6 +1918,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   }), [
     state,
     addTask,
+    pushLiveGoal,
     updateTask,
     deleteTask,
     completeTask,
