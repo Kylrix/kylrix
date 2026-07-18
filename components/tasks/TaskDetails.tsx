@@ -786,7 +786,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               </button>
             )}
           </div>
-          <div className="min-h-[100px] md:min-h-[140px] flex">
+          <div className="min-h-[100px] md:min-h-[140px] w-full">
             {isEditingDescription ? (
               <textarea
                 rows={5}
