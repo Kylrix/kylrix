@@ -1,167 +1,155 @@
 ---
 name: sync
-description: Canonical local-copy sync architecture for Kylrix objects. Live copy is UI SoT; Appwrite feeds and confirms it. Client-only pendingSync; detail never autosaves; upsert merge never wipes; shared SyncStatusDot. Use when wiring CRUD for notes, goals, vault, projects, or any object onto the live engine.
+description: >-
+  Canonical offline-first local-copy sync for Kylrix. Live copy = UI content SoT;
+  autonomic sync engine pending queue (RxDB) = amber/green SoT; Appwrite confirms
+  and replenishes. Use when wiring notes or porting goals, vault, projects, forms,
+  tasks, events to the same offline-first pattern — including guest/no-account use.
 ---
 
-# Sync (Local Copy ↔ Appwrite)
+# Sync (Offline-First Local Copy ↔ Appwrite)
 
-This is the **canonical sync skill** for the suite. Notes/Ideas were the first reference implementation; the same rules apply when porting to goals, vault rows, projects, forms, etc.
+**Canonical skill** for suite-wide offline-first sync. Notes/Ideas are the reference implementation; every other object type must follow the same contract.
 
-**Code anchors**
+| Companion | Purpose |
+|-----------|---------|
+| [journey.md](./journey.md) | Full history: failed layers → scorched-earth resolution (read before reinventing) |
+| [porting.md](./porting.md) | Object-agnostic checklist to add offline-first to goals, vault, projects, etc. |
+
+Related substrate only: `rxdb-appwrite-sync` (IndexedDB/RxDB mechanics). **Do not** invent a second pending model from that skill — follow **this** skill first.
+
+---
+
+## Code anchors (current system)
 
 | Piece | Path |
 |-------|------|
-| Object-agnostic merge / sort / soft-pull cadence | `lib/sync/local-copy-sync.ts` |
-| Activity intensity + draft **push** cycle | `lib/services/sync-engine.ts` |
-| Live-copy getter bridge for push payloads | `lib/sync/pending-sync-bridge.ts` |
-| Pending vs remote-persisted flags (notes) | `lib/notes/compose-draft-registry.ts` |
-| Shared amber/green affordance | `components/ui/SyncStatusDot.tsx` |
-| Reference live-copy context | `context/NotesContext.tsx` |
-
-Related (substrate only): `rxdb-appwrite-sync` — RxDB/IndexedDB details. **Do not** implement object list sync from that skill alone; follow **this** skill first.
-
----
-
-## Intent
-
-1. UI talks **only** to the live/local copy (context list + cache/RxDB).
-2. Appwrite is the remote source of truth that **feeds and confirms** that live copy.
-3. Push and pull are **upserts by id** — never “replace the whole list with a page” and never “discard the card because it uploaded.”
-4. Background sync is **autonomic** (activity intensity + realtime), not random full reloads that strand the user on an empty screen.
-5. **Pending sync is client-only** — never an Appwrite column. Card and detail share one indicator.
+| **Pending queue SoT** (`markPending` / `isPending` / `ack` / `runCycle`) | `lib/services/sync-engine.ts` |
+| Pending queue persistence | RxDB `cache` id `kylrix:sync:pending-queue` (IndexedDB; survives browser close) |
+| Live-copy getter for flush payloads | `lib/sync/pending-sync-bridge.ts` |
+| Merge / sort / soft-pull | `lib/sync/local-copy-sync.ts` |
+| Amber/green UI (engine only) | `components/ui/SyncStatusDot.tsx` |
+| Live content upsert + enqueue | `context/NotesContext.tsx` → `pushLiveNote` |
+| Compose **lifecycle** (create drawer; not the dot) | `lib/notes/compose-draft-registry.ts`, `registerComposeSession` / `unregisterComposeSession` |
+| Flush field picker (no pending flags) | `pickNoteAutosavePayload` in `lib/appwrite/note.ts` |
+| Reference create path | `app/(app)/app/(app)/notes/CreateNoteForm.tsx` |
+| Reference detail plugin | `components/ui/NoteDetailSidebar.tsx` |
+| Detail shell (no open-path `getNote` as SoT) | `context/SectionContext.tsx` → `NoteDetailContainer` |
 
 ---
 
-## Dual source of truth (strict)
+## Intent (non-negotiable)
 
-| Layer | Role |
-|-------|------|
-| **Live / local copy** | SoT for **on-device UI** (cards, detail, selectors, composers). |
-| **Appwrite database** | SoT that **confirms** and **replenishes** the live copy (push success, pull pages, realtime events). |
-
-- Detail = **stateful plugin** on the live copy (edits → `pushLive*` + `markPendingSync`).
-- Card/list = **stateless projection** of the live copy + shared `SyncStatusDot`.
-- No open-path `getX()` in detail that overwrites newer local state.
+1. UI talks **only** to the **live/local copy** for content (context list + RxDB/cache).
+2. **Amber/green** talks **only** to the **sync engine pending queue** (same authority that flushes).
+3. Appwrite **feeds and confirms** — never owns a `pendingSync` / dirty column.
+4. Push and pull are **upserts by id** — never replace-the-list, never discard-the-card-because-uploaded.
+5. Works for **signed-in and guest / no-account** users: RxDB + engine queue are device-local; guest payloads may stay local or use ghost paths, but the **same** pending/live contracts apply.
+6. Background sync is **autonomic** (activity intensity), not random full reloads.
 
 ---
 
-## Pending sync (client-only — critical)
+## Dual authority (strict)
 
-| Rule | Do | Do not |
-|------|----|--------|
-| Storage | In-memory set (`markComposeDraft` / `markPendingSync`) + React `composeSyncEpoch` | Appwrite attributes like `pendingSync`, `isDirty`, `syncStatus` |
-| Who sets pending | Any edit path that mutates live copy | Detail-owned React state that cards cannot see |
-| Who clears pending | Sync engine after **confirmed** remote write (`kylrix:sync-complete`) | Leaving the detail, unmount, “Saving…”, or “is this remote?” reads |
-| What gets pushed | Live-copy payload via `getLiveNoteForSync` + `pick*AutosavePayload` | Pending flags, UI-only fields, or detail-private caches |
-| Indicator | `SyncStatusDot` + `isPendingSync(id)` on **both** card and detail | Separate “Saving…” in detail and green on card |
+| Layer | Authority for | Storage |
+|-------|---------------|---------|
+| **Live / local copy** | On-device **content** (cards, detail, composers) | React context + RxDB/cache (`note_${id}`, etc.) |
+| **Engine pending queue** | On-device **amber/green** (unflushed work this device owes) | In-memory `Map` + RxDB cache key `kylrix:sync:pending-queue` |
+| **Appwrite** | Remote confirm + replenish | TablesDB — **no** pending fields in payloads |
 
-### API surface (notes reference)
+- Detail = **stateful plugin** on live copy: edits → `pushLive*` (content) → engine `markPending` (dot).
+- Card/list = **projection** of live copy + `SyncStatusDot(noteId)` (engine subscribe).
+- Compose registry = **create/drawer lifecycle** only. It must **not** drive the dot and must **not** call `ack` (that wiped concurrent edits after `sync-complete`).
 
-- `markPendingSync(id)` — edit happened; amber everywhere.
-- `clearPendingSync(id)` — remote confirmed; green everywhere.
-- `isPendingSync(id)` — ephemeral / unpersisted draft / pending set.
-- `composeSyncEpoch` — bump so React re-evaluates dots without storing flags on rows.
-- `autonomicSyncEngine.nudge()` — schedule a flush after marking pending.
-- Events: `kylrix:sync-complete` (clear), `kylrix:sync-pending` (re-queue after concurrent edit).
+---
+
+## Pending API (engine — use these names)
+
+| Call | Meaning |
+|------|---------|
+| `autonomicSyncEngine.markPending(id, revision)` | This device owes a flush for this live revision → amber |
+| `autonomicSyncEngine.isPending(id)` | Dot / label read path |
+| `autonomicSyncEngine.subscribe(listener)` | `useSyncExternalStore` for dots |
+| `autonomicSyncEngine.ack(id, flushedRevision?)` | Remote confirmed (or explicit remote save already wrote). If `flushedRevision` ≠ queued, **stay amber** |
+| `autonomicSyncEngine.runCycle()` | Flush pending ids via live getter → `pick*AutosavePayload` → create/update |
+| `autonomicSyncEngine.nudge()` | Reschedule autonomic flush |
+
+**Events:** `kylrix:sync-complete` (compose cleanup / snapshot align — **not** a second ack that deletes a newer pending rev); `kylrix:sync-pending` (concurrent edit re-queue).
+
+**Deprecated theater (do not revive):** `setNoteDirty` / `isNoteDirty`, detail-local dirty as dot SoT, `isPendingSync` aliases, Appwrite `pendingSync` columns, `SyncStatusDot` reading compose sets, `unregisterComposeSession` → `ack`.
+
+---
+
+## Edit → flush contract (notes reference)
+
+```
+keystroke / mutate
+  → pushLiveNote(draft)           // live content SoT; default options.pending !== false → markPending
+  → registerComposeSession(id)    // create lifecycle only (optional for detail)
+  → setCachedData(`note_${id}`)   // RxDB body survives close
+
+engine runCycle
+  → getLiveNoteForSync(id) || RxDB cache
+  → pickNoteAutosavePayload only  // never pending flags
+  → createNote | updateNote
+  → if live rev moved on: re-queue + sync-pending
+  → else: ack(id, flushRevision) + sync-complete
+
+explicit remote save already succeeded (create drawer / agent tools)
+  → pushLiveNote(row, { pending: false })
+  → autonomicSyncEngine.ack(id)
+```
+
+Ephemeral ids (`live-*`, `ghost-*`): `isPending` stays true until they become real or are discarded + `ack`.
 
 ---
 
 ## Detail must not own saves
 
-Detail is **not** a second sync engine.
-
 | Do | Do not |
 |----|--------|
-| `commitLocalEdit` / `pushLive*` + `markPendingSync` + `nudge()` | `useAutosave` / `forceSave` / immediate `updateNote` on every keystroke or voice insert |
-| Leave pending amber when user closes detail | Clear pending on unmount / back / “Saving…” complete |
-| Share `SyncStatusDot` with the card | Show “Saving…” only in detail while card stays green |
-| Let sync engine create-or-update from live copy | Race detail autosave against the engine with different payloads |
-
-**Why we ripped detail autosave:** it cleared pending when the detail believed it had saved, while the card only watched the compose registry — green card, dirty detail, then wipe/race on pull. One pending set, one flusher.
-
----
-
-## Core sync rules
-
-### 1. Separation of concerns
-- Keystrokes / edits update the live copy **synchronously**.
-- Remote writes are scheduled by the sync engine **asynchronously**.
-
-### 2. Autonomic activity scheduling
-- High typing intensity → shorter push check interval.
-- Idle / reading → longer interval.
-- Soft **pull** uses `shouldSoftPull({ lastPullAt, activityIntensity })` plus visibility/focus.
-
-### Draft / pending isolation
-- **One signal:** `registerComposeSession` / `unregisterComposeSession` → `unpersistedDraftIds` + `composeSyncEpoch`.
-- Create already does this; detail edits must call the same `registerComposeSession(id)` on mutate.
-- Card/detail dots read `isUnpersistedComposeDraft(id)` (via `SyncStatusDot` + epoch) — do not invent a parallel pending API.
-- `markNotePersistedRemote` only means “remote row exists” (create vs update). It must **never** clear the pending set.
-- Clear pending only via `unregisterComposeSession` (create after save, or `kylrix:sync-complete` after flush).
-
-### 4. Upsert merge — never wipe
-Pulls return **pages**. Replacing the live list with `serverPage` drops local rows missing from that page → “card vanished after sync.”
-
-Use `mergeServerPageWithLocalCopy`:
-
-- Both sides → merge (live-edit guard / newer local `updatedAt` wins when appropriate).
-- Local only → **keep**.
-- Remote only → append.
-- Remove only on **explicit** delete/tombstone (realtime `.delete`).
-
-### 5. Push confirms — does not discard
-After successful remote create/update: clear pending. The **card stays** in the live copy.
-
-### 6. Canonical list order
-`sortPinnedThenCreatedAt`: pinned first, then newest `$createdAt` / `createdAt`.
-
-### 7. Auth / cold start
-- Hydrate from cache/RxDB before network when possible.
-- Clear live list only on **confirmed logout**, not auth flicker.
-- Failed pull must not wipe a populated live copy.
+| Dirty mirror → `pushLiveNote` (+ compose register for lifecycle) | Detail `useAutosave` / `forceSave` / immediate `updateNote` on keystroke |
+| Leave amber when user closes detail | Clear pending on unmount / “Saving…” |
+| Share `SyncStatusDot` (engine) | Local `isDirty` as the card’s amber source |
+| Engine create-or-update from live copy | Race detail autosave vs engine with different payloads |
+| No open-path `getNote` as SoT in detail shell | Fetch that overwrites newer live copy |
 
 ---
 
-## Modularizing for other objects (checklist)
+## Core sync rules (all objects)
 
-For each object type `T`:
-
-1. Context list = live copy (`pushLiveT` / `upsertT`).
-2. **Client-only** pending registry keyed by id (or `resourceType:id`) — never DB columns.
-3. Detail edits: live push + `markPendingSync` only; **no** detail-owned autosave to Appwrite.
-4. Sync engine (or shared cycle): read live payload via a getter bridge; strip non-columns; create-or-update; emit complete / re-queue.
-5. Every pull/reset → `mergeServerPageWithLocalCopy`.
-6. Realtime → upsert/delete by id (with edit guards).
-7. Soft pull via activity + `lastPullAt` + visibility.
-8. Sort pinned → newest created.
-9. Card + detail use the same pending indicator (`SyncStatusDot` or equivalent).
-10. Do **not** give detail a private cache that “owns” the card.
+1. **Separation:** edits update live copy sync; remote writes are engine-scheduled.
+2. **Autonomic cadence:** high intensity → shorter push interval; soft pull via `shouldSoftPull` + visibility.
+3. **Upsert merge:** `mergeServerPageWithLocalCopy` — local-only ids **kept**; remove only on explicit delete.
+4. **Push confirms:** does not discard the card; `ack` clears amber only.
+5. **Order:** `sortPinnedThenCreatedAt`.
+6. **Auth / cold start:** hydrate RxDB before network; clear live list only on confirmed logout; failed pull must not wipe.
+7. **Offline / guest:** bodies + pending queue in RxDB; no account required for local durability. Flush when network + identity allow; until then amber stays honest.
 
 ---
 
-## Problems we already solved (do not reintroduce)
+## Quick port (see porting.md)
 
-1. **Wipe-after-sync** — `setList(serverPage)` dropped cards not on page 1. → Upsert merge; keep local-only ids.
-2. **Detail vs card split brain** — Detail `getNote()` overwrote newer local. → Both read live copy.
-3. **Green while dirty** — Pending only in detail React state / cleared by autosave. → Shared client-only pending + epoch; detail does not clear on leave.
-4. **Pending cleared by “is remote?” reads** — Remote-id checks deleted pending. → Reads must not clear pending.
-5. **Auth flash empty** — Logout clear during bootstrap. → Clear only on confirmed logout.
-6. **Scattered order** — Pin sort without createdAt. → Pinned, then newest created.
-7. **Manual refresh dependency** — No lastPull/activity heartbeat. → Soft pull + realtime.
-8. **Push treated as discard** — “Uploaded = remove local.” → Push confirms; local remains UI SoT.
-9. **Open-path network as SoT** — Parallel fetches racing the live copy. → Leave network to sync/realtime.
-10. **Detail force-save on unmount** — Cleared amber while engine still had work / raced payloads. → Nudge engine; keep pending until confirm.
-11. **Immediate updateNote on voice/paste/format** — Bypassed pending SoT and cleared dirty early. → Same `commitLocalEdit` path as typing.
-12. **Concurrent edit during flush** — Cleared pending while live copy already moved on. → Compare timestamps; re-queue + `kylrix:sync-pending`.
+1. Live context + `pushLiveT` that enqueues engine pending (or shared multi-type queue).
+2. RxDB cache body + pending map durability.
+3. Detail plugin only; shared `SyncStatusDot`.
+4. Engine cycle: getter → strip payload → create/update → ack / re-queue.
+5. Pulls: merge helper; never `setList(serverPage)`.
 
 ---
 
 ## Quick test matrix
 
-- Create → card survives amber→green, soft pull, and refresh.
-- Edit in detail → amber on **card and detail** immediately; green only after flush; reopen keeps text.
-- Close detail while amber → card stays amber; engine still flushes; no wipe.
-- Type during an in-flight flush → stays/reverts to amber until latest live copy is confirmed.
-- New device login → fills via soft pull/realtime without permanent empty.
-- Pin + create → pinned block first, then newest created.
-- Explicit delete → leaves live copy; mere omission from page 1 does not.
+- Edit detail → amber on **card and detail**; green only after flush or explicit remote `ack`.
+- Reload / **close browser** → body in RxDB + pending queue still amber until flush.
+- Close detail while amber → card stays amber; engine still flushes.
+- Type during in-flight flush → stays amber until **latest** rev confirmed.
+- Create drawer save → `pending: false` + `ack`; no false re-amber.
+- Guest/no-account → local RxDB still holds body + queue.
+- Soft pull / pin order / explicit delete behave as merge rules above.
+
+---
+
+## Do not reintroduce (see journey.md)
+
+Wipe-after-sync, detail-vs-card split brain, green-while-dirty theater, pending cleared by “is remote?” reads, sessionStorage-only pending (breaks offline), `unregisterComposeSession` calling `ack`, Appwrite pending columns, parallel dirty APIs, open-path network as SoT.
