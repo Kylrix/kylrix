@@ -210,6 +210,20 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     }
   };
 
+  const handleStartNewSession = async () => {
+    try {
+      const { startNewAgentSession } = await import('@/lib/actions/agentic');
+      const { account } = await import('@/lib/appwrite/client');
+      const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
+      await startNewAgentSession(jwt);
+      setMessages([]);
+      toast.success('Started a new conversation session.');
+    } catch (err) {
+      console.error('Failed to start new session:', err);
+      toast.error('Could not start new session.');
+    }
+  };
+
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -476,6 +490,14 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               {agentCount > 0 ? ` · ${agentCount} agent${agentCount === 1 ? '' : 's'}` : ''}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={handleStartNewSession}
+            title="Start New Session"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-white/45 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 flex-shrink-0 mr-1"
+          >
+            <RefreshCw size={16} />
+          </button>
           <button
             type="button"
             onClick={onClose}

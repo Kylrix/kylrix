@@ -251,9 +251,27 @@ export const TelemetryService = {
   /**
    * Retrieves the interactive context and message history session for the user.
    */
-  async loadSession(userId: string): Promise<{ context: string; chatHistory: string; seen: boolean; rowId?: string }> {
+  async loadSession(userId: string, sessionId?: string): Promise<{ context: string; chatHistory: string; seen: boolean; rowId?: string }> {
     try {
       const tables = createSystemTablesDB();
+      if (sessionId) {
+        try {
+          const row = await tables.getRow({
+            databaseId: DATABASE_ID,
+            tableId: 'agentic_sessions',
+            rowId: sessionId
+          });
+          if (row) {
+            return {
+              context: row.context || '',
+              chatHistory: row.chatHistory || '[]',
+              seen: row.seen !== false,
+              rowId: row.$id
+            };
+          }
+        } catch {}
+      }
+
       const res = await tables.listRows({
         databaseId: DATABASE_ID,
         tableId: 'agentic_sessions',
@@ -282,10 +300,10 @@ export const TelemetryService = {
   /**
    * Persists or updates the context and chat history session.
    */
-  async saveSession(userId: string, context: string, chatHistory: string, seen = true): Promise<void> {
+  async saveSession(userId: string, context: string, chatHistory: string, seen = true, sessionId?: string): Promise<void> {
     try {
       const tables = createSystemTablesDB();
-      const session = await this.loadSession(userId);
+      const targetSessionId = sessionId || (await this.loadSession(userId)).rowId;
       
       const payload = {
         userId,
@@ -295,21 +313,24 @@ export const TelemetryService = {
         isMemory: false
       };
 
-      if (session.rowId) {
-        await tables.updateRow({
-          databaseId: DATABASE_ID,
-          tableId: 'agentic_sessions',
-          rowId: session.rowId,
-          data: payload
-        });
-      } else {
-        await tables.createRow({
-          databaseId: DATABASE_ID,
-          tableId: 'agentic_sessions',
-          rowId: ID.unique(),
-          data: payload
-        });
+      if (targetSessionId) {
+        try {
+          await tables.updateRow({
+            databaseId: DATABASE_ID,
+            tableId: 'agentic_sessions',
+            rowId: targetSessionId,
+            data: payload
+          });
+          return;
+        } catch {}
       }
+
+      await tables.createRow({
+        databaseId: DATABASE_ID,
+        tableId: 'agentic_sessions',
+        rowId: targetSessionId || ID.unique(),
+        data: payload
+      });
     } catch (err) {
       console.error('[TelemetryService] Failed to save session:', err);
     }

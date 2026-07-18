@@ -316,8 +316,15 @@ export async function executeInstantRequestAction(
   let lifetimeMemoryContext = "";
 
   if (historyEnabled) {
+    let activeSessionId: string | undefined = undefined;
+    try {
+      const { account } = await createServerClient(jwt);
+      const appPrefs = await account.getPrefs().catch(() => ({}));
+      activeSessionId = appPrefs?.activeAgentSessionId;
+    } catch {}
+
     const [sessionLoad, memoryLoad] = await Promise.all([
-      TelemetryService.loadSession(user.$id),
+      TelemetryService.loadSession(user.$id, activeSessionId),
       TelemetryService.loadMemory(user.$id)
     ]);
     sessionData = sessionLoad;
@@ -475,6 +482,7 @@ ${lifetimeMemoryContext}
   let visibleResponse = responseTextRaw;
   let sessionUpdate = "";
   let memoryUpdate = "";
+  let isThreadCompletedVal: number | undefined = undefined;
   let parsedToolCalls: any[] | undefined = undefined;
 
   try {
@@ -482,6 +490,7 @@ ${lifetimeMemoryContext}
     visibleResponse = parsed.response || responseTextRaw;
     sessionUpdate = parsed.sessionContextUpdate || "";
     memoryUpdate = parsed.lifetimeMemoryUpdate || "";
+    isThreadCompletedVal = parsed.isThreadCompleted;
     if (Array.isArray(parsed.toolCalls)) {
       parsedToolCalls = parsed.toolCalls;
     }
@@ -508,26 +517,45 @@ ${lifetimeMemoryContext}
         nextContext = nextContext ? `${nextContext}\n- ${sessionUpdate}` : `- ${sessionUpdate}`;
       }
 
-      // Metamorphose / Compact context if message queue exceeds 6 items (using old_context * new_chats formula)
-      if (historyArr.length >= 6) {
-        const compactModel = genAI.getGenerativeModel({
-          model: 'gemini-2.0-flash',
-          systemInstruction: 'You are the context compactor engine. Merge the old context with the new user interactions, keeping only crucial rules, parameters, outcomes, and progress details. Output clean compressed text.'
-        });
-        const compactorPrompt = `
+      // Check if session should be retired (too long or completed)
+      let shouldRetire = false;
+      if (historyArr.length >= 24) {
+        shouldRetire = true;
+      } else if (historyArr.length >= 12 && typeof isThreadCompletedVal === 'number' && isThreadCompletedVal > 0.8) {
+        shouldRetire = true;
+      }
+
+      if (shouldRetire) {
+        // Start a brand new session for subsequent requests!
+        const newSessionId = `session_${Date.now()}`;
+        await TelemetryService.saveSession(user.$id, '', '[]', false, newSessionId);
+        try {
+          const { account } = await createServerClient(jwt);
+          const prefs = await account.getPrefs().catch(() => ({}));
+          await account.updatePrefs({ ...prefs, activeAgentSessionId: newSessionId }).catch(() => {});
+        } catch {}
+      } else {
+        // Metamorphose / Compact context if message queue exceeds 6 items (using old_context * new_chats formula)
+        if (historyArr.length >= 6) {
+          const compactModel = genAI.getGenerativeModel({
+            model: 'gemini-2.0-flash',
+            systemInstruction: 'You are the context compactor engine. Merge the old context with the new user interactions, keeping only crucial rules, parameters, outcomes, and progress details. Output clean compressed text.'
+          });
+          const compactorPrompt = `
 Old Context:
 ${nextContext}
 
 New Chats Added:
 ${historyArr.slice(-6).map((m: any) => `${m.role === 'user' ? 'User' : 'Agent'}: ${m.content}`).join('\n')}
 `;
-        const compactRes = await compactModel.generateContent(compactorPrompt);
-        nextContext = compactRes.response.text().trim();
-        // Clear historic chats after compaction to keep it scalable, keeping only final trailing chats
-        historyArr = historyArr.slice(-4);
-      }
+          const compactRes = await compactModel.generateContent(compactorPrompt);
+          nextContext = compactRes.response.text().trim();
+          // Clear historic chats after compaction to keep it scalable, keeping only final trailing chats
+          historyArr = historyArr.slice(-4);
+        }
 
-      await TelemetryService.saveSession(user.$id, nextContext, JSON.stringify(historyArr), false);
+        await TelemetryService.saveSession(user.$id, nextContext, JSON.stringify(historyArr), false, sessionData?.rowId);
+      }
 
       // Save high-quality lifetime memory updates if specified
       if (memoryUpdate) {
@@ -568,6 +596,43 @@ ${historyArr.slice(-6).map((m: any) => `${m.role === 'user' ? 'User' : 'Agent'}:
 
 export async function getAgentSession(jwt?: string) {
   const user = await requireUser(jwt);
+  const { account } = await createServerClient(jwt);
+  const prefs = await account.getPrefs().catch(() => ({}));
+  let activeSessionId = prefs?.activeAgentSessionId;
+
   const { TelemetryService } = await import('@/lib/services/telemetry');
-  return TelemetryService.loadSession(user.$id);
+  
+  let session = null;
+  if (activeSessionId) {
+    session = await TelemetryService.loadSession(user.$id, activeSessionId);
+  }
+  
+  if (!session || !session.rowId) {
+    session = await TelemetryService.loadSession(user.$id);
+    if (session.rowId) {
+      activeSessionId = session.rowId;
+      await account.updatePrefs({ ...prefs, activeAgentSessionId: activeSessionId }).catch(() => {});
+    } else {
+      const newSessionId = `session_${Date.now()}`;
+      await TelemetryService.saveSession(user.$id, '', '[]', false, newSessionId);
+      activeSessionId = newSessionId;
+      await account.updatePrefs({ ...prefs, activeAgentSessionId: activeSessionId }).catch(() => {});
+      session = { context: '', chatHistory: '[]', seen: false, rowId: newSessionId };
+    }
+  }
+
+  return session;
+}
+
+export async function startNewAgentSession(jwt?: string) {
+  const user = await requireUser(jwt);
+  const { account } = await createServerClient(jwt);
+  const prefs = await account.getPrefs().catch(() => ({}));
+  
+  const newSessionId = `session_${Date.now()}`;
+  const { TelemetryService } = await import('@/lib/services/telemetry');
+  await TelemetryService.saveSession(user.$id, '', '[]', false, newSessionId);
+  
+  await account.updatePrefs({ ...prefs, activeAgentSessionId: newSessionId }).catch(() => {});
+  return { success: true, sessionId: newSessionId };
 }
