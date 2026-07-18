@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
@@ -30,7 +31,7 @@ export function AgenticDrawer() {
 
   const isFullscreen = !isDesktop && isExpanded;
 
-  return (
+  return createPortal(
     <>
       <div
         className={`fixed inset-0 bg-black/60 backdrop-blur-sm ${isFullscreen ? 'z-[10000]' : 'z-[1300]'}`}
@@ -65,6 +66,7 @@ export function AgenticDrawer() {
           <AgenticPanelContent onClose={handleClose} isDesktop={isDesktop} />
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
