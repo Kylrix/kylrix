@@ -56,16 +56,17 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useNotes } from '@/context/NotesContext';
 import { useTask } from '@/context/TaskContext';
 import { AgenticService } from '@/lib/services/agentic';
-import { executeInstantRequestAction } from '@/lib/actions/agentic';
 import {
   buildInstantPrompt,
   getQuickWorkflows,
   resolveAgenticPageContext,
+  runInstantAgenticRequest,
   type QuickWorkflowAction,
-} from '@/lib/agentic/context-workflows';
+  userMayUsePaidAi,
+  AI_UPGRADE_LABEL,
+} from '@/lib/agentic';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
-import { hasPaidKylrixPlan } from '@/lib/utils';
 import { account } from '@/lib/appwrite/client';
 import { WalletService } from '@/lib/services/wallets';
 import { toast } from 'react-hot-toast';
@@ -221,7 +222,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const { openProUpgrade } = useProUpgrade();
   const pathname = usePathname() || '/';
   const router = useRouter();
-  const isPro = hasPaidKylrixPlan(user);
+  const isPro = userMayUsePaidAi(user);
 
   const pageContext = useMemo(() => resolveAgenticPageContext(pathname), [pathname]);
   const accent = useMemo(() => getAppColor(pageContext.accentApp), [pageContext.accentApp]);
@@ -456,7 +457,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       if (!trimmed) return;
 
       if (!isPro) {
-        openProUpgrade('Kylie request');
+        openProUpgrade(AI_UPGRADE_LABEL);
         return;
       }
 
@@ -473,12 +474,18 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       try {
         const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
         const contextualPrompt = buildInstantPrompt(trimmed, pageContext);
-        const res = await executeInstantRequestAction(contextualPrompt, jwt, {
-          zone: pageContext.zone,
-          route: pageContext.route,
-          title: pageContext.title,
-          systemHint: pageContext.systemHint,
-          resourceId: pageContext.resourceId,
+        const res = await runInstantAgenticRequest({
+          prompt: contextualPrompt,
+          user,
+          jwt,
+          pageContext: {
+            zone: pageContext.zone,
+            route: pageContext.route,
+            title: pageContext.title,
+            systemHint: pageContext.systemHint,
+            resourceId: pageContext.resourceId,
+            userMessage: trimmed,
+          },
           userMessage: trimmed,
         });
 
@@ -820,7 +827,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         setRunningWorkflowId(null);
       }
     },
-    [appendMessage, isPro, openProUpgrade, pageContext, addTask, updateTask, deleteTask, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote, user?.$id, onClose, router],
+    [appendMessage, isPro, openProUpgrade, pageContext, addTask, updateTask, deleteTask, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote, user, onClose, router],
   );
 
   useEffect(() => {

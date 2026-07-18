@@ -50,6 +50,8 @@ import { IdentityAvatar } from '@/components/IdentityBadge';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
+import { MILESTONES_UPGRADE_LABEL, AI_UPGRADE_LABEL } from '@/lib/agentic/access';
 import {
   Drawer,
   Box,
@@ -148,7 +150,19 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
 
   const { openProUpgrade } = useProUpgrade();
   const { currentTier } = useSubscription();
-  const isPaid = currentTier === 'PRO' || currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
+  const isPaid = hasPaidKylrixPlan(user) || currentTier === 'PRO' || currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
+
+  const requirePaidMilestones = useCallback(() => {
+    if (isPaid) return true;
+    openProUpgrade(MILESTONES_UPGRADE_LABEL);
+    return false;
+  }, [isPaid, openProUpgrade]);
+
+  const requirePaidAi = useCallback(() => {
+    if (isPaid) return true;
+    openProUpgrade(AI_UPGRADE_LABEL);
+    return false;
+  }, [isPaid, openProUpgrade]);
 
   const [newSubtask, setNewSubtask] = useState('');
   const [newComment, setNewComment] = useState('');
@@ -315,6 +329,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const handleGenerateSubtasks = async () => {
     const currentTask = task;
     if (!currentTask?.title) return;
+    if (!requirePaidAi()) return;
     setIsGeneratingSubtasks(true);
     try {
       const prompt = `You are a Project Manager. The user wants to '${currentTask.title}'. Generate a JSON array of 5 concrete, actionable sub-tasks. Return ONLY the JSON array of strings.`;
@@ -394,6 +409,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const handleAddSubtask = async () => {
     const currentTask = task;
     if (!currentTask) return;
+    if (!requirePaidMilestones()) return;
     const rawInput = newSubtask.trim();
     if (rawInput) {
       let title = rawInput.split('\n')[0].trim();
@@ -858,18 +874,28 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             <div className="flex gap-2 mt-4 p-1 bg-white/[0.02] rounded-xl border border-white/5 items-center">
               <input
                 type="text"
-                placeholder="Add milestone..."
+                placeholder={isPaid ? 'Add milestone...' : 'Milestones — Pro / Teams'}
                 value={newSubtask}
                 onChange={(e) => setNewSubtask(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') return;
+                  e.preventDefault();
+                  void handleAddSubtask();
+                }}
                 className="w-full bg-transparent border-0 outline-none px-3 py-1.5 text-xs text-[#F5F2ED] focus:ring-0 focus:outline-none font-satoshi"
               />
               <button
                 type="button"
-                onClick={handleGenerateSubtasks}
-                disabled={isGeneratingSubtasks}
+                onClick={() => {
+                  if (!requirePaidAi()) return;
+                  openUnified('ai-milestone-suggester', {
+                    taskId: task.id,
+                    taskTitle: task.title,
+                    existingMilestones: task.subtasks.map((s) => s.title),
+                  });
+                }}
                 className="p-1.5 text-[#A855F7] hover:text-white rounded-lg hover:bg-[#A855F7]/10 transition-colors flex shrink-0"
-                title="AI Autocomplete Milestones"
+                title={isPaid ? 'AI Autocomplete Milestones' : 'AI milestones — Pro / Teams'}
               >
                 {isGeneratingSubtasks ? (
                   <div className="w-4 h-4 border-2 border-[#A855F7] border-t-transparent rounded-full animate-spin" />

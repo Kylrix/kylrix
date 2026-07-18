@@ -7,6 +7,7 @@ import { createSystemClient } from '@/lib/appwrite-admin';
 import { createServerClient } from '@/lib/appwrite/server';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { userHasPaidAiAccess } from '@/lib/server/ai-subscription-gate';
+import { AI_REQUIRES_PRO_MESSAGE } from '@/lib/agentic/access';
 
 type AgentStatus = 'idle' | 'working';
 
@@ -53,7 +54,7 @@ async function requireUser(jwt?: string) {
 async function checkComputeBalance(userId: string) {
   const hasAccess = await userHasPaidAiAccess(userId);
   if (!hasAccess) {
-    throw new Error('AI features require a Pro account. Upgrade to continue.');
+    throw new Error(AI_REQUIRES_PRO_MESSAGE);
   }
 
   const { databases } = createSystemClient();

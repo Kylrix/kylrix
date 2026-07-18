@@ -34,6 +34,7 @@ const ProjectAutoSweepDrawer = dynamic(() => import('../projects/ProjectAutoSwee
 const JoinRequestConfirmDrawer = dynamic(() => import('./JoinRequestConfirmDrawer').then(mod => mod.JoinRequestConfirmDrawer), { ssr: false });
 const AccessControlDrawer = dynamic(() => import('./AccessControlDrawer').then(mod => mod.AccessControlDrawer), { ssr: false });
 const TaskDetails = dynamic(() => import('../tasks/TaskDetails'), { ssr: false });
+const AiMilestoneSuggesterDrawer = dynamic(() => import('./AiMilestoneSuggesterDrawer').then(mod => mod.AiMilestoneSuggesterDrawer), { ssr: false });
 
 
 export function UnifiedBottomDrawer() {
@@ -144,6 +145,8 @@ export function UnifiedBottomDrawer() {
             />;
         case 'milestone-details':
             return <TaskDetails taskId={drawerData?.taskId} onBack={close} />;
+        case 'ai-milestone-suggester':
+            return <AiMilestoneSuggesterDrawer />;
         default: return null;
     }
   };
@@ -151,7 +154,7 @@ export function UnifiedBottomDrawer() {
   const content = renderContent();
   if (!content) return null;
 
-  if (activeContent === 'delete-confirm' || activeContent === 'milestone-details') {
+  if (activeContent === 'delete-confirm' || activeContent === 'milestone-details' || activeContent === 'ai-milestone-suggester') {
     return (
       <Drawer
         anchor="bottom"

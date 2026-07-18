@@ -4,6 +4,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AIRequestPayload, AIResponse } from "@/lib/ai/types";
 import { getActor } from "@/lib/actions/secure-ops";
 import { hasPaidKylrixPlan } from "@/lib/utils";
+import { userHasPaidAiAccess } from "@/lib/server/ai-subscription-gate";
+import { AI_REQUIRES_PRO_MESSAGE } from "@/lib/agentic/access";
 import { createSystemClient, createSystemTablesDB } from "@/lib/appwrite-admin";
 import { Query, ID } from "node-appwrite";
 import { TelemetryService } from "@/lib/services/telemetry";
@@ -38,16 +40,18 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
     console.error('[AI getActor Exception]', e);
   }
 
+  if (!actor?.$id) {
+    return { success: false, error: "Please log in to use AI services." };
+  }
+
+  // Pro/Teams required for all AI (ecosystem key and BYOK).
+  const paidLedger = await userHasPaidAiAccess(actor.$id);
+  if (!paidLedger && !hasPaidKylrixPlan(actor)) {
+    return { success: false, error: AI_REQUIRES_PRO_MESSAGE };
+  }
+
   // Compute checking for ecosystem users (non-BYOK)
   if (!isBYOK) {
-    if (!actor) {
-      return { success: false, error: "Please log in to use ecosystem AI services." };
-    }
-
-    if (!hasPaidKylrixPlan(actor)) {
-      return { success: false, error: "Ecosystem AI is only available to Pro subscribers. Upgrade or supply your own private AI key in Settings." };
-    }
-
     try {
       tables = createSystemTablesDB();
       const res = await tables.listRows({
@@ -60,16 +64,14 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
       });
 
       if (res.rows.length === 0) {
-        // Initialize Pro user compute profile
-        const isPro = hasPaidKylrixPlan(actor);
         balanceRow = await tables.createRow({
           databaseId: 'passwordManagerDb',
           tableId: 'compute_balances',
           rowId: ID.unique(),
           data: {
             userId: actor.$id,
-            tier: isPro ? 'pro' : 'free',
-            balance: isPro ? 100000 : 0,
+            tier: 'pro',
+            balance: 100000,
             lastResetAt: new Date().toISOString()
           }
         });
