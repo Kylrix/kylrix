@@ -113,6 +113,7 @@ interface NotesContextType {
   pinNote: (noteId: string) => Promise<void>;
   unpinNote: (noteId: string) => Promise<void>;
   isPinned: (noteId: string) => boolean;
+  isUnpersistedComposeDraft: (noteId?: string | null) => boolean;
 }
 
 const NotesContext = createContext<NotesContextType>({
@@ -135,6 +136,7 @@ const NotesContext = createContext<NotesContextType>({
   pinNote: async () => {},
   unpinNote: async () => {},
   isPinned: () => false,
+  isUnpersistedComposeDraft: () => false,
 });
 
 function normalizeVisibility(note: Notes): Notes {
@@ -199,6 +201,7 @@ const sweepInFlightRef = { current: false };
 export function NotesProvider({ children }: { children: ReactNode }) {
   const [notes, setNotes] = useState<Notes[]>([]);
   const [composeSyncEpoch, setComposeSyncEpoch] = useState(0);
+  const [unpersistedComposeDraftIds, setUnpersistedComposeDraftIds] = useState<Set<string>>(new Set());
   const [totalNotes, setTotalNotes] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -660,6 +663,11 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     if (!noteId) return;
     activeComposeNoteIdsRef.current.add(noteId);
     markComposeDraft(noteId);
+    setUnpersistedComposeDraftIds((prev) => {
+      const next = new Set(prev);
+      next.add(noteId);
+      return next;
+    });
     // Always bump so detail/card re-read the set (create only registers once; edit registers on mutate).
     setComposeSyncEpoch((n) => n + 1);
   }, []);
@@ -668,8 +676,18 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     if (!noteId) return;
     activeComposeNoteIdsRef.current.delete(noteId);
     markComposePersisted(noteId);
+    setUnpersistedComposeDraftIds((prev) => {
+      const next = new Set(prev);
+      next.delete(noteId);
+      return next;
+    });
     setComposeSyncEpoch((n) => n + 1);
   }, []);
+
+  const isUnpersistedComposeDraftLocal = useCallback((noteId?: string | null) => {
+    if (!noteId) return false;
+    return unpersistedComposeDraftIds.has(noteId);
+  }, [unpersistedComposeDraftIds]);
 
   // Sync engine reads live-copy payloads from here — never from a detail-owned cache.
   useEffect(() => {
@@ -1080,6 +1098,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       pinNote,
       unpinNote,
       isPinned,
+      isUnpersistedComposeDraft: isUnpersistedComposeDraftLocal,
     }),
     [
       sortedNotes,
@@ -1101,6 +1120,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       pinNote,
       unpinNote,
       isPinned,
+      isUnpersistedComposeDraftLocal,
     ]
   );
 

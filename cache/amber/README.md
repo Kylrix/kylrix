@@ -101,7 +101,14 @@ Latest attempt (`37b74f2d` and related):
 - Inputs only `setState`; no sync `nudge` on keystroke.
 - Detail UI amber also ORs local `isDirty` for immediate feedback.
 
-**User report: still doesn’t work.** Stopped further code fixes per request.
+### Phase G — Move Set to React Context (Avoid Module-Level Isolation)
+Attempted to address suspected HMR/bundling module-level separation between card and editor context:
+
+- Replaced module-level set lookup inside `SyncStatusDot` with context-backed `unpersistedComposeDraftIds` state from `NotesContext`.
+- Exposed `isUnpersistedComposeDraft` via context value to bypass module instance boundaries.
+- Re-run status update hooks to sync local sets with the context state.
+
+**User report: still did not resolve edit amber.** Reversed further attempts per request.
 
 ---
 

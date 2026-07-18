@@ -216,8 +216,8 @@ interface AgenticPanelContentProps {
 export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentProps) {
   const { consumePendingPrompt } = useAgenticDrawer();
   const { user } = useAuth();
-  const { notes: allNotes, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId } = useNotes();
-  const { addTask, updateTask } = useTask();
+  const { notes: allNotes, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote } = useNotes();
+  const { addTask, updateTask, deleteTask } = useTask();
   const { openProUpgrade } = useProUpgrade();
   const pathname = usePathname() || '/';
   const router = useRouter();
@@ -766,6 +766,19 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       toolKey: 'link_to_project',
                     });
                     resultSummary = `Connected ${entityKind} to project`;
+                  } else if (call.toolKey === 'delete_resource' && call.specifier) {
+                    const type = String(call.args?.type || 'note');
+                    if (type === 'note') {
+                      const { deleteNote } = await import('@/lib/actions/client-ops');
+                      await deleteNote(call.specifier);
+                      removeNote(call.specifier);
+                    } else if (type === 'goal' || type === 'task') {
+                      await deleteTask(call.specifier);
+                    } else if (type === 'project') {
+                      const { deleteProject } = await import('@/lib/actions/client-ops');
+                      await deleteProject(call.specifier);
+                    }
+                    resultSummary = `Deleted ${type}: ${call.specifier}`;
                   } else if (call.toolKey === 'navigate_workspace' && call.args.route) {
                     resultSummary = `Navigate: ${call.args.route}`;
                     onClose();
@@ -803,7 +816,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         setRunningWorkflowId(null);
       }
     },
-    [appendMessage, isPro, openProUpgrade, pageContext, addTask, updateTask, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, user?.$id, onClose, router],
+    [appendMessage, isPro, openProUpgrade, pageContext, addTask, updateTask, deleteTask, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote, user?.$id, onClose, router],
   );
 
   useEffect(() => {

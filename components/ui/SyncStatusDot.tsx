@@ -1,6 +1,7 @@
 'use client';
 
-import { isUnpersistedComposeDraft } from '@/lib/notes/compose-draft-registry';
+import { useNotes } from '@/context/NotesContext';
+import { isUnpersistedComposeDraft as isUnpersistedRegistryDraft } from '@/lib/notes/compose-draft-registry';
 
 /** Amber/green from the same compose draft set CreateNoteForm uses. */
 export function SyncStatusDot({
@@ -15,6 +16,7 @@ export function SyncStatusDot({
   pending?: boolean;
 }) {
   void epoch;
+  const context = useNotes();
   const isPending =
     typeof pending === 'boolean'
       ? pending
@@ -22,7 +24,9 @@ export function SyncStatusDot({
           noteId &&
             (noteId.startsWith('live-') ||
               noteId.startsWith('ghost-') ||
-              isUnpersistedComposeDraft(noteId)),
+              (context && typeof context.isUnpersistedComposeDraft === 'function'
+                ? context.isUnpersistedComposeDraft(noteId)
+                : isUnpersistedRegistryDraft(noteId))),
         );
 
   if (isPending) {
