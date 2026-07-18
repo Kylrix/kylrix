@@ -83,7 +83,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
 
   const { openMenu } = useContextMenu();
   const { openSidebar } = useDynamicSidebar();
-  const { isPinned, pinNote, unpinNote, upsertNote, notes: contextNotes, composeSyncEpoch, isUnpersistedComposeDraft, isNoteDirty } = useNotes();
+  const { isPinned, pinNote, unpinNote, upsertNote, notes: contextNotes } = useNotes();
   const liveNote = React.useMemo(
     () => contextNotes?.find((candidate) => candidate.$id === note.$id) || note,
     [contextNotes, note],
@@ -412,11 +412,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/4 flex-shrink-0 select-none">
             {/* Sync Status Dot */}
             <div className="flex items-center gap-1.5">
-              <SyncStatusDot
-                noteId={note.$id}
-                epoch={composeSyncEpoch}
-                pending={isUnpersistedComposeDraft?.(note.$id) || isNoteDirty?.(note.$id)}
-              />
+              <SyncStatusDot noteId={note.$id} />
             </div>
 
             {/* Attachments / Tag Badges */}

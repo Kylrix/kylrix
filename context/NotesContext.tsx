@@ -101,21 +101,20 @@ interface NotesContextType {
   loadMore: () => Promise<void>;
   refetchNotes: () => void;
   upsertNote: (note: Notes) => void;
-  pushLiveNote: (note: Notes) => void;
+  /** Live-copy upsert. `pending: false` = already remote / hydrate (no amber). Default enqueues engine flush. */
+  pushLiveNote: (note: Notes, options?: { pending?: boolean }) => void;
   registerComposeSession: (noteId: string) => void;
   unregisterComposeSession: (noteId: string) => void;
   clearLiveNoteGuard: (noteId: string) => void;
   removeNote: (noteId: string) => void;
   migrateDraftNoteId: (ephemeralId: string, savedId: string) => void;
-  /** Bumps when compose draft set changes — cards/detail re-read amber/green. */
+  /** Bumps when compose draft set changes — create lifecycle UI (not the sync dot). */
   composeSyncEpoch: number;
   pinnedIds: string[];
   pinNote: (noteId: string) => Promise<void>;
   unpinNote: (noteId: string) => Promise<void>;
   isPinned: (noteId: string) => boolean;
   isUnpersistedComposeDraft: (noteId?: string | null) => boolean;
-  setNoteDirty: (noteId: string, isDirty: boolean) => void;
-  isNoteDirty: (noteId: string) => boolean;
 }
 
 const NotesContext = createContext<NotesContextType>({
@@ -139,8 +138,6 @@ const NotesContext = createContext<NotesContextType>({
   unpinNote: async () => {},
   isPinned: () => false,
   isUnpersistedComposeDraft: () => false,
-  setNoteDirty: () => {},
-  isNoteDirty: () => false,
 });
 
 function normalizeVisibility(note: Notes): Notes {
@@ -206,7 +203,6 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const [notes, setNotes] = useState<Notes[]>([]);
   const [composeSyncEpoch, setComposeSyncEpoch] = useState(0);
   const [unpersistedComposeDraftIds, setUnpersistedComposeDraftIds] = useState<Set<string>>(new Set());
-  const [dirtyNoteIds, setDirtyNoteIds] = useState<Record<string, boolean>>({});
   const [totalNotes, setTotalNotes] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -642,7 +638,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     setCachedData(`note_${normalized.$id}`, normalized);
   }, [setCachedData, INITIAL_NOTES_CACHE_KEY, invalidate]);
 
-  const pushLiveNote = useCallback((note: Notes) => {
+  const pushLiveNote = useCallback((note: Notes, options?: { pending?: boolean }) => {
     if (!note?.$id) return;
     const tags = Array.isArray(note.tags) ? note.tags : [];
     const cardTitle = resolveNoteCardTitle(note.title, note.content) || note.title || '';
@@ -661,9 +657,13 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       updatedAt: new Date().toISOString(),
     };
     upsertNote(stamped);
+    // Sync engine is SoT for amber — enqueue live revision (never an Appwrite field).
+    if (options?.pending !== false) {
+      autonomicSyncEngine.markPending(stamped.$id, stamped.updatedAt);
+    }
   }, [upsertNote]);
 
-  /** Same helper CreateNoteForm uses — membership in unpersisted set + epoch for dots. */
+  /** Compose-lifecycle only. Dot green/amber is engine.ack / markPending — never here. */
   const registerComposeSession = useCallback((noteId: string) => {
     if (!noteId) return;
     activeComposeNoteIdsRef.current.add(noteId);
@@ -673,7 +673,6 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       next.add(noteId);
       return next;
     });
-    // Always bump so detail/card re-read the set (create only registers once; edit registers on mutate).
     setComposeSyncEpoch((n) => n + 1);
   }, []);
 
@@ -694,19 +693,6 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     return unpersistedComposeDraftIds.has(noteId);
   }, [unpersistedComposeDraftIds]);
 
-  const setNoteDirty = useCallback((noteId: string, isDirty: boolean) => {
-    if (!noteId) return;
-    setDirtyNoteIds((prev) => {
-      if (prev[noteId] === isDirty) return prev;
-      return { ...prev, [noteId]: isDirty };
-    });
-  }, []);
-
-  const isNoteDirty = useCallback((noteId: string) => {
-    if (!noteId) return false;
-    return !!dirtyNoteIds[noteId];
-  }, [dirtyNoteIds]);
-
   // Sync engine reads live-copy payloads from here — never from a detail-owned cache.
   useEffect(() => {
     registerLiveNoteGetter((noteId) => notesRef.current.find((n) => n.$id === noteId) || null);
@@ -717,7 +703,6 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     const onSyncComplete = (event: Event) => {
       const noteId = String((event as CustomEvent)?.detail?.noteId || '').trim();
       if (!noteId) return;
-      // Same clear path as create after remote accept.
       unregisterComposeSession(noteId);
       markNotePersistedRemote(noteId);
     };
@@ -1117,8 +1102,6 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       unpinNote,
       isPinned,
       isUnpersistedComposeDraft: isUnpersistedComposeDraftLocal,
-      setNoteDirty,
-      isNoteDirty,
     }),
     [
       sortedNotes,
@@ -1141,8 +1124,6 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       unpinNote,
       isPinned,
       isUnpersistedComposeDraftLocal,
-      setNoteDirty,
-      isNoteDirty,
     ]
   );
 

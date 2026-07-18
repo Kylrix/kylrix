@@ -49,6 +49,7 @@ import { useAuth } from '@/lib/auth';
 import { useAutosave } from '@/hooks/useAutosave';
 import { isEphemeralComposeNoteId, isUnpersistedComposeDraft, markNotePersistedRemote, shouldCreateComposeNote, withNotePersistLock, isAlreadyExistsAppwriteError } from '@/lib/notes/compose-draft-registry';
 import { isValidAppwriteRowId } from '@/lib/utils/resource-ids';
+import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 
 interface CreateNoteFormProps {
   onNoteCreated: (note: Notes) => void;
@@ -758,6 +759,7 @@ export default function CreateNoteForm({
       if (composeHasContentRef.current) return;
       removeNote(draftId);
       unregisterComposeSession(draftId);
+      autonomicSyncEngine.ack(draftId);
     };
   }, [removeNote, unregisterComposeSession]);
 
@@ -932,6 +934,8 @@ export default function CreateNoteForm({
         onNoteCreated(saved);
       }
       applyPersistSnapshot(saved, source);
+      pushLiveNote(saved, { pending: false });
+      autonomicSyncEngine.ack(id);
       return saved;
     }
 
@@ -1013,7 +1017,9 @@ export default function CreateNoteForm({
       $updatedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    pushLiveNote(localNote);
+    // Already on Appwrite — hydrate live copy without re-amber; ack any draft queue entry.
+    pushLiveNote(localNote, { pending: false });
+    autonomicSyncEngine.ack(saved.$id, localNote.updatedAt);
     setCachedData(`note_${saved.$id}`, localNote);
 
     return saved;
@@ -1105,6 +1111,7 @@ export default function CreateNoteForm({
       if (draftId && isUnpersistedComposeDraft(draftId)) {
         removeNote(draftId);
         unregisterComposeSession(draftId);
+        autonomicSyncEngine.ack(draftId);
         liveDraftIdRef.current = undefined;
         setResolvedNoteId(undefined);
         setLastSavedSnapshot('');

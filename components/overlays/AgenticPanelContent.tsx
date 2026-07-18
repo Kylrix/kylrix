@@ -654,7 +654,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                     }
                     unregisterComposeSession(draftId);
                     if (saved.$id) unregisterComposeSession(saved.$id);
-                    pushLiveNote(saved);
+                    pushLiveNote(saved, { pending: false });
+                    const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+                    autonomicSyncEngine.ack(saved.$id);
 
                     await recordSessionObject({
                       objectId: saved.$id,
@@ -672,7 +674,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       isPublic: call.args.isPublic !== undefined ? (call.args.isPublic === true || call.args.isPublic === 'true') : undefined,
                       isGuest: call.args.isPublic !== undefined ? (call.args.isPublic === true || call.args.isPublic === 'true') : undefined,
                     });
-                    pushLiveNote(saved);
+                    pushLiveNote(saved, { pending: false });
+                    const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+                    autonomicSyncEngine.ack(saved.$id || call.specifier);
                     await recordSessionObject({
                       objectId: saved.$id || call.specifier,
                       objectType: 'idea',
@@ -683,7 +687,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   } else if (call.toolKey === 'get_note' && call.specifier) {
                     const { getNote } = await import('@/lib/appwrite/note');
                     const note = await getNote(call.specifier);
-                    pushLiveNote(note);
+                    pushLiveNote(note, { pending: false });
                     await recordSessionObject({
                       objectId: note.$id,
                       objectType: 'idea',

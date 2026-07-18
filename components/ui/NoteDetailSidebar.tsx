@@ -61,7 +61,7 @@ import { useAuth } from '@/lib/auth';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useNotes } from '@/context/NotesContext';
-import { isEphemeralComposeNoteId, isUnpersistedComposeDraft } from '@/lib/notes/compose-draft-registry';
+import { isEphemeralComposeNoteId } from '@/lib/notes/compose-draft-registry';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { useSection } from '@/context/SectionContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
@@ -92,7 +92,7 @@ import { resolveResourceOwnerId, isValidAppwriteRowId } from '@/lib/utils/resour
 import { attachObject } from '@/lib/actions/client-ops';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
-import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
+import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
 import {
   applyMarkdownWrap,
   getRemovedObjectBlocks,
@@ -146,7 +146,7 @@ export function NoteDetailSidebar({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { setCachedData } = useDataNexus();
-  const { notes: allNotes, isPinned, pinNote, unpinNote, pushLiveNote, registerComposeSession, composeSyncEpoch, setNoteDirty } = useNotes();
+  const { notes: allNotes, isPinned, pinNote, unpinNote, pushLiveNote, registerComposeSession } = useNotes();
   const isPinnedFunc = useMemo(() => typeof isPinned === 'function' ? isPinned : () => false, [isPinned]);
   const pinNoteFunc = useMemo(() => typeof pinNote === 'function' ? pinNote : async () => {}, [pinNote]);
   const unpinNoteFunc = useMemo(() => typeof unpinNote === 'function' ? unpinNote : async () => {}, [unpinNote]);
@@ -254,25 +254,11 @@ export function NoteDetailSidebar({
     isDirtyRef.current = isDirty;
   }, [isDirty]);
 
-  useEffect(() => {
-    const noteId = liveNoteRef.current?.$id;
-    if (noteId && typeof setNoteDirty === 'function') {
-      setNoteDirty(noteId, isDirty);
-    }
-    return () => {
-      if (noteId && typeof setNoteDirty === 'function') {
-        setNoteDirty(noteId, false);
-      }
-    };
-  }, [liveNoteRef.current?.$id, isDirty, setNoteDirty]);
-
   const loadedNoteIdRef = useRef<string | null>(null);
   const lastAppliedServerTsRef = useRef('');
 
   /**
-   * Mirror CreateNoteForm keystroke → card path exactly:
-   * registerComposeSession (amber set) + pushLiveNote + cache.
-   * No sync nudge here — create doesn't nudge either.
+   * Mirror CreateNoteForm: dirty editor → pushLiveNote (engine enqueues amber).
    */
   useEffect(() => {
     if (readOnly) return;
@@ -1275,21 +1261,8 @@ export function NoteDetailSidebar({
                 Content
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <SyncStatusDot
-                  noteId={liveNote.$id}
-                  epoch={composeSyncEpoch}
-                  pending={
-                    isDirty ||
-                    isUnpersistedComposeDraft(liveNote.$id) ||
-                    String(liveNote.$id || '').startsWith('live-') ||
-                    String(liveNote.$id || '').startsWith('ghost-')
-                  }
-                />
-                <span className="text-[10px] font-semibold text-[#9B9691]">
-                  {isDirty || isUnpersistedComposeDraft(liveNote.$id)
-                    ? 'Not saved yet'
-                    : 'Saved'}
-                </span>
+                <SyncStatusDot noteId={liveNote.$id} />
+                <SyncStatusLabel noteId={liveNote.$id} />
               </div>
             </div>
 

@@ -135,14 +135,15 @@ Attempted a direct, dedicated state channel:
 
 | Concern | Path |
 |---------|------|
-| Compose pending set | `lib/notes/compose-draft-registry.ts` |
-| Register / epoch | `context/NotesContext.tsx` (`registerComposeSession`, `composeSyncEpoch`) |
+| **Dot SoT (pending queue)** | `lib/services/sync-engine.ts` (`markPending` / `isPending` / `ack`) |
+| Dot UI | `components/ui/SyncStatusDot.tsx` |
+| Live copy enqueue | `context/NotesContext.tsx` (`pushLiveNote`) |
+| Compose lifecycle (not dot) | `lib/notes/compose-draft-registry.ts`, `registerComposeSession` |
 | Create reference | `app/(app)/app/(app)/notes/CreateNoteForm.tsx` |
 | Detail editor | `components/ui/NoteDetailSidebar.tsx` |
 | Detail shell (no getNote) | `context/SectionContext.tsx` → `NoteDetailContainer` |
-| Card dot | `components/ui/NoteCard.tsx`, `components/NoteCard.tsx`, `components/ui/SyncStatusDot.tsx` |
-| Background flush | `lib/services/sync-engine.ts` |
-| Skill (aspirational) | `.agents/skills/sync/SKILL.md` |
+| Card dot | `components/ui/NoteCard.tsx`, `components/NoteCard.tsx` |
+| Flush payload (no pending fields) | `pickNoteAutosavePayload` in `lib/appwrite/note.ts` |
 
 ---
 
@@ -156,8 +157,14 @@ Attempted a direct, dedicated state channel:
 
 ---
 
-## Explicit non-goals for this doc
+## Resolution direction (2026-07-18 scorched earth)
 
-- No further implementation in this pass.
-- No commitment that Phase F is “almost there.”
-- Resume only with a failing reproduction + instrumentation that names the exact broken step above.
+**Dot SoT = sync engine pending queue** (`autonomicSyncEngine.markPending` / `isPending` / `ack`), persisted in `sessionStorage` so remount keeps amber until flush.
+
+- Live copy = content (`pushLiveNote` enqueues a revision).
+- Engine flushes with `pickNoteAutosavePayload` only — no pending fields in Appwrite.
+- `SyncStatusDot` / `SyncStatusLabel` subscribe to the engine only (no `isDirty` / compose-set theater).
+- Green only after successful push (or create save `ack` via `unregisterComposeSession`).
+
+See `lib/services/sync-engine.ts` and `components/ui/SyncStatusDot.tsx`.
+
