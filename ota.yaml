@@ -372,6 +372,8 @@ workflows:
   sqlite-dev:
     intent: local_development
     description: Prepare the deterministic offline SQLite profile and start the local Next.js runtime
+    proof:
+      claim: bounded
     setup:
       task: setup
     run:

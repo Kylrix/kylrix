@@ -11,118 +11,72 @@ permissions:
   contents: read
 
 jobs:
-  sqlite-verification:
-    name: ${{ matrix.os }} SQLite verification
+  verify-native-linux:
+    uses: ./.github/workflows/ota-verify-native-linux.yml
+    with:
+      ota_projection_identity: sha256:ee3835bb4c532fd11a8d8082ab1eb10d0a8ee0f3fb2841a6480979c725dc768a
+      ota_target_os: linux
+      ota_runner: ubuntu-latest
+
+  verify-native-macos:
+    uses: ./.github/workflows/ota-verify-native-macos.yml
+    with:
+      ota_projection_identity: sha256:a8277aa9c1cf6ce81e0b6466c61d12eea654ceda56b25bb2c4322d3e1e25c186
+      ota_target_os: macos
+      ota_runner: macos-latest
+
+  verify-native-windows:
+    uses: ./.github/workflows/ota-verify-native-windows.yml
+    with:
+      ota_projection_identity: sha256:aa52e2760d9d73724de802ec62bbe027864485e59a82fdf63732430ab1fb4383
+      ota_target_os: windows
+      ota_runner: windows-latest
+
+  verify-container-linux:
+    uses: ./.github/workflows/ota-verify-container-linux.yml
+    with:
+      ota_projection_identity: sha256:4028a3c0a90dac4a9145f995b3ac630a3a4a27630879d8d963c7c2e788b11e29
+      ota_target_os: linux
+      ota_runner: ubuntu-latest
+
+  runtime-native:
+    name: ${{ matrix.os }} bounded runtime proof
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Enable pinned pnpm
-        shell: bash
-        run: corepack enable
-
-      - uses: ota-run/setup@v1.0.8
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: ota-run/setup@493cba84bf7f7c11c9e8e996d832d93a89c62184
         with:
           source: contract
+      # `dev` is intentionally outside agent admission. This is an explicit
+      # human-owned proof lane, not a generated agent-execution projection.
+      - name: Prove bounded native runtime
+        run: ota proof runtime --workflow sqlite-dev --mode native --json
+      - name: Archive native runtime receipt
+        run: ota receipt --workflow sqlite-dev --mode native --archive --json
 
-      - name: Validate contract
-        run: ota validate .
-
-      - name: Diagnose readiness
-        run: ota doctor --json
-
-      - name: Discover safe execution surface
-        run: ota tasks --safe --use --json
-
-      - name: Preview agent verification task
-        run: ota run verify --agent --dry-run --json
-
-      - name: Preview agent verification workflow
-        run: ota up --workflow verify --agent --dry-run --json
-
-      - name: Prove native task and workflow refusal canaries
-        run: |
-          ota run --agent --expect-refusal --json selfhost:up > ota-task-refusal-canary.json
-          ota json validate --schema refusal-canary.json --input ota-task-refusal-canary.json --assert-eq ok=true --assert-eq status=refused_as_expected --assert-eq canary.execution_started=false --assert-eq canary.refusal.reason_family=requested_task_not_safe --assert-eq receipt.ok=false
-          ota up --agent --expect-refusal --workflow selfhost --json > ota-workflow-refusal-canary.json
-          ota json validate --schema refusal-canary.json --input ota-workflow-refusal-canary.json --assert-eq ok=true --assert-eq status=refused_as_expected --assert-eq canary.execution_started=false --assert-eq canary.refusal.reason_family=requested_task_not_safe --assert-eq receipt.ok=false
-
-      - name: Run agent verification workflow
-        run: ota up --workflow verify --agent --json
-
-      - name: Archive verification receipt
-        run: ota receipt --workflow verify --archive --json
-
-      - name: Prove isolated native runtime
-        run: ota proof runtime --workflow sqlite-dev --json
-
-      - name: Archive runtime receipt
-        run: ota receipt --workflow sqlite-dev --archive --json
-
-  container-verification:
-    name: Ubuntu container verification
+  runtime-container:
+    name: Ubuntu bounded container runtime proof
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: ota-run/setup@v1.0.8
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: ota-run/setup@493cba84bf7f7c11c9e8e996d832d93a89c62184
         with:
           source: contract
-
-      - name: Validate container contract surface
-        run: ota validate .
-
-      - name: Diagnose container readiness
-        run: ota doctor --container --json
-
-      - name: Discover safe execution surface
-        run: ota tasks --safe --use --json
-
-      - name: Preview self-hosted Compose workflow
-        run: ota up --workflow selfhost --dry-run --json
-
-      - name: Preview agent container verification workflow
-        run: ota up --workflow verify --container --agent --dry-run --json
-
-      - name: Prove container task and workflow refusal canaries
-        run: |
-          ota run --agent --expect-refusal --container --json selfhost:up > ota-container-task-refusal-canary.json
-          ota json validate --schema refusal-canary.json --input ota-container-task-refusal-canary.json --assert-eq ok=true --assert-eq status=refused_as_expected --assert-eq canary.execution_started=false --assert-eq canary.refusal.reason_family=requested_task_not_safe --assert-eq receipt.ok=false
-          ota up --agent --expect-refusal --container --workflow selfhost --json > ota-container-workflow-refusal-canary.json
-          ota json validate --schema refusal-canary.json --input ota-container-workflow-refusal-canary.json --assert-eq ok=true --assert-eq status=refused_as_expected --assert-eq canary.execution_started=false --assert-eq canary.refusal.reason_family=requested_task_not_safe --assert-eq receipt.ok=false
-
-      - name: Run agent container verification workflow
-        run: ota up --workflow verify --container --agent --json
-
-      - name: Archive container verification receipt
-        run: ota receipt --workflow verify --archive --json
-
-      - name: Prove isolated container runtime
-        run: ota proof runtime --workflow sqlite-dev --container --json
-
+      # The same explicit, non-agent proof boundary applies in container mode.
+      - name: Prove bounded container runtime
+        run: ota proof runtime --workflow sqlite-dev --mode container --json
       - name: Archive container runtime receipt
-        run: ota receipt --workflow sqlite-dev --archive --json
+        run: ota receipt --workflow sqlite-dev --mode container --archive --json
 
   contract-ci-drift:
     name: Contract-to-CI drift gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Enable pinned pnpm
-        run: corepack enable
 
       - name: Fail on contract-to-CI workflow drift
         uses: ota-run/action@4fba25c6c0063af009d38e215d97ab1a925277c8

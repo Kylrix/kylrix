@@ -1,0 +1,67 @@
+# ota:managed-github-projection v1 identity=sha256:aa52e2760d9d73724de802ec62bbe027864485e59a82fdf63732430ab1fb4383
+name: Ota governance ('verify')
+
+on:
+  workflow_call:
+    inputs:
+      ota_projection_identity:
+        description: Ota-managed projection identity
+        required: true
+        type: string
+      ota_runner:
+        description: GitHub runner selected by the human-owned caller
+        required: false
+        default: 'windows-latest'
+        type: string
+      ota_target_os:
+        description: Target operating system bound into the Ota projection
+        required: true
+        type: string
+
+jobs:
+  ota_ota_verify_verify:
+    name: 'ota.verify.verify (windows/native)'
+    runs-on: ${{ inputs.ota_runner }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: ota-run/setup@493cba84bf7f7c11c9e8e996d832d93a89c62184
+        with:
+          source: contract
+      - name: Verify Ota projection identity
+        run: ota ci projection --workflow 'verify' --mode native --target-os ${{ inputs.ota_target_os }} --expect-identity ${{ inputs.ota_projection_identity }} --json
+      - name: Validate contract
+        run: ota validate . --json
+      - name: Diagnose contract lane
+        run: ota doctor --workflow 'verify' --mode native --json
+      - name: Discover safe execution surface
+        run: ota tasks --safe --use --json
+      - name: Preview contract lane
+        run: ota up --workflow 'verify' --mode native --agent --dry-run --json
+      - name: Run contract lane
+        run: ota up --workflow 'verify' --mode native --agent --json
+      - name: Archive contract receipt
+        run: ota receipt --workflow 'verify' --mode native --archive --json
+  ota_ota_refusal_canary_task_selfhost_up:
+    name: 'ota.refusal-canary.task.selfhost-up (windows/native)'
+    runs-on: ${{ inputs.ota_runner }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: ota-run/setup@493cba84bf7f7c11c9e8e996d832d93a89c62184
+        with:
+          source: contract
+      - name: Verify Ota projection identity
+        run: ota ci projection --workflow 'verify' --mode native --target-os ${{ inputs.ota_target_os }} --expect-identity ${{ inputs.ota_projection_identity }} --json
+      - name: Prove agent refusal canary
+        run: ota run --agent --expect-refusal --mode native --json 'selfhost:up'
+  ota_ota_refusal_canary_workflow_selfhost:
+    name: 'ota.refusal-canary.workflow.selfhost (windows/native)'
+    runs-on: ${{ inputs.ota_runner }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: ota-run/setup@493cba84bf7f7c11c9e8e996d832d93a89c62184
+        with:
+          source: contract
+      - name: Verify Ota projection identity
+        run: ota ci projection --workflow 'verify' --mode native --target-os ${{ inputs.ota_target_os }} --expect-identity ${{ inputs.ota_projection_identity }} --json
+      - name: Prove agent refusal canary
+        run: ota up --agent --expect-refusal --workflow 'selfhost' --mode native --json
