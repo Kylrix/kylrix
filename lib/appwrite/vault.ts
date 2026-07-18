@@ -1722,6 +1722,27 @@ export class VaultService {
     }
   }
 
+  static async setTotpPinned(id: string, pinned: boolean): Promise<void> {
+    const doc = await appwriteDatabases.getRow(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_COLLECTION_TOTPSECRETS_ID,
+      id,
+    ) as Record<string, unknown>;
+    const permissions = Array.isArray(doc.$permissions)
+      ? (doc.$permissions as string[])
+      : undefined;
+    await appwriteDatabases.updateRow(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_COLLECTION_TOTPSECRETS_ID,
+      id,
+      { isPinned: pinned },
+      permissions,
+    );
+    if (typeof doc.userId === 'string') {
+      this.clearCredentialCache(doc.userId);
+    }
+  }
+
   static async toggleCredentialPin(id: string): Promise<boolean> {
     const doc = await appwriteDatabases.getRow(
       APPWRITE_DATABASE_ID,
@@ -1736,13 +1757,7 @@ export class VaultService {
   static async toggleTOTPPin(id: string): Promise<boolean> {
     const existing = await this.getTOTPSecret(id);
     const newPinned = !existing.isPinned;
-    await appwriteDatabases.updateRow(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_COLLECTION_TOTPSECRETS_ID,
-        id,
-        { isPinned: newPinned }
-    );
-    this.clearCredentialCache(existing.userId);
+    await this.setTotpPinned(id, newPinned);
     return newPinned;
   }
 
@@ -3506,6 +3521,10 @@ export async function listCredentialAttachments(credentialId: string): Promise<E
 
 export async function setCredentialPinned(id: string, pinned: boolean) {
   return await VaultService.setCredentialPinned(id, pinned);
+}
+
+export async function setTotpPinned(id: string, pinned: boolean) {
+  return await VaultService.setTotpPinned(id, pinned);
 }
 
 export async function toggleCredentialPin(id: string) {

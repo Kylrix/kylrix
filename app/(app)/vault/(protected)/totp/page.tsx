@@ -44,6 +44,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     isPublic?: boolean | null;
     isGuest?: boolean | null;
     isPinned?: boolean | null;
+    userId?: string | null;
     dek?: string | null;
   };
   
@@ -189,7 +190,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   };
 
   const { openMenu } = useContextMenu();
-  const { isPinned: isResourcePinned, togglePin } = useResourcePins();
+  const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
 
   const TOTPCard = ({ totp }: { totp: TotpItem }) => {
     const code = generateTOTP(
@@ -207,22 +208,38 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     const issuerInitials = totp.issuer ? totp.issuer.trim().charAt(0).toUpperCase() : "?";
 
     const isSelected = selectedTotp?.$id === totp.$id;
-    const pinned = isResourcePinned('totp', totp.$id, user?.$id, (totp as any).isPinned);
+    const ownerId = totp.userId || user?.$id || '';
+    const pinned = isResourcePinned('totp', totp.$id, ownerId, totp.isPinned);
 
     const handlePinToggle = async (e?: React.MouseEvent) => {
       if (e) e.stopPropagation();
+      if (!user?.$id) return;
+      const currentlyPinned = isResourcePinned('totp', totp.$id, ownerId, totp.isPinned);
+      const isOwner = user.$id === ownerId;
+
       try {
-        await togglePin({
+        const nextPinned = await togglePin({
           resourceType: 'totp',
           resourceId: totp.$id,
-          ownerId: user?.$id || '',
-          rowIsPinned: (totp as any).isPinned,
+          ownerId,
+          rowIsPinned: totp.isPinned,
           setOwnerRowPin: async (pinned) => {
-              // Update via local refresh for now or implement updateTotpSecret
+            const { setTotpPinned } = await import('@/lib/appwrite');
+            await setTotpPinned(totp.$id, pinned);
           },
         });
-      } catch (err: any) {
+        if (isOwner) {
+          setTotpCodes((prev) =>
+            prev.map((t) => (t.$id === totp.$id ? { ...t, isPinned: nextPinned } : t)),
+          );
+        }
+        toast.success(nextPinned ? 'Pinned to top' : 'Unpinned');
+      } catch (err: unknown) {
+        if (!isOwner) {
+          setLocalPin('totp', totp.$id, currentlyPinned);
+        }
         console.error('Failed to toggle pin:', err);
+        toast.error('Failed to toggle pin');
       }
     };
 
