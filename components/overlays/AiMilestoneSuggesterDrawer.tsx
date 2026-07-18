@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { useAI } from '@/hooks/useAI';
+import { useAI } from '../../hooks/useAI';
 import { useTask } from '@/context/TaskContext';
 import { useToast } from '@/components/ui/Toast';
 import { Sparkles, Check, X, Send } from 'lucide-react';
@@ -111,54 +111,67 @@ Return ONLY the JSON array of strings. Example: ["Setup database schema", "Build
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#161412] text-[#F5F2ED] font-satoshi relative">
+    <div className="flex flex-col h-full bg-[#161412] text-[#F5F2ED] font-satoshi relative overflow-hidden">
+      {/* Top spotlight ambient gradient */}
+      <div className="absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_50%_-20%,rgba(168,85,247,0.15),transparent_70%)] pointer-events-none z-0" />
+
       {/* Header */}
-      <div className="flex items-center justify-between p-5 border-b border-white/5 bg-[#161412]/60 backdrop-blur-md">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-[#A855F7]" />
+      <div className="relative z-10 flex items-center justify-between p-6 border-b border-white/5 bg-[#161412]/40 backdrop-blur-md">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-[#A855F7]/10 border border-[#A855F7]/20 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.1)]">
+            <Sparkles className="w-5 h-5 text-[#A855F7] animate-pulse" />
+          </div>
           <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider font-mono text-[#A855F7]">Kylie Autocomplete</h3>
-            <p className="text-[10px] text-[#9B9691] font-mono mt-0.5 truncate max-w-[300px]">Goal: {taskTitle}</p>
+            <h3 className="text-xs font-black uppercase tracking-widest font-mono text-[#A855F7]">Kylie Autocomplete</h3>
+            <p className="text-[10px] text-[#9B9691] font-mono mt-0.5 max-w-[280px] truncate">
+              GOAL: {taskTitle}
+            </p>
           </div>
         </div>
         <button
           type="button"
           onClick={close}
-          className="p-1.5 rounded-lg text-[#9B9691] hover:text-white hover:bg-white/5 transition-colors"
+          className="p-2 rounded-xl text-[#9B9691] hover:text-white hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-white/5"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
 
       {/* Suggested Milestones Area */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-4 max-h-[300px]">
+      <div className="relative z-10 flex-1 overflow-y-auto p-6 space-y-4 max-h-[340px] scrollbar-thin">
         {loading && suggestions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 gap-3">
-            <div className="w-6 h-6 border-2 border-[#A855F7] border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs text-[#9B9691] font-mono">Steering Kylie...</span>
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <div className="relative">
+              <div className="w-8 h-8 border-2 border-[#A855F7]/20 border-t-[#A855F7] rounded-full animate-spin" />
+              <div className="absolute inset-0 bg-[#A855F7]/10 blur-md rounded-full animate-pulse" />
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-xs font-black uppercase tracking-widest text-[#A855F7] font-mono">Generating</span>
+              <span className="text-[10px] text-[#9B9691] font-mono">Kylie is mapping milestones...</span>
+            </div>
           </div>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {suggestions.map((item, idx) => (
               <div
                 key={idx}
-                className={`flex items-center gap-3 p-3 rounded-2xl border transition-all duration-200 ${
+                className={`flex items-center gap-4 p-4 rounded-2xl border transition-all duration-200 hover:translate-y-[-1px] ${
                   item.selected
-                    ? 'bg-[#A855F7]/5 border-[#A855F7]/20 shadow-[0_0_12px_rgba(168,85,247,0.05)]'
-                    : 'bg-[#0A0908]/40 border-white/5 opacity-60'
+                    ? 'bg-[#0B0A09] border-[#A855F7]/30 shadow-[0_4px_16px_rgba(168,85,247,0.06)]'
+                    : 'bg-[#0B0A09]/40 border-white/5 opacity-50 hover:opacity-80'
                 }`}
               >
                 {/* Custom Checkbox */}
                 <button
                   type="button"
                   onClick={() => handleToggleSelect(idx)}
-                  className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${
+                  className={`w-5.5 h-5.5 rounded-lg border flex items-center justify-center transition-all ${
                     item.selected
-                      ? 'bg-[#A855F7] border-[#A855F7] text-[#0A0908]'
-                      : 'border-white/20 bg-transparent hover:border-white/40'
+                      ? 'bg-[#A855F7] border-[#A855F7] text-[#0A0908] shadow-[0_0_12px_rgba(168,85,247,0.4)] scale-[1.05]'
+                      : 'border-white/10 bg-transparent hover:border-[#A855F7]/30'
                   }`}
                 >
-                  {item.selected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                  {item.selected && <Check className="w-4 h-4 stroke-[3]" />}
                 </button>
 
                 {/* Editable Title Input */}
@@ -166,7 +179,7 @@ Return ONLY the JSON array of strings. Example: ["Setup database schema", "Build
                   type="text"
                   value={item.title}
                   onChange={(e) => handleEditTitle(idx, e.target.value)}
-                  className="flex-1 bg-transparent border-0 outline-none text-sm text-[#F5F2ED] focus:ring-0 focus:outline-none py-0.5 font-bold"
+                  className="flex-1 bg-transparent border-0 outline-none text-sm text-[#F5F2ED] focus:ring-0 focus:outline-none py-0.5 font-bold tracking-tight"
                   placeholder="Milestone title..."
                 />
               </div>
@@ -175,21 +188,21 @@ Return ONLY the JSON array of strings. Example: ["Setup database schema", "Build
         )}
       </div>
 
-      {/* Steering Input Form */}
-      <div className="p-5 border-t border-white/5 bg-[#0A0908]/40 space-y-4">
+      {/* Steering Input Form & Footer Actions */}
+      <div className="relative z-10 p-6 border-t border-white/5 bg-[#0B0A09] space-y-4">
         <form onSubmit={handleSteerSubmit} className="flex gap-2">
           <input
             type="text"
             value={steerInput}
             onChange={(e) => setSteerInput(e.target.value)}
-            placeholder="Not satisfied? Tell Kylie how to restructure instead..."
+            placeholder="Not satisfied? Tell Kylie how to restructure..."
             disabled={loading}
-            className="flex-1 bg-white/[0.02] border border-white/5 rounded-xl px-4 py-2.5 text-xs text-[#F5F2ED] outline-none focus:border-[#A855F7]/30 focus:bg-[#0A0908]/80 transition-all font-satoshi"
+            className="flex-1 bg-[#161412] border border-white/5 rounded-xl px-4 py-3 text-xs text-[#F5F2ED] outline-none focus:border-[#A855F7]/25 focus:bg-[#161412]/80 transition-all font-satoshi placeholder-[#9B9691]/50"
           />
           <button
             type="submit"
             disabled={loading || !steerInput.trim()}
-            className="p-2.5 bg-[#A855F7] text-[#0A0908] rounded-xl hover:bg-[#9333EA] transition-colors disabled:opacity-30 flex items-center justify-center shrink-0"
+            className="p-3 bg-[#A855F7] text-[#0A0908] rounded-xl hover:bg-[#9333EA] transition-all duration-200 disabled:opacity-30 flex items-center justify-center shrink-0 shadow-[0_4px_12px_-4px_rgba(168,85,247,0.4)] active:scale-[0.98]"
           >
             <Send className="w-4 h-4" />
           </button>
@@ -199,9 +212,9 @@ Return ONLY the JSON array of strings. Example: ["Setup database schema", "Build
           type="button"
           onClick={handleApply}
           disabled={loading || suggestions.filter((s) => s.selected).length === 0}
-          className="w-full py-3 bg-[#A855F7] text-[#0A0908] font-black text-xs uppercase tracking-widest rounded-2xl shadow-[0_8px_20px_-8px_rgba(168,85,247,0.4)] hover:bg-[#9333EA] transition-colors disabled:opacity-30"
+          className="w-full py-3.5 bg-[#A855F7] text-[#0A0908] font-black text-xs uppercase tracking-widest rounded-2xl shadow-[0_8px_24px_-8px_rgba(168,85,247,0.5)] hover:bg-[#9333EA] hover:translate-y-[-1px] transition-all duration-200 disabled:opacity-20 active:translate-y-[0px]"
         >
-          {loading ? 'Importing...' : 'Add Selected Milestones'}
+          {loading ? 'Importing Milestones...' : 'Add Selected Milestones'}
         </button>
       </div>
     </div>
