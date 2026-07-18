@@ -114,6 +114,8 @@ interface NotesContextType {
   unpinNote: (noteId: string) => Promise<void>;
   isPinned: (noteId: string) => boolean;
   isUnpersistedComposeDraft: (noteId?: string | null) => boolean;
+  setNoteDirty: (noteId: string, isDirty: boolean) => void;
+  isNoteDirty: (noteId: string) => boolean;
 }
 
 const NotesContext = createContext<NotesContextType>({
@@ -137,6 +139,8 @@ const NotesContext = createContext<NotesContextType>({
   unpinNote: async () => {},
   isPinned: () => false,
   isUnpersistedComposeDraft: () => false,
+  setNoteDirty: () => {},
+  isNoteDirty: () => false,
 });
 
 function normalizeVisibility(note: Notes): Notes {
@@ -202,6 +206,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const [notes, setNotes] = useState<Notes[]>([]);
   const [composeSyncEpoch, setComposeSyncEpoch] = useState(0);
   const [unpersistedComposeDraftIds, setUnpersistedComposeDraftIds] = useState<Set<string>>(new Set());
+  const [dirtyNoteIds, setDirtyNoteIds] = useState<Record<string, boolean>>({});
   const [totalNotes, setTotalNotes] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -689,6 +694,19 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     return unpersistedComposeDraftIds.has(noteId);
   }, [unpersistedComposeDraftIds]);
 
+  const setNoteDirty = useCallback((noteId: string, isDirty: boolean) => {
+    if (!noteId) return;
+    setDirtyNoteIds((prev) => {
+      if (prev[noteId] === isDirty) return prev;
+      return { ...prev, [noteId]: isDirty };
+    });
+  }, []);
+
+  const isNoteDirty = useCallback((noteId: string) => {
+    if (!noteId) return false;
+    return !!dirtyNoteIds[noteId];
+  }, [dirtyNoteIds]);
+
   // Sync engine reads live-copy payloads from here — never from a detail-owned cache.
   useEffect(() => {
     registerLiveNoteGetter((noteId) => notesRef.current.find((n) => n.$id === noteId) || null);
@@ -1099,6 +1117,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       unpinNote,
       isPinned,
       isUnpersistedComposeDraft: isUnpersistedComposeDraftLocal,
+      setNoteDirty,
+      isNoteDirty,
     }),
     [
       sortedNotes,
@@ -1121,6 +1141,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       unpinNote,
       isPinned,
       isUnpersistedComposeDraftLocal,
+      setNoteDirty,
+      isNoteDirty,
     ]
   );
 

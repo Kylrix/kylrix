@@ -146,7 +146,7 @@ export function NoteDetailSidebar({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { setCachedData } = useDataNexus();
-  const { notes: allNotes, isPinned, pinNote, unpinNote, pushLiveNote, registerComposeSession, composeSyncEpoch } = useNotes();
+  const { notes: allNotes, isPinned, pinNote, unpinNote, pushLiveNote, registerComposeSession, composeSyncEpoch, setNoteDirty } = useNotes();
   const isPinnedFunc = useMemo(() => typeof isPinned === 'function' ? isPinned : () => false, [isPinned]);
   const pinNoteFunc = useMemo(() => typeof pinNote === 'function' ? pinNote : async () => {}, [pinNote]);
   const unpinNoteFunc = useMemo(() => typeof unpinNote === 'function' ? unpinNote : async () => {}, [unpinNote]);
@@ -253,6 +253,18 @@ export function NoteDetailSidebar({
   useEffect(() => {
     isDirtyRef.current = isDirty;
   }, [isDirty]);
+
+  useEffect(() => {
+    const noteId = liveNoteRef.current?.$id;
+    if (noteId && typeof setNoteDirty === 'function') {
+      setNoteDirty(noteId, isDirty);
+    }
+    return () => {
+      if (noteId && typeof setNoteDirty === 'function') {
+        setNoteDirty(noteId, false);
+      }
+    };
+  }, [liveNoteRef.current?.$id, isDirty, setNoteDirty]);
 
   const loadedNoteIdRef = useRef<string | null>(null);
   const lastAppliedServerTsRef = useRef('');
