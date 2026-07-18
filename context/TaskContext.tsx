@@ -1044,6 +1044,22 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   }, [state.userId, shouldIgnoreRealtimeStatus]);
 
   // Task actions
+  const pushLiveGoal = useCallback(
+    (task: Task, options?: { pending?: boolean }) => {
+      if (!task?.id) return;
+      const stamped: Task = {
+        ...task,
+        updatedAt: new Date(),
+      };
+      dispatch({ type: 'UPSERT_TASK', payload: stamped });
+      void setCachedData(`goal_${stamped.id}`, stamped);
+      if (options?.pending !== false) {
+        autonomicSyncEngine.markPending(goalPendingKey(stamped.id), stamped.updatedAt.toISOString());
+      }
+    },
+    [setCachedData],
+  );
+
   const addTask = useCallback(
     async (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'position'>) => {
       try {
@@ -1118,67 +1134,52 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           };
 
           dispatch({ type: 'ADD_TASK', payload: mappedTask });
-          autonomicSyncEngine.markPending(goalPendingKey(id), mappedTask.updatedAt.toISOString());
           void setCachedData(`goal_${id}`, mappedTask);
+          autonomicSyncEngine.markPending(goalPendingKey(id), mappedTask.updatedAt.toISOString());
+          autonomicSyncEngine.nudge();
           return mappedTask;
         }
 
-        // Prepare tags with project ID
-        const tags = [...(task.labels || [])];
-        if (task.linkedNotes?.length) {
-          tags.push(...buildSourceNoteTags(task.linkedNotes));
-        }
-        if (task.projectId && task.projectId !== 'inbox') {
-          tags.push(`project:${task.projectId}`);
-        }
-
-        const newTask = await taskApi.create({
+        // 1:1 ideas: live copy first (amber) — engine create/update. Do not await Appwrite here.
+        const id = ID.unique();
+        const mappedTask: Task = {
+          id,
           title: task.title,
           description: task.description || '',
           status: task.status,
           priority: task.priority,
-          dueDate: task.dueDate ? task.dueDate.toISOString() : null,
-          userId: userId,
-          tags: tags,
+          projectId: task.projectId || 'inbox',
+          labels: task.labels || [],
+          linkedNotes: task.linkedNotes || [],
+          subtasks: [],
+          comments: [],
+          attachments: [],
+          reminders: [],
+          timeEntries: [],
           assigneeIds: task.assigneeIds || [],
-          attachmentIds: [],
-          eventId: '',
-          parentId: '',
-          recurrenceRule: task.recurrence ? JSON.stringify(task.recurrence) : '',
+          creatorId: userId,
+          parentTaskId: task.parentTaskId || null,
+          dueDate: task.dueDate,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          position: 0,
+          isArchived: false,
+          isPinned: false,
+          isPublic: false,
+          isGuest: false,
           isAgentic: task.isAgentic === true,
-        }, buildTaskPermissions(userId, task.assigneeIds || []));
+        };
 
-        await syncTaskAccess(newTask.$id, userId, task.assigneeIds || [], task.title, []);
-        invalidateTasksNexus(userId);
-
-        const mapped = mapAppwriteTaskToTask(newTask);
-        dispatch({ type: 'ADD_TASK', payload: mapped });
-        void setCachedData(`goal_${mapped.id}`, mapped);
-        autonomicSyncEngine.ack(goalPendingKey(mapped.id), mapped.updatedAt.toISOString());
-        return mapped;
+        pushLiveGoal(mappedTask);
+        autonomicSyncEngine.nudge();
+        return mappedTask;
       } catch (error: unknown) {
         console.error('Failed to create task', error);
         dispatch({ type: 'SET_ERROR', payload: 'Failed to create task' });
         return null;
       }
     },
-    [state.userId, invalidateTasksNexus, setCachedData]
-  );
-
-  const pushLiveGoal = useCallback(
-    (task: Task, options?: { pending?: boolean }) => {
-      if (!task?.id) return;
-      const stamped: Task = {
-        ...task,
-        updatedAt: new Date(),
-      };
-      dispatch({ type: 'UPSERT_TASK', payload: stamped });
-      void setCachedData(`goal_${stamped.id}`, stamped);
-      if (options?.pending !== false) {
-        autonomicSyncEngine.markPending(goalPendingKey(stamped.id), stamped.updatedAt.toISOString());
-      }
-    },
-    [setCachedData],
+    [state.userId, setCachedData, pushLiveGoal]
   );
 
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {

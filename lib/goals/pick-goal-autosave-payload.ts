@@ -25,15 +25,18 @@ export function pickGoalAutosavePayload(task: Task): Record<string, unknown> {
         ? task.dueDate.toISOString()
         : task.dueDate
       : null,
-    parentId: task.parentTaskId || null,
+    parentId: task.parentTaskId || '',
     assigneeIds: task.assigneeIds || [],
     attachmentIds: Array.isArray(task.attachments)
       ? task.attachments.map((a: any) => (typeof a === 'string' ? a : a?.id)).filter(Boolean)
       : [],
+    eventId: '',
+    recurrenceRule: '',
     isPinned: !!task.isPinned,
     isPublic: !!task.isPublic,
     isGuest: !!task.isGuest,
     scheduled: !!task.scheduled,
+    isAgentic: !!task.isAgentic,
     tags,
   };
 }

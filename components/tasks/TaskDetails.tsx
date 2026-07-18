@@ -559,50 +559,27 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
 
       {/* Header - Sticky/Fixed at Top */}
       <div className="relative z-20 flex flex-col gap-3 p-5 md:p-6 border-b border-white/5 bg-[#161412]/60 backdrop-blur-md shrink-0">
-        {/* Row 1: Title & Close Action Buttons */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-2 flex-1 min-w-0">
-            {onBack ? (
-              <button
-                type="button"
-                onClick={onBack}
-                className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-colors flex-shrink-0"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleClose}
-                className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-colors flex-shrink-0 md:hidden"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            )}
+        {/* Row 1: chrome only — back + actions (title is not on this line) */}
+        <div className="flex items-center justify-between gap-3">
+          {onBack ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-colors shrink-0"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleClose}
+              className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-colors shrink-0 md:hidden"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
 
-            {isEditingTitle ? (
-              <input
-                type="text"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                onBlur={handleSaveEditTitle}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveEditTitle()}
-                autoFocus
-                className="w-full bg-transparent border-0 outline-none text-base md:text-lg font-extrabold font-clash text-white tracking-tight uppercase border-b border-white/10 focus:border-[#A855F7] transition-all py-0.5"
-              />
-            ) : (
-              <h2
-                onClick={handleStartEditTitle}
-                className="text-base md:text-lg font-extrabold font-clash text-[#A855F7] tracking-tight uppercase flex-1 min-w-0 break-words [overflow-wrap:anywhere] cursor-pointer hover:text-[#b975ff] transition-colors flex items-center gap-2 w-full"
-              >
-                <span className="min-w-0 break-words [overflow-wrap:anywhere]">{task.title}</span>
-                <SyncStatusDot resourceId={goalPendingKey(task.id)} />
-                <SyncStatusLabel resourceId={goalPendingKey(task.id)} />
-              </h2>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
             <button
               type="button"
               onClick={() => setShowProjectLinker(true)}
@@ -687,7 +664,33 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
           </div>
         </div>
 
-        {/* Row 2: Status & Priority Dropdowns */}
+        {/* Row 2: full-bleed title — free of back/action chrome */}
+        <div className="w-full min-w-0 flex flex-col gap-1">
+          {isEditingTitle ? (
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              onBlur={handleSaveEditTitle}
+              onKeyDown={(e) => e.key === 'Enter' && handleSaveEditTitle()}
+              autoFocus
+              className="w-full min-w-0 bg-transparent border-0 outline-none text-base md:text-lg font-extrabold font-clash text-white tracking-tight uppercase border-b border-white/10 focus:border-[#A855F7] transition-all py-0.5"
+            />
+          ) : (
+            <h2
+              onClick={handleStartEditTitle}
+              className="w-full min-w-0 text-base md:text-lg font-extrabold font-clash text-[#A855F7] tracking-tight uppercase break-words [overflow-wrap:anywhere] cursor-pointer hover:text-[#b975ff] transition-colors"
+            >
+              {task.title}
+            </h2>
+          )}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <SyncStatusDot resourceId={goalPendingKey(task.id)} />
+            <SyncStatusLabel resourceId={goalPendingKey(task.id)} />
+          </div>
+        </div>
+
+        {/* Row 3: Status & Priority Dropdowns */}
         <div className="flex items-center gap-2.5">
           {/* Status Dropdown */}
           <div className="relative">

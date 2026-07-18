@@ -16,6 +16,6 @@ Under flex layout conditions, `inline-flex` restricts the element to shrink-wrap
 
 ## 4. Attempts
 - **Attempt 1**: Focused on the description box layout wrapper (`min-h-[100px] md:min-h-[140px] flex`), changing it to `w-full` (this did not address the title header).
-- **Attempt 2**: Replaced `inline-flex` with `flex w-full` on the `<h2>` title element in `components/tasks/TaskDetails.tsx` to allow full width expansion next to the buttons block. 
-
-*Further attempts halted per user directive.*
+- **Attempt 2**: Replaced `inline-flex` with `flex w-full` on the `<h2>` — still squeezed because SyncStatusDot/Label lived **inside** the title flex row.
+- **Fix (shipped)**: Dedicated text column (`flex-1 min-w-0 flex flex-col`): block `h2`/`input` for the title; status on a separate `shrink-0` row below (same pattern as note detail content header). Action buttons stay `shrink-0` on the right.
+- **Fix 2**: Break the shared line entirely — **row 1** = back + action icons only; **row 2** = full-width title (+ sync status). Title no longer competes with chrome for horizontal space.

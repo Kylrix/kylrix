@@ -218,6 +218,18 @@ async function flushGoalPending(
       },
       permissions,
     );
+    // Match former addTask post-create: assignee collaborator rows
+    try {
+      const { taskCollaborators } = await import('@/lib/kylrixflow');
+      for (const assigneeId of assignees) {
+        if (!assigneeId || assigneeId === creatorId || assigneeId === 'guest') continue;
+        await taskCollaborators
+          .create(goalId, assigneeId, 'read', creatorId, permissions)
+          .catch(() => null);
+      }
+    } catch {
+      // non-fatal — row exists; access sync can retry later
+    }
   }
 
   if (db) {
