@@ -297,6 +297,7 @@ export async function executeInstantRequestAction(
   success: boolean;
   response: string;
   toolCalls?: any[];
+  nextSteps?: Array<{ label: string; prompt: string }>;
   sessionId?: string;
   conversationId?: string;
 }> {
@@ -387,26 +388,59 @@ export async function executeInstantRequestAction(
 
     // Fetch basic structural context for Notes/Goals/Projects to allow AI to know about active records
     const [notesRes, tasksRes, projectsRes] = await Promise.all([
-      databases.listRows('passwordManagerDb', '67ff05f3002502ef239e', [Query.equal('userId', user.$id), Query.limit(5)]),
-      databases.listRows('passwordManagerDb', 'tasks', [Query.equal('userId', user.$id), Query.notEqual('isTrash', true), Query.limit(5)]),
-      databases.listRows('passwordManagerDb', 'projects', [Query.equal('ownerId', user.$id), Query.notEqual('isTrash', true), Query.limit(5)])
+      databases.listRows('passwordManagerDb', '67ff05f3002502ef239e', [
+        Query.equal('userId', user.$id),
+        Query.orderDesc('$updatedAt'),
+        Query.limit(8),
+      ]),
+      databases.listRows('passwordManagerDb', 'tasks', [
+        Query.equal('userId', user.$id),
+        Query.notEqual('isTrash', true),
+        Query.orderDesc('$updatedAt'),
+        Query.limit(6),
+      ]),
+      databases.listRows('passwordManagerDb', 'projects', [
+        Query.equal('ownerId', user.$id),
+        Query.notEqual('isTrash', true),
+        Query.orderDesc('$updatedAt'),
+        Query.limit(5),
+      ]),
     ]).catch(() => [
       { rows: [], total: 0 },
       { rows: [], total: 0 },
       { rows: [], total: 0 },
     ]);
 
-    const activeNotes = (notesRes.rows || []).filter((n: any) => n.isTrash !== true).map((n: any) => `- Note ID: ${n.$id}, Title: "${n.title}"`).join('\n');
-    const activeTasks = (tasksRes.rows || []).map((t: any) => `- Goal/Task ID: ${t.$id}, Title: "${t.title}" (Status: ${t.status})`).join('\n');
-    const activeProjects = (projectsRes.rows || []).map((p: any) => `- Project ID: ${p.$id}, Title: "${p.title}"`).join('\n');
+    const recentIdeaTitles = (notesRes.rows || [])
+      .filter((n: any) => n.isTrash !== true)
+      .map((n: any) => String(n.title || '').trim())
+      .filter(Boolean)
+      .slice(0, 8)
+      .map((t: string) => `- "${t}"`)
+      .join('\n');
+
+    const activeNotes = (notesRes.rows || [])
+      .filter((n: any) => n.isTrash !== true)
+      .slice(0, 5)
+      .map((n: any) => `- Note ID: ${n.$id}, Title: "${n.title}"`)
+      .join('\n');
+    const activeTasks = (tasksRes.rows || [])
+      .map((t: any) => `- Goal/Task ID: ${t.$id}, Title: "${t.title}" (Status: ${t.status}${t.isAgentic ? ', Kylie-made' : ''})`)
+      .join('\n');
+    const activeProjects = (projectsRes.rows || [])
+      .map((p: any) => `- Project ID: ${p.$id}, Title: "${p.title}"`)
+      .join('\n');
 
     userResourceSummaries = `
+[RECENT IDEA TITLES — TITLES ONLY]
+${recentIdeaTitles || 'None'}
+
 Active Notes:
-${activeNotes || "None"}
+${activeNotes || 'None'}
 Active Goals/Tasks:
-${activeTasks || "None"}
+${activeTasks || 'None'}
 Active Projects:
-${activeProjects || "None"}
+${activeProjects || 'None'}
 `;
   } catch (err) {
     console.error('[executeInstantRequestAction] Failed to retrieve context details:', err);
@@ -429,10 +463,21 @@ ${activeProjects || "None"}
    - Creating an Idea ALWAYS requires toolKey "create_note" with args { title, content } at minimum.
 3. Other tables:
    - "67ff06280034908cf08a" (Tags): { userId, name, color, isTrash }
-   - "tasks" (Goals): { userId, title, status, priority, isTrash }
+   - "tasks" (Goals): { userId, title, status, priority, dueDate, description, isAgentic, isTrash }
    - "events": { userId, title, startTime, endTime, isTrash }
    - "forms": { userId, title, schema, settings, isTrash }
    - "projects": { ownerId, title, summary, isTrash }
+
+[GOALS — ALWAYS ON]
+- Goals are the primary productivity object. Infuse goal-oriented next steps on every page (Ideas, Flow, Vault, Connect, Projects).
+- When Kylie creates a goal, set args.isAgentic = true so it is marked as Kylie-made.
+
+[NEXT STEPS CONTRACT — DEAD ACCURATE]
+- Nearly every helpful reply SHOULD include toolKey "suggest_next_steps" with 2–4 suggestions.
+- Each suggestion: { "label": "short chip", "prompt": "complete instruction that will fully execute when clicked" }.
+- Ground suggestions in: live chat, [RECENT IDEA TITLES], Active Goals/Projects, and [USER RECENT TELEMETRY HISTORY] habits.
+- Prefer concrete chips like: "Create a goal for …", "Connect this idea to project …", "Open Flow", "Draft a follow-up idea".
+- The prompt field must be executable by Kylie alone (no clarifying questions unless absolutely required). One click = full flow via tools.
 
 [NOTE / IDEA TOOL JSON CONTRACT — EXACT]
 ${NOTE_TOOL_PAYLOAD_SCHEMA}
@@ -488,9 +533,10 @@ ${lifetimeMemoryContext}
   const model = genAI.getGenerativeModel({
     model: process.env.GEMINI_MODEL_NAME || 'gemini-2.0-flash',
     systemInstruction: [
-      'You are Kyle — the friendly Kylrix workspace partner embedded in the user workspace. Speak as Kyle in first person when natural; never call yourself System or Smart System.',
-      'Identity (when asked who you are / what you do): say you are Kyle, their productivity sidekick. Keep it short and warm.',
+      'You are Kylie — the friendly Kylrix workspace partner embedded in the user workspace. Speak as Kylie in first person when natural; never call yourself System or Smart System.',
+      'Identity (when asked who you are / what you do): say you are Kylie, their productivity sidekick. Keep it short and warm.',
       'Steering: if the ask is vague, offer 2–3 concrete next steps tied to the current page. If off-topic, gently redirect to Ideas, Flow, Vault, Connect, or Projects. If unsafe or impossible here, say so plainly and suggest what they can do instead.',
+      'NEXT STEPS: After substantive help, include suggest_next_steps with clickable prompts grounded in recent idea titles, habits, and this chat. Prefer at least one create_goal-oriented chip. Goals matter on every page.',
       'Respond with concise, actionable output. Prefer bullet steps when planning.',
       'Stay grounded in the current page context and Kylrix apps: Ideas, Flow, Vault, Connect, Projects.',
       'MUTATION PROTOCOL (STRICT):',
@@ -498,6 +544,7 @@ ${lifetimeMemoryContext}
       '- If the user asks to compose, write, draft, create, or save an Idea/note: toolCalls MUST include create_note with title + content. The response field may describe what you are creating, but MUST NOT claim it already exists unless create_note is present in toolCalls.',
       '- If the user asks to edit an existing Idea: toolCalls MUST include update_note with specifier = note $id from [SESSION OBJECTS] or prior context.',
       '- If the user asks to open/show an Idea by id: toolCalls MUST include get_note with that specifier.',
+      '- When Kylie creates a goal: create_goal with isAgentic true.',
       '- Empty toolCalls is only valid for pure Q&A with no create/update/navigate side effects.',
       '- NEVER tell the user to create the Idea manually when create_note can do it.',
       'You MUST return a valid JSON object matching this schema exactly:',
@@ -507,15 +554,15 @@ ${lifetimeMemoryContext}
       '  "lifetimeMemoryUpdate": "Optional high-quality lifelong memory. Leave blank if none.",',
       '  "toolCalls": [',
       '     {',
-      '        "toolKey": "create_note | update_note | get_note | create_goal | update_goal | create_project | toggle_privacy | navigate_workspace",',
+      '        "toolKey": "create_note | update_note | get_note | create_goal | update_goal | create_project | link_to_project | suggest_next_steps | toggle_privacy | navigate_workspace",',
       '        "specifier": "note/goal/project id or route when required; null otherwise",',
       '        "subSpecifier": "optional field name",',
-      '        "args": { "title": "...", "content": "...", "tags": [], "isPublic": false }',
+      '        "args": { "title": "...", "content": "...", "tags": [], "isPublic": false, "isAgentic": true, "suggestions": [{ "label": "...", "prompt": "..." }], "objectType": "note", "objectId": "..." }',
       '     }',
       '  ]',
       '}',
       'Example — user asks to compose an Idea titled Odyssey:',
-      '{"response":"Creating Idea \\"odyssey, the movie\\" with a concise Greek-mythology write-up.","toolCalls":[{"toolKey":"create_note","specifier":null,"args":{"title":"odyssey, the movie","content":"## Odyssey\\nConcise Greek mythology write-up...","tags":[],"isPublic":false}}]}',
+      '{"response":"Creating Idea \\"odyssey, the movie\\" with a concise Greek-mythology write-up.","toolCalls":[{"toolKey":"create_note","specifier":null,"args":{"title":"odyssey, the movie","content":"## Odyssey\\nConcise Greek mythology write-up...","tags":[],"isPublic":false}},{"toolKey":"suggest_next_steps","args":{"suggestions":[{"label":"Create a goal for Odyssey","prompt":"Create a high-priority goal titled \\"Ship Odyssey outline\\" with isAgentic true using create_goal."},{"label":"Connect Odyssey to a project","prompt":"If a matching project exists, link the Odyssey idea to it with link_to_project; otherwise create a project titled Odyssey and link the idea."}]}}]}',
       '[AVAILABLE TOOLS]',
       toolsSnippet,
       DATA_STRUCTURES_GUIDE,
@@ -536,6 +583,7 @@ ${lifetimeMemoryContext}
   let memoryUpdate = "";
   let isThreadCompletedVal: number | undefined = undefined;
   let parsedToolCalls: any[] | undefined = undefined;
+  let parsedNextSteps: Array<{ label: string; prompt: string }> | undefined = undefined;
 
   try {
     const parsed = JSON.parse(responseTextRaw);
@@ -546,6 +594,9 @@ ${lifetimeMemoryContext}
     if (Array.isArray(parsed.toolCalls)) {
       parsedToolCalls = parsed.toolCalls;
     }
+    if (Array.isArray(parsed.nextSteps)) {
+      parsedNextSteps = parsed.nextSteps;
+    }
   } catch {
     // Fallback if AI output doesn't match JSON structure perfectly
     visibleResponse = responseTextRaw;
@@ -553,6 +604,18 @@ ${lifetimeMemoryContext}
 
   // Keep parse field available for future session lifecycle without unused-lint noise.
   void isThreadCompletedVal;
+
+  // Flatten suggest_next_steps tool into nextSteps for history + UI.
+  const fromTool = (parsedToolCalls || [])
+    .filter((c: any) => c?.toolKey === 'suggest_next_steps')
+    .flatMap((c: any) => (Array.isArray(c?.args?.suggestions) ? c.args.suggestions : []));
+  const nextStepsForHistory = [...(parsedNextSteps || []), ...fromTool]
+    .map((item: any) => ({
+      label: String(item?.label || '').trim(),
+      prompt: String(item?.prompt || '').trim(),
+    }))
+    .filter((s) => s.label && s.prompt)
+    .slice(0, 4);
 
   await debitComputeBalance(user.$id, balanceRow, prompt, visibleResponse);
 
@@ -579,7 +642,12 @@ ${lifetimeMemoryContext}
 
       // Persist the user's exact words — never the behind-the-hood model prompt template.
       historyArr.push({ id: userMessageId, role: 'user', content: userVisibleMessage });
-      historyArr.push({ id: conversationId, role: 'assistant', content: visibleResponse });
+      historyArr.push({
+        id: conversationId,
+        role: 'assistant',
+        content: visibleResponse,
+        ...(nextStepsForHistory.length ? { nextSteps: nextStepsForHistory } : {}),
+      });
 
       let nextContext = sessionContext;
       if (sessionUpdate) {
@@ -653,6 +721,7 @@ ${compactable}
     success: true,
     response: visibleResponse,
     toolCalls: parsedToolCalls,
+    nextSteps: nextStepsForHistory,
     sessionId: sessionData?.rowId || activeSessionId || undefined,
     conversationId,
   };

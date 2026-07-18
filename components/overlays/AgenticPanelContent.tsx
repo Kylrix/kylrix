@@ -78,11 +78,17 @@ interface ToolCallDisplay {
   args?: string | null;
 }
 
+interface NextStepSuggestion {
+  label: string;
+  prompt: string;
+}
+
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   tools?: ToolCallDisplay[];
+  nextSteps?: NextStepSuggestion[];
 }
 
 /** Strip behind-the-hood prompt templates so the UI shows the user's exact words. */
@@ -94,6 +100,17 @@ function visibleChatContent(role: string, content: unknown): string {
     if (match?.[1]?.trim()) return match[1].trim();
   }
   return raw.trim();
+}
+
+function normalizeNextSteps(raw: unknown): NextStepSuggestion[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item: any) => ({
+      label: String(item?.label || '').trim(),
+      prompt: String(item?.prompt || '').trim(),
+    }))
+    .filter((s) => s.label && s.prompt)
+    .slice(0, 4);
 }
 
 function formatHistoryMessages(
@@ -129,6 +146,7 @@ function formatHistoryMessages(
       role,
       content: visibleChatContent(role, h.content),
       tools: role === 'assistant' ? toolsByConversation.get(id) : undefined,
+      nextSteps: role === 'assistant' ? normalizeNextSteps(h.nextSteps) : undefined,
     };
   });
 }
@@ -184,7 +202,7 @@ function zoneLabel(zone: string): string {
     connect: 'Connect',
     projects: 'Projects',
     settings: 'Settings',
-    agents: 'Kyle',
+    agents: 'Kylie',
     accounts: 'Accounts',
   };
   return labels[zone] || 'Workspace';
@@ -221,6 +239,24 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const [showSessionsDrawer, setShowSessionsDrawer] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
+  const syncTimeoutRef = useRef<any>(null);
+
+  const handleInputChange = (val: string) => {
+    setChatInput(val);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kylrix_kylie_live_input', val);
+    }
+    
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(async () => {
+      try {
+        const currentPrefs = await account.getPrefs().catch(() => ({}));
+        await account.updatePrefs({ ...currentPrefs, kylie_live_input: val });
+      } catch (err) {
+        console.error('Failed to sync kylie live input to remote settings:', err);
+      }
+    }, 1500);
+  };
 
   useEffect(() => {
     const handlePaymentRequest = (e: CustomEvent) => {
@@ -374,6 +410,29 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       }
     };
     void loadSessionHistory();
+  // Load local copy of draft prompt instantly on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const localDraft = localStorage.getItem('kylrix_kylie_live_input') || '';
+      if (localDraft) {
+        setChatInput(localDraft);
+      }
+    }
+  }, []);
+
+  // Fetch remote backup from user settings preferences in the background
+  useEffect(() => {
+    const fetchRemoteDraft = async () => {
+      try {
+        const appPrefs = await account.getPrefs();
+        const remoteDraft = appPrefs?.kylie_live_input || '';
+        if (remoteDraft && remoteDraft !== localStorage.getItem('kylrix_kylie_live_input')) {
+          setChatInput(remoteDraft);
+          localStorage.setItem('kylrix_kylie_live_input', remoteDraft);
+        }
+      } catch {}
+    };
+    if (user?.$id) void fetchRemoteDraft();
   }, [user?.$id]);
 
   useEffect(() => {
@@ -395,12 +454,18 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       if (!trimmed) return;
 
       if (!isPro) {
-        openProUpgrade('Kyle request');
+        openProUpgrade('Kylie request');
         return;
       }
 
       appendMessage('user', trimmed);
       setChatInput('');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('kylrix_kylie_live_input');
+      }
+      account.getPrefs().then((currentPrefs: any) => {
+        account.updatePrefs({ ...currentPrefs, kylie_live_input: '' }).catch(() => {});
+      }).catch(() => {});
       setExecuting(true);
 
       try {
@@ -433,7 +498,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               resultSummary: resultSummary || null,
               args: call.args ? JSON.stringify(call.args) : null,
             };
-            executedTools.push(display);
+            if (call.toolKey !== 'suggest_next_steps') {
+              executedTools.push(display);
+            }
             if (!sessionIdForObjects || !conversationId) return;
             try {
               const { recordAgentToolCallAction } = await import('@/lib/actions/agentic');
@@ -456,14 +523,34 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
 
           setMessages((prev) => [
             ...prev,
-            { id: assistantId, role: 'assistant', content: res.response, tools: [] },
+            {
+              id: assistantId,
+              role: 'assistant',
+              content: res.response,
+              tools: [],
+              nextSteps: normalizeNextSteps(res.nextSteps),
+            },
           ]);
+
+          let liveNextSteps = normalizeNextSteps(res.nextSteps);
 
           if (Array.isArray(res.toolCalls) && res.toolCalls.length > 0) {
             for (const call of res.toolCalls) {
               const { AGENTIC_TOOLS_REGISTRY } = await import('@/lib/agentic/tools-registry');
               const toolDef = AGENTIC_TOOLS_REGISTRY.find(t => t.key === call.toolKey);
               if (toolDef) {
+                if (call.toolKey === 'suggest_next_steps') {
+                  const steps = normalizeNextSteps(call.args?.suggestions);
+                  if (steps.length) {
+                    liveNextSteps = steps;
+                    setMessages((prev) =>
+                      prev.map((m) => (m.id === assistantId ? { ...m, nextSteps: steps } : m)),
+                    );
+                  }
+                  await recordToolCall(call, 'success', `${steps.length} next steps`);
+                  continue;
+                }
+
                 if (toolDef.requiresAuthorization) {
                   let isPreAuthorized = false;
                   try {
@@ -609,6 +696,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   } else if (call.toolKey === 'create_goal') {
                     const created = await addTask({
                       title: call.args.title || 'Untitled Goal',
+                      description: call.args.description || '',
                       status: call.args.status || 'todo',
                       priority: call.args.priority || 'medium',
                       dueDate: call.args.dueDate ? new Date(call.args.dueDate) : null,
@@ -621,8 +709,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       assigneeIds: user?.$id ? [user.$id] : ['guest'],
                       creatorId: user?.$id || 'guest',
                       isArchived: false,
-                      isPinned: false
-                    });
+                      isPinned: false,
+                      isAgentic: true,
+                    } as any);
                     const goalId = (created as any)?.id || (created as any)?.$id;
                     if (goalId) {
                       await recordSessionObject({
@@ -659,24 +748,50 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       });
                     }
                     resultSummary = `Created project: ${call.args.title || project?.title || 'Untitled Project'}`;
+                  } else if (call.toolKey === 'link_to_project' && call.specifier) {
+                    const objectType = String(call.args?.objectType || 'note');
+                    const objectId = String(call.args?.objectId || '').trim();
+                    if (!objectId) {
+                      toast.error('Kylie needs an object id to connect to a project.');
+                      await recordToolCall(call, 'error', 'Missing objectId');
+                      continue;
+                    }
+                    const entityKind = objectType === 'goal' || objectType === 'task' ? 'task' : 'note';
+                    const { addObjectToProject } = await import('@/lib/actions/client-ops');
+                    await addObjectToProject(call.specifier, entityKind, objectId);
+                    await recordSessionObject({
+                      objectId,
+                      objectType: entityKind === 'task' ? 'goal' : 'idea',
+                      title: `Linked to project ${call.specifier}`,
+                      toolKey: 'link_to_project',
+                    });
+                    resultSummary = `Connected ${entityKind} to project`;
                   } else if (call.toolKey === 'navigate_workspace' && call.args.route) {
                     resultSummary = `Navigate: ${call.args.route}`;
                     onClose();
                     router.push(call.args.route);
                   }
                   await recordToolCall(call, 'success', resultSummary);
-                  toast.success(`Kyle ran ${toolDef.name}.`);
+                  toast.success(`Kylie ran ${toolDef.name}.`);
                 } catch (err: any) {
                   console.error(`Failed to execute tool ${call.toolKey}:`, err);
                   await recordToolCall(call, 'error', err?.message || 'Failed');
-                  toast.error(`Kyle couldn't run ${toolDef.name}`);
+                  toast.error(`Kylie couldn't run ${toolDef.name}`);
                 }
               }
             }
 
-            if (executedTools.length > 0) {
+            if (executedTools.length > 0 || liveNextSteps.length > 0) {
               setMessages((prev) =>
-                prev.map((m) => (m.id === assistantId ? { ...m, tools: executedTools } : m)),
+                prev.map((m) =>
+                  m.id === assistantId
+                    ? {
+                        ...m,
+                        tools: executedTools.length ? executedTools : m.tools,
+                        nextSteps: liveNextSteps.length ? liveNextSteps : m.nextSteps,
+                      }
+                    : m,
+                ),
               );
             }
           }
@@ -759,7 +874,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           </div>
           <div className="min-w-0 flex-1 flex flex-col gap-0.5">
             <h2 className="text-white font-extrabold text-[16px] font-clash tracking-tight leading-tight truncate">
-              Kyle
+              Kylie
             </h2>
             <p className="text-[#9B9691] text-xs font-semibold leading-snug truncate">
               Here for {zoneLabel(pageContext.zone).toLowerCase()}
@@ -769,7 +884,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           <button
             type="button"
             onClick={handleOpenSessions}
-            title="Past chats with Kyle"
+            title="Past chats with Kylie"
             className="w-8 h-8 rounded-lg flex items-center justify-center text-white/45 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 flex-shrink-0 mr-1"
           >
             <History size={16} />
@@ -793,7 +908,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         <div className="flex-shrink-0 border-b border-white/5 bg-[#161412] px-5 py-3 flex flex-col min-h-0 max-h-[min(240px,36%)]">
           <div className="flex items-center justify-between gap-2 mb-2.5 flex-shrink-0">
             <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#9B9691] font-clash">
-              Try with Kyle
+              Try with Kylie
             </span>
             <span className="text-[10px] font-semibold text-white/25">{workflows.length} actions</span>
           </div>
@@ -844,7 +959,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         {messages.length === 0 && !executing && (
           <div className="rounded-[16px] border border-white/5 bg-[#0B0A09] px-4 py-3.5">
             <p className="text-white/80 text-[13px] font-bold font-clash leading-snug mb-1">
-              Hey — I&apos;m Kyle.
+              Hey — I&apos;m Kylie.
             </p>
             <p className="text-[#9B9691] text-xs font-semibold leading-relaxed">
               Pick a suggestion above or just ask. I&apos;ll keep this chat right here.
@@ -875,7 +990,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               }
             >
               <p className="text-[10px] font-black tracking-wider text-[#9B9691] mb-1.5 leading-none">
-                {msg.role === 'user' ? 'You' : 'Kyle'}
+                {msg.role === 'user' ? 'You' : 'Kylie'}
               </p>
               <p className="text-[13px] font-semibold leading-relaxed whitespace-pre-wrap break-words">
                 {msg.content}
@@ -906,6 +1021,27 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   ))}
                 </div>
               )}
+              {msg.role === 'assistant' && msg.nextSteps && msg.nextSteps.length > 0 && (
+                <div className="mt-3 flex flex-col gap-1.5">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-[#9B9691]">
+                    Next with Kylie
+                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    {msg.nextSteps.map((step, stepIdx) => (
+                      <button
+                        key={`${msg.id}-next-${stepIdx}`}
+                        type="button"
+                        disabled={executing}
+                        onClick={() => void runPrompt(step.prompt)}
+                        className="w-full text-left rounded-[12px] px-3 py-2.5 border border-white/8 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/12 transition disabled:opacity-50"
+                        style={{ boxShadow: `inset 2px 0 0 0 ${accent}70` }}
+                      >
+                        <span className="text-[12px] font-bold text-white leading-snug">{step.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -920,7 +1056,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             </div>
             <div className="rounded-[16px] px-4 py-3 bg-[#0B0A09] border border-white/5 flex items-center gap-2">
               <RefreshCw size={14} className="animate-spin" style={{ color: accent }} />
-              <span className="text-[#9B9691] text-xs font-semibold leading-snug">Kyle is on it…</span>
+              <span className="text-[#9B9691] text-xs font-semibold leading-snug">Kylie is on it…</span>
             </div>
           </div>
         )}
@@ -969,9 +1105,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 <Shield size={16} />
               </div>
               <div className="flex-1 text-left">
-                <h3 className="text-white text-xs font-bold leading-tight">Allow Kyle</h3>
+                <h3 className="text-white text-xs font-bold leading-tight">Allow Kylie</h3>
                 <p className="text-[#9B9691] text-[10px] leading-snug mt-0.5">
-                  Kyle wants to run <strong>{pendingToolAuth.name}</strong>.
+                  Kylie wants to run <strong>{pendingToolAuth.name}</strong>.
                 </p>
               </div>
             </div>
@@ -1036,9 +1172,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             <textarea
               ref={textareaRef}
               value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
+              onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleComposerKeyDown}
-              placeholder="Ask Kyle to help you with anything…"
+              placeholder="Ask Kylie to help you with anything…"
               disabled={executing}
               rows={isDesktop ? 2 : 2}
               className="flex-1 min-w-0 resize-none bg-transparent text-white text-[13px] font-semibold leading-relaxed placeholder:text-[#9B9691]/50 focus:outline-none disabled:opacity-50 max-h-[96px] py-1.5 px-1"
@@ -1088,7 +1224,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               <div className="flex items-center gap-2">
                 <History size={16} style={{ color: accent }} />
                 <h3 className="text-white font-extrabold text-[14px] font-clash tracking-tight">
-                  Chats with Kyle
+                  Chats with Kylie
                 </h3>
               </div>
               <div className="flex items-center gap-2">
@@ -1134,7 +1270,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                     }
                     if (lastMsg) {
                       const body = visibleChatContent(lastMsg.role, lastMsg.content);
-                      previewText = `${lastMsg.role === 'user' ? 'You' : 'Kyle'}: ${body}`;
+                      previewText = `${lastMsg.role === 'user' ? 'You' : 'Kylie'}: ${body}`;
                     }
                   } catch {}
 

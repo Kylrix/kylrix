@@ -70,6 +70,7 @@ const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
     isGuest: raw.isGuest === true || String(raw.isGuest) === 'true',
     discussionId: raw.discussionId || null,
     scheduled: raw.scheduled === true || String(raw.scheduled) === 'true',
+    isAgentic: raw.isAgentic === true || String(raw.isAgentic) === 'true',
   };
 };
 
@@ -1090,6 +1091,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           eventId: '',
           parentId: '',
           recurrenceRule: task.recurrence ? JSON.stringify(task.recurrence) : '',
+          isAgentic: task.isAgentic === true,
         }, buildTaskPermissions(userId, task.assigneeIds || []));
 
         await syncTaskAccess(newTask.$id, userId, task.assigneeIds || [], task.title, []);

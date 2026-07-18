@@ -8280,6 +8280,13 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "isAgentic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [

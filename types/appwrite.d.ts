@@ -956,6 +956,7 @@ export type Tasks = Models.Row & {
     isDeleted: boolean;
     scheduled: boolean;
     isTrash: boolean;
+    isAgentic?: boolean | null;
 }
 
 export type Forms = Models.Row & {

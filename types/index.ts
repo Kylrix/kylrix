@@ -100,6 +100,8 @@ export interface Task {
   linkedMeetings?: string[]; // KylrixMeet integration
   linkedCalendarEvents?: string[]; // KylrixCal integration
   scheduled?: boolean;
+  /** True when Kyle (agent) created this goal rather than the user. */
+  isAgentic?: boolean;
 }
 
 export type CollaboratorPermission = 'read' | 'write' | 'admin';

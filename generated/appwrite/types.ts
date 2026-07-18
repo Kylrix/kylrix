@@ -1679,6 +1679,7 @@ export type TasksCreate = {
     "isDeleted"?: boolean;
     "scheduled"?: boolean;
     "isTrash"?: boolean;
+    "isAgentic"?: boolean;
 }
 
 export type Tasks = Models.Row & {
@@ -1705,6 +1706,7 @@ export type Tasks = Models.Row & {
     "isDeleted"?: boolean;
     "scheduled"?: boolean;
     "isTrash"?: boolean;
+    "isAgentic"?: boolean;
 }
 
 export type FormsCreate = {
@@ -3851,6 +3853,7 @@ export type DatabaseTableMap = {
         "isDeleted"?: boolean;
         "scheduled"?: boolean;
         "isTrash"?: boolean;
+        "isAgentic"?: boolean;
       }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Tasks>;
       get: (id: string) => Promise<Tasks>;
       update: (id: string, data: Partial<{
@@ -3877,6 +3880,7 @@ export type DatabaseTableMap = {
         "isDeleted"?: boolean;
         "scheduled"?: boolean;
         "isTrash"?: boolean;
+        "isAgentic"?: boolean;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Tasks>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Tasks>>(field: K, value: QueryableFieldValue<Tasks, K>) => string; notEqual: <K extends QueryableKeys<Tasks>>(field: K, value: QueryableFieldValue<Tasks, K>) => string; lessThan: <K extends QueryableKeys<Tasks>>(field: K, value: QueryableFieldValue<Tasks, K>) => string; lessThanEqual: <K extends QueryableKeys<Tasks>>(field: K, value: QueryableFieldValue<Tasks, K>) => string; greaterThan: <K extends QueryableKeys<Tasks>>(field: K, value: QueryableFieldValue<Tasks, K>) => string; greaterThanEqual: <K extends QueryableKeys<Tasks>>(field: K, value: QueryableFieldValue<Tasks, K>) => string; contains: <K extends QueryableKeys<Tasks>>(field: K, value: QueryableFieldValue<Tasks, K>) => string; search: <K extends QueryableKeys<Tasks>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Tasks>>(field: K) => string; isNotNull: <K extends QueryableKeys<Tasks>>(field: K) => string; startsWith: <K extends QueryableKeys<Tasks>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Tasks>>(field: K, value: string) => string; between: <K extends QueryableKeys<Tasks>>(field: K, start: QueryableFieldValue<Tasks, K>, end: QueryableFieldValue<Tasks, K>) => string; select: <K extends keyof Tasks>(fields: K[]) => string; orderAsc: <K extends keyof Tasks>(field: K) => string; orderDesc: <K extends keyof Tasks>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Tasks[] }>;

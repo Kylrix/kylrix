@@ -34,9 +34,10 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
   {
     key: 'create_goal',
     name: 'Create Goal/Task',
-    description: 'Create a new scheduled task or workflow goal. Specifiers: none.',
+    description:
+      'Create a Goal in table tasks. Prefer goals for productivity follow-through on every page. Args: title (required), status, priority, dueDate, description. Set isAgentic true when Kylie creates the goal (not the user). Specifiers: none.',
     requiresAuthorization: false,
-    parameters: ['title', 'status', 'priority', 'dueDate'],
+    parameters: ['title', 'status', 'priority', 'dueDate', 'description', 'isAgentic'],
   },
   {
     key: 'update_goal',
@@ -52,6 +53,22 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     description: 'Spin up a new flagship project workspace. Specifiers: none.',
     requiresAuthorization: false,
     parameters: ['title', 'summary'],
+  },
+  {
+    key: 'link_to_project',
+    name: 'Connect to Project',
+    description:
+      'Attach an Idea or Goal to a Project workspace. Specifier: project $id. Args: objectType ("note"|"goal"), objectId (required). Prefer project ids from Active Projects context.',
+    requiresAuthorization: false,
+    parameters: ['objectType', 'objectId'],
+  },
+  {
+    key: 'suggest_next_steps',
+    name: 'Suggest Next Steps',
+    description:
+      'Emit 2–4 clickable next-step chips in chat. REQUIRED args.suggestions: array of { label: short UI text, prompt: FULL instruction Kylie will auto-run when clicked }. Prompts must be self-contained so one click completes the flow (create_goal, create_note, create_project, link_to_project, navigate_workspace, update_note, etc). Prefer at least one goal-oriented step on every turn when useful. Use recent idea titles + habits + live chat. Specifiers: none.',
+    requiresAuthorization: false,
+    parameters: ['suggestions'],
   },
   {
     key: 'toggle_privacy',
@@ -78,7 +95,7 @@ export interface AgenticToolCallPayload {
   args: Record<string, any>;
 }
 
-/** Exact create_note / update_note args the model must emit. */
+/** Exact create_note / update_note / next-step args the model must emit. */
 export const NOTE_TOOL_PAYLOAD_SCHEMA = `{
   "create_note": {
     "toolKey": "create_note",
@@ -104,5 +121,37 @@ export const NOTE_TOOL_PAYLOAD_SCHEMA = `{
     "toolKey": "get_note",
     "specifier": "note_$id — required",
     "args": {}
+  },
+  "suggest_next_steps": {
+    "toolKey": "suggest_next_steps",
+    "specifier": null,
+    "args": {
+      "suggestions": [
+        {
+          "label": "short chip text the user sees",
+          "prompt": "full self-contained instruction Kylie auto-runs on click (must trigger real tools)"
+        }
+      ]
+    }
+  },
+  "create_goal": {
+    "toolKey": "create_goal",
+    "specifier": null,
+    "args": {
+      "title": "string — required",
+      "status": "todo|in_progress|done — optional",
+      "priority": "low|medium|high — optional",
+      "dueDate": "ISO date optional",
+      "description": "optional string",
+      "isAgentic": true
+    }
+  },
+  "link_to_project": {
+    "toolKey": "link_to_project",
+    "specifier": "project_$id — required",
+    "args": {
+      "objectType": "note|goal",
+      "objectId": "string — required"
+    }
   }
 }`;
