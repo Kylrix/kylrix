@@ -5,7 +5,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAI } from '@/context/AIContext';
 import { useTask } from '@/context/TaskContext';
 import { useToast } from '@/context/ToastContext';
-import { Sparkles, Check, ChevronRight, CornerDownRight, X, Send } from '@/lib/openbricks/icons';
+import { Sparkles, Check, X, Send } from '@/lib/openbricks/icons';
 
 interface SuggestedMilestone {
   title: string;
