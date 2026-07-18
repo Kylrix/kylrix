@@ -332,39 +332,25 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 // Execute actual functionalities locally so they auto-sync via sync engines
                 try {
                   if (call.toolKey === 'create_note') {
-                    const noteId = `note_${Date.now()}`;
-                    const newNote: any = {
-                      $id: noteId,
-                      id: noteId,
+                    const { createNote } = await import('@/lib/actions/client-ops');
+                    const saved = await createNote({
                       title: call.args.title || 'Untitled Note',
                       content: call.args.content || '',
                       tags: Array.isArray(call.args.tags) ? call.args.tags : (call.args.tags ? [call.args.tags] : []),
-                      userId: user?.$id || 'guest',
-                      isTrash: false,
                       isPublic: call.args.isPublic === true || call.args.isPublic === 'true',
                       isGuest: call.args.isPublic === true || call.args.isPublic === 'true',
-                      createdAt: new Date().toISOString(),
-                      updatedAt: new Date().toISOString(),
-                      $createdAt: new Date().toISOString(),
-                      $updatedAt: new Date().toISOString(),
-                      $permissions: []
-                    };
-                    pushLiveNote(newNote);
+                    });
+                    pushLiveNote(saved);
                   } else if (call.toolKey === 'update_note' && call.specifier) {
-                    const existingNote = allNotes.find(n => n.id === call.specifier || n.$id === call.specifier);
-                    if (existingNote) {
-                      const updatedNote = {
-                        ...existingNote,
-                        title: call.args.title !== undefined ? call.args.title : existingNote.title,
-                        content: call.args.content !== undefined ? call.args.content : existingNote.content,
-                        tags: call.args.tags !== undefined ? (Array.isArray(call.args.tags) ? call.args.tags : [call.args.tags]) : existingNote.tags,
-                        isPublic: call.args.isPublic !== undefined ? (call.args.isPublic === true || call.args.isPublic === 'true') : existingNote.isPublic,
-                        isGuest: call.args.isPublic !== undefined ? (call.args.isPublic === true || call.args.isPublic === 'true') : existingNote.isGuest,
-                        updatedAt: new Date().toISOString(),
-                        $updatedAt: new Date().toISOString()
-                      };
-                      pushLiveNote(updatedNote);
-                    }
+                    const { updateNote } = await import('@/lib/actions/client-ops');
+                    const saved = await updateNote(call.specifier, {
+                      title: call.args.title,
+                      content: call.args.content,
+                      tags: call.args.tags !== undefined ? (Array.isArray(call.args.tags) ? call.args.tags : [call.args.tags]) : undefined,
+                      isPublic: call.args.isPublic !== undefined ? (call.args.isPublic === true || call.args.isPublic === 'true') : undefined,
+                      isGuest: call.args.isPublic !== undefined ? (call.args.isPublic === true || call.args.isPublic === 'true') : undefined,
+                    });
+                    pushLiveNote(saved);
                   } else if (call.toolKey === 'create_goal') {
                     await addTask({
                       title: call.args.title || 'Untitled Goal',
