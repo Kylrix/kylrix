@@ -167,8 +167,6 @@ export type Notes = Models.Row & {
     linkedCredentialIds?: string[] | null;
     linkedSource?: string | null;
     isPinned?: boolean | null;
-    /** Client-only: local edits not yet confirmed upstream. Never an Appwrite column. */
-    pendingSync?: boolean | null;
     isEncrypted?: boolean | null;
     isGhost?: boolean;
     isThread?: boolean;

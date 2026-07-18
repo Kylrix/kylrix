@@ -2,28 +2,22 @@
 
 import { isUnpersistedComposeDraft } from '@/lib/notes/compose-draft-registry';
 
-/** Shared amber/green sync affordance for card + detail (live-copy pending flag only). */
+/** Amber/green from the same compose draft set CreateNoteForm uses. */
 export function SyncStatusDot({
   noteId,
-  pending,
   epoch,
 }: {
   noteId?: string | null;
-  /** Prefer context `isPendingSync(id)` when available. */
-  pending?: boolean;
-  /** Subscribe to composeSyncEpoch so React re-evaluates. */
+  /** Subscribe to composeSyncEpoch so React re-evaluates after register/unregister. */
   epoch?: number;
 }) {
   void epoch;
-  const isPending =
-    typeof pending === 'boolean'
-      ? pending
-      : Boolean(
-          noteId &&
-            (noteId.startsWith('live-') ||
-              noteId.startsWith('ghost-') ||
-              isUnpersistedComposeDraft(noteId)),
-        );
+  const isPending = Boolean(
+    noteId &&
+      (noteId.startsWith('live-') ||
+        noteId.startsWith('ghost-') ||
+        isUnpersistedComposeDraft(noteId)),
+  );
 
   if (isPending) {
     return (

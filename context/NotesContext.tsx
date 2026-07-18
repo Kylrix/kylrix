@@ -107,14 +107,8 @@ interface NotesContextType {
   clearLiveNoteGuard: (noteId: string) => void;
   removeNote: (noteId: string) => void;
   migrateDraftNoteId: (ephemeralId: string, savedId: string) => void;
-  /** Bumps when client-only pending-sync set changes — cards/detail subscribe for dots. */
+  /** Bumps when compose draft set changes — cards/detail re-read amber/green. */
   composeSyncEpoch: number;
-  /** Client-only: true when live copy has edits not yet confirmed by remote flush. */
-  isPendingSync: (noteId?: string | null) => boolean;
-  /** Mark note pending (never written to Appwrite). */
-  markPendingSync: (noteId: string) => void;
-  /** Clear pending after sync engine confirms remote write. */
-  clearPendingSync: (noteId: string) => void;
   pinnedIds: string[];
   pinNote: (noteId: string) => Promise<void>;
   unpinNote: (noteId: string) => Promise<void>;
@@ -137,9 +131,6 @@ const NotesContext = createContext<NotesContextType>({
   removeNote: () => {},
   migrateDraftNoteId: () => {},
   composeSyncEpoch: 0,
-  isPendingSync: () => false,
-  markPendingSync: () => {},
-  clearPendingSync: () => {},
   pinnedIds: [],
   pinNote: async () => {},
   unpinNote: async () => {},
@@ -264,15 +255,6 @@ export function NotesProvider({ children }: { children: ReactNode }) {
                 setCursor(cachedNotes.cursor || null);
                 setHasMore(cachedNotes.hasMore ?? true);
                 setIsLoading(false); // Stop loading immediately on local hit
-                // Restore on-device amber after reload from live/RxDB rows.
-                let restored = 0;
-                for (const note of cachedNotes.notes) {
-                  if (note?.$id && note.pendingSync) {
-                    if (markComposeDraft(note.$id)) restored += 1;
-                    activeComposeNoteIdsRef.current.add(note.$id);
-                  }
-                }
-                if (restored > 0) setComposeSyncEpoch((n) => n + 1);
                 console.log('[NotesContext] Sub-millisecond cold start via RxDB substrate.');
             }
         }
@@ -662,73 +644,32 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       tags,
       at: Date.now(),
     });
-    const pending =
-      note.pendingSync === true ||
-      isUnpersistedComposeDraft(note.$id) ||
-      activeComposeNoteIdsRef.current.has(note.$id);
     const stamped: Notes = {
       ...note,
       title: cardTitle,
       content: note.content || '',
       tags,
-      pendingSync: pending || undefined,
       $updatedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     upsertNote(stamped);
   }, [upsertNote]);
 
+  /** Same helper CreateNoteForm uses — membership in unpersisted set + epoch for dots. */
   const registerComposeSession = useCallback((noteId: string) => {
     if (!noteId) return;
     activeComposeNoteIdsRef.current.add(noteId);
-    const live = notesRef.current.find((n) => n.$id === noteId);
-    const wasRowPending = !!live?.pendingSync;
-    const newlyPending = markComposeDraft(noteId);
-    if (live && !wasRowPending) {
-      const next = { ...live, pendingSync: true as const };
-      setNotes((prev) => prev.map((n) => (n.$id === noteId ? next : n)));
-      setCachedData(`note_${noteId}`, next);
-    } else if (live) {
-      setCachedData(`note_${noteId}`, { ...live, pendingSync: true });
-    }
-    if (newlyPending || !wasRowPending) {
-      setComposeSyncEpoch((n) => n + 1);
-    }
-  }, [setCachedData]);
+    markComposeDraft(noteId);
+    // Always bump so detail/card re-read the set (create only registers once; edit registers on mutate).
+    setComposeSyncEpoch((n) => n + 1);
+  }, []);
 
   const unregisterComposeSession = useCallback((noteId: string) => {
     if (!noteId) return;
     activeComposeNoteIdsRef.current.delete(noteId);
-    const cleared = markComposePersisted(noteId);
-    const live = notesRef.current.find((n) => n.$id === noteId);
-    const wasRowPending = !!live?.pendingSync;
-    if (live && wasRowPending) {
-      const next = { ...live, pendingSync: false as const };
-      setNotes((prev) => prev.map((n) => (n.$id === noteId ? next : n)));
-      setCachedData(`note_${noteId}`, next);
-    }
-    if (cleared || wasRowPending) {
-      setComposeSyncEpoch((n) => n + 1);
-    }
-  }, [setCachedData]);
-
-  const isPendingSync = useCallback((noteId?: string | null) => {
-    const id = String(noteId || '').trim();
-    if (!id) return false;
-    if (id.startsWith('live-') || id.startsWith('ghost-')) return true;
-    if (isUnpersistedComposeDraft(id)) return true;
-    const live = notesRef.current.find((n) => n.$id === id);
-    return !!live?.pendingSync;
-  }, [composeSyncEpoch]);
-
-  const markPendingSync = useCallback((noteId: string) => {
-    registerComposeSession(noteId);
-  }, [registerComposeSession]);
-
-  const clearPendingSync = useCallback((noteId: string) => {
-    unregisterComposeSession(noteId);
-    markNotePersistedRemote(noteId);
-  }, [unregisterComposeSession]);
+    markComposePersisted(noteId);
+    setComposeSyncEpoch((n) => n + 1);
+  }, []);
 
   // Sync engine reads live-copy payloads from here — never from a detail-owned cache.
   useEffect(() => {
@@ -740,12 +681,14 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     const onSyncComplete = (event: Event) => {
       const noteId = String((event as CustomEvent)?.detail?.noteId || '').trim();
       if (!noteId) return;
-      clearPendingSync(noteId);
+      // Same clear path as create after remote accept.
+      unregisterComposeSession(noteId);
+      markNotePersistedRemote(noteId);
     };
     const onSyncPending = (event: Event) => {
       const noteId = String((event as CustomEvent)?.detail?.noteId || '').trim();
       if (!noteId) return;
-      markPendingSync(noteId);
+      registerComposeSession(noteId);
     };
     window.addEventListener('kylrix:sync-complete', onSyncComplete as EventListener);
     window.addEventListener('kylrix:sync-pending', onSyncPending as EventListener);
@@ -753,7 +696,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('kylrix:sync-complete', onSyncComplete as EventListener);
       window.removeEventListener('kylrix:sync-pending', onSyncPending as EventListener);
     };
-  }, [clearPendingSync, markPendingSync]);
+  }, [unregisterComposeSession, registerComposeSession]);
 
   const clearLiveNoteGuard = useCallback((noteId: string) => {
     liveEditGuardsRef.current.delete(noteId);
@@ -1133,9 +1076,6 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       removeNote,
       migrateDraftNoteId,
       composeSyncEpoch,
-      isPendingSync,
-      markPendingSync,
-      clearPendingSync,
       pinnedIds: effectivePinnedIds,
       pinNote,
       unpinNote,
@@ -1157,9 +1097,6 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       removeNote,
       migrateDraftNoteId,
       composeSyncEpoch,
-      isPendingSync,
-      markPendingSync,
-      clearPendingSync,
       effectivePinnedIds,
       pinNote,
       unpinNote,

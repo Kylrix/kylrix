@@ -61,7 +61,7 @@ import { useAuth } from '@/lib/auth';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useNotes } from '@/context/NotesContext';
-import { isEphemeralComposeNoteId } from '@/lib/notes/compose-draft-registry';
+import { isEphemeralComposeNoteId, isUnpersistedComposeDraft } from '@/lib/notes/compose-draft-registry';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { useSection } from '@/context/SectionContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
@@ -147,7 +147,7 @@ export function NoteDetailSidebar({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { setCachedData } = useDataNexus();
-  const { notes: allNotes, isPinned, pinNote, unpinNote, pushLiveNote, registerComposeSession, isPendingSync, composeSyncEpoch } = useNotes();
+  const { notes: allNotes, isPinned, pinNote, unpinNote, pushLiveNote, registerComposeSession, composeSyncEpoch } = useNotes();
   const isPinnedFunc = useMemo(() => typeof isPinned === 'function' ? isPinned : () => false, [isPinned]);
   const pinNoteFunc = useMemo(() => typeof pinNote === 'function' ? pinNote : async () => {}, [pinNote]);
   const unpinNoteFunc = useMemo(() => typeof unpinNote === 'function' ? unpinNote : async () => {}, [unpinNote]);
@@ -229,13 +229,12 @@ export function NoteDetailSidebar({
   const markDirty = useCallback(() => {
     isDirtyRef.current = true;
     if (liveNote?.$id) {
-      // Same contract as CreateNoteForm: register compose session on local mutate.
       registerComposeSession(liveNote.$id);
       autonomicSyncEngine.nudge();
     }
   }, [liveNote?.$id, registerComposeSession]);
 
-  /** Push draft into live copy + pending flag. Never calls updateNote. */
+  /** Same as CreateNoteForm keystroke path: register compose session, then push live copy. */
   const commitLocalEdit = useCallback(
     (patch: Partial<Notes>) => {
       if (!liveNote?.$id) return;
@@ -243,12 +242,11 @@ export function NoteDetailSidebar({
       const draftNote: Notes = {
         ...liveNote,
         ...patch,
-        pendingSync: true,
         updatedAt: new Date().toISOString(),
         $updatedAt: new Date().toISOString(),
       };
       pushLiveNote(draftNote);
-      void setCachedData(`note_${liveNote.$id}`, { ...draftNote, pendingSync: true });
+      void setCachedData(`note_${liveNote.$id}`, draftNote);
       onUpdate(draftNote);
       autonomicSyncEngine.nudge();
     },
@@ -1249,13 +1247,13 @@ export function NoteDetailSidebar({
                 Content
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <SyncStatusDot
-                  noteId={liveNote.$id}
-                  pending={isPendingSync(liveNote.$id)}
-                  epoch={composeSyncEpoch}
-                />
+                <SyncStatusDot noteId={liveNote.$id} epoch={composeSyncEpoch} />
                 <span className="text-[10px] font-semibold text-[#9B9691]">
-                  {isPendingSync(liveNote.$id) ? 'Not saved yet' : 'Saved'}
+                  {isUnpersistedComposeDraft(liveNote.$id) ||
+                  String(liveNote.$id || '').startsWith('live-') ||
+                  String(liveNote.$id || '').startsWith('ghost-')
+                    ? 'Not saved yet'
+                    : 'Saved'}
                 </span>
               </div>
             </div>

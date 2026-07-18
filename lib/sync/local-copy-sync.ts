@@ -15,8 +15,6 @@ export type SyncableRow = {
   createdAt?: string | null;
   updatedAt?: string | null;
   isPinned?: boolean | null;
-  /** Client-only pending flag (survives merge; never an Appwrite column). */
-  pendingSync?: boolean | null;
 };
 
 export type LiveEditGuardLike = {
@@ -82,11 +80,6 @@ export function mergeServerPageWithLocalCopy<T extends SyncableRow>(params: {
       next = normalize({ ...serverRow, ...local, $id: serverRow.$id });
     } else if (local) {
       next = normalize({ ...local, ...serverRow, $id: serverRow.$id });
-    }
-
-    // Client-only amber must survive remote field merges.
-    if (local?.pendingSync) {
-      next = { ...next, pendingSync: true };
     }
 
     mergedById.set(serverRow.$id, next);
