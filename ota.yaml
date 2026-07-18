@@ -394,13 +394,16 @@ workflows:
 agent:
   bootstrap:
     ota:
-      note: Only install Ota if it is missing and installation is approved.
+      note: Install the active Ota pressure branch so native and container governance checks exercise the same unreleased runner truth.
       source:
         kind: branch
         branch: 1.6.25-implementation
   entrypoint: setup
   default_task: verify
   safe_tasks: [setup, test, lint, build, verify]
+  refusal_canaries:
+    - task: selfhost:up
+    - workflow: selfhost
   verify_after_changes: [verify]
   writable_paths:
     - .env
@@ -438,3 +441,6 @@ agent:
     Appwrite schema provisioning are intentionally outside this contract because they require
     operator credentials. Use `ota up --workflow selfhost` for the documented full Compose
     topology; it is intentionally not agent-callable and does not claim schema provisioning.
+    `selfhost:up` and the `selfhost` workflow are refusal canaries: run
+    `ota run --agent --expect-refusal selfhost:up` or
+    `ota up --agent --expect-refusal --workflow selfhost` to prove that boundary remains live.

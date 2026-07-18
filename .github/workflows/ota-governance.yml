@@ -48,6 +48,13 @@ jobs:
       - name: Preview agent verification workflow
         run: ota up --workflow verify --agent --dry-run --json
 
+      - name: Prove native task and workflow refusal canaries
+        run: |
+          ota run --agent --expect-refusal --json selfhost:up > ota-task-refusal-canary.json
+          ota json validate --schema refusal-canary.json --input ota-task-refusal-canary.json --assert-eq ok=true --assert-eq status=refused_as_expected --assert-eq canary.execution_started=false --assert-eq canary.refusal.reason_family=requested_task_not_safe --assert-eq receipt.ok=false
+          ota up --agent --expect-refusal --workflow selfhost --json > ota-workflow-refusal-canary.json
+          ota json validate --schema refusal-canary.json --input ota-workflow-refusal-canary.json --assert-eq ok=true --assert-eq status=refused_as_expected --assert-eq canary.execution_started=false --assert-eq canary.refusal.reason_family=requested_task_not_safe --assert-eq receipt.ok=false
+
       - name: Run agent verification workflow
         run: ota up --workflow verify --agent --json
 
@@ -84,6 +91,13 @@ jobs:
 
       - name: Preview agent container verification workflow
         run: ota up --workflow verify --container --agent --dry-run --json
+
+      - name: Prove container task and workflow refusal canaries
+        run: |
+          ota run --agent --expect-refusal --container --json selfhost:up > ota-container-task-refusal-canary.json
+          ota json validate --schema refusal-canary.json --input ota-container-task-refusal-canary.json --assert-eq ok=true --assert-eq status=refused_as_expected --assert-eq canary.execution_started=false --assert-eq canary.refusal.reason_family=requested_task_not_safe --assert-eq receipt.ok=false
+          ota up --agent --expect-refusal --container --workflow selfhost --json > ota-container-workflow-refusal-canary.json
+          ota json validate --schema refusal-canary.json --input ota-container-workflow-refusal-canary.json --assert-eq ok=true --assert-eq status=refused_as_expected --assert-eq canary.execution_started=false --assert-eq canary.refusal.reason_family=requested_task_not_safe --assert-eq receipt.ok=false
 
       - name: Run agent container verification workflow
         run: ota up --workflow verify --container --agent --json
