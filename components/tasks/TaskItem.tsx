@@ -562,9 +562,9 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
               {/* Label Pills */}
               {taskLabels.length > 0 && (
                 <div className="hidden sm:flex gap-1">
-                  {taskLabels.slice(0, 2).map((label) => (
+                  {taskLabels.slice(0, 2).map((label, idx) => (
                     <span
-                      key={label.name}
+                      key={`${label.name}-${idx}`}
                       className="h-1.5 w-4 rounded-full opacity-60"
                       style={{ backgroundColor: label.color }}
                       title={label.name}

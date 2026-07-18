@@ -593,7 +593,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             ) : (
               <h2
                 onClick={handleStartEditTitle}
-                className="text-base md:text-lg font-extrabold font-clash text-[#A855F7] tracking-tight uppercase flex-1 min-w-0 break-words [overflow-wrap:anywhere] cursor-pointer hover:text-[#b975ff] transition-colors inline-flex items-center gap-2"
+                className="text-base md:text-lg font-extrabold font-clash text-[#A855F7] tracking-tight uppercase flex-1 min-w-0 break-words [overflow-wrap:anywhere] cursor-pointer hover:text-[#b975ff] transition-colors flex items-center gap-2 w-full"
               >
                 <span className="min-w-0 break-words [overflow-wrap:anywhere]">{task.title}</span>
                 <SyncStatusDot resourceId={goalPendingKey(task.id)} />
