@@ -6,18 +6,24 @@ import { isUnpersistedComposeDraft } from '@/lib/notes/compose-draft-registry';
 export function SyncStatusDot({
   noteId,
   epoch,
+  pending,
 }: {
   noteId?: string | null;
   /** Subscribe to composeSyncEpoch so React re-evaluates after register/unregister. */
   epoch?: number;
+  /** Optional override (e.g. CreateNoteForm-style local isDirty before effect registers). */
+  pending?: boolean;
 }) {
   void epoch;
-  const isPending = Boolean(
-    noteId &&
-      (noteId.startsWith('live-') ||
-        noteId.startsWith('ghost-') ||
-        isUnpersistedComposeDraft(noteId)),
-  );
+  const isPending =
+    typeof pending === 'boolean'
+      ? pending
+      : Boolean(
+          noteId &&
+            (noteId.startsWith('live-') ||
+              noteId.startsWith('ghost-') ||
+              isUnpersistedComposeDraft(noteId)),
+        );
 
   if (isPending) {
     return (

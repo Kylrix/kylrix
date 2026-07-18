@@ -93,7 +93,6 @@ import { attachObject } from '@/lib/actions/client-ops';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
-import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import {
   applyMarkdownWrap,
   getRemovedObjectBlocks,
@@ -223,50 +222,95 @@ export function NoteDetailSidebar({
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const isDirtyRef = useRef(false);
-  const loadedNoteIdRef = useRef<string | null>(null);
-  const lastAppliedServerTsRef = useRef('');
-  const markDirty = useCallback(() => {
-    isDirtyRef.current = true;
-    if (liveNote?.$id) {
-      registerComposeSession(liveNote.$id);
-      autonomicSyncEngine.nudge();
-    }
-  }, [liveNote?.$id, registerComposeSession]);
-
-  /** Same as CreateNoteForm keystroke path: register compose session, then push live copy. */
-  const commitLocalEdit = useCallback(
-    (patch: Partial<Notes>) => {
-      if (!liveNote?.$id) return;
-      registerComposeSession(liveNote.$id);
-      const draftNote: Notes = {
-        ...liveNote,
-        ...patch,
-        updatedAt: new Date().toISOString(),
-        $updatedAt: new Date().toISOString(),
-      };
-      pushLiveNote(draftNote);
-      void setCachedData(`note_${liveNote.$id}`, draftNote);
-      onUpdate(draftNote);
-      autonomicSyncEngine.nudge();
-    },
-    [liveNote, pushLiveNote, setCachedData, onUpdate, registerComposeSession],
-  );
-  
-  useEffect(() => {
-    const onSyncComplete = (event: Event) => {
-      const noteId = String((event as CustomEvent)?.detail?.noteId || '').trim();
-      if (!noteId || noteId !== liveNote?.$id) return;
-      isDirtyRef.current = false;
-    };
-    window.addEventListener('kylrix:sync-complete', onSyncComplete as EventListener);
-    return () => window.removeEventListener('kylrix:sync-complete', onSyncComplete as EventListener);
-  }, [liveNote?.$id]);
+  const liveNoteRef = useRef(liveNote);
+  liveNoteRef.current = liveNote;
 
   const [title, setTitle] = useState(liveNote.title || '');
   const [content, setContent] = useState(liveNote.content || '');
   const [tags, setTags] = useState(liveNote.tags?.join(', ') || '');
   const [isPublic, setIsPublic] = useState(getNotePublicState(liveNote));
+
+  // Same dirty contract as CreateNoteForm (snapshot vs last saved).
+  const [lastSavedSnapshot, setLastSavedSnapshot] = useState(() =>
+    JSON.stringify({
+      title: (liveNote.title || '').trim(),
+      content: (liveNote.content || '').trim(),
+      tags: (liveNote.tags || []).join(', '),
+    }),
+  );
+
+  const editorSnapshot = useMemo(
+    () =>
+      JSON.stringify({
+        title: title.trim(),
+        content: content.trim(),
+        tags,
+      }),
+    [title, content, tags],
+  );
+  const isDirty = editorSnapshot !== lastSavedSnapshot;
+  const isDirtyRef = useRef(false);
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+
+  const loadedNoteIdRef = useRef<string | null>(null);
+  const lastAppliedServerTsRef = useRef('');
+
+  /**
+   * Mirror CreateNoteForm keystroke → card path exactly:
+   * registerComposeSession (amber set) + pushLiveNote + cache.
+   * No sync nudge here — create doesn't nudge either.
+   */
+  useEffect(() => {
+    if (readOnly) return;
+    const noteId = liveNoteRef.current?.$id;
+    if (!noteId || !isDirty) return;
+
+    registerComposeSession(noteId);
+
+    const normalizedTags = tags
+      .split(',')
+      .map((t: string) => t.trim())
+      .filter(Boolean);
+    const draftNote: Notes = {
+      ...liveNoteRef.current,
+      title,
+      content,
+      tags: normalizedTags,
+      updatedAt: new Date().toISOString(),
+      $updatedAt: new Date().toISOString(),
+    };
+    pushLiveNote(draftNote);
+    void setCachedData(`note_${noteId}`, draftNote);
+    onUpdate(draftNote);
+  }, [
+    title,
+    content,
+    tags,
+    isDirty,
+    readOnly,
+    registerComposeSession,
+    pushLiveNote,
+    setCachedData,
+    onUpdate,
+  ]);
+
+  useEffect(() => {
+    const onSyncComplete = (event: Event) => {
+      const noteId = String((event as CustomEvent)?.detail?.noteId || '').trim();
+      if (!noteId || noteId !== liveNoteRef.current?.$id) return;
+      setLastSavedSnapshot(
+        JSON.stringify({
+          title: title.trim(),
+          content: content.trim(),
+          tags,
+        }),
+      );
+    };
+    window.addEventListener('kylrix:sync-complete', onSyncComplete as EventListener);
+    return () => window.removeEventListener('kylrix:sync-complete', onSyncComplete as EventListener);
+  }, [title, content, tags]);
 
   const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(false);
   const [collaboratorProfiles, setCollaboratorProfiles] = useState<any[]>([]);
@@ -316,12 +360,18 @@ export function NoteDetailSidebar({
 
     if (loadedNoteIdRef.current !== noteId) {
       loadedNoteIdRef.current = noteId;
-      isDirtyRef.current = false;
       lastAppliedServerTsRef.current = serverTs;
       setTitle(liveNote.title || '');
       setContent(liveNote.content || '');
       setTags(liveNote.tags?.join(', ') || '');
       setIsPublic(getNotePublicState(liveNote));
+      setLastSavedSnapshot(
+        JSON.stringify({
+          title: (liveNote.title || '').trim(),
+          content: (liveNote.content || '').trim(),
+          tags: (liveNote.tags || []).join(', '),
+        }),
+      );
       return;
     }
 
@@ -610,25 +660,17 @@ export function NoteDetailSidebar({
   }, [onDelete, liveNote.$id]);
 
   const handleBackClick = useCallback(() => {
-    // Pending edits stay in live copy; sync engine flushes — do not force-save on leave.
-    if (isDirtyRef.current && liveNote.$id) {
-      registerComposeSession(liveNote.$id);
-      autonomicSyncEngine.nudge();
-    }
+    // Create persists on close; detail keeps compose session registered — sync engine flushes.
     if (onBack) {
       onBack();
     } else {
       closeSidebar();
     }
-  }, [onBack, closeSidebar, liveNote.$id, registerComposeSession]);
+  }, [onBack, closeSidebar]);
 
   const handleDismiss = useCallback(() => {
-    if (isDirtyRef.current && liveNote.$id) {
-      registerComposeSession(liveNote.$id);
-      autonomicSyncEngine.nudge();
-    }
     closeSidebar();
-  }, [closeSidebar, liveNote.$id, registerComposeSession]);
+  }, [closeSidebar]);
 
   const handleCreateTaskFromNote = useCallback(async () => {
     setIsCreatingTaskFromNote(true);
@@ -800,11 +842,6 @@ export function NoteDetailSidebar({
       const end = textarea.selectionEnd;
       nextContent = content.substring(0, start) + text + content.substring(end);
       setContent(nextContent);
-      commitLocalEdit({
-        content: nextContent,
-        title,
-        tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
-      });
 
       setTimeout(() => {
         textarea.focus();
@@ -813,22 +850,12 @@ export function NoteDetailSidebar({
     } else {
       nextContent = content + text;
       setContent(nextContent);
-      commitLocalEdit({
-        content: nextContent,
-        title,
-        tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
-      });
     }
-  }, [content, title, tags, commitLocalEdit]);
+  }, [content]);
 
   const replaceContentWithSave = useCallback(async (nextContent: string) => {
     setContent(nextContent);
-    commitLocalEdit({
-      content: nextContent,
-      title,
-      tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
-    });
-  }, [title, tags, commitLocalEdit]);
+  }, []);
 
   const insertObjectBlockAtCursor = useCallback(async (block: string) => {
     const textarea = contentTextareaRef.current;
@@ -966,16 +993,11 @@ export function NoteDetailSidebar({
     const end = textarea.selectionEnd;
     const { next, cursorStart, cursorEnd } = applyMarkdownWrap(content, start, end, left, right);
     setContent(next);
-    commitLocalEdit({
-      content: next,
-      title,
-      tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
-    });
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(cursorStart, cursorEnd);
     }, 0);
-  }, [content, title, tags, commitLocalEdit]);
+  }, [content]);
 
   const onEditorKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key !== 'Backspace' && event.key !== 'Delete') return;
@@ -1086,13 +1108,7 @@ export function NoteDetailSidebar({
                 type="text"
                 value={title}
                 onChange={(e) => {
-                  const nextTitle = e.target.value;
-                  setTitle(nextTitle);
-                  commitLocalEdit({
-                    title: nextTitle,
-                    content,
-                    tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
-                  });
+                  setTitle(e.target.value);
                 }}
                 className="w-full min-w-0 bg-transparent text-[#6366F1] font-extrabold text-lg font-clash tracking-tight leading-tight border-none focus:outline-none placeholder:text-white/25"
                 placeholder="Untitled note"
@@ -1247,11 +1263,18 @@ export function NoteDetailSidebar({
                 Content
               </span>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <SyncStatusDot noteId={liveNote.$id} epoch={composeSyncEpoch} />
+                <SyncStatusDot
+                  noteId={liveNote.$id}
+                  epoch={composeSyncEpoch}
+                  pending={
+                    isDirty ||
+                    isUnpersistedComposeDraft(liveNote.$id) ||
+                    String(liveNote.$id || '').startsWith('live-') ||
+                    String(liveNote.$id || '').startsWith('ghost-')
+                  }
+                />
                 <span className="text-[10px] font-semibold text-[#9B9691]">
-                  {isUnpersistedComposeDraft(liveNote.$id) ||
-                  String(liveNote.$id || '').startsWith('live-') ||
-                  String(liveNote.$id || '').startsWith('ghost-')
+                  {isDirty || isUnpersistedComposeDraft(liveNote.$id)
                     ? 'Not saved yet'
                     : 'Saved'}
                 </span>
@@ -1381,13 +1404,7 @@ export function NoteDetailSidebar({
                   <textarea
                     value={content}
                     onChange={(e) => {
-                      const nextContent = e.target.value;
-                      setContent(nextContent);
-                      commitLocalEdit({
-                        title,
-                        content: nextContent,
-                        tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
-                      });
+                      setContent(e.target.value);
                     }}
                     ref={contentTextareaRef}
                     onKeyDown={onEditorKeyDown}
@@ -1437,11 +1454,6 @@ export function NoteDetailSidebar({
                       onClick={() => {
                         const newTags = displayTags.filter((t) => t !== tag);
                         setTags(newTags.join(', '));
-                        commitLocalEdit({
-                          title,
-                          content,
-                          tags: newTags,
-                        });
                       }}
                       className="hover:text-white"
                     >
@@ -1890,11 +1902,6 @@ export function NoteDetailSidebar({
                         nextTagsArray = nextTagsArray.filter(n => n !== tag.name);
                       }
                       setTags(nextTagsArray.join(', '));
-                      commitLocalEdit({
-                        title,
-                        content,
-                        tags: nextTagsArray,
-                      });
                       setIsTagSelectorOpen(false);
                     }}
                     sx={{ 
@@ -2023,19 +2030,9 @@ export function NoteDetailSidebar({
                     const end = textarea.selectionEnd;
                     if (start === 0 && end === textarea.value.length) {
                       setContent(text);
-                      commitLocalEdit({
-                        title,
-                        content: text,
-                        tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
-                      });
                     } else {
                       const nextContent = content.substring(0, start) + text + content.substring(end);
                       setContent(nextContent);
-                      commitLocalEdit({
-                        title,
-                        content: nextContent,
-                        tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
-                      });
                       setTimeout(() => {
                         textarea.focus();
                         textarea.setSelectionRange(start + text.length, start + text.length);
