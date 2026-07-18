@@ -30,6 +30,8 @@ export const APPWRITE_CONFIG = {
         KEYCHAIN: 'keychain',
         USER_RESOURCE_PINS: 'user_resource_pins',
         OBJECTS: 'objects',
+        SESSION_OBJECTS: 'session_objects',
+        TOOL_CALLS: 'tool_calls',
         SWEPT: 'swept',
         TOKEN_REGISTRY: 'token_registry',
         WEB3_TRANSACTIONS: 'web3_transactions',

@@ -278,10 +278,19 @@ export const TelemetryService = {
         queries: [
           Query.equal('userId', userId),
           Query.notEqual('isMemory', true),
-          Query.limit(1)
+          Query.orderDesc('$updatedAt'),
+          Query.limit(20)
         ]
       });
-      const row = res.rows[0];
+      const withHistory = (res.rows || []).find((row: any) => {
+        try {
+          const hist = JSON.parse(row.chatHistory || '[]');
+          return Array.isArray(hist) && hist.length > 0;
+        } catch {
+          return false;
+        }
+      });
+      const row = withHistory || res.rows?.[0];
       if (row) {
         return {
           context: row.context || '',
@@ -434,5 +443,164 @@ export const TelemetryService = {
     } catch (err) {
       console.error('[TelemetryService] Failed to record agentic telemetry:', err);
     }
-  }
+  },
+
+  /**
+   * Records a workspace object created/touched by an agentic tool in the active session.
+   * Powers session object widgets and gives the model durable object pointers.
+   */
+  async recordSessionObject(params: {
+    userId: string;
+    sessionId: string;
+    objectId: string;
+    objectType: string;
+    title?: string | null;
+    toolKey?: string | null;
+  }): Promise<void> {
+    try {
+      if (!params.userId || !params.sessionId || !params.objectId || !params.objectType) return;
+      const tables = createSystemTablesDB();
+      await tables.createRow({
+        databaseId: DATABASE_ID,
+        tableId: 'session_objects',
+        rowId: ID.unique(),
+        data: {
+          userId: params.userId,
+          sessionId: params.sessionId,
+          objectId: params.objectId,
+          objectType: params.objectType,
+          title: params.title ? String(params.title).slice(0, 256) : null,
+          toolKey: params.toolKey || null,
+          createdAt: new Date().toISOString(),
+        },
+      });
+    } catch (err) {
+      console.error('[TelemetryService] Failed to record session object:', err);
+    }
+  },
+
+  /**
+   * Lists objects created in a session (newest first). Dedupes by objectId keeping latest title.
+   */
+  async listSessionObjects(
+    userId: string,
+    sessionId: string,
+    limit = 40,
+  ): Promise<Array<{ objectId: string; objectType: string; title: string | null; toolKey: string | null; createdAt: string | null }>> {
+    try {
+      if (!userId || !sessionId) return [];
+      const tables = createSystemTablesDB();
+      const res = await tables.listRows({
+        databaseId: DATABASE_ID,
+        tableId: 'session_objects',
+        queries: [
+          Query.equal('userId', userId),
+          Query.equal('sessionId', sessionId),
+          Query.orderDesc('$createdAt'),
+          Query.limit(limit),
+        ],
+      });
+      const seen = new Set<string>();
+      const out: Array<{ objectId: string; objectType: string; title: string | null; toolKey: string | null; createdAt: string | null }> = [];
+      for (const row of res.rows || []) {
+        const objectId = String(row.objectId || '');
+        if (!objectId || seen.has(objectId)) continue;
+        seen.add(objectId);
+        out.push({
+          objectId,
+          objectType: String(row.objectType || 'idea'),
+          title: row.title != null ? String(row.title) : null,
+          toolKey: row.toolKey != null ? String(row.toolKey) : null,
+          createdAt: row.createdAt != null ? String(row.createdAt) : (row.$createdAt || null),
+        });
+      }
+      return out;
+    } catch (err) {
+      console.error('[TelemetryService] Failed to list session objects:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Persist one agent tool invocation against a session + conversation reply id.
+   */
+  async recordToolCall(params: {
+    userId: string;
+    sessionId: string;
+    conversationId: string;
+    toolKey: string;
+    specifier?: string | null;
+    args?: Record<string, unknown> | null;
+    status?: string | null;
+    resultSummary?: string | null;
+  }): Promise<string | null> {
+    try {
+      if (!params.userId || !params.sessionId || !params.conversationId || !params.toolKey) return null;
+      const tables = createSystemTablesDB();
+      const rowId = ID.unique();
+      await tables.createRow({
+        databaseId: DATABASE_ID,
+        tableId: 'tool_calls',
+        rowId,
+        data: {
+          userId: params.userId,
+          sessionId: params.sessionId,
+          conversationId: params.conversationId,
+          toolKey: params.toolKey,
+          specifier: params.specifier || null,
+          args: params.args ? JSON.stringify(params.args).slice(0, 7800) : null,
+          status: params.status || 'success',
+          resultSummary: params.resultSummary ? String(params.resultSummary).slice(0, 512) : null,
+          createdAt: new Date().toISOString(),
+        },
+      });
+      return rowId;
+    } catch (err) {
+      console.error('[TelemetryService] Failed to record tool call:', err);
+      return null;
+    }
+  },
+
+  async listToolCalls(
+    userId: string,
+    sessionId: string,
+    limit = 100,
+  ): Promise<Array<{
+    $id: string;
+    conversationId: string;
+    toolKey: string;
+    specifier: string | null;
+    args: string | null;
+    status: string | null;
+    resultSummary: string | null;
+    createdAt: string | null;
+  }>> {
+    try {
+      if (!userId || !sessionId) return [];
+      const tables = createSystemTablesDB();
+      const res = await tables.listRows({
+        databaseId: DATABASE_ID,
+        tableId: 'tool_calls',
+        queries: [
+          Query.equal('userId', userId),
+          Query.equal('sessionId', sessionId),
+          Query.orderAsc('$createdAt'),
+          Query.limit(limit),
+        ],
+      });
+      return (res.rows || []).map((row: any) => ({
+        $id: row.$id,
+        conversationId: String(row.conversationId || ''),
+        toolKey: String(row.toolKey || ''),
+        specifier: row.specifier != null ? String(row.specifier) : null,
+        args: row.args != null ? String(row.args) : null,
+        status: row.status != null ? String(row.status) : null,
+        resultSummary: row.resultSummary != null ? String(row.resultSummary) : null,
+        createdAt: row.createdAt != null ? String(row.createdAt) : (row.$createdAt || null),
+      }));
+    } catch (err) {
+      console.error('[TelemetryService] Failed to list tool calls:', err);
+      return [];
+    }
+  },
 };

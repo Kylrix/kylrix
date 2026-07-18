@@ -70,10 +70,67 @@ import { account } from '@/lib/appwrite/client';
 import { WalletService } from '@/lib/services/wallets';
 import { toast } from 'react-hot-toast';
 
+interface ToolCallDisplay {
+  toolKey: string;
+  specifier?: string | null;
+  status?: string | null;
+  resultSummary?: string | null;
+  args?: string | null;
+}
+
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  tools?: ToolCallDisplay[];
+}
+
+/** Strip behind-the-hood prompt templates so the UI shows the user's exact words. */
+function visibleChatContent(role: string, content: unknown): string {
+  const raw = typeof content === 'string' ? content : '';
+  if (role !== 'user') return raw;
+  if (/User request:\s*/i.test(raw)) {
+    const match = raw.match(/User request:\s*([\s\S]*)$/i);
+    if (match?.[1]?.trim()) return match[1].trim();
+  }
+  return raw.trim();
+}
+
+function formatHistoryMessages(
+  historyArr: any[],
+  toolCalls: Array<{
+    conversationId: string;
+    toolKey: string;
+    specifier?: string | null;
+    status?: string | null;
+    resultSummary?: string | null;
+    args?: string | null;
+  }> = [],
+): ChatMessage[] {
+  const toolsByConversation = new Map<string, ToolCallDisplay[]>();
+  for (const tc of toolCalls) {
+    if (!tc.conversationId) continue;
+    const list = toolsByConversation.get(tc.conversationId) || [];
+    list.push({
+      toolKey: tc.toolKey,
+      specifier: tc.specifier,
+      status: tc.status,
+      resultSummary: tc.resultSummary,
+      args: tc.args,
+    });
+    toolsByConversation.set(tc.conversationId, list);
+  }
+
+  return (Array.isArray(historyArr) ? historyArr : []).map((h: any, idx: number) => {
+    const id = typeof h.id === 'string' && h.id ? h.id : `hist-${idx}`;
+    const role = h.role === 'assistant' ? 'assistant' : 'user';
+    return {
+      id,
+      role,
+      content: visibleChatContent(role, h.content),
+      tools: role === 'assistant' ? toolsByConversation.get(id) : undefined,
+    };
+  });
 }
 
 const QUICK_ICON_MAP: Record<string, ComponentType<{ size?: number; strokeWidth?: number }>> = {
@@ -229,6 +286,11 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     }
   };
 
+  const handleCreateNewSessionFromDrawer = async () => {
+    await handleStartNewSession();
+    setShowSessionsDrawer(false);
+  };
+
   const handleOpenSessions = async () => {
     setShowSessionsDrawer(true);
     setLoadingSessions(true);
@@ -248,18 +310,14 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
 
   const handleSelectSession = async (sessionId: string) => {
     try {
-      const { selectAgentSession } = await import('@/lib/actions/agentic');
+      const { selectAgentSession, listAgentToolCallsAction } = await import('@/lib/actions/agentic');
       const { account } = await import('@/lib/appwrite/client');
       const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
       const res = await selectAgentSession(sessionId, jwt);
       if (res.success) {
         const historyArr = JSON.parse(res.session.chatHistory || '[]');
-        const formatted = historyArr.map((h: any, idx: number) => ({
-          id: `${Date.now()}-hist-${idx}`,
-          role: h.role,
-          content: h.content
-        }));
-        setMessages(formatted);
+        const toolCalls = await listAgentToolCallsAction(sessionId, jwt).catch(() => []);
+        setMessages(formatHistoryMessages(historyArr, toolCalls));
         setShowSessionsDrawer(false);
         toast.success('Switched agent session.');
       }
@@ -301,16 +359,15 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       try {
         const { account } = await import('@/lib/appwrite/client');
         const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
-        const { getAgentSession } = await import('@/lib/actions/agentic');
+        const { getAgentSession, listAgentToolCallsAction } = await import('@/lib/actions/agentic');
         const session = await getAgentSession(jwt);
         const historyArr = JSON.parse(session.chatHistory || '[]');
         if (Array.isArray(historyArr) && historyArr.length > 0) {
-          const formatted = historyArr.map((h: any, idx: number) => ({
-            id: `${Date.now()}-hist-${idx}`,
-            role: h.role,
-            content: h.content
-          }));
-          setMessages(formatted);
+          const sessionId = session.rowId || '';
+          const toolCalls = sessionId
+            ? await listAgentToolCallsAction(sessionId, jwt).catch(() => [])
+            : [];
+          setMessages(formatHistoryMessages(historyArr, toolCalls));
         }
       } catch (err) {
         console.error('Failed to load session history on client:', err);
@@ -355,19 +412,59 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           title: pageContext.title,
           systemHint: pageContext.systemHint,
           resourceId: pageContext.resourceId,
+          userMessage: trimmed,
         });
 
         if (res.success) {
-          appendMessage('assistant', res.response);
+          const assistantId = res.conversationId || `${Date.now()}-a`;
+          const executedTools: ToolCallDisplay[] = [];
+          const sessionIdForObjects = res.sessionId as string | undefined;
+          const conversationId = res.conversationId as string | undefined;
+
+          const recordToolCall = async (
+            call: { toolKey: string; specifier?: string; args?: Record<string, unknown> },
+            status: string,
+            resultSummary?: string,
+          ) => {
+            const display: ToolCallDisplay = {
+              toolKey: call.toolKey,
+              specifier: call.specifier || null,
+              status,
+              resultSummary: resultSummary || null,
+              args: call.args ? JSON.stringify(call.args) : null,
+            };
+            executedTools.push(display);
+            if (!sessionIdForObjects || !conversationId) return;
+            try {
+              const { recordAgentToolCallAction } = await import('@/lib/actions/agentic');
+              await recordAgentToolCallAction(
+                {
+                  sessionId: sessionIdForObjects,
+                  conversationId,
+                  toolKey: call.toolKey,
+                  specifier: call.specifier,
+                  args: call.args || null,
+                  status,
+                  resultSummary,
+                },
+                jwt,
+              );
+            } catch (recordErr) {
+              console.warn('[agentic] Failed to record tool call:', recordErr);
+            }
+          };
+
+          setMessages((prev) => [
+            ...prev,
+            { id: assistantId, role: 'assistant', content: res.response, tools: [] },
+          ]);
+
           if (Array.isArray(res.toolCalls) && res.toolCalls.length > 0) {
-            // Process tools sequentially
             for (const call of res.toolCalls) {
               const { AGENTIC_TOOLS_REGISTRY } = await import('@/lib/agentic/tools-registry');
               const toolDef = AGENTIC_TOOLS_REGISTRY.find(t => t.key === call.toolKey);
               if (toolDef) {
-                // Check if tool requires auth
                 if (toolDef.requiresAuthorization) {
-                  // Fetch live settings preferences to check if user has 'allow_all' or this tool in their whitelist
                   let isPreAuthorized = false;
                   try {
                     const appPrefs = await account.getPrefs();
@@ -378,29 +475,66 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   } catch {}
 
                   if (!isPreAuthorized) {
-                    // Set pending tool authorization prompt state
                     setPendingToolAuth({
                       toolKey: call.toolKey,
                       name: toolDef.name,
                       specifier: call.specifier,
                       args: call.args
                     });
-                    break; // Block further executions until authorized
+                    break;
                   }
                 }
 
-                // Execute actual functionalities locally so they auto-sync via sync engines
                 try {
+                  const recordSessionObject = async (payload: {
+                    objectId: string;
+                    objectType: string;
+                    title?: string | null;
+                    toolKey: string;
+                  }) => {
+                    if (!sessionIdForObjects || !payload.objectId) return;
+                    try {
+                      const { recordAgentSessionObjectAction } = await import('@/lib/actions/agentic');
+                      await recordAgentSessionObjectAction(
+                        {
+                          sessionId: sessionIdForObjects,
+                          objectId: payload.objectId,
+                          objectType: payload.objectType,
+                          title: payload.title,
+                          toolKey: payload.toolKey,
+                        },
+                        jwt,
+                      );
+                    } catch (recordErr) {
+                      console.warn('[agentic] Failed to record session object:', recordErr);
+                    }
+                  };
+
+                  let resultSummary = toolDef.name;
                   if (call.toolKey === 'create_note') {
+                    const title = String(call.args?.title || '').trim() || 'Untitled Idea';
+                    const content = String(call.args?.content || '').trim();
+                    if (!content) {
+                      toast.error('Agent create_note missing content.');
+                      await recordToolCall(call, 'error', 'Missing content');
+                      continue;
+                    }
                     const { createNote } = await import('@/lib/actions/client-ops');
                     const saved = await createNote({
-                      title: call.args.title || 'Untitled Note',
-                      content: call.args.content || '',
+                      title,
+                      content,
                       tags: Array.isArray(call.args.tags) ? call.args.tags : (call.args.tags ? [call.args.tags] : []),
                       isPublic: call.args.isPublic === true || call.args.isPublic === 'true',
                       isGuest: call.args.isPublic === true || call.args.isPublic === 'true',
                     });
                     pushLiveNote(saved);
+                    await recordSessionObject({
+                      objectId: saved.$id,
+                      objectType: 'idea',
+                      title: saved.title || title,
+                      toolKey: 'create_note',
+                    });
+                    resultSummary = `Created idea: ${saved.title || title}`;
                   } else if (call.toolKey === 'update_note' && call.specifier) {
                     const { updateNote } = await import('@/lib/actions/client-ops');
                     const saved = await updateNote(call.specifier, {
@@ -411,8 +545,30 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       isGuest: call.args.isPublic !== undefined ? (call.args.isPublic === true || call.args.isPublic === 'true') : undefined,
                     });
                     pushLiveNote(saved);
+                    await recordSessionObject({
+                      objectId: saved.$id || call.specifier,
+                      objectType: 'idea',
+                      title: saved.title || call.args.title || null,
+                      toolKey: 'update_note',
+                    });
+                    resultSummary = `Updated idea: ${saved.title || call.args.title || call.specifier}`;
+                  } else if (call.toolKey === 'get_note' && call.specifier) {
+                    const { getNote } = await import('@/lib/appwrite/note');
+                    const note = await getNote(call.specifier);
+                    pushLiveNote(note);
+                    await recordSessionObject({
+                      objectId: note.$id,
+                      objectType: 'idea',
+                      title: note.title || null,
+                      toolKey: 'get_note',
+                    });
+                    resultSummary = `Loaded idea: ${note.title || 'Untitled'}`;
+                    appendMessage(
+                      'assistant',
+                      `Loaded Idea **${note.title || 'Untitled'}** (\`${note.$id}\`).`,
+                    );
                   } else if (call.toolKey === 'create_goal') {
-                    await addTask({
+                    const created = await addTask({
                       title: call.args.title || 'Untitled Goal',
                       status: call.args.status || 'todo',
                       priority: call.args.priority || 'medium',
@@ -428,6 +584,16 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       isArchived: false,
                       isPinned: false
                     });
+                    const goalId = (created as any)?.id || (created as any)?.$id;
+                    if (goalId) {
+                      await recordSessionObject({
+                        objectId: String(goalId),
+                        objectType: 'goal',
+                        title: call.args.title || 'Untitled Goal',
+                        toolKey: 'create_goal',
+                      });
+                    }
+                    resultSummary = `Created goal: ${call.args.title || 'Untitled Goal'}`;
                   } else if (call.toolKey === 'update_goal' && call.specifier) {
                     await updateTask(call.specifier, {
                       title: call.args.title,
@@ -435,25 +601,44 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       priority: call.args.priority,
                       dueDate: call.args.dueDate ? new Date(call.args.dueDate) : undefined
                     });
+                    resultSummary = `Updated goal: ${call.specifier}`;
                   } else if (call.toolKey === 'create_project') {
                     const { ProjectsService } = await import('@/lib/appwrite/projects');
-                    await ProjectsService.createProject(user?.$id || 'guest', {
+                    const project = await ProjectsService.createProject(user?.$id || 'guest', {
                       title: call.args.title || 'Untitled Project',
                       summary: call.args.summary || '',
                       status: 'active'
                     });
                     const { warmProjectsList } = await import('@/lib/projects/warm-projects-list');
                     await warmProjectsList.warm();
+                    if (project?.$id) {
+                      await recordSessionObject({
+                        objectId: project.$id,
+                        objectType: 'project',
+                        title: call.args.title || project.title || 'Untitled Project',
+                        toolKey: 'create_project',
+                      });
+                    }
+                    resultSummary = `Created project: ${call.args.title || project?.title || 'Untitled Project'}`;
                   } else if (call.toolKey === 'navigate_workspace' && call.args.route) {
+                    resultSummary = `Navigate: ${call.args.route}`;
                     onClose();
                     router.push(call.args.route);
                   }
+                  await recordToolCall(call, 'success', resultSummary);
                   toast.success(`Agent executed ${toolDef.name} successfully.`);
                 } catch (err: any) {
                   console.error(`Failed to execute tool ${call.toolKey}:`, err);
+                  await recordToolCall(call, 'error', err?.message || 'Failed');
                   toast.error(`Failed to execute ${toolDef.name}`);
                 }
               }
+            }
+
+            if (executedTools.length > 0) {
+              setMessages((prev) =>
+                prev.map((m) => (m.id === assistantId ? { ...m, tools: executedTools } : m)),
+              );
             }
           }
         }
@@ -464,7 +649,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         setRunningWorkflowId(null);
       }
     },
-    [appendMessage, isPro, openProUpgrade, pageContext],
+    [appendMessage, isPro, openProUpgrade, pageContext, addTask, updateTask, pushLiveNote, user?.$id, onClose, router],
   );
 
   useEffect(() => {
@@ -634,6 +819,32 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               <p className="text-[13px] font-semibold leading-relaxed whitespace-pre-wrap break-words">
                 {msg.content}
               </p>
+              {msg.role === 'assistant' && msg.tools && msg.tools.length > 0 && (
+                <div className="mt-2.5 flex flex-col gap-1.5">
+                  {msg.tools.map((tool, toolIdx) => (
+                    <div
+                      key={`${msg.id}-tool-${toolIdx}`}
+                      className="rounded-lg border border-white/8 bg-black/30 px-2.5 py-2 text-left"
+                    >
+                      <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#9B9691]">
+                        <Zap size={11} style={{ color: accent }} />
+                        <span>Tool · {tool.toolKey}</span>
+                        {tool.status ? (
+                          <span className={tool.status === 'success' ? 'text-emerald-400/80' : 'text-red-400/80'}>
+                            {tool.status}
+                          </span>
+                        ) : null}
+                      </div>
+                      {tool.specifier ? (
+                        <p className="mt-1 text-[10px] font-mono text-white/45 truncate">Target: {tool.specifier}</p>
+                      ) : null}
+                      {tool.resultSummary ? (
+                        <p className="mt-1 text-[11px] font-semibold text-white/70 leading-snug">{tool.resultSummary}</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -845,12 +1056,18 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 </div>
               ) : (
                 sessions.map((sess) => {
-                  let previewText = "Empty session thread";
+                  let previewText = 'Empty session thread';
+                  let titleText = `Session ${new Date(sess.createdAt).toLocaleDateString()}`;
                   try {
                     const parsed = JSON.parse(sess.chatHistory || '[]');
+                    const firstUser = parsed.find((m: any) => m.role === 'user');
                     const lastMsg = parsed[parsed.length - 1];
+                    if (firstUser?.content) {
+                      titleText = visibleChatContent('user', firstUser.content).slice(0, 72) || titleText;
+                    }
                     if (lastMsg) {
-                      previewText = `${lastMsg.role === 'user' ? 'You' : 'Agent'}: ${lastMsg.content}`;
+                      const body = visibleChatContent(lastMsg.role, lastMsg.content);
+                      previewText = `${lastMsg.role === 'user' ? 'You' : 'System'}: ${body}`;
                     }
                   } catch {}
 
@@ -862,7 +1079,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                     >
                       <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                         <span className="text-white text-xs font-bold leading-tight truncate">
-                          {sess.context ? sess.context.split('\n')[0].replace(/^- /, '') : `Session ${new Date(sess.createdAt).toLocaleDateString()}`}
+                          {titleText}
                         </span>
                         <span className="text-[#9B9691] text-[10px] leading-snug line-clamp-1">
                           {previewText}

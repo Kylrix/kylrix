@@ -2109,6 +2109,50 @@ export type Swept = Models.Row & {
     "updatedAt"?: string | null;
 }
 
+export type SessionObjectsCreate = {
+    "userId": string;
+    "sessionId": string;
+    "objectId": string;
+    "objectType": string;
+    "title"?: string | null;
+    "toolKey"?: string | null;
+    "createdAt"?: string | null;
+}
+
+export type SessionObjects = Models.Row & {
+    "userId": string;
+    "sessionId": string;
+    "objectId": string;
+    "objectType": string;
+    "title"?: string | null;
+    "toolKey"?: string | null;
+    "createdAt"?: string | null;
+}
+
+export type ToolCallsCreate = {
+    "userId": string;
+    "sessionId": string;
+    "conversationId": string;
+    "toolKey": string;
+    "specifier"?: string | null;
+    "args"?: string | null;
+    "status"?: string | null;
+    "resultSummary"?: string | null;
+    "createdAt"?: string | null;
+}
+
+export type ToolCalls = Models.Row & {
+    "userId": string;
+    "sessionId": string;
+    "conversationId": string;
+    "toolKey": string;
+    "specifier"?: string | null;
+    "args"?: string | null;
+    "status"?: string | null;
+    "resultSummary"?: string | null;
+    "createdAt"?: string | null;
+}
+
 declare const __roleStringBrand: unique symbol;
 export type RoleString = string & { readonly [__roleStringBrand]: never };
 
@@ -4298,6 +4342,56 @@ export type DatabaseTableMap = {
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Swept>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Swept>>(field: K, value: QueryableFieldValue<Swept, K>) => string; notEqual: <K extends QueryableKeys<Swept>>(field: K, value: QueryableFieldValue<Swept, K>) => string; lessThan: <K extends QueryableKeys<Swept>>(field: K, value: QueryableFieldValue<Swept, K>) => string; lessThanEqual: <K extends QueryableKeys<Swept>>(field: K, value: QueryableFieldValue<Swept, K>) => string; greaterThan: <K extends QueryableKeys<Swept>>(field: K, value: QueryableFieldValue<Swept, K>) => string; greaterThanEqual: <K extends QueryableKeys<Swept>>(field: K, value: QueryableFieldValue<Swept, K>) => string; contains: <K extends QueryableKeys<Swept>>(field: K, value: QueryableFieldValue<Swept, K>) => string; search: <K extends QueryableKeys<Swept>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Swept>>(field: K) => string; isNotNull: <K extends QueryableKeys<Swept>>(field: K) => string; startsWith: <K extends QueryableKeys<Swept>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Swept>>(field: K, value: string) => string; between: <K extends QueryableKeys<Swept>>(field: K, start: QueryableFieldValue<Swept, K>, end: QueryableFieldValue<Swept, K>) => string; select: <K extends keyof Swept>(fields: K[]) => string; orderAsc: <K extends keyof Swept>(field: K) => string; orderDesc: <K extends keyof Swept>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Swept[] }>;
+    };
+    "Session Objects": {
+      create: (data: {
+        "userId": string;
+        "sessionId": string;
+        "objectId": string;
+        "objectType": string;
+        "title"?: string | null;
+        "toolKey"?: string | null;
+        "createdAt"?: string | null;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<SessionObjects>;
+      get: (id: string) => Promise<SessionObjects>;
+      update: (id: string, data: Partial<{
+        "userId": string;
+        "sessionId": string;
+        "objectId": string;
+        "objectType": string;
+        "title"?: string | null;
+        "toolKey"?: string | null;
+        "createdAt"?: string | null;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<SessionObjects>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<SessionObjects>>(field: K, value: QueryableFieldValue<SessionObjects, K>) => string; notEqual: <K extends QueryableKeys<SessionObjects>>(field: K, value: QueryableFieldValue<SessionObjects, K>) => string; lessThan: <K extends QueryableKeys<SessionObjects>>(field: K, value: QueryableFieldValue<SessionObjects, K>) => string; lessThanEqual: <K extends QueryableKeys<SessionObjects>>(field: K, value: QueryableFieldValue<SessionObjects, K>) => string; greaterThan: <K extends QueryableKeys<SessionObjects>>(field: K, value: QueryableFieldValue<SessionObjects, K>) => string; greaterThanEqual: <K extends QueryableKeys<SessionObjects>>(field: K, value: QueryableFieldValue<SessionObjects, K>) => string; contains: <K extends QueryableKeys<SessionObjects>>(field: K, value: QueryableFieldValue<SessionObjects, K>) => string; search: <K extends QueryableKeys<SessionObjects>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<SessionObjects>>(field: K) => string; isNotNull: <K extends QueryableKeys<SessionObjects>>(field: K) => string; startsWith: <K extends QueryableKeys<SessionObjects>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<SessionObjects>>(field: K, value: string) => string; between: <K extends QueryableKeys<SessionObjects>>(field: K, start: QueryableFieldValue<SessionObjects, K>, end: QueryableFieldValue<SessionObjects, K>) => string; select: <K extends keyof SessionObjects>(fields: K[]) => string; orderAsc: <K extends keyof SessionObjects>(field: K) => string; orderDesc: <K extends keyof SessionObjects>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: SessionObjects[] }>;
+    };
+    "Tool Calls": {
+      create: (data: {
+        "userId": string;
+        "sessionId": string;
+        "conversationId": string;
+        "toolKey": string;
+        "specifier"?: string | null;
+        "args"?: string | null;
+        "status"?: string | null;
+        "resultSummary"?: string | null;
+        "createdAt"?: string | null;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<ToolCalls>;
+      get: (id: string) => Promise<ToolCalls>;
+      update: (id: string, data: Partial<{
+        "userId": string;
+        "sessionId": string;
+        "conversationId": string;
+        "toolKey": string;
+        "specifier"?: string | null;
+        "args"?: string | null;
+        "status"?: string | null;
+        "resultSummary"?: string | null;
+        "createdAt"?: string | null;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<ToolCalls>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<ToolCalls>>(field: K, value: QueryableFieldValue<ToolCalls, K>) => string; notEqual: <K extends QueryableKeys<ToolCalls>>(field: K, value: QueryableFieldValue<ToolCalls, K>) => string; lessThan: <K extends QueryableKeys<ToolCalls>>(field: K, value: QueryableFieldValue<ToolCalls, K>) => string; lessThanEqual: <K extends QueryableKeys<ToolCalls>>(field: K, value: QueryableFieldValue<ToolCalls, K>) => string; greaterThan: <K extends QueryableKeys<ToolCalls>>(field: K, value: QueryableFieldValue<ToolCalls, K>) => string; greaterThanEqual: <K extends QueryableKeys<ToolCalls>>(field: K, value: QueryableFieldValue<ToolCalls, K>) => string; contains: <K extends QueryableKeys<ToolCalls>>(field: K, value: QueryableFieldValue<ToolCalls, K>) => string; search: <K extends QueryableKeys<ToolCalls>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<ToolCalls>>(field: K) => string; isNotNull: <K extends QueryableKeys<ToolCalls>>(field: K) => string; startsWith: <K extends QueryableKeys<ToolCalls>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<ToolCalls>>(field: K, value: string) => string; between: <K extends QueryableKeys<ToolCalls>>(field: K, start: QueryableFieldValue<ToolCalls, K>, end: QueryableFieldValue<ToolCalls, K>) => string; select: <K extends keyof ToolCalls>(fields: K[]) => string; orderAsc: <K extends keyof ToolCalls>(field: K) => string; orderDesc: <K extends keyof ToolCalls>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: ToolCalls[] }>;
     }
   }
 };

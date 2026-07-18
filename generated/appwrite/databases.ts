@@ -101,6 +101,8 @@ tableIdMap["passwordManagerDb"]["Agent Payment Intents"] = "agent_payment_intent
 tableIdMap["passwordManagerDb"]["Agentic Telemetry"] = "agentic_telemetry";
 tableIdMap["passwordManagerDb"]["Agentic Sessions"] = "agentic_sessions";
 tableIdMap["passwordManagerDb"]["swept"] = "swept";
+tableIdMap["passwordManagerDb"]["Session Objects"] = "session_objects";
+tableIdMap["passwordManagerDb"]["Tool Calls"] = "tool_calls";
 
 const tablesWithRelationships = new Set<string>();
 

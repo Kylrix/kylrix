@@ -287,8 +287,19 @@ export async function executeInstantRequestAction(
     title: string;
     systemHint: string;
     resourceId?: string;
+    /** Exact user-facing sentence for chat history. Model still receives `prompt`. */
+    userMessage?: string;
   },
-): Promise<{ success: boolean; response: string; toolCalls?: any[] }> {
+  options?: {
+    userMessage?: string;
+  },
+): Promise<{
+  success: boolean;
+  response: string;
+  toolCalls?: any[];
+  sessionId?: string;
+  conversationId?: string;
+}> {
   const user = await requireUser(jwt);
   const apiKey = process.env.GOOGLE_API_KEY;
   if (!apiKey) {
@@ -301,12 +312,14 @@ export async function executeInstantRequestAction(
 
   // 1. Fetch preferences to see if chat history is allowed
   let historyEnabled = true;
+  let activeSessionId: string | undefined = undefined;
   try {
     const { account } = await createServerClient(jwt);
     const appPrefs = await account.getPrefs();
     if (appPrefs?.smartSystemHistory === false) {
       historyEnabled = false;
     }
+    activeSessionId = appPrefs?.activeAgentSessionId;
   } catch {}
 
   // 2. Load historical compressed session context, recent messages, and lifetime Memory (C0)
@@ -314,20 +327,27 @@ export async function executeInstantRequestAction(
   let recentMessagesStr = "";
   let sessionData: any = null;
   let lifetimeMemoryContext = "";
+  let sessionObjectsSnippet = "No session objects yet.";
 
   if (historyEnabled) {
-    let activeSessionId: string | undefined = undefined;
-    try {
-      const { account } = await createServerClient(jwt);
-      const appPrefs = await account.getPrefs().catch(() => ({}));
-      activeSessionId = appPrefs?.activeAgentSessionId;
-    } catch {}
-
     const [sessionLoad, memoryLoad] = await Promise.all([
       TelemetryService.loadSession(user.$id, activeSessionId),
       TelemetryService.loadMemory(user.$id)
     ]);
     sessionData = sessionLoad;
+    if (sessionData?.rowId) {
+      activeSessionId = sessionData.rowId;
+    }
+    if (!activeSessionId) {
+      activeSessionId = `session_${Date.now()}`;
+      await TelemetryService.saveSession(user.$id, '', '[]', false, activeSessionId);
+      try {
+        const { account } = await createServerClient(jwt);
+        const prefs = await account.getPrefs().catch(() => ({}));
+        await account.updatePrefs({ ...prefs, activeAgentSessionId: activeSessionId }).catch(() => {});
+      } catch {}
+      sessionData = { context: '', chatHistory: '[]', seen: false, rowId: activeSessionId };
+    }
     sessionContext = sessionData.context || "";
     lifetimeMemoryContext = memoryLoad.context || "";
     try {
@@ -336,6 +356,18 @@ export async function executeInstantRequestAction(
       const tail = historyArr.slice(-15);
       recentMessagesStr = tail.map((m: any) => `${m.role === 'user' ? 'User' : 'Agent'}: ${m.content}`).join('\n');
     } catch {}
+
+    if (activeSessionId) {
+      const sessionObjects = await TelemetryService.listSessionObjects(user.$id, activeSessionId, 40);
+      if (sessionObjects.length > 0) {
+        sessionObjectsSnippet = sessionObjects
+          .map(
+            (o) =>
+              `- type=${o.objectType} id=${o.objectId} title="${(o.title || '').replace(/"/g, "'")}" tool=${o.toolKey || 'n/a'}`,
+          )
+          .join('\n');
+      }
+    }
   }
 
   // Load dynamic ecosystem database information and telemetry background for contextual reasoning
@@ -386,17 +418,28 @@ ${activeProjects || "None"}
     .replace(/(?<=^|\s)[A-Za-z0-9+/]{40,}(?=$|\s)/g, '[REDACTED_HASH]');
 
   // Inject ecosystem data structures / RLS guidelines, explicitly redacting or dropping security models
+  const { NOTE_TOOL_PAYLOAD_SCHEMA } = await import('@/lib/agentic/tools-registry');
   const DATA_STRUCTURES_GUIDE = `
 [KYLRIX DATA ECOSYSTEM STRUCTURES & SCHEMAS]
 1. Database Consolidation: All tables live in database: "passwordManagerDb".
-2. Tables available:
-   - "67ff05f3002502ef239e" (Notes): fields { userId, title, content, isTrash, isPublic, isGuest }
-   - "67ff06280034908cf08a" (Tags): fields { userId, name, color, isTrash }
-   - "tasks" (Goals / Tasks): fields { userId, title, status, priority, isTrash }
-   - "events" (Calendar events): fields { userId, title, startTime, endTime, isTrash }
-   - "forms" (Dynamic Forms): fields { userId, title, schema, settings, isTrash }
-   - "formSubmissions" (Responses): fields { submitterId, formId, status, payload, isTrash }
-   - "projects" (Shared work spaces): fields { ownerId, title, summary, isTrash }
+2. Idea / Note table (canonical):
+   - tableId: "67ff05f3002502ef239e" (product name: Idea; code: notes)
+   - Row fields the agent may set via tools: title (string), content (markdown string), tags (string[]), isPublic (boolean), isGuest (boolean)
+   - System-owned fields (DO NOT invent or set): $id, userId, $createdAt, $updatedAt, dek, isTrash, collaborators
+   - Creating an Idea ALWAYS requires toolKey "create_note" with args { title, content } at minimum.
+3. Other tables:
+   - "67ff06280034908cf08a" (Tags): { userId, name, color, isTrash }
+   - "tasks" (Goals): { userId, title, status, priority, isTrash }
+   - "events": { userId, title, startTime, endTime, isTrash }
+   - "forms": { userId, title, schema, settings, isTrash }
+   - "projects": { ownerId, title, summary, isTrash }
+
+[NOTE / IDEA TOOL JSON CONTRACT — EXACT]
+${NOTE_TOOL_PAYLOAD_SCHEMA}
+
+[SESSION OBJECTS — THIS THREAD]
+Objects already created or opened in this agent session (prefer these ids for update_note / get_note):
+${sessionObjectsSnippet}
 
 [SECURITY ACCESS CONTROL]
 - Secrets, TOTP Secrets, Logins, and Passwords tables are mathematically EXCLUDED from the agent context. You do not have access to these and should never ask for or handle credentials.
@@ -448,22 +491,29 @@ ${lifetimeMemoryContext}
       'You are the Kylrix Smart System assistant embedded in the user workspace.',
       'Respond with concise, actionable output. Prefer bullet steps when planning.',
       'Stay grounded in the current page context and Kylrix apps: Ideas, Flow, Vault, Connect, Projects.',
-      'NEVER suggest that the user manually create resources, schedule, or guess parameters if they can be scheduled directly.',
-      'You can suggest actions to create notes, goals, or projects, link objects together, toggle their visibility (isPublic/isGuest), or share links (e.g. share path `/projects/[id]` or invite link). Use session history memory to reference last-created elements.',
-      'You MUST return your response as a valid, stringified JSON object matching this schema:',
+      'MUTATION PROTOCOL (STRICT):',
+      '- Workspace mutations ONLY happen through toolCalls. Prose never creates data.',
+      '- If the user asks to compose, write, draft, create, or save an Idea/note: toolCalls MUST include create_note with title + content. The response field may describe what you are creating, but MUST NOT claim it already exists unless create_note is present in toolCalls.',
+      '- If the user asks to edit an existing Idea: toolCalls MUST include update_note with specifier = note $id from [SESSION OBJECTS] or prior context.',
+      '- If the user asks to open/show an Idea by id: toolCalls MUST include get_note with that specifier.',
+      '- Empty toolCalls is only valid for pure Q&A with no create/update/navigate side effects.',
+      '- NEVER tell the user to create the Idea manually when create_note can do it.',
+      'You MUST return a valid JSON object matching this schema exactly:',
       '{',
-      '  "response": "Your visible workspace reply to the user (contains markdown). Required.",',
-      '  "sessionContextUpdate": "Additional context facts to append to the current active session. Optional.",',
-      '  "lifetimeMemoryUpdate": "HIGH QUALITY memory to persist FOREVER about the user (e.g. name, work preferences, recurring systems). Be extremely strict. Leave empty/blank if no high-quality insights exist. Optional.",',
+      '  "response": "Visible reply to the user (markdown). Required.",',
+      '  "sessionContextUpdate": "Optional facts to append to session context.",',
+      '  "lifetimeMemoryUpdate": "Optional high-quality lifelong memory. Leave blank if none.",',
       '  "toolCalls": [',
       '     {',
-      '        "toolKey": "key of the tool to execute. e.g. update_note",',
-      '        "specifier": "e.g. note_id if updating a note, or route_path. Optional.",',
-      '        "subSpecifier": "e.g. field name being updated. Optional.",',
-      '        "args": { "paramName": "paramValue" }',
+      '        "toolKey": "create_note | update_note | get_note | create_goal | update_goal | create_project | toggle_privacy | navigate_workspace",',
+      '        "specifier": "note/goal/project id or route when required; null otherwise",',
+      '        "subSpecifier": "optional field name",',
+      '        "args": { "title": "...", "content": "...", "tags": [], "isPublic": false }',
       '     }',
       '  ]',
       '}',
+      'Example — user asks to compose an Idea titled Odyssey:',
+      '{"response":"Creating Idea \\"odyssey, the movie\\" with a concise Greek-mythology write-up.","toolCalls":[{"toolKey":"create_note","specifier":null,"args":{"title":"odyssey, the movie","content":"## Odyssey\\nConcise Greek mythology write-up...","tags":[],"isPublic":false}}]}',
       '[AVAILABLE TOOLS]',
       toolsSnippet,
       DATA_STRUCTURES_GUIDE,
@@ -499,7 +549,23 @@ ${lifetimeMemoryContext}
     visibleResponse = responseTextRaw;
   }
 
+  // Keep parse field available for future session lifecycle without unused-lint noise.
+  void isThreadCompletedVal;
+
   await debitComputeBalance(user.$id, balanceRow, prompt, visibleResponse);
+
+  const extractVisibleUserMessage = (rawPrompt: string, override?: string) => {
+    if (override && override.trim()) return override.trim();
+    const match = rawPrompt.match(/User request:\s*([\s\S]*)$/i);
+    if (match?.[1]?.trim()) return match[1].trim();
+    return rawPrompt.trim();
+  };
+  const userVisibleMessage = extractVisibleUserMessage(
+    prompt,
+    options?.userMessage || pageContext?.userMessage,
+  );
+  const userMessageId = `msg_u_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const conversationId = `msg_a_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
   // 3. Compact and update session data
   if (historyEnabled) {
@@ -509,53 +575,47 @@ ${lifetimeMemoryContext}
         historyArr = JSON.parse(sessionData?.chatHistory || '[]');
       } catch {}
 
-      historyArr.push({ role: 'user', content: prompt });
-      historyArr.push({ role: 'assistant', content: visibleResponse });
+      // Persist the user's exact words — never the behind-the-hood model prompt template.
+      historyArr.push({ id: userMessageId, role: 'user', content: userVisibleMessage });
+      historyArr.push({ id: conversationId, role: 'assistant', content: visibleResponse });
 
       let nextContext = sessionContext;
       if (sessionUpdate) {
         nextContext = nextContext ? `${nextContext}\n- ${sessionUpdate}` : `- ${sessionUpdate}`;
       }
 
-      // Check if session should be retired (too long or completed)
-      let shouldRetire = false;
-      if (historyArr.length >= 24) {
-        shouldRetire = true;
-      } else if (historyArr.length >= 12 && typeof isThreadCompletedVal === 'number' && isThreadCompletedVal > 0.8) {
-        shouldRetire = true;
-      }
-
-      if (shouldRetire) {
-        // Start a brand new session for subsequent requests!
-        const newSessionId = `session_${Date.now()}`;
-        await TelemetryService.saveSession(user.$id, '', '[]', false, newSessionId);
+      // Compact behind-the-hood session context only — never wipe live chatHistory.
+      if (historyArr.length >= 6) {
         try {
-          const { account } = await createServerClient(jwt);
-          const prefs = await account.getPrefs().catch(() => ({}));
-          await account.updatePrefs({ ...prefs, activeAgentSessionId: newSessionId }).catch(() => {});
-        } catch {}
-      } else {
-        // Metamorphose / Compact context if message queue exceeds 6 items (using old_context * new_chats formula)
-        if (historyArr.length >= 6) {
           const compactModel = genAI.getGenerativeModel({
             model: 'gemini-2.0-flash',
             systemInstruction: 'You are the context compactor engine. Merge the old context with the new user interactions, keeping only crucial rules, parameters, outcomes, and progress details. Output clean compressed text.'
           });
+          const compactable = historyArr.slice(-6).map((m: any) => {
+            const body = typeof m.content === 'string' ? m.content : '';
+            return `${m.role === 'user' ? 'User' : 'Agent'}: ${body}`;
+          }).join('\n');
           const compactorPrompt = `
 Old Context:
 ${nextContext}
 
 New Chats Added:
-${historyArr.slice(-6).map((m: any) => `${m.role === 'user' ? 'User' : 'Agent'}: ${m.content}`).join('\n')}
+${compactable}
 `;
           const compactRes = await compactModel.generateContent(compactorPrompt);
           nextContext = compactRes.response.text().trim();
-          // Clear historic chats after compaction to keep it scalable, keeping only final trailing chats
-          historyArr = historyArr.slice(-4);
+        } catch (compactErr) {
+          console.warn('[executeInstantRequestAction] Context compact failed:', compactErr);
         }
-
-        await TelemetryService.saveSession(user.$id, nextContext, JSON.stringify(historyArr), false, sessionData?.rowId);
       }
+
+      await TelemetryService.saveSession(
+        user.$id,
+        nextContext,
+        JSON.stringify(historyArr),
+        false,
+        sessionData?.rowId || activeSessionId,
+      );
 
       // Save high-quality lifetime memory updates if specified
       if (memoryUpdate) {
@@ -590,7 +650,9 @@ ${historyArr.slice(-6).map((m: any) => `${m.role === 'user' ? 'User' : 'Agent'}:
   return {
     success: true,
     response: visibleResponse,
-    toolCalls: parsedToolCalls
+    toolCalls: parsedToolCalls,
+    sessionId: sessionData?.rowId || activeSessionId || undefined,
+    conversationId,
   };
 }
 
@@ -606,7 +668,7 @@ export async function getAgentSession(jwt?: string) {
   if (activeSessionId) {
     session = await TelemetryService.loadSession(user.$id, activeSessionId);
   }
-  
+
   if (!session || !session.rowId) {
     session = await TelemetryService.loadSession(user.$id);
     if (session.rowId) {
@@ -635,6 +697,70 @@ export async function startNewAgentSession(jwt?: string) {
   
   await account.updatePrefs({ ...prefs, activeAgentSessionId: newSessionId }).catch(() => {});
   return { success: true, sessionId: newSessionId };
+}
+
+export async function recordAgentSessionObjectAction(params: {
+  sessionId: string;
+  objectId: string;
+  objectType: string;
+  title?: string | null;
+  toolKey?: string | null;
+}, jwt?: string) {
+  const user = await requireUser(jwt);
+  if (!params.sessionId || !params.objectId || !params.objectType) {
+    return { success: false };
+  }
+  const { TelemetryService } = await import('@/lib/services/telemetry');
+  await TelemetryService.recordSessionObject({
+    userId: user.$id,
+    sessionId: params.sessionId,
+    objectId: params.objectId,
+    objectType: params.objectType,
+    title: params.title,
+    toolKey: params.toolKey,
+  });
+  return { success: true };
+}
+
+export async function listAgentSessionObjectsAction(sessionId: string, jwt?: string) {
+  const user = await requireUser(jwt);
+  if (!sessionId) return [];
+  const { TelemetryService } = await import('@/lib/services/telemetry');
+  return TelemetryService.listSessionObjects(user.$id, sessionId, 40);
+}
+
+export async function recordAgentToolCallAction(params: {
+  sessionId: string;
+  conversationId: string;
+  toolKey: string;
+  specifier?: string | null;
+  args?: Record<string, unknown> | null;
+  status?: string | null;
+  resultSummary?: string | null;
+}, jwt?: string) {
+  const user = await requireUser(jwt);
+  if (!params.sessionId || !params.conversationId || !params.toolKey) {
+    return { success: false };
+  }
+  const { TelemetryService } = await import('@/lib/services/telemetry');
+  const id = await TelemetryService.recordToolCall({
+    userId: user.$id,
+    sessionId: params.sessionId,
+    conversationId: params.conversationId,
+    toolKey: params.toolKey,
+    specifier: params.specifier,
+    args: params.args || null,
+    status: params.status || 'success',
+    resultSummary: params.resultSummary,
+  });
+  return { success: Boolean(id), id };
+}
+
+export async function listAgentToolCallsAction(sessionId: string, jwt?: string) {
+  const user = await requireUser(jwt);
+  if (!sessionId) return [];
+  const { TelemetryService } = await import('@/lib/services/telemetry');
+  return TelemetryService.listToolCalls(user.$id, sessionId, 120);
 }
 
 export async function listAgentSessions(jwt?: string) {
