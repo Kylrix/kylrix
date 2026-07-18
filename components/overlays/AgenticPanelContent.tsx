@@ -51,6 +51,8 @@ import {
 
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useNotes } from '@/context/NotesContext';
+import { useTask } from '@/context/TaskContext';
 import { AgenticService } from '@/lib/services/agentic';
 import { executeInstantRequestAction } from '@/lib/actions/agentic';
 import {
@@ -137,6 +139,8 @@ interface AgenticPanelContentProps {
 export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentProps) {
   const { consumePendingPrompt } = useAgenticDrawer();
   const { user } = useAuth();
+  const { notes: allNotes, pushLiveNote } = useNotes();
+  const { addTask, updateTask } = useTask();
   const { openProUpgrade } = useProUpgrade();
   const pathname = usePathname() || '/';
   const router = useRouter();
@@ -311,8 +315,84 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   }
                 }
 
-                // If authorized, simulate internal agentic engine task handoff
-                toast.success(`Agent executed ${toolDef.name} successfully.`);
+                // Execute actual functionalities locally so they auto-sync via sync engines
+                try {
+                  if (call.toolKey === 'create_note') {
+                    const noteId = `note_${Date.now()}`;
+                    const newNote: any = {
+                      $id: noteId,
+                      id: noteId,
+                      title: call.args.title || 'Untitled Note',
+                      content: call.args.content || '',
+                      tags: Array.isArray(call.args.tags) ? call.args.tags : (call.args.tags ? [call.args.tags] : []),
+                      userId: user?.$id || 'guest',
+                      isTrash: false,
+                      isPublic: call.args.isPublic === true || call.args.isPublic === 'true',
+                      isGuest: call.args.isPublic === true || call.args.isPublic === 'true',
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      $createdAt: new Date().toISOString(),
+                      $updatedAt: new Date().toISOString(),
+                      $permissions: []
+                    };
+                    pushLiveNote(newNote);
+                  } else if (call.toolKey === 'update_note' && call.specifier) {
+                    const existingNote = allNotes.find(n => n.id === call.specifier || n.$id === call.specifier);
+                    if (existingNote) {
+                      const updatedNote = {
+                        ...existingNote,
+                        title: call.args.title !== undefined ? call.args.title : existingNote.title,
+                        content: call.args.content !== undefined ? call.args.content : existingNote.content,
+                        tags: call.args.tags !== undefined ? (Array.isArray(call.args.tags) ? call.args.tags : [call.args.tags]) : existingNote.tags,
+                        isPublic: call.args.isPublic !== undefined ? (call.args.isPublic === true || call.args.isPublic === 'true') : existingNote.isPublic,
+                        isGuest: call.args.isPublic !== undefined ? (call.args.isPublic === true || call.args.isPublic === 'true') : existingNote.isGuest,
+                        updatedAt: new Date().toISOString(),
+                        $updatedAt: new Date().toISOString()
+                      };
+                      pushLiveNote(updatedNote);
+                    }
+                  } else if (call.toolKey === 'create_goal') {
+                    await addTask({
+                      title: call.args.title || 'Untitled Goal',
+                      status: call.args.status || 'todo',
+                      priority: call.args.priority || 'medium',
+                      dueDate: call.args.dueDate ? new Date(call.args.dueDate) : null,
+                      labels: [],
+                      subtasks: [],
+                      comments: [],
+                      attachments: [],
+                      reminders: [],
+                      timeEntries: [],
+                      assigneeIds: user?.$id ? [user.$id] : ['guest'],
+                      creatorId: user?.$id || 'guest',
+                      isArchived: false,
+                      isPinned: false
+                    });
+                  } else if (call.toolKey === 'update_goal' && call.specifier) {
+                    await updateTask(call.specifier, {
+                      title: call.args.title,
+                      status: call.args.status,
+                      priority: call.args.priority,
+                      dueDate: call.args.dueDate ? new Date(call.args.dueDate) : undefined
+                    });
+                  } else if (call.toolKey === 'create_project') {
+                    const { ProjectsService } = await import('@/lib/appwrite/projects');
+                    await ProjectsService.createProject(user?.$id || 'guest', {
+                      title: call.args.title || 'Untitled Project',
+                      summary: call.args.summary || '',
+                      status: 'active'
+                    });
+                    const { warmProjectsList } = await import('@/lib/projects/warm-projects-list');
+                    await warmProjectsList.warm();
+                  } else if (call.toolKey === 'navigate_workspace' && call.args.route) {
+                    onClose();
+                    router.push(call.args.route);
+                  }
+                  toast.success(`Agent executed ${toolDef.name} successfully.`);
+                } catch (err: any) {
+                  console.error(`Failed to execute tool ${call.toolKey}:`, err);
+                  toast.error(`Failed to execute ${toolDef.name}`);
+                }
               }
             }
           }
