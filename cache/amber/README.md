@@ -108,7 +108,15 @@ Attempted to address suspected HMR/bundling module-level separation between card
 - Exposed `isUnpersistedComposeDraft` via context value to bypass module instance boundaries.
 - Re-run status update hooks to sync local sets with the context state.
 
-**User report: still did not resolve edit amber.** Reversed further attempts per request.
+### Phase H — Direct React State Channel (`setNoteDirty` / `isNoteDirty`)
+Attempted a direct, dedicated state channel:
+
+- Declared `dirtyNoteIds` dictionary state in `NotesContext`.
+- Exposed `setNoteDirty` and `isNoteDirty` methods through the context.
+- Programmed `NoteDetailSidebar` to set/unset the note's dirty state.
+- Set the `NoteCard` `SyncStatusDot` to consume `isNoteDirty(note.$id)`.
+
+**User report: still did not work. Reverted and ceased further attempts.**
 
 ---
 
