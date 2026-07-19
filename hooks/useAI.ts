@@ -9,7 +9,7 @@ export interface AIChatMessage {
 }
 
 export const useAI = () => {
-  const { user } = useAuth();
+  const { user, getJWT } = useAuth();
 
   const generate = async (prompt: string, options: {
     history?: AIChatMessage[],
@@ -17,13 +17,15 @@ export const useAI = () => {
   } = {}) => {
     // Fallback for user custom key from prefs if relevant
     const customKey = user?.prefs?.customGeminiKey;
+    const jwt = getJWT ? await getJWT() : null;
 
     const result = await generateAIContent({
       mode: 'GENERIC_CHAT',
       prompt,
       history: options.history,
       systemInstruction: options.systemInstruction,
-      byokKey: customKey
+      byokKey: customKey,
+      jwt: jwt || undefined
     });
 
     if (!result.success) {

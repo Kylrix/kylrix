@@ -35,7 +35,7 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
 
   // Resolve actor for logging and gating checks
   try {
-    actor = await getActor();
+    actor = await getActor(payload.jwt);
   } catch (e) {
     console.error('[AI getActor Exception]', e);
   }

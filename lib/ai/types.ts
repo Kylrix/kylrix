@@ -14,6 +14,7 @@ export interface AIRequestPayload {
   localContext?: any; // Compiled browser context summary
   history?: any[]; // Optional chat history
   systemInstruction?: string; // Optional system instruction override
+  jwt?: string; // Optional JWT token for authentication context
 }
 
 export interface AIResponse {
