@@ -862,6 +862,49 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             </Stack>
 
             <Stack gap={2.5} sx={{ flex: 1, overflowY: 'auto', px: 3, pb: 3, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
+                {/* KTS Mode Toggle */}
+                <Box
+                    sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 2,
+                        px: 2.25,
+                        py: 1.5,
+                        borderRadius: '18px',
+                        bgcolor: HIGHLIGHT,
+                        border: `1px solid ${EDGE}`,
+                    }}
+                >
+                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
+                        <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
+                            KTS mode (Kylrix ledger only)
+                        </Typography>
+                        <Typography component="span" sx={{ color: MUTED, fontSize: '0.76rem', lineHeight: 1.35, fontFamily: 'var(--font-satoshi)' }}>
+                            Only show Kylrix ledger balance and hide on-chain wallets.
+                        </Typography>
+                    </Box>
+                    <Box sx={{ flexShrink: 0 }}>
+                        <Switch
+                            checked={ktsMode}
+                            onChange={(e: any) => {
+                                setKtsModeState(e.target.checked);
+                                try {
+                                    localStorage.setItem(KTS_STORAGE_KEY, e.target.checked ? '1' : '0');
+                                } catch (_e: unknown) {
+                                    /* noop */
+                                }
+                            }}
+                            size="small"
+                            sx={{
+                                '& .ob-switch-thumb.ob-checked': { color: ACCENT },
+                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
+                            }}
+                        />
+                    </Box>
+                </Box>
+
                 {/* Testnet Mode Toggle */}
                 <Box
                     sx={{
@@ -1241,9 +1284,14 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                     </Stack>
                     <Stack direction="row" alignItems="center" gap={1}>
                         {isUnlocked && (
-                            <IconButton size="small" onClick={() => setShowSettings(true)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
-                                <Settings size={18} />
-                            </IconButton>
+                            <>
+                                <IconButton size="small" onClick={() => setShowKylrixDetail(true)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                                    <History size={18} />
+                                </IconButton>
+                                <IconButton size="small" onClick={() => setShowSettings(true)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                                    <Settings size={18} />
+                                </IconButton>
+                            </>
                         )}
                         {!isMobile && (
                             <IconButton size="small" onClick={() => setIsExpanded(!isExpanded)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
@@ -1446,47 +1494,6 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                     ? 'Kylrix Token System — on-chain wallets hidden'
                                     : `Fiat estimate excludes KYLRIX · ${wallets.length} active chains`}
                             </Typography>
-                            
-                            <Box sx={{
-                                borderTop: `1px solid ${EDGE}`,
-                                pt: 2,
-                                mt: 2.5,
-                                mx: -3,
-                                mb: -3,
-                                px: 3,
-                                pb: 2,
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                bgcolor: 'rgba(255,255,255,0.015)'
-                            }}>
-                                <FormControlLabel
-                                    sx={{ m: 0, display: 'flex', gap: 1 }}
-                                    control={(
-                                        <Switch
-                                            checked={ktsMode}
-                                            onChange={(_: React.SyntheticEvent, checked: boolean) => {
-                                                setKtsModeState(checked);
-                                                try {
-                                                    localStorage.setItem(KTS_STORAGE_KEY, checked ? '1' : '0');
-                                                } catch (_e: unknown) {
-                                                    /* noop */
-                                                }
-                                            }}
-                                            size="small"
-                                            sx={{
-                                                '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
-                                            }}
-                                        />
-                                    )}
-                                    label={(
-                                        <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
-                                            KTS mode (Kylrix ledger only)
-                                        </Typography>
-                                    )}
-                                />
-                            </Box>
                         </Box>
 
                         {ktsMode ? (
@@ -1812,23 +1819,6 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                             </Stack>
                         )}
 
-                        <Stack gap={2}>
-                            <Typography variant="caption" sx={{ fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
-                                Recent Activity
-                            </Typography>
-                            <Box sx={{
-                                p: 4,
-                                textAlign: 'center',
-                                borderRadius: '24px',
-                                border: `1px solid ${EDGE}`,
-                                bgcolor: HIGHLIGHT
-                            }}>
-                                <History size={24} color={MUTED} style={{ marginBottom: 12 }} />
-                                <Typography variant="body2" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
-                                    No transactions yet
-                                </Typography>
-                            </Box>
-                        </Stack>
                         </>
                         )}
                     </Box>
