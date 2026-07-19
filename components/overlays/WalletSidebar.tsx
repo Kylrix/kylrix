@@ -1261,27 +1261,17 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
         }
         return (
             <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 0 }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ pt: 3.5, px: 3, pb: 2, mb: 1 }}>
-                    <Stack direction="row" alignItems="center" gap={1.5}>
-                        <Box sx={{
-                            p: 1,
-                            borderRadius: '12px',
-                            bgcolor: '#1C1A18',
-                            border: `1px solid ${EDGE}`,
-                            color: ACCENT,
-                            display: 'flex'
-                        }}>
-                            <WalletIcon size={20} />
-                        </Box>
-                        <Box>
-                            <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', color: 'white' }}>
-                                Kylrix Wallet
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
-                                T4 Non-Custodial Layer
-                            </Typography>
-                        </Box>
-                    </Stack>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ pt: 3, px: 3, pb: 1.5 }}>
+                    <Box sx={{
+                        p: 1,
+                        borderRadius: '12px',
+                        bgcolor: '#1C1A18',
+                        border: `1px solid ${EDGE}`,
+                        color: ACCENT,
+                        display: 'flex'
+                    }}>
+                        <WalletIcon size={20} />
+                    </Box>
                     <Stack direction="row" alignItems="center" gap={1}>
                         {isUnlocked && (
                             <>
