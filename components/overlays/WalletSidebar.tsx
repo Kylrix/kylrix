@@ -305,7 +305,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
     };
 
     const ACCENT = '#6366F1';
-    const SURFACE = '#161412';
+    const SURFACE = '#000000';
     const HIGHLIGHT = '#1C1A18';
     const EDGE = '#34322F';
     const MUTED = '#9B9691';
