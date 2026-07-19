@@ -32,6 +32,8 @@ import {
     Settings,
     Maximize2,
     Minimize2,
+    ArrowUpRight,
+    ArrowDownLeft,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSudo } from '@/context/SudoContext';
@@ -626,76 +628,111 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                 </Paper>
             ) : null}
 
-            <Stack gap={1.1} sx={{ mt: ledgerHistoryLoading ? 1 : 0 }}>
+            <Stack gap={1.5} sx={{ mt: ledgerHistoryLoading ? 1 : 0 }}>
                 {!ledgerHistoryLoading
                     ? sortedLedgerHistory.map((row, index) => {
                           const deltaStr = formatLedgerDelta(row.deltaMicro);
-                          let deltaColor = ACCENT;
+                          let deltaColor = '#4ade80';
+                          let isReceive = true;
                           try {
                               const n = BigInt(String(row.deltaMicro ?? '0'));
-                              if (n < 0n) deltaColor = '#f87171';
-                              else if (n === 0n) deltaColor = MUTED;
+                              if (n < 0n) {
+                                  deltaColor = '#f87171';
+                                  isReceive = false;
+                              } else if (n === 0n) {
+                                  deltaColor = MUTED;
+                              }
                           } catch {
                               deltaColor = MUTED;
                           }
                           const after = formatLedgerBalanceAfter(row.balanceAfterMicro);
                           const status = String(row.status || '').toLowerCase();
                           return (
-                              <Paper
+                              <Box
                                   key={ledgerRowKey(row, index)}
                                   sx={{
-                                      p: 1.35,
-                                      borderRadius: '14px',
-                                      bgcolor: HIGHLIGHT,
+                                      width: '100%',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 1.75,
+                                      px: 2.25,
+                                      py: 1.5,
+                                      borderRadius: '18px',
+                                      bgcolor: '#161412',
                                       border: `1px solid ${EDGE}`,
-                                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+                                      transition: 'border-color 0.2s',
+                                      '&:hover': { borderColor: '#4A4743' }
                                   }}
                               >
-                                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1.25}>
-                                      <Box sx={{ minWidth: 0 }}>
-                                          <Typography
-                                              sx={{
-                                                  color: 'white',
-                                                  fontWeight: 700,
-                                                  fontSize: '0.82rem',
-                                                  fontFamily: 'var(--font-satoshi)',
-                                                  lineHeight: 1.35,
-                                              }}
-                                          >
-                                              {describeLedgerRow(row)}
-                                          </Typography>
-                                          <Typography sx={{ color: MUTED, fontSize: '0.72rem', mt: 0.35 }}>
-                                              {formatLedgerWhen(row)}
-                                          </Typography>
-                                          {status === 'pending' ? (
-                                              <Typography sx={{ color: '#FBBF24', fontSize: '0.7rem', fontWeight: 600, mt: 0.35 }}>
-                                                  Pending
-                                              </Typography>
-                                          ) : null}
-                                      </Box>
+                                  {/* 1. Fixed icon slot */}
+                                  <Box
+                                      sx={{
+                                          width: 38,
+                                          height: 38,
+                                          borderRadius: '12px',
+                                          display: 'grid',
+                                          placeItems: 'center',
+                                          flexShrink: 0,
+                                          bgcolor: isReceive ? 'rgba(21, 128, 61, 0.15)' : 'rgba(185, 28, 28, 0.15)',
+                                          border: `1px solid ${isReceive ? '#15803d' : '#b91c1c'}`,
+                                          color: isReceive ? '#4ade80' : '#f87171'
+                                      }}
+                                  >
+                                      {isReceive ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
+                                  </Box>
+
+                                  {/* 2. Stacked copy column */}
+                                  <Box
+                                      sx={{
+                                          minWidth: 0,
+                                          flex: 1,
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          gap: 0.35,
+                                          pr: 0.5
+                                      }}
+                                  >
                                       <Typography
+                                          component="span"
+                                          sx={{ fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.25, color: 'white' }}
+                                          noWrap
+                                      >
+                                          {describeLedgerRow(row)}
+                                      </Typography>
+                                      <Typography
+                                          component="span"
+                                          sx={{
+                                              color: MUTED,
+                                              fontWeight: 600,
+                                              fontSize: '0.74rem',
+                                              lineHeight: 1.35
+                                          }}
+                                      >
+                                          {formatLedgerWhen(row)} {after ? `· after: ${after} ${kylrixTicker(tokenBalance?.symbol)}` : ''}
+                                      </Typography>
+                                  </Box>
+
+                                  {/* 3. Amount and status */}
+                                  <Box sx={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.35 }}>
+                                      <Typography
+                                          component="span"
                                           sx={{
                                               color: deltaColor,
                                               fontFamily: 'var(--font-mono)',
                                               fontWeight: 800,
                                               fontSize: '0.88rem',
-                                              flexShrink: 0,
-                                              textAlign: 'right',
-                                              lineHeight: 1.35,
+                                              lineHeight: 1.25
                                           }}
                                       >
-                                          {deltaStr}{' '}
-                                          <Box component="span" sx={{ color: MUTED, fontWeight: 600, fontSize: '0.72rem' }}>
-                                              {kylrixTicker(tokenBalance?.symbol)}
-                                          </Box>
+                                          {deltaStr}
                                       </Typography>
-                                  </Stack>
-                                  {after ? (
-                                      <Typography sx={{ color: MUTED, fontSize: '0.7rem', mt: 0.85 }}>
-                                          After · {after} {kylrixTicker(tokenBalance?.symbol)}
-                                      </Typography>
-                                  ) : null}
-                              </Paper>
+                                      {status === 'pending' ? (
+                                          <Typography component="span" sx={{ color: '#FBBF24', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                              Pending
+                                          </Typography>
+                                      ) : null}
+                                  </Box>
+                              </Box>
                           );
                       })
                     : null}
@@ -1789,17 +1826,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                     </Box>
                 )}
 
-                <Divider sx={{ borderColor: EDGE, my: 2, mx: 3 }} />
-                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 3, pb: 3, pt: 0.5 }}>
-                    <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
-                        {isUnlocked ? 'Vault unlocked & active' : 'Auto-provisioned once unlocked'}
-                    </Typography>
-                    {!isUnlocked && (
-                        <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)', fontStyle: 'italic', opacity: 0.6 }}>
-                            Locked
-                        </Typography>
-                    )}
-                </Stack>
+
             </Box>
         );
     };
