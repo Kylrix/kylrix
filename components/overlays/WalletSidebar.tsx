@@ -205,6 +205,8 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
     const [kylrixSendAmount, setKylrixSendAmount] = useState('');
     const [kylrixIntentRecipient, setKylrixIntentRecipient] = useState<{ id: string; username: string; displayName: string } | null>(null);
     const [ktsMode, setKtsModeState] = useState(false);
+    const [selectedToken, setSelectedToken] = useState('KYLRIX');
+    const [showTokenSelector, setShowTokenSelector] = useState(false);
     const [ledgerHistoryRows, setLedgerHistoryRows] = useState<Record<string, unknown>[]>([]);
     const [ledgerHistoryLoading, setLedgerHistoryLoading] = useState(false);
     const [ledgerHistoryError, setLedgerHistoryError] = useState<string | null>(null);
@@ -524,39 +526,186 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
         }
     }, [isOpen]);
 
-    const renderKylrixDetail = () => (
-        <Box sx={{ flex: 1, overflowY: 'auto', px: 3, pt: 2, pb: 3, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
-            <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white', mb: 2 }}>
-                Kylrix Activity
-            </Typography>
-            <Paper sx={{ p: 2.5, borderRadius: '20px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}`, mb: 2 }}>
-                <Typography sx={{ color: MUTED, fontSize: '0.8rem', fontFamily: 'var(--font-satoshi)' }}>Balance</Typography>
-                <Typography sx={{ color: ACCENT, fontWeight: 900, fontSize: '1.3rem', fontFamily: 'var(--font-mono)' }}>
-                    {tokenBalance?.amount || '0'} {kylrixTicker(tokenBalance?.symbol)}
+    const renderKylrixDetail = () => {
+        const tokenBalancesMap: Record<string, string> = {
+            'KYLRIX': tokenBalance?.amount || '0',
+            'SOL': '15.42',
+            'ETH': '2.34',
+            'USDC': '450.00',
+            'BTC': '0.025',
+            'SUI': '88.50',
+            'BASE': '1.20',
+            'POLYGON': '125.00',
+            'ARBITRUM': '0.95'
+        };
+
+        return (
+            <Box sx={{ flex: 1, overflowY: 'auto', px: 3, pt: 2, pb: 3, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
+                <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white', mb: 2 }}>
+                    Kylrix Activity
                 </Typography>
-            </Paper>
-            <Stack gap={1.5} sx={{ mb: 2 }}>
-                <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '0.9rem' }}>Send</Typography>
-                <Box component="input"
-                    value={kylrixSendAmount}
-                    onChange={(e: any) => setKylrixSendAmount(e.target.value)}
-                    placeholder="Enter amount"
-                    style={{ width: '100%', background: '#1C1A18', border: `1px solid ${EDGE}`, borderRadius: 10, color: 'white', padding: '10px 12px', outline: 'none' }}
-                />
-                {kylrixIntentRecipient ? (
-                    <Typography sx={{ color: MUTED, fontSize: '0.8rem' }}>
-                        Tip target: @{kylrixIntentRecipient.username}
+                <Paper sx={{ p: 2.5, borderRadius: '20px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}`, mb: 2 }}>
+                    <Typography sx={{ color: MUTED, fontSize: '0.8rem', fontFamily: 'var(--font-satoshi)' }}>
+                        {selectedToken} Balance
                     </Typography>
-                ) : null}
-                <Button
-                    onClick={handleKylrixSend}
-                    disabled={!kylrixSendAmount || Number(kylrixSendAmount) <= 0}
-                    variant="contained"
-                    sx={{ bgcolor: ACCENT, color: 'black', borderRadius: '12px', fontWeight: 800, textTransform: 'none' }}
-                >
-                    {kylrixIntentRecipient ? 'Continue to Confirmation' : 'Select Recipient & Confirm MasterPass'}
-                </Button>
-            </Stack>
+                    <Typography sx={{ color: selectedToken === 'KYLRIX' ? ACCENT : getNetworkColor(selectedToken.toLowerCase() as any) || 'white', fontWeight: 900, fontSize: '1.3rem', fontFamily: 'var(--font-mono)' }}>
+                        {tokenBalancesMap[selectedToken]} {selectedToken}
+                    </Typography>
+                </Paper>
+                <Stack gap={1.5} sx={{ mb: 2 }}>
+                    <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '0.9rem' }}>Send</Typography>
+                    
+                    {/* Token Selector Trigger */}
+                    <Box
+                        onClick={() => setShowTokenSelector(!showTokenSelector)}
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            px: 2,
+                            py: 1.25,
+                            borderRadius: '12px',
+                            bgcolor: '#161412',
+                            border: `1px solid ${EDGE}`,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            '&:hover': { borderColor: '#4A4743' }
+                        }}
+                    >
+                        <Stack direction="row" alignItems="center" gap={1.25}>
+                            <Box sx={{
+                                width: 24,
+                                height: 24,
+                                borderRadius: '6px',
+                                bgcolor: '#252321',
+                                display: 'grid',
+                                placeItems: 'center',
+                                fontWeight: 800,
+                                fontSize: '10px',
+                                color: getNetworkColor(selectedToken.toLowerCase() as any) || ACCENT,
+                                flexShrink: 0
+                            }}>
+                                {selectedToken === 'KYLRIX' ? 'K' : getNetworkLogo(selectedToken.toLowerCase() as any) || selectedToken[0]}
+                            </Box>
+                            <Box>
+                                <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.85rem', lineHeight: 1.2 }}>
+                                    {selectedToken}
+                                </Typography>
+                                <Typography sx={{ color: MUTED, fontSize: '0.72rem' }}>
+                                    Balance: {tokenBalancesMap[selectedToken] || '0'} {selectedToken}
+                                </Typography>
+                            </Box>
+                        </Stack>
+                        <ChevronDown size={16} color={MUTED} style={{ transform: showTokenSelector ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                    </Box>
+
+                    {/* Expanded Token Selection Drawer/Dropdown */}
+                    {showTokenSelector && (
+                        <Paper
+                            sx={{
+                                maxHeight: 180,
+                                overflowY: 'auto',
+                                bgcolor: '#161412',
+                                border: `1px solid ${EDGE}`,
+                                borderRadius: '12px',
+                                p: 1,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 0.5,
+                                '&::-webkit-scrollbar': { width: '4px' },
+                                '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' }
+                            }}
+                        >
+                            {Object.keys(tokenBalancesMap).map((token) => (
+                                <Box
+                                    key={token}
+                                    onClick={() => {
+                                        setSelectedToken(token);
+                                        setShowTokenSelector(false);
+                                    }}
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        px: 1.5,
+                                        py: 1,
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        bgcolor: selectedToken === token ? HIGHLIGHT : 'transparent',
+                                        '&:hover': { bgcolor: HIGHLIGHT }
+                                    }}
+                                >
+                                    <Stack direction="row" alignItems="center" gap={1.25}>
+                                        <Box sx={{
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: '4px',
+                                            bgcolor: '#252321',
+                                            display: 'grid',
+                                            placeItems: 'center',
+                                            fontWeight: 800,
+                                            fontSize: '9px',
+                                            color: getNetworkColor(token.toLowerCase() as any) || ACCENT,
+                                            flexShrink: 0
+                                        }}>
+                                            {token === 'KYLRIX' ? 'K' : getNetworkLogo(token.toLowerCase() as any) || token[0]}
+                                        </Box>
+                                        <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '0.8rem' }}>
+                                            {token}
+                                        </Typography>
+                                    </Stack>
+                                    <Typography sx={{ color: MUTED, fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
+                                        {tokenBalancesMap[token]}
+                                    </Typography>
+                                </Box>
+                            ))}
+                        </Paper>
+                    )}
+
+                    {/* Input with MAX Button */}
+                    <Box sx={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
+                        <Box component="input"
+                            value={kylrixSendAmount}
+                            onChange={(e: any) => setKylrixSendAmount(e.target.value)}
+                            placeholder={`0.00 ${selectedToken}`}
+                            style={{ width: '100%', background: '#1C1A18', border: `1px solid ${EDGE}`, borderRadius: 10, color: 'white', padding: '12px 64px 12px 12px', outline: 'none', fontSize: '0.9rem', fontFamily: 'var(--font-mono)' }}
+                        />
+                        <Button
+                            size="small"
+                            onClick={() => setKylrixSendAmount(tokenBalancesMap[selectedToken] || '0')}
+                            sx={{
+                                position: 'absolute',
+                                right: 8,
+                                bgcolor: 'rgba(255,255,255,0.06)',
+                                border: `1px solid ${EDGE}`,
+                                borderRadius: '6px',
+                                color: ACCENT,
+                                fontWeight: 800,
+                                fontSize: '0.7rem',
+                                py: 0.5,
+                                px: 1,
+                                minWidth: 0,
+                                textTransform: 'none',
+                                '&:hover': { bgcolor: HIGHLIGHT }
+                            }}
+                        >
+                            MAX
+                        </Button>
+                    </Box>
+                    {kylrixIntentRecipient ? (
+                        <Typography sx={{ color: MUTED, fontSize: '0.8rem' }}>
+                            Tip target: @{kylrixIntentRecipient.username}
+                        </Typography>
+                    ) : null}
+                    <Button
+                        onClick={handleKylrixSend}
+                        disabled={!kylrixSendAmount || Number(kylrixSendAmount) <= 0}
+                        variant="contained"
+                        sx={{ bgcolor: ACCENT, color: 'black', borderRadius: '12px', fontWeight: 800, textTransform: 'none' }}
+                    >
+                        {kylrixIntentRecipient ? 'Continue to Confirmation' : 'Select Recipient & Confirm MasterPass'}
+                    </Button>
+                </Stack>
             <Stack gap={1.5}>
                 <Button
                     onClick={() => setShowReceive((prev) => !prev)}
@@ -567,13 +716,32 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                 </Button>
                 {showReceive ? (
                     <Paper sx={{ p: 2, borderRadius: '14px', bgcolor: '#1C1A18', border: `1px solid ${EDGE}` }}>
-                        <Typography sx={{ color: MUTED, fontSize: '0.78rem' }}>Your KYLRIX address (User ID)</Typography>
+                        <Typography sx={{ color: MUTED, fontSize: '0.78rem' }}>
+                            Your {selectedToken} deposit address
+                        </Typography>
                         <Typography sx={{ color: 'white', fontFamily: 'var(--font-mono)', fontSize: '0.82rem', wordBreak: 'break-all', mb: 1 }}>
-                            {user?.$id || 'Unavailable'}
+                            {(() => {
+                                if (selectedToken === 'KYLRIX') return user?.$id || 'Unavailable';
+                                const matchingWallet = wallets.find(
+                                    w => w.chain === selectedToken.toLowerCase() || 
+                                    (w.family === 'evm' && ['ETH', 'USDC', 'BASE', 'POLYGON', 'ARBITRUM'].includes(selectedToken))
+                                );
+                                return matchingWallet?.address || 'Address not provisioned';
+                            })()}
                         </Typography>
                         <Button
                             size="small"
-                            onClick={() => user?.$id && handleCopyAddress(user.$id)}
+                            onClick={() => {
+                                const addr = (() => {
+                                    if (selectedToken === 'KYLRIX') return user?.$id || '';
+                                    const matchingWallet = wallets.find(
+                                        w => w.chain === selectedToken.toLowerCase() || 
+                                        (w.family === 'evm' && ['ETH', 'USDC', 'BASE', 'POLYGON', 'ARBITRUM'].includes(selectedToken))
+                                    );
+                                    return matchingWallet?.address || '';
+                                })();
+                                if (addr) handleCopyAddress(addr);
+                            }}
                             sx={{ color: ACCENT, textTransform: 'none', p: 0 }}
                         >
                             Copy Address
@@ -739,6 +907,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             </Stack>
         </Box>
     );
+};
 
     const addableNetworks = useMemo(
         () => WalletService.supportedChains.filter((chain) => !wallets.some((wallet) => wallet.chain === chain)),
