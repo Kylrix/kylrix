@@ -956,7 +956,7 @@ export type Tasks = Models.Row & {
     isDeleted: boolean;
     scheduled: boolean;
     isTrash: boolean;
-    isAgentic?: boolean | null;
+    isAgentic: boolean;
 }
 
 export type Forms = Models.Row & {
@@ -1158,4 +1158,26 @@ export type Swept = Models.Row & {
     policy: string | null;
     createdAt: string | null;
     updatedAt: string | null;
+}
+
+export type SessionObjects = Models.Row & {
+    userId: string;
+    sessionId: string;
+    objectId: string;
+    objectType: string;
+    title: string | null;
+    toolKey: string | null;
+    createdAt: string | null;
+}
+
+export type ToolCalls = Models.Row & {
+    userId: string;
+    sessionId: string;
+    conversationId: string;
+    toolKey: string;
+    specifier: string | null;
+    args: string | null;
+    status: string | null;
+    resultSummary: string | null;
+    createdAt: string | null;
 }
