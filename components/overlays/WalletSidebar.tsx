@@ -609,14 +609,14 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
     const renderKylrixDetail = () => {
         const tokenBalancesMap: Record<string, string> = {
             'KYLRIX': tokenBalance?.amount || '0',
-            'SOL': '15.42',
-            'ETH': '2.34',
-            'USDC': '450.00',
-            'BTC': '0.025',
-            'SUI': '88.50',
-            'BASE': '1.20',
-            'POLYGON': '125.00',
-            'ARBITRUM': '0.95'
+            'SOL': onChainBalances['SOL'] || '0.0000',
+            'ETH': onChainBalances['ETH'] || '0.0000',
+            'USDC': onChainBalances['USDC'] || '0.0000',
+            'BTC': onChainBalances['BTC'] || '0.0000',
+            'SUI': onChainBalances['SUI'] || '0.0000',
+            'BASE': onChainBalances['BASE'] || '0.0000',
+            'POLYGON': onChainBalances['POLYGON'] || '0.0000',
+            'ARBITRUM': onChainBalances['ARBITRUM'] || '0.0000'
         };
 
         return (
