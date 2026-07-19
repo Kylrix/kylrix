@@ -22,6 +22,7 @@ import {
     X,
     Wallet as WalletIcon,
     ChevronLeft,
+    ChevronDown,
     Lock,
     Unlock,
     Copy,
@@ -599,68 +600,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                         <ChevronDown size={16} color={MUTED} style={{ transform: showTokenSelector ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
                     </Box>
 
-                    {/* Expanded Token Selection Drawer/Dropdown */}
-                    {showTokenSelector && (
-                        <Paper
-                            sx={{
-                                maxHeight: 180,
-                                overflowY: 'auto',
-                                bgcolor: '#161412',
-                                border: `1px solid ${EDGE}`,
-                                borderRadius: '12px',
-                                p: 1,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: 0.5,
-                                '&::-webkit-scrollbar': { width: '4px' },
-                                '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' }
-                            }}
-                        >
-                            {Object.keys(tokenBalancesMap).map((token) => (
-                                <Box
-                                    key={token}
-                                    onClick={() => {
-                                        setSelectedToken(token);
-                                        setShowTokenSelector(false);
-                                    }}
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        px: 1.5,
-                                        py: 1,
-                                        borderRadius: '8px',
-                                        cursor: 'pointer',
-                                        bgcolor: selectedToken === token ? HIGHLIGHT : 'transparent',
-                                        '&:hover': { bgcolor: HIGHLIGHT }
-                                    }}
-                                >
-                                    <Stack direction="row" alignItems="center" gap={1.25}>
-                                        <Box sx={{
-                                            width: 20,
-                                            height: 20,
-                                            borderRadius: '4px',
-                                            bgcolor: '#252321',
-                                            display: 'grid',
-                                            placeItems: 'center',
-                                            fontWeight: 800,
-                                            fontSize: '9px',
-                                            color: getNetworkColor(token.toLowerCase() as any) || ACCENT,
-                                            flexShrink: 0
-                                        }}>
-                                            {token === 'KYLRIX' ? 'K' : getNetworkLogo(token.toLowerCase() as any) || token[0]}
-                                        </Box>
-                                        <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '0.8rem' }}>
-                                            {token}
-                                        </Typography>
-                                    </Stack>
-                                    <Typography sx={{ color: MUTED, fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
-                                        {tokenBalancesMap[token]}
-                                    </Typography>
-                                </Box>
-                            ))}
-                        </Paper>
-                    )}
+
 
                     {/* Input with MAX Button */}
                     <Box sx={{ position: 'relative', width: '100%', display: 'flex', alignItems: 'center' }}>
@@ -905,6 +845,92 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                       })
                     : null}
             </Stack>
+
+            {/* Bottom Drawer Token Selector (Z-Index above the main Wallet Drawer) */}
+            <Drawer
+                anchor="bottom"
+                open={showTokenSelector}
+                onClose={() => setShowTokenSelector(false)}
+                PaperProps={{
+                    sx: {
+                        bgcolor: SURFACE,
+                        borderTop: `1px solid ${EDGE}`,
+                        borderRadius: '32px 32px 0 0',
+                        backgroundImage: 'none',
+                        p: 3,
+                        maxHeight: '60dvh',
+                        zIndex: 1500,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2.5
+                    }
+                }}
+                ModalProps={{
+                    sx: {
+                        zIndex: 1490
+                    }
+                }}
+            >
+                {/* Drawer handle indicator */}
+                <Box sx={{ width: 40, height: 4, bgcolor: '#4A4743', borderRadius: '2px', alignSelf: 'center', mb: 1 }} />
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white' }}>
+                        Select Token
+                    </Typography>
+                    <IconButton size="small" onClick={() => setShowTokenSelector(false)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                        <X size={20} />
+                    </IconButton>
+                </Box>
+
+                <Stack gap={1.25} sx={{ overflowY: 'auto', maxHeight: '40dvh', pr: 0.5, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
+                    {Object.keys(tokenBalancesMap).map((token) => (
+                        <Box
+                            key={token}
+                            onClick={() => {
+                                setSelectedToken(token);
+                                setShowTokenSelector(false);
+                            }}
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                px: 2.25,
+                                py: 1.5,
+                                borderRadius: '18px',
+                                cursor: 'pointer',
+                                bgcolor: selectedToken === token ? HIGHLIGHT : '#161412',
+                                border: `1px solid ${EDGE}`,
+                                transition: 'all 0.2s',
+                                '&:hover': { borderColor: '#4A4743', bgcolor: HIGHLIGHT }
+                            }}
+                        >
+                            <Stack direction="row" alignItems="center" gap={1.5}>
+                                <Box sx={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: '8px',
+                                    bgcolor: '#252321',
+                                    display: 'grid',
+                                    placeItems: 'center',
+                                    fontWeight: 800,
+                                    fontSize: '12px',
+                                    color: getNetworkColor(token.toLowerCase() as any) || ACCENT,
+                                    flexShrink: 0
+                                }}>
+                                    {token === 'KYLRIX' ? 'K' : getNetworkLogo(token.toLowerCase() as any) || token[0]}
+                                </Box>
+                                <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', fontFamily: 'var(--font-satoshi)' }}>
+                                    {token}
+                                </Typography>
+                            </Stack>
+                            <Typography sx={{ color: MUTED, fontSize: '0.8rem', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                                {tokenBalancesMap[token]}
+                            </Typography>
+                        </Box>
+                    ))}
+                </Stack>
+            </Drawer>
         </Box>
     );
 };
