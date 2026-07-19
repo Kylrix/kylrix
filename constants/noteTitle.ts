@@ -8,7 +8,7 @@ export const AUTO_TITLE_CONFIG = {
 };
 
 /** Appwrite notes.title column max length */
-export const NOTE_TITLE_MAX_LENGTH = 256;
+export const NOTE_TITLE_MAX_LENGTH = 206;
 
 const OBJECT_BLOCK_REGEX = /\[\[kylrix-object:(\{.*?\})\]\]/g;
 
