@@ -1453,12 +1453,11 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                             p: 3, 
                             mb: 3, 
                             textAlign: 'center',
-                            background: 'linear-gradient(135deg, #1C1A18 0%, #0A0908 100%)',
+                            bgcolor: HIGHLIGHT,
                             borderRadius: '24px',
                             position: 'relative',
                             overflow: 'hidden',
-                            border: `1px solid ${EDGE}`,
-                            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.4)'
+                            border: `1px solid ${EDGE}`
                         }}>
                             <Typography variant="caption" sx={{ color: ACCENT, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'var(--font-satoshi)' }}>
                                 {ktsMode ? 'Kylrix Balance (KTS)' : 'Estimated Balance'}
