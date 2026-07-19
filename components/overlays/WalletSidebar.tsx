@@ -523,21 +523,10 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
     }, [isOpen]);
 
     const renderKylrixDetail = () => (
-        <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5 }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-                <Button
-                    size="small"
-                    onClick={() => setShowKylrixDetail(false)}
-                    startIcon={<ChevronLeft size={14} />}
-                    sx={{ color: MUTED, textTransform: 'none', borderRadius: '10px' }}
-                >
-                    Back
-                </Button>
-                <Typography variant="caption" sx={{ color: ACCENT, fontFamily: 'var(--font-satoshi)', fontWeight: 800 }}>
-                    {kylrixTicker(tokenBalance?.symbol)}
-                </Typography>
-            </Stack>
-            <Paper sx={{ p: 2.5, borderRadius: '20px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}`, mb: 2 }}>
+        <Box sx={{ flex: 1, overflowY: 'auto', px: 3, pt: 2, pb: 3, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
+            <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white', mb: 2 }}>
+                Kylrix Activity
+            </Typography>
                 <Typography sx={{ color: MUTED, fontSize: '0.8rem', fontFamily: 'var(--font-satoshi)' }}>Balance</Typography>
                 <Typography sx={{ color: ACCENT, fontWeight: 900, fontSize: '1.3rem', fontFamily: 'var(--font-mono)' }}>
                     {tokenBalance?.amount || '0'} {kylrixTicker(tokenBalance?.symbol)}
@@ -830,38 +819,11 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
     };
 
     const renderSettingsContent = () => (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 0 }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ pt: 3.5, px: 3, pb: 2, mb: 1 }}>
-                <Stack direction="row" alignItems="center" gap={1.5}>
-                    <Box sx={{
-                        p: 1,
-                        borderRadius: '12px',
-                        bgcolor: '#1C1A18',
-                        border: `1px solid ${EDGE}`,
-                        color: ACCENT,
-                        display: 'flex'
-                    }}>
-                        <Settings size={20} />
-                    </Box>
-                    <Box sx={{ textAlign: 'left' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', color: 'white' }}>
-                            Wallet Settings
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
-                            Configure advanced options & keys
-                        </Typography>
-                    </Box>
-                </Stack>
-                <IconButton onClick={() => {
-                    setShowSettings(false);
-                    setExportedMnemonic(null);
-                    setExportedPrivateKey(null);
-                }} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
-                    <X size={20} />
-                </IconButton>
-            </Stack>
-
-            <Stack gap={2.5} sx={{ flex: 1, overflowY: 'auto', px: 3, pb: 3, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Stack gap={2.5} sx={{ flex: 1, overflowY: 'auto', px: 3, pt: 2, pb: 3, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
+                <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white', mb: 2 }}>
+                    Wallet Settings
+                </Typography>
                 {/* KTS Mode Toggle */}
                 <Box
                     sx={{
@@ -1150,29 +1112,11 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
     );
 
     const renderSignConfirmation = () => (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 0, bgcolor: SURFACE }}>
-            <Stack direction="row" alignItems="center" gap={1.5} sx={{ pt: 3.5, px: 3, pb: 2, mb: 1 }}>
-                <Box sx={{
-                    p: 1,
-                    borderRadius: '12px',
-                    bgcolor: '#221805',
-                    border: '1px solid #d97706',
-                    color: '#f59e0b',
-                    display: 'flex'
-                }}>
-                    <Lock size={20} />
-                </Box>
-                <Box sx={{ textAlign: 'left' }}>
-                    <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', color: 'white' }}>
-                        Signature Request
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
-                        Confirm secure on-chain operation
-                    </Typography>
-                </Box>
-            </Stack>
-
-            <Stack gap={2.5} sx={{ flex: 1, overflowY: 'auto', px: 3, pb: 3, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: SURFACE }}>
+            <Stack gap={2.5} sx={{ flex: 1, overflowY: 'auto', px: 3, pt: 2, pb: 3, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
+                <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white', mb: 2 }}>
+                    Signature Request
+                </Typography>
                 <Paper sx={{ px: 2.25, py: 1.5, borderRadius: '18px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}`, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
                     <Typography component="span" sx={{ color: MUTED, fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em', fontFamily: 'var(--font-satoshi)' }}>
                         Origin / Invoker
@@ -1258,41 +1202,11 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
         }
         if (showSettings) {
             return renderSettingsContent();
+        if (showKylrixDetail) {
+            return renderKylrixDetail();
         }
         return (
-            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 0 }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ pt: 1.5, px: 3, pb: 1 }}>
-                    <Box sx={{
-                        p: 1,
-                        borderRadius: '12px',
-                        bgcolor: '#1C1A18',
-                        border: `1px solid ${EDGE}`,
-                        color: ACCENT,
-                        display: 'flex'
-                    }}>
-                        <WalletIcon size={20} />
-                    </Box>
-                    <Stack direction="row" alignItems="center" gap={1}>
-                        {isUnlocked && (
-                            <>
-                                <IconButton size="small" onClick={() => setShowKylrixDetail(true)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
-                                    <History size={18} />
-                                </IconButton>
-                                <IconButton size="small" onClick={() => setShowSettings(true)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
-                                    <Settings size={18} />
-                                </IconButton>
-                            </>
-                        )}
-                        {!isMobile && (
-                            <IconButton size="small" onClick={() => setIsExpanded(!isExpanded)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
-                                {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                            </IconButton>
-                        )}
-                        <IconButton onClick={onClose} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
-                            <X size={20} />
-                        </IconButton>
-                    </Stack>
-                </Stack>
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
 
                 {!user ? (
                     <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', px: 3 }}>
@@ -1888,6 +1802,61 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
         );
     };
 
+    const renderHeader = () => {
+        const isSubView = showSettings || showSignConfirmation || showKylrixDetail;
+        return (
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ pt: 1.5, px: 3, pb: 1, borderBottom: isSubView ? `1px solid ${EDGE}` : 'none', flexShrink: 0 }}>
+                {isSubView ? (
+                    <IconButton 
+                        size="small" 
+                        onClick={() => {
+                            setShowSettings(false);
+                            setShowSignConfirmation(false);
+                            setShowKylrixDetail(false);
+                            setExportedMnemonic(null);
+                            setExportedPrivateKey(null);
+                        }}
+                        sx={{ color: 'white', p: 0.75, '&:hover': { bgcolor: HIGHLIGHT } }}
+                        aria-label="Back to main wallet"
+                    >
+                        <ChevronLeft size={20} />
+                    </IconButton>
+                ) : (
+                    <Box sx={{
+                        p: 1,
+                        borderRadius: '12px',
+                        bgcolor: '#1C1A18',
+                        border: `1px solid ${EDGE}`,
+                        color: ACCENT,
+                        display: 'flex'
+                    }}>
+                        <WalletIcon size={20} />
+                    </Box>
+                )}
+                <Stack direction="row" alignItems="center" gap={1}>
+                    {isUnlocked && !isSubView && (
+                        <>
+                            <IconButton size="small" onClick={() => setShowKylrixDetail(true)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                                <History size={18} />
+                            </IconButton>
+                            <IconButton size="small" onClick={() => setShowSettings(true)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                                <Settings size={18} />
+                            </IconButton>
+                        </>
+                    )}
+                    {!isMobile && (
+                        <IconButton size="small" onClick={() => setIsExpanded(!isExpanded)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                            {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                        </IconButton>
+                    )}
+                    <IconButton onClick={onClose} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                        <X size={20} />
+                    </IconButton>
+                </Stack>
+            </Stack>
+        );
+    };
+
     if (isMobile) {
         return (
             <Drawer
@@ -1928,7 +1897,10 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                         <Box sx={{ width: 40, height: 4, bgcolor: '#4A4743', borderRadius: '2px' }} />
                     )}
                 </Box>
-                {renderWalletContent()}
+                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    {renderHeader()}
+                    {renderWalletContent()}
+                </Box>
             </Drawer>
         );
     }
@@ -1953,7 +1925,10 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                 }
             }}
         >
-            {renderWalletContent()}
+            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                {renderHeader()}
+                {renderWalletContent()}
+            </Box>
         </Drawer>
     );
 };
