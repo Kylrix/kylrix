@@ -527,6 +527,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white', mb: 2 }}>
                 Kylrix Activity
             </Typography>
+            <Paper sx={{ p: 2.5, borderRadius: '20px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}`, mb: 2 }}>
                 <Typography sx={{ color: MUTED, fontSize: '0.8rem', fontFamily: 'var(--font-satoshi)' }}>Balance</Typography>
                 <Typography sx={{ color: ACCENT, fontWeight: 900, fontSize: '1.3rem', fontFamily: 'var(--font-mono)' }}>
                     {tokenBalance?.amount || '0'} {kylrixTicker(tokenBalance?.symbol)}
@@ -1202,6 +1203,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
         }
         if (showSettings) {
             return renderSettingsContent();
+        }
         if (showKylrixDetail) {
             return renderKylrixDetail();
         }
@@ -1844,7 +1846,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                             </IconButton>
                         </>
                     )}
-                    {!isMobile && (
+                    {isMobile && (
                         <IconButton size="small" onClick={() => setIsExpanded(!isExpanded)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
                             {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                         </IconButton>
@@ -1867,13 +1869,15 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                 PaperProps={{
                     sx: {
                         height: isExpanded ? '100dvh' : '60dvh',
+                        maxHeight: '100dvh',
                         bgcolor: SURFACE,
-                        borderTop: `1px solid ${EDGE}`,
+                        borderTop: isExpanded ? 'none' : `1px solid ${EDGE}`,
                         borderRadius: isExpanded ? '0' : '32px 32px 0 0',
                         backgroundImage: 'none',
-                        transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         overflow: 'hidden',
-                        p: 0
+                        p: 0,
+                        margin: 0
                     }
                 }}
             >
@@ -1913,14 +1917,13 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
             PaperProps={{
                 sx: {
-                    width: isExpanded ? '100vw' : 400,
+                    width: 400,
                     bgcolor: SURFACE,
                     borderLeft: `1px solid ${EDGE}`,
                     backgroundImage: 'none',
                     boxShadow: 'none',
-                    top: isExpanded ? '0px' : '88px',
-                    height: isExpanded ? '100dvh' : 'calc(100dvh - 88px)',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    top: '88px',
+                    height: 'calc(100dvh - 88px)',
                     p: 0
                 }
             }}
