@@ -12,6 +12,7 @@ import type { Projects } from '@/types/appwrite';
 import toast from 'react-hot-toast';
 import { warmProjectsList } from '@/lib/projects/warm-projects-list';
 import { getSessionProjectsList } from '@/lib/projects/projects-cache';
+import { attachObjectToProject } from '@/lib/projects/object-attachment';
 
 function ProjectRowSkeleton() {
   return (
@@ -30,21 +31,25 @@ export function TaskAddToProjectDrawer({
   onClose,
   taskId,
   taskTitle,
+  preselectedProjectId,
 }: {
   isOpen: boolean;
   onClose: () => void;
   taskId: string;
   taskTitle: string;
+  preselectedProjectId?: string;
 }) {
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const { setIsDrawerOpen } = useDrawerState();
   const { user } = useAuth();
+  const { open } = useUnifiedDrawer();
   const { fetchOptimized, getCachedDataAsync } = useDataNexus();
 
   const [projects, setProjects] = useState<Projects[]>(() => getSessionProjectsList() ?? []);
   const [loading, setLoading] = useState(() => !getSessionProjectsList()?.length);
   const [query, setQuery] = useState('');
   const [addingId, setAddingId] = useState<string | null>(null);
+  const [highlightedProjectId, setHighlightedProjectId] = useState<string | null>(null);
 
   const loadProjects = useCallback(async () => {
     if (!user?.$id) return;
@@ -77,13 +82,15 @@ export function TaskAddToProjectDrawer({
   useEffect(() => {
     setIsDrawerOpen(isOpen);
     if (isOpen) {
+      setHighlightedProjectId(preselectedProjectId || null);
       void loadProjects();
     } else {
       setQuery('');
       setAddingId(null);
+      setHighlightedProjectId(null);
     }
     return () => setIsDrawerOpen(false);
-  }, [isOpen, loadProjects, setIsDrawerOpen]);
+  }, [isOpen, loadProjects, preselectedProjectId, setIsDrawerOpen]);
 
   const filteredProjects = useMemo(() => {
     const eligible = projects.filter((project) => !(project as Projects & { isPending?: boolean }).isPending);
@@ -100,7 +107,11 @@ export function TaskAddToProjectDrawer({
     if (!taskId || addingId) return;
     setAddingId(project.$id);
     try {
-      await ProjectsService.addObjectToProject(project.$id, 'goal', taskId);
+      await attachObjectToProject({
+        projectId: project.$id,
+        entityKind: 'goal',
+        entityId: taskId,
+      });
       toast.success(`Added to "${project.title}"`);
       onClose();
     } catch (error: any) {
@@ -108,6 +119,19 @@ export function TaskAddToProjectDrawer({
     } finally {
       setAddingId(null);
     }
+  };
+
+  const handleCreateProject = () => {
+    open('new-project', {
+      onCreated: (project: Projects) => {
+        if (!project?.$id) return;
+        open('task-add-to-project', {
+          taskId,
+          taskTitle,
+          preselectedProjectId: project.$id,
+        });
+      },
+    });
   };
 
   if (!isOpen) return null;
@@ -184,17 +208,31 @@ export function TaskAddToProjectDrawer({
               <p className="text-xs text-white/30 mt-1">
                 Create a project first, then link this goal from here.
               </p>
+              {!query.trim() && (
+                <button
+                  type="button"
+                  onClick={handleCreateProject}
+                  className="mt-4 h-10 px-4 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs transition-all"
+                >
+                  Create Project
+                </button>
+              )}
             </div>
           ) : (
             filteredProjects.map((project) => {
               const isAdding = addingId === project.$id;
+              const isHighlighted = highlightedProjectId === project.$id;
               return (
                 <button
                   key={project.$id}
                   type="button"
                   disabled={Boolean(addingId)}
                   onClick={() => void handleSelect(project)}
-                  className="w-full flex items-center gap-3 p-3.5 rounded-2xl border border-white/6 bg-white/[0.02] hover:bg-[#6366F1]/8 hover:border-[#6366F1]/25 transition-all text-left disabled:opacity-60"
+                  className={`w-full flex items-center gap-3 p-3.5 rounded-2xl border transition-all text-left disabled:opacity-60 ${
+                    isHighlighted
+                      ? 'border-[#6366F1]/35 bg-[#6366F1]/12'
+                      : 'border-white/6 bg-white/[0.02] hover:bg-[#6366F1]/8 hover:border-[#6366F1]/25'
+                  }`}
                 >
                   <div className="w-10 h-10 rounded-xl bg-[#6366F1]/12 border border-[#6366F1]/20 grid place-items-center shrink-0">
                     <LayoutGrid size={18} className="text-[#818CF8]" />
@@ -215,6 +253,17 @@ export function TaskAddToProjectDrawer({
             })
           )}
         </div>
+        {filteredProjects.length > 0 && (
+          <div className="p-5 pt-0 shrink-0">
+            <button
+              type="button"
+              onClick={handleCreateProject}
+              className="w-full h-11 rounded-2xl border border-white/8 bg-white/[0.02] hover:bg-white/[0.05] text-white/80 hover:text-white font-black text-xs transition-all"
+            >
+              Create New Project
+            </button>
+          </div>
+        )}
       </div>
     </>
   );
@@ -230,6 +279,7 @@ export function TaskAddToProjectDrawerHost() {
       onClose={close}
       taskId={drawerData?.taskId || drawerData?.resourceId || ''}
       taskTitle={drawerData?.taskTitle || drawerData?.resourceTitle || ''}
+      preselectedProjectId={drawerData?.preselectedProjectId || ''}
     />
   );
 }

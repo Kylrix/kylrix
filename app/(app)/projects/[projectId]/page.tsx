@@ -101,6 +101,7 @@ import FormDialog from '@/components/forms/FormDialog';
 import { CallActionModal } from '@/components/call/CallActionModal';
 import NewTotpDialog from '@/components/app/totp/new';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
+import { attachObjectToProject } from '@/lib/projects/object-attachment';
 
 const TABS_CONFIG = [
   { label: 'Integrated Notes', icon: <FileText size={18} /> },
@@ -2134,13 +2135,13 @@ function GitHubExternalObjectsTab({
         addedAt: new Date().toISOString()
       };
 
-      await ProjectsService.addObjectToProject(
-        projectId,
-        'unverified_github',
-        fullPath,
-        'viewer',
-        metadata
-      );
+      await attachObjectToProject({
+        projectId: projectId as string,
+        entityKind: 'unverified_github',
+        entityId: fullPath,
+        role: 'viewer',
+        metadata,
+      });
 
       toast.success('Unverified repository added to project successfully!', { id: toastId });
       setRepoInput('');
@@ -2426,7 +2427,11 @@ function UnverifiedGithubRepoDrawer({
         }
       );
 
-      await ProjectsService.addObjectToProject(projectId, 'goal', taskId);
+      await attachObjectToProject({
+        projectId: projectId as string,
+        entityKind: 'goal',
+        entityId: taskId,
+      });
 
       toast.success('Successfully converted to Execution Goal!', { id: toastId });
       fetchProjectData();

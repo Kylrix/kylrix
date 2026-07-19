@@ -46,6 +46,7 @@ import { hasPaidKylrixPlan } from '@/lib/utils';
 import { listNotesByUser } from '@/lib/appwrite/note';
 import { tasks } from '@/lib/kylrixflow';
 import { ID } from 'appwrite';
+import { attachObjectToProject } from '@/lib/projects/object-attachment';
 
 const SURFACE_ASH = '#161412';
 const VOID = '#0A0908';
@@ -209,7 +210,11 @@ export function NewProjectDrawer() {
           const resourceKind = (template?.id === 'form-to-project' || template?.id === 'service-desk' || template?.id === 'event-command-center') ? 'form' : 'note';
           
           // Link Resource
-          await ProjectsService.addObjectToProject(project.$id, resourceKind, selectedResourceId);
+          await attachObjectToProject({
+            projectId: project.$id,
+            entityKind: resourceKind,
+            entityId: selectedResourceId,
+          });
           
           // Auto-spin up Task if it's the Form-to-Project flow
           if (template?.id === 'form-to-project' || template?.id === 'service-desk') {

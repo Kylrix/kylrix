@@ -46,6 +46,10 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useTask } from '@/context/TaskContext';
 import { useNotes } from '@/context/NotesContext';
+import {
+  attachObjectToProject,
+  isAlreadyAttachedProjectObjectError,
+} from '@/lib/projects/object-attachment';
 
 // Service Imports
 import { FormsService } from '@/lib/services/forms';
@@ -376,7 +380,7 @@ export default function ProjectAddObjectModal({
       const selectedItem = results.find((row) => row?.$id === entityId) || null;
       if (mode === 'project') {
         if (!projectId) throw new Error('Project id is required');
-        await ProjectsService.addObjectToProject(projectId, kind, entityId);
+        await attachObjectToProject({ projectId, entityKind: kind, entityId });
         showSuccess('Added to project');
         onAdded?.();
       } else {
@@ -387,7 +391,7 @@ export default function ProjectAddObjectModal({
       onClose();
     } catch (err: any) {
       const msg = err?.message || '';
-      if (msg.includes('ALREADY_ADDED') || msg.toLowerCase().includes('already linked')) {
+      if (msg.includes('ALREADY_ADDED') || isAlreadyAttachedProjectObjectError(err)) {
         showError('Already added', 'This item is already linked to the project.');
       } else {
         showError(mode === 'project' ? 'Failed to add object' : 'Failed to attach object', msg);
