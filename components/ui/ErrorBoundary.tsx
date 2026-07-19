@@ -5,6 +5,9 @@ import { Button } from './Button';
 import { Box, Typography, Paper, Stack } from '@/lib/openbricks/primitives';
 import { Warning as WarningIcon, Description as DescriptionIcon } from '@/lib/openbricks/icons';
 
+const MUTED = '#9B9691';
+const ACCENT = '#6366F1';
+
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
@@ -78,51 +81,97 @@ export class ErrorBoundary extends Component<Props, State> {
 
       // Default error UI
       return (
-        <Box sx={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}>
-          <Box sx={{ textAlign: 'center', maxWidth: 400 }}>
-            <WarningIcon sx={{ fontSize: 48, color: 'error.main', mb: 2 }} />
+        <Box sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 99999,
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          backdropFilter: 'blur(20px)',
+          bgcolor: 'rgba(0, 0, 0, 0.75)',
+          p: { xs: 0, sm: 3 },
+          margin: 0
+        }}>
+          {/* Bottom Drawer Card */}
+          <Box sx={{
+            width: '100%',
+            maxWidth: '520px',
+            bgcolor: '#000000',
+            borderTop: '1px solid #34322F',
+            borderLeft: { xs: 'none', sm: '1px solid #34322F' },
+            borderRight: { xs: 'none', sm: '1px solid #34322F' },
+            borderBottom: { xs: 'none', sm: '1px solid #34322F' },
+            borderRadius: { xs: '28px 28px 0 0', sm: '28px' },
+            p: 4,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
+            boxShadow: '0 -16px 48px rgba(0,0,0,0.7)',
+            mb: { xs: 0, sm: 2 },
+            textAlign: 'left'
+          }}>
+            <Stack direction="row" alignItems="center" gap={2}>
+              <Box sx={{
+                width: 48,
+                height: 48,
+                borderRadius: '16px',
+                bgcolor: '#220505',
+                border: '1px solid #ef4444',
+                color: '#ef4444',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0
+              }}>
+                <WarningIcon sx={{ fontSize: 24 }} />
+              </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', color: 'white', lineHeight: 1.2 }}>
+                  System Recovery Required
+                </Typography>
+                <Typography variant="caption" sx={{ color: MUTED, fontFamily: 'var(--font-satoshi)', fontWeight: 700 }}>
+                  An unexpected interruption occurred
+                </Typography>
+              </Box>
+            </Stack>
 
-            <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>
-              Something went wrong
+            <Typography variant="body2" sx={{ color: MUTED, fontFamily: 'var(--font-satoshi)', lineHeight: 1.5 }}>
+              The system experienced a temporary interruption. We have prepared an automatic recovery path to restore your session safely.
             </Typography>
 
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              We encountered an unexpected error. You can try refreshing this section or contact support if the problem persists.
-            </Typography>
-
-            {this.props.showDetails && this.state.error && (
-              <Box sx={{ mb: 3, textAlign: 'left' }}>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: 'primary.main', cursor: 'pointer', display: 'block', mb: 1 }}>
-                  Error Details
+            {this.state.error && (
+              <Box>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: ACCENT, display: 'block', mb: 1, textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'var(--font-satoshi)' }}>
+                  Interruption Details
                 </Typography>
                 <Paper 
                   variant="outlined" 
                   sx={{ 
-                    p: 1.5, 
-                    bgcolor: 'rgba(255, 255, 255, 0.03)', 
-                    borderRadius: '12px',
-                    maxHeight: 128,
+                    p: 2, 
+                    bgcolor: '#1C1A18', 
+                    borderColor: '#34322F',
+                    borderRadius: '16px',
+                    maxHeight: 120,
                     overflow: 'auto'
                   }}
                 >
-                  <Typography component="pre" sx={{ fontSize: '0.7rem', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                  <Typography component="pre" sx={{ fontSize: '0.74rem', fontFamily: 'var(--font-mono)', color: 'white', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
                     {this.state.error.message}
-                    {this.state.errorInfo?.componentStack}
                   </Typography>
                 </Paper>
               </Box>
             )}
 
-            <Stack direction="row" spacing={2} justifyContent="center">
-              <Button onClick={this.handleRetry} size="small">
-                Try Again
+            <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+              <Button onClick={this.handleRetry} style={{ flex: 1, height: 48, borderRadius: 14, fontWeight: 900, textTransform: 'none' }}>
+                Restore Session
               </Button>
               <Button
                 onClick={() => window.location.reload()}
                 variant="outlined"
-                size="small"
+                style={{ flex: 1, height: 48, borderRadius: 14, fontWeight: 800, borderColor: '#34322F', color: 'white', textTransform: 'none' }}
               >
-                Reload Page
+                Refresh App
               </Button>
             </Stack>
           </Box>
