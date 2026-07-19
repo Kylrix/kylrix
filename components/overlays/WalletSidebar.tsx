@@ -1897,7 +1897,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                 slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
                 PaperProps={{
                     sx: {
-                        height: isExpanded ? '100%' : '75%',
+                        height: isExpanded ? '100dvh' : '60dvh',
                         bgcolor: SURFACE,
                         borderTop: `1px solid ${EDGE}`,
                         borderRadius: isExpanded ? '0' : '32px 32px 0 0',
@@ -1941,13 +1941,14 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
             PaperProps={{
                 sx: {
-                    width: 400,
+                    width: isExpanded ? '100vw' : 400,
                     bgcolor: SURFACE,
                     borderLeft: `1px solid ${EDGE}`,
                     backgroundImage: 'none',
                     boxShadow: 'none',
-                    top: '88px',
-                    height: 'calc(100dvh - 88px)',
+                    top: isExpanded ? '0px' : '88px',
+                    height: isExpanded ? '100dvh' : 'calc(100dvh - 88px)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     p: 0
                 }
             }}
