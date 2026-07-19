@@ -55,6 +55,22 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     parameters: ['title', 'summary'],
   },
   {
+    key: 'create_or_select_agent',
+    name: 'Create or Select Agent',
+    description:
+      'Open the agent selection/creation drawer so user can pick an existing agent or create a new one for the current goal/task. Optional args: name, goal.',
+    requiresAuthorization: false,
+    parameters: ['name', 'goal'],
+  },
+  {
+    key: 'open_wallet_funding',
+    name: 'Open Wallet Funding',
+    description:
+      'Open wallet-guided funding flow for agentic execution. Optional args: amount, chainId, intentId, agentId. Use this when task needs funded execution.',
+    requiresAuthorization: false,
+    parameters: ['amount', 'chainId', 'intentId', 'agentId'],
+  },
+  {
     key: 'link_to_project',
     name: 'Connect to Project',
     description:
@@ -167,6 +183,25 @@ export const NOTE_TOOL_PAYLOAD_SCHEMA = `{
     "specifier": "resource_$id — required",
     "args": {
       "type": "note|goal|project — required"
+    }
+  }
+  ,
+  "create_or_select_agent": {
+    "toolKey": "create_or_select_agent",
+    "specifier": null,
+    "args": {
+      "name": "optional suggested agent name",
+      "goal": "optional agent objective"
+    }
+  },
+  "open_wallet_funding": {
+    "toolKey": "open_wallet_funding",
+    "specifier": "optional agent id",
+    "args": {
+      "amount": "optional numeric amount",
+      "chainId": "optional numeric chain id",
+      "intentId": "optional payment intent id",
+      "agentId": "optional target agent id"
     }
   }
 }`;

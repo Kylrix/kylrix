@@ -18,6 +18,7 @@ const NewChannelDrawer = dynamic(() => import('./NewChannelDrawer').then(mod => 
 const NewTagDrawer = dynamic(() => import('./NewTagDrawer').then(mod => mod.NewTagDrawer), { ssr: false });
 const TagSelectorDrawer = dynamic(() => import('./TagSelectorDrawer').then(mod => mod.TagSelectorDrawer), { ssr: false });
 const NewProjectDrawer = dynamic(() => import('./NewProjectDrawer').then(mod => mod.NewProjectDrawer), { ssr: false });
+const AgentCreateDrawer = dynamic(() => import('./AgentCreateDrawer').then(mod => mod.AgentCreateDrawer), { ssr: false });
 const SecureChatSetupDrawer = dynamic(() => import('./SecureChatSetupDrawer').then(mod => mod.SecureChatSetupDrawer), { ssr: false });
 const PasskeySetupPanel = dynamic(() => import('./PasskeySetup').then(mod => mod.PasskeySetupPanel), { ssr: false });
 const DeleteConfirmDrawer = dynamic(() => import('./DeleteConfirmDrawer').then(mod => mod.DeleteConfirmDrawer), { ssr: false });
@@ -50,6 +51,7 @@ export function UnifiedBottomDrawer() {
         case 'new-tag': return <NewTagDrawer />;
         case 'tag-selector': return <TagSelectorDrawer />;
         case 'new-project': return <NewProjectDrawer />;
+        case 'agent-create': return <AgentCreateDrawer />;
         case 'share-note': 
             return <ShareNoteDrawer 
                 isOpen={true} 

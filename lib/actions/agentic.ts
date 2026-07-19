@@ -607,7 +607,7 @@ ${lifetimeMemoryContext}
       '  "lifetimeMemoryUpdate": "Optional high-quality lifelong memory. Leave blank if none.",',
       '  "toolCalls": [',
       '     {',
-      '        "toolKey": "create_note | update_note | get_note | create_goal | update_goal | create_project | link_to_project | suggest_next_steps | toggle_privacy | navigate_workspace | delete_resource",',
+      '        "toolKey": "create_note | update_note | get_note | create_goal | update_goal | create_project | create_or_select_agent | open_wallet_funding | link_to_project | suggest_next_steps | toggle_privacy | navigate_workspace | delete_resource",',
       '        "specifier": "note/goal/project id or route when required; null otherwise",',
       '        "subSpecifier": "optional field name",',
       '        "args": { "title": "...", "content": "...", "tags": [], "isPublic": false, "isAgentic": true, "suggestions": [{ "label": "...", "prompt": "..." }], "objectType": "note", "objectId": "...", "type": "note" }',

@@ -52,6 +52,8 @@ import {
 } from 'lucide-react';
 
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useNotes } from '@/context/NotesContext';
 import { useTask } from '@/context/TaskContext';
@@ -217,6 +219,8 @@ interface AgenticPanelContentProps {
 
 export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentProps) {
   const { consumePendingPrompt } = useAgenticDrawer();
+  const { open: openUnified } = useUnifiedDrawer();
+  const { openWallet } = useWalletOverlay();
   const { user } = useAuth();
   const { notes: allNotes, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote } = useNotes();
   const { setCachedData } = useDataNexus();
@@ -236,7 +240,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const [runningWorkflowId, setRunningWorkflowId] = useState<string | null>(null);
   const [agentCount, setAgentCount] = useState(0);
 
-  const [pendingPayment, setPendingPayment] = useState<{ agentId: string; amount: number; intentId: string; chainId: number } | null>(null);
+  const [pendingPayment, setPendingPayment] = useState<{ agentId: string; amount: number; intentId: string; chainId: number; phase?: 'review' | 'processing' | 'done' } | null>(null);
   const [signing, setSigning] = useState(false);
   const [pendingToolAuth, setPendingToolAuth] = useState<{ toolKey: string; name: string; specifier?: string; args?: any } | null>(null);
   const [showSessionsDrawer, setShowSessionsDrawer] = useState(false);
@@ -264,7 +268,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   useEffect(() => {
     const handlePaymentRequest = (e: CustomEvent) => {
       const { agentId, amount, intentId, chainId } = e.detail;
-      setPendingPayment({ agentId, amount, intentId, chainId });
+      setPendingPayment({ agentId, amount, intentId, chainId, phase: 'review' });
     };
     window.addEventListener('kylrix:request-payment' as any, handlePaymentRequest);
     return () => window.removeEventListener('kylrix:request-payment' as any, handlePaymentRequest);
@@ -273,6 +277,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const handleApprovePayment = async () => {
     if (!pendingPayment || !user?.$id) return;
     setSigning(true);
+    setPendingPayment((prev) => (prev ? { ...prev, phase: 'processing' } : prev));
     try {
       const privKey = await WalletService.derivePrivateKey(user.$id, 'arbitrum');
       const signature = `0x${privKey.slice(0, 10)}...mock_signature...${Date.now()}`;
@@ -303,9 +308,11 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         role: 'assistant',
         content: `✅ Agent payment of ${pendingPayment.amount} ARB approved. On-chain Stream funded! Tx: ${result.txHash}`
       }]);
-      setPendingPayment(null);
+      setPendingPayment((prev) => (prev ? { ...prev, phase: 'done' } : prev));
+      setTimeout(() => setPendingPayment(null), 900);
     } catch (err: any) {
       toast.error(err.message || 'Payment approval failed');
+      setPendingPayment((prev) => (prev ? { ...prev, phase: 'review' } : prev));
     } finally {
       setSigning(false);
     }
