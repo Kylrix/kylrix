@@ -1261,7 +1261,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
         }
         return (
             <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 0 }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ pt: 3, px: 3, pb: 1.5 }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ pt: 1.5, px: 3, pb: 1 }}>
                     <Box sx={{
                         p: 1,
                         borderRadius: '12px',
@@ -1416,25 +1416,25 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                     <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Paper sx={{
                             p: 3,
-                            borderRadius: '20px',
-                            bgcolor: SURFACE,
-                            border: `1px solid ${EDGE}`,
+                            bgcolor: '#221111',
+                            border: '1px solid #7f1d1d',
+                            borderRadius: '16px',
                             textAlign: 'center',
                             maxWidth: 280
                         }}>
-                            <Typography variant="body1" sx={{ fontWeight: 800, mb: 1, fontFamily: 'var(--font-satoshi)', color: 'white' }}>
-                                Wallet Sync Failed
+                            <Typography sx={{ color: '#ef4444', fontWeight: 800, mb: 1, fontSize: '0.88rem', fontFamily: 'var(--font-satoshi)' }}>
+                                Provisioning Error
                             </Typography>
-                            <Typography variant="body2" sx={{ color: MUTED, mb: 2, fontFamily: 'var(--font-satoshi)' }}>
+                            <Typography sx={{ color: '#fca5a5', fontSize: '0.78rem', mb: 3, lineHeight: 1.45, fontFamily: 'var(--font-satoshi)' }}>
                                 {error}
                             </Typography>
                             <Button
-                                onClick={refreshWallets}
                                 variant="outlined"
+                                onClick={() => void refreshWallets()}
                                 sx={{
+                                    borderColor: '#ef4444',
+                                    color: '#fca5a5',
                                     borderRadius: '12px',
-                                    borderColor: EDGE,
-                                    color: 'white',
                                     textTransform: 'none',
                                     fontFamily: 'var(--font-satoshi)',
                                     '&:hover': { bgcolor: HIGHLIGHT, borderColor: '#4A4743' }
@@ -1485,6 +1485,66 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                     : `Fiat estimate excludes KYLRIX · ${wallets.length} active chains`}
                             </Typography>
                         </Box>
+
+                        {/* Send, Receive, Swap Actions */}
+                        <Stack direction="row" gap={1.5} sx={{ mb: 3 }}>
+                            <Button
+                                fullWidth
+                                variant="contained"
+                                onClick={() => setShowKylrixDetail(true)}
+                                sx={{
+                                    bgcolor: HIGHLIGHT,
+                                    color: 'white',
+                                    borderRadius: '14px',
+                                    fontWeight: 800,
+                                    textTransform: 'none',
+                                    py: 1.25,
+                                    border: `1px solid ${EDGE}`,
+                                    '&:hover': { bgcolor: SURFACE, borderColor: '#4A4743' }
+                                }}
+                            >
+                                Send
+                            </Button>
+                            <Button
+                                fullWidth
+                                variant="contained"
+                                onClick={() => {
+                                    setShowKylrixDetail(true);
+                                    setShowReceive(true);
+                                }}
+                                sx={{
+                                    bgcolor: HIGHLIGHT,
+                                    color: 'white',
+                                    borderRadius: '14px',
+                                    fontWeight: 800,
+                                    textTransform: 'none',
+                                    py: 1.25,
+                                    border: `1px solid ${EDGE}`,
+                                    '&:hover': { bgcolor: SURFACE, borderColor: '#4A4743' }
+                                }}
+                            >
+                                Receive
+                            </Button>
+                            <Button
+                                fullWidth
+                                variant="contained"
+                                onClick={() => {
+                                    toast.success('Swap routing feature coming soon');
+                                }}
+                                sx={{
+                                    bgcolor: HIGHLIGHT,
+                                    color: 'white',
+                                    borderRadius: '14px',
+                                    fontWeight: 800,
+                                    textTransform: 'none',
+                                    py: 1.25,
+                                    border: `1px solid ${EDGE}`,
+                                    '&:hover': { bgcolor: SURFACE, borderColor: '#4A4743' }
+                                }}
+                            >
+                                Swap
+                            </Button>
+                        </Stack>
 
                         {ktsMode ? (
                         <Stack gap={1.5} sx={{ mb: 4 }}>
