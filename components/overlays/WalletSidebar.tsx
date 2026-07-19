@@ -1885,7 +1885,6 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                 Pinned Network
                             </Typography>
                             <Paper
-                                sx={{
                                 onMouseDown={() => handlePressStart(pinnedToken)}
                                 onMouseUp={handlePressEnd}
                                 onMouseLeave={handlePressEnd}
@@ -1972,7 +1971,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                             >
                                                 Add SOL
                                             </Button>
-                                        )}
+                                        ) : null}
                                     </Box>
                                 </Box>
                             </Paper>
