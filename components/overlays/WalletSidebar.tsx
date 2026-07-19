@@ -49,6 +49,8 @@ import { KeychainService } from '@/lib/appwrite/keychain';
 import { useTokenOps } from '@/context/TokenOpsContext';
 import type { TokenWalletIntent } from '@/context/WalletOverlayContext';
 import Logo from '@/components/Logo';
+import { createPublicClient, http, formatEther } from 'viem';
+import { mainnet, base, arbitrum, polygon } from 'viem/chains';
 
 interface WalletSidebarProps {
     isOpen: boolean;
@@ -213,6 +215,8 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
     const [ledgerHistoryError, setLedgerHistoryError] = useState<string | null>(null);
     const [showSettings, setShowSettings] = useState(false);
     const [testnetMode, setTestnetMode] = useState(false);
+    const [onChainBalances, setOnChainBalances] = useState<Record<string, string>>({});
+    const [balancesLoading, setBalancesLoading] = useState(false);
     
     // Additional settings states
     const [smartDelegation, setSmartDelegation] = useState(false);
@@ -235,6 +239,81 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             setRecurringBilling(localStorage.getItem('kylrix_wallet_recurring_billing') === '1');
         }
     }, []);
+
+    const fetchBalanceForChain = async (chain: string, address: string): Promise<string> => {
+        try {
+            if (['eth', 'base', 'arbitrum', 'polygon'].includes(chain)) {
+                const chainConfigMap: Record<string, any> = {
+                    eth: { config: mainnet, rpc: 'https://cloudflare-eth.com' },
+                    base: { config: base, rpc: 'https://mainnet.base.org' },
+                    arbitrum: { config: arbitrum, rpc: 'https://arb1.arbitrum.io/rpc' },
+                    polygon: { config: polygon, rpc: 'https://polygon-rpc.com' }
+                };
+                const mapping = chainConfigMap[chain];
+                if (!mapping) return '0.0000';
+                
+                const client = createPublicClient({
+                    chain: mapping.config,
+                    transport: http(mapping.rpc)
+                });
+                const balance = await client.getBalance({ address: address as `0x${string}` });
+                return parseFloat(formatEther(balance)).toFixed(4);
+            }
+            if (chain === 'sol') {
+                const res = await fetch('https://api.mainnet-beta.solana.com', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: 1,
+                        method: 'getBalance',
+                        params: [address]
+                    })
+                });
+                const json = await res.json();
+                const lamports = json?.result?.value || 0;
+                return (lamports / 1e9).toFixed(4);
+            }
+            if (chain === 'sui') {
+                const res = await fetch('https://fullnode.mainnet.sui.io', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: 1,
+                        method: 'suix_getBalance',
+                        params: [address]
+                    })
+                });
+                const json = await res.json();
+                const balanceMs = json?.result?.totalBalance || 0;
+                return (balanceMs / 1e9).toFixed(4);
+            }
+            return '0.0000';
+        } catch (err) {
+            console.warn(`[WalletSidebar] Failed to fetch balance for ${chain}:`, err);
+            return '0.0000';
+        }
+    };
+
+    useEffect(() => {
+        if (!isOpen || !user?.$id || wallets.length === 0) return;
+        
+        const loadAllBalances = async () => {
+            setBalancesLoading(true);
+            const balances: Record<string, string> = {};
+            await Promise.all(
+                wallets.map(async (wallet) => {
+                    const bal = await fetchBalanceForChain(wallet.chain, wallet.address);
+                    balances[wallet.chain.toUpperCase()] = bal;
+                })
+            );
+            setOnChainBalances(balances);
+            setBalancesLoading(false);
+        };
+        
+        void loadAllBalances();
+    }, [isOpen, user?.$id, wallets]);
 
     // Sync preferences from Appwrite on load
     useEffect(() => {
@@ -1803,7 +1882,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                     </Box>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5, flexShrink: 0 }}>
                                         <Typography component="span" sx={{ fontWeight: 900, color: getNetworkColor('sol'), fontFamily: 'var(--font-mono)', fontSize: '0.8rem', lineHeight: 1.2 }}>
-                                            0.00 {solWallet?.symbol || 'SOL'}
+                                            {onChainBalances['SOL'] || '0.00'} {solWallet?.symbol || 'SOL'}
                                         </Typography>
                                         {solWallet ? (
                                             <Stack direction="row" gap={0.5}>
@@ -1956,7 +2035,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                             </Box>
                                             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5, flexShrink: 0 }}>
                                                 <Typography component="span" sx={{ fontWeight: 900, color: getNetworkColor(wallet.chain), fontFamily: 'var(--font-mono)', fontSize: '0.8rem', lineHeight: 1.2 }}>
-                                                    0.00 {wallet.symbol}
+                                                    {onChainBalances[wallet.chain.toUpperCase()] || '0.00'} {wallet.symbol}
                                                 </Typography>
                                                 <Stack direction="row" gap={0.5}>
                                                     <IconButton
