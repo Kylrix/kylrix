@@ -30,6 +30,8 @@ import {
     Plus,
     History,
     Settings,
+    Maximize2,
+    Minimize2,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSudo } from '@/context/SudoContext';
@@ -1237,9 +1239,21 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                             </Typography>
                         </Box>
                     </Stack>
-                    <IconButton onClick={onClose} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
-                        <X size={20} />
-                    </IconButton>
+                    <Stack direction="row" alignItems="center" gap={1}>
+                        {isUnlocked && (
+                            <IconButton size="small" onClick={() => setShowSettings(true)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                                <Settings size={18} />
+                            </IconButton>
+                        )}
+                        {!isMobile && (
+                            <IconButton size="small" onClick={() => setIsExpanded(!isExpanded)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                                {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                            </IconButton>
+                        )}
+                        <IconButton onClick={onClose} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                            <X size={20} />
+                        </IconButton>
+                    </Stack>
                 </Stack>
 
                 {!user ? (
@@ -1401,11 +1415,12 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                             p: 3, 
                             mb: 3, 
                             textAlign: 'center',
-                            bgcolor: HIGHLIGHT,
+                            background: 'linear-gradient(135deg, #1C1A18 0%, #0A0908 100%)',
                             borderRadius: '24px',
                             position: 'relative',
                             overflow: 'hidden',
-                            border: `1px solid ${EDGE}`
+                            border: `1px solid ${EDGE}`,
+                            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.4)'
                         }}>
                             <Typography variant="caption" sx={{ color: ACCENT, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'var(--font-satoshi)' }}>
                                 {ktsMode ? 'Kylrix Balance (KTS)' : 'Estimated Balance'}
@@ -1431,32 +1446,47 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                     ? 'Kylrix Token System — on-chain wallets hidden'
                                     : `Fiat estimate excludes KYLRIX · ${wallets.length} active chains`}
                             </Typography>
-                            <FormControlLabel
-                                sx={{ mt: 1.5, justifyContent: 'center', m: 0, display: 'flex', gap: 1 }}
-                                control={(
-                                    <Switch
-                                        checked={ktsMode}
-                                        onChange={(_: React.SyntheticEvent, checked: boolean) => {
-                                            setKtsModeState(checked);
-                                            try {
-                                                localStorage.setItem(KTS_STORAGE_KEY, checked ? '1' : '0');
-                                            } catch (_e: unknown) {
-                                                /* noop */
-                                            }
-                                        }}
-                                        size="small"
-                                        sx={{
-                                            '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                            '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
-                                        }}
-                                    />
-                                )}
-                                label={(
-                                    <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
-                                        KTS mode (Kylrix ledger only)
-                                    </Typography>
-                                )}
-                            />
+                            
+                            <Box sx={{
+                                borderTop: `1px solid ${EDGE}`,
+                                pt: 2,
+                                mt: 2.5,
+                                mx: -3,
+                                mb: -3,
+                                px: 3,
+                                pb: 2,
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                bgcolor: 'rgba(255,255,255,0.015)'
+                            }}>
+                                <FormControlLabel
+                                    sx={{ m: 0, display: 'flex', gap: 1 }}
+                                    control={(
+                                        <Switch
+                                            checked={ktsMode}
+                                            onChange={(_: React.SyntheticEvent, checked: boolean) => {
+                                                setKtsModeState(checked);
+                                                try {
+                                                    localStorage.setItem(KTS_STORAGE_KEY, checked ? '1' : '0');
+                                                } catch (_e: unknown) {
+                                                    /* noop */
+                                                }
+                                            }}
+                                            size="small"
+                                            sx={{
+                                                '& .ob-switch-thumb.ob-checked': { color: ACCENT },
+                                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
+                                            }}
+                                        />
+                                    )}
+                                    label={(
+                                        <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
+                                            KTS mode (Kylrix ledger only)
+                                        </Typography>
+                                    )}
+                                />
+                            </Box>
                         </Box>
 
                         {ktsMode ? (
@@ -1804,16 +1834,12 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                     </Box>
                 )}
 
-                <Divider sx={{ borderColor: EDGE, my: 2 }} />
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Divider sx={{ borderColor: EDGE, my: 2, mx: 3 }} />
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 3, pb: 3, pt: 0.5 }}>
                     <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
                         {isUnlocked ? 'Vault unlocked & active' : 'Auto-provisioned once unlocked'}
                     </Typography>
-                    {isUnlocked ? (
-                        <IconButton size="small" onClick={() => setShowSettings(true)} sx={{ color: MUTED, '&:hover': { color: 'white' } }}>
-                            <Settings size={16} />
-                        </IconButton>
-                    ) : (
+                    {!isUnlocked && (
                         <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)', fontStyle: 'italic', opacity: 0.6 }}>
                             Locked
                         </Typography>
