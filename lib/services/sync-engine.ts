@@ -179,8 +179,9 @@ async function flushGoalPending(
   }
 
   if (activeUserId) {
-    if (!payload.userId || payload.userId === 'guest' || payload.userId === 'ghost') {
-      payload.userId = activeUserId;
+    const payloadAny = payload as any;
+    if (!payloadAny.userId || payloadAny.userId === 'guest' || payloadAny.userId === 'ghost') {
+      payloadAny.userId = activeUserId;
       if (db) {
         await db.cache.upsert({
           id: `goal_${goalId}`,
@@ -188,8 +189,8 @@ async function flushGoalPending(
           timestamp: Date.now()
         }).catch(() => {});
       }
-    } else if (payload.userId !== activeUserId) {
-      console.warn(`[SyncEngine] Skipped goal belonging to different user: ${payload.userId}`);
+    } else if (payloadAny.userId !== activeUserId) {
+      console.warn(`[SyncEngine] Skipped goal belonging to different user: ${payloadAny.userId}`);
       return;
     }
   }

@@ -9,10 +9,25 @@ import { MasterPassDrawer } from '@/components/overlays/MasterPassDrawer';
 import { generateTOTP } from '@/lib/totp-util';
 import toast from 'react-hot-toast';
 import type { Credentials, TotpSecrets, Notes } from '@/types/appwrite';
-import { isSendObjectMeta, parseSendGhostMetadata } from '@/lib/send/metadata';
+function parseSendGhostMetadata(metadata: any): any {
+  if (typeof metadata === 'object' && metadata !== null) return metadata;
+  try {
+    return JSON.parse(metadata || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function isSendObjectMeta(meta: any): boolean {
+  return !!(meta && typeof meta === 'object' && meta.send_object && typeof meta.send_object.kind === 'string');
+}
+
 import { decryptGhostData, decryptGhostBinaryFromBytes } from '@/lib/encryption/ghost-crypto';
 import { storage } from '@/lib/appwrite/client';
-import type { SendPasswordPayload, SendTotpPayload, SendFilePayload } from '@/lib/send/types';
+
+export type SendPasswordPayload = any;
+export type SendTotpPayload = any;
+export type SendFilePayload = any;
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { usePresence } from '@/components/providers/PresenceProvider';

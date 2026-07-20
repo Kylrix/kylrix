@@ -1,7 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { validatePublicNoteAccess } from '@/lib/appwrite';
 import { UsersService } from '@/lib/services/users';
-import { parseSendGhostMetadata } from '@/lib/send/metadata';
 
 export const alt = 'Kylrix Shared Note';
 export const size = { width: 1200, height: 630 };
@@ -63,7 +62,10 @@ export default async function SharedNoteOGImage(props: {
     const note = await validatePublicNoteAccess(noteId);
 
     if (note) {
-      const meta = parseSendGhostMetadata(note.metadata);
+      let meta: any = {};
+      try {
+        meta = JSON.parse(note.metadata || '{}');
+      } catch {}
       isEncrypted = note.isEncrypted === true || meta.isEncrypted === true;
       
       let rawTitle = note.title || 'Untitled Note';

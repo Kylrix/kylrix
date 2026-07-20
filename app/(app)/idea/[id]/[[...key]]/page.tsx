@@ -1,7 +1,6 @@
 import React from 'react';
 import SharedNoteClient from '../SharedNoteClient';
 import { validatePublicNoteAccess } from '@/lib/appwrite';
-import { parseSendGhostMetadata } from '@/lib/send/metadata';
 
 export async function generateMetadata({
   params,
@@ -32,7 +31,10 @@ export async function generateMetadata({
     }
 
     const keyParam = key?.join('/') || undefined;
-    const meta = parseSendGhostMetadata(note.metadata);
+    let meta: any = {};
+    try {
+      meta = JSON.parse(note.metadata || '{}');
+    } catch {}
     let decryptedTitle = note.title || '';
     let decryptedContent = note.content || '';
     const isEncrypted = note.isEncrypted === true || meta.isEncrypted === true;
