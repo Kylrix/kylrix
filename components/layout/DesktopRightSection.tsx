@@ -29,7 +29,6 @@ import { listNotes, listTags, listKeepCredentials } from '@/lib/appwrite';
 import { listTotpSecrets } from '@/lib/appwrite/vault';
 import { ChatList } from '@/components/chat/ChatList';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { SendSparkShelf } from '@/components/send/SendSparkShelf';
 import toast from 'react-hot-toast';
 
 interface PanelState {
@@ -1337,32 +1336,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
           }
 
           case 'stash':
-            return (
-              <div 
-                key={panel} 
-                className={`bg-[#161412] rounded-[24px] border border-white/5 p-5 flex flex-col overflow-hidden transition-all duration-300 ease-out flex-none ${
-                  isOpen ? 'h-auto max-h-[380px]' : 'h-[68px]'
-                }`}
-              >
-                <div className={`flex justify-between items-center ${isOpen ? 'mb-2' : ''}`}>
-                  <h3 className="text-white text-base font-black tracking-tight leading-tight flex items-center gap-1.5 font-mono select-none">
-                    <Clock size={18} className="text-[#6366F1]" /> Stash
-                  </h3>
-                  <button 
-                    onClick={() => togglePanel(panel)} 
-                    className="p-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all"
-                  >
-                    {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  </button>
-                </div>
-
-                {isOpen && (
-                  <div className="flex-1 overflow-y-auto pr-0.5 mt-2 scrollbar-thin">
-                    <SendSparkShelf sparks={sendSparks} onSaveSparks={saveSendSparks} />
-                  </div>
-                )}
-              </div>
-            );
+            return null;
 
           default:
             return null;

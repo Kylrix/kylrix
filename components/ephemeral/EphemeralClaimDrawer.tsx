@@ -25,14 +25,33 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { addAttachmentToNote } from '@/lib/appwrite/note';
 import { claimSendObject, createNote } from '@/lib/actions/client-ops';
 import { createCredential, createTotpSecret } from '@/lib/appwrite/vault';
-import type { SendKind } from '@/lib/send/types';
-import type { SendPasswordPayload, SendTaskPayload, SendTotpPayload, SendFilePayload } from '@/lib/send/types';
+export type SendKind = 'note' | 'password' | 'totp' | 'file' | 'task';
+export type SendPasswordPayload = any;
+export type SendTaskPayload = any;
+export type SendTotpPayload = any;
+export type SendFilePayload = any;
+
+function parseSendGhostMetadata(metadata: any): any {
+  if (typeof metadata === 'object' && metadata !== null) return metadata;
+  try {
+    return JSON.parse(metadata || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function isSendObjectMeta(meta: any): boolean {
+  return !!(meta && typeof meta === 'object' && meta.send_object && typeof meta.send_object.kind === 'string');
+}
+
+function sharedNotePublicUrl(noteId: string): string {
+  return `/app/api/shared/${noteId}`;
+}
+
 import { stashEphemeralClaimResume, type ClaimStashKind } from '@/lib/ephemeral/claim-session';
 import { consumeEphemeralRemote } from '@/lib/ephemeral/consume-client';
 import { decryptGhostBinaryFromBytes, decryptGhostData } from '@/lib/encryption/ghost-crypto';
 import { MasterPassCrypto } from '@/lib/masterpass-crypto';
-import { parseSendGhostMetadata, isSendObjectMeta } from '@/lib/send/metadata';
-import { sharedNotePublicUrl } from '@/lib/send/shared-note-api';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 

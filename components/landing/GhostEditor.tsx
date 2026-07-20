@@ -53,7 +53,9 @@ import { sha256HexUtf8 } from '@/lib/crypto/sha256-hex';
 import { burnEphemeralNoteWithProof } from '@/lib/ephemeral/burn-note';
 import { EphemeralClaimDrawer, type EphemeralClaimTarget } from '@/components/ephemeral/EphemeralClaimDrawer';
 import { clearEphemeralClaimResume, peekEphemeralClaimResume } from '@/lib/ephemeral/claim-session';
-import { sharedNotePublicUrl } from '@/lib/send/shared-note-api';
+function sharedNotePublicUrl(noteId: string): string {
+  return `/app/api/shared/${noteId}`;
+}
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
 import { buildAutoTitleFromContent } from '@/constants/noteTitle';
