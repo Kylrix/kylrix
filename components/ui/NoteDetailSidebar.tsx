@@ -179,11 +179,11 @@ export function NoteDetailSidebar({
 
   const updateLocalAndParentNote = useCallback((updated: Notes) => {
     if (updated?.$id) {
-      pushLiveNote(updated);
+      pushLiveNote(updated, { pending: !readOnly });
       void setCachedData(`note_${updated.$id}`, updated);
     }
     onUpdate(updated);
-  }, [onUpdate, pushLiveNote, setCachedData]);
+  }, [onUpdate, pushLiveNote, setCachedData, readOnly]);
 
   useEffect(() => {
     noteRef.current = note;
@@ -195,10 +195,10 @@ export function NoteDetailSidebar({
     if (!seed?.$id || isEphemeralComposeNoteId(seed.$id)) return;
     const exists = allNotesRef.current.some((candidate) => candidate.$id === seed.$id);
     if (!exists) {
-      pushLiveNote(seed);
+      pushLiveNote(seed, { pending: !readOnly });
       void setCachedData(`note_${seed.$id}`, seed);
     }
-  }, [note.$id, pushLiveNote, setCachedData]);
+  }, [note.$id, pushLiveNote, setCachedData, readOnly]);
 
   useEffect(() => {
     if (liveNote?.$id) {
@@ -1157,14 +1157,16 @@ export function NoteDetailSidebar({
           )}
 
           {/* Start Huddle */}
-          <button 
-            type="button"
-            onClick={handleStartNoteHuddle} 
-            className="p-1.5 rounded-lg bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/25 transition-colors flex items-center justify-center"
-            title="Start Huddle"
-          >
-            <VideoCallIcon className="w-4 h-4" />
-          </button>
+          {!readOnly && (
+            <button 
+              type="button"
+              onClick={handleStartNoteHuddle} 
+              className="p-1.5 rounded-lg bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/25 transition-colors flex items-center justify-center"
+              title="Start Huddle"
+            >
+              <VideoCallIcon className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Voice recorder — only for editors */}
           {!readOnly && !shouldMaskEncrypted && (
@@ -1260,10 +1262,12 @@ export function NoteDetailSidebar({
               <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6366F1] font-clash">
                 Content
               </span>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <SyncStatusDot noteId={liveNote.$id} />
-                <SyncStatusLabel noteId={liveNote.$id} />
-              </div>
+              {!readOnly && (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <SyncStatusDot noteId={liveNote.$id} />
+                  <SyncStatusLabel noteId={liveNote.$id} />
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
