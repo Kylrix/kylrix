@@ -8,6 +8,41 @@ export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 export const runtime = 'nodejs';
 
+function extractFirstImageUrlFromContent(content: string): string | null {
+  if (!content) return null;
+
+  // 1. Check for markdown image format: ![alt](url)
+  const mdImageRegex = /!\[.*?\]\((.*?)\)/;
+  const mdMatch = content.match(mdImageRegex);
+  if (mdMatch && mdMatch[1]) {
+    return mdMatch[1];
+  }
+
+  // 2. Check for HTML img tag src
+  const htmlImgRegex = /<img\s+[^>]*src=["']([^"']+)["']/i;
+  const htmlMatch = content.match(htmlImgRegex);
+  if (htmlMatch && htmlMatch[1]) {
+    return htmlMatch[1];
+  }
+
+  // 3. Check for kylrix-object JSON blocks that might represent an image
+  const OBJECT_BLOCK_REGEX = /\[\[kylrix-object:(\{.*?\})\]\]/g;
+  let objMatch;
+  while ((objMatch = OBJECT_BLOCK_REGEX.exec(content)) !== null) {
+    try {
+      const payload = JSON.parse(objMatch[1]);
+      if (payload.type === 'image' && typeof payload.src === 'string') {
+        return payload.src;
+      }
+      if (typeof payload.url === 'string' && (payload.url.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i) || payload.type === 'image')) {
+        return payload.url;
+      }
+    } catch {}
+  }
+
+  return null;
+}
+
 export default async function SharedNoteOGImage(props: { 
   params: Promise<{ id: string }>;
   searchParams?: Promise<{ key?: string }>;
@@ -22,6 +57,7 @@ export default async function SharedNoteOGImage(props: {
   let ownerName = 'Kylrix User';
   let dateText = '';
   let tags: string[] = [];
+  let base64Image: string | null = null;
 
   try {
     const note = await validatePublicNoteAccess(noteId);
@@ -59,6 +95,48 @@ export default async function SharedNoteOGImage(props: {
         
         noteDesc = cleanContent.slice(0, 180);
         if (cleanContent.length > 180) noteDesc += '...';
+
+        // Extract image URL from attachments or content
+        let imageUrl: string | null = null;
+        const attachments = (note as any).attachments || [];
+        const parsedAttachments = Array.isArray(attachments)
+          ? attachments.map(entry => {
+              try {
+                if (typeof entry === 'string') return JSON.parse(entry);
+                return entry;
+              } catch { return null; }
+            }).filter(Boolean)
+          : [];
+          
+        const firstImageAttachment = parsedAttachments.find(att => att && att.mime && att.mime.startsWith('image/'));
+        if (firstImageAttachment) {
+          try {
+            const { createSystemClient } = await import('@/lib/appwrite-admin');
+            const { storage } = createSystemClient();
+            const bucketId = 'notes_attachments';
+            imageUrl = storage.getFilePreview(bucketId, firstImageAttachment.id).toString();
+          } catch (e) {
+            console.warn('Failed to resolve attachment preview URL:', e);
+          }
+        }
+        
+        if (!imageUrl) {
+          imageUrl = extractFirstImageUrlFromContent(rawContent);
+        }
+
+        if (imageUrl) {
+          try {
+            const imgRes = await fetch(imageUrl);
+            if (imgRes.ok) {
+              const arrayBuffer = await imgRes.arrayBuffer();
+              const buffer = Buffer.from(arrayBuffer);
+              const contentTypeHeader = imgRes.headers.get('content-type') || 'image/png';
+              base64Image = `data:${contentTypeHeader};base64,${buffer.toString('base64')}`;
+            }
+          } catch (e) {
+            console.warn('Failed to fetch/encode preview image:', e);
+          }
+        }
       } else if (isEncrypted) {
         noteDesc = 'This note is protected with end-to-end encryption. Unlock it to view the full content.';
       }
@@ -128,29 +206,70 @@ export default async function SharedNoteOGImage(props: {
           )}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, justifyContent: 'center' }}>
-          <div
-            style={{
-              fontSize: '48px',
-              fontWeight: 900,
-              letterSpacing: '-0.03em',
-              lineHeight: 1.1,
-              maxWidth: '900px',
-            }}
-          >
-            {noteTitle}
+        {base64Image ? (
+          <div style={{ display: 'flex', flexDirection: 'row', gap: '40px', flex: 1, alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, justifyContent: 'center' }}>
+              <div
+                style={{
+                  fontSize: '48px',
+                  fontWeight: 900,
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1.1,
+                  maxWidth: '650px',
+                }}
+              >
+                {noteTitle}
+              </div>
+              <div
+                style={{
+                  fontSize: '20px',
+                  color: 'rgba(255,255,255,0.6)',
+                  lineHeight: 1.5,
+                  maxWidth: '650px',
+                }}
+              >
+                {noteDesc}
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexShrink: 0 }}>
+              <img
+                src={base64Image}
+                alt={noteTitle}
+                style={{
+                  width: '380px',
+                  height: '320px',
+                  objectFit: 'cover',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }}
+              />
+            </div>
           </div>
-          <div
-            style={{
-              fontSize: '20px',
-              color: 'rgba(255,255,255,0.6)',
-              lineHeight: 1.5,
-              maxWidth: '900px',
-            }}
-          >
-            {noteDesc}
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, justifyContent: 'center' }}>
+            <div
+              style={{
+                fontSize: '48px',
+                fontWeight: 900,
+                letterSpacing: '-0.03em',
+                lineHeight: 1.1,
+                maxWidth: '900px',
+              }}
+            >
+              {noteTitle}
+            </div>
+            <div
+              style={{
+                fontSize: '20px',
+                color: 'rgba(255,255,255,0.6)',
+                lineHeight: 1.5,
+                maxWidth: '900px',
+              }}
+            >
+              {noteDesc}
+            </div>
           </div>
-        </div>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

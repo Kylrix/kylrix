@@ -21,6 +21,9 @@ const PENDING_QUEUE_KEY = 'kylrix:sync:pending-queue';
 const pendingById = new Map<string, string>();
 const statusListeners = new Set<() => void>();
 
+const failedSyncAttempts = new Map<string, { count: number; lastFailedAt: number }>();
+let lastSuccessfulSyncTime = 0;
+
 let globalIntensity = 0;
 let lastKeystrokeTime = 0;
 let lastPullAt = 0;
@@ -135,10 +138,9 @@ if (typeof window !== 'undefined') {
 function triggerAutonomicSyncScheduler() {
   if (syncTimeout) clearTimeout(syncTimeout);
   if (isSyncing) return;
-  const waitDuration = globalIntensity >= 5 ? 4000 : 12000;
   syncTimeout = setTimeout(() => {
     void autonomicSyncEngine.runCycle();
-  }, waitDuration);
+  }, 0);
 }
 
 function revisionOf(note: Notes | null | undefined): string {
@@ -253,6 +255,8 @@ async function flushGoalPending(
       new CustomEvent('kylrix:sync-pending', { detail: { noteId: pendingKey, goalId, kind: 'goal' } }),
     );
   } else {
+    lastSuccessfulSyncTime = Date.now();
+    failedSyncAttempts.delete(pendingKey);
     autonomicSyncEngine.ack(pendingKey, flushRevision);
     window.dispatchEvent(
       new CustomEvent('kylrix:sync-complete', {
@@ -334,6 +338,8 @@ async function flushNotePending(
     console.log(`[SyncEngine] Re-queued note after concurrent edit: ${noteId}`);
     window.dispatchEvent(new CustomEvent('kylrix:sync-pending', { detail: { noteId } }));
   } else {
+    lastSuccessfulSyncTime = Date.now();
+    failedSyncAttempts.delete(noteId);
     autonomicSyncEngine.ack(noteId, flushRevision);
     window.dispatchEvent(
       new CustomEvent('kylrix:sync-complete', {
@@ -446,6 +452,19 @@ export const autonomicSyncEngine = {
         if (!pendingById.has(pendingId)) continue;
         const queuedRevision = pendingById.get(pendingId) || '';
 
+        // Backoff/retry delay for specific failed objects:
+        const failInfo = failedSyncAttempts.get(pendingId);
+        if (failInfo) {
+          const delay = Math.min(60000, 1000 * Math.pow(2, failInfo.count));
+          if (Date.now() - failInfo.lastFailedAt < delay) {
+            // Only delay if there is at least one other object syncing properly:
+            if (lastSuccessfulSyncTime > 0 && Date.now() - lastSuccessfulSyncTime < 300000) {
+              console.log(`[SyncEngine] Delaying retry for failed item: ${pendingId}`);
+              continue;
+            }
+          }
+        }
+
         try {
           const goalId = parseGoalPendingKey(pendingId);
           if (goalId) {
@@ -453,8 +472,27 @@ export const autonomicSyncEngine = {
           } else {
             await flushNotePending(pendingId, queuedRevision, db);
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error(`[SyncEngine] Sync failed for item ${pendingId}:`, err);
+          
+          const prev = failedSyncAttempts.get(pendingId) || { count: 0, lastFailedAt: 0 };
+          const nextCount = prev.count + 1;
+          failedSyncAttempts.set(pendingId, { count: nextCount, lastFailedAt: Date.now() });
+
+          // Auto bug report if other object synced properly recently (meaning network is active)
+          if (lastSuccessfulSyncTime > 0 && Date.now() - lastSuccessfulSyncTime < 300000) {
+            try {
+              const { submitRuntimeErrorFeedback } = await import('@/lib/errors/runtime-feedback');
+              await submitRuntimeErrorFeedback({
+                boundary: 'global',
+                error: new Error(`SyncEngine auto-reporting failed item ${pendingId} (Revision: ${queuedRevision}). Connection is active (other objects syncing properly). Error details: ${err?.message || String(err)}`),
+              });
+              console.warn(`[SyncEngine] Automatically reported bug for failed sync item ${pendingId}`);
+            } catch (reportErr) {
+              console.error('[SyncEngine] Failed to submit auto-report:', reportErr);
+            }
+          }
+
           notifyStatusListeners();
         }
       }

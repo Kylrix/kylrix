@@ -4281,10 +4281,10 @@ export async function getCurrentPublicNoteDecryptionKey(noteId: string): Promise
 export async function validatePublicNoteAccess(noteId: string): Promise<Notes | null> {
   try {
     if (typeof window === 'undefined') {
-      const { createSystemClient } = await import('@/lib/appwrite-admin');
-      const { databases } = createSystemClient();
+      const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
+      const tables = createSystemTablesDB();
       
-      const doc = await databases.getRow(
+      const doc = await tables.getRow(
         APPWRITE_DATABASE_ID,
         APPWRITE_TABLE_ID_NOTES,
         noteId
@@ -4295,7 +4295,7 @@ export async function validatePublicNoteAccess(noteId: string): Promise<Notes | 
         hydrateVirtualAttributes(doc);
         try {
           const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-          const pivot = await databases.listRows(
+          const pivot = await tables.listRows(
             APPWRITE_DATABASE_ID,
             noteTagsTable,
             [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any
