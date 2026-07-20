@@ -1,4 +1,4 @@
-# ota:managed-github-projection v1 identity=sha256:aa52e2760d9d73724de802ec62bbe027864485e59a82fdf63732430ab1fb4383
+# ota:managed-github-projection v1 identity=sha256:70a69e93fece567b9c14fb63c7130c4ba98e7e6cc0e290d4bdbe7c016f8e44b0
 name: Ota governance ('verify')
 
 on:
@@ -27,6 +27,10 @@ jobs:
       - uses: ota-run/setup@493cba84bf7f7c11c9e8e996d832d93a89c62184
         with:
           source: contract
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '>=22'
+          package-manager-cache: false
       - name: Verify Ota projection identity
         run: ota ci projection --workflow 'verify' --mode native --target-os ${{ inputs.ota_target_os }} --expect-identity ${{ inputs.ota_projection_identity }} --json
       - name: Validate contract
@@ -37,9 +41,9 @@ jobs:
         run: ota tasks --safe --use --json
       - name: Preview contract lane
         run: ota up --workflow 'verify' --mode native --agent --dry-run --json
-      - name: Run contract lane
-        run: ota up --workflow 'verify' --mode native --agent --json
-      - name: Archive contract receipt
+      - name: Execute finite contract task
+        run: ota run 'verify' --mode native --agent
+      - name: Archive workflow readiness receipt
         run: ota receipt --workflow 'verify' --mode native --archive --json
   ota_ota_refusal_canary_task_selfhost_up:
     name: 'ota.refusal-canary.task.selfhost-up (windows/native)'
@@ -49,6 +53,10 @@ jobs:
       - uses: ota-run/setup@493cba84bf7f7c11c9e8e996d832d93a89c62184
         with:
           source: contract
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '>=22'
+          package-manager-cache: false
       - name: Verify Ota projection identity
         run: ota ci projection --workflow 'verify' --mode native --target-os ${{ inputs.ota_target_os }} --expect-identity ${{ inputs.ota_projection_identity }} --json
       - name: Prove agent refusal canary
@@ -61,6 +69,10 @@ jobs:
       - uses: ota-run/setup@493cba84bf7f7c11c9e8e996d832d93a89c62184
         with:
           source: contract
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: '>=22'
+          package-manager-cache: false
       - name: Verify Ota projection identity
         run: ota ci projection --workflow 'verify' --mode native --target-os ${{ inputs.ota_target_os }} --expect-identity ${{ inputs.ota_projection_identity }} --json
       - name: Prove agent refusal canary
