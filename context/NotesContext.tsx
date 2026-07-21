@@ -500,110 +500,11 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         hasInitiallyFetched.current = true;
       }
     } else if (!isAuthLoading && !isAuthenticated) {
-      const loadGhost = async () => {
-        const historyRaw = typeof window !== 'undefined' ? localStorage.getItem('kylrix_ghost_notes_v2') : null;
-        if (historyRaw) {
-          try {
-            const history = JSON.parse(historyRaw);
-            if (Array.isArray(history)) {
-              const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
-              const mapped = await Promise.all(history.map(async (item: any) => {
-                let decryptedTitle = item.title;
-                let decryptedContent = item.content || '';
-                if (item.decryptionKey) {
-                  try {
-                    decryptedTitle = await decryptGhostData(item.title, item.decryptionKey);
-                    decryptedContent = await decryptGhostData(item.content || '', item.decryptionKey);
-                  } catch (e) {
-                    console.error('Failed to decrypt ghost note in NotesContext:', e);
-                  }
-                }
-                return {
-                  $id: item.id,
-                  $createdAt: item.createdAt,
-                  $updatedAt: item.createdAt,
-                  title: decryptedTitle,
-                  content: decryptedContent,
-                  format: 'text',
-                  tags: [],
-                  userId: 'ghost',
-                  isPublic: false,
-                  isGuest: false,
-                  metadata: item.metadata || '{}',
-                };
-              })) as any[];
-              setNotes(mapped);
-              setTotalNotes(mapped.length);
-              setIsLoading(false);
-              setHasMore(false);
-              setError(null);
-              setPinnedIds([]);
-              return;
-            }
-          } catch (e) {
-            console.error('Failed to parse ghost history', e);
-          }
-        }
-        setNotes([]);
-        setTotalNotes(0);
-        setHasMore(false);
-        setIsLoading(false);
-        setError(null);
-        setPinnedIds([]);
-      };
-      void loadGhost();
+      setIsLoading(false);
+      setHasMore(false);
       hasInitiallyFetched.current = false;
     }
   }, [isAuthenticated, isAuthLoading, user?.$id, fetchBatch, isCacheLoaded, notes.length]);
-
-  useEffect(() => {
-    if (isAuthenticated) return;
-    
-    const handleStorage = async () => {
-      const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
-      if (historyRaw) {
-        try {
-          const history = JSON.parse(historyRaw);
-          if (Array.isArray(history)) {
-            const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
-            const mapped = await Promise.all(history.map(async (item: any) => {
-              let decryptedTitle = item.title;
-              let decryptedContent = item.content || '';
-              if (item.decryptionKey) {
-                try {
-                  decryptedTitle = await decryptGhostData(item.title, item.decryptionKey);
-                  decryptedContent = await decryptGhostData(item.content || '', item.decryptionKey);
-                } catch (e) {
-                  console.error('Failed to decrypt ghost note in NotesContext handleStorage:', e);
-                }
-              }
-              return {
-                $id: item.id,
-                $createdAt: item.createdAt,
-                $updatedAt: item.createdAt,
-                title: decryptedTitle,
-                content: decryptedContent,
-                format: 'text',
-                tags: [],
-                userId: 'ghost',
-                isPublic: false,
-                isGuest: false,
-                metadata: item.metadata || '{}',
-              };
-            })) as any[];
-            setNotes(mapped);
-            setTotalNotes(mapped.length);
-          }
-        } catch {}
-      } else {
-        setNotes([]);
-        setTotalNotes(0);
-      }
-    };
-
-    window.addEventListener('storage', () => { void handleStorage(); });
-    return () => window.removeEventListener('storage', () => { void handleStorage(); });
-  }, [isAuthenticated]);
 
   const transferComposeSession = useCallback((ephemeralId: string, savedId: string) => {
     const guard = liveEditGuardsRef.current.get(ephemeralId);

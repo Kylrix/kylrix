@@ -182,6 +182,10 @@ async function flushGoalPending(
     const payloadAny = payload as any;
     if (!payloadAny.userId || payloadAny.userId === 'guest' || payloadAny.userId === 'ghost') {
       payloadAny.userId = activeUserId;
+      payload.creatorId = activeUserId;
+      if (Array.isArray(payload.assigneeIds)) {
+        payload.assigneeIds = payload.assigneeIds.map((id) => (id === 'guest' || !id ? activeUserId : id));
+      }
       if (db) {
         await db.cache.upsert({
           id: `goal_${goalId}`,
@@ -216,7 +220,7 @@ async function flushGoalPending(
     remote = null;
   }
 
-  const creatorId = payload.creatorId || (remote as any)?.userId || '';
+  const creatorId = payload.creatorId || activeUserId || (remote as any)?.userId || 'guest';
   const assignees = (payload.assigneeIds || []).filter(Boolean);
   let permissions: string[] | undefined;
   try {
@@ -234,7 +238,7 @@ async function flushGoalPending(
       {
         ...(dataPayload as any),
         $id: goalId,
-        userId: creatorId || 'guest',
+        userId: creatorId,
       },
       permissions,
     );
