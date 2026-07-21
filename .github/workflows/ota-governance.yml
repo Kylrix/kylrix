@@ -80,6 +80,7 @@ jobs:
           command: doctor
           source: contract
           contract-path: ota.yaml
+          workflow: verify
           fail-on-ci-drift: true
           comment-pr: false
           artifact-name: ota-contract-ci-drift
