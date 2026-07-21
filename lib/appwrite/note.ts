@@ -375,16 +375,27 @@ export function pickNoteAutosavePayload(data: {
   content?: string | null;
   format?: string | null;
   tags?: string[] | null;
+  isPublic?: boolean | null;
+  isGuest?: boolean | null;
 }): Partial<Notes> {
   const content = data.content ?? '';
   const trimmedTitle = clampNoteTitle(data.title);
 
-  return {
+  const payload: Partial<Notes> = {
     title: trimmedTitle || buildAutoTitleFromContent(content) || 'Untitled Thought',
     content,
     format: data.format || 'markdown',
     tags: Array.isArray(data.tags) ? data.tags.filter(Boolean) : [],
   };
+
+  if (typeof data.isPublic === 'boolean') {
+    payload.isPublic = data.isPublic;
+  }
+  if (typeof data.isGuest === 'boolean') {
+    payload.isGuest = data.isGuest;
+  }
+
+  return payload;
 }
 
 export function sanitizeNoteUpdatePatch(

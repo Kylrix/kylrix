@@ -24,12 +24,14 @@ Related substrate only: `rxdb-appwrite-sync` (IndexedDB/RxDB mechanics). **Do no
 
 | Piece | Path |
 |-------|------|
-| **Pending queue SoT** (`markPending` / `isPending` / `ack` / `runCycle`) | `lib/services/sync-engine.ts` |
+| **Forward-reactive sync engine** (`markPending` + `runCycle`) | `lib/services/sync-engine.ts` |
+| **optimisticEngine** (speculative background fetches) | `lib/sync/optimistic-engine.ts` |
+| **interpolationEngine** (intelligent local vs server merge) | `lib/sync/interpolation-engine.ts` |
 | Pending queue persistence | RxDB `cache` id `kylrix:sync:pending-queue` (IndexedDB; survives browser close) |
 | Live-copy getter for flush payloads | `lib/sync/pending-sync-bridge.ts` |
 | Merge / sort / soft-pull | `lib/sync/local-copy-sync.ts` |
 | Amber/green UI (engine only) | `components/ui/SyncStatusDot.tsx` |
-| Live content upsert + enqueue | `context/NotesContext.tsx` → `pushLiveNote` |
+| Live content upsert + enqueue | `context/NotesContext.tsx` → `pushLiveNote`, `TaskContext.tsx` → `pushLiveGoal` |
 | Compose **lifecycle** (create drawer; not the dot) | `lib/notes/compose-draft-registry.ts`, `registerComposeSession` / `unregisterComposeSession` |
 | Flush field picker (no pending flags) | `pickNoteAutosavePayload` in `lib/appwrite/note.ts` |
 | Reference create path | `app/(app)/app/(app)/notes/CreateNoteForm.tsx` |
@@ -38,14 +40,15 @@ Related substrate only: `rxdb-appwrite-sync` (IndexedDB/RxDB mechanics). **Do no
 
 ---
 
-## Intent (non-negotiable)
+## Intent & Advanced Architecture (non-negotiable)
 
-1. UI talks **only** to the **live/local copy** for content (context list + RxDB/cache).
-2. **Amber/green** talks **only** to the **sync engine pending queue** (same authority that flushes).
-3. Appwrite **feeds and confirms** — never owns a `pendingSync` / dirty column.
-4. Push and pull are **upserts by id** — never replace-the-list, never discard-the-card-because-uploaded.
-5. Works for **signed-in and guest / no-account** users: RxDB + engine queue are device-local; guest payloads may stay local or use ghost paths, but the **same** pending/live contracts apply.
-6. Background sync is **autonomic** (activity intensity), not random full reloads.
+1. **Local Copy as Single Source of Truth**: The UI talks **only** to the **live/local copy** for content (context list + RxDB/cache).
+2. **Forward-Reactive Sync Engine**: All CRUD operations, field updates, and visibility toggles (`isPublic`, `isGuest`) mutate the local copy instantly (`pushLiveNote` / `pushLiveGoal`), mark the revision pending in `autonomicSyncEngine`, and immediately invoke `runCycle()` for on-demand background flushing.
+3. **`optimisticEngine`**: Pre-fetches and speculatively queries remote database data in the background while serving instant 0ms local copy results to the UI.
+4. **`interpolationEngine`**: Merges background server responses into the local copy. Key rule: If an item has un-flushed local changes (`autonomicSyncEngine.isPending(id)`), the local copy strictly wins to prevent overwriting user edits.
+5. **Amber/green** talks **only** to the **sync engine pending queue** (same authority that flushes).
+6. **Appwrite feeds and confirms** — never owns a `pendingSync` / dirty column.
+7. Works for **signed-in and guest / no-account** users: RxDB + engine queue are device-local; guest payloads stay local until claimed, but the **same** pending/live contracts apply.
 
 ---
 
