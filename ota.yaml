@@ -374,6 +374,8 @@ workflows:
     description: Prepare the deterministic offline SQLite profile and start the local Next.js runtime
     proof:
       claim: bounded
+    readiness:
+      surfaces: [contributor:web]
     setup:
       task: setup
     run:
