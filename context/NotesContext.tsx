@@ -288,14 +288,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     if (isFetchingRef.current) return;
 
     if (!isAuthenticated) {
-      // Never flash-wipe the live copy during auth bootstrap. Only clear on confirmed logout.
       if (!isAuthLoading && !user?.$id) {
-        setNotes([]);
-        setTotalNotes(0);
         setIsLoading(false);
         setHasMore(false);
         setError(null);
-        setPinnedIds([]);
       }
       return;
     }
