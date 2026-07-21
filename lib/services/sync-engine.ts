@@ -155,8 +155,10 @@ function revisionOf(note: Notes | null | undefined): string {
     if (typeof (u as any)?.getTime === 'function') {
       return new Date((u as any).getTime()).toISOString();
     }
-  } catch {}
-  return String(u ?? '').trim();
+    return String(u ?? '').trim();
+  } catch {
+    return '';
+  }
 }
 
 function goalRevisionOf(task: Task | null | undefined): string {
@@ -171,8 +173,10 @@ function goalRevisionOf(task: Task | null | undefined): string {
     if (typeof (u as any)?.getTime === 'function') {
       return new Date((u as any).getTime()).toISOString();
     }
-  } catch {}
-  return String(u ?? '').trim();
+    return String(u ?? '').trim();
+  } catch {
+    return '';
+  }
 }
 
 async function flushGoalPending(
