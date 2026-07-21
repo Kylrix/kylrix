@@ -800,12 +800,13 @@ export async function createNoteSecure(data: any, jwt?: string) {
     }
   }
 
-  // Rigorous runtime validation
+  const { clampNoteTitle } = await import('@/constants/noteTitle');
   const validated = NoteSchema.parse(data);
 
   // Mathematically tie the create operation to the current user
   const noteData: any = {
     ...validated,
+    title: clampNoteTitle(validated.title, 'Untitled Thought'),
     userId: actor.$id,
     creatorId: actor.$id,
   };
@@ -1005,6 +1006,11 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string) 
   const isAllowed = await verifyNotePermission(noteId, actor.$id, 'editor');
   if (!isAllowed) {
     throw new Error('Forbidden: Insufficient permissions to update this note');
+  }
+
+  if (data.title !== undefined) {
+    const { clampNoteTitle } = await import('@/constants/noteTitle');
+    data.title = clampNoteTitle(data.title, 'Untitled Thought');
   }
 
   const contentLength = (data.content || '').length;

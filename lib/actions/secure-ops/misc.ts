@@ -936,16 +936,24 @@ export async function createRowSecure(
     delete dataCopy.$id;
   }
 
-  const result = await Registry.getDatabase().createRow<any>(
-    dbId,
-    tblId,
-    customRowId,
-    dataCopy,
-    perms,
-    { forceSystem: true }
-  );
-
-  return JSON.parse(JSON.stringify(result));
+  try {
+    const result = await Registry.getDatabase().createRow<any>(
+      dbId,
+      tblId,
+      customRowId,
+      dataCopy,
+      perms,
+      { forceSystem: true }
+    );
+    return JSON.parse(JSON.stringify(result));
+  } catch (error: any) {
+    const message = String(error?.message || '').toLowerCase();
+    const isDuplicate = message.includes('already exists') || message.includes('duplicate') || error?.code === 409 || error?.status === 409;
+    if (customRowId && isDuplicate) {
+      return updateRowSecure(dbId, tblId, customRowId, dataCopy, perms, jwt);
+    }
+    throw error;
+  }
 }
 
 export async function updateRowSecure(

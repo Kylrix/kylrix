@@ -145,14 +145,34 @@ function triggerAutonomicSyncScheduler() {
 
 function revisionOf(note: Notes | null | undefined): string {
   if (!note) return '';
-  return String(note.updatedAt || note.$updatedAt || '').trim();
+  const u = note.updatedAt || note.$updatedAt;
+  if (!u) return '';
+  try {
+    if (typeof u === 'string') return u.trim();
+    if (typeof (u as any)?.toISOString === 'function') {
+      return (u as any).toISOString();
+    }
+    if (typeof (u as any)?.getTime === 'function') {
+      return new Date((u as any).getTime()).toISOString();
+    }
+  } catch {}
+  return String(u ?? '').trim();
 }
 
 function goalRevisionOf(task: Task | null | undefined): string {
   if (!task) return '';
   const u = task.updatedAt;
-  if (u instanceof Date) return u.toISOString();
-  return String(u || '').trim();
+  if (!u) return '';
+  try {
+    if (typeof u === 'string') return u.trim();
+    if (typeof (u as any)?.toISOString === 'function') {
+      return (u as any).toISOString();
+    }
+    if (typeof (u as any)?.getTime === 'function') {
+      return new Date((u as any).getTime()).toISOString();
+    }
+  } catch {}
+  return String(u ?? '').trim();
 }
 
 async function flushGoalPending(
