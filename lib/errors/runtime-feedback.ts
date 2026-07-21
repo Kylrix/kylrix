@@ -65,6 +65,16 @@ function buildPayload(schema: FormSchemaField[], input: RuntimeErrorFeedbackInpu
   const message = input.error.message || 'Unknown application error';
   const stack = typeof input.error.stack === 'string' ? input.error.stack : '';
 
+  const extraKeys: Record<string, unknown> = {};
+  try {
+    for (const key of Object.getOwnPropertyNames(input.error)) {
+      if (key !== 'name' && key !== 'message' && key !== 'stack' && key !== 'digest') {
+        extraKeys[key] = (input.error as any)[key];
+      }
+    }
+  } catch {}
+  const extraDetails = Object.keys(extraKeys).length ? `\n\nExtra Properties:\n${JSON.stringify(extraKeys, null, 2)}` : '';
+
   const summary = truncate(`${input.boundary.toUpperCase()} error: ${message}`, 180);
   const details = truncate(
     [
@@ -77,7 +87,7 @@ function buildPayload(schema: FormSchemaField[], input: RuntimeErrorFeedbackInpu
       ua ? `User Agent: ${ua}` : null,
     ]
       .filter(Boolean)
-      .join('\n\n'),
+      .join('\n\n') + extraDetails,
     6000
   );
   const steps = truncate(`1. Open ${href || path || '/'}\n2. Continue normal usage\n3. App shows a crash drawer`, 1000);
@@ -162,16 +172,22 @@ export async function submitRuntimeErrorFeedback(input: RuntimeErrorFeedbackInpu
   const dedupeKey = `${SESSION_DEDUPE_PREFIX}${fingerprintBase}`;
 
   if (sessionStorage.getItem(dedupeKey) === 'submitted') return;
-  sessionStorage.setItem(dedupeKey, 'pending');
+  sessionStorage.setItem(dedupeKey, 'submitted');
+
+  const totalSentKey = 'kylrix:auto-error-feedback:sent-count';
+  const sentCount = parseInt(sessionStorage.getItem(totalSentKey) || '0', 10);
+  if (sentCount >= 3) {
+    console.warn('[RuntimeFeedback] Throttling automatic error submission. Limit reached.');
+    return;
+  }
+  sessionStorage.setItem(totalSentKey, String(sentCount + 1));
 
   try {
     const form = await FormsService.getForm(FEATURE_REQUEST_FORM_ID);
     const schema = parseSchema(form?.schema);
     const payload = buildPayload(schema, input);
     await FormsService.submitForm(FEATURE_REQUEST_FORM_ID, JSON.stringify(payload));
-    sessionStorage.setItem(dedupeKey, 'submitted');
   } catch (err) {
-    sessionStorage.removeItem(dedupeKey);
     console.error('[RuntimeFeedback] Failed to submit automatic error feedback.', err);
   }
 }
