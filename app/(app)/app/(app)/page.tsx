@@ -803,43 +803,43 @@ export default function NotesPage() {
       )}
 
       {/* Notes Grid */}
-      {isInitialLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {Array.from({ length: 12 }).map((_, index) => (
-            <NoteCard key={`skeleton-${index}`} note={{ $id: `skeleton-${index}`, title: 'Loading...', content: '', tags: [], isPublic: false, status: 'loading' } as any} />
-          ))}
-        </div>
-      ) : paginatedNotes.length === 0 ? (
+      {paginatedNotes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center select-none">
           <div className="w-24 h-24 bg-white/5 border border-white/10 rounded-[28px] flex items-center justify-center mb-6 shadow-2xl">
-            {hasSearchResults ? (
+            {isInitialLoading ? (
+              <CircularProgress size={28} className="text-[#EC4899]" />
+            ) : hasSearchResults ? (
               <SearchIcon size={38} className="text-white/30" />
             ) : (
               <PlusCircleIcon size={38} className="text-white/30" />
             )}
           </div>
           <h4 className="text-white font-black text-lg tracking-tight mb-2">
-            {hasSearchResults ? 'No Results' : 'No Ideas Yet'}
+            {isInitialLoading ? 'Loading Vault...' : hasSearchResults ? 'No Results' : 'No Ideas Yet'}
           </h4>
           <p className="text-white/40 text-xs font-semibold max-w-xs leading-relaxed mb-6">
-            {hasSearchResults
+            {isInitialLoading
+              ? 'Decrypting and retrieving your secure ideas...'
+              : hasSearchResults
               ? `No matches found for "${searchQuery}". Try adjusting your query.`
               : 'Capture your thoughts and tasks here. Ideas are securely sealed in your vault.'
             }
           </p>
-          {hasSearchResults ? (
-            <div className="flex items-center gap-3">
-              <Button variant="outlined" onClick={clearSearch}>
-                Clear Search
-              </Button>
+          {!isInitialLoading && (
+            hasSearchResults ? (
+              <div className="flex items-center gap-3">
+                <Button variant="outlined" onClick={clearSearch}>
+                  Clear Search
+                </Button>
+                <Button onClick={handleCreateNoteClick}>
+                  New Idea
+                </Button>
+              </div>
+            ) : (
               <Button onClick={handleCreateNoteClick}>
-                New Idea
+                Open Composer
               </Button>
-            </div>
-          ) : (
-            <Button onClick={handleCreateNoteClick}>
-              Open Composer
-            </Button>
+            )
           )}
         </div>
       ) : (
