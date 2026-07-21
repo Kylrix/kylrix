@@ -14,28 +14,28 @@ jobs:
   verify-native-linux:
     uses: ./.github/workflows/ota-verify-native-linux.yml
     with:
-      ota_projection_identity: sha256:4483dd3e4d051145537fcf50005f87666a063f7b0d15c2a56bb24318ba91e6fe
+      ota_projection_identity: sha256:f84e2ea06ac5eaee2d5c2eb26995c4d4cb23f19d42030467abf9617d3ae8f5aa
       ota_target_os: linux
       ota_runner: ubuntu-latest
 
   verify-native-macos:
     uses: ./.github/workflows/ota-verify-native-macos.yml
     with:
-      ota_projection_identity: sha256:cc187bf7de2f5e1eb9184f5fff62f87cbae7624df902a6dd64aeabc0b710fda5
+      ota_projection_identity: sha256:283e11795584f0391bebe1f9b7aff68e17e70e9fd36c376ed00c013728ae4264
       ota_target_os: macos
       ota_runner: macos-latest
 
   verify-native-windows:
     uses: ./.github/workflows/ota-verify-native-windows.yml
     with:
-      ota_projection_identity: sha256:70a69e93fece567b9c14fb63c7130c4ba98e7e6cc0e290d4bdbe7c016f8e44b0
+      ota_projection_identity: sha256:e3fbeb038a40296aaba67a7c5bd987db66f0ea08bc2aed35a32012b430c7cb40
       ota_target_os: windows
       ota_runner: windows-latest
 
   verify-container-linux:
     uses: ./.github/workflows/ota-verify-container-linux.yml
     with:
-      ota_projection_identity: sha256:5c341edd074591c3bc6c46797f0842107e6a6f2e17632ad09a5fd130f4908da3
+      ota_projection_identity: sha256:40a3f00e0000a3a6c91fdf8368bcc3ecdcbff17f1abb38822aea9706395ac3b8
       ota_target_os: linux
       ota_runner: ubuntu-latest
 
@@ -53,10 +53,8 @@ jobs:
           source: contract
       # `dev` is intentionally outside agent admission. This is an explicit
       # human-owned proof lane, not a generated agent-execution projection.
-      - name: Prove bounded native runtime
-        run: ota proof runtime --workflow sqlite-dev --mode native --json
-      - name: Archive native runtime receipt
-        run: ota receipt --workflow sqlite-dev --mode native --archive --json
+      - name: Prove and archive bounded native runtime
+        run: ota proof runtime --workflow sqlite-dev --mode native --archive --json
 
   runtime-container:
     name: Ubuntu bounded container runtime proof
@@ -67,10 +65,8 @@ jobs:
         with:
           source: contract
       # The same explicit, non-agent proof boundary applies in container mode.
-      - name: Prove bounded container runtime
-        run: ota proof runtime --workflow sqlite-dev --mode container --json
-      - name: Archive container runtime receipt
-        run: ota receipt --workflow sqlite-dev --mode container --archive --json
+      - name: Prove and archive bounded container runtime
+        run: ota proof runtime --workflow sqlite-dev --mode container --archive --json
 
   contract-ci-drift:
     name: Contract-to-CI drift gate

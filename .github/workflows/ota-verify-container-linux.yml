@@ -1,4 +1,4 @@
-# ota:managed-github-projection v1 identity=sha256:5c341edd074591c3bc6c46797f0842107e6a6f2e17632ad09a5fd130f4908da3
+# ota:managed-github-projection v1 identity=sha256:40a3f00e0000a3a6c91fdf8368bcc3ecdcbff17f1abb38822aea9706395ac3b8
 name: Ota governance ('verify')
 
 on:
