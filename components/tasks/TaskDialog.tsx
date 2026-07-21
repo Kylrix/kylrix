@@ -445,8 +445,8 @@ export default function TaskDialog() {
                   onChange={(e) => setProjectId(e.target.value)}
                   className="w-full bg-[#161412] border border-[#2C2A28] rounded-xl px-3 py-2.5 text-sm text-[#F5F2ED] font-semibold focus:outline-none focus:border-[#A855F7] transition-colors cursor-pointer"
                 >
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
+                  {Array.from(new Map(projects.map((p) => [p.id, p])).values()).map((project, idx) => (
+                    <option key={`${project.id}-${idx}`} value={project.id}>
                       {project.name}
                     </option>
                   ))}

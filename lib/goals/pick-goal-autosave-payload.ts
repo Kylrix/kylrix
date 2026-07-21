@@ -2,7 +2,7 @@
  * Goal (tasks table) autosave payload — never includes pending/sync UI fields.
  */
 
-import type { Task } from '@/types';
+import { clampNoteTitle } from '@/constants/noteTitle';
 
 export function pickGoalAutosavePayload(task: Task): Record<string, unknown> {
   const tags = [...(task.labels || [])];
@@ -15,8 +15,11 @@ export function pickGoalAutosavePayload(task: Task): Record<string, unknown> {
     if (!tags.includes(projectTag)) tags.push(projectTag);
   }
 
+  const rawTitle = typeof task.title === 'string' ? task.title.trim() : '';
+  const title = clampNoteTitle(rawTitle || 'Untitled Goal', 'Untitled Goal');
+
   return {
-    title: task.title || '',
+    title,
     description: task.description || '',
     status: task.status || 'todo',
     priority: task.priority || 'medium',

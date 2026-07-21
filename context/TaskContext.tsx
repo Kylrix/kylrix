@@ -791,11 +791,16 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       if (!byId.has(live.id)) byId.set(live.id, live);
     }
 
+    const projectsMap = new Map<string, Project>();
+    for (const proj of (data.projects || [])) {
+      if (proj?.id) projectsMap.set(proj.id, proj);
+    }
+
     dispatch({
       type: 'SET_DATA',
       payload: {
         tasks: applyPendingPatches(Array.from(byId.values())),
-        projects: data.projects,
+        projects: Array.from(projectsMap.values()),
       },
     });
   }, [applyPendingPatches]);
