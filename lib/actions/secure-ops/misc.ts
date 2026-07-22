@@ -813,7 +813,8 @@ export async function createRowSecure(
   } catch (_) {}
 
   if (!actor || !actor.$id) {
-    if (isAnonymousFormSubmission || tblId === 'forms' || tblId === 'form_submissions' || tblId === 'events' || (rowData as any)?.isPublic || (rowData as any)?.isGuest) {
+    const cleanTbl = String(tblId || '').toLowerCase();
+    if (isAnonymousFormSubmission || cleanTbl.includes('form') || cleanTbl.includes('event') || (rowData as any)?.isPublic || (rowData as any)?.isGuest) {
       actor = { $id: 'guest', email: 'guest@kylrix.space' };
     } else {
       throw new Error('Unauthorized');
