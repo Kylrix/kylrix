@@ -13,6 +13,7 @@ import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useSection } from '@/context/SectionContext';
+import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
 import toast from 'react-hot-toast';
 
 interface EventDetailsProps {
@@ -156,6 +157,10 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
           <h2 className="text-xl font-black font-clash text-white tracking-tight leading-snug">
             {event.title}
           </h2>
+          <div className="flex items-center gap-2 mt-1.5 shrink-0">
+            <SyncStatusDot resourceId={eventIdValue} />
+            <SyncStatusLabel resourceId={eventIdValue} />
+          </div>
         </div>
 
         {/* Date & Time / Location (Card) */}

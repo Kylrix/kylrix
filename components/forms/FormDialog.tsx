@@ -46,6 +46,7 @@ import { DraftsService, FormDraft } from '@/lib/services/drafts';
 import { Forms, FormsStatus } from '@/generated/appwrite/types';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
+import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
@@ -621,16 +622,13 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
 
       if (form) {
         await FormsService.updateForm(form.$id, formData);
+        autonomicSyncEngine.markPending(form.$id);
         if (user) invalidate(`f_user_forms_${user.$id}`);
         invalidate(`f_form_schema_${form.$id}`);
-        DraftsService.clearDraft(form.$id);
       } else {
         const newForm = await FormsService.createForm(user.$id, formData);
+        autonomicSyncEngine.markPending(newForm.$id);
         if (user) invalidate(`f_user_forms_${user.$id}`);
-        // Clear both possible draft source IDs
-        DraftsService.clearDraft('new');
-        if (initialDraft) DraftsService.clearDraft(initialDraft.id);
-        DraftsService.clearDraft(newForm.$id);
       }
       setHasUnsavedChanges(false);
       

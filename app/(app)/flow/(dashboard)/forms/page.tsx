@@ -108,19 +108,25 @@ export default function FormsDashboard() {
         
         try {
             const response = user?.$id 
-                ? await fetchOptimized(cacheKey, () => FormsService.listUserForms(user.$id)).catch(() => ({ rows: [] }))
-                : { rows: [] };
+                ? await fetchOptimized(cacheKey, () => FormsService.listUserForms(user.$id)).catch(() => [])
+                : [];
             
+            const formRows: any[] = Array.isArray(response) 
+                ? response 
+                : (Array.isArray((response as any)?.rows) 
+                    ? (response as any).rows 
+                    : (Array.isArray((response as any)?.documents) ? (response as any).documents : []));
+
             setForms((prev) => {
                 const byId = new Map<string, Forms>();
-                prev.forEach((f) => byId.set(f.$id, f));
-                response.rows.forEach((f: any) => byId.set(f.$id, f));
+                (prev || []).forEach((f) => f && f.$id && byId.set(f.$id, f));
+                formRows.forEach((f: any) => f && f.$id && byId.set(f.$id, f));
                 const merged = Array.from(byId.values()).sort((a: any, b: any) => {
                     const aPinned = isResourcePinned('form', a.$id, a.userId, a.isPinned);
                     const bPinned = isResourcePinned('form', b.$id, b.userId, b.isPinned);
                     if (aPinned && !bPinned) return -1;
                     if (!aPinned && bPinned) return 1;
-                    return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
+                    return new Date(b.$createdAt || Date.now()).getTime() - new Date(a.$createdAt || Date.now()).getTime();
                 });
 
                 (async () => {
