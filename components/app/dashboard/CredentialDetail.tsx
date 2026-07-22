@@ -1,7 +1,9 @@
+'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 import type { Credentials } from '@/lib/appwrite/types';
-import { storage } from '@/lib/appwrite';
+import { storage, deleteCredential } from '@/lib/appwrite';
 import { useAI } from '@/context/AIContext';
 import { useSudo } from '@/context/SudoContext';
 import { 
@@ -19,11 +21,15 @@ import {
   Share2,
   Lock,
   Key,
-  Tag as TagIcon
+  Tag as TagIcon,
+  Trash2,
+  Sparkles,
+  Info
 } from 'lucide-react';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
-import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
+import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
+import { useOverlay } from '@/components/ui/OverlayContext';
 import toast from 'react-hot-toast';
 
 export default function CredentialDetail({
@@ -42,6 +48,7 @@ export default function CredentialDetail({
   const [copied, setCopied] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(!!credential.isPublic);
   const { requestSudo } = useSudo();
+  const { openUnified } = useOverlay();
 
   const handleShareLink = useCallback(async () => {
     try {
@@ -199,7 +206,7 @@ export default function CredentialDetail({
         <button 
           type="button"
           onClick={onCopy} 
-          className="h-6 text-[10px] font-bold px-2 rounded-md hover:bg-[#10B981]/10 flex items-center gap-1.5 transition-colors text-[#10B981]"
+          className="h-6 text-[10px] font-bold px-2 rounded-lg hover:bg-[#10B981]/10 flex items-center gap-1.5 transition-colors text-[#10B981]"
         >
           <Copy className="w-3 h-3" />
           <span>{copied === fieldId ? "Copied!" : "Copy"}</span>
@@ -218,44 +225,76 @@ export default function CredentialDetail({
 
   const content = (
     <div className={`h-full flex flex-col ${inline ? 'bg-transparent' : 'bg-[#161412]'} w-full min-h-0 text-[#F5F2ED]`}>
-      {/* Header Bar */}
-      <div className="px-5 py-4 flex items-center gap-3 border-b border-[#2C2A28] shrink-0 bg-[#161412]/95 backdrop-blur-md">
-        <button 
-          type="button"
-          onClick={onClose} 
-          className="p-2 rounded-xl text-[#9B9691] hover:text-white hover:bg-white/5 transition-colors"
-        >
-          {isMobile ? <ArrowLeft className="w-5 h-5" /> : <X className="w-5 h-5" />}
-        </button>
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Lock className="w-4 h-4 text-[#10B981] shrink-0" />
-          <h3 className="text-sm font-black text-white uppercase tracking-wider font-clash truncate">
-            Secret Details
-          </h3>
-          <SyncStatusDot resourceId={credential.$id} />
+      {/* Header Bar matching TaskDetails / NoteDetailSidebar */}
+      <div className="px-5 py-4 flex flex-col gap-3 border-b border-[#2C2A28] shrink-0 bg-[#161412]/95 backdrop-blur-md">
+        {/* Row 1: Back/Close & Action Buttons */}
+        <div className="flex items-center justify-between min-w-0">
+          <div className="flex items-center gap-2">
+            <button 
+              type="button"
+              onClick={onClose} 
+              className="p-2 rounded-xl text-[#9B9691] hover:text-white hover:bg-white/5 transition-colors"
+              title="Back"
+            >
+              {isMobile ? <ArrowLeft className="w-4 h-4" /> : <X className="w-4 h-4" />}
+            </button>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#10B981]/10 border border-[#10B981]/20 text-[10px] font-bold text-[#10B981] uppercase tracking-wider font-mono">
+              <Lock className="w-3 h-3" />
+              <span>Vault Secret</span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            <button 
+              type="button"
+              onClick={handleShareLink}
+              className={`p-2 rounded-xl transition-all border ${
+                isPublic 
+                  ? 'text-[#10B981] bg-[#10B981]/15 border-[#10B981]/30 hover:bg-[#10B981]/25' 
+                  : 'text-[#9B9691] bg-white/5 border-[#2C2A28] hover:bg-white/10 hover:text-white'
+              }`}
+              title={isPublic ? "Copy Sharing Link" : "Publish & Share Link"}
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
+            <button 
+              type="button"
+              onClick={() => setShowProjectLinker(true)} 
+              className="p-2 rounded-xl text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/20 hover:bg-[#10B981]/20 transition-all"
+              title="Link Project"
+            >
+              <Folder className="w-4 h-4" />
+            </button>
+            <button 
+              type="button"
+              onClick={() => {
+                openUnified('delete-confirm', {
+                  title: 'Delete Vault Secret?',
+                  description: `Are you sure you want to permanently delete "${credential.name}"?`,
+                  onConfirm: async () => {
+                    await deleteCredential(credential.$id);
+                    toast.success('Secret deleted.');
+                    onClose();
+                  }
+                });
+              }}
+              className="p-2 text-[#9B9691] hover:text-red-400 rounded-xl hover:bg-white/5 transition-all"
+              title="Delete Secret"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button 
-            type="button"
-            onClick={handleShareLink}
-            className={`p-2 rounded-xl transition-all border ${
-              isPublic 
-                ? 'text-[#10B981] bg-[#10B981]/15 border-[#10B981]/30 hover:bg-[#10B981]/25' 
-                : 'text-[#9B9691] bg-white/5 border-[#2C2A28] hover:bg-white/10 hover:text-white'
-            }`}
-            title={isPublic ? "Copy Sharing Link" : "Publish & Share Link"}
-          >
-            <Share2 className="w-4 h-4" />
-          </button>
-          <button 
-            type="button"
-            onClick={() => setShowProjectLinker(true)} 
-            className="p-2 rounded-xl text-[#10B981] bg-[#10B981]/10 border border-[#10B981]/20 hover:bg-[#10B981]/20 transition-all"
-            title="Link to Project"
-          >
-            <Folder className="w-4 h-4" />
-          </button>
+        {/* Row 2: Full-bleed Title & Sync Status Indicator matching TaskDetails / NoteDetailSidebar */}
+        <div className="w-full min-w-0 flex flex-col gap-1.5 pt-1">
+          <h2 className="w-full min-w-0 text-lg md:text-xl font-black font-clash text-[#10B981] tracking-tight uppercase break-words [overflow-wrap:anywhere]">
+            {credential.name}
+          </h2>
+          <div className="flex items-center gap-2 shrink-0">
+            <SyncStatusDot resourceId={credential.$id} />
+            <SyncStatusLabel resourceId={credential.$id} />
+          </div>
         </div>
       </div>
 
@@ -266,64 +305,60 @@ export default function CredentialDetail({
         entityKind="password" 
       />
 
-      {/* Main Body */}
+      {/* Main Body with Deep Ash Balances */}
       <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
-        {/* Hero Card */}
-        <div className="p-4 rounded-2xl bg-[#1C1A18] border border-[#2C2A28] flex items-start gap-4">
-          <div className="w-14 h-14 rounded-xl bg-[#141211] flex items-center justify-center border border-[#34322F] shrink-0 overflow-hidden">
-            {faviconUrl ? (
-              <img src={faviconUrl} className="w-8 h-8 object-contain" alt="" />
-            ) : (
-              <span className="text-2xl font-black text-[#10B981] font-clash">
-                {credential.name?.charAt(0)?.toUpperCase() || "?"}
-              </span>
-            )}
-          </div>
-          <div className="min-w-0 flex-1 flex flex-col gap-1">
-            <h4 className="text-lg font-black text-white truncate font-clash leading-tight">
-              {credential.name}
-            </h4>
-            {credential.url && (
-              <div className="flex flex-col gap-1.5 items-start mt-0.5">
-                <a 
-                  href={credential.url} 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#10B981] hover:underline"
+        {/* Favicon & URL Hero Surface */}
+        {credential.url && (
+          <div className="p-4 rounded-2xl bg-[#1C1A18] border border-[#2C2A28] flex items-start gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-[#141211] flex items-center justify-center border border-[#34322F] shrink-0 overflow-hidden">
+              {faviconUrl ? (
+                <img src={faviconUrl} className="w-7 h-7 object-contain" alt="" />
+              ) : (
+                <span className="text-xl font-black text-[#10B981] font-clash">
+                  {credential.name?.charAt(0)?.toUpperCase() || "?"}
+                </span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1 flex flex-col gap-1">
+              <span className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase font-clash">Website Domain</span>
+              <a 
+                href={credential.url} 
+                target="_blank" 
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#10B981] hover:underline"
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span className="truncate">{new URL(credential.url).hostname}</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+              {urlSafety && (
+                <div
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 mt-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${
+                    urlSafety.safe 
+                      ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20' 
+                      : 'bg-red-500/10 text-red-400 border-red-500/20'
+                  }`}
                 >
-                  <Globe className="w-3.5 h-3.5" />
-                  <span className="truncate">{new URL(credential.url).hostname}</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-                {urlSafety && (
-                  <div
-                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${
-                      urlSafety.safe 
-                        ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20' 
-                        : 'bg-red-500/10 text-red-400 border-red-500/20'
-                    }`}
-                  >
-                    {urlSafety.safe ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
-                    <span>{urlSafety.riskLevel} Risk: {urlSafety.reason}</span>
-                  </div>
-                )}
-              </div>
-            )}
+                  {urlSafety.safe ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
+                  <span>{urlSafety.riskLevel} Risk: {urlSafety.reason}</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Fields List */}
         <div className="flex flex-col gap-4">
           <div>
-            <FieldLabel label="Username / Account" onCopy={() => handleCopy(credential.username || '', "username")} fieldId="username" />
+            <FieldLabel label="Username / Email" onCopy={() => handleCopy(credential.username || '', "username")} fieldId="username" />
             <FieldValue>{credential.username || "N/A"}</FieldValue>
           </div>
 
-          {/* Secret Value */}
+          {/* Secret Password Value */}
           <div className="flex flex-col">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase font-clash">
-                Secret Value
+                Secret Password
               </span>
               <div className="flex gap-2">
                 <button 
@@ -335,7 +370,7 @@ export default function CredentialDetail({
                       setShowPassword(false);
                     }
                   }}
-                  className="h-6 text-[10px] font-bold px-2 rounded-md hover:bg-[#10B981]/10 flex items-center gap-1.5 transition-colors text-[#10B981]"
+                  className="h-6 text-[10px] font-bold px-2 rounded-lg hover:bg-[#10B981]/10 flex items-center gap-1.5 transition-colors text-[#10B981]"
                 >
                   {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   <span>{showPassword ? "Hide" : "Show"}</span>
@@ -343,7 +378,7 @@ export default function CredentialDetail({
                 <button 
                   type="button"
                   onClick={() => requestSudo({ onSuccess: () => handleCopy(credential.password || '', "password") })}
-                  className="h-6 text-[10px] font-bold px-2 rounded-md hover:bg-[#10B981]/10 flex items-center gap-1.5 transition-colors text-[#10B981]"
+                  className="h-6 text-[10px] font-bold px-2 rounded-lg hover:bg-[#10B981]/10 flex items-center gap-1.5 transition-colors text-[#10B981]"
                 >
                   <Copy className="w-3.5 h-3.5" />
                   <span>{copied === "password" ? "Copied!" : "Copy"}</span>
@@ -443,10 +478,10 @@ export default function CredentialDetail({
 
           <div className="h-px bg-[#2C2A28] my-1" />
 
-          {/* Metadata */}
+          {/* Metadata & Audit Info */}
           <div>
             <span className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase mb-2.5 flex items-center gap-1.5 font-clash">
-              <Calendar className="w-3.5 h-3.5 text-[#10B981]" />
+              <Info className="w-3.5 h-3.5 text-[#10B981]" />
               <span>Information</span>
             </span>
             <div className="flex flex-col gap-1.5 text-xs text-[#9B9691]">
