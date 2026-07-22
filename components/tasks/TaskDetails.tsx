@@ -1003,9 +1003,9 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
           </div>
           {taskLabels.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {taskLabels.map((label) => (
+              {Array.from(new Map(taskLabels.map((l) => [l.name, l])).values()).map((label, idx) => (
                 <div 
-                  key={label.name}
+                  key={`${label.name}-${idx}`}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/5 text-[11px] font-bold text-white/60"
                 >
                   <TagIcon size={10} style={{ color: label.color || '#9B9691' }} />

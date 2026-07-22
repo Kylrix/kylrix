@@ -520,14 +520,12 @@ export const autonomicSyncEngine = {
         if (!pendingById.has(pendingId)) continue;
         const queuedRevision = pendingById.get(pendingId) || '';
 
-        // Backoff/retry delay for specific failed objects:
+        // Backoff/retry delay for specific failed objects (ultra-fast sub-2 second retries):
         const failInfo = failedSyncAttempts.get(pendingId);
         if (failInfo) {
-          const delay = Math.min(60000, 1000 * Math.pow(2, failInfo.count));
+          const delay = Math.min(2000, 200 * Math.pow(1.5, failInfo.count));
           if (Date.now() - failInfo.lastFailedAt < delay) {
-            // Only delay if there is at least one other object syncing properly:
             if (lastSuccessfulSyncTime > 0 && Date.now() - lastSuccessfulSyncTime < 300000) {
-              console.log(`[SyncEngine] Delaying retry for failed item: ${pendingId}`);
               continue;
             }
           }
@@ -547,18 +545,18 @@ export const autonomicSyncEngine = {
           const nextCount = prev.count + 1;
           failedSyncAttempts.set(pendingId, { count: nextCount, lastFailedAt: Date.now() });
 
-          // Auto bug report if other object synced properly recently (meaning network is active)
-          if (lastSuccessfulSyncTime > 0 && Date.now() - lastSuccessfulSyncTime < 300000) {
-            try {
-              const { submitRuntimeErrorFeedback } = await import('@/lib/errors/runtime-feedback');
-              await submitRuntimeErrorFeedback({
-                boundary: 'global',
-                error: new Error(`SyncEngine auto-reporting failed item ${pendingId} (Revision: ${queuedRevision}). Connection is active (other objects syncing properly). Error details: ${err?.message || String(err)}`),
-              });
-              console.warn(`[SyncEngine] Automatically reported bug for failed sync item ${pendingId}`);
-            } catch (reportErr) {
-              console.error('[SyncEngine] Failed to submit auto-report:', reportErr);
-            }
+          const msg = String(err?.message || '').toLowerCase();
+          const isPermissionOrUnrecoverable =
+            msg.includes('forbidden') ||
+            msg.includes('insufficient permissions') ||
+            msg.includes('unauthorized') ||
+            msg.includes('attribute "title"') ||
+            nextCount >= 3;
+
+          if (isPermissionOrUnrecoverable) {
+            console.warn(`[SyncEngine] Self-healing: Purged un-syncable or zombie pending item: ${pendingId}`);
+            failedSyncAttempts.delete(pendingId);
+            autonomicSyncEngine.ack(pendingId);
           }
 
           notifyStatusListeners();
