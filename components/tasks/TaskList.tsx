@@ -11,6 +11,8 @@ import { MultiSectionContainer } from '@/context/SectionContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { toast } from 'react-hot-toast';
 
+import { EmptyStateAnomalyDetector } from '@/context/NeuralContext';
+
 export default function TaskList() {
   const {
     getFilteredTasks,
@@ -157,7 +159,14 @@ export default function TaskList() {
   };
 
   return (
-    <div className="animate-fadeIn min-h-screen bg-[#0A0908] p-4 md:p-8 pointer-events-auto">
+    <EmptyStateAnomalyDetector
+      componentName="TaskList"
+      expectedItemKind="goal"
+      itemCount={tasks.length}
+      isLoading={isLoading}
+      onHeal={refreshTasks}
+    >
+      <div className="animate-fadeIn min-h-screen bg-[#0A0908] p-4 md:p-8 pointer-events-auto">
       <MultiSectionContainer panels={['forms', 'huddles', 'projects']}>
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-10 gap-4 sm:gap-6">
@@ -513,6 +522,7 @@ export default function TaskList() {
           )}
         </div>
       </MultiSectionContainer>
-    </div>
+      </div>
+    </EmptyStateAnomalyDetector>
   );
 }

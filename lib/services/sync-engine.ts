@@ -136,6 +136,17 @@ if (typeof window !== 'undefined') {
   window.addEventListener('online', () => triggerAutonomicSyncScheduler(), { passive: true });
 }
 
+// Offload beat / polling to SpineEngine: SyncEngine subscribes to Spine heartbeats
+if (typeof window !== 'undefined') {
+  import('@/lib/services/SpineEngine').then(({ SpineEngine }) => {
+    SpineEngine.subscribe('sync.crud', (tick) => {
+      if (tick.isOnline && !isSyncing && pendingById.size > 0) {
+        void autonomicSyncEngine.runCycle();
+      }
+    });
+  }).catch(() => {});
+}
+
 function triggerAutonomicSyncScheduler() {
   if (syncTimeout) clearTimeout(syncTimeout);
   if (isSyncing) return;

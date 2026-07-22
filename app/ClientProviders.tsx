@@ -26,6 +26,9 @@ import { CallLauncherProvider } from '@/context/CallLauncherContext';
 import { LocalContextProvider } from '@/lib/context-engine';
 import { SetupProvider } from '@/context/SetupContext';
 
+import { SpineProvider } from '@/context/SpineContext';
+import { NeuralProvider } from '@/context/NeuralContext';
+
 const ClientToaster = dynamic(() => import('@/components/ClientToaster'), { ssr: false });
 
 interface ComposeProvidersProps {
@@ -49,6 +52,8 @@ function ComposeProviders({ providers, children }: ComposeProvidersProps) {
  * Lightweight UI-state providers that don't block hydration with heavy data fetching.
  */
 const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
+  SpineProvider,
+  NeuralProvider,
   DrawerStateProvider,
   AppwriteProvider,
   SudoProvider,
