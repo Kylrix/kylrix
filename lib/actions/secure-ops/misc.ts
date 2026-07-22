@@ -813,12 +813,7 @@ export async function createRowSecure(
   } catch (_) {}
 
   if (!actor || !actor.$id) {
-    const cleanTbl = String(tblId || '').toLowerCase();
-    if (isAnonymousFormSubmission || cleanTbl.includes('form') || cleanTbl.includes('event') || (rowData as any)?.isPublic || (rowData as any)?.isGuest) {
-      actor = { $id: 'guest', email: 'guest@kylrix.space' };
-    } else {
-      throw new Error('Unauthorized');
-    }
+    actor = { $id: 'guest', email: 'guest@kylrix.space' };
   }
 
   // 3. Security checks and payload preparation

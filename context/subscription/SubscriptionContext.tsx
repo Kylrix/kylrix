@@ -63,20 +63,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   const isLoading = authLoading || tierLoading || balanceLoading;
 
-  useEffect(() => {
-    const fetchRates = async () => {
-      try {
-        const res = await fetch('https://api.frankfurter.dev/v1/latest?base=USD');
-        const data = await res.json();
-        if (data.rates) {
-          setExchangeRates({ USD: 1, ...data.rates });
-        }
-      } catch {
-        console.error('[Subscription] Failed to fetch exchange rates');
-      }
-    };
-    fetchRates();
-  }, []);
+
 
   const prices = useMemo(
     () => ({

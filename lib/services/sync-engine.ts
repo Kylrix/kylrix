@@ -133,6 +133,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener('input', handleUserActivity, { passive: true });
   window.addEventListener('scroll', handleUserActivity, { passive: true });
   window.addEventListener('click', handleUserActivity, { passive: true });
+  window.addEventListener('online', () => triggerAutonomicSyncScheduler(), { passive: true });
 }
 
 function triggerAutonomicSyncScheduler() {
@@ -504,6 +505,9 @@ export const autonomicSyncEngine = {
    */
   async runCycle() {
     if (isSyncing) return;
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && !navigator.onLine) {
+      return;
+    }
 
     const { hasAuthSessionHint, getCurrentUserSnapshot } = await import('@/lib/appwrite');
     const hasSession = hasAuthSessionHint();

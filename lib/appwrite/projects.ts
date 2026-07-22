@@ -30,8 +30,14 @@ export const ProjectsService = {
     const rows = await projectsCache.fetch(async () => {
       let result: any[];
       if (typeof window !== 'undefined') {
-        const { account } = await import('./client');
-        const { jwt } = await account.createJWT();
+        let jwt: string | undefined = undefined;
+        if (typeof navigator === 'undefined' || navigator.onLine) {
+          try {
+            const { account } = await import('./client');
+            const res = await account.createJWT().catch(() => null);
+            jwt = res?.jwt;
+          } catch {}
+        }
         const { listProjectsWithCollaborationsSecure } = await import('@/lib/actions/secure-ops');
         result = await listProjectsWithCollaborationsSecure(jwt);
       } else {

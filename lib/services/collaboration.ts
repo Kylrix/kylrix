@@ -24,31 +24,39 @@ export const CollaborationService = {
             retryTime: 5000,
             pull: {
                 handler: async (lastCheckpoint: any, batchSize) => {
+                    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                        return { documents: [], checkpoint: lastCheckpoint };
+                    }
                     try {
-                        const jwt = await account.createJWT();
+                        const jwtRes = await account.createJWT().catch(() => null);
+                        if (!jwtRes?.jwt) {
+                            return { documents: [], checkpoint: lastCheckpoint };
+                        }
                         const result = await pullNotesDeltaSecure({
                             lastCheckpoint: lastCheckpoint ? lastCheckpoint.updatedAt : null,
                             limit: batchSize
-                        }, jwt.jwt);
+                        }, jwtRes.jwt);
                         
                         return {
                             documents: result.documents as any[],
                             checkpoint: result.checkpoint
                         };
                     } catch (err) {
-                        console.error('[Replication] Pull failed:', err);
                         return { documents: [], checkpoint: lastCheckpoint };
                     }
                 }
             },
             push: {
                 handler: async (rows) => {
+                    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                        return [];
+                    }
                     try {
-                        const jwt = await account.createJWT();
-                        const conflicts = await pushNotesDeltaSecure(rows, jwt.jwt);
+                        const jwtRes = await account.createJWT().catch(() => null);
+                        if (!jwtRes?.jwt) return [];
+                        const conflicts = await pushNotesDeltaSecure(rows, jwtRes.jwt);
                         return conflicts as any[];
                     } catch (err) {
-                        console.error('[Replication] Push failed:', err);
                         return [];
                     }
                 },

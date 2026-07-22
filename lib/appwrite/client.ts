@@ -22,11 +22,13 @@ const originalTablesDB = new TablesDB(client);
 
 // Helper to fetch JWT securely from client-side SDK
 async function getJwt(): Promise<string | undefined> {
+  if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && !navigator.onLine) {
+    return undefined;
+  }
   try {
-    const res = await account.createJWT();
-    return res.jwt;
+    const res = await account.createJWT().catch(() => null);
+    return res?.jwt;
   } catch (e) {
-    console.warn('[client-ops] Failed to generate JWT:', e);
     return undefined;
   }
 }
