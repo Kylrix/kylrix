@@ -46,6 +46,8 @@ function ComposeProviders({ providers, children }: ComposeProvidersProps) {
   );
 }
 
+import { SecurityProvider } from '@/context/SecurityContext';
+
 /**
  * Tier 1: Root Providers
  * Mandatory for GlobalShell and UI orchestration. 
@@ -54,6 +56,7 @@ function ComposeProviders({ providers, children }: ComposeProvidersProps) {
 const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   SpineProvider,
   NeuralProvider,
+  SecurityProvider,
   DrawerStateProvider,
   AppwriteProvider,
   SudoProvider,

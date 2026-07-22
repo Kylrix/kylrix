@@ -19,36 +19,49 @@ const projectsCache = getNamedListCache<any[]>('projects', 60000); // 1 minute c
 
 export const ProjectsService = {
   async listProjects(force = false) {
-    if (!force) {
-      const { getSessionProjectsList } = await import('@/lib/projects/projects-cache');
-      const warm = getSessionProjectsList();
-      if (warm?.length) {
-        return { rows: warm };
-      }
+    if (typeof window !== 'undefined') {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cached = await LocalEngine.cacheGet<any[]>('f_projects_list');
+        if (cached && cached.length > 0 && !force) {
+          this.fetchRemoteProjects(force).then(async (remoteRows) => {
+            if (remoteRows && remoteRows.length > 0) {
+              await LocalEngine.cacheSet('f_projects_list', remoteRows);
+            }
+          }).catch(() => {});
+          return { rows: cached };
+        }
+      } catch {}
     }
 
-    const rows = await projectsCache.fetch(async () => {
-      let result: any[];
-      if (typeof window !== 'undefined') {
-        let jwt: string | undefined = undefined;
-        if (typeof navigator === 'undefined' || navigator.onLine) {
-          try {
-            const { account } = await import('./client');
-            const res = await account.createJWT().catch(() => null);
-            jwt = res?.jwt;
-          } catch {}
-        }
-        const { listProjectsWithCollaborationsSecure } = await import('@/lib/actions/secure-ops');
-        result = await listProjectsWithCollaborationsSecure(jwt);
-      } else {
-        const { listProjectsWithCollaborationsSecure } = await import('@/lib/actions/secure-ops');
-        result = await listProjectsWithCollaborationsSecure();
-      }
-      setSessionProjectsList(result);
-      return result;
-    }, force);
-
+    const rows = await this.fetchRemoteProjects(force);
+    if (typeof window !== 'undefined' && rows && rows.length > 0) {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        void LocalEngine.cacheSet('f_projects_list', rows);
+      } catch {}
+    }
     return { rows };
+  },
+
+  async fetchRemoteProjects(force = false) {
+    let result: any[] = [];
+    if (typeof window !== 'undefined') {
+      let jwt: string | undefined = undefined;
+      if (typeof navigator === 'undefined' || navigator.onLine) {
+        try {
+          const { account } = await import('./client');
+          const res = await account.createJWT().catch(() => null);
+          jwt = res?.jwt;
+        } catch {}
+      }
+      const { listProjectsWithCollaborationsSecure } = await import('@/lib/actions/secure-ops');
+      result = await listProjectsWithCollaborationsSecure(jwt);
+    } else {
+      const { listProjectsWithCollaborationsSecure } = await import('@/lib/actions/secure-ops');
+      result = await listProjectsWithCollaborationsSecure();
+    }
+    return result;
   },
   async getProject(projectId: string) {
     return databases.getRow<any>(
