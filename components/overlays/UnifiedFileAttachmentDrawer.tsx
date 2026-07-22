@@ -1,9 +1,11 @@
 'use client';
 
 /**
- * UnifiedFileAttachmentDrawer — Unified 2-Tab File Drawer (Synced Media vs Upload New).
- * Synced tab (default) enables 0ms instant attachment of existing uploaded media from LocalEngine,
- * skipping redundant remote uploads and linking existing storage assets directly.
+ * UnifiedFileAttachmentDrawer — 3-Tab Unified Attachment Drawer.
+ * Tabs:
+ *   1. 'objects' (Default) with sub-tabs: Goals, Notes, Forms, Events, Vault, Tags. (0ms Local Copy)
+ *   2. 'synced': Synced Media from Storage Buckets cached in LocalEngine (0ms Local Copy)
+ *   3. 'upload': Drag-and-drop or upload new file
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -18,12 +20,17 @@ import {
   Search,
   Loader2,
   HardDrive,
+  Target,
+  FileCode,
+  Calendar,
+  Key,
+  Tag,
+  Layers,
 } from 'lucide-react';
 import { useUnifiedFileDrawer, SyncedMediaFile } from '@/context/UnifiedFileDrawerContext';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { StorageService } from '@/lib/services/storage';
 import { useAuth } from '@/context/auth/AuthContext';
-import { formatTime } from '@/lib/time-util';
 
 const BUCKETS = [
   'notes_attachments',
@@ -33,29 +40,44 @@ const BUCKETS = [
   'profile_pictures',
 ];
 
+type MainTab = 'objects' | 'synced' | 'upload';
+type ObjectSubTab = 'goals' | 'notes' | 'forms' | 'events' | 'vault' | 'tags';
+
 export function UnifiedFileAttachmentDrawer() {
   const { isOpen, options, closeFileDrawer } = useUnifiedFileDrawer();
   const { user } = useAuth();
   const userId = user?.$id || 'guest';
 
-  const [activeTab, setActiveTab] = useState<'synced' | 'upload'>('synced');
-  const [mediaFiles, setMediaFiles] = useState<SyncedMediaFile[]>([]);
+  const [activeTab, setActiveTab] = useState<MainTab>('objects');
+  const [activeSubTab, setActiveSubTab] = useState<ObjectSubTab>('goals');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [mediaFiles, setMediaFiles] = useState<SyncedMediaFile[]>([]);
+  const [objectItems, setObjectItems] = useState<any[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<SyncedMediaFile | null>(null);
 
-  // Load local copy media at 0ms speed
-  const loadMedia = useCallback(async () => {
+  // 1. Load Local Copy Objects & Media at 0ms Speed
+  const loadLocalData = useCallback(async () => {
     setLoading(true);
-    const cacheKey = `f_user_media_${userId}`;
-    const cached = await LocalEngine.cacheGet<SyncedMediaFile[]>(cacheKey);
-    if (cached && cached.length > 0) {
-      setMediaFiles(cached);
+    try {
+      // Synced Media Local Copy
+      const cachedMedia = await LocalEngine.cacheGet<SyncedMediaFile[]>(`f_user_media_${userId}`);
+      if (cachedMedia && cachedMedia.length > 0) {
+        setMediaFiles(cachedMedia);
+      }
+
+      // Objects Local Copy depending on subtab
+      const cachedObjects = await LocalEngine.cacheGet<any[]>(`f_${activeSubTab}_${userId}`) ||
+                            await LocalEngine.cacheGet<any[]>(`f_user_${activeSubTab}_${userId}`) || [];
+      setObjectItems(cachedObjects);
+    } catch (_e) {} finally {
       setLoading(false);
     }
 
-    // Remote sync across storage buckets if online
+    // Remote sync for storage media if online
     if (typeof navigator !== 'undefined' && navigator.onLine) {
       try {
         const fetchedFiles: SyncedMediaFile[] = [];
@@ -79,31 +101,45 @@ export function UnifiedFileAttachmentDrawer() {
         }
         if (fetchedFiles.length > 0) {
           setMediaFiles(fetchedFiles);
-          await LocalEngine.cacheSet(cacheKey, fetchedFiles);
+          await LocalEngine.cacheSet(`f_user_media_${userId}`, fetchedFiles);
         }
-      } catch (_err) {} finally {
-        setLoading(false);
-      }
-    } else {
-      setLoading(false);
+      } catch (_err) {}
     }
-  }, [userId]);
+  }, [userId, activeSubTab]);
 
   useEffect(() => {
     if (isOpen) {
-      setActiveTab('synced');
+      setActiveTab('objects');
       setSelectedFile(null);
-      void loadMedia();
+      void loadLocalData();
     }
-  }, [isOpen, loadMedia]);
+  }, [isOpen, loadLocalData]);
 
   if (!isOpen || !options) return null;
 
-  const handleSelectSyncedFile = (file: SyncedMediaFile) => {
-    setSelectedFile(file);
+  const handleSelectObject = (item: any) => {
+    const itemTitle = item.title || item.name || item.label || 'Attached Item';
+    let rawReference = `[${itemTitle}](source:kylrix${activeSubTab}:${item.$id || item.id})`;
+    if (activeSubTab === 'notes') {
+      rawReference = `[Note: ${itemTitle}](file://notes/${item.$id || item.id})`;
+    } else if (activeSubTab === 'goals') {
+      rawReference = `[Goal: ${itemTitle}](source:kylrixgoal:${item.$id || item.id})`;
+    } else if (activeSubTab === 'forms') {
+      rawReference = `[Form: ${itemTitle}](source:kylrixform:${item.$id || item.id})`;
+    }
+
+    options.onSelectFile({
+      $id: item.$id || item.id || 'obj',
+      name: itemTitle,
+      bucketId: activeSubTab,
+      sizeOriginal: 0,
+      mimeType: 'application/x-kylrix-object',
+      fileUrl: rawReference,
+    });
+    closeFileDrawer();
   };
 
-  const handleConfirmSelection = () => {
+  const handleConfirmMediaSelection = () => {
     if (selectedFile) {
       options.onSelectFile(selectedFile);
       closeFileDrawer();
@@ -141,8 +177,12 @@ export function UnifiedFileAttachmentDrawer() {
     }
   };
 
-  const filteredFiles = mediaFiles.filter((f) =>
+  const filteredMedia = mediaFiles.filter((f) =>
     f.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredObjects = objectItems.filter((o) =>
+    String(o.title || o.name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const renderFileIcon = (file: SyncedMediaFile) => {
@@ -159,9 +199,9 @@ export function UnifiedFileAttachmentDrawer() {
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-[#1C1A18]">
           <div className="flex items-center gap-2.5">
-            <HardDrive className="w-5 h-5 text-[#A855F7]" />
+            <Layers className="w-5 h-5 text-[#A855F7]" />
             <h3 className="font-clash font-extrabold text-xl text-[#F5F2ED]">
-              {options.title || 'Attach Media'}
+              {options.title || 'Attach Object or Media'}
             </h3>
           </div>
           <button
@@ -172,11 +212,21 @@ export function UnifiedFileAttachmentDrawer() {
           </button>
         </div>
 
-        {/* Tab Switcher */}
+        {/* Top 3-Tab Switcher */}
         <div className="flex items-center gap-2 mt-4 p-1 bg-[#161412] rounded-xl border border-[#1C1A18]">
           <button
+            onClick={() => setActiveTab('objects')}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+              activeTab === 'objects'
+                ? 'bg-[#1C1A18] text-[#F5F2ED] shadow-sm'
+                : 'text-[#9B9691] hover:text-[#F5F2ED]'
+            }`}
+          >
+            Objects
+          </button>
+          <button
             onClick={() => setActiveTab('synced')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
               activeTab === 'synced'
                 ? 'bg-[#1C1A18] text-[#F5F2ED] shadow-sm'
                 : 'text-[#9B9691] hover:text-[#F5F2ED]'
@@ -186,7 +236,7 @@ export function UnifiedFileAttachmentDrawer() {
           </button>
           <button
             onClick={() => setActiveTab('upload')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
               activeTab === 'upload'
                 ? 'bg-[#1C1A18] text-[#F5F2ED] shadow-sm'
                 : 'text-[#9B9691] hover:text-[#F5F2ED]'
@@ -196,7 +246,89 @@ export function UnifiedFileAttachmentDrawer() {
           </button>
         </div>
 
-        {/* Tab 1: Synced Media (0ms Instant Selection) */}
+        {/* Tab 1: Objects (With Sub-Tabs) */}
+        {activeTab === 'objects' && (
+          <div className="flex-1 flex flex-col overflow-hidden mt-4">
+            {/* Scrollable Sub-Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-2 custom-scrollbar">
+              {[
+                { id: 'goals', label: 'Goals', icon: Target },
+                { id: 'notes', label: 'Notes', icon: FileText },
+                { id: 'forms', label: 'Forms', icon: FileCode },
+                { id: 'events', label: 'Events', icon: Calendar },
+                { id: 'vault', label: 'Vault', icon: Key },
+                { id: 'tags', label: 'Tags', icon: Tag },
+              ].map((sub) => {
+                const IconComponent = sub.icon;
+                const isSelected = activeSubTab === sub.id;
+                return (
+                  <button
+                    key={sub.id}
+                    onClick={() => setActiveSubTab(sub.id as ObjectSubTab)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${
+                      isSelected
+                        ? 'bg-[#A855F7] text-white shadow-sm'
+                        : 'bg-[#161412] text-[#9B9691] hover:text-[#F5F2ED] border border-[#1C1A18]'
+                    }`}
+                  >
+                    <IconComponent className="w-3.5 h-3.5" />
+                    <span>{sub.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="relative my-2">
+              <Search className="absolute left-3.5 top-3 w-4 h-4 text-[#9B9691]" />
+              <input
+                type="text"
+                placeholder={`Search local ${activeSubTab}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#161412] border border-[#1C1A18] rounded-xl pl-10 pr-4 py-2 text-sm text-[#F5F2ED] focus:outline-none focus:border-[#A855F7]"
+              />
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+              {loading ? (
+                <div className="flex justify-center items-center py-12 text-[#9B9691]">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#A855F7]" />
+                </div>
+              ) : filteredObjects.length === 0 ? (
+                <div className="text-center py-12 text-[#9B9691] text-xs">
+                  No local {activeSubTab} found.
+                </div>
+              ) : (
+                filteredObjects.map((item, idx) => (
+                  <div
+                    key={item.$id || item.id || idx}
+                    onClick={() => handleSelectObject(item)}
+                    className="flex items-center justify-between p-3 rounded-xl bg-[#161412] border border-[#1C1A18] hover:border-[#A855F7] transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2 rounded-lg bg-[#0A0908] border border-[#1C1A18] text-[#A855F7]">
+                        <Layers className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-[#F5F2ED] truncate group-hover:text-[#A855F7] transition-colors">
+                          {item.title || item.name || item.label || 'Untitled Object'}
+                        </p>
+                        <p className="text-xs text-[#9B9691] font-mono mt-0.5 capitalize">
+                          {activeSubTab} • Local Copy
+                        </p>
+                      </div>
+                    </div>
+                    <button className="px-3 py-1.5 rounded-lg bg-[#1C1A18] hover:bg-[#A855F7] hover:text-white text-xs font-bold text-[#F5F2ED] transition-all">
+                      Attach
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: Synced Media (0ms Instant Selection) */}
         {activeTab === 'synced' && (
           <div className="flex-1 flex flex-col overflow-hidden mt-4">
             <div className="relative mb-3">
@@ -206,7 +338,7 @@ export function UnifiedFileAttachmentDrawer() {
                 placeholder="Search synced media..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#161412] border border-[#1C1A18] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[#F5F2ED] focus:outline-none focus:border-[#A855F7]"
+                className="w-full bg-[#161412] border border-[#1C1A18] rounded-xl pl-10 pr-4 py-2 text-sm text-[#F5F2ED] focus:outline-none focus:border-[#A855F7]"
               />
             </div>
 
@@ -215,17 +347,17 @@ export function UnifiedFileAttachmentDrawer() {
                 <div className="flex justify-center items-center py-12 text-[#9B9691]">
                   <Loader2 className="w-6 h-6 animate-spin text-[#A855F7]" />
                 </div>
-              ) : filteredFiles.length === 0 ? (
-                <div className="text-center py-12 text-[#9B9691] text-sm">
-                  No synced media found. Upload a new file to get started.
+              ) : filteredMedia.length === 0 ? (
+                <div className="text-center py-12 text-[#9B9691] text-xs">
+                  No synced media found.
                 </div>
               ) : (
-                filteredFiles.map((file) => {
+                filteredMedia.map((file) => {
                   const isSelected = selectedFile?.$id === file.$id;
                   return (
                     <div
                       key={file.$id}
-                      onClick={() => handleSelectSyncedFile(file)}
+                      onClick={() => setSelectedFile(file)}
                       className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-[#1C1A18] border-[#A855F7] shadow-sm'
@@ -259,7 +391,7 @@ export function UnifiedFileAttachmentDrawer() {
             {selectedFile && (
               <div className="mt-4 pt-3 border-t border-[#1C1A18] flex justify-end">
                 <button
-                  onClick={handleConfirmSelection}
+                  onClick={handleConfirmMediaSelection}
                   className="px-5 py-2.5 bg-[#A855F7] hover:bg-[#9333EA] text-white font-bold text-sm rounded-xl transition-all shadow-lg"
                 >
                   Attach Selected Media
@@ -269,13 +401,13 @@ export function UnifiedFileAttachmentDrawer() {
           </div>
         )}
 
-        {/* Tab 2: Upload New */}
+        {/* Tab 3: Upload New */}
         {activeTab === 'upload' && (
           <div className="flex-1 flex flex-col items-center justify-center py-12 mt-4 border-2 border-dashed border-[#1C1A18] rounded-2xl bg-[#161412]/50">
             {uploading ? (
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-[#A855F7]" />
-                <p className="text-sm text-[#9B9691]">Uploading and syncing to local media...</p>
+                <p className="text-xs text-[#9B9691]">Uploading and syncing to local media...</p>
               </div>
             ) : (
               <label className="flex flex-col items-center gap-3 cursor-pointer">
@@ -285,7 +417,7 @@ export function UnifiedFileAttachmentDrawer() {
                 <div className="text-center">
                   <p className="text-sm font-bold text-[#F5F2ED]">Click to browse file</p>
                   <p className="text-xs text-[#9B9691] mt-1">
-                    File will be uploaded and added to your synced media
+                    File will be uploaded and cached to your local media
                   </p>
                 </div>
                 <input

@@ -1459,220 +1459,55 @@ export function NoteDetailSidebar({
           </div>
         </div>
 
-        {/* Attachments */}
-        <div className="shrink-0">
-          <div className="flex items-center gap-2 mb-2.5">
-            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-[#6366F1] font-clash block">
-              Attachments
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsObjectPermissionInfoOpen(true)}
-              className="w-5 h-5 rounded-md flex items-center justify-center text-white/45 hover:text-white hover:bg-white/5 transition-colors"
-              title="Attachment permission info"
-              aria-label="Attachment permission info"
-            >
-              <Info className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          {currentAttachments.length > 0 ? (
+        {/* Collaborators */}
+        <div className="shrink-0 min-h-[44px]">
+          <span className="text-[10px] font-black uppercase tracking-[0.14em] text-pink-400 font-clash block mb-2.5">
+            Collaborators
+          </span>
+          {isLoadingCollaborators ? (
+            <div className="h-[44px] text-xs text-[#9B9691] font-semibold flex items-center gap-2">
+              <div className="w-3.5 h-3.5 border border-pink-500 border-t-transparent rounded-full animate-spin" />
+              <span>Loading…</span>
+            </div>
+          ) : collaboratorProfiles.length > 0 ? (
             <div className="flex flex-col gap-2">
-              {currentAttachments.map((file: any) => (
-                <div
-                  key={file.id}
-                  className="p-3.5 rounded-[16px] bg-[#161412] border border-white/5 flex items-center gap-3 min-w-0"
+              {collaboratorProfiles.map((p: any) => (
+                <button
+                  key={p.$id || p.userId}
+                  type="button"
+                  onClick={() =>
+                    openUnified('share-note', {
+                      noteId: liveNote.$id,
+                      noteTitle: liveNote.title,
+                      initialCollaborator: p,
+                    })
+                  }
+                  className="w-full p-3 rounded-[16px] bg-[#161412] border border-white/5 flex items-center gap-3 hover:bg-white/[0.02] transition-colors text-left min-w-0"
                 >
-                  <PaperClipIcon className="w-4 h-4 text-white/40 flex-shrink-0" />
+                  <IdentityAvatar
+                    fileId={p.avatar}
+                    alt={p.username}
+                    fallback={p.username?.[0]?.toUpperCase()}
+                    size={34}
+                    verified={p.tier === 'admin' || p.verified}
+                  />
                   <div className="min-w-0 flex-1 flex flex-col gap-0.5">
-                    <span className="text-sm font-extrabold text-white leading-tight truncate">{file.name}</span>
-                    <span className="text-[11px] font-semibold text-[#9B9691] leading-snug">
-                      {formatFileSize(file.size)}
+                    <span className="text-sm font-extrabold text-white leading-tight truncate">
+                      {p.displayName || p.username}
+                    </span>
+                    <span className="text-[11px] font-semibold text-[#9B9691] leading-snug truncate">
+                      @{p.username}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => window.open(`/api/notes/${liveNote.$id}/attachments/${file.id}`, '_blank')}
-                    className="w-8 h-8 rounded-lg text-[#6366F1] hover:text-white hover:bg-white/[0.04] flex items-center justify-center flex-shrink-0"
-                  >
-                    <OpenIcon className="w-4 h-4" />
-                  </button>
-                </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-pink-500/10 text-pink-400 flex-shrink-0">
+                    {p.permissionLevel || 'Viewer'}
+                  </span>
+                </button>
               ))}
             </div>
           ) : (
-            <span className="text-[#9B9691] text-xs font-semibold leading-relaxed">No attachments</span>
+            <span className="text-[#9B9691] text-xs font-semibold leading-relaxed">No collaborators</span>
           )}
-        </div>
-
-        {/* Voice Notes */}
-        <div className="shrink-0">
-          <span className="text-[10px] font-black uppercase tracking-[0.14em] text-pink-400 font-clash block mb-2.5">
-            Voice notes
-          </span>
-          {attachedObjects.filter((obj) => obj.childKind === 'voice').length > 0 ? (
-            <div className="flex flex-col gap-2">
-              {attachedObjects
-                .filter((obj) => obj.childKind === 'voice')
-                .map((obj) => (
-                  <div
-                    key={obj.$id}
-                    className="p-3.5 rounded-[16px] bg-[#161412] border border-white/5 flex flex-col gap-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-semibold text-[#9B9691]">
-                        Line {obj.metadata ? JSON.parse(obj.metadata).insertLine || 1 : 1}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            const { detachObject } = await import('@/lib/actions/client-ops');
-                            await detachObject(obj.$id);
-                            setAttachedObjects((prev) => prev.filter((o) => o.$id !== obj.$id));
-                            showSuccess('Voice note removed');
-                          } catch (err: unknown) {
-                            showError('Failed to remove', err instanceof Error ? err.message : 'Error');
-                          }
-                        }}
-                        className="text-[11px] font-bold text-red-400 hover:text-red-300"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <VoiceNotePlayer fileId={obj.childId} />
-                  </div>
-                ))}
-            </div>
-          ) : (
-            <span className="text-[#9B9691] text-xs font-semibold leading-relaxed">No voice notes</span>
-          )}
-        </div>
-
-        {/* Linked sections */}
-        <div className="flex flex-col gap-5">
-          {[
-            {
-              label: 'Goals',
-              items: linkedTasks,
-              loading: isLoadingTasks,
-              icon: <TaskIcon className="w-4 h-4" />,
-              color: 'text-emerald-400',
-              borderHover: 'hover:bg-emerald-500/5',
-              iconColor: '#10B981',
-              link: (id: string) => `/flow?taskId=${id}`,
-            },
-            {
-              label: 'Events',
-              items: linkedEvents,
-              loading: isLoadingEvents,
-              icon: <EventIcon className="w-4 h-4" />,
-              color: 'text-indigo-400',
-              borderHover: 'hover:bg-indigo-500/5',
-              iconColor: '#6366F1',
-              link: (id: string) => `/flow/events?eventId=${id}`,
-            },
-            {
-              label: 'Secrets',
-              items: linkedSecrets,
-              loading: isLoadingSecrets,
-              icon: <KeyIcon className="w-4 h-4" />,
-              color: 'text-amber-400',
-              borderHover: 'hover:bg-amber-500/5',
-              iconColor: '#F59E0B',
-              link: (id: string) => `/vault?id=${id}`,
-            },
-          ].map((section) => (
-            <div key={section.label} className="shrink-0">
-              <span className={`text-[10px] font-black uppercase tracking-[0.14em] font-clash block mb-2.5 ${section.color}`}>
-                Linked {section.label}
-              </span>
-              {section.loading ? (
-                <div className="text-xs text-[#9B9691] font-semibold flex items-center gap-2">
-                  <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-                  <span>Loading…</span>
-                </div>
-              ) : section.items.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {section.items.map((item: any) => (
-                    <div
-                      key={item.$id}
-                      className={`p-3.5 rounded-[16px] bg-[#161412] border border-white/5 flex items-center gap-3 min-w-0 transition-colors ${section.borderHover}`}
-                    >
-                      <span style={{ color: section.iconColor }} className="flex-shrink-0">
-                        {section.icon}
-                      </span>
-                      <span className="min-w-0 flex-1 text-sm font-extrabold text-white leading-tight truncate">
-                        {item.title || item.name}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => window.open(section.link(item.$id), '_blank')}
-                        className="w-8 h-8 rounded-lg hover:bg-white/[0.04] flex items-center justify-center flex-shrink-0"
-                        style={{ color: section.iconColor }}
-                      >
-                        <OpenIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-[#9B9691] text-xs font-semibold leading-relaxed">
-                  No linked {section.label.toLowerCase()}
-                </span>
-              )}
-            </div>
-          ))}
-
-          {/* Collaborators */}
-          <div className="shrink-0">
-            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-pink-400 font-clash block mb-2.5">
-              Collaborators
-            </span>
-            {isLoadingCollaborators ? (
-              <div className="text-xs text-[#9B9691] font-semibold flex items-center gap-2">
-                <div className="w-3.5 h-3.5 border border-pink-500 border-t-transparent rounded-full animate-spin" />
-                <span>Loading…</span>
-              </div>
-            ) : collaboratorProfiles.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {collaboratorProfiles.map((p: any) => (
-                  <button
-                    key={p.$id || p.userId}
-                    type="button"
-                    onClick={() =>
-                      openUnified('share-note', {
-                        noteId: liveNote.$id,
-                        noteTitle: liveNote.title,
-                        initialCollaborator: p,
-                      })
-                    }
-                    className="w-full p-3 rounded-[16px] bg-[#161412] border border-white/5 flex items-center gap-3 hover:bg-white/[0.02] transition-colors text-left min-w-0"
-                  >
-                    <IdentityAvatar
-                      fileId={p.avatar}
-                      alt={p.username}
-                      fallback={p.username?.[0]?.toUpperCase()}
-                      size={34}
-                      verified={p.tier === 'admin' || p.verified}
-                    />
-                    <div className="min-w-0 flex-1 flex flex-col gap-0.5">
-                      <span className="text-sm font-extrabold text-white leading-tight truncate">
-                        {p.displayName || p.username}
-                      </span>
-                      <span className="text-[11px] font-semibold text-[#9B9691] leading-snug truncate">
-                        @{p.username}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md bg-pink-500/10 text-pink-400 flex-shrink-0">
-                      {p.permissionLevel || 'Viewer'}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <span className="text-[#9B9691] text-xs font-semibold leading-relaxed">No collaborators</span>
-            )}
-          </div>
         </div>
 
         {/* Timestamps */}
