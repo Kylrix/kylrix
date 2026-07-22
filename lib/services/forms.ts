@@ -67,16 +67,12 @@ export const FormsService = {
      * List forms for a user
      */
     async listUserForms(userId: string) {
-        return await tablesDB.listRows<Forms>({
-            databaseId: DATABASE_ID,
-            tableId: FORMS_TABLE,
-            queries: [
-                Query.equal('userId', userId),
-                Query.orderDesc('$createdAt'),
-                Query.limit(50),
-                Query.select(['$id', 'userId', 'status', 'settings', 'title', 'description', 'schema', 'isPublic', 'isGuest', '$createdAt'])
-            ]
-        });
+        if (typeof window !== 'undefined') {
+            const { listUserForms } = await import('@/lib/actions/client-ops');
+            return await listUserForms(userId);
+        }
+        const { listUserFormsSecure } = await import('@/lib/actions/secure-ops');
+        return await listUserFormsSecure(userId);
     },
 
     /**

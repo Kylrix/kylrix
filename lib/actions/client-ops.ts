@@ -15,6 +15,7 @@ import {
   addProjectCollaboratorSecure,
   removeProjectCollaboratorSecure,
   createFormSecure,
+  listUserFormsSecure,
   updateFormSecure,
   deleteFormSecure,
   addFormCollaboratorSecure,
@@ -185,6 +186,11 @@ export async function removeObjectFromProject(objectId: string) {
 export async function createForm(data: any) {
   const jwt = await getJwt();
   return createFormSecure(data, jwt);
+}
+
+export async function listUserForms(userId: string) {
+  const jwt = await getJwt();
+  return listUserFormsSecure(userId, jwt);
 }
 
 export async function updateForm(formId: string, data: any) {

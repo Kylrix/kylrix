@@ -1218,6 +1218,35 @@ export async function createFormSecure(data: any, jwt?: string) {
   return JSON.parse(JSON.stringify(form));
 }
 
+export async function listUserFormsSecure(userId?: string, jwt?: string) {
+  let actor: any = null;
+  try {
+    actor = await getActor(jwt);
+  } catch (_) {}
+
+  const targetUserId = userId || actor?.$id || 'guest';
+  const systemTables = createSystemTablesDB();
+
+  const queries: string[] = [
+    Query.orderDesc('$createdAt'),
+    Query.limit(100),
+  ];
+
+  if (targetUserId && targetUserId !== 'guest') {
+    queries.push(Query.or([Query.equal('userId', targetUserId), Query.equal('isPublic', true)]));
+  } else {
+    queries.push(Query.equal('isPublic', true));
+  }
+
+  const result = await systemTables.listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+    queries,
+  });
+
+  return JSON.parse(JSON.stringify(result));
+}
+
 export async function updateFormSecure(formId: string, data: any, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
