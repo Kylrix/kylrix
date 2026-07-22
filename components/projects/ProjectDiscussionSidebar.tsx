@@ -44,9 +44,9 @@ import { VoiceMessage } from '@/components/chat/VoiceMessage';
 import { StorageService } from '@/lib/services/storage';
 import MuralPattern from '@/components/chat/MuralPattern';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
-import { formatTime } from '@/lib/time-util';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { ThreadsRegistry } from '@/lib/services/ThreadsRegistry';
 
 interface ProjectDiscussionSidebarProps {
   project: Projects;
@@ -516,7 +516,7 @@ export function ProjectDiscussionSidebar({
   const handleInitHuddle = async () => {
     setLoading(true);
     try {
-      await createGhostNoteForProject(project.$id, `${project.title} Discussion`);
+      await ThreadsRegistry.getOrCreateThreadForObject(project.$id, 'project', `${project.title} Discussion`, chatNoteId);
       fetchProjectData();
     } catch (err) {
       console.error('Failed to initialize huddle thread:', err);
