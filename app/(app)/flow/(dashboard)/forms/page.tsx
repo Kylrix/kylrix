@@ -42,7 +42,7 @@ export default function FormsDashboard() {
     const { user } = useAuth();
     const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
     const router = useRouter();
-    const { fetchOptimized, invalidate } = useDataNexus();
+    const { invalidate } = useDataNexus();
     const { open: openDrawer } = useUnifiedDrawer();
     const { setActiveDetail } = useSection();
     const { setConfiguration, resetConfiguration } = useFAB();
@@ -107,9 +107,14 @@ export default function FormsDashboard() {
         if (shouldShowLoading) setLoading(true);
         
         try {
-            const response = user?.$id 
-                ? await fetchOptimized(cacheKey, () => FormsService.listUserForms(user.$id)).catch(() => [])
-                : [];
+            let response: any = [];
+            if (user?.$id) {
+                try {
+                    response = await FormsService.listUserForms(user.$id);
+                } catch (e) {
+                    console.error('[Forms] listUserForms failed:', e);
+                }
+            }
             
             const formRows: any[] = Array.isArray(response) 
                 ? response 
@@ -163,7 +168,7 @@ export default function FormsDashboard() {
         } finally {
             if (shouldShowLoading) setLoading(false);
         }
-    }, [user, fetchOptimized, isResourcePinned]);
+    }, [user, isResourcePinned]);
 
     const [isRefreshing, setIsRefreshing] = useState(false);
 
