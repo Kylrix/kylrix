@@ -468,6 +468,8 @@ export const autonomicSyncEngine = {
     if (!id) return false;
     if (id.startsWith('live-') || id.startsWith('ghost-')) return true;
     if (pendingById.has(id)) return true;
+    if (pendingById.has(`event:${id}`)) return true;
+    if (pendingById.has(`form:${id}`)) return true;
     return pendingById.has(goalPendingKey(id));
   },
 

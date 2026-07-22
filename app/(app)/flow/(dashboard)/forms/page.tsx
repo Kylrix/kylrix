@@ -84,29 +84,60 @@ export default function FormsDashboard() {
     }, [forms.length]);
 
     const fetchForms = useCallback(async (showLoading = true) => {
-        if (!user) return;
+        const userId = user?.$id || 'guest';
+        const cacheKey = `f_user_forms_${userId}`;
         
-        // Only show loading if we don't have forms yet, to prevent blinking
+        // Load RxDB local cache immediately if state is empty
+        if (formsLengthRef.current === 0) {
+            try {
+                const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+                const db = await getRxDB().catch(() => null);
+                if (db) {
+                    const cachedDoc = await db.cache.findOne(cacheKey).exec().catch(() => null);
+                    if (cachedDoc?.data && Array.isArray(cachedDoc.data)) {
+                        setForms(cachedDoc.data as Forms[]);
+                        setLoading(false);
+                    }
+                }
+            } catch {}
+        }
+
         const shouldShowLoading = showLoading && formsLengthRef.current === 0;
         if (shouldShowLoading) setLoading(true);
         
         try {
-            const response = await fetchOptimized(`f_user_forms_${user.$id}`, () => 
-                FormsService.listUserForms(user.$id)
-            ); 
+            const response = user?.$id 
+                ? await fetchOptimized(cacheKey, () => FormsService.listUserForms(user.$id)).catch(() => ({ rows: [] }))
+                : { rows: [] };
             
-            // Deduplicate by ID and sort by pinned status
-            const uniqueForms = response.rows
-                .filter((form, index, self) => index === self.findIndex((f) => f.$id === form.$id))
-                .sort((a: any, b: any) => {
+            setForms((prev) => {
+                const byId = new Map<string, Forms>();
+                prev.forEach((f) => byId.set(f.$id, f));
+                response.rows.forEach((f: any) => byId.set(f.$id, f));
+                const merged = Array.from(byId.values()).sort((a: any, b: any) => {
                     const aPinned = isResourcePinned('form', a.$id, a.userId, a.isPinned);
                     const bPinned = isResourcePinned('form', b.$id, b.userId, b.isPinned);
                     if (aPinned && !bPinned) return -1;
                     if (!aPinned && bPinned) return 1;
                     return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
                 });
-            
-            setForms(uniqueForms);
+
+                (async () => {
+                    try {
+                        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+                        const db = await getRxDB().catch(() => null);
+                        if (db) {
+                            await db.cache.upsert({
+                                id: cacheKey,
+                                data: merged as any,
+                                timestamp: Date.now(),
+                            }).catch(() => {});
+                        }
+                    } catch {}
+                })();
+
+                return merged;
+            });
 
             // Load offline drafts
             const manifest = await DraftsService.getManifest();

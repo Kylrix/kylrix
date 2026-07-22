@@ -52,22 +52,43 @@ export default function EventList() {
   }, [setConfiguration, resetConfiguration, isAuthenticated]);
 
   useEffect(() => {
+    let isCancelled = false;
+    const cacheKey = `f_user_events_${userId || 'guest'}`;
+
+    (async () => {
+      try {
+        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+        const db = await getRxDB().catch(() => null);
+        if (db) {
+          const cachedDoc = await db.cache.findOne(cacheKey).exec().catch(() => null);
+          if (cachedDoc?.data && Array.isArray(cachedDoc.data) && !isCancelled) {
+            const parsed = (cachedDoc.data as any[]).map((e) => ({
+              ...e,
+              startTime: new Date(e.startTime),
+              endTime: new Date(e.endTime),
+              createdAt: new Date(e.createdAt),
+              updatedAt: new Date(e.updatedAt),
+            }));
+            setEvents(parsed);
+            setIsLoading(false);
+          }
+        }
+      } catch {}
+    })();
+
     const fetchEvents = async () => {
       try {
-        setIsLoading(true);
-        
-        const queries: string[] = [];
-        if (userId) {
-          queries.push(Query.equal('userId', userId));
-        } else if (!isAuthenticated) {
+        const queries: string[] = [Query.limit(100)];
+        if (userId && userId !== 'guest') {
+          queries.push(Query.or([Query.equal('userId', userId), Query.equal('visibility', 'public')]));
+        } else {
           queries.push(Query.equal('visibility', 'public'));
         }
 
-        queries.push(Query.limit(100));
-        queries.push(Query.select(['$id', 'title', 'description', 'startTime', 'endTime', 'location', 'visibility', 'status', 'coverImageId', 'userId', '$createdAt', '$updatedAt']));
+        const list = await eventApi.list(queries).catch(() => ({ rows: [] }));
+        if (isCancelled) return;
 
-        const list = await eventApi.list(queries);
-        const mapped = list.rows.map(doc => ({
+        const remoteMapped = list.rows.map(doc => ({
           id: doc.$id,
           title: doc.title,
           description: doc.description,
@@ -83,30 +104,52 @@ export default function EventList() {
           createdAt: new Date(doc.$createdAt),
           updatedAt: new Date(doc.$updatedAt),
         }));
-        setEvents(mapped);
+
+        setEvents((prev) => {
+          const byId = new Map<string, Event>();
+          prev.forEach((e) => byId.set(e.id, e));
+          remoteMapped.forEach((e) => byId.set(e.id, e));
+          const merged = Array.from(byId.values());
+
+          (async () => {
+            try {
+              const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+              const db = await getRxDB().catch(() => null);
+              if (db) {
+                await db.cache.upsert({
+                  id: cacheKey,
+                  data: merged as any,
+                  timestamp: Date.now(),
+                }).catch(() => {});
+              }
+            } catch {}
+          })();
+
+          return merged;
+        });
       } catch (_error: unknown) {
         console.error('Failed to fetch events', _error);
       } finally {
-        setIsLoading(false);
+        if (!isCancelled) setIsLoading(false);
       }
     };
 
     fetchEvents();
+    return () => {
+      isCancelled = true;
+    };
   }, [userId, isAuthenticated]);
 
   const handleCreateEvent = async (eventData: any) => {
     try {
-      // Use first project as calendar or default
       const calendarId = projects[0]?.id || 'default';
       const currentUserId = userId || 'guest';
       const visibility: EventVisibility = eventData.visibility || 'public';
       
-      // Get appropriate permissions based on visibility
       const eventPermissions = permissions.forVisibility(visibility, currentUserId);
       
       let meetingUrl = eventData.url || '';
 
-      // Auto-create call if requested
       if (eventData.autoCreateCall && currentUserId !== 'guest') {
         try {
           const call = await CallService.createCallLink(
@@ -115,7 +158,7 @@ export default function EventList() {
             undefined,
             eventData.title,
             eventData.startTime.toISOString(),
-            60 // 1 hour duration
+            60
           );
           meetingUrl = `/connect/call/${call.$id}`;
           toast.success('Kylrix Connect call scheduled');
@@ -138,34 +181,45 @@ export default function EventList() {
           coverImageId: eventData.coverImage || '',
           maxAttendees: 0,
           recurrenceRule: eventData.recurrenceRule || '',
-          calendarId: calendarId,
-          userId: currentUserId,
-          isPublic: visibility === 'public',
-          isGuest: visibility === 'public',
         },
         eventPermissions
       );
 
-      const newEvent: Event = {
+      const createdEvent: Event = {
         id: newDoc.$id,
         title: newDoc.title,
         description: newDoc.description,
         startTime: new Date(newDoc.startTime),
         endTime: new Date(newDoc.endTime),
         location: newDoc.location,
-        url: '',
-        coverImage: '',
+        url: newDoc.meetingUrl || '',
+        coverImage: newDoc.coverImageId || '',
         attendees: [],
-        isPublic: visibility === 'public',
+        isPublic: newDoc.visibility === 'public',
         isPinned: false,
         creatorId: currentUserId,
         createdAt: new Date(newDoc.$createdAt),
         updatedAt: new Date(newDoc.$updatedAt),
       };
 
-      setEvents([newEvent, ...events]);
+      setEvents((prev) => [createdEvent, ...prev.filter((e) => e.id !== createdEvent.id)]);
+
+      const cacheKey = `f_user_events_${userId || 'guest'}`;
+      try {
+        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+        const db = await getRxDB().catch(() => null);
+        if (db) {
+          const doc = await db.cache.findOne(cacheKey).exec().catch(() => null);
+          const currentList = Array.isArray(doc?.data) ? doc.data : [];
+          await db.cache.upsert({
+            id: cacheKey,
+            data: [createdEvent, ...currentList.filter((e: any) => e.id !== createdEvent.id)],
+            timestamp: Date.now(),
+          }).catch(() => {});
+        }
+      } catch {}
       setIsDialogOpen(false);
-      return newEvent;
+      return createdEvent;
     } catch (_error: unknown) {
       console.error('Failed to create event', _error);
       return null;
