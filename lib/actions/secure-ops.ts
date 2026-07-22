@@ -55,6 +55,7 @@ import {
   createGhostNoteForResourceSecure,
   createGhostNoteChatSecure,
   listGhostNoteChatsSecure,
+  listTagsSecure,
 } from './secure-ops/notes';
 
 import {
@@ -202,6 +203,7 @@ export {
   createGhostNoteForResourceSecure,
   createGhostNoteChatSecure,
   listGhostNoteChatsSecure,
+  listTagsSecure,
   getPublicGoalDataSecure,
   createAccountEventSecure,
   listProjectsWithCollaborationsSecure,

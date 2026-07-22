@@ -25,6 +25,7 @@ import {
   ArrowLeft,
   ShieldCheck
 } from 'lucide-react';
+import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 
 export default function TagsPage() {
   const { user, isAuthenticated, openIDMWindow } = useAuth();
@@ -53,18 +54,65 @@ export default function TagsPage() {
   });
   const [resolvingResources, setResolvingResources] = useState(false);
 
-  const fetchTags = useCallback(async () => {
+  const tagsLengthRef = useRef(tags.length);
+  useEffect(() => {
+    tagsLengthRef.current = tags.length;
+  }, [tags.length]);
+
+  const fetchTags = useCallback(async (showLoading = true) => {
     if (!user) {
       setError('User not authenticated');
       return;
     }
 
+    const userId = user.$id;
+    const cacheKey = `f_user_tags_${userId}`;
+
+    if (tagsLengthRef.current === 0) {
+      try {
+        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+        const db = await getRxDB().catch(() => null);
+        if (db) {
+          const cachedDoc = await db.cache.findOne(cacheKey).exec().catch(() => null);
+          if (cachedDoc?.data && Array.isArray(cachedDoc.data)) {
+            setTags(cachedDoc.data as Tags[]);
+            setLoading(false);
+          }
+        }
+      } catch {}
+    }
+
     try {
-      setLoading(true);
+      if (showLoading && tagsLengthRef.current === 0) setLoading(true);
       const response = await listTags();
-      setTags(response.rows as unknown as Tags[]);
+      const tagRows: Tags[] = Array.isArray(response)
+        ? response
+        : (Array.isArray((response as any)?.rows) ? (response as any).rows : []);
+
+      setTags((prev) => {
+        const byId = new Map<string, Tags>();
+        (prev || []).forEach((t) => t && t.$id && byId.set(t.$id, t));
+        tagRows.forEach((t) => t && t.$id && byId.set(t.$id, t));
+        const merged = Array.from(byId.values());
+
+        (async () => {
+          try {
+            const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+            const db = await getRxDB().catch(() => null);
+            if (db) {
+              await db.cache.upsert({
+                id: cacheKey,
+                data: merged as any,
+                timestamp: Date.now(),
+              }).catch(() => {});
+            }
+          } catch {}
+        })();
+
+        return merged;
+      });
     } catch (err: any) {
-       setError(err instanceof Error ? err.message : 'Failed to fetch tags');
+      setError(err instanceof Error ? err.message : 'Failed to fetch tags');
     } finally {
       setLoading(false);
     }
@@ -229,10 +277,13 @@ export default function TagsPage() {
                             >
                               <TagIcon size={20} />
                             </div>
-                            <div className="min-w-0">
-                              <h3 className="text-white text-base font-black tracking-tight leading-tight truncate font-mono">
-                                {tag.name}
-                              </h3>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-white text-base font-black tracking-tight leading-tight truncate font-mono">
+                                  {tag.name}
+                                </h3>
+                                <SyncStatusDot resourceId={tag.$id} />
+                              </div>
                               <span className="block text-[9px] font-black uppercase tracking-wider text-white/30 font-mono mt-0.5">
                                 {(tag as any).usageCount || 0} items
                               </span>

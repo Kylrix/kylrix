@@ -1610,3 +1610,23 @@ export async function listGhostNoteChatsSecure(jwt?: string) {
 
   return JSON.parse(JSON.stringify(rows));
 }
+
+export async function listTagsSecure(userId?: string, jwt?: string) {
+  let actor: any = null;
+  try {
+    actor = await getActor(jwt);
+  } catch (_) {}
+
+  const targetUserId = userId || actor?.$id;
+  const systemTables = createSystemTablesDB();
+
+  const result = await systemTables.listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.TAGS || '67ff06280034908cf08a',
+    queries: targetUserId
+      ? [Query.equal('userId', targetUserId), Query.orderDesc('$createdAt'), Query.limit(100)]
+      : [Query.orderDesc('$createdAt'), Query.limit(100)],
+  });
+
+  return JSON.parse(JSON.stringify(result));
+}

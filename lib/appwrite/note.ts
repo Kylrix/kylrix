@@ -1379,6 +1379,10 @@ export async function createTag(data: Partial<Tags & { isPublic?: boolean; isGue
     };
 
     const doc = await createRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, payload);
+    try {
+      const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+      if (doc?.$id) autonomicSyncEngine.markPending(doc.$id);
+    } catch {}
     invalidateCache('list:tags');
     return hydrateTagMetadata(doc as unknown as Tags);
   }
@@ -1487,33 +1491,23 @@ export async function deleteTag(tagId: string, jwt?: string) {
 }
 
 export async function listTags(queries: any[] = [], limit: number = 100) {
-  const key = `list:tags:${JSON.stringify(queries)}:${limit}`;
-  
-  return await fetchOptimized(key, async () => {
-    // By default, fetch all tags for the current user
-    if (!queries.length) {
-      const user = await getCurrentUser();
-      if (!user || !user.$id) {
-        return { rows: [], total: 0 };
-      }
-      queries = [
-        Query.equal("userId", user.$id),
-        Query.notEqual("isTrash", true)
-      ];
-    }
-    
-    const finalQueries = [
-      ...queries,
-      Query.limit(limit),
-      Query.orderDesc("$createdAt")
-    ];
-    
-    const res = await databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, finalQueries);
-    return { 
-        ...res, 
-        rows: (res.rows as unknown as Tags[]).map(t => hydrateTagMetadata(t)) 
+  if (typeof window !== 'undefined') {
+    const { listTags: listTagsClient } = await import('@/lib/actions/client-ops');
+    const res = await listTagsClient();
+    const rows = Array.isArray(res) ? res : (Array.isArray(res?.rows) ? res.rows : []);
+    return {
+      total: rows.length,
+      rows: rows.map((t: any) => hydrateTagMetadata(t as Tags)),
     };
-  }, LIST_TTL);
+  }
+
+  const { listTagsSecure } = await import('@/lib/actions/secure-ops');
+  const res = await listTagsSecure();
+  const rows = Array.isArray(res) ? res : (Array.isArray(res?.rows) ? res.rows : []);
+  return {
+    total: rows.length,
+    rows: rows.map((t: any) => hydrateTagMetadata(t as Tags)),
+  };
 }
 
 // New function to get all tags with cursor pagination

@@ -6,6 +6,7 @@ import {
   createNoteSecure,
   updateNoteSecure,
   deleteNoteSecure,
+  listTagsSecure,
   sharePublicNoteAsMomentSecure,
   grantPermissionSecure,
   revokePermissionSecure,
@@ -90,6 +91,11 @@ export async function updateNote(noteId: string, data: any) {
 export async function deleteNote(noteId: string) {
   const jwt = await getJwt();
   return deleteNoteSecure(noteId, jwt);
+}
+
+export async function listTags(userId?: string) {
+  const jwt = await getJwt();
+  return listTagsSecure(userId, jwt);
 }
 
 export async function sharePublicNoteAsMoment(noteId: string, text?: string) {
