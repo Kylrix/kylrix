@@ -236,16 +236,18 @@ function cleanRowData<T>(data: Partial<T>): Record<string, unknown> {
  */
 export function isGhostNote(note: any): boolean {
   if (!note) return false;
-  // 1. Direct Column Check
-  if (note.isGhost !== undefined && note.isGhost !== null) {
-    return !!note.isGhost;
+  // 1. Direct Column Check (Ghost, Thread, Chat, Discussion)
+  if (note.isGhost || note.isThread || note.isChat || note.isDiscussion) {
+    return true;
   }
   // 2. Legacy Metadata Fallback
   if (note.metadata) {
     try {
       const parsed = typeof note.metadata === 'string' ? JSON.parse(note.metadata) : note.metadata;
-      if (parsed && typeof parsed === 'object' && parsed.isGhost !== undefined) {
-        return !!parsed.isGhost;
+      if (parsed && typeof parsed === 'object') {
+        if (parsed.isGhost || parsed.isThread || parsed.isChat || parsed.isDiscussion) {
+          return true;
+        }
       }
     } catch {}
   }
@@ -3334,7 +3336,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
             isPublic: false,
             isGuest: false,
             metadata: doc.metadata || '{}',
-          })) as any[];
+          })).filter(doc => includeGhosts || !isGhostNote(doc)) as any[];
           
           return {
             rows,
