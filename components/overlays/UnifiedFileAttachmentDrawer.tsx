@@ -154,7 +154,7 @@ export function UnifiedFileAttachmentDrawer() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-[999999] flex items-end justify-center bg-black/75 backdrop-blur-md animate-fadeIn">
       <div className="w-full max-w-2xl bg-[#0A0908] border-t border-[#1C1A18] rounded-t-[28px] p-6 shadow-2xl font-satoshi flex flex-col max-h-[85vh] transition-all">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-[#1C1A18]">

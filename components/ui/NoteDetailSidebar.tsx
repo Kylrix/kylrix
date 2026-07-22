@@ -37,6 +37,7 @@ import {
   Code2,
   Info
 } from 'lucide-react';
+import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 
 import { 
   Drawer, 
@@ -220,6 +221,7 @@ export function NoteDetailSidebar({
     return ecosystemSecurity.onStatusChange((s) => setVaultUnlocked(s.isUnlocked));
   }, []);
 
+  const { openFileDrawer } = useUnifiedFileDrawer();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const liveNoteRef = useRef(liveNote);
@@ -2044,7 +2046,15 @@ export function NoteDetailSidebar({
                 type="button"
                 onClick={() => {
                   setIsContextDrawerOpen(false);
-                  setIsAttachObjectPickerOpen(true);
+                  openFileDrawer({
+                    title: 'Attach Object or Media',
+                    onSelectFile: (file) => {
+                      const fileMarkdown = file.mimeType?.startsWith('image/')
+                        ? `\n![${file.name}](${file.fileUrl || StorageService.getFileView(file.$id, file.bucketId)})\n`
+                        : `\n[${file.name}](${file.fileUrl || StorageService.getFileView(file.$id, file.bucketId)})\n`;
+                      setContent((prev) => prev + fileMarkdown);
+                    },
+                  });
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-pink-500/40 text-sm font-bold text-pink-300 hover:bg-pink-500/10 transition-all text-left cursor-pointer"
               >

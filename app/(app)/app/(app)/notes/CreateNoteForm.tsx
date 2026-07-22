@@ -27,6 +27,7 @@ import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/not
 import { pickNoteAutosavePayload } from '@/lib/appwrite/note';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useToast } from '@/components/ui/Toast';
+import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { getNote, getNotePublicState, toggleNoteVisibility, getAllTags } from '@/lib/appwrite';
 import { createNote, updateNote, attachObject } from '@/lib/actions/client-ops';
 import type { Notes } from '@/types/appwrite';
@@ -91,6 +92,7 @@ export default function CreateNoteForm({
   const { open: openUnified } = useUnifiedDrawer();
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
+  const { openFileDrawer } = useUnifiedFileDrawer();
   const hasMasterKey = ecosystemSecurity.status.hasKey;
 
   const [title, setTitle] = useState(initialContent?.title || '');
@@ -1547,7 +1549,15 @@ export default function CreateNoteForm({
                 onClick={() => {
                   setIsContextDrawerOpen(false);
                   ensureLiveDraftId();
-                  setIsAttachDrawerOpen(true);
+                  openFileDrawer({
+                    title: 'Attach Object or Media',
+                    onSelectFile: (file) => {
+                      const fileMarkdown = file.mimeType?.startsWith('image/')
+                        ? `\n![${file.name}](${file.fileUrl || StorageService.getFileView(file.$id, file.bucketId)})\n`
+                        : `\n[${file.name}](${file.fileUrl || StorageService.getFileView(file.$id, file.bucketId)})\n`;
+                      setContent((prev) => prev + fileMarkdown);
+                    },
+                  });
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-pink-500/40 text-sm font-bold text-pink-300 hover:bg-pink-500/10 transition-all text-left cursor-pointer"
               >
