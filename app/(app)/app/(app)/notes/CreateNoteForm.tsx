@@ -1554,32 +1554,6 @@ export default function CreateNoteForm({
                 <Plus className="w-5 h-5 text-pink-400" />
                 <span>Attach object…</span>
               </button>
-
-              {/* Upload file */}
-              <button
-                type="button"
-                disabled={isAttachingFile}
-                onClick={() => {
-                  setIsContextDrawerOpen(false);
-                  ensureLiveDraftId();
-                  fileUploadRef.current?.click();
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer disabled:opacity-60"
-              >
-                <Paperclip className="w-5 h-5 text-indigo-400" />
-                <span>{isAttachingFile ? 'Uploading…' : 'Upload file or image'}</span>
-              </button>
-
-              {/* Paste URL */}
-              <button
-                type="button"
-                disabled={isCheckingUrl}
-                onClick={() => { void attachUrl(); }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer disabled:opacity-60"
-              >
-                <LinkIcon className="w-5 h-5 text-cyan-400" />
-                <span>{isCheckingUrl ? 'Checking…' : 'Paste URL'}</span>
-              </button>
             </Box>
           </Drawer>
         )}

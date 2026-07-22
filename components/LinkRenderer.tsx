@@ -23,6 +23,7 @@ function isSendObjectMeta(meta: any): boolean {
 }
 
 import { decryptGhostData, decryptGhostBinaryFromBytes } from '@/lib/encryption/ghost-crypto';
+import { LinkPreviewCard } from '@/components/common/LinkPreviewCard';
 import { storage } from '@/lib/appwrite/client';
 
 export type SendPasswordPayload = any;
@@ -549,7 +550,12 @@ export function LinkComponent({ href, children }: { href?: string; children?: Re
     const keyParam = sendMatch[2] || null;
     return <SendRelayPreviewCard href={href} noteId={noteId} keyParam={keyParam}>{children}</SendRelayPreviewCard>;
   }
-  
+
+  // Render native link preview card for standard external URLs
+  if (href.startsWith('http://') || href.startsWith('https://')) {
+    return <LinkPreviewCard url={href} />;
+  }
+
   return (
     <Link
       href={href}

@@ -2051,22 +2051,6 @@ export function NoteDetailSidebar({
                 <Plus className="w-5 h-5 text-pink-400" />
                 <span>Attach object</span>
               </button>
-              <button
-                type="button"
-                onClick={() => { if (!canAttachSecondaryObject) return; objectUploadInputRef.current?.click(); }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer${isAttachingObject ? ' opacity-60 pointer-events-none' : ''}`}
-              >
-                <PaperClipIcon className="w-5 h-5 text-indigo-400" />
-                <span>{isAttachingObject ? 'Uploading…' : 'Upload file or image'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => { void attachExternalLink(); }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
-              >
-                <LinkIcon className="w-5 h-5 text-cyan-400" />
-                <span>Attach link</span>
-              </button>
             </>
 
             <button
