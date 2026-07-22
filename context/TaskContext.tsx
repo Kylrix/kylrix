@@ -735,7 +735,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       const { rows } = await getAllTags();
       dispatch({ type: 'SET_ECOSYSTEM_TAGS', payload: rows });
     } catch (error) {
-      console.error('[TaskContext] Failed to load ecosystem tags', error);
+      console.warn('[TaskContext] Remote tags fetch failed, keeping local tags:', error);
     }
   }, []);
 
@@ -865,6 +865,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
               tasks: combinedTasks.map(mapAppwriteTaskToTask),
               projects: (cachedCalsRes?.rows || []).map(mapAppwriteCalendarToProject),
             });
+            dispatch({ type: 'SET_LOADING', payload: false });
         }
 
         if (userId === 'guest') {
@@ -872,13 +873,19 @@ export function TaskProvider({ children }: { children: ReactNode }) {
             return;
         }
 
-        // 2. Standard Background Refresh
-        const data = await fetchBatch(userId);
-        dispatchSyncedData(data);
-        await refreshEcosystemTags();
+        // 2. Background Refresh — network errors are silent so local copy remains SoT
+        try {
+          const data = await fetchBatch(userId);
+          dispatchSyncedData(data);
+          await refreshEcosystemTags();
+        } catch (netErr) {
+          console.warn('[TaskContext] Background network sync failed, local copy remains SoT:', netErr);
+        } finally {
+          dispatch({ type: 'SET_LOADING', payload: false });
+        }
       } catch (err: any) {
-          console.error('[TaskContext] Authoritative init failed:', err);
-          dispatch({ type: 'SET_ERROR', payload: err.message || 'Failed to sync workspace' });
+          console.warn('[TaskContext] Init fallback:', err);
+          dispatch({ type: 'SET_LOADING', payload: false });
       }
     };
 

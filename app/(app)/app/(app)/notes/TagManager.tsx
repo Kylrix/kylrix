@@ -17,10 +17,32 @@ export default function TagManager({ selectedTags, onChangeAction }: TagManagerP
   useEffect(() => {
     const fetchTags = async () => {
       try {
+        const { getCurrentUser } = await import('@/lib/appwrite/client');
+        const user = await getCurrentUser().catch(() => null);
+        const userId = user?.$id || 'guest';
+        const cacheKey = `f_user_tags_${userId}`;
+
+        try {
+          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+          const db = await getRxDB().catch(() => null);
+          if (db) {
+            const cachedDoc = await db.cache.findOne(cacheKey).exec().catch(() => null);
+            if (cachedDoc?.data && Array.isArray(cachedDoc.data)) {
+              setTags(cachedDoc.data as Tags[]);
+            }
+          }
+        } catch {}
+
         const res = await listTags();
-        setTags(res.rows as Tags[]);
+        const rows = Array.isArray(res) ? res : (Array.isArray((res as any)?.rows) ? (res as any).rows : []);
+        setTags((prev) => {
+          const byId = new Map<string, Tags>();
+          (prev || []).forEach((t) => t && t.$id && byId.set(t.$id, t));
+          rows.forEach((t: any) => t && t.$id && byId.set(t.$id, t));
+          return Array.from(byId.values());
+        });
       } catch (error: any) {
-        console.error('Failed to fetch tags:', error);
+        console.warn('[TagManager] Local tag fetch fallback:', error);
       }
     };
     fetchTags();
