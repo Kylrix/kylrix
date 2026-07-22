@@ -18,6 +18,7 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import type { Notes } from '@/types/appwrite';
 import { useAuth } from '@/context/auth/AuthContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { isGhostNote } from '@/lib/appwrite/note';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useDataNexus } from './DataNexusContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
@@ -343,7 +344,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         
         // Update other states based on this initial fetch
         const batch = mergeFetchedNotesWithLocalDrafts(
-          (res?.rows || []).map((note: Notes) => normalizeVisibility(note)).filter((n: any) => !deletedIds.has(n.$id)),
+          (res?.rows || []).map((note: Notes) => normalizeVisibility(note)).filter((n: any) => !deletedIds.has(n.$id) && !isGhostNote(n)),
           notesRef.current,
           liveEditGuardsRef.current,
           deletedIds,
