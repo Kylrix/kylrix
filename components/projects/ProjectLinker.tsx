@@ -74,7 +74,7 @@ export default function ProjectLinker({ open, onClose, entityId, entityKind, onL
     setLinking(projectId);
     try {
       await ProjectsService.addObjectToProject(projectId, entityKind, entityId);
-      showSuccess('Linked to project');
+      showSuccess('Linked to workspace');
       onLinked?.();
       onClose();
     } catch (err: any) {
@@ -101,8 +101,8 @@ export default function ProjectLinker({ open, onClose, entityId, entityKind, onL
       <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Box>
-            <Typography variant="h6" sx={{ color: '#fff', fontWeight: 900 }}>Add to Project</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>Select a project for this {entityKind}</Typography>
+            <Typography variant="h6" sx={{ color: '#fff', fontWeight: 900 }}>Add to Workspace</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>Select a workspace for this {entityKind}</Typography>
           </Box>
           <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.5)' }}>
             <X size={20} />
@@ -115,14 +115,14 @@ export default function ProjectLinker({ open, onClose, entityId, entityKind, onL
           </Box>
         ) : projects.length === 0 ? (
           <Box sx={{ textAlign: 'center', py: 8 }}>
-            <Typography sx={{ color: 'rgba(255,255,255,0.3)', mb: 3 }}>No projects found.</Typography>
+            <Typography sx={{ color: 'rgba(255,255,255,0.3)', mb: 3 }}>No workspaces found.</Typography>
             <Button 
                 variant="outlined" 
                 startIcon={<Plus size={16} />}
                 sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 800 }}
-                onClick={() => { /* Open create project? */ }}
+                onClick={() => { /* Open create workspace? */ }}
             >
-                Create Project
+                Create Workspace
             </Button>
           </Box>
         ) : (

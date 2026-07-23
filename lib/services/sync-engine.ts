@@ -593,49 +593,35 @@ export const autonomicSyncEngine = {
       const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
       const db = await getRxDB().catch(() => null);
 
-      for (const pendingId of pendingIds) {
-        if (!pendingById.has(pendingId)) continue;
-        const queuedRevision = pendingById.get(pendingId) || '';
-
-        // Backoff/retry delay for specific failed objects (ultra-fast sub-2 second retries):
+      const tasksToFlush = pendingIds.filter((pendingId) => {
+        if (!pendingById.has(pendingId)) return false;
         const failInfo = failedSyncAttempts.get(pendingId);
         if (failInfo) {
           const delay = Math.min(2000, 200 * Math.pow(1.5, failInfo.count));
-          if (Date.now() - failInfo.lastFailedAt < delay) {
-            continue;
-          }
+          if (Date.now() - failInfo.lastFailedAt < delay) return false;
         }
+        return true;
+      });
 
-        try {
-          const goalId = parseGoalPendingKey(pendingId);
-          if (goalId) {
-            await flushGoalPending(pendingId, goalId, queuedRevision, db, activeUserId);
-          } else {
-            await flushNotePending(pendingId, queuedRevision, db, activeUserId);
-          }
-        } catch (err: any) {
-          console.error(`[SyncEngine] Sync failed for item ${pendingId}:`, err);
-          
-          const prev = failedSyncAttempts.get(pendingId) || { count: 0, lastFailedAt: 0 };
-          const nextCount = prev.count + 1;
-          failedSyncAttempts.set(pendingId, { count: nextCount, lastFailedAt: Date.now() });
-
-          const msg = String(err?.message || '').toLowerCase();
-          const isPermissionOrUnrecoverable =
-            msg.includes('forbidden') ||
-            msg.includes('insufficient permissions') ||
-            msg.includes('unauthorized') ||
-            msg.includes('attribute "title"') ||
-            nextCount >= 3;
-
-          if (isPermissionOrUnrecoverable) {
-            console.warn(`[SyncEngine] Self-healing: Purged un-syncable or zombie pending item: ${pendingId}`);
-            failedSyncAttempts.delete(pendingId);
-            autonomicSyncEngine.ack(pendingId);
-          }
-
-          notifyStatusListeners();
-        }
+      if (tasksToFlush.length > 0) {
+        await Promise.allSettled(
+          tasksToFlush.map(async (pendingId) => {
+            const queuedRevision = pendingById.get(pendingId) || '';
+            try {
+              const goalId = parseGoalPendingKey(pendingId);
+              if (goalId) {
+                await flushGoalPending(pendingId, goalId, queuedRevision, db, activeUserId);
+              } else {
+                await flushNotePending(pendingId, queuedRevision, db, activeUserId);
+              }
+            } catch (err: any) {
+              console.error(`[SyncEngine] Sync failed for item ${pendingId}:`, err);
+              const prev = failedSyncAttempts.get(pendingId) || { count: 0, lastFailedAt: 0 };
+              failedSyncAttempts.set(pendingId, { count: prev.count + 1, lastFailedAt: Date.now() });
+              notifyStatusListeners();
+            }
+          })
+        );
       }
     } catch (error) {
       console.error('[SyncEngine] Autonomic sync error:', error);

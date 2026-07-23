@@ -124,7 +124,7 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
       <DialogTitle sx={{ p: 3, pb: 1 }}>
         <Stack direction="row" spacing={1.5} alignItems="center">
             <Typography variant="h5" sx={{ fontWeight: 900, color: '#fff', fontFamily: 'var(--font-clash)' }}>
-                New Project
+                New Workspace
             </Typography>
         </Stack>
       </DialogTitle>
@@ -174,7 +174,7 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
                 <Stack spacing={3}>
                     <TextField
                         fullWidth
-                        label="Project Title"
+                        label="Workspace Title"
                         value={title}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
                         variant="outlined"
@@ -193,7 +193,7 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
                     />
                     <TextField
                         fullWidth
-                        label="Project Summary"
+                        label="Workspace Summary"
                         value={summary}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSummary(e.target.value)}
                         variant="outlined"
@@ -253,7 +253,7 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
             '&:hover': { bgcolor: alpha('#6366F1', 0.8) }
           }}
         >
-          {loading ? 'Creating...' : 'Create Project'}
+          {loading ? 'Creating...' : 'Create Workspace'}
         </Button>
       </DialogActions>
     </Dialog>

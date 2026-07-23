@@ -605,7 +605,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               type="button"
               onClick={() => setShowProjectLinker(true)}
               className="p-2 text-[#A855F7] hover:text-white rounded-xl bg-[#A855F7]/10 hover:bg-[#A855F7]/20 transition-all"
-              title="Link Project"
+              title="Link Workspace"
             >
               <Sparkles className="w-4 h-4" />
             </button>

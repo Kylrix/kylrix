@@ -388,7 +388,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
-                    Projects
+                    Workspaces
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
                     <IconButton onClick={() => togglePanel(panel)} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>

@@ -1507,7 +1507,7 @@ export function NoteDetailSidebar({
                 className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 text-xs font-mono font-bold text-white hover:bg-white/5 hover:text-white transition-colors"
               >
                 <FolderKanban className="w-4 h-4" />
-                <span>Add to Project</span>
+                <span>Add to Workspace</span>
               </button>
 
               <button 

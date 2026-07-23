@@ -577,7 +577,7 @@ export default function ProjectsPage() {
       mainIcon: <Plus size={32} strokeWidth={3} />,
       onMainClick: () => openCreateDrawerRef.current(),
       actions: [
-        { id: 'create-project', label: 'CREATE PROJECT', icon: <Plus size={20} />, onClick: () => openCreateDrawerRef.current() },
+        { id: 'create-project', label: 'CREATE WORKSPACE', icon: <Plus size={20} />, onClick: () => openCreateDrawerRef.current() },
         { id: 'workflows-nav', label: 'ACTION WORKFLOWS', icon: <Workflow size={20} />, onClick: () => router.push('/projects/workflows') },
         { id: 'insights', label: 'AI INSIGHTS', icon: <Sparkles size={20} />, onClick: () => router.push('/app') }]
     });
@@ -587,13 +587,13 @@ export default function ProjectsPage() {
   const handleDeleteProject = async (project: Projects) => {
     open('delete-confirm', {
       title: `Delete "${project.title}"?`,
-      resourceName: 'this project',
-      confirmLabel: 'Delete Project',
+      resourceName: 'this workspace',
+      confirmLabel: 'Delete Workspace',
       isProject: true,
       onConfirm: async (deleteMode?: 'detach' | 'created_within' | 'all') => {
         try {
           await ProjectsService.deleteProject(project.$id, deleteMode);
-          showSuccess('Project deleted');
+          showSuccess('Workspace deleted');
           setProjects(prev => prev.filter(p => p.$id !== project.$id));
         } catch (err: any) {
           showError('Action failed', err.message);
@@ -795,7 +795,7 @@ export default function ProjectsPage() {
     <Box>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em' }}>
-              Projects ({projects.length})
+              Workspaces ({projects.length})
             </Typography>
             <IconButton
               size="small"
