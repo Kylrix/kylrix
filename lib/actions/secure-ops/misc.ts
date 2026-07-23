@@ -1339,6 +1339,10 @@ export async function getRowSecure(databaseId: string, tableId: string, rowId: s
         console.error('[getRowSecure] Admin fallback exception:', adminErr);
       }
     }
+
+    if (error?.code === 404 || error?.status === 404 || error?.message?.includes('could not be found')) {
+      return null;
+    }
     
     throw error;
   }

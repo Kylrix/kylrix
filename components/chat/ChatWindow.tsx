@@ -326,7 +326,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                         fullWidth
                         multiline
                         maxRows={4}
-                        placeholder="Encrypted payload..."
+                        placeholder="Type a message..."
                         value={draft}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                             setDraft(e.target.value);
@@ -1895,7 +1895,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                     </Box>
                 </Box>
                 {[1, 2, 3, 4].map((i) => (
-                    <></>
+                    <React.Fragment key={i} />
                 ))}
             </Stack>
         </Box>
@@ -1935,6 +1935,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                         sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
                     >
                         <IdentityAvatar 
+                            userId={isSelf ? user?.$id : partnerUserId}
                             fileId={conversation?.avatarUrl || conversation?.avatar || null}
                             alt={conversation?.name}
                             fallback={isSelf ? 'B' : (conversation?.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'U')}
@@ -2201,6 +2202,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                                         sx={{ width: '100%', maxWidth: '80%' }}
                                     >
                                         <IdentityAvatar
+                                            userId={senderId}
                                             fileId={senderProfile?.avatar || null}
                                             alt={senderName}
                                             fallback={senderName.slice(0, 1).toUpperCase()}
@@ -2527,7 +2529,16 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                         attachmentDisabled={!isProPlan}
                         enableMentions={conversation?.type === 'group'}
                         mentionTargets={groupMentionTargets}
-                        onAttach={(e) => setAttachAnchorEl(e.currentTarget)}
+                        onAttach={() => {
+                            openUnified('file-attachment', {
+                                onSelectFile: (file: any) => {
+                                    const objectType = file.type || file.subType || (file.issuer ? 'totp' : file.secret ? 'vault' : 'file');
+                                    const title = file.name || file.title || file.label || file.issuer || 'Object';
+                                    const tag = `[${objectType}:${file.$id || file.id}:${title}]`;
+                                    handleSend(tag);
+                                }
+                            });
+                        }}
                         onUpgradeRequested={() => showUpgradeIsland('attach files/images/videos')}
                         onSend={handleSend}
                         onToggleRecording={toggleRecording}
