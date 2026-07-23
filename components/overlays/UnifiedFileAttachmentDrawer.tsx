@@ -48,14 +48,16 @@ import { FormsService } from '@/lib/services/forms';
 import { useTask } from '@/context/TaskContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { VaultService } from '@/lib/appwrite/vault';
-import { tasks, calendars } from '@/lib/kylrixflow';
+import { tasks, events } from '@/lib/kylrixflow';
 
 const BUCKETS = [
+  'general_storage',
   'notes_attachments',
   'messages',
   'task_attachments',
   'voice',
   'profile_pictures',
+  'event_covers',
 ];
 
 type MainTab = 'objects' | 'synced' | 'upload';
@@ -196,7 +198,7 @@ export function UnifiedFileAttachmentDrawer() {
       } else if (activeSubTab === 'events') {
         // Events
         try {
-          const res = await calendars.list();
+          const res = await events.list();
           items = res.rows || (Array.isArray(res) ? res : []);
         } catch (_e) {
           items = (await db.events.find().exec()).map((d) => d.toJSON());
@@ -214,7 +216,7 @@ export function UnifiedFileAttachmentDrawer() {
     }
   }, [activeSubTab, userId, localContextNotes]);
 
-  // Load Synced Media from LocalEngine + Storage Buckets
+  // Load Synced Media from LocalEngine + Storage Buckets + Local Notes Attachments
   const loadSyncedMedia = useCallback(async () => {
     try {
       const cachedMedia = await LocalEngine.cacheGet<SyncedMediaFile[]>(`f_user_media_${userId}`);
@@ -224,20 +226,54 @@ export function UnifiedFileAttachmentDrawer() {
 
       // Live fetch across storage buckets
       const fetchedFiles: SyncedMediaFile[] = [];
+      const seenIds = new Set<string>();
+
+      // Scan attached media objects from local notes SoT
+      if (localContextNotes && localContextNotes.length > 0) {
+        localContextNotes.forEach((note: any) => {
+          if (note.attachments) {
+            try {
+              const atts = typeof note.attachments === 'string' ? JSON.parse(note.attachments) : note.attachments;
+              if (Array.isArray(atts)) {
+                atts.forEach((a: any) => {
+                  const fid = a.fileId || a.$id;
+                  if (fid && !seenIds.has(fid)) {
+                    seenIds.add(fid);
+                    const bId = a.bucketId || 'notes_attachments';
+                    fetchedFiles.push({
+                      $id: fid,
+                      name: a.name || a.title || 'Note Attachment',
+                      bucketId: bId,
+                      sizeOriginal: a.size || a.sizeOriginal || 0,
+                      mimeType: a.mimeType || a.type || 'image/png',
+                      createdAt: a.createdAt || note.createdAt || new Date().toISOString(),
+                      fileUrl: a.fileUrl || StorageService.getFileView(fid, bId),
+                    });
+                  }
+                });
+              }
+            } catch (_e) {}
+          }
+        });
+      }
+
       for (const bucketId of BUCKETS) {
         try {
           const listRes = await storage.listFiles(bucketId);
           if (listRes?.files) {
             listRes.files.forEach((f: any) => {
-              fetchedFiles.push({
-                $id: f.$id,
-                name: f.name,
-                bucketId,
-                sizeOriginal: f.sizeOriginal || f.size || 0,
-                mimeType: f.mimeType,
-                createdAt: f.$createdAt || f.createdAt,
-                fileUrl: StorageService.getFileView(f.$id, bucketId),
-              });
+              if (!seenIds.has(f.$id)) {
+                seenIds.add(f.$id);
+                fetchedFiles.push({
+                  $id: f.$id,
+                  name: f.name,
+                  bucketId,
+                  sizeOriginal: f.sizeOriginal || f.size || 0,
+                  mimeType: f.mimeType,
+                  createdAt: f.$createdAt || f.createdAt,
+                  fileUrl: StorageService.getFileView(f.$id, bucketId),
+                });
+              }
             });
           }
         } catch (_e) {}
@@ -248,7 +284,7 @@ export function UnifiedFileAttachmentDrawer() {
         await LocalEngine.cacheSet(`f_user_media_${userId}`, fetchedFiles);
       }
     } catch (_err) {}
-  }, [userId]);
+  }, [userId, localContextNotes]);
 
   useEffect(() => {
     if (isOpen) {
@@ -550,32 +586,53 @@ export function UnifiedFileAttachmentDrawer() {
               ) : (
                 filteredMedia.map((file) => {
                   const isSelected = selectedFile?.$id === file.$id;
+                  const isImg = file.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name);
+                  const isAudio = file.mimeType?.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|webm)$/i.test(file.name) || file.bucketId === 'voice';
+
                   return (
                     <div
                       key={file.$id}
                       onClick={() => setSelectedFile(file)}
-                      className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                      className={`flex flex-col gap-2 p-3.5 rounded-2xl border transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-[#161412] border-[#A855F7] shadow-lg shadow-[#A855F7]/10'
                           : 'bg-[#0A0908] border-[#1C1A18] hover:border-[#34322F]'
                       }`}
                     >
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        <div className="p-2.5 rounded-xl bg-[#161412] border border-[#1C1A18]">
-                          {renderFileIcon(file)}
+                      <div className="flex items-center justify-between min-w-0 w-full">
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          {isImg ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={file.fileUrl}
+                              alt={file.name}
+                              className="w-12 h-12 rounded-xl object-cover border border-[#1C1A18] shrink-0 bg-[#161412]"
+                            />
+                          ) : (
+                            <div className="p-2.5 rounded-xl bg-[#161412] border border-[#1C1A18] text-[#A855F7]">
+                              {renderFileIcon(file)}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-[#F5F2ED] truncate">
+                              {file.name}
+                            </p>
+                            <p className="text-xs text-[#9B9691] font-mono mt-0.5 capitalize">
+                              {file.bucketId.replace('_', ' ')} • {(file.sizeOriginal / 1024).toFixed(1)} KB
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-[#F5F2ED] truncate">
-                            {file.name}
-                          </p>
-                          <p className="text-xs text-[#9B9691] font-mono mt-0.5">
-                            {file.bucketId} • {(file.sizeOriginal / 1024).toFixed(1)} KB
-                          </p>
-                        </div>
+                        {isSelected && (
+                          <div className="p-1.5 rounded-full bg-[#A855F7] text-white shrink-0 ml-2">
+                            <Check className="w-4 h-4" />
+                          </div>
+                        )}
                       </div>
-                      {isSelected && (
-                        <div className="p-1.5 rounded-full bg-[#A855F7] text-white">
-                          <Check className="w-4 h-4" />
+
+                      {/* Inline Audio Player Preview for Voice Notes */}
+                      {isAudio && (
+                        <div className="mt-1 pt-2 border-t border-[#1C1A18]/60 w-full" onClick={(e) => e.stopPropagation()}>
+                          <audio controls src={file.fileUrl} className="w-full h-8 rounded-lg bg-[#161412]" />
                         </div>
                       )}
                     </div>
