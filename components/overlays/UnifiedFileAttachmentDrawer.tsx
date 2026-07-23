@@ -35,6 +35,13 @@ import {
   FolderKanban,
   MessageSquare,
   ShieldAlert,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Eye,
+  Mic,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import { useUnifiedFileDrawer, SyncedMediaFile } from '@/context/UnifiedFileDrawerContext';
 import { LocalEngine } from '@/lib/services/LocalEngine';
@@ -109,6 +116,29 @@ export function UnifiedFileAttachmentDrawer() {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<SyncedMediaFile | null>(null);
 
+  // Multi-Select & Lightbox Sub-Drawer State (z-[99999])
+  const [selectedMediaIds, setSelectedMediaIds] = useState<string[]>([]);
+  const [previewFile, setPreviewFile] = useState<SyncedMediaFile | null>(null);
+  const [zoomScale, setZoomScale] = useState(1);
+
+  const toggleMediaSelection = (fileId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedMediaIds((prev) =>
+      prev.includes(fileId) ? prev.filter((id) => id !== fileId) : [...prev, fileId]
+    );
+  };
+
+  const handleAttachBatchMedia = () => {
+    const selectedFiles = mediaFiles.filter((f) => selectedMediaIds.includes(f.$id));
+    if (selectedFiles.length > 0) {
+      selectedFiles.forEach((f) => options.onSelectFile(f));
+      closeFileDrawer();
+    } else if (selectedFile) {
+      options.onSelectFile(selectedFile);
+      closeFileDrawer();
+    }
+  };
+
   // 1. Comprehensive 0ms Local & Live SDK Hydration for All Object Types
   const loadLocalObjects = useCallback(async () => {
     setLoading(true);
@@ -162,19 +192,36 @@ export function UnifiedFileAttachmentDrawer() {
           items = (await LocalEngine.cacheGet<any[]>('f_threads_list')) || [];
         }
       } else if (activeSubTab === 'totps') {
-        // TOTPs / Credentials
-        try {
-          const res = await VaultService.listTOTPSecrets(userId);
-          items = Array.isArray(res) ? res : [];
-        } catch (_e) {
-          items = (await LocalEngine.cacheGet<any[]>(`f_keychain_${userId}`)) || [];
+        // TOTPs / Credentials — 0ms Local Copy Caching
+        const cached = await LocalEngine.cacheGet<any[]>(`f_decrypted_totps_${userId}`);
+        if (cached && cached.length > 0) {
+          items = cached;
+        } else {
+          try {
+            const res = await VaultService.listTOTPSecrets(userId);
+            items = Array.isArray(res) ? res : [];
+            if (items.length > 0) {
+              void LocalEngine.cacheSet(`f_decrypted_totps_${userId}`, items);
+            }
+          } catch (_e) {
+            items = (await LocalEngine.cacheGet<any[]>(`f_keychain_${userId}`)) || [];
+          }
         }
       } else if (activeSubTab === 'vault') {
-        // Vault Items / Secrets
-        try {
-          items = await VaultService.listAllCredentials(userId);
-        } catch (_e) {
-          items = (await LocalEngine.cacheGet<any[]>(`f_keychain_${userId}`)) || [];
+        // Vault Items / Secrets — 0ms Local Copy Caching
+        const cached = await LocalEngine.cacheGet<any[]>(`f_decrypted_vault_${userId}`);
+        if (cached && cached.length > 0) {
+          items = cached;
+        } else {
+          try {
+            const res = await VaultService.listAllCredentials(userId);
+            items = res.rows || [];
+            if (items.length > 0) {
+              void LocalEngine.cacheSet(`f_decrypted_vault_${userId}`, items);
+            }
+          } catch (_e) {
+            items = (await LocalEngine.cacheGet<any[]>(`f_keychain_${userId}`)) || [];
+          }
         }
       } else if (activeSubTab === 'tags') {
         // Tags
@@ -585,7 +632,7 @@ export function UnifiedFileAttachmentDrawer() {
                 </div>
               ) : (
                 filteredMedia.map((file) => {
-                  const isSelected = selectedFile?.$id === file.$id;
+                  const isSelected = selectedMediaIds.includes(file.$id) || selectedFile?.$id === file.$id;
                   const isImg = file.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name);
                   const isAudio = file.mimeType?.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|webm)$/i.test(file.name) || file.bucketId === 'voice';
 
@@ -593,7 +640,7 @@ export function UnifiedFileAttachmentDrawer() {
                     <div
                       key={file.$id}
                       onClick={() => setSelectedFile(file)}
-                      className={`flex flex-col gap-2 p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                      className={`flex flex-col gap-2 p-3.5 rounded-2xl border transition-all cursor-pointer group ${
                         isSelected
                           ? 'bg-[#161412] border-[#A855F7] shadow-lg shadow-[#A855F7]/10'
                           : 'bg-[#0A0908] border-[#1C1A18] hover:border-[#34322F]'
@@ -601,20 +648,49 @@ export function UnifiedFileAttachmentDrawer() {
                     >
                       <div className="flex items-center justify-between min-w-0 w-full">
                         <div className="flex items-center gap-3.5 min-w-0">
-                          {isImg ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img
-                              src={file.fileUrl}
-                              alt={file.name}
-                              className="w-12 h-12 rounded-xl object-cover border border-[#1C1A18] shrink-0 bg-[#161412]"
-                            />
-                          ) : (
-                            <div className="p-2.5 rounded-xl bg-[#161412] border border-[#1C1A18] text-[#A855F7]">
-                              {renderFileIcon(file)}
+                          {/* Multi-select Checkbox */}
+                          <button
+                            type="button"
+                            onClick={(e) => toggleMediaSelection(file.$id, e)}
+                            className="text-[#9B9691] hover:text-[#A855F7] transition-colors p-1"
+                            title={isSelected ? 'Unselect' : 'Select'}
+                          >
+                            {isSelected ? (
+                              <CheckSquare className="w-5 h-5 text-[#A855F7]" />
+                            ) : (
+                              <Square className="w-5 h-5" />
+                            )}
+                          </button>
+
+                          {/* Left-side Preview Thumbnail Trigger */}
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewFile(file);
+                              setZoomScale(1);
+                            }}
+                            className="relative group/prev cursor-pointer shrink-0"
+                            title="Click to expand full preview"
+                          >
+                            {isImg ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                src={file.fileUrl}
+                                alt={file.name}
+                                className="w-12 h-12 rounded-xl object-cover border border-[#1C1A18] group-hover/prev:border-[#A855F7] transition-all bg-[#161412]"
+                              />
+                            ) : (
+                              <div className="p-2.5 rounded-xl bg-[#161412] border border-[#1C1A18] text-[#A855F7] group-hover/prev:border-[#A855F7] transition-all">
+                                {renderFileIcon(file)}
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover/prev:opacity-100 flex items-center justify-center transition-opacity text-white">
+                              <Eye className="w-4 h-4" />
                             </div>
-                          )}
+                          </div>
+
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-[#F5F2ED] truncate">
+                            <p className="text-sm font-semibold text-[#F5F2ED] truncate group-hover:text-[#A855F7] transition-colors">
                               {file.name}
                             </p>
                             <p className="text-xs text-[#9B9691] font-mono mt-0.5 capitalize">
@@ -622,11 +698,21 @@ export function UnifiedFileAttachmentDrawer() {
                             </p>
                           </div>
                         </div>
-                        {isSelected && (
-                          <div className="p-1.5 rounded-full bg-[#A855F7] text-white shrink-0 ml-2">
-                            <Check className="w-4 h-4" />
-                          </div>
-                        )}
+
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewFile(file);
+                              setZoomScale(1);
+                            }}
+                            className="p-2 rounded-xl bg-[#161412] border border-[#1C1A18] hover:border-[#A855F7] text-[#9B9691] hover:text-[#F5F2ED] text-xs font-bold transition-all flex items-center gap-1.5"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-[#A855F7]" />
+                            Preview
+                          </button>
+                        </div>
                       </div>
 
                       {/* Inline Audio Player Preview for Voice Notes */}
@@ -641,13 +727,18 @@ export function UnifiedFileAttachmentDrawer() {
               )}
             </div>
 
-            {selectedFile && (
-              <div className="mt-4 pt-3 border-t border-[#1C1A18] flex justify-end">
+            {(selectedFile || selectedMediaIds.length > 0) && (
+              <div className="mt-4 pt-3 border-t border-[#1C1A18] flex items-center justify-between">
+                <span className="text-xs font-mono text-[#9B9691]">
+                  {selectedMediaIds.length > 0
+                    ? `${selectedMediaIds.length} media file(s) selected`
+                    : '1 media file selected'}
+                </span>
                 <button
-                  onClick={handleConfirmMediaSelection}
-                  className="px-6 py-2.5 bg-[#A855F7] hover:bg-[#9333EA] text-white font-bold text-sm rounded-xl transition-all shadow-lg"
+                  onClick={handleAttachBatchMedia}
+                  className="px-6 py-2.5 bg-[#A855F7] hover:bg-[#9333EA] text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-[#A855F7]/20"
                 >
-                  Attach Selected Media
+                  Attach {selectedMediaIds.length > 1 ? `(${selectedMediaIds.length}) ` : ''}Selected Media
                 </button>
               </div>
             )}
@@ -683,6 +774,158 @@ export function UnifiedFileAttachmentDrawer() {
           </div>
         )}
       </div>
+
+      {/* 4. Top-level Media Preview Sub-Drawer & Lightbox (Z-Index 99999) */}
+      {previewFile && (
+        <div
+          className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 transition-all animate-fadeIn"
+          onClick={() => {
+            setPreviewFile(null);
+            setZoomScale(1);
+          }}
+        >
+          <div
+            className="relative w-full max-w-4xl max-h-[92vh] bg-[#161412] border border-[#34322F] rounded-3xl p-6 shadow-2xl flex flex-col font-satoshi overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Sub-Drawer Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-[#1C1A18] shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2.5 rounded-xl bg-[#0A0908] border border-[#1C1A18] text-[#A855F7] shrink-0">
+                  <Eye className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="font-extrabold text-lg text-[#F5F2ED] truncate">
+                    {previewFile.name}
+                  </h4>
+                  <p className="text-xs text-[#9B9691] font-mono mt-0.5 capitalize">
+                    {previewFile.bucketId.replace('_', ' ')} • {(previewFile.sizeOriginal / 1024).toFixed(1)} KB
+                  </p>
+                </div>
+              </div>
+
+              {/* Zoom & Close Controls */}
+              <div className="flex items-center gap-2">
+                {(previewFile.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(previewFile.name)) && (
+                  <div className="flex items-center gap-1 bg-[#0A0908] border border-[#1C1A18] rounded-xl p-1">
+                    <button
+                      onClick={() => setZoomScale((s) => Math.max(0.5, s - 0.25))}
+                      className="p-1.5 rounded-lg text-[#9B9691] hover:text-[#F5F2ED] hover:bg-[#161412] transition-all"
+                      title="Zoom Out"
+                    >
+                      <ZoomOut className="w-4 h-4" />
+                    </button>
+                    <span className="text-xs font-mono text-[#F5F2ED] px-2 min-w-[45px] text-center">
+                      {Math.round(zoomScale * 100)}%
+                    </span>
+                    <button
+                      onClick={() => setZoomScale((s) => Math.min(4, s + 0.25))}
+                      className="p-1.5 rounded-lg text-[#9B9691] hover:text-[#F5F2ED] hover:bg-[#161412] transition-all"
+                      title="Zoom In"
+                    >
+                      <ZoomIn className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setZoomScale(1)}
+                      className="p-1.5 rounded-lg text-[#9B9691] hover:text-[#F5F2ED] hover:bg-[#161412] transition-all"
+                      title="Reset Zoom"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    setPreviewFile(null);
+                    setZoomScale(1);
+                  }}
+                  className="p-2 rounded-xl text-[#9B9691] hover:text-[#F5F2ED] bg-[#0A0908] border border-[#1C1A18] hover:border-[#34322F] transition-all"
+                  title="Close Preview"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Sub-Drawer Main Preview Body */}
+            <div className="flex-1 overflow-auto flex items-center justify-center py-6 custom-scrollbar min-h-[300px]">
+              {previewFile.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(previewFile.name) ? (
+                <div
+                  className="overflow-auto max-w-full max-h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
+                  onWheel={(e) => {
+                    if (e.deltaY < 0) {
+                      setZoomScale((s) => Math.min(4, s + 0.15));
+                    } else {
+                      setZoomScale((s) => Math.max(0.5, s - 0.15));
+                    }
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={previewFile.fileUrl}
+                    alt={previewFile.name}
+                    style={{ transform: `scale(${zoomScale})` }}
+                    className="max-h-[65vh] max-w-full object-contain rounded-2xl transition-transform duration-150 shadow-2xl border border-[#34322F]"
+                  />
+                </div>
+              ) : previewFile.mimeType?.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|webm)$/i.test(previewFile.name) || previewFile.bucketId === 'voice' ? (
+                <div className="w-full max-w-md p-8 rounded-3xl bg-[#0A0908] border border-[#1C1A18] flex flex-col items-center gap-6 shadow-2xl">
+                  <div className="p-5 rounded-2xl bg-[#6366F1]/10 text-[#6366F1] border border-[#6366F1]/20">
+                    <Mic className="w-10 h-10 animate-pulse" />
+                  </div>
+                  <div className="text-center">
+                    <h5 className="font-bold text-base text-[#F5F2ED]">{previewFile.name}</h5>
+                    <p className="text-xs text-[#9B9691] font-mono mt-1 capitalize">
+                      {previewFile.bucketId.replace('_', ' ')} • Voice Note
+                    </p>
+                  </div>
+                  <audio controls src={previewFile.fileUrl} className="w-full h-10 rounded-xl bg-[#161412]" />
+                </div>
+              ) : (
+                <div className="text-center py-16 text-[#9B9691] flex flex-col items-center gap-3">
+                  <FileCode className="w-12 h-12 text-[#A855F7]" />
+                  <p className="text-sm font-bold text-[#F5F2ED]">{previewFile.name}</p>
+                  <p className="text-xs font-mono text-[#9B9691]">No visual preview available for this file type.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Sub-Drawer Action Footer */}
+            <div className="pt-4 border-t border-[#1C1A18] flex items-center justify-between shrink-0">
+              <button
+                onClick={(e) => toggleMediaSelection(previewFile.$id, e)}
+                className={`px-4 py-2.5 rounded-xl border font-bold text-xs flex items-center gap-2 transition-all ${
+                  selectedMediaIds.includes(previewFile.$id)
+                    ? 'bg-[#A855F7]/10 border-[#A855F7] text-[#A855F7]'
+                    : 'bg-[#0A0908] border-[#1C1A18] text-[#9B9691] hover:text-[#F5F2ED]'
+                }`}
+              >
+                {selectedMediaIds.includes(previewFile.$id) ? (
+                  <>
+                    <CheckSquare className="w-4 h-4" /> Selected
+                  </>
+                ) : (
+                  <>
+                    <Square className="w-4 h-4" /> Select for Batch Attach
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  options.onSelectFile(previewFile);
+                  setPreviewFile(null);
+                  closeFileDrawer();
+                }}
+                className="px-6 py-2.5 bg-[#A855F7] hover:bg-[#9333EA] text-white font-bold text-sm rounded-xl transition-all shadow-lg"
+              >
+                Attach This File
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
