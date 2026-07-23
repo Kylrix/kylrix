@@ -131,10 +131,10 @@ export function UnifiedFileAttachmentDrawer() {
   const handleAttachBatchMedia = () => {
     const selectedFiles = mediaFiles.filter((f) => selectedMediaIds.includes(f.$id));
     if (selectedFiles.length > 0) {
-      selectedFiles.forEach((f) => options.onSelectFile(f));
+      selectedFiles.forEach((f) => options?.onSelectFile(f));
       closeFileDrawer();
     } else if (selectedFile) {
-      options.onSelectFile(selectedFile);
+      options?.onSelectFile(selectedFile);
       closeFileDrawer();
     }
   };
@@ -215,7 +215,7 @@ export function UnifiedFileAttachmentDrawer() {
         } else {
           try {
             const res = await VaultService.listAllCredentials(userId);
-            items = res.rows || [];
+            items = Array.isArray(res) ? res : (res as any)?.rows || [];
             if (items.length > 0) {
               void LocalEngine.cacheSet(`f_decrypted_vault_${userId}`, items);
             }
@@ -914,7 +914,7 @@ export function UnifiedFileAttachmentDrawer() {
 
               <button
                 onClick={() => {
-                  options.onSelectFile(previewFile);
+                  options?.onSelectFile(previewFile);
                   setPreviewFile(null);
                   closeFileDrawer();
                 }}
