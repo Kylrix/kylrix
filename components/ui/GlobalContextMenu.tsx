@@ -7,8 +7,9 @@ import { useContextMenu } from './ContextMenuContext';
 const ContextMenu = lazy(() => import('./ContextMenu').then(m => ({ default: m.ContextMenu })));
 
 export const GlobalContextMenu: React.FC = () => {
-  const { isOpen, state, closeMenu } = useContextMenu();
-  if (!isOpen || !state) return null;
+  const context = useContextMenu();
+  if (!context || !context.isOpen || !context.state) return null;
+  const { state, closeMenu } = context;
   return (
     <Suspense fallback={null}>
       <ContextMenu x={state.x} y={state.y} items={state.items} onCloseAction={closeMenu} appType={state.appType} />

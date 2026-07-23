@@ -280,12 +280,14 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const handleRightClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    openMenu({
-      x: e.clientX,
-      y: e.clientY,
-      items: contextMenuItems,
-      appType: 'note',
-    });
+    if (openMenu) {
+      openMenu({
+        x: e.clientX,
+        y: e.clientY,
+        items: contextMenuItems,
+        appType: 'note',
+      });
+    }
   };
 
   const handleClick = () => {

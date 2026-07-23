@@ -152,12 +152,14 @@ export default function CredentialItem({
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    openMenu({
+    if (openMenu) {
+      openMenu({
         x: e.clientX,
         y: e.clientY,
         items: contextMenuItems,
         appType: 'vault'
-    });
+      });
+    }
   };
 
   return (

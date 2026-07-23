@@ -46,7 +46,7 @@ export function useAccessControlMenuItems({
                 const res = await toggleResourcePublicGuest({
                   resourceType,
                   resourceId,
-                  mode: 'private',
+                  mode: 'make_private',
                   projectId
                 });
                 if (res.success) {

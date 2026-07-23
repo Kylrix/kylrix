@@ -137,12 +137,14 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    openMenu({
-      x: e.clientX,
-      y: e.clientY,
-      items: contextMenuItems,
-      appType: 'flow'
-    });
+    if (openMenu) {
+      openMenu({
+        x: e.clientX,
+        y: e.clientY,
+        items: contextMenuItems,
+        appType: 'flow'
+      });
+    }
   };
 
   const getDateLabel = () => {

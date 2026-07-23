@@ -181,11 +181,11 @@ export const ChatList = ({
 
     const handleConversationRightClick = useCallback((event: React.MouseEvent, conv: any) => {
         event.preventDefault();
-        event.stopPropagation();
-        openMenu({
-            x: event.clientX,
-            y: event.clientY,
-            appType: 'connect',
+        if (openMenu) {
+            openMenu({
+                x: event.clientX,
+                y: event.clientY,
+                appType: 'connect',
             items: [
                 {
                     label: 'Open Secure Chat',
@@ -231,16 +231,17 @@ export const ChatList = ({
                     }
                 }
             ]
-        });
+            });
+        }
     }, [openMenu, router, openUnified]);
 
     const handleGhostConversationRightClick = useCallback((event: React.MouseEvent, conv: any) => {
         event.preventDefault();
-        event.stopPropagation();
-        openMenu({
-            x: event.clientX,
-            y: event.clientY,
-            appType: 'connect',
+        if (openMenu) {
+            openMenu({
+                x: event.clientX,
+                y: event.clientY,
+                appType: 'connect',
             items: [
                 {
                     label: 'Open Discussion Thread',
@@ -286,7 +287,8 @@ export const ChatList = ({
                     }
                 }
             ]
-        });
+            });
+        }
     }, [openMenu, router, openUnified]);
 
     const handleCancelRedirect = useCallback(() => {

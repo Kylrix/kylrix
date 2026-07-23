@@ -50,12 +50,14 @@ export function MomentItem({ moment, isOwnPost, creatorId, creatorAvatar, moment
   const handleRightClick = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      openMenu({
-          x: e.clientX,
-          y: e.clientY,
-          items: contextMenuItems,
-          appType: 'connect'
-      });
+      if (openMenu) {
+        openMenu({
+            x: e.clientX,
+            y: e.clientY,
+            items: contextMenuItems,
+            appType: 'connect'
+        });
+      }
   };
 
   return (
