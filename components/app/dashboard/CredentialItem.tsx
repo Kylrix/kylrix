@@ -203,7 +203,9 @@ export default function CredentialItem({
         <div className="flex items-center gap-1.5 min-w-0">
           {pinned && <Pin className="w-3.5 h-3.5 text-[#F59E0B] shrink-0 fill-[#F59E0B]" />}
           <span className="font-black text-white leading-tight font-clash text-base truncate">
-            {credential.name}
+            {credential.name && (credential.name.startsWith('{"iv"') || credential.name.startsWith('{"ct"') || (credential.name.includes('::') && credential.name.length > 20))
+              ? 'Encrypted Secret'
+              : credential.name}
           </span>
           <SyncStatusDot resourceId={credential.$id} />
         </div>
@@ -211,7 +213,9 @@ export default function CredentialItem({
           className="text-[#9B9691] font-medium text-[0.85rem] leading-[1.35] font-satoshi truncate transition-[filter] duration-300"
           style={{ filter: isBlurEnabled ? 'blur(4.5px)' : 'none' }}
         >
-          {credential.username}
+          {credential.username && (credential.username.startsWith('{"iv"') || credential.username.startsWith('{"ct"') || (credential.username.includes('::') && credential.username.length > 20))
+            ? '••••••••'
+            : credential.username}
         </span>
         {(credential as any).sharedFrom && (
           <div className="mt-1 h-5 text-[0.62rem] font-black bg-[#10B981]/10 text-[#10B981] rounded-[6px] px-2 py-0.5 uppercase tracking-[0.02em] inline-flex items-center w-fit">

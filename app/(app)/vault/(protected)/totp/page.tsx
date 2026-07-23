@@ -450,7 +450,9 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 min-w-0">
               <div className="text-[1.05rem] font-extrabold text-white font-clash leading-tight truncate">
-                {totp.issuer || "Smart Code"}
+                {totp.issuer && (totp.issuer.startsWith('{"iv"') || totp.issuer.startsWith('{"ct"') || (totp.issuer.includes('::') && totp.issuer.length > 20))
+                  ? "Encrypted Code"
+                  : (totp.issuer || "Smart Code")}
               </div>
               <SyncStatusDot resourceId={totp.$id} />
             </div>
@@ -458,7 +460,9 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
               className="text-sm font-medium text-[#9B9691] font-satoshi mt-0.5 truncate transition-[filter] duration-300"
               style={{ filter: isVaultBlurEnabled ? 'blur(4.5px)' : 'none' }}
             >
-              {totp.accountName || "No account info"}
+              {totp.accountName && (totp.accountName.startsWith('{"iv"') || totp.accountName.startsWith('{"ct"') || (totp.accountName.includes('::') && totp.accountName.length > 20))
+                ? "••••••••"
+                : (totp.accountName || "No account info")}
             </div>
             
             <div className="flex flex-wrap gap-1 mt-2">

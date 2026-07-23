@@ -56,6 +56,8 @@ import { useTask } from '@/context/TaskContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { VaultService } from '@/lib/appwrite/vault';
 import { tasks, events } from '@/lib/kylrixflow';
+import { MasterPassDrawer } from '@/components/overlays/MasterPassDrawer';
+import { useAppwriteVault } from '@/context/appwrite-context';
 
 const BUCKETS = [
   'general_storage',
@@ -99,6 +101,7 @@ function isLikelyEncrypted(str?: string | null): boolean {
 export function UnifiedFileAttachmentDrawer() {
   const { isOpen, options, closeFileDrawer } = useUnifiedFileDrawer();
   const { user } = useAuth();
+  const { isVaultUnlocked } = useAppwriteVault();
   const userId = user?.$id || 'guest';
   const { notes: localContextNotes } = useNotes();
 
@@ -107,7 +110,17 @@ export function UnifiedFileAttachmentDrawer() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeTab, setActiveTab] = useState<MainTab>('objects');
   const [activeSubTab, setActiveSubTab] = useState<ObjectSubTab>('goals');
+  const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Auto-trigger masterpassword drawer if user switches to encrypted sub-tabs and vault is locked
+  useEffect(() => {
+    if (isOpen && activeTab === 'objects' && (activeSubTab === 'totps' || activeSubTab === 'vault')) {
+      if (!isVaultUnlocked()) {
+        setShowMasterPassDrawer(true);
+      }
+    }
+  }, [isOpen, activeTab, activeSubTab, isVaultUnlocked]);
 
   const [mediaFiles, setMediaFiles] = useState<SyncedMediaFile[]>([]);
   const [objectItems, setObjectItems] = useState<any[]>([]);
@@ -925,6 +938,18 @@ export function UnifiedFileAttachmentDrawer() {
             </div>
           </div>
         </div>
+      )}
+
+      {showMasterPassDrawer && (
+        <MasterPassDrawer
+          isOpen={showMasterPassDrawer}
+          onClose={() => {
+            setShowMasterPassDrawer(false);
+            if (isVaultUnlocked()) {
+              loadLocalObjects();
+            }
+          }}
+        />
       )}
     </div>
   );
