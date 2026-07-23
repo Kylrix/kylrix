@@ -622,12 +622,12 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
 
       if (form) {
         await FormsService.updateForm(form.$id, formData);
-        autonomicSyncEngine.markPending(form.$id);
+        autonomicSyncEngine.ack(form.$id);
         if (user) invalidate(`f_user_forms_${user.$id}`);
         invalidate(`f_form_schema_${form.$id}`);
       } else {
         const newForm = await FormsService.createForm(user.$id, formData);
-        autonomicSyncEngine.markPending(newForm.$id);
+        autonomicSyncEngine.ack(newForm.$id);
         if (user) invalidate(`f_user_forms_${user.$id}`);
       }
       setHasUnsavedChanges(false);

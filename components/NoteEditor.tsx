@@ -190,7 +190,7 @@ export default function NoteEditor({
 
         pushLiveNote(localNote, { pending: true });
         setCachedData(`note_${id}`, localNote);
-        autonomicSyncEngine.markPending(id, localNote.updatedAt);
+        autonomicSyncEngine.markPending(id, localNote.updatedAt, localNote);
         if (!effectiveNoteId) {
           setInternalNoteId(id);
           onNoteCreated?.(localNote);

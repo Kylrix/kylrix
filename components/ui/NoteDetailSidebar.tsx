@@ -323,6 +323,10 @@ export function NoteDetailSidebar({
     const noteId = liveNote.$id;
     if (!noteId) return;
 
+    if (loadedNoteIdRef.current && loadedNoteIdRef.current !== noteId) {
+      autonomicSyncEngine.flushImmediately();
+    }
+
     if (loadedNoteIdRef.current !== noteId) {
       loadedNoteIdRef.current = noteId;
       setTitle(liveNote.title || '');
@@ -330,6 +334,10 @@ export function NoteDetailSidebar({
       setTags(liveNote.tags?.join(', ') || '');
       setIsPublic(getNotePublicState(liveNote));
     }
+
+    return () => {
+      autonomicSyncEngine.flushImmediately();
+    };
   }, [liveNote.$id, liveNote.title, liveNote.content, liveNote.tags]);
 
 

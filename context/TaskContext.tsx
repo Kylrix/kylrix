@@ -993,7 +993,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'UPSERT_TASK', payload: stamped });
       void setCachedData(`goal_${stamped.id}`, stamped);
       if (options?.pending !== false) {
-        autonomicSyncEngine.markPending(goalPendingKey(stamped.id), stamped.updatedAt.toISOString());
+        autonomicSyncEngine.markPending(goalPendingKey(stamped.id), stamped.updatedAt.toISOString(), stamped);
         autonomicSyncEngine.runCycle();
       }
     },

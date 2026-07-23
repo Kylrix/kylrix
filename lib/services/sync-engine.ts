@@ -16,9 +16,12 @@ import type { Notes } from '@/types/appwrite';
 import type { Task } from '@/types';
 
 const PENDING_QUEUE_KEY = 'kylrix:sync:pending-queue';
+const PENDING_PAYLOADS_KEY = 'kylrix:sync:pending-payloads';
 
 /** noteId → live revision string we still owe upstream */
 const pendingById = new Map<string, string>();
+/** noteId → live payload object stored in SyncEngine memory (independent of React UI components/routes) */
+const pendingPayloads = new Map<string, any>();
 const statusListeners = new Set<() => void>();
 
 const failedSyncAttempts = new Map<string, { count: number; lastFailedAt: number }>();
@@ -41,6 +44,14 @@ function queueSnapshot(): Record<string, string> {
   const obj: Record<string, string> = {};
   pendingById.forEach((rev, id) => {
     obj[id] = rev;
+  });
+  return obj;
+}
+
+function payloadsSnapshot(): Record<string, any> {
+  const obj: Record<string, any> = {};
+  pendingPayloads.forEach((payload, id) => {
+    if (payload) obj[id] = payload;
   });
   return obj;
 }
@@ -68,12 +79,18 @@ function writePersistedQueue() {
   if (typeof window === 'undefined') return;
   persistWriteChain = persistWriteChain.then(async () => {
     const snapshot = queueSnapshot();
+    const payloads = payloadsSnapshot();
     try {
       const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
       const db = await getRxDB();
       await db.cache.upsert({
         id: PENDING_QUEUE_KEY,
         data: snapshot,
+        timestamp: Date.now(),
+      });
+      await db.cache.upsert({
+        id: PENDING_PAYLOADS_KEY,
+        data: payloads,
         timestamp: Date.now(),
       });
     } catch {
@@ -97,6 +114,16 @@ async function hydratePendingQueue() {
       for (const [id, rev] of Object.entries(stored)) {
         if (id && rev) pendingById.set(id, String(rev));
       }
+
+      const payloadsDoc = await db.cache.findOne(PENDING_PAYLOADS_KEY).exec();
+      const storedPayloads = (payloadsDoc?.data && typeof payloadsDoc.data === 'object' ? payloadsDoc.data : {}) as Record<
+        string,
+        any
+      >;
+      for (const [id, payload] of Object.entries(storedPayloads)) {
+        if (id && payload) pendingPayloads.set(id, payload);
+      }
+
       await db.cache.upsert({
         id: PENDING_QUEUE_KEY,
         data: queueSnapshot(),
@@ -134,6 +161,13 @@ if (typeof window !== 'undefined') {
   window.addEventListener('scroll', handleUserActivity, { passive: true });
   window.addEventListener('click', handleUserActivity, { passive: true });
   window.addEventListener('online', () => triggerAutonomicSyncScheduler(), { passive: true });
+  window.addEventListener('beforeunload', () => autonomicSyncEngine.flushImmediately());
+  window.addEventListener('pagehide', () => autonomicSyncEngine.flushImmediately());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      autonomicSyncEngine.flushImmediately();
+    }
+  });
 }
 
 // Offload beat / polling to SpineEngine: SyncEngine subscribes to Spine heartbeats
@@ -198,7 +232,10 @@ async function flushGoalPending(
   db: Awaited<ReturnType<typeof import('@/lib/webrtc/RxDBManager').getRxDB>> | null,
   activeUserId: string | null
 ) {
-  let payload: Task | null = getLiveGoalForSync(goalId);
+  let payload: Task | null =
+    pendingPayloads.get(pendingKey) ||
+    pendingPayloads.get(goalId) ||
+    getLiveGoalForSync(goalId);
 
   if (!payload && db) {
     try {
@@ -292,7 +329,7 @@ async function flushGoalPending(
       .catch(() => {});
   }
 
-  const liveAfter = getLiveGoalForSync(goalId);
+  const liveAfter = pendingPayloads.get(pendingKey) || pendingPayloads.get(goalId) || getLiveGoalForSync(goalId);
   const liveRev = goalRevisionOf(liveAfter);
   if (liveRev && flushRevision && liveRev !== flushRevision) {
     pendingById.set(pendingKey, liveRev);
@@ -321,7 +358,7 @@ async function flushNotePending(
   db: Awaited<ReturnType<typeof import('@/lib/webrtc/RxDBManager').getRxDB>> | null,
   activeUserId: string | null
 ) {
-  let payload: Notes | null = getLiveNoteForSync(noteId);
+  let payload: Notes | null = pendingPayloads.get(noteId) || getLiveNoteForSync(noteId);
 
   if (!payload && db) {
     try {
@@ -397,7 +434,7 @@ async function flushNotePending(
       .catch(() => {});
   }
 
-  const liveAfter = getLiveNoteForSync(noteId);
+  const liveAfter = pendingPayloads.get(noteId) || getLiveNoteForSync(noteId);
   const liveRev = revisionOf(liveAfter);
   if (liveRev && flushRevision && liveRev !== flushRevision) {
     pendingById.set(noteId, liveRev);
@@ -435,6 +472,11 @@ export const autonomicSyncEngine = {
     triggerAutonomicSyncScheduler();
   },
 
+  flushImmediately() {
+    if (syncTimeout) clearTimeout(syncTimeout);
+    void autonomicSyncEngine.runCycle();
+  },
+
   getLastPullAt() {
     return lastPullAt;
   },
@@ -455,7 +497,7 @@ export const autonomicSyncEngine = {
    * Enqueue a live revision for push. Client-only — never an Appwrite field.
    * Also mirrors compose-draft membership for create-lifecycle helpers.
    */
-  markPending(noteId: string, revision?: string | null) {
+  markPending(noteId: string, revision?: string | null, payload?: any) {
     const rawId = String(noteId || '').trim();
     if (!rawId) return;
     const rev = String(revision || Date.now()).trim() || String(Date.now());
@@ -466,6 +508,11 @@ export const autonomicSyncEngine = {
     }
 
     pendingById.set(id, rev);
+    if (payload) {
+      pendingPayloads.set(id, payload);
+      pendingPayloads.set(rawId, payload);
+    }
+
     if (!parseGoalPendingKey(id)) {
       markComposeDraft(id);
     }
@@ -502,6 +549,11 @@ export const autonomicSyncEngine = {
       return;
     }
     pendingById.delete(id);
+    pendingPayloads.delete(id);
+    const goalId = parseGoalPendingKey(id);
+    if (goalId) {
+      pendingPayloads.delete(goalId);
+    }
     if (!parseGoalPendingKey(id)) {
       markComposePersisted(id);
       markNotePersistedRemote(id);

@@ -927,7 +927,7 @@ export default function CreateNoteForm({
 
       pushLiveNote(localNote, { pending: true });
       setCachedData(`note_${source.$id}`, localNote);
-      autonomicSyncEngine.markPending(source.$id, localNote.updatedAt);
+      autonomicSyncEngine.markPending(source.$id, localNote.updatedAt, localNote);
       if (!hasAnnouncedCreateRef.current) {
         hasAnnouncedCreateRef.current = true;
         onNoteCreated(localNote);
