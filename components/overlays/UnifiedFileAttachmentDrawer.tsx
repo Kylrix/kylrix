@@ -44,6 +44,8 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useNotes } from '@/context/NotesContext';
 import { storage } from '@/lib/appwrite/client';
 import { getAllTags, listNotesPaginated } from '@/lib/appwrite';
+import { FormsService } from '@/lib/services/forms';
+import { useTask } from '@/context/TaskContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { VaultService } from '@/lib/appwrite/vault';
 import { tasks, calendars } from '@/lib/kylrixflow';
@@ -91,6 +93,8 @@ export function UnifiedFileAttachmentDrawer() {
   const userId = user?.$id || 'guest';
   const { notes: localContextNotes } = useNotes();
 
+  const { tasks: localContextGoals } = useTask();
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeTab, setActiveTab] = useState<MainTab>('objects');
   const [activeSubTab, setActiveSubTab] = useState<ObjectSubTab>('goals');
@@ -103,7 +107,7 @@ export function UnifiedFileAttachmentDrawer() {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<SyncedMediaFile | null>(null);
 
-  // 1. Comprehensive Local & Live SDK Hydration for All Object Types
+  // 1. Comprehensive 0ms Local & Live SDK Hydration for All Object Types
   const loadLocalObjects = useCallback(async () => {
     setLoading(true);
     try {
@@ -111,29 +115,40 @@ export function UnifiedFileAttachmentDrawer() {
       const db = await getRxDB();
 
       if (activeSubTab === 'ideas') {
-        // Ideas / Notes
+        // Ideas / Notes — Unified 0ms Local Copy
         items = localContextNotes && localContextNotes.length > 0 ? localContextNotes : [];
         if (items.length === 0) {
-          const rxNotes = (await db.notes.find().exec()).map((d) => d.toJSON());
-          items = rxNotes;
+          items = (await db.notes.find().exec()).map((d) => d.toJSON());
         }
         if (items.length === 0) {
           const res = await listNotesPaginated({ limit: 100 });
           items = res.rows || [];
         }
       } else if (activeSubTab === 'goals') {
-        // Goals / Tasks
-        try {
-          const res = await tasks.list();
-          items = res.rows || [];
-        } catch (_e) {
+        // Goals / Tasks — Unified 0ms Local Copy (Same as Goal Card Page)
+        items = localContextGoals && localContextGoals.length > 0 ? localContextGoals : [];
+        if (items.length === 0) {
           items = (await db.tasks.find().exec()).map((d) => d.toJSON());
+        }
+        if (items.length === 0) {
+          items = (await LocalEngine.cacheGet<any[]>('f_goals_list')) || [];
+        }
+        if (items.length === 0) {
+          try {
+            const res = await tasks.list();
+            items = res.rows || [];
+          } catch (_e) {
+            /* optional fallback */
+          }
         }
       } else if (activeSubTab === 'projects') {
         // Projects
         try {
-          const res = await ProjectsService.listProjects(true);
-          items = res.rows || [];
+          items = (await LocalEngine.cacheGet<any[]>('f_projects_list')) || [];
+          if (items.length === 0) {
+            const res = await ProjectsService.listProjects(true);
+            items = res.rows || [];
+          }
         } catch (_e) {
           items = (await LocalEngine.cacheGet<any[]>('f_projects_list')) || [];
         }
@@ -168,13 +183,26 @@ export function UnifiedFileAttachmentDrawer() {
           items = (await db.tags.find().exec()).map((d) => d.toJSON());
         }
       } else if (activeSubTab === 'forms') {
-        items = (await db.forms.find().exec()).map((d) => d.toJSON());
+        // Forms
+        try {
+          const res = await FormsService.listUserForms(userId);
+          items = Array.isArray(res) ? res : (res as any)?.rows || [];
+        } catch (_e) {
+          items = (await db.forms.find().exec()).map((d) => d.toJSON());
+          if (items.length === 0) {
+            items = (await LocalEngine.cacheGet<any[]>('f_forms_list')) || [];
+          }
+        }
       } else if (activeSubTab === 'events') {
+        // Events
         try {
           const res = await calendars.list();
-          items = res.rows || [];
+          items = res.rows || (Array.isArray(res) ? res : []);
         } catch (_e) {
           items = (await db.events.find().exec()).map((d) => d.toJSON());
+          if (items.length === 0) {
+            items = (await LocalEngine.cacheGet<any[]>('f_events_list')) || [];
+          }
         }
       }
 
