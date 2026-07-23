@@ -229,11 +229,6 @@ function ConnectHomeContent() {
           <div className="max-w-3xl md:max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-[1fr_340px] gap-8 items-start">
             {/* Left Column: Moments Feed */}
             <div className="min-w-0 w-full flex flex-col gap-6">
-              <div className="flex items-between justify-between">
-                <h2 className="text-2xl font-black font-clash text-white tracking-tight">
-                  Moments
-                </h2>
-              </div>
               <NostrFeed />
             </div>
 

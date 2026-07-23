@@ -197,80 +197,7 @@ export function NostrFeed() {
             </p>
           </div>
         ) : (
-          displayedItems.map((item) => {
-            return (
-              <div
-                key={item.id}
-                className="bg-[#161412] border border-white/10 rounded-3xl p-5 flex flex-col gap-3.5 hover:border-[#F59E0B]/30 transition-all shadow-xl group"
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#F59E0B] to-amber-700 p-0.5 shrink-0 shadow-md">
-                      <div className="w-full h-full bg-[#0A0908] rounded-[14px] flex items-center justify-center font-black font-mono text-xs text-[#F59E0B]">
-                        {item.authorName.replace('@', '').slice(0, 2).toUpperCase() || 'KY'}
-                      </div>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-extrabold text-white truncate group-hover:text-[#F59E0B] transition-colors">
-                          {item.authorName}
-                        </span>
-                        {item.isEcosystemUser && (
-                          <span className="px-2 py-0.5 rounded-md bg-[#F59E0B]/10 text-[#F59E0B] text-[10px] font-bold border border-[#F59E0B]/20 shrink-0">
-                            Kylrix User
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-white/40 font-mono mt-0.5">
-                        {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} •{' '}
-                        {new Date(item.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                      </p>
-                    </div>
-                  </div>
-
-                  <span className="px-2.5 py-1 rounded-xl bg-white/5 border border-white/5 text-[10px] font-mono text-white/50 flex items-center gap-1 shrink-0">
-                    {item.source === 'nostr' ? <Globe size={12} className="text-[#F59E0B]" /> : <Shield size={12} className="text-emerald-400" />}
-                    {item.source === 'nostr' ? 'Nostr' : 'Kylrix'}
-                  </span>
-                </div>
-
-                {/* Content */}
-                <p className="text-sm text-white/90 leading-relaxed font-sans break-words whitespace-pre-wrap px-0.5">
-                  {item.content}
-                </p>
-
-                {/* Action Bar */}
-                <div className="flex items-center gap-6 border-t border-white/5 pt-3 text-white/40 text-xs select-none">
-                  <button
-                    onClick={() => toast.success('Pulse logged!')}
-                    className="flex items-center gap-1.5 hover:text-[#F59E0B] transition-all font-bold"
-                  >
-                    <Heart size={15} />
-                    <span>{item.likesCount || 0} Pulse</span>
-                  </button>
-                  <button className="flex items-center gap-1.5 hover:text-white transition-all font-bold">
-                    <MessageCircle size={15} />
-                    <span>{item.repliesCount || 0} Reply</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (navigator.share) {
-                        void navigator.share({ text: item.content });
-                      } else {
-                        void navigator.clipboard.writeText(item.content);
-                        toast.success('Copied moment link to clipboard');
-                      }
-                    }}
-                    className="flex items-center gap-1.5 hover:text-white transition-all font-bold"
-                  >
-                    <Share2 size={15} />
-                    <span>Share</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })
+          displayedItems.map((item) => <MomentCard key={item.id} item={item} />)
         )}
       </div>
 
@@ -281,6 +208,92 @@ export function NostrFeed() {
           <span className="text-xs font-mono">Loading more moments...</span>
         </div>
       )}
+    </div>
+  );
+}
+
+function MomentCard({ item }: { item: UnifiedFeedItem }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = item.content.length > 260 || item.content.split('\n').length > 4;
+
+  return (
+    <div className="bg-[#161412] border border-white/10 rounded-3xl p-5 flex flex-col gap-3.5 hover:border-[#F59E0B]/30 transition-all shadow-xl group">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#F59E0B] to-amber-700 p-0.5 shrink-0 shadow-md">
+            <div className="w-full h-full bg-[#0A0908] rounded-[14px] flex items-center justify-center font-black font-mono text-xs text-[#F59E0B]">
+              {item.authorName.replace('@', '').slice(0, 2).toUpperCase() || 'KY'}
+            </div>
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-extrabold text-white truncate group-hover:text-[#F59E0B] transition-colors">
+                {item.authorName}
+              </span>
+              {item.isEcosystemUser && (
+                <span className="px-2 py-0.5 rounded-md bg-[#F59E0B]/10 text-[#F59E0B] text-[10px] font-bold border border-[#F59E0B]/20 shrink-0">
+                  Kylrix User
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-white/40 font-mono mt-0.5">
+              {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} •{' '}
+              {new Date(item.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+            </p>
+          </div>
+        </div>
+
+        <span className="px-2.5 py-1 rounded-xl bg-white/5 border border-white/5 text-[10px] font-mono text-white/50 flex items-center gap-1 shrink-0">
+          {item.source === 'nostr' ? <Globe size={12} className="text-[#F59E0B]" /> : <Shield size={12} className="text-emerald-400" />}
+          {item.source === 'nostr' ? 'Nostr' : 'Kylrix'}
+        </span>
+      </div>
+
+      {/* Content Clamped to Max Height */}
+      <div>
+        <p className={`text-sm text-white/90 leading-relaxed font-sans break-words whitespace-pre-wrap px-0.5 ${!expanded && isLong ? 'line-clamp-4' : ''}`}>
+          {item.content}
+        </p>
+        {isLong && (
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            className="text-xs font-bold text-[#F59E0B] hover:underline mt-1.5 px-0.5 transition-all"
+          >
+            {expanded ? 'Show less' : 'Show more...'}
+          </button>
+        )}
+      </div>
+
+      {/* Action Bar */}
+      <div className="flex items-center gap-6 border-t border-white/5 pt-3 text-white/40 text-xs select-none">
+        <button
+          onClick={() => toast.success('Pulse logged!')}
+          className="flex items-center gap-1.5 hover:text-[#F59E0B] transition-all font-bold"
+        >
+          <Heart size={15} />
+          <span>{item.likesCount || 0} Pulse</span>
+        </button>
+        <button className="flex items-center gap-1.5 hover:text-white transition-all font-bold">
+          <MessageCircle size={15} />
+          <span>{item.repliesCount || 0} Reply</span>
+        </button>
+        <button
+          onClick={() => {
+            if (navigator.share) {
+              void navigator.share({ text: item.content });
+            } else {
+              void navigator.clipboard.writeText(item.content);
+              toast.success('Copied moment link to clipboard');
+            }
+          }}
+          className="flex items-center gap-1.5 hover:text-white transition-all font-bold"
+        >
+          <Share2 size={15} />
+          <span>Share</span>
+        </button>
+      </div>
     </div>
   );
 }
