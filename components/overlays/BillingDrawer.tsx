@@ -9,7 +9,6 @@ import {
   Check,
   ArrowRight,
   Sparkles,
-  Ticket,
   Clock,
   Printer,
   Search,
@@ -18,11 +17,11 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { AppwriteService } from '@/lib/appwrite';
 import { account } from '@/lib/appwrite/client';
 import { getMyCouponsAction } from '@/app/(app)/(auth)/accounts/actions/coupons';
 import { listBillingTransactionsAction } from '@/app/(app)/(auth)/accounts/actions/billing';
-import { verifyProEntitlementAction } from '@/app/(app)/(auth)/accounts/actions/billing';
 
 interface BillingDrawerProps {
   isOpen: boolean;
@@ -32,11 +31,8 @@ interface BillingDrawerProps {
 export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { currentTier, expiresAt, isLoading: planLoading } = useSubscription();
   const [isExpanded, setIsExpanded] = useState(false);
-
-  // Plan states
-  const [currentTier, setCurrentTier] = useState('FREE');
-  const [loadingPlan, setLoadingPlan] = useState(true);
 
   // Coupon states
   const [coupons, setCoupons] = useState<any[]>([]);
@@ -52,20 +48,6 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-
-  const loadSubscriptionStatus = useCallback(async () => {
-    if (!user?.$id) return;
-    try {
-      setLoadingPlan(true);
-      const jwtRes = await account.createJWT().then(r => r.jwt).catch(() => undefined);
-      const ent = await verifyProEntitlementAction(jwtRes);
-      setCurrentTier(ent.uiTier || 'FREE');
-    } catch (err) {
-      console.warn('Failed to load subscription plan status:', err);
-    } finally {
-      setLoadingPlan(false);
-    }
-  }, [user?.$id]);
 
   const loadCoupons = useCallback(async () => {
     if (!user?.$id) return;
@@ -104,11 +86,10 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
 
   useEffect(() => {
     if (user && isOpen) {
-      loadSubscriptionStatus();
       loadCoupons();
       loadTransactions();
     }
-  }, [user, isOpen, loadSubscriptionStatus, loadCoupons, loadTransactions]);
+  }, [user, isOpen, loadCoupons, loadTransactions]);
 
   // Reset expand state when closed
   useEffect(() => {
@@ -281,7 +262,7 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
               </div>
               <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 ${tierBadgeColor}`}>
                 <Sparkles size={9} />
-                {loadingPlan ? '…' : currentTier}
+                {planLoading ? '…' : currentTier}
               </span>
             </div>
 
@@ -289,15 +270,20 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
               <div>
                 <span className="text-[9px] text-white/40 font-black tracking-widest uppercase block">Active Plan</span>
                 <span className="text-2xl font-black text-white">
-                  {loadingPlan ? 'Resolving…' : `${currentTier} PLAN`}
+                  {planLoading ? 'Resolving…' : `${currentTier} PLAN`}
                 </span>
-                {!loadingPlan && (isPro || isTeams) && (
+                {!planLoading && (isPro || isTeams) && (
                   <span className="text-[10px] text-white/40 font-mono block mt-0.5">
                     {isTeams ? '$50/mo' : '$10/mo'}
                   </span>
                 )}
+                {expiresAt && (isPro || isTeams) && (
+                  <span className="text-[10px] text-white/40 font-mono block mt-0.5">
+                    Active until {new Date(expiresAt).toLocaleDateString()}
+                  </span>
+                )}
               </div>
-              {!isPro && !isTeams && !loadingPlan && (
+              {!isPro && !isTeams && !planLoading && (
                 <button
                   type="button"
                   onClick={() => { onClose(); router.push('/pricing'); }}
@@ -310,7 +296,7 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
             </div>
 
             {/* Pricing Reference */}
-            {!isPro && !isTeams && !loadingPlan && (
+            {!isPro && !isTeams && !planLoading && (
               <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/5">
                 <div className="p-3 rounded-xl bg-[#6366F1]/5 border border-[#6366F1]/10">
                   <span className="text-[10px] font-black text-[#6366F1] uppercase tracking-wider block">Pro</span>
