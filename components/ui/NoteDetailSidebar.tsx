@@ -38,6 +38,7 @@ import {
   Info
 } from 'lucide-react';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
+import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 
 import { 
   Drawer, 
