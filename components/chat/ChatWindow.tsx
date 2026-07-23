@@ -1935,7 +1935,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                         sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
                     >
                         <IdentityAvatar 
-                            userId={isSelf ? user?.$id : partnerUserId}
+                            userId={isSelf ? user?.$id : partnerId}
                             fileId={conversation?.avatarUrl || conversation?.avatar || null}
                             alt={conversation?.name}
                             fallback={isSelf ? 'B' : (conversation?.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'U')}

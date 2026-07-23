@@ -261,7 +261,7 @@ export function isGhostNote(note: any): boolean {
  * Matches the types in src/types/appwrite.d.ts
  */
 function hydrateVirtualAttributes(doc: any): any {
-  if (doc.metadata) {
+  if (doc && doc.metadata) {
     try {
       const extra = JSON.parse(doc.metadata);
       if (extra && typeof extra === 'object') {
