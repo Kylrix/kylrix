@@ -1794,24 +1794,26 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                     </Box>
                 );
             } else {
-                // Dynamically decrypt using memory cache to prevent render loop execution bottlenecks
+                // Dynamically decrypt using conversation key to prevent render loop execution bottlenecks
                 const cacheKey = `decrypted_msg_${msg.$id || msg.id}`;
                 const cachedDecrypted = (window as any)[cacheKey];
                 if (cachedDecrypted) {
                     displayedContent = cachedDecrypted;
                 } else {
-                    // Start async decryption task and trigger render state updates dynamically
-                    ecosystemSecurity.decrypt(displayedContent)
-                        .then((decrypted) => {
-                            (window as any)[cacheKey] = decrypted;
-                            setMessages((prev) => prev.map((m) => {
-                                if ((m.$id || m.id) === (msg.$id || msg.id)) {
-                                    return { ...m, content: decrypted };
-                                }
-                                return m;
-                            }));
-                        })
-                        .catch(() => {});
+                    const convKey = ecosystemSecurity.getConversationKey(conversationId);
+                    if (convKey) {
+                        ecosystemSecurity.decryptWithKey(displayedContent, convKey)
+                            .then((decrypted) => {
+                                (window as any)[cacheKey] = decrypted;
+                                setMessages((prev) => prev.map((m) => {
+                                    if ((m.$id || m.id) === (msg.$id || msg.id)) {
+                                        return { ...m, content: decrypted };
+                                    }
+                                    return m;
+                                }));
+                            })
+                            .catch(() => {});
+                    }
                 }
             }
         }

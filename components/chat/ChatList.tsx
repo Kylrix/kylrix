@@ -516,18 +516,29 @@ export const ChatList = ({
         }
     }, [externalQuery]);
 
-    const isLikelyEncrypted = (val: string) => {
-        if (!val) return false;
-        return val.length > 40 && !val.includes(' ');
-    };
+    const isLikelyEncrypted = useCallback((val: string) => {
+        if (!val || typeof val !== 'string') return false;
+        const trimmed = val.trim();
+        return (
+            trimmed.startsWith('{"iv"') ||
+            trimmed.startsWith('{"data"') ||
+            trimmed.startsWith('{"ct"') ||
+            trimmed.startsWith('[DECRYPTION_') ||
+            (trimmed.length >= 24 && !trimmed.includes(' '))
+        );
+    }, []);
 
     const formatPreviewFromMessage = useCallback((message: any) => {
         if (!message) return 'No messages yet';
+        const rawContent = message.content || `[${message.type || 'message'}]`;
+        if (isLikelyEncrypted(rawContent)) {
+            return '🔒 Encrypted message';
+        }
         if (message.type === 'text' || message.type === 'attachment') {
-            return message.content || `[${message.type}]`;
+            return rawContent;
         }
         return `[${message.type || 'message'}]`;
-    }, []);
+    }, [isLikelyEncrypted]);
 
     const handleGlobalSearch = useCallback(async (query: string) => {
         if (!query.trim() || query.length < 2) {

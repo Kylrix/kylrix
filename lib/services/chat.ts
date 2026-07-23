@@ -378,6 +378,15 @@ async function fetchProfilePublicKey(userId: string) {
     }
 }
 
+function isLikelyCiphertext(val: unknown): boolean {
+    if (typeof val !== 'string' || !val.trim()) return false;
+    const trimmed = val.trim();
+    if (trimmed.startsWith('{"iv"') || trimmed.startsWith('{"data"') || trimmed.startsWith('{"ct"') || trimmed.startsWith('[DECRYPTION_')) {
+        return true;
+    }
+    return trimmed.length >= 24 && !trimmed.includes(' ');
+}
+
 async function unwrapKeyMapping(row: any, fallbackUserId?: string) {
     if (!row?.wrappedKey || !row?.grantee) return null;
 
@@ -684,14 +693,14 @@ export const ChatService = {
 
         if (!convKey) return conv;
 
-        if (conv.name && conv.name.length > 40) {
+        if (conv.name && isLikelyCiphertext(conv.name)) {
             try {
                 conv.name = await ecosystemSecurity.decryptWithKey(conv.name, convKey);
             } catch (error) {
                 console.warn('[ChatService] Failed to decrypt conversation name, keeping plaintext:', error);
             }
         }
-        if (conv.lastMessageText && conv.lastMessageText.length > 40) {
+        if (conv.lastMessageText && isLikelyCiphertext(conv.lastMessageText)) {
             try {
                 conv.lastMessageText = await ecosystemSecurity.decryptWithKey(conv.lastMessageText, convKey);
             } catch (error) {
@@ -1160,8 +1169,8 @@ export const ChatService = {
             // Decrypt messages in parallel
             res.rows = await Promise.all(res.rows.map(async (msg: any) => {
                 const isEncrypted = ecosystemSecurity.status.isUnlocked && (
-                    (msg.type === 'text' && msg.content && msg.content.length > 40) ||
-                    (msg.metadata && msg.metadata.length > 40)
+                    (msg.type === 'text' && msg.content && isLikelyCiphertext(msg.content)) ||
+                    isLikelyCiphertext(msg.metadata)
                 );
 
                 if (isEncrypted) {
@@ -1178,10 +1187,10 @@ export const ChatService = {
 
                         if (!messageKey) return msg;
 
-                        if (msg.type === 'text' && msg.content && msg.content.length > 40) {
+                        if (msg.type === 'text' && msg.content && isLikelyCiphertext(msg.content)) {
                             msg.content = await ecosystemSecurity.decryptWithKey(msg.content, messageKey);
                         }
-                        if (msg.metadata && msg.metadata.length > 40) {
+                        if (msg.metadata && isLikelyCiphertext(msg.metadata)) {
                             const decryptedMeta = await ecosystemSecurity.decryptWithKey(msg.metadata, messageKey);
                             try {
                                 msg.metadata = JSON.parse(decryptedMeta);
