@@ -251,8 +251,8 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin, onUpdate }:
   onUpdate?: (updated: Projects) => void;
 }) {
   const { isPinned: isResourcePinned } = useResourcePins();
-  const pinned = isResourcePinned('project', project.$id, project.ownerId, project.isPinned);
-  const { openMenu } = useContextMenu();
+  const contextMenu = useContextMenu();
+  const openMenu = contextMenu?.openMenu;
 
   const accessControlItems = useAccessControlMenuItems({
     resourceType: 'project',
@@ -273,12 +273,14 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin, onUpdate }:
     if ((project as any).isPending || (project as any).isRequested || project.$id.startsWith('skeleton-')) return;
     e.preventDefault();
     e.stopPropagation();
-    openMenu({
-      x: e.clientX,
-      y: e.clientY,
-      items: accessControlItems,
-      appType: 'project' as any,
-    });
+    if (openMenu) {
+      openMenu({
+        x: e.clientX,
+        y: e.clientY,
+        items: accessControlItems,
+        appType: 'project' as any,
+      });
+    }
   };
 
   const getVisibilityIcon = () => {

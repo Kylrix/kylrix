@@ -220,7 +220,8 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     }
   };
 
-  const { openMenu } = useContextMenu();
+  const contextMenu = useContextMenu();
+  const openMenu = contextMenu?.openMenu;
   const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
 
   const TOTPCard = ({ totp }: { totp: TotpItem }) => {
