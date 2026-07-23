@@ -35,8 +35,47 @@ export function useAccessControlMenuItems({
     {
       label: isActive ? 'Stop Sharing' : 'Share',
       icon: isActive ? <ShieldAlert size={16} className="text-red-500" /> : <Share2 size={16} />,
-      onClick: async () => {
-        if (!isActive) {
+      ...(isActive ? {
+        submenu: [
+          {
+            label: 'Confirm Stop Sharing',
+            icon: <ShieldAlert size={16} className="text-red-500" />,
+            variant: 'destructive' as const,
+            onClick: async () => {
+              try {
+                const res = await toggleResourcePublicGuest({
+                  resourceType,
+                  resourceId,
+                  mode: 'private',
+                  projectId
+                });
+                if (res.success) {
+                  showSuccess('Sharing stopped.');
+                  onUpdate?.({ isPublic: false, isGuest: false });
+                }
+              } catch (err: any) {
+                showError('Failed to stop sharing: ' + err.message);
+              }
+            }
+          },
+          {
+            label: 'Access Settings',
+            icon: <Share2 size={16} />,
+            onClick: () => {
+              openUnified('access-control', {
+                resourceType,
+                resourceId,
+                isPublic,
+                isGuest,
+                resourceTitle: resourceTitle || 'Item',
+                projectId,
+                onUpdate
+              });
+            }
+          }
+        ]
+      } : {
+        onClick: async () => {
           try {
             const res = await toggleResourcePublicGuest({
               resourceType,
@@ -56,18 +95,8 @@ export function useAccessControlMenuItems({
           } catch (err: any) {
             showError('Failed to publish: ' + err.message);
           }
-        } else {
-          openUnified('access-control', {
-            resourceType,
-            resourceId,
-            isPublic,
-            isGuest,
-            resourceTitle: resourceTitle || 'Item',
-            projectId,
-            onUpdate
-          });
         }
-      }
+      })
     }
   ];
 }

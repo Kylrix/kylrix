@@ -17,6 +17,8 @@ import {
   Refresh as RefreshIcon,
 } from '@/lib/openbricks/icons';
 
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
+
 type KylrixApp = 'root' | 'accounts' | 'kylrix' | 'vault' | 'flow' | 'note' | 'connect';
 
 interface ContextMenuItem {
@@ -46,7 +48,13 @@ const ContextMenuContext = createContext<ContextMenuContextType | undefined>(und
 
 export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<MenuState | null>(null);
+  const { setIsDrawerOpen } = useDrawerState();
   const isOpen = !!state;
+
+  useEffect(() => {
+    setIsDrawerOpen(isOpen);
+    return () => setIsDrawerOpen(false);
+  }, [isOpen, setIsDrawerOpen]);
 
   const closeMenu = useCallback(() => setState(null), []);
   
@@ -213,6 +221,5 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
 
 export const useContextMenu = () => {
   const ctx = useContext(ContextMenuContext);
-  if (!ctx) throw new Error('useContextMenu must be used within a ContextMenuProvider');
-  return ctx;
+  return ctx || null;
 };

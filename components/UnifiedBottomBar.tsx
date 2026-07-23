@@ -21,6 +21,7 @@ import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useCallLauncher } from '@/context/CallLauncherContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { useContextMenu } from '@/components/ui/ContextMenuContext';
 
 /**
  * Persistent unified app-specific bottom bar.
@@ -70,6 +71,12 @@ export function UnifiedBottomBar() {
     return null;
   };
 
+  React.useEffect(() => {
+    ['/app', '/flow', '/vault', '/connect', '/projects'].forEach((route) => {
+      router.prefetch(route);
+    });
+  }, [router]);
+
   const handleNavChange = (_: React.SyntheticEvent, newValue: string) => {
     const routes: Record<string, string> = {
       note: '/app',
@@ -108,6 +115,8 @@ export function UnifiedBottomBar() {
   const isPublicFormPage = Boolean(pathname?.match(/^\/flow\/form\/[^/]+$/));
   const isSharedNotePage = Boolean(pathname?.startsWith('/app/shared') || pathname?.startsWith('/idea'));
 
+  const contextMenu = useContextMenu();
+
   if (pathname?.startsWith('/accounts')) return null;
 
   if (
@@ -123,7 +132,8 @@ export function UnifiedBottomBar() {
     isNoteFullPageDetail ||
     isConnectCallDetail ||
     isCallLauncherOpen ||
-    isOverlayOpen
+    isOverlayOpen ||
+    contextMenu?.isOpen
   ) {
     return null;
   }

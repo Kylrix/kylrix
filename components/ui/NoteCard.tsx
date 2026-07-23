@@ -20,7 +20,8 @@ import {
   Calendar,
   Unlock,
   ShieldCheck,
-  Globe
+  Globe,
+  Sparkles
 } from 'lucide-react';
 
 import { useContextMenu } from './ContextMenuContext';
@@ -286,7 +287,12 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const handleRightClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsMenuDrawerOpen(true);
+    openMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: contextMenuItems,
+      appType: 'note',
+    });
   };
 
   const handleClick = () => {
@@ -313,17 +319,40 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const useMemo = React.useMemo; const contextMenuItems = useMemo(() => [
     { label: pinned ? 'Unpin' : 'Pin', icon: <PinIcon size={16} className={pinned ? 'rotate-45 text-[#EC4899]' : ''} />, onClick: () => { handlePinToggle(); } },
     ...accessControlItems,
-    { label: 'Duplicate', icon: <DuplicateIcon size={16} />, onClick: () => { handleDuplicate(); } },
-    { label: isLockedT5 ? 'Unlock Note' : 'Lock Note', icon: isLockedT5 ? <Unlock size={16} /> : <PrivateIcon size={16} />, onClick: () => { handleLockToggle(); } },
+    { label: isLockedT5 ? 'Unlock' : 'Lock', icon: isLockedT5 ? <Unlock size={16} /> : <PrivateIcon size={16} />, onClick: () => { handleLockToggle(); } },
     { label: 'Add Paywall', icon: <LocalOfferIcon size={16} className="text-[#EC4899]" />, onClick: () => { setIsPaywallDialogOpen(true); } },
     ...(isPro ? [
-      { label: 'AI Summarize', icon: <SummarizeIcon size={16} className="text-[#6366F1]" />, onClick: () => { handleAIAction('summarize'); } },
-      { label: 'AI Fix Grammar', icon: <GrammarIcon size={16} className="text-[#6366F1]" />, onClick: () => { handleAIAction('grammar'); } },
-      { label: 'Convert To Todo', icon: <TodoIcon size={16} className="text-[#6366F1]" />, onClick: () => { handleCreateTodo(); } }
+      { 
+        label: 'Kylie Assist', 
+        icon: <Sparkles size={16} className="text-[#A855F7]" />, 
+        submenu: [
+            { label: 'Summarize', icon: <SummarizeIcon size={16} className="text-[#A855F7]" />, onClick: () => { handleAIAction('summarize'); } },
+            { label: 'Fix Grammar', icon: <GrammarIcon size={16} className="text-[#A855F7]" />, onClick: () => { handleAIAction('grammar'); } },
+        ]
+      },
+      {
+        label: 'Integrate',
+        icon: <TodoIcon size={16} className="text-[#3B82F6]" />,
+        submenu: [
+            { label: 'Convert to Goal', icon: <TodoIcon size={16} className="text-[#3B82F6]" />, onClick: () => { handleCreateTodo(); } },
+        ]
+      }
     ] : []),
     { label: 'Collaborators', icon: <ShareIcon size={16} />, onClick: openShare },
-    { label: 'Delete', icon: <TrashIcon size={16} className="text-red-500" />, onClick: openDelete, variant: 'destructive' as const }
-  ], [pinned, accessControlItems, isPro, handlePinToggle, handleDuplicate, isLockedT5, handleLockToggle, setIsPaywallDialogOpen, handleAIAction, handleCreateTodo, openShare, openDelete]);
+    { 
+      label: 'Delete', 
+      icon: <TrashIcon size={16} className="text-red-500" />, 
+      variant: 'destructive' as const,
+      submenu: [
+        {
+          label: 'Confirm Delete',
+          icon: <TrashIcon size={16} className="text-red-500" />,
+          variant: 'destructive' as const,
+          onClick: openDelete
+        }
+      ]
+    }
+  ], [pinned, accessControlItems, isPro, handlePinToggle, isLockedT5, handleLockToggle, setIsPaywallDialogOpen, handleAIAction, handleCreateTodo, openShare, openDelete]);
 
   const cardTitle = React.useMemo(
     () => (isLockedT5 ? '🔒 Locked Note' : isEncryptedNote ? '🔒 Encrypted note' : resolveNoteCardTitle(liveNote.title, liveNote.content) || 'Untitled Note'),
@@ -426,97 +455,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         </div>
       )}
 
-      {isMenuDrawerOpen && (
-        <Drawer
-          anchor="bottom"
-          open={isMenuDrawerOpen}
-          onClose={() => setIsMenuDrawerOpen(false)}
-          PaperProps={{
-            sx: {
-              position: 'fixed !important',
-              bottom: '0 !important',
-              left: '0 !important',
-              right: '0 !important',
-              borderTopLeftRadius: '24px',
-              borderTopRightRadius: '24px',
-              bgcolor: '#161412',
-              borderTop: '1px solid #34322F',
-              backgroundImage: 'none',
-              maxWidth: 720,
-              width: '100%',
-              mx: 'auto',
-              p: 2,
-              pb: 4,
-              height: isExpanded ? '92dvh' : '60dvh',
-              transition: 'height 0.3s ease-in-out',
-              pointerEvents: 'auto',
-            }
-          }}
-          ModalProps={{
-            keepMounted: false,
-            disableScrollLock: false,
-            disablePortal: true,
-          }}
-        >
-          {hasOverflow && (
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                py: 1, 
-                cursor: 'pointer',
-                pointerEvents: 'auto'
-              }}
-              onClick={() => setIsExpanded(!isExpanded)}
-            >
-              <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
-            </Box>
-          )}
 
-          <Box 
-            ref={contentWrapperRef}
-            sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: 1.5, 
-              pointerEvents: 'auto',
-              flex: 1,
-              overflowY: 'auto'
-            }}
-          >
-            {!hasOverflow && (
-              <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36', mx: 'auto', mb: 1 }} aria-hidden />
-            )}
-            <Typography sx={{ fontSize: '0.9rem', fontWeight: 950, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', tracking: '0.05em', fontFamily: 'var(--font-mono)', mb: 1, textAlign: 'center' }}>
-              Note Actions
-            </Typography>
-
-            {contextMenuItems.map((item: any, idx: number) => {
-              if (item.divider) return <Box key={idx} sx={{ h: '1px', bgcolor: 'white/5', my: 0.5 }} />;
-              
-              const isDestructive = item.variant === 'destructive';
-              return (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    setIsMenuDrawerOpen(false);
-                    item.onClick?.();
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold transition-all text-left cursor-pointer ${
-                    isDestructive 
-                      ? 'bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20' 
-                      : 'bg-white/[0.02] border-white/5 text-white hover:bg-white/5'
-                  }`}
-                >
-                  {item.icon && <span className="opacity-70">{item.icon}</span>}
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </Box>
-        </Drawer>
-      )}
     </>
   );
 });

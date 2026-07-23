@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Box, Paper, Tooltip } from '@/lib/openbricks/primitives';
 import {
@@ -63,6 +63,12 @@ export function UnifiedLeftSidebar() {
     if (pathname?.startsWith('/connect')) return 'connect';
     return null;
   };
+
+  useEffect(() => {
+    ['/app', '/flow', '/vault', '/connect', '/projects', '/tags'].forEach((route) => {
+      router.prefetch(route);
+    });
+  }, [router]);
 
   const handleNavChange = (navId: NavId) => {
     const routes: Record<NavId, string> = {
