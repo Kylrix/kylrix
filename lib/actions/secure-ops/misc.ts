@@ -2530,7 +2530,9 @@ export async function toggleTaskReminderSecure(taskId: string, enabled: boolean,
       throw new Error('Deadline is in the past.');
     }
 
-    const { functions } = createSystemClient();
+    const { Functions } = await import('node-appwrite');
+    const { client } = createSystemClient();
+    const functions = new Functions(client);
     const functionId = 'goal-reminder-dispatch';
 
     // Trigger/schedule execution of goal-reminder-dispatch function
@@ -2540,7 +2542,7 @@ export async function toggleTaskReminderSecure(taskId: string, enabled: boolean,
         JSON.stringify({ taskId, userId: actor.$id }),
         false, // async execution
         '/',
-        'POST'
+        'POST' as any
       );
     } catch (fnErr: any) {
       console.warn('[toggleTaskReminderSecure] Direct function execution error, registering scheduled state:', fnErr?.message);
