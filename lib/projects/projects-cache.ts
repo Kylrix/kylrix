@@ -78,36 +78,16 @@ export function projectEntityCacheKey(
   return `project_entities_${projectId}_${kind}_${Math.abs(hash)}`;
 }
 
-import { LocalEngine } from '@/lib/services/LocalEngine';
-
 export function getSessionProjectsList(): Projects[] | null {
-  if (sessionProjectsList) return sessionProjectsList;
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem('kylrix_session_projects_list');
-    if (raw) {
-      sessionProjectsList = JSON.parse(raw);
-      return sessionProjectsList;
-    }
-  } catch {}
-  return null;
+  return sessionProjectsList;
 }
 
 export function setSessionProjectsList(rows: Projects[]): void {
   sessionProjectsList = rows;
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem('kylrix_session_projects_list', JSON.stringify(rows));
-    } catch {}
-    void LocalEngine.cacheSet('kylrix_session_projects_list', rows);
-  }
 }
 
 export function clearSessionProjectsList(): void {
   sessionProjectsList = null;
-  if (typeof window !== 'undefined') {
-    void LocalEngine.cacheDelete('kylrix_session_projects_list');
-  }
 }
 
 export function getSessionProjectDetail(projectId: string): ProjectDetailCache | null {
@@ -116,26 +96,33 @@ export function getSessionProjectDetail(projectId: string): ProjectDetailCache |
 
   if (typeof window === 'undefined') return null;
 
-  void LocalEngine.cacheGet<ProjectDetailCache>(`project_cache_${projectId}`).then((stored) => {
-    if (stored && !sessionProjectDetails.has(projectId)) {
-      sessionProjectDetails.set(projectId, stored);
-    }
-  });
+  const legacy = sessionStorage.getItem(`project_cache_${projectId}`);
+  if (!legacy) return null;
 
-  return null;
+  try {
+    const parsed = JSON.parse(legacy) as ProjectDetailCache;
+    sessionProjectDetails.set(projectId, parsed);
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
 export function setSessionProjectDetail(projectId: string, payload: ProjectDetailCache): void {
   sessionProjectDetails.set(projectId, payload);
   if (typeof window !== 'undefined') {
-    void LocalEngine.cacheSet(`project_cache_${projectId}`, payload);
+    try {
+      sessionStorage.setItem(`project_cache_${projectId}`, JSON.stringify(payload));
+    } catch {
+      // Quota exceeded — memory mirror still holds the payload.
+    }
   }
 }
 
 export function clearSessionProjectDetail(projectId: string): void {
   sessionProjectDetails.delete(projectId);
   if (typeof window !== 'undefined') {
-    void LocalEngine.cacheDelete(`project_cache_${projectId}`);
+    sessionStorage.removeItem(`project_cache_${projectId}`);
   }
 }
 

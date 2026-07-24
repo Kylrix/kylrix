@@ -16,25 +16,11 @@ export interface SharedNotesPartition {
 let sessionSharedRows: SharedNoteRow[] | null = null;
 
 export function getSessionSharedNotes(): SharedNoteRow[] | null {
-  if (sessionSharedRows) return sessionSharedRows;
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem('kylrix_session_shared_notes');
-    if (raw) {
-      sessionSharedRows = JSON.parse(raw);
-      return sessionSharedRows;
-    }
-  } catch {}
-  return null;
+  return sessionSharedRows;
 }
 
 export function setSessionSharedNotes(rows: SharedNoteRow[]): void {
   sessionSharedRows = rows;
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem('kylrix_session_shared_notes', JSON.stringify(rows));
-    } catch {}
-  }
 }
 
 export function partitionSharedNotes(rows: SharedNoteRow[]): SharedNotesPartition {

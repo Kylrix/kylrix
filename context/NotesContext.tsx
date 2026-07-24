@@ -142,13 +142,8 @@ const NotesContext = createContext<NotesContextType>({
 });
 
 function normalizeVisibility(note: Notes): Notes {
-  const raw = note as any;
-  const id = note?.$id || raw?.id || ID.unique();
   return {
     ...note,
-    $id: id,
-    $createdAt: note?.$createdAt || raw?.createdAt || new Date().toISOString(),
-    $updatedAt: note?.$updatedAt || raw?.updatedAt || new Date().toISOString(),
     isPublic: getNotePublicState(note)
   };
 }
@@ -244,34 +239,26 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
     const hydrateFromCache = async () => {
         if (PINNED_CACHE_KEY && INITIAL_NOTES_CACHE_KEY) {
-            const syncNotes = getCachedData<any>(INITIAL_NOTES_CACHE_KEY);
-            const syncPinned = getCachedData<string[]>(PINNED_CACHE_KEY);
-            if (syncPinned && Array.isArray(syncPinned)) setPinnedIds(syncPinned);
-            const rawSyncList = Array.isArray(syncNotes?.rows) ? syncNotes.rows : Array.isArray(syncNotes) ? syncNotes : null;
-            if (rawSyncList && rawSyncList.length > 0) {
-                setNotes(rawSyncList);
-                setTotalNotes(syncNotes?.total ?? rawSyncList.length);
-                setCursor(syncNotes?.cursor || null);
-                setHasMore(syncNotes?.hasMore ?? true);
-                setIsLoading(false);
-            }
-
-            // Try Async hit (checks memory then RxDB/IndexedDB)
+            // Try Async hit first (checks memory then RxDB/IndexedDB)
             const [cachedPinned, cachedNotes] = await Promise.all([
                 getCachedDataAsync<string[]>(PINNED_CACHE_KEY),
-                getCachedDataAsync<any>(INITIAL_NOTES_CACHE_KEY)
+                getCachedDataAsync<{
+                    notes: Notes[];
+                    totalNotes: number;
+                    cursor: string | null;
+                    hasMore: boolean;
+                }>(INITIAL_NOTES_CACHE_KEY)
             ]);
 
             if (cachedPinned && Array.isArray(cachedPinned)) {
                 setPinnedIds(cachedPinned);
             }
 
-            const rawAsyncList = Array.isArray(cachedNotes?.rows) ? cachedNotes.rows : Array.isArray(cachedNotes) ? cachedNotes : null;
-            if (rawAsyncList && rawAsyncList.length > 0) {
-                setNotes(rawAsyncList);
-                setTotalNotes(cachedNotes?.total ?? rawAsyncList.length);
-                setCursor(cachedNotes?.cursor || null);
-                setHasMore(cachedNotes?.hasMore ?? true);
+            if (cachedNotes && Array.isArray(cachedNotes.notes)) {
+                setNotes(cachedNotes.notes);
+                setTotalNotes(cachedNotes.totalNotes || 0);
+                setCursor(cachedNotes.cursor || null);
+                setHasMore(cachedNotes.hasMore ?? true);
                 setIsLoading(false); // Stop loading immediately on local hit
                 console.log('[NotesContext] Sub-millisecond cold start via RxDB substrate.');
             }
@@ -311,7 +298,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     }
     
     isFetchingRef.current = true;
-    setError(null);
+    if (reset && notesRef.current.length === 0) {
+      setIsLoading(true);
+      setError(null);
+    }
 
     try {
       // Load ghost notes and deleted IDs
@@ -332,7 +322,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           }
         } catch {}
       }
-      const ghostNotes = await getGhostNotes().catch(() => []);
+      const ghostNotes = await getGhostNotes();
 
       // Fetch pinned IDs with optimization
       if (reset && PINNED_CACHE_KEY) {
@@ -352,9 +342,9 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         const optimizedRes = await fetchOptimized(INITIAL_NOTES_CACHE_KEY, fetcher);
         res = optimizedRes;
         
-        const rawResRows = Array.isArray(res?.rows) ? res.rows : Array.isArray(res) ? res : [];
+        // Update other states based on this initial fetch
         const batch = mergeFetchedNotesWithLocalDrafts(
-          rawResRows.map((note: Notes) => normalizeVisibility(note)).filter((n: any) => !deletedIds.has(n.$id) && !isGhostNote(n)),
+          (res?.rows || []).map((note: Notes) => normalizeVisibility(note)).filter((n: any) => !deletedIds.has(n.$id) && !isGhostNote(n)),
           notesRef.current,
           liveEditGuardsRef.current,
           deletedIds,
@@ -368,7 +358,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
             deletedIds,
           ),
         );
-        setTotalNotes(res?.total ?? rawResRows.length);
+        setTotalNotes(res?.total || 0);
         setHasMore(!!res?.hasMore);
         setCursor(res?.nextCursor || null);
 
@@ -385,9 +375,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           userId: user?.$id,
         });
 
-        const rawFetchRows = Array.isArray(res?.rows) ? res.rows : Array.isArray(res) ? res : [];
         const mergedBatch = mergeFetchedNotesWithLocalDrafts(
-          rawFetchRows.map((note: Notes) => normalizeVisibility(note)).filter((n: any) => !deletedIds.has(n.$id)),
+          (res?.rows || []).map((note: Notes) => normalizeVisibility(note)).filter((n: any) => !deletedIds.has(n.$id)),
           notesRef.current,
           liveEditGuardsRef.current,
           deletedIds,
@@ -405,7 +394,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           return dedupeNotesById([...safePrev, ...newOnes]);
         });
 
-        setTotalNotes(res?.total ?? rawFetchRows.length);
+        setTotalNotes(res?.total || 0);
         setHasMore(!!res?.hasMore);
         if (res?.nextCursor) {
           setCursor(res.nextCursor);
@@ -416,8 +405,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         // Cache the first page result if it was a reset
         if (reset && INITIAL_NOTES_CACHE_KEY) {
             setCachedData(INITIAL_NOTES_CACHE_KEY, {
-                rows: batch,
-                total: res?.total ?? batch.length,
+                notes: batch,
+                totalNotes: res?.total || 0,
                 cursor: res?.nextCursor || null,
                 hasMore: !!res?.hasMore
             });
@@ -495,17 +484,24 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isAuthenticated && user?.$id && isCacheLoaded) {
-      if (!hasInitiallyFetched.current) {
+      if (notes.length > 0 && !hasInitiallyFetched.current) {
         hasInitiallyFetched.current = true;
+        console.log('Instant reload: Using cached notes with background refresh');
         setIsLoading(false);
-        void fetchBatch(true);
+        fetchBatch(true);
+        return;
+      }
+
+      if (!hasInitiallyFetched.current) {
+        fetchBatch(true);
+        hasInitiallyFetched.current = true;
       }
     } else if (!isAuthLoading && !isAuthenticated) {
       setIsLoading(false);
       setHasMore(false);
       hasInitiallyFetched.current = false;
     }
-  }, [isAuthenticated, isAuthLoading, user?.$id, fetchBatch, isCacheLoaded]);
+  }, [isAuthenticated, isAuthLoading, user?.$id, fetchBatch, isCacheLoaded, notes.length]);
 
   const transferComposeSession = useCallback((ephemeralId: string, savedId: string) => {
     const guard = liveEditGuardsRef.current.get(ephemeralId);
@@ -561,7 +557,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     upsertNote(stamped);
     // Sync engine is SoT for amber — enqueue live revision (never an Appwrite field).
     if (options?.pending !== false) {
-      autonomicSyncEngine.markPending(stamped.$id, stamped.updatedAt, stamped);
+      autonomicSyncEngine.markPending(stamped.$id, stamped.updatedAt);
       autonomicSyncEngine.runCycle();
     }
   }, [upsertNote]);
