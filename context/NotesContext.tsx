@@ -239,7 +239,18 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
     const hydrateFromCache = async () => {
         if (PINNED_CACHE_KEY && INITIAL_NOTES_CACHE_KEY) {
-            // Try Async hit first (checks memory then RxDB/IndexedDB)
+            const syncNotes = getCachedData<{ notes: Notes[]; totalNotes: number; cursor: string | null; hasMore: boolean }>(INITIAL_NOTES_CACHE_KEY);
+            const syncPinned = getCachedData<string[]>(PINNED_CACHE_KEY);
+            if (syncPinned && Array.isArray(syncPinned)) setPinnedIds(syncPinned);
+            if (syncNotes && Array.isArray(syncNotes.notes) && syncNotes.notes.length > 0) {
+                setNotes(syncNotes.notes);
+                setTotalNotes(syncNotes.totalNotes || 0);
+                setCursor(syncNotes.cursor || null);
+                setHasMore(syncNotes.hasMore ?? true);
+                setIsLoading(false);
+            }
+
+            // Try Async hit (checks memory then RxDB/IndexedDB)
             const [cachedPinned, cachedNotes] = await Promise.all([
                 getCachedDataAsync<string[]>(PINNED_CACHE_KEY),
                 getCachedDataAsync<{

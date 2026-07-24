@@ -67,6 +67,22 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
             return memoryEntry.data;
         }
 
+        // 2. Synchronous LocalStorage Fallback Hit (0ms)
+        if (typeof window !== 'undefined') {
+            try {
+                const raw = localStorage.getItem(key) || localStorage.getItem(`k_nexus_${key}`);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    const data = parsed.data !== undefined ? parsed.data : parsed;
+                    const timestamp = parsed.timestamp || Date.now();
+                    if (now - timestamp < ttl) {
+                        memoryCache.current.set(key, { data, timestamp });
+                        return data as T;
+                    }
+                }
+            } catch {}
+        }
+
         return null;
     }, []);
 
@@ -97,8 +113,13 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
         const timestamp = Date.now();
         const entry: CacheEntry<T> = { data, timestamp };
 
-        // Update Synchronous Mirror
+        // Update Synchronous Mirror & LocalStorage Fallback
         memoryCache.current.set(key, entry);
+        if (typeof window !== 'undefined') {
+            try {
+                localStorage.setItem(key, JSON.stringify(entry));
+            } catch {}
+        }
 
         // Update RxDB Substrate
         try {

@@ -13,7 +13,7 @@ if (typeof window !== 'undefined') {
     addRxPlugin(RxDBLeaderElectionPlugin);
 }
 
-const DB_NAME = 'kylrix_nexus_db_v2';
+const DB_NAME = 'kylrix_nexus_db_v3';
 
 export interface NoteDocument {
     id: string;
@@ -50,10 +50,10 @@ const GenericCacheSchema = {
     type: 'object',
     properties: {
         id: { type: 'string', maxLength: 256 },
-        data: { type: 'object' },
+        data: {},
         timestamp: { type: 'number' }
     },
-    required: ['id', 'data', 'timestamp']
+    required: ['id', 'timestamp']
 };
 
 const TagSchema = {
@@ -179,7 +179,7 @@ export async function migrateLocalStorageToRxDB() {
                     data: parsed.data || parsed,
                     timestamp: parsed.timestamp || Date.now()
                 });
-                localStorage.removeItem(key);
+                // Keep localStorage as fallback substrate
             }
         } catch (e) {
             console.warn(`[RxDB Migration] Failed for key: ${key}`, e);
