@@ -956,6 +956,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       }
       isFetchingTasksRef.current = true;
       try {
+        if (!state.userId) return;
         const data = await fetchBatch(state.userId, true);
         dispatchSyncedData(data);
         lastTaskPullAtRef.current = Date.now();
@@ -996,7 +997,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     const initRealtime = async () => {
       // Subscribe to Tasks
       unsubTasks = await subscribeToTable<AppwriteTask>(APPWRITE_CONFIG.TABLES.TASKS, ({ type, payload }) => {
-        const isBelonging = payload.userId === state.userId || (Array.isArray(payload.assigneeIds) && payload.assigneeIds.includes(state.userId));
+        const isBelonging = Boolean(state.userId && (payload.userId === state.userId || (Array.isArray(payload.assigneeIds) && payload.assigneeIds.includes(state.userId))));
         if (!isBelonging) return;
         if (type === 'create') {
           dispatch({ type: 'ADD_TASK', payload: mapAppwriteTaskToTask(payload) });

@@ -152,10 +152,24 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }
 
+const fallbackPersonalWorkspace: WorkspaceItem = {
+  id: 'guest',
+  title: 'My Workspace',
+  ownerId: 'guest',
+  isPersonal: true,
+};
+
+const fallbackWorkspaceContext: WorkspaceContextType = {
+  activeWorkspace: fallbackPersonalWorkspace,
+  workspaces: [fallbackPersonalWorkspace],
+  loadingWorkspaces: false,
+  setActiveWorkspaceId: () => {},
+  refreshWorkspaces: async () => {},
+  createWorkspace: async () => null,
+  attachEntityToActiveWorkspace: async () => {},
+};
+
 export function useWorkspace() {
   const context = useContext(WorkspaceContext);
-  if (!context) {
-    throw new Error('useWorkspace must be used within a WorkspaceProvider');
-  }
-  return context;
+  return context || fallbackWorkspaceContext;
 }

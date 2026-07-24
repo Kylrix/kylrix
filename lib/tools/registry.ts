@@ -309,8 +309,8 @@ function registerCoreTools() {
       description: { type: 'string', description: 'Detailed description' },
     },
     execute: async (params) => {
-      const { createFlowTask } = await import('@/lib/appwrite/note');
-      const task = await createFlowTask(params as any);
+      const { tasks } = await import('@/lib/kylrixflow');
+      const task = await tasks.create(params as any);
       return { success: true, data: task };
     },
   });
@@ -325,13 +325,13 @@ function registerCoreTools() {
       id: { type: 'string', description: 'Goal ID' },
     },
     execute: async (params) => {
-      const { listFlowTasks } = await import('@/lib/appwrite/note');
-      const res = await listFlowTasks();
+      const { tasks } = await import('@/lib/kylrixflow');
       if (params.id) {
-        const found = res.rows.find((t: any) => t.$id === params.id);
-        return { success: true, data: found || null };
+        const item = await tasks.get(params.id).catch(() => null);
+        return { success: true, data: item };
       }
-      return { success: true, data: res.rows };
+      const list = await tasks.list();
+      return { success: true, data: list.rows };
     },
   });
 
@@ -348,8 +348,9 @@ function registerCoreTools() {
       title: { type: 'string', description: 'New title' },
     },
     execute: async (params) => {
-      const { updateFlowTask } = await import('@/lib/appwrite/note');
-      const updated = await updateFlowTask(params.id, params as any);
+      const { tasks } = await import('@/lib/kylrixflow');
+      const { id, ...updates } = params;
+      const updated = await tasks.update(id, updates as any);
       return { success: true, data: updated };
     },
   });
@@ -359,13 +360,13 @@ function registerCoreTools() {
     domain: 'goal',
     action: 'delete',
     name: 'Delete Goal/Task',
-    description: 'Delete a goal task by ID.',
+    description: 'Remove a task permanently.',
     parameters: {
       id: { type: 'string', description: 'Goal ID', required: true },
     },
     execute: async (params) => {
-      const { deleteFlowTask } = await import('@/lib/appwrite/note');
-      await deleteFlowTask(params.id);
+      const { tasks } = await import('@/lib/kylrixflow');
+      await tasks.delete(params.id);
       return { success: true, data: { deletedId: params.id } };
     },
   });
