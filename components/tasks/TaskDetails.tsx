@@ -38,6 +38,7 @@ import { createComment, listComments, getNote } from '@/lib/appwrite/note';
 import { formatNoteCreatedDate } from '@/lib/date-utils';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { goalPendingKey } from '@/lib/sync/goal-keys';
 import { useLayout } from '@/context/LayoutContext';
 import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
 import { useTask } from '@/context/TaskContext';
