@@ -485,6 +485,12 @@ export async function getCurrentUser(force = false): Promise<any | null> {
         return currentUserCache.user;
     }
 
+    // If offline or network timeout, fall back to snapshot immediately
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const snap = readCurrentUserSnapshot();
+        if (snap?.user) return snap.user;
+    }
+
     // If forcing, check if we just did a forced refresh very recently (dedupe)
     if (force && currentUserCache?.lastForcedAt && (now - currentUserCache.lastForcedAt < CURRENT_USER_FORCE_TTL)) {
         return currentUserCache.user;
@@ -496,6 +502,8 @@ export async function getCurrentUser(force = false): Promise<any | null> {
     }
 
     if (!force && !hasAuthSessionHint()) {
+        const snap = readCurrentUserSnapshot();
+        if (snap?.user) return snap.user;
         return null;
     }
 
@@ -524,7 +532,11 @@ export async function getCurrentUser(force = false): Promise<any | null> {
                 return null;
             }
 
-            // Network/timeout blips must not log the user out mid-navigation.
+            // Network/timeout blips must not log the user out mid-navigation or offline.
+            const snap = readCurrentUserSnapshot();
+            if (snap?.user) {
+                return snap.user;
+            }
             if (currentUserCache?.user) {
                 return currentUserCache.user;
             }

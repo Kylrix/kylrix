@@ -110,8 +110,37 @@ export class EcosystemSecurity {
             Query.equal('userId', resolvedUserId)
         ]).catch(() => ({ rows: [] as any[] }))]);
 
-      const userDoc = (userRowsRes.rows || [])[0] || null;
-      const keychainEntries = Array.isArray(keychainRowsRes.rows) ? keychainRowsRes.rows : [];
+      let userDoc = (userRowsRes.rows || [])[0] || null;
+      let keychainEntries = Array.isArray(keychainRowsRes.rows) ? keychainRowsRes.rows : [];
+
+      if (keychainEntries.length > 0 && typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem(`kylrix_keychain_${resolvedUserId}`, JSON.stringify(keychainEntries));
+        } catch {}
+      } else if (keychainEntries.length === 0 && typeof localStorage !== 'undefined') {
+        try {
+          const cachedKeychain = localStorage.getItem(`kylrix_keychain_${resolvedUserId}`);
+          if (cachedKeychain) {
+            const parsed = JSON.parse(cachedKeychain);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              keychainEntries = parsed;
+            }
+          }
+        } catch {}
+      }
+
+      if (userDoc && typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem(`kylrix_userdoc_${resolvedUserId}`, JSON.stringify(userDoc));
+        } catch {}
+      } else if (!userDoc && typeof localStorage !== 'undefined') {
+        try {
+          const cachedUserDoc = localStorage.getItem(`kylrix_userdoc_${resolvedUserId}`);
+          if (cachedUserDoc) {
+            userDoc = JSON.parse(cachedUserDoc);
+          }
+        } catch {}
+      }
 
       this.hasMasterpassState = !!(userDoc?.masterpass === true || keychainEntries.some((entry: any) => entry?.type === 'password'));
       this.hasPasskeyState = !!(userDoc?.isPasskey === true || keychainEntries.some((entry: any) => entry?.type === 'passkey'));
@@ -867,22 +896,46 @@ export class EcosystemSecurity {
   }
 
   async fetchKeychain(userId: string): Promise<any | null> {
-    const res = await tablesDB.listRows(
-      APPWRITE_CONFIG.DATABASES.VAULT,
-      APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
-      [Query.equal('userId', userId), Query.limit(10)]
-    );
-    const rows = res.rows || [];
-    if (rows.length === 0) return null;
+    const getLocalCache = () => {
+      if (typeof localStorage === 'undefined') return null;
+      try {
+        const raw = localStorage.getItem(`kylrix_keychain_${userId}`);
+        if (!raw) return null;
+        const rows = JSON.parse(raw);
+        if (!Array.isArray(rows) || rows.length === 0) return null;
+        const passwordEntries = rows.filter((r: any) => r.type === 'password');
+        if (passwordEntries.length === 0) return rows[0];
+        const stableEntry = passwordEntries.find((r: any) => !r.isPending);
+        return stableEntry || passwordEntries[0];
+      } catch {
+        return null;
+      }
+    };
 
-    // Prioritization: 
-    // 1. Prefer password type (not passkey/identity)
-    // 2. Prefer non-pending entry
-    const passwordEntries = rows.filter((r: any) => r.type === 'password');
-    if (passwordEntries.length === 0) return rows[0]; // fallback to whatever exists
+    try {
+      const res = await tablesDB.listRows(
+        APPWRITE_CONFIG.DATABASES.VAULT,
+        APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+        [Query.equal('userId', userId), Query.limit(10)]
+      );
+      const rows = res.rows || [];
+      if (rows.length > 0 && typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem(`kylrix_keychain_${userId}`, JSON.stringify(rows));
+        } catch {}
+      }
+      if (rows.length === 0) {
+        return getLocalCache();
+      }
 
-    const stableEntry = passwordEntries.find((r: any) => !r.isPending);
-    return stableEntry || passwordEntries[0];
+      const passwordEntries = rows.filter((r: any) => r.type === 'password');
+      if (passwordEntries.length === 0) return rows[0];
+
+      const stableEntry = passwordEntries.find((r: any) => !r.isPending);
+      return stableEntry || passwordEntries[0];
+    } catch {
+      return getLocalCache();
+    }
   }
 
   getConversationKey(conversationId: string): CryptoKey | null {

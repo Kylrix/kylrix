@@ -1042,22 +1042,38 @@ export class VaultService {
       [
         Permission.read(Role.user(data.userId))]
     );
+    const created = doc as unknown as Keychain;
+    const { getLocalKeychainCache, setLocalKeychainCache } = await import('./client');
+    const existing = getLocalKeychainCache(data.userId);
+    setLocalKeychainCache(data.userId, [created, ...existing.filter(e => e.$id !== created.$id)]);
     // Invalidate ecosystem security snapshot
     const { ecosystemSecurity } = await import("../ecosystem/security");
     ecosystemSecurity.fetchSecuritySnapshot(data.userId, true);
     
-    return doc as unknown as Keychain;
+    return created;
   }
 
   static async listKeychainEntries(
     userId: string,
   ): Promise<Keychain[]> {
-    const response = await appwriteDatabases.listRows(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_COLLECTION_KEYCHAIN_ID,
-      [Query.equal("userId", userId)],
-    );
-    return response.rows as unknown as Keychain[];
+    const { getLocalKeychainCache, setLocalKeychainCache } = await import('./client');
+    const cached = getLocalKeychainCache(userId);
+    try {
+      const response = await appwriteDatabases.listRows(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_COLLECTION_KEYCHAIN_ID,
+        [Query.equal("userId", userId)],
+      );
+      const rows = response.rows as unknown as Keychain[];
+      if (rows && rows.length > 0) {
+        setLocalKeychainCache(userId, rows);
+        return rows;
+      }
+      return cached.length > 0 ? (cached as unknown as Keychain[]) : rows;
+    } catch (err) {
+      if (cached.length > 0) return cached as unknown as Keychain[];
+      throw err;
+    }
   }
 
   static async deleteKeychainEntry(id: string): Promise<void> {
@@ -1078,7 +1094,13 @@ export class VaultService {
       id,
       data,
     );
-    return doc as unknown as Keychain;
+    const updated = doc as unknown as Keychain;
+    if (updated.userId) {
+      const { getLocalKeychainCache, setLocalKeychainCache } = await import('./client');
+      const existing = getLocalKeychainCache(updated.userId);
+      setLocalKeychainCache(updated.userId, existing.map(e => e.$id === id ? { ...e, ...updated } : e));
+    }
+    return updated;
   }
 
   static async createUserDoc(data: Omit<User, "$id">): Promise<User> {

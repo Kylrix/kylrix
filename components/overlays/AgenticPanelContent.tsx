@@ -400,8 +400,19 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       .then((rows) => setAgentCount(rows.length))
       .catch(() => setAgentCount(0));
 
-    // Load session chat history on panel open
+    // Load session chat history on panel open (local copy first)
     const loadSessionHistory = async () => {
+      if (typeof window !== 'undefined' && user?.$id) {
+        try {
+          const localHistory = localStorage.getItem(`kylrix_agentic_chat_history_${user.$id}`);
+          if (localHistory) {
+            const parsed = JSON.parse(localHistory);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setMessages(parsed);
+            }
+          }
+        } catch {}
+      }
       try {
         const { account } = await import('@/lib/appwrite/client');
         const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
@@ -413,7 +424,11 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           const toolCalls = sessionId
             ? await listAgentToolCallsAction(sessionId, jwt).catch(() => [])
             : [];
-          setMessages(formatHistoryMessages(historyArr, toolCalls));
+          const formatted = formatHistoryMessages(historyArr, toolCalls);
+          setMessages(formatted);
+          if (typeof window !== 'undefined' && user?.$id) {
+            localStorage.setItem(`kylrix_agentic_chat_history_${user.$id}`, JSON.stringify(formatted));
+          }
         }
       } catch (err) {
         console.error('Failed to load session history on client:', err);
@@ -1001,7 +1016,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           </div>
         )}
 
-        {messages.map((msg) => (
+        {messages.filter((m: any) => !m.isHiddenFromUI).map((msg) => (
           <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-2`}>
             {msg.role === 'assistant' && (
               <div
