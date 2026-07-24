@@ -28,6 +28,8 @@ import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useCallLauncher } from '@/context/CallLauncherContext';
 import { useServiceWorker } from '@/hooks/useServiceWorker';
 
+import { UnifiedLeftSidebar } from '@/components/UnifiedLeftSidebar';
+
 // Lazy Components
 const UnifiedBottomDrawer = dynamic(() => import('./overlays/UnifiedBottomDrawer').then(m => m.UnifiedBottomDrawer), { ssr: false });
 const ProUpgradeDrawer = dynamic(() => import('./overlays/ProUpgradeDrawer').then(m => m.ProUpgradeDrawer), { ssr: false });
@@ -36,7 +38,6 @@ const PasskeyReminderDrawer = dynamic(() => import('./overlays/PasskeyReminderDr
 const Overlay = dynamic(() => import('@/components/ui/Overlay'), { ssr: false });
 const DynamicSidebar = dynamic(() => import('./ui/DynamicSidebarPanel').then(m => m.DynamicSidebar), { ssr: false });
 const RightSidebar = dynamic(() => import('./layout/RightSidebar'), { ssr: false });
-const UnifiedLeftSidebar = dynamic(() => import('./UnifiedLeftSidebar').then(m => m.UnifiedLeftSidebar), { ssr: false });
 const AccountHealthDrawers = dynamic(() => import('./onboarding/AccountHealthDrawers').then(m => m.AccountHealthDrawers), { ssr: false });
 const UnifiedFileAttachmentDrawer = dynamic(() => import('./overlays/UnifiedFileAttachmentDrawer').then(m => m.UnifiedFileAttachmentDrawer), { ssr: false });
 
@@ -105,14 +106,12 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     isAppRoute &&
     !isSharedPage &&
     !isVaultResetRoute &&
-    !isLandingPage &&
-    !isConnectChatPage
+    !isLandingPage
   ), [
     isAppRoute,
     isSharedPage,
     isVaultResetRoute,
-    isLandingPage,
-    isConnectChatPage
+    isLandingPage
   ]);
 
   const mainClassName = useMemo(() => {
@@ -198,27 +197,35 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         }}
     >
       <FABProvider>
-      {/* --- LAYER 0: CONTENT --- */}
+      {/* --- LAYER 0: CONTENT & SIDEBAR FLEX ROW --- */}
       <Box
-        component="main"
-        className={mainClassName}
         sx={{
-          minWidth: 0,
-          position: 'relative',
-          zIndex: 1,
-          pt: isSpecificPostPage ? 0 : '72px',
-          pb: isSpecificPostPage ? 0 : (isLandingPage ? 0 : { xs: 12, md: 4 }),
-          px: isProjectDetailPage ? { xs: 1, sm: 1, md: 2 } : isNoteFullPageDetail ? { xs: 0, sm: 0, md: 0 } : { xs: 2, sm: 2, md: 4 },
-          pl: showLeftSidebar ? { xs: 2, md: isCollapsed ? '96px' : '264px' } : undefined,
-          // Authoritative padding is now handled by CSS classes for 100% rigidity
-          maxWidth: 1800,
-          mx: 'auto',
+          display: 'flex',
+          width: '100%',
           minHeight: '100vh',
-          pointerEvents: 'auto',
-          transition: 'padding-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          pt: isSpecificPostPage ? 0 : { xs: '84px', sm: '88px', md: '96px' },
+          position: 'relative',
         }}
       >
-        {children}
+        {showLeftSidebar && <UnifiedLeftSidebar />}
+
+        <Box
+          component="main"
+          className={mainClassName}
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            width: '100%',
+            position: 'relative',
+            zIndex: 1,
+            pb: isSpecificPostPage ? 0 : (isLandingPage ? 0 : { xs: 12, md: 4 }),
+            px: isProjectDetailPage ? { xs: 1, sm: 1, md: 2 } : isNoteFullPageDetail ? { xs: 0, sm: 0, md: 0 } : { xs: 2, sm: 2, md: 3 },
+            pointerEvents: 'auto',
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        >
+          {children}
+        </Box>
       </Box>
 
       {/* --- LAYER 1: CHROME --- */}
@@ -244,14 +251,6 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         <UnifiedBottomBar />
       )}
       
-      {showLeftSidebar && (
-        <Box sx={{ contain: 'layout size style', willChange: 'transform' }}>
-            <UnifiedLeftSidebar />
-        </Box>
-      )}
-      {isAppRoute && !isSharedPage && !isVaultResetRoute && !isLandingPage && !isConnectPage && (
-        <Box sx={{ display: 'none' }} />
-      )}
       {!isSharedPage && <UniversalFAB />}
 
       </FABProvider>

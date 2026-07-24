@@ -85,7 +85,7 @@ export default function NotesPage() {
   const { 
     notes: allNotes, 
     totalNotes, 
-    isLoading: isInitialLoading, 
+    isLoading: isNotesLoading, 
     upsertNote, 
     registerComposeSession,
     pushLiveNote,
@@ -96,6 +96,7 @@ export default function NotesPage() {
     hasMore,
     loadMore
   } = useNotes();
+  const isInitialLoading = isNotesLoading && allNotes.length === 0;
   const { promptSudo } = useSudo();
   const { openOverlay, closeOverlay } = useOverlay();
   const { setConfiguration, resetConfiguration } = useFAB();
@@ -815,14 +816,14 @@ export default function NotesPage() {
             )}
           </div>
           <h4 className="text-white font-black text-lg tracking-tight mb-2">
-            {isInitialLoading ? 'Loading Vault...' : hasSearchResults ? 'No Results' : 'No Ideas Yet'}
+            {isInitialLoading ? 'Loading Ideas...' : hasSearchResults ? 'No Results' : 'No Ideas Yet'}
           </h4>
           <p className="text-white/40 text-xs font-semibold max-w-xs leading-relaxed mb-6">
             {isInitialLoading
-              ? 'Decrypting and retrieving your secure ideas...'
+              ? 'Loading your ideas...'
               : hasSearchResults
               ? `No matches found for "${searchQuery}". Try adjusting your query.`
-              : 'Capture your thoughts and tasks here. Ideas are securely sealed in your vault.'
+              : 'Capture your thoughts and tasks here.'
             }
           </p>
           {!isInitialLoading && (

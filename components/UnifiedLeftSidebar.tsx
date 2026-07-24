@@ -91,11 +91,6 @@ export function UnifiedLeftSidebar() {
 
   if (pathname?.startsWith('/accounts')) return null;
 
-  if (
-    isConnectChatPage ||
-    mode === 'compact'
-  ) return null;
-
   const currentTab = getCurrentTab();
 
   const navItems: { id: NavId; label: string; icon: typeof NotesIcon }[] = [
@@ -111,12 +106,12 @@ export function UnifiedLeftSidebar() {
       component="nav"
       className="kylrix-sidebar"
       sx={{
-        position: 'fixed',
-        left: 0,
-        top: '72px',
-        bottom: 0,
         width: isCollapsed ? 72 : 240,
-        zIndex: 1100,
+        flexShrink: 0,
+        height: 'calc(100vh - 96px)',
+        position: 'sticky',
+        top: '96px',
+        zIndex: 10,
         display: { xs: 'none', md: 'block' },
         transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
@@ -136,6 +131,7 @@ export function UnifiedLeftSidebar() {
           py: 2.5,
           px: isCollapsed ? 0 : 2,
           boxSizing: 'border-box',
+          overflow: 'hidden',
           transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >

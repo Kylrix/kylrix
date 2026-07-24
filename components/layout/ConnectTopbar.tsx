@@ -2265,9 +2265,10 @@ export default function ConnectTopbar({
           }}>
             
             {/* Left: App Logo / Menu Trigger */}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start', pointerEvents: 'auto' }}>
               <Box 
                 onClick={(e: React.MouseEvent<HTMLElement>) => {
+                  e.stopPropagation();
                   if (!user) {
                     openUnified('login');
                     return;
@@ -2278,7 +2279,7 @@ export default function ConnectTopbar({
                     openAppMenu(e);
                   }
                 }} 
-                sx={{ cursor: 'pointer', flexShrink: 0 }}
+                sx={{ cursor: 'pointer', flexShrink: 0, pointerEvents: 'auto' }}
               >
                 <Logo app={activeApp} size={32} variant="full" />
               </Box>

@@ -14,7 +14,7 @@ const STORAGE_KEY = 'kylrixnote_sidebar_collapsed';
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(true);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {

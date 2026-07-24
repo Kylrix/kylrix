@@ -298,10 +298,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     }
     
     isFetchingRef.current = true;
-    if (reset && notesRef.current.length === 0) {
-      setIsLoading(true);
-      setError(null);
-    }
+    setError(null);
 
     try {
       // Load ghost notes and deleted IDs
@@ -322,7 +319,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           }
         } catch {}
       }
-      const ghostNotes = await getGhostNotes();
+      const ghostNotes = await getGhostNotes().catch(() => []);
 
       // Fetch pinned IDs with optimization
       if (reset && PINNED_CACHE_KEY) {
@@ -484,24 +481,17 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isAuthenticated && user?.$id && isCacheLoaded) {
-      if (notes.length > 0 && !hasInitiallyFetched.current) {
-        hasInitiallyFetched.current = true;
-        console.log('Instant reload: Using cached notes with background refresh');
-        setIsLoading(false);
-        fetchBatch(true);
-        return;
-      }
-
       if (!hasInitiallyFetched.current) {
-        fetchBatch(true);
         hasInitiallyFetched.current = true;
+        setIsLoading(false);
+        void fetchBatch(true);
       }
     } else if (!isAuthLoading && !isAuthenticated) {
       setIsLoading(false);
       setHasMore(false);
       hasInitiallyFetched.current = false;
     }
-  }, [isAuthenticated, isAuthLoading, user?.$id, fetchBatch, isCacheLoaded, notes.length]);
+  }, [isAuthenticated, isAuthLoading, user?.$id, fetchBatch, isCacheLoaded]);
 
   const transferComposeSession = useCallback((ephemeralId: string, savedId: string) => {
     const guard = liveEditGuardsRef.current.get(ephemeralId);
