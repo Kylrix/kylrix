@@ -522,19 +522,36 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     let added = false;
     setNotes((prev) => {
       if (prev.some((n) => n.$id === normalized.$id)) {
-        return dedupeNotesById(prev.map((item) => (item.$id === normalized.$id ? normalized : item)));
+        const updated = dedupeNotesById(prev.map((item) => (item.$id === normalized.$id ? normalized : item)));
+        // Persist bulk cache so items survive offline navigation
+        if (INITIAL_NOTES_CACHE_KEY) {
+          setCachedData(INITIAL_NOTES_CACHE_KEY, {
+            notes: updated,
+            totalNotes: updated.length,
+            cursor: cursorRef.current,
+            hasMore: true,
+          });
+        }
+        return updated;
       }
       added = true;
-      return dedupeNotesById([normalized, ...prev]);
+      const updated = dedupeNotesById([normalized, ...prev]);
+      // Persist bulk cache so new items survive offline navigation
+      if (INITIAL_NOTES_CACHE_KEY) {
+        setCachedData(INITIAL_NOTES_CACHE_KEY, {
+          notes: updated,
+          totalNotes: updated.length,
+          cursor: cursorRef.current,
+          hasMore: true,
+        });
+      }
+      return updated;
     });
-    if (added && !isUnpersistedComposeDraft(normalized.$id)) {
-      setTotalNotes((prev) => prev + 1);
-      if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
-    } else if (added) {
+    if (added) {
       setTotalNotes((prev) => prev + 1);
     }
     setCachedData(`note_${normalized.$id}`, normalized);
-  }, [setCachedData, INITIAL_NOTES_CACHE_KEY, invalidate]);
+  }, [setCachedData, INITIAL_NOTES_CACHE_KEY]);
 
   const pushLiveNote = useCallback((note: Notes, options?: { pending?: boolean }) => {
     if (!note?.$id) return;

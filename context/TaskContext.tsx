@@ -1045,12 +1045,17 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       };
       dispatch({ type: 'UPSERT_TASK', payload: stamped });
       void setCachedData(`goal_${stamped.id}`, stamped);
+      if (state.userId) {
+        const tasksKey = `f_tasks_${state.userId}`;
+        const updatedList = [stamped, ...tasksRef.current.filter((t) => t.id !== stamped.id)];
+        void setCachedData(tasksKey, { rows: updatedList, total: updatedList.length });
+      }
       if (options?.pending !== false) {
         autonomicSyncEngine.markPending(goalPendingKey(stamped.id), stamped.updatedAt.toISOString(), stamped);
         autonomicSyncEngine.runCycle();
       }
     },
-    [setCachedData],
+    [setCachedData, state.userId],
   );
 
   const addTask = useCallback(
