@@ -1008,6 +1008,23 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string) 
 
   const isAllowed = await verifyNotePermission(noteId, actor.$id, 'editor');
   if (!isAllowed) {
+    // Check if the note actually exists — if it doesn't, delegate to create instead of throwing Forbidden.
+    // This handles the sync race where a new note's first sync attempt hits updateNoteSecure before the row exists on Appwrite.
+    try {
+      const probeTables = createSystemTablesDB();
+      const existing = await probeTables.getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+        tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+        rowId: noteId,
+      }).catch(() => null);
+      if (!existing) {
+        // Row doesn't exist yet — delegate to create path
+        return createNoteSecure({ ...data, $id: noteId }, jwt);
+      }
+    } catch {
+      // If probe fails, row may not exist — still try to create
+      return createNoteSecure({ ...data, $id: noteId }, jwt);
+    }
     throw new Error('Forbidden: Insufficient permissions to update this note');
   }
 

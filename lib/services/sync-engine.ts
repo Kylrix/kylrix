@@ -296,7 +296,8 @@ async function flushGoalPending(
   } catch (err: any) {
     const msg = String(err?.message || '').toLowerCase();
     const isNotFound = msg.includes('not found') || err?.code === 404 || err?.status === 404;
-    if (isNotFound) {
+    const isForbiddenOrMissing = msg.includes('forbidden') || msg.includes('insufficient permissions') || msg.includes('unauthorized');
+    if (isNotFound || isForbiddenOrMissing) {
       synced = await taskApi.create(
         {
           ...(dataPayload as any),
@@ -414,7 +415,8 @@ async function flushNotePending(
   } catch (err: any) {
     const msg = String(err?.message || '').toLowerCase();
     const isNotFound = msg.includes('not found') || err?.code === 404 || err?.status === 404;
-    if (isNotFound) {
+    const isForbiddenOrMissing = msg.includes('forbidden') || msg.includes('insufficient permissions') || msg.includes('unauthorized');
+    if (isNotFound || isForbiddenOrMissing) {
       syncedNote = await createNote({
         ...dataPayload,
         $id: noteId,
