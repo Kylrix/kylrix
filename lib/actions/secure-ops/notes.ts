@@ -771,7 +771,7 @@ export async function pushNotesDeltaSecure(rows: any[], jwt?: string) {
   return conflicts;
 }
 
-export async function createNoteSecure(data: any, jwt?: string) {
+export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized: Session expired or invalid');
@@ -995,7 +995,7 @@ export async function createNoteSecure(data: any, jwt?: string) {
   }
 }
 
-export async function updateNoteSecure(noteId: string, data: any, jwt?: string) {
+export async function updateNoteSecure(noteId: string, data: any, jwt?: string): Promise<any> {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized: Session expired or invalid');
