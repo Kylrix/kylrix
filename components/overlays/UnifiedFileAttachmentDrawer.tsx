@@ -368,37 +368,51 @@ export function UnifiedFileAttachmentDrawer() {
       ? 'Encrypted Item'
       : item.title || item.name || item.label || 'Attached Item';
 
-    let rawReference = `\n\n[${itemTitle}](source:kylrix${activeSubTab}:${item.$id || item.id})\n\n`;
-    if (activeSubTab === 'ideas') {
-      rawReference = `\n\n[Idea: ${itemTitle}](source:kylrixnote:${item.$id || item.id})\n\n`;
-    } else if (activeSubTab === 'goals') {
-      rawReference = `\n\n[Goal: ${itemTitle}](source:kylrixgoal:${item.$id || item.id})\n\n`;
-    } else if (activeSubTab === 'projects') {
-      rawReference = `\n\n[Project: ${itemTitle}](source:kylrixproject:${item.$id || item.id})\n\n`;
-    } else if (activeSubTab === 'threads') {
-      rawReference = `\n\n[Thread: ${itemTitle}](source:kylrixthread:${item.$id || item.id})\n\n`;
-    } else if (activeSubTab === 'totps') {
-      rawReference = `\n\n[TOTP: ${itemTitle}](source:kylrixvault:${item.$id || item.id})\n\n`;
-    } else if (activeSubTab === 'vault') {
-      rawReference = `\n\n[Secret: ${itemTitle}](source:kylrixvault:${item.$id || item.id})\n\n`;
-    } else if (activeSubTab === 'forms') {
-      rawReference = `\n\n[Form: ${itemTitle}](source:kylrixform:${item.$id || item.id})\n\n`;
-    }
+    const childId = item.$id || item.id || 'obj';
+    let childKind: any = 'note';
+    if (activeSubTab === 'ideas') childKind = 'note';
+    else if (activeSubTab === 'goals') childKind = 'task';
+    else if (activeSubTab === 'projects') childKind = 'note';
+    else if (activeSubTab === 'threads') childKind = 'note';
+    else if (activeSubTab === 'totps') childKind = 'vault';
+    else if (activeSubTab === 'vault') childKind = 'vault';
+    else if (activeSubTab === 'forms') childKind = 'form';
+
+    const objectBlock = serializeObjectBlock({
+      childId,
+      childKind,
+      bucketId: activeSubTab,
+      label: itemTitle,
+      appTheme: 'idea',
+      metadata: { title: itemTitle, subTab: activeSubTab },
+    });
 
     options.onSelectFile({
-      $id: item.$id || item.id || 'obj',
+      $id: childId,
       name: itemTitle,
       bucketId: activeSubTab,
       sizeOriginal: 0,
       mimeType: 'application/x-kylrix-object',
-      fileUrl: rawReference,
+      fileUrl: objectBlock,
     });
     closeFileDrawer();
   };
 
   const handleConfirmMediaSelection = () => {
     if (selectedFile) {
-      options.onSelectFile(selectedFile);
+      const childKind = selectedFile.mimeType?.startsWith('image/') ? 'image' : 'file';
+      const objectBlock = serializeObjectBlock({
+        childId: selectedFile.$id,
+        childKind,
+        bucketId: selectedFile.bucketId,
+        label: selectedFile.name,
+        appTheme: 'idea',
+        metadata: { mimeType: selectedFile.mimeType, fileName: selectedFile.name, fileUrl: selectedFile.fileUrl },
+      });
+      options.onSelectFile({
+        ...selectedFile,
+        fileUrl: objectBlock,
+      });
       closeFileDrawer();
     }
   };
@@ -411,6 +425,18 @@ export function UnifiedFileAttachmentDrawer() {
     try {
       const bucket = 'notes_attachments';
       const uploaded = await StorageService.uploadFile(file, bucket);
+      const childKind = file.type.startsWith('image/') ? 'image' : 'file';
+      const fileUrl = StorageService.getFileView(uploaded.$id, bucket);
+
+      const objectBlock = serializeObjectBlock({
+        childId: uploaded.$id,
+        childKind,
+        bucketId: bucket,
+        label: uploaded.name,
+        appTheme: 'idea',
+        metadata: { mimeType: uploaded.mimeType || file.type, fileName: uploaded.name, fileUrl },
+      });
+
       const newMedia: SyncedMediaFile = {
         $id: uploaded.$id,
         name: uploaded.name,
@@ -418,7 +444,7 @@ export function UnifiedFileAttachmentDrawer() {
         sizeOriginal: uploaded.sizeOriginal || file.size,
         mimeType: uploaded.mimeType || file.type,
         createdAt: new Date().toISOString(),
-        fileUrl: StorageService.getFileView(uploaded.$id, bucket),
+        fileUrl: objectBlock,
       };
 
       const updated = [newMedia, ...mediaFiles];

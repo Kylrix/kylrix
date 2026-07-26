@@ -1552,10 +1552,17 @@ export default function CreateNoteForm({
                   openFileDrawer({
                     title: 'Attach Object or Media',
                     onSelectFile: (file) => {
-                      const fileMarkdown = file.mimeType?.startsWith('image/')
-                        ? `\n![${file.name}](${file.fileUrl || StorageService.getFileView(file.$id, file.bucketId)})\n`
-                        : `\n[${file.name}](${file.fileUrl || StorageService.getFileView(file.$id, file.bucketId)})\n`;
-                      setContent((prev) => prev + fileMarkdown);
+                      const block = file.fileUrl?.startsWith('[[kylrix-object:')
+                        ? file.fileUrl
+                        : serializeObjectBlock({
+                            childId: file.$id,
+                            childKind: file.mimeType?.startsWith('image/') ? 'image' : 'file',
+                            bucketId: file.bucketId,
+                            label: file.name,
+                            appTheme: 'idea',
+                            metadata: { mimeType: file.mimeType, fileName: file.name, fileUrl: file.fileUrl },
+                          });
+                      insertObjectBlock(block);
                     },
                   });
                 }}

@@ -1350,7 +1350,18 @@ export function NoteDetailSidebar({
                   <textarea
                     value={content}
                     onChange={(e) => {
-                      setContent(e.target.value);
+                      const nextValue = e.target.value;
+                      const blocks = parseObjectBlocks(content);
+                      const changed = blocks.find((b) => {
+                        const prevBlock = content.slice(b.start, b.end);
+                        const nextBlock = nextValue.slice(b.start, b.start + prevBlock.length);
+                        return prevBlock !== nextBlock;
+                      });
+                      if (changed) {
+                        setPendingBlockDelete(changed);
+                        return;
+                      }
+                      setContent(nextValue);
                     }}
                     ref={contentTextareaRef}
                     onKeyDown={onEditorKeyDown}
@@ -1839,10 +1850,17 @@ export function NoteDetailSidebar({
                   openFileDrawer({
                     title: 'Attach Object or Media',
                     onSelectFile: (file) => {
-                      const fileMarkdown = file.mimeType?.startsWith('image/')
-                        ? `\n\n![${file.name}](${file.fileUrl || StorageService.getFileView(file.$id, file.bucketId)})\n\n`
-                        : `\n\n${file.fileUrl || `[${file.name}](${StorageService.getFileView(file.$id, file.bucketId)})`}\n\n`;
-                      setContent((prev) => prev + fileMarkdown);
+                      const block = file.fileUrl?.startsWith('[[kylrix-object:')
+                        ? file.fileUrl
+                        : serializeObjectBlock({
+                            childId: file.$id,
+                            childKind: file.mimeType?.startsWith('image/') ? 'image' : 'file',
+                            bucketId: file.bucketId,
+                            label: file.name,
+                            appTheme: 'idea',
+                            metadata: { mimeType: file.mimeType, fileName: file.name, fileUrl: file.fileUrl },
+                          });
+                      insertObjectBlockAtCursor(block);
                     },
                   });
                 }}
