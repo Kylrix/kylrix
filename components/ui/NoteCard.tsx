@@ -124,6 +124,53 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const isEncryptedNote = (noteMeta?.encryptionVersion === 'T4' || isLockedT5) && !noteMeta?.clientDecrypted;
   const pinned = isPinned(note.$id);
 
+  // Extract first image URL from note content, attachments, or object blocks
+  const previewImageUrl = React.useMemo(() => {
+    if (isEncryptedNote || !liveNote.content) return null;
+    const content = liveNote.content;
+
+    // 1. Check markdown image format: ![alt](url)
+    const mdMatch = content.match(/!\[.*?\]\((.*?)\)/);
+    if (mdMatch && mdMatch[1]) return mdMatch[1];
+
+    // 2. Check HTML img tag src
+    const htmlMatch = content.match(/<img\s+[^>]*src=["']([^"']+)["']/i);
+    if (htmlMatch && htmlMatch[1]) return htmlMatch[1];
+
+    // 3. Check kylrix-object JSON blocks
+    const OBJECT_BLOCK_REGEX = /\[\[kylrix-object:(\{.*?\})\]\]/g;
+    let objMatch;
+    while ((objMatch = OBJECT_BLOCK_REGEX.exec(content)) !== null) {
+      try {
+        const payload = JSON.parse(objMatch[1]);
+        if (payload.childKind === 'image' || payload.type === 'image') {
+          const url = payload.metadata?.fileUrl || payload.src || payload.url;
+          if (url) return url;
+          if (payload.childId && payload.bucketId) {
+            return `https://api.kylrix.space/v1/storage/buckets/${payload.bucketId}/files/${payload.childId}/view?project=67fe9627001d97e37ef3`;
+          }
+        }
+      } catch {}
+    }
+
+    // 4. Check attachments array for image mimeType or extensions
+    if (Array.isArray(liveNote.attachments)) {
+      for (const att of liveNote.attachments) {
+        try {
+          const parsed = typeof att === 'string' ? JSON.parse(att) : att;
+          if (parsed?.mimeType?.startsWith('image/') || parsed?.name?.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i)) {
+            if (parsed.fileUrl) return parsed.fileUrl;
+            if (parsed.$id && parsed.bucketId) {
+              return `https://api.kylrix.space/v1/storage/buckets/${parsed.bucketId}/files/${parsed.$id}/view?project=67fe9627001d97e37ef3`;
+            }
+          }
+        } catch {}
+      }
+    }
+
+    return null;
+  }, [liveNote.content, liveNote.attachments, isEncryptedNote]);
+
   const handleAIAction = React.useCallback(async (action: 'summarize' | 'grammar' | 'expand') => {
     if (isAIProcessing) return;
     setIsAIProcessing(true);
@@ -389,15 +436,34 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
               </div>
 
               {/* Summary / Content Preview */}
-              <div className="text-sm text-white/50 font-medium leading-relaxed mt-2 overflow-hidden">
+              <div className="text-sm text-white/50 font-medium leading-relaxed mt-1.5 overflow-hidden flex flex-col gap-2">
                 <p className="line-clamp-2 break-words select-text">
                   {isEncryptedNote 
                     ? (isLockedT5 ? '🔒 Locked Note' : '🔒 Encrypted note') 
                     : note.format === 'doodle'
                       ? 'Sketch note (no longer supported)'
-                      : (liveNote.content || '').replace(/\[voice:[a-zA-Z0-9_-]+\]/g, '🎙️ Voice Note')
+                      : (liveNote.content || '')
+                          .replace(/\[\[kylrix-object:.*?\]\]/g, '')
+                          .replace(/!\[.*?\]\(.*?\)/g, '')
+                          .replace(/\[voice:[a-zA-Z0-9_-]+\]/g, '🎙️ Voice Note')
+                          .trim() || (previewImageUrl ? '📷 Image attached' : 'Empty note')
                   }
                 </p>
+
+                {/* Preview Image Card */}
+                {previewImageUrl && !isEncryptedNote && (
+                  <div className="relative w-full h-24 sm:h-28 rounded-xl overflow-hidden bg-[#161412] border border-white/10 group-hover:border-pink-500/30 transition-all">
+                    <img 
+                      src={previewImageUrl} 
+                      alt="Preview" 
+                      className="w-full h-full object-cover object-center opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+                      onError={(e) => {
+                        (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                  </div>
+                )}
               </div>
             </div>
 
