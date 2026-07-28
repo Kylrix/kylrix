@@ -52,6 +52,7 @@ import { useNotes } from '@/context/NotesContext';
 import { storage } from '@/lib/appwrite/client';
 import { getAllTags, listNotesPaginated } from '@/lib/appwrite';
 import { FormsService } from '@/lib/services/forms';
+import { serializeObjectBlock } from '@/lib/note-object-secondary';
 import { useTask } from '@/context/TaskContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { VaultService } from '@/lib/appwrite/vault';
