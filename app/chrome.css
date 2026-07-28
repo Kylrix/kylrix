@@ -10,6 +10,9 @@
   .kylrix-sidebar {
     display: none !important;
   }
+  .kylrix-main-content {
+    margin-left: 0 !important;
+  }
 }
 
 /* Authoritative Main Content Isolation */

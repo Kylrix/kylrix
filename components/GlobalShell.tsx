@@ -216,7 +216,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
             flex: 1,
             minWidth: 0,
             width: '100%',
-            ml: showLeftSidebar ? { xs: 0, md: isCollapsed ? '72px' : '240px' } : 0,
+            ml: showLeftSidebar ? { xs: 0, sm: 0, md: isCollapsed ? '72px' : '240px' } : 0,
             position: 'relative',
             zIndex: 1,
             pb: isSpecificPostPage ? 0 : (isLandingPage ? 0 : { xs: 12, md: 4 }),
