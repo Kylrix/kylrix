@@ -1517,9 +1517,7 @@ export const Backdrop = ({ open = false, onClick, children, className, sx, ...pr
         position: 'fixed',
         inset: 0,
         zIndex: 1300,
-        backgroundColor: 'rgba(0, 0, 0, 0.48)',
-        backdropFilter: 'blur(16px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+        backgroundColor: 'rgba(0, 0, 0, 0.72)',
         animation: 'kylrixBackdropIn 0.28s ease',
         ...cleanSx(sx),
       }}

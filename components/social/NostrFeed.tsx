@@ -88,6 +88,8 @@ export function NostrFeed() {
   const [resolvedProfiles, setResolvedProfiles] = useState<Record<string, { username: string; avatarUrl?: string }>>({});
   const [visibleCount, setVisibleCount] = useState(20);
   const observerRef = useRef<HTMLDivElement | null>(null);
+  const resolvedProfilesRef = useRef(resolvedProfiles);
+  resolvedProfilesRef.current = resolvedProfiles;
 
   // 1. Load Ecosystem Moments (0ms Local Copy Hydration)
   const loadEcosystemMoments = useCallback(async () => {
@@ -124,16 +126,30 @@ export function NostrFeed() {
           return null;
         }
       })
-      .filter((n): n is string => !!n && !resolvedProfiles[n]);
+      .filter((n): n is string => !!n && !resolvedProfilesRef.current[n]);
 
     if (unresolvedNpubs.length === 0) return;
 
+    let cancelled = false;
     resolveNostrPubkeysAction(unresolvedNpubs).then((res) => {
-      if (res && Object.keys(res).length > 0) {
-        setResolvedProfiles((prev) => ({ ...prev, ...res }));
-      }
+      if (cancelled || !res || Object.keys(res).length === 0) return;
+      setResolvedProfiles((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        for (const [key, value] of Object.entries(res)) {
+          if (!next[key]) {
+            next[key] = value;
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
     });
-  }, [nostrFeed, resolvedProfiles]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nostrFeed]);
 
   // 3. Combine Ecosystem Moments & Nostr Feed into Unified Stream
   const unifiedStream = useMemo<UnifiedFeedItem[]>(() => {
@@ -275,11 +291,11 @@ function MomentCard({ item }: { item: UnifiedFeedItem }) {
   const isLong = media.cleanText.length > 260 || media.cleanText.split('\n').length > 4;
 
   return (
-    <div className="bg-[#161412] border border-white/10 rounded-3xl p-5 flex flex-col gap-3.5 hover:border-[#F59E0B]/30 transition-all shadow-xl group">
+    <div className="bg-[#161412] border border-white/10 rounded-3xl p-5 flex flex-col gap-3.5 hover:border-[#F59E0B]/30 transition-[border-color] shadow-md group" style={{ contain: 'content' }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#F59E0B] to-amber-700 p-0.5 shrink-0 shadow-md">
+          <div className="w-10 h-10 rounded-2xl bg-[#F59E0B] p-0.5 shrink-0">
             <div className="w-full h-full bg-[#0A0908] rounded-[14px] flex items-center justify-center font-black font-mono text-xs text-[#F59E0B]">
               {item.authorName.replace('@', '').slice(0, 2).toUpperCase() || 'KY'}
             </div>
@@ -342,7 +358,9 @@ function MomentCard({ item }: { item: UnifiedFeedItem }) {
               <img
                 src={imgUrl}
                 alt="Moment media"
-                className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
+                className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
               />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity text-white">
                 <Eye size={20} className="text-[#F59E0B]" />
@@ -411,7 +429,7 @@ function MomentCard({ item }: { item: UnifiedFeedItem }) {
       {/* Image Lightbox Modal */}
       {lightboxImg && (
         <div
-          className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 transition-all animate-fadeIn"
+          className="fixed inset-0 z-[99999] bg-[#0A0908]/95 flex items-center justify-center p-4 animate-fadeIn"
           onClick={() => {
             setLightboxImg(null);
             setZoomScale(1);

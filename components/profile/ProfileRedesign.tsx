@@ -816,7 +816,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
 
           {isOwnProfile && (
             <div className="bg-[#151311] border border-[#6366F1]/10 rounded-[24px] p-6 space-y-5 shadow-xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-8 -mr-8 -mt-8 bg-[#6366F1]/5 rounded-full blur-2xl group-hover:bg-[#6366F1]/10 transition-colors" />
+              <div className="absolute top-0 right-0 w-32 h-32 -mr-8 -mt-8 rounded-full bg-[#6366F1]/10 pointer-events-none" />
               
               <div className="flex items-center gap-3 relative z-10">
                 <div className="p-2 rounded-lg bg-[#6366F1]/10 text-[#6366F1]">
@@ -934,7 +934,8 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
                   <div
                     key={moment.$id}
                     onClick={() => router.push(`/connect/post/${moment.$id}`)}
-                    className="p-4 bg-white/2 hover:bg-white/4 border border-white/8 rounded-2xl transition-all cursor-pointer flex flex-col gap-2.5"
+                    className="p-4 bg-white/2 hover:bg-white/4 border border-white/8 rounded-2xl transition-[background-color,border-color] cursor-pointer flex flex-col gap-2.5"
+                    style={{ contain: 'content' }}
                   >
                     <div className="flex justify-between items-center text-[10px] font-bold text-white/30">
                       <span className="uppercase tracking-wider text-[#6366F1]">{type}</span>
@@ -991,7 +992,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1100] transition-opacity duration-300 ease-in-out cursor-default"
+            className="fixed inset-0 bg-black/70 z-[1100] transition-opacity duration-300 ease-in-out cursor-default"
             onClick={() => setTechnicalInfoOpen(false)}
           />
           {/* Drawer container */}

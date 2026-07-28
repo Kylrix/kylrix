@@ -186,8 +186,8 @@ function ConnectHomeContent() {
 
   return (
     <div className="w-full mx-auto py-4 px-4 md:px-6 pointer-events-auto">
-      {/* Top spotlight ambient glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-[300px] bg-gradient-to-b from-amber-500/[0.04] to-transparent rounded-full blur-3xl pointer-events-none" />
+      {/* Soft top wash — solid gradient only (no filter blur; avoids GPU compositor thrash over the feed) */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-[240px] bg-gradient-to-b from-amber-500/[0.05] to-transparent pointer-events-none" />
 
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Tab Switcher */}
@@ -233,10 +233,10 @@ function ConnectHomeContent() {
             </div>
 
             {/* Right Column: Collaboration Sidebar */}
-            <div className="hidden md:flex w-full flex-col gap-8 max-h-[calc(100vh-140px)] overflow-y-auto scrollbar-none pr-1 md:sticky md:top-[108px]">
+            <div className="hidden md:flex w-full flex-col gap-8 max-h-[calc(100vh-140px)] overflow-y-auto scrollbar-none pr-1 md:sticky md:top-[108px]" style={{ contain: 'layout paint' }}>
               {/* Pocket 1: Discussion Threads */}
               <div 
-                className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] hover:border-white/10 hover:-translate-y-0.5 transition-all duration-300"
+                className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] hover:border-white/10 transition-[border-color] duration-300"
                 style={{
                   flex: '0 0 auto',
                   height: threadsOpen ? '380px' : '68px',
@@ -274,7 +274,7 @@ function ConnectHomeContent() {
 
               {/* Pocket 2: Projects Index */}
               <div 
-                className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] hover:border-white/10 hover:-translate-y-0.5 transition-all duration-300"
+                className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] hover:border-white/10 transition-[border-color] duration-300"
                 style={{
                   flex: '0 0 auto',
                   height: projectsOpen ? '380px' : '68px',
@@ -378,7 +378,7 @@ function ConnectHomeContent() {
 
               {/* Pocket 3: Bookmarks */}
               <div 
-                className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] hover:border-white/10 hover:-translate-y-0.5 transition-all duration-300"
+                className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] hover:border-white/10 transition-[border-color] duration-300"
                 style={{
                   flex: '0 0 auto',
                   height: bookmarksOpen ? '380px' : '68px',

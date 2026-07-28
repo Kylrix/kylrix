@@ -10,7 +10,7 @@ export default function FlowDashboardPage() {
   return (
     <div className="min-h-screen bg-[#0A0908] text-white/90 font-satoshi relative overflow-x-hidden pt-4 md:pt-8 px-4 md:px-6">
       {/* Spotlight ambient glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-[300px] bg-gradient-to-b from-purple-500/[0.04] to-transparent rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-[240px] bg-gradient-to-b from-purple-500/[0.05] to-transparent pointer-events-none" />
 
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Tab Switcher */}

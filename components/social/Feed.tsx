@@ -101,6 +101,7 @@ const momentCardSx = {
     border: '1px solid #34322F',
     boxShadow: 'none',
     overflow: 'hidden',
+    contain: 'content',
     transition: 'border-color 0.2s ease',
     '&:hover': {
         background: '#161412 !important',
@@ -286,11 +287,14 @@ const PostComposer = React.memo(function PostComposer({
         hasDraftTextProp || selectedNote || selectedEvent || selectedCall || pulseTarget || selectedFiles.length > 0
     );
 
+    // Global unmount: closed mobile composer must leave the DOM (no hidden GPU layer)
+    if (isMobile && !isOpen) return null;
+
     return (
         <motion.div
-            initial={false}
-            animate={isMobile ? (isOpen ? { opacity: 1, y: 0 } : { opacity: 0, y: 100 }) : { opacity: isOpen ? 1 : 0.01 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            initial={isMobile ? { opacity: 0, y: 24 } : false}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'tween', duration: 0.22, ease: 'easeOut' }}
             style={isMobile ? {
                 position: 'fixed',
                 bottom: 0,
@@ -302,16 +306,7 @@ const PostComposer = React.memo(function PostComposer({
                 borderTop: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '24px 24px 0 0',
                 boxShadow: '0 -10px 40px rgba(0,0,0,0.8)',
-                transform: 'translateZ(0)',
-                willChange: 'transform, opacity',
-                backfaceVisibility: 'hidden',
-                pointerEvents: isOpen ? 'auto' : 'none',
-                visibility: isOpen ? 'visible' : 'hidden',
-            } : {
-                pointerEvents: isOpen ? 'auto' : 'none',
-                visibility: isOpen ? 'visible' : 'hidden',
-            }}
-            aria-hidden={!isOpen}
+            } : undefined}
         >
                     <Card sx={{
                         mb: isMobile ? 0 : 4,
@@ -1098,8 +1093,6 @@ return (
                             width: '100%', 
                             height: moment.metadata.attachments.filter((a: any) => a.type === 'image').length === 1 ? 300 : 180, 
                             objectFit: 'cover',
-                            transition: 'transform 0.5s ease',
-                            '&:hover': { transform: 'scale(1.02)' }
                         }} 
                     />
                 ))}
@@ -1157,12 +1150,10 @@ return (
                     bgcolor: '#161412',
                     borderColor: 'rgba(255, 255, 255, 0.08)',
                     cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: 'border-color 0.2s ease',
                     overflow: 'hidden',
                     '&:hover': {
                         borderColor: 'rgba(99, 102, 241, 0.4)',
-                        transform: 'translateY(-4px)',
-                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(99, 102, 241, 0.1)'
                     }
                 }}
             >
@@ -1233,12 +1224,10 @@ return (
                     bgcolor: '#161412',
                     borderColor: 'rgba(255, 255, 255, 0.08)',
                     cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: 'border-color 0.2s ease',
                     overflow: 'hidden',
                     '&:hover': {
                         borderColor: 'rgba(0, 163, 255, 0.4)',
-                        transform: 'translateY(-4px)',
-                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 163, 255, 0.1)'
                     }
                 }}
             >
@@ -1318,12 +1307,10 @@ return (
                     bgcolor: '#161412',
                     borderColor: 'rgba(255, 255, 255, 0.08)',
                     cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transition: 'border-color 0.2s ease',
                     overflow: 'hidden',
                     '&:hover': {
                         borderColor: 'rgba(245, 158, 11, 0.4)',
-                        transform: 'translateY(-4px)',
-                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.1)'
                     }
                 }}
             >

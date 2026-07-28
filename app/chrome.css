@@ -1,7 +1,6 @@
-/* Kylrix Absolute Layout Isolation */
+/* Kylrix Absolute Layout Isolation — no will-change: keeps chrome off permanent GPU layers */
 .kylrix-sidebar, .kylrix-topbar, .kylrix-bottombar {
-  contain: layout style;
-  will-change: transform;
+  contain: layout style paint;
   background-color: #000000;
   border-color: rgba(255, 255, 255, 0.08);
 }
@@ -46,13 +45,11 @@
     }
 }
 
-/* Hardware-Accelerated Skeleton Transitions */
+/* Skeleton pulse — CPU-friendly, no forced compositor layers */
 .nexus-skeleton-pulse {
   animation: visual-fade 1.2s infinite ease-in-out;
   background: linear-gradient(90deg, #121212 25%, #1c1c1c 50%, #121212 75%);
   background-size: 200% 100%;
-  will-change: opacity;
-  transform: translate3d(0,0,0); /* Force GPU composite layer */
 }
 
 @keyframes visual-fade {

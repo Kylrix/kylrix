@@ -193,7 +193,7 @@ export default function NoteEditorPageClient() {
         {/* Note Body Card */}
         <div className="p-4 sm:p-6 md:p-8 bg-[#161412] border border-white/5 rounded-[24px] shadow-xl relative overflow-hidden mb-6">
           {/* Decorative glowing gradient overlay */}
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#6366F1]/5 blur-[60px] rounded-full pointer-events-none" />
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#6366F1]/10 rounded-full pointer-events-none" />
 
           {isEditing ? (
             <div className="space-y-4">

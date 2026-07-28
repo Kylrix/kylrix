@@ -380,7 +380,7 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
         <>
             {/* Backdrop */}
             <div 
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1100] transition-opacity duration-300 ease-in-out cursor-default"
+                className="fixed inset-0 bg-black/70 z-[1100] transition-opacity duration-300 ease-in-out cursor-default"
                 onClick={onClose}
             />
 

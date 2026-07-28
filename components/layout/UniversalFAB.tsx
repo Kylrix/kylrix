@@ -83,7 +83,6 @@ export default function UniversalFAB() {
               color: '#000',
               borderRadius: '20px',
               boxShadow: `0 10px 34px ${alpha(mainColor, 0.45)}`,
-              backdropFilter: 'blur(14px) saturate(170%)',
               transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
               '&:hover': {
                 bgcolor: mainColor,
@@ -196,7 +195,6 @@ export default function UniversalFAB() {
             borderRadius: '20px',
             border: isExpanded ? '1px solid rgba(255, 255, 255, 0.18)' : 'none',
             boxShadow: isExpanded ? '0 12px 40px rgba(0,0,0,0.55)' : `0 10px 34px ${alpha(mainColor, 0.45)}`,
-            backdropFilter: 'blur(14px) saturate(170%)',
             transform: isExpanded ? 'rotate(0deg)' : 'none',
             transition: 'all 0.38s cubic-bezier(0.34, 1.56, 0.64, 1)',
             '&:active': { transform: 'scale(0.94)' },

@@ -239,7 +239,6 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
               right: 0, 
               zIndex: TOPBAR_Z, 
               pointerEvents: 'none',
-              willChange: 'transform'
           }}
         >
           <Box sx={{ pointerEvents: 'auto' }}>

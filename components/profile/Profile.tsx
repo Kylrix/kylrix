@@ -405,17 +405,16 @@ export const Profile = ({ username }: ProfileProps) => {
                         borderRadius: '28px'
                     }
                 }} elevation={0}>
-                {/* Accent gradient - static, no re-render triggers */}
+                {/* Soft accent — solid radial, no filter blur (avoids GPU compositor thrash) */}
                 <Box sx={{
                     position: 'absolute',
                     top: -100,
                     right: -100,
                     width: 200,
                     height: 200,
-                    background: 'radial-gradient(circle, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0) 70%)',
-                    filter: 'blur(35px)',
-                    willChange: 'auto',
-                    zIndex: 0
+                    background: 'radial-gradient(circle, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0) 70%)',
+                    zIndex: 0,
+                    pointerEvents: 'none',
                 }} />
 
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 3, sm: 5 }} alignItems={{ xs: 'center', sm: 'flex-start' }} position="relative" zIndex={1}>
