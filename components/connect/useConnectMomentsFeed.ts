@@ -90,9 +90,11 @@ export function useConnectMomentsFeed() {
   const ecosystemRef = useRef(ecosystemMoments);
   const hasSeededRef = useRef(false);
 
-  nostrFeedRef.current = nostrFeed;
-  ecosystemRef.current = ecosystemMoments;
-  resolvedProfilesRef.current = resolvedProfiles;
+  useEffect(() => {
+    nostrFeedRef.current = nostrFeed;
+    ecosystemRef.current = ecosystemMoments;
+    resolvedProfilesRef.current = resolvedProfiles;
+  }, [nostrFeed, ecosystemMoments, resolvedProfiles]);
 
   const snapshot = useCallback(
     () => buildItems(ecosystemRef.current, nostrFeedRef.current, resolvedProfilesRef.current),
@@ -113,27 +115,30 @@ export function useConnectMomentsFeed() {
     }
   }, [ecosystemMoments, nostrFeed, syncDisplay]);
 
-  const loadEcosystemMoments = useCallback(async () => {
-    try {
-      const cached = await LocalEngine.cacheGet<any[]>('f_moments_list');
-      if (cached?.length) {
-        setEcosystemMoments(cached);
-      }
-
-      const liveRes = await SocialService.getFeed(user?.$id);
-      const liveMoments = Array.isArray(liveRes) ? liveRes : (liveRes as any)?.rows || [];
-      if (liveMoments.length) {
-        setEcosystemMoments(liveMoments);
-        await LocalEngine.cacheSet('f_moments_list', liveMoments);
-      }
-    } catch (err) {
-      console.warn('[ConnectMoments] load failed:', err);
-    }
-  }, [user?.$id]);
-
   useEffect(() => {
+    let cancelled = false;
+    const loadEcosystemMoments = async () => {
+      try {
+        const cached = await LocalEngine.cacheGet<any[]>('f_moments_list');
+        if (!cancelled && cached?.length) {
+          setEcosystemMoments(cached);
+        }
+
+        const liveRes = await SocialService.getFeed(user?.$id);
+        const liveMoments = Array.isArray(liveRes) ? liveRes : (liveRes as any)?.rows || [];
+        if (!cancelled && liveMoments.length) {
+          setEcosystemMoments(liveMoments);
+          await LocalEngine.cacheSet('f_moments_list', liveMoments);
+        }
+      } catch (err) {
+        console.warn('[ConnectMoments] load failed:', err);
+      }
+    };
     void loadEcosystemMoments();
-  }, [loadEcosystemMoments]);
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.$id]);
 
   // Resolve handles once before refresh — never patch visible rows in place.
   useEffect(() => {
@@ -176,9 +181,23 @@ export function useConnectMomentsFeed() {
   }, [nostrFeed.length]);
 
   const refresh = useCallback(async () => {
-    await loadEcosystemMoments();
+    try {
+      const cached = await LocalEngine.cacheGet<any[]>('f_moments_list');
+      if (cached?.length) {
+        setEcosystemMoments(cached);
+      }
+
+      const liveRes = await SocialService.getFeed(user?.$id);
+      const liveMoments = Array.isArray(liveRes) ? liveRes : (liveRes as any)?.rows || [];
+      if (liveMoments.length) {
+        setEcosystemMoments(liveMoments);
+        await LocalEngine.cacheSet('f_moments_list', liveMoments);
+      }
+    } catch (err) {
+      console.warn('[ConnectMoments] refresh failed:', err);
+    }
     syncDisplay();
-  }, [loadEcosystemMoments, syncDisplay]);
+  }, [user, syncDisplay]);
 
   const totalPages = Math.max(1, Math.ceil(displayItems.length / PAGE_SIZE));
   const hasNextPage = currentPage < totalPages;

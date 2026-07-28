@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -1206,11 +1206,18 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
 
   const composerMenuItems = useMemo(() => {
     const hasText = Boolean(chatInput);
-    const items = [
+    const items: Array<{
+      label: string;
+      icon: ReactNode;
+      onClick: () => void;
+      variant?: 'default' | 'destructive';
+    }> = [
       {
         label: 'Paste',
         icon: <ClipboardPaste size={16} />,
-        onClick: () => void handleComposerPaste(),
+        onClick: () => {
+          void handleComposerPaste();
+        },
       },
     ];
     if (hasText) {
@@ -1218,18 +1225,24 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         {
           label: 'Select all',
           icon: <TextSelect size={16} />,
-          onClick: handleComposerSelectAll,
+          onClick: () => {
+            handleComposerSelectAll();
+          },
         },
         {
           label: 'Copy all',
           icon: <Copy size={16} />,
-          onClick: handleComposerCopyAll,
+          onClick: () => {
+            handleComposerCopyAll();
+          },
         },
         {
           label: 'Clear',
           icon: <Trash2 size={16} />,
-          onClick: handleComposerClear,
-          variant: 'destructive' as const,
+          onClick: () => {
+            handleComposerClear();
+          },
+          variant: 'destructive',
         },
       );
     }

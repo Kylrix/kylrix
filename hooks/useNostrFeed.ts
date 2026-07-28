@@ -46,7 +46,9 @@ export function useNostrFeed() {
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const feedRef = useRef<NostrEvent[]>([]);
 
-  feedRef.current = feed;
+  useEffect(() => {
+    feedRef.current = feed;
+  }, [feed]);
 
   const flushPending = useCallback(() => {
     flushTimerRef.current = null;
