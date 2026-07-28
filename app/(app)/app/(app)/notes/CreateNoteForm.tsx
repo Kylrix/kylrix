@@ -380,10 +380,11 @@ export default function CreateNoteForm({
       hasBootstrappedDraftRef.current = true;
     }
 
+    const generatedTitle = isTitleManuallyEdited ? title : buildAutoTitleFromContent(nextValue);
     const previewTitle = resolveNoteCardTitle(
-      isTitleManuallyEdited ? title : null,
+      isTitleManuallyEdited ? title : generatedTitle,
       nextValue,
-    ) || '';
+    ) || generatedTitle || 'Untitled Thought';
 
     const draftNote: Notes = {
       $id: draftId,
@@ -1004,7 +1005,8 @@ export default function CreateNoteForm({
     applyPersistSnapshot(saved, source);
 
     const fallbackTitle = '';
-    const cardTitle = resolveNoteCardTitle(source.title || title, source.content) || fallbackTitle;
+    const resolvedTitleInput = generatedTitle || source.title || title;
+    const cardTitle = resolveNoteCardTitle(resolvedTitleInput, source.content) || generatedTitle || fallbackTitle;
     const localNote: Notes = {
       ...saved,
       title: cardTitle,
