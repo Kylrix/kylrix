@@ -25,15 +25,15 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="hidden md:flex items-center justify-between p-5 bg-white/[0.01] border border-white/8 rounded-[32px] relative select-none">
-        <div className="absolute top-[-1px] left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-[#F59E0B] to-transparent" />
+      <header className="flex items-center justify-between p-4 md:p-5 bg-white/[0.01] border border-white/8 rounded-[32px] relative select-none">
+        <div className="absolute top-[-1px] left-[10%] right-[10%] h-px bg-gradient-to-r from-transparent via-[#F59E0B] to-transparent hidden md:block" />
         <div>
-          <h1 className="text-white font-black text-2xl md:text-3xl tracking-tight font-mono">Moments</h1>
+          <h1 className="text-white font-black text-xl md:text-3xl tracking-tight font-mono">Moments</h1>
           <p className="text-white/40 text-xs font-semibold mt-1">
-            <span className="font-mono font-bold text-[#F59E0B]">{total}</span> updates in your feed
+            <span className="font-mono font-bold text-[#F59E0B]">{total}</span> updates
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <button
             type="button"
             onClick={handleRefresh}
@@ -46,7 +46,7 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
             <button
               type="button"
               onClick={onCreateMoment}
-              className="h-10 px-4 rounded-xl bg-[#F59E0B]/10 hover:bg-[#F59E0B]/20 border border-[#F59E0B]/20 hover:border-[#F59E0B]/40 flex items-center gap-1.5 text-[#FBBF24] font-bold text-xs"
+              className="hidden md:flex h-10 px-4 rounded-xl bg-[#F59E0B]/10 hover:bg-[#F59E0B]/20 border border-[#F59E0B]/20 hover:border-[#F59E0B]/40 items-center gap-1.5 text-[#FBBF24] font-bold text-xs"
             >
               <PlusCircle size={16} />
               Create
