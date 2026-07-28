@@ -443,11 +443,12 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     fetchBatch(true);
   }, [fetchBatch, INITIAL_NOTES_CACHE_KEY, invalidate]);
 
-  // Soft pull heartbeat: activity-aware + visibility. Relies on merge upserts — never a wipe.
+  // Soft pull heartbeat: focus/visibility demand only (activity-gated). Relies on merge upserts — never a wipe.
   useEffect(() => {
     if (!isAuthenticated || !user?.$id) return;
 
     const maybeSoftPull = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
       if (isFetchingRef.current) return;
       if (
         !shouldSoftPull({
@@ -460,23 +461,15 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       void fetchBatch(true);
     };
 
-    const unsub = autonomicSyncEngine.subscribeToActivity(() => {
-      maybeSoftPull();
-    });
-
     const onVisible = () => {
       if (document.visibilityState === 'visible') maybeSoftPull();
     };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onVisible);
 
-    const interval = window.setInterval(maybeSoftPull, 20_000);
-
     return () => {
-      unsub();
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', onVisible);
-      window.clearInterval(interval);
     };
   }, [isAuthenticated, user?.$id, fetchBatch]);
 
@@ -575,8 +568,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     upsertNote(stamped);
     // Sync engine is SoT for amber — enqueue live revision (never an Appwrite field).
     if (options?.pending !== false) {
-      autonomicSyncEngine.markPending(stamped.$id, stamped.updatedAt);
-      autonomicSyncEngine.runCycle();
+      autonomicSyncEngine.markPending(stamped.$id, stamped.updatedAt, stamped);
     }
   }, [upsertNote]);
 

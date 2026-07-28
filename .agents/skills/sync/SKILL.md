@@ -24,7 +24,7 @@ Related substrate only: `rxdb-appwrite-sync` (IndexedDB/RxDB mechanics). **Do no
 
 | Piece | Path |
 |-------|------|
-| **Forward-reactive sync engine** (`markPending` + `runCycle`) | `lib/services/sync-engine.ts` |
+| **Forward-reactive sync engine** (`markPending` → coalesced `runCycle`) | `lib/services/sync-engine.ts` |
 | **optimisticEngine** (speculative background fetches) | `lib/sync/optimistic-engine.ts` |
 | **interpolationEngine** (intelligent local vs server merge) | `lib/sync/interpolation-engine.ts` |
 | Pending queue persistence | RxDB `cache` id `kylrix:sync:pending-queue` (IndexedDB; survives browser close) |
@@ -43,12 +43,13 @@ Related substrate only: `rxdb-appwrite-sync` (IndexedDB/RxDB mechanics). **Do no
 ## Intent & Advanced Architecture (non-negotiable)
 
 1. **Local Copy as Single Source of Truth**: The UI talks **only** to the **live/local copy** for content (context list + RxDB/cache).
-2. **Forward-Reactive Sync Engine**: All CRUD operations, field updates, and visibility toggles (`isPublic`, `isGuest`) mutate the local copy instantly (`pushLiveNote` / `pushLiveGoal`), mark the revision pending in `autonomicSyncEngine`, and immediately invoke `runCycle()` for on-demand background flushing.
+2. **Forward-Reactive Sync Engine**: All CRUD operations mutate the local copy instantly (`pushLiveNote` / `pushLiveGoal`), call `markPending`, and schedule a **coalesced demand flush** (~450ms). No spine/fixed-interval Appwrite polling. Retry uses exponential backoff only when unpaid work remains.
 3. **`optimisticEngine`**: Pre-fetches and speculatively queries remote database data in the background while serving instant 0ms local copy results to the UI.
 4. **`interpolationEngine`**: Merges background server responses into the local copy. Key rule: If an item has un-flushed local changes (`autonomicSyncEngine.isPending(id)`), the local copy strictly wins to prevent overwriting user edits.
 5. **Amber/green** talks **only** to the **sync engine pending queue** (same authority that flushes).
 6. **Appwrite feeds and confirms** — never owns a `pendingSync` / dirty column.
 7. Works for **signed-in and guest / no-account** users: RxDB + engine queue are device-local; guest payloads stay local until claimed, but the **same** pending/live contracts apply.
+8. **Soft pull** is focus/visibility gated (`shouldSoftPull`) — never a 1–3s hammer. Realtime + explicit refresh cover multi-device.
 
 ---
 
@@ -122,7 +123,7 @@ Ephemeral ids (`live-*`, `ghost-*`): `isPending` stays true until they become re
 ## Core sync rules (all objects)
 
 1. **Separation:** edits update live copy sync; remote writes are engine-scheduled.
-2. **Autonomic cadence:** high intensity → shorter push interval; soft pull via `shouldSoftPull` + visibility.
+2. **Autonomic cadence:** CRUD → coalesce flush; soft pull via `shouldSoftPull` + tab focus/visibility only (no fixed 3s poll).
 3. **Upsert merge:** `mergeServerPageWithLocalCopy` — local-only ids **kept**; remove only on explicit delete.
 4. **Push confirms:** does not discard the card; `ack` clears amber only.
 5. **Order:** `sortPinnedThenCreatedAt`.

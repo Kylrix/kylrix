@@ -1,9 +1,9 @@
 'use client';
 
 /**
- * SpineEngine — Application-wide independent Heartbeat & Pulse Oscillator.
- * Controls over-clocking (sub-100ms) vs under-clocking (3000ms idle) based on live user activity & focused resources.
- * Decouples timer polling from SyncEngine, NeuralEngine, and UI workflows.
+ * SpineEngine — Optional application pulse for UI/neural subscribers.
+ * SyncEngine is demand-driven (CRUD / focus / online) and must NOT poll this spine.
+ * Blind fixed-interval heartbeats that hammer Appwrite are forbidden.
  */
 
 export interface SpineTickData {

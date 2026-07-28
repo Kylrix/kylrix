@@ -35,6 +35,101 @@ import { shouldSoftPull } from '@/lib/sync/local-copy-sync';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 
 // Mappers
+function coerceCachedTask(row: any): Task | null {
+  if (!row || typeof row !== 'object') return null;
+  const id = String(row.$id || row.id || '').trim();
+  if (!id) return null;
+
+  // Already a live Task shape (cache / pushLiveGoal) — do NOT re-run Appwrite mapper
+  // (that expects tags[] and would wipe projectId/labels).
+  if (row.id && !row.$id) {
+    return {
+      ...row,
+      id,
+      title: String(row.title || ''),
+      description: String(row.description || ''),
+      status: (row.status as TaskStatus) || 'todo',
+      priority: (row.priority as Priority) || 'medium',
+      projectId: row.projectId || 'inbox',
+      labels: Array.isArray(row.labels) ? row.labels : [],
+      linkedNotes: Array.isArray(row.linkedNotes) ? row.linkedNotes : [],
+      subtasks: Array.isArray(row.subtasks) ? row.subtasks : [],
+      comments: Array.isArray(row.comments) ? row.comments : [],
+      attachments: Array.isArray(row.attachments) ? row.attachments : [],
+      reminders: Array.isArray(row.reminders) ? row.reminders : [],
+      timeEntries: Array.isArray(row.timeEntries) ? row.timeEntries : [],
+      assigneeIds: Array.isArray(row.assigneeIds) ? row.assigneeIds : [],
+      creatorId: row.creatorId || row.userId || 'guest',
+      userId: row.userId || row.creatorId || 'guest',
+      parentTaskId: row.parentTaskId || row.parentId || null,
+      dueDate: row.dueDate ? new Date(row.dueDate) : undefined,
+      createdAt: row.createdAt ? new Date(row.createdAt) : new Date(),
+      updatedAt: row.updatedAt ? new Date(row.updatedAt) : new Date(),
+      completedAt: row.completedAt ? new Date(row.completedAt) : undefined,
+      position: typeof row.position === 'number' ? row.position : 0,
+      isArchived: row.isArchived === true || String(row.isArchived) === 'true',
+      isPinned: row.isPinned === true || String(row.isPinned) === 'true',
+      isPublic: row.isPublic === true || String(row.isPublic) === 'true',
+      isGuest: row.isGuest === true || String(row.isGuest) === 'true',
+      discussionId: row.discussionId || null,
+      scheduled: row.scheduled === true || String(row.scheduled) === 'true',
+      isAgentic: row.isAgentic === true || String(row.isAgentic) === 'true',
+    } as Task;
+  }
+
+  return mapAppwriteTaskToTask({ ...row, $id: id } as AppwriteTask);
+}
+
+function mergeTaskRows(...groups: any[][]): Task[] {
+  const byId = new Map<string, Task>();
+  for (const group of groups) {
+    for (const row of group || []) {
+      const task = coerceCachedTask(row);
+      if (!task?.id) continue;
+      const prev = byId.get(task.id);
+      if (!prev) {
+        byId.set(task.id, task);
+        continue;
+      }
+      const prevTs = prev.updatedAt instanceof Date ? prev.updatedAt.getTime() : 0;
+      const nextTs = task.updatedAt instanceof Date ? task.updatedAt.getTime() : 0;
+      if (nextTs >= prevTs) byId.set(task.id, task);
+    }
+  }
+  return Array.from(byId.values());
+}
+
+async function persistGoalsLocalCopy(userId: string | null | undefined, tasks: Task[]) {
+  if (typeof window === 'undefined') return;
+  const list = Array.isArray(tasks) ? tasks : [];
+  try {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    await LocalEngine.cacheSet('f_goals_list', list);
+    if (userId) {
+      await LocalEngine.cacheSet(`f_tasks_${userId}`, { rows: list, total: list.length });
+    }
+    const db = await import('@/lib/webrtc/RxDBManager').then((m) => m.getRxDB()).catch(() => null);
+    if (db?.tasks) {
+      await Promise.all(
+        list.slice(0, 200).map((t) =>
+          db.tasks
+            .upsert({
+              id: t.id,
+              title: t.title || '',
+              status: t.status || 'todo',
+              userId: t.userId || t.creatorId || 'guest',
+              isPublic: Boolean(t.isPublic),
+              updatedAt: (t.updatedAt instanceof Date ? t.updatedAt : new Date()).toISOString(),
+            })
+            .catch(() => {}),
+        ),
+      );
+    }
+  } catch (err) {
+    console.warn('[TaskContext] Failed to persist goals local copy:', err);
+  }
+}
+
 const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
   const raw = doc as any;
   // Extract project ID from tags if present (format: "project:ID")
@@ -797,14 +892,18 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       if (proj?.id) projectsMap.set(proj.id, proj);
     }
 
+    const nextTasks = applyPendingPatches(Array.from(byId.values()));
+
     dispatch({
       type: 'SET_DATA',
       payload: {
-        tasks: applyPendingPatches(Array.from(byId.values())),
+        tasks: nextTasks,
         projects: Array.from(projectsMap.values()),
       },
     });
-  }, [applyPendingPatches]);
+
+    void persistGoalsLocalCopy(state.userId || flowWarmOwnerRef.current, nextTasks);
+  }, [applyPendingPatches, state.userId]);
 
   const refreshTasks = useCallback(async () => {
     if (!state.userId || state.userId === 'guest') return;
@@ -849,21 +948,28 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         const calsKey = `f_calendars_${userId}`;
         const COLD_START_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days authoritative window
 
-        const [cachedTasksRes, cachedCalsRes, guestTasksRes] = await Promise.all([
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const db = await import('@/lib/webrtc/RxDBManager').then((m) => m.getRxDB()).catch(() => null);
+
+        const [cachedTasksRes, cachedCalsRes, guestTasksRes, goalsListCache, rxTasks] = await Promise.all([
             getCachedDataAsync<any>(tasksKey, COLD_START_TTL),
             getCachedDataAsync<any>(calsKey, COLD_START_TTL),
             userId !== 'guest' ? getCachedDataAsync<any>('f_tasks_guest', COLD_START_TTL) : Promise.resolve(null),
+            LocalEngine.cacheGet<any[]>('f_goals_list'),
+            db?.tasks ? db.tasks.find().exec().then((docs: any[]) => docs.map((d) => d.toJSON())).catch(() => []) : Promise.resolve([]),
         ]);
 
-        const combinedTasks = [
-          ...(cachedTasksRes?.rows || []),
-          ...(guestTasksRes?.rows || []),
-        ];
+        const combinedTasks = mergeTaskRows(
+          cachedTasksRes?.rows || (Array.isArray(cachedTasksRes) ? cachedTasksRes : []),
+          guestTasksRes?.rows || (Array.isArray(guestTasksRes) ? guestTasksRes : []),
+          Array.isArray(goalsListCache) ? goalsListCache : [],
+          Array.isArray(rxTasks) ? rxTasks : [],
+        );
 
-        if (cachedTasksRes || cachedCalsRes || guestTasksRes) {
-            console.log('[TaskContext] Cold-start hydration triggered via RxDB.');
+        if (combinedTasks.length > 0 || cachedCalsRes) {
+            console.log('[TaskContext] Cold-start hydration from local copy:', combinedTasks.length, 'goals');
             dispatchSyncedData({
-              tasks: combinedTasks.map(mapAppwriteTaskToTask),
+              tasks: combinedTasks,
               projects: (cachedCalsRes?.rows || []).map(mapAppwriteCalendarToProject),
             });
             dispatch({ type: 'SET_LOADING', payload: false });
@@ -937,7 +1043,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     };
   }, [state.userId, refreshTasks]);
 
-  // Active soft-pull heartbeat for Tasks & Goals (multi-device sync)
+  // Soft pull: focus/visibility demand only — never a fixed 3s DB hammer.
   const lastTaskPullAtRef = useRef<number>(0);
   const isFetchingTasksRef = useRef<boolean>(false);
 
@@ -945,6 +1051,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     if (!state.userId || state.userId === 'guest') return;
 
     const maybeSoftPull = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
       if (isFetchingTasksRef.current) return;
       if (
         !shouldSoftPull({
@@ -967,23 +1074,15 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const unsub = autonomicSyncEngine.subscribeToActivity(() => {
-      void maybeSoftPull();
-    });
-
     const onVisible = () => {
       if (document.visibilityState === 'visible') void maybeSoftPull();
     };
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onVisible);
 
-    const interval = window.setInterval(() => void maybeSoftPull(), 3_000);
-
     return () => {
-      unsub();
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', onVisible);
-      window.clearInterval(interval);
     };
   }, [state.userId, fetchBatch, dispatchSyncedData]);
 
@@ -1045,14 +1144,16 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       };
       dispatch({ type: 'UPSERT_TASK', payload: stamped });
       void setCachedData(`goal_${stamped.id}`, stamped);
+      const updatedList = [stamped, ...tasksRef.current.filter((t) => t.id !== stamped.id)];
       if (state.userId) {
         const tasksKey = `f_tasks_${state.userId}`;
-        const updatedList = [stamped, ...tasksRef.current.filter((t) => t.id !== stamped.id)];
         void setCachedData(tasksKey, { rows: updatedList, total: updatedList.length });
       }
+      void persistGoalsLocalCopy(state.userId, updatedList);
       if (options?.pending !== false) {
+        // markPending schedules a coalesced demand flush — do not call runCycle() here
+        // (that bypassed coalesce and raced the busy-loop).
         autonomicSyncEngine.markPending(goalPendingKey(stamped.id), stamped.updatedAt.toISOString(), stamped);
-        autonomicSyncEngine.runCycle();
       }
     },
     [setCachedData, state.userId],

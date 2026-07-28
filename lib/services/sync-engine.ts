@@ -1,8 +1,14 @@
 'use client';
 
 /**
- * Autonomic sync engine — source of truth for note amber/green.
+ * Autonomic sync engine — source of truth for note/goal amber/green.
  * Pending queue is client-only in RxDB cache (never Appwrite columns / payloads).
+ *
+ * Demand-driven (not spine-polled):
+ * - markPending → coalesced flush (~450ms)
+ * - online / tab focus / visibility → flush if unpaid work exists
+ * - pagehide / hidden → flushImmediately
+ * - failed items retry with exponential backoff only (never 0ms spin)
  */
 
 import { markNotePersistedRemote, markComposePersisted, markComposeDraft } from '@/lib/notes/compose-draft-registry';
@@ -31,8 +37,14 @@ let globalIntensity = 0;
 let lastKeystrokeTime = 0;
 let lastPullAt = 0;
 let syncTimeout: NodeJS.Timeout | null = null;
+let retryTimeout: NodeJS.Timeout | null = null;
 let isSyncing = false;
 let persistWriteChain: Promise<void> = Promise.resolve();
+
+/** Coalesce keystroke/CRUD bursts — never tight-loop the network. */
+const FLUSH_COALESCE_MS = 450;
+const RETRY_BASE_MS = 2_000;
+const RETRY_MAX_MS = 60_000;
 
 const activityListeners = new Set<(intensity: number) => void>();
 
@@ -160,33 +172,75 @@ if (typeof window !== 'undefined') {
   window.addEventListener('input', handleUserActivity, { passive: true });
   window.addEventListener('scroll', handleUserActivity, { passive: true });
   window.addEventListener('click', handleUserActivity, { passive: true });
-  window.addEventListener('online', () => triggerAutonomicSyncScheduler(), { passive: true });
+  window.addEventListener('online', () => scheduleDemandFlush({ immediate: true }), { passive: true });
   window.addEventListener('beforeunload', () => autonomicSyncEngine.flushImmediately());
   window.addEventListener('pagehide', () => autonomicSyncEngine.flushImmediately());
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
       autonomicSyncEngine.flushImmediately();
+    } else if (pendingById.size > 0) {
+      // Tab focused again with unpaid work — flush on demand, not on a timer.
+      scheduleDemandFlush({ immediate: true });
     }
+  });
+  window.addEventListener('focus', () => {
+    if (pendingById.size > 0) scheduleDemandFlush({ immediate: true });
   });
 }
 
-// Offload beat / polling to SpineEngine: SyncEngine subscribes to Spine heartbeats
-if (typeof window !== 'undefined') {
-  import('@/lib/services/SpineEngine').then(({ SpineEngine }) => {
-    SpineEngine.subscribe('sync.crud', (tick) => {
-      if (tick.isOnline && !isSyncing && pendingById.size > 0) {
-        void autonomicSyncEngine.runCycle();
-      }
-    });
-  }).catch(() => {});
+function maxFailedAttempts(): number {
+  let max = 0;
+  failedSyncAttempts.forEach((info) => {
+    if (info.count > max) max = info.count;
+  });
+  return max;
+}
+
+/**
+ * Demand-driven flush scheduler.
+ * - Coalesces bursts (typing / rapid CRUD)
+ * - Never re-arms itself into a 0ms spin loop
+ * - Retries only when unpaid work remains, with exponential backoff
+ */
+function scheduleDemandFlush(opts?: { immediate?: boolean; retry?: boolean }) {
+  if (typeof window === 'undefined') return;
+  if (isSyncing) return;
+  if (pendingById.size === 0) {
+    if (syncTimeout) clearTimeout(syncTimeout);
+    if (retryTimeout) clearTimeout(retryTimeout);
+    syncTimeout = null;
+    retryTimeout = null;
+    return;
+  }
+
+  if (opts?.immediate) {
+    if (syncTimeout) clearTimeout(syncTimeout);
+    if (retryTimeout) clearTimeout(retryTimeout);
+    syncTimeout = null;
+    retryTimeout = null;
+    void autonomicSyncEngine.runCycle();
+    return;
+  }
+
+  if (opts?.retry) {
+    if (retryTimeout) return;
+    const backoff = Math.min(RETRY_MAX_MS, RETRY_BASE_MS * Math.pow(1.6, maxFailedAttempts()));
+    retryTimeout = setTimeout(() => {
+      retryTimeout = null;
+      void autonomicSyncEngine.runCycle();
+    }, backoff);
+    return;
+  }
+
+  if (syncTimeout) clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(() => {
+    syncTimeout = null;
+    void autonomicSyncEngine.runCycle();
+  }, FLUSH_COALESCE_MS);
 }
 
 function triggerAutonomicSyncScheduler() {
-  if (syncTimeout) clearTimeout(syncTimeout);
-  if (isSyncing) return;
-  syncTimeout = setTimeout(() => {
-    void autonomicSyncEngine.runCycle();
-  }, 0);
+  scheduleDemandFlush();
 }
 
 function revisionOf(note: Notes | null | undefined): string {
@@ -248,6 +302,9 @@ async function flushGoalPending(
 
   if (!payload) {
     console.warn(`[SyncEngine] No live payload for pending goal: ${goalId}`);
+    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
+    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
     return;
   }
 
@@ -372,6 +429,9 @@ async function flushNotePending(
 
   if (!payload) {
     console.warn(`[SyncEngine] No live payload for pending id: ${noteId}`);
+    const prev = failedSyncAttempts.get(noteId) || { count: 0, lastFailedAt: 0 };
+    failedSyncAttempts.set(noteId, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
     return;
   }
 
@@ -471,12 +531,11 @@ export const autonomicSyncEngine = {
   },
 
   nudge() {
-    triggerAutonomicSyncScheduler();
+    scheduleDemandFlush();
   },
 
   flushImmediately() {
-    if (syncTimeout) clearTimeout(syncTimeout);
-    void autonomicSyncEngine.runCycle();
+    scheduleDemandFlush({ immediate: true });
   },
 
   getLastPullAt() {
@@ -574,13 +633,15 @@ export const autonomicSyncEngine = {
       return;
     }
 
+    if (pendingById.size === 0) return;
+
     const { hasAuthSessionHint, getCurrentUserSnapshot } = await import('@/lib/appwrite');
     const hasSession = hasAuthSessionHint();
     const activeUser = getCurrentUserSnapshot();
     const activeUserId = activeUser?.$id || null;
 
     if (!hasSession && !activeUserId) {
-      // No account detected, stay offline
+      // No account — unpaid work stays amber locally until claim/login.
       return;
     }
 
@@ -588,9 +649,7 @@ export const autonomicSyncEngine = {
 
     try {
       const pendingIds = Array.from(pendingById.keys());
-      if (pendingIds.length === 0) return;
-
-      console.log(`[SyncEngine] Spun up. Found ${pendingIds.length} pending live rows.`);
+      console.log(`[SyncEngine] Demand flush. ${pendingIds.length} pending live row(s).`);
 
       const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
       const db = await getRxDB().catch(() => null);
@@ -599,7 +658,7 @@ export const autonomicSyncEngine = {
         if (!pendingById.has(pendingId)) return false;
         const failInfo = failedSyncAttempts.get(pendingId);
         if (failInfo) {
-          const delay = Math.min(2000, 200 * Math.pow(1.5, failInfo.count));
+          const delay = Math.min(RETRY_MAX_MS, RETRY_BASE_MS * Math.pow(1.5, failInfo.count));
           if (Date.now() - failInfo.lastFailedAt < delay) return false;
         }
         return true;
@@ -629,7 +688,10 @@ export const autonomicSyncEngine = {
       console.error('[SyncEngine] Autonomic sync error:', error);
     } finally {
       isSyncing = false;
-      triggerAutonomicSyncScheduler();
+      // Demand-only retry: if work remains, back off. Never spin at 0ms.
+      if (pendingById.size > 0) {
+        scheduleDemandFlush({ retry: true });
+      }
     }
   },
 };
