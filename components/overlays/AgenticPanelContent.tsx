@@ -732,9 +732,11 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       `Loaded Idea **${note.title || 'Untitled'}** (\`${note.$id}\`).`,
                     );
                   } else if (call.toolKey === 'create_goal') {
+                    const goalTitle = call.args.title || 'Untitled Goal';
+                    const goalDesc = call.args.description || `Goal created by Kylie for "${goalTitle}"`;
                     const created = await addTask({
-                      title: call.args.title || 'Untitled Goal',
-                      description: call.args.description || '',
+                      title: goalTitle,
+                      description: goalDesc,
                       status: call.args.status || 'todo',
                       priority: call.args.priority || 'medium',
                       dueDate: call.args.dueDate ? new Date(call.args.dueDate) : null,
@@ -755,11 +757,24 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       await recordSessionObject({
                         objectId: String(goalId),
                         objectType: 'goal',
-                        title: call.args.title || 'Untitled Goal',
+                        title: goalTitle,
                         toolKey: 'create_goal',
                       });
                     }
-                    resultSummary = `Created goal: ${call.args.title || 'Untitled Goal'}`;
+                    resultSummary = `Created goal: ${goalTitle}`;
+                  } else if (call.toolKey === 'list_goals') {
+                    const query = String(call.args?.query || call.specifier || '.all').trim();
+                    const allTasks = tasks || [];
+                    const filteredTasks = query === '.all' || !query
+                      ? allTasks.filter(t => !t.isArchived)
+                      : allTasks.filter(t => !t.isArchived && (t.title?.toLowerCase().includes(query.toLowerCase()) || t.description?.toLowerCase().includes(query.toLowerCase())));
+                    
+                    const summaryList = filteredTasks.slice(0, 15).map(t => `- **${t.title}** (${t.status || 'todo'}${t.priority ? `, ${t.priority}` : ''}) — ID: \`${t.id}\``).join('\n');
+                    appendMessage(
+                      'assistant',
+                      `### Active Goals (${filteredTasks.length})\n${summaryList || 'No matching goals found.'}`,
+                    );
+                    resultSummary = `Listed ${filteredTasks.length} goals matching "${query}"`;
                   } else if (call.toolKey === 'update_goal' && call.specifier) {
                     await updateTask(call.specifier, {
                       title: call.args.title,

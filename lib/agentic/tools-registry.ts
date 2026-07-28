@@ -110,6 +110,14 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     requiresAuthorization: true,
     parameters: ['type'],
   },
+  {
+    key: 'list_goals',
+    name: 'List All Goals',
+    description:
+      'Fetch and list all active user goals/tasks across all statuses or query by query string or ".all" to return every non-trashed goal. Specifiers: optional query string or ".all" for everything. Args: query (optional string, e.g. ".all" or "backend").',
+    requiresAuthorization: false,
+    parameters: ['query'],
+  },
 ];
 
 export interface AgenticToolCallPayload {
@@ -162,12 +170,19 @@ export const NOTE_TOOL_PAYLOAD_SCHEMA = `{
     "toolKey": "create_goal",
     "specifier": null,
     "args": {
-      "title": "string — required",
-      "status": "todo|in_progress|done — optional",
-      "priority": "low|medium|high — optional",
+      "title": "string — required, descriptive goal title",
+      "description": "string — required, detailed goal description explaining what to accomplish",
+      "status": "todo|in_progress|done — optional, default todo",
+      "priority": "low|medium|high — optional, default medium",
       "dueDate": "ISO date optional",
-      "description": "optional string",
       "isAgentic": true
+    }
+  },
+  "list_goals": {
+    "toolKey": "list_goals",
+    "specifier": ".all | query_string — optional",
+    "args": {
+      "query": "optional string e.g. '.all' to fetch all non-trashed goals"
     }
   },
   "link_to_project": {
