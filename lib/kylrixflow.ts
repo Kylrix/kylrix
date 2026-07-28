@@ -18,7 +18,7 @@ export function subscribeToTable<T extends Models.Row>(
     tableId: string,
     callback: (event: { type: 'create' | 'update' | 'delete', payload: T }) => void
 ) {
-    const channel = `databases.${FLOW_DATABASE_ID}.tables.${TABLES.FLOW.TASKS}.rows`;
+    const channel = `databases.${FLOW_DATABASE_ID}.tables.${tableId}.rows`;
 
     return realtime.subscribe(channel, (response) => {
         const payload = response.payload as T;

@@ -722,7 +722,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated || !user?.$id) return;
 
     // Listen to the entire collection to catch all relevant changes
-    const channel = `databases.${APPWRITE_DATABASE_ID}.collections.${APPWRITE_CONFIG.DATABASES.NOTE}.notes.documents`;
+    const channel = `databases.${APPWRITE_DATABASE_ID}.tables.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.rows`;
     
     const sub = realtime.subscribe(channel, (response) => {
       const payload = normalizeVisibility(response.payload as Notes);

@@ -977,7 +977,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onVisible);
 
-    const interval = window.setInterval(() => void maybeSoftPull(), 10_000);
+    const interval = window.setInterval(() => void maybeSoftPull(), 3_000);
 
     return () => {
       unsub();
