@@ -8,6 +8,7 @@ import { createServerClient } from '@/lib/appwrite/server';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { userHasPaidAiAccess } from '@/lib/server/ai-subscription-gate';
 import { AI_REQUIRES_PRO_MESSAGE } from '@/lib/agentic/access';
+import { resolveAgenticError, type AgenticErrorCode } from '@/lib/agentic/errors';
 
 type AgentStatus = 'idle' | 'working';
 
@@ -297,6 +298,44 @@ export async function executeInstantRequestAction(
 ): Promise<{
   success: boolean;
   response: string;
+  errorCode?: AgenticErrorCode;
+  toolCalls?: any[];
+  nextSteps?: Array<{ label: string; prompt: string }>;
+  sessionId?: string;
+  conversationId?: string;
+}> {
+  try {
+  return await executeInstantRequestActionInner(prompt, jwt, pageContext, options);
+  } catch (error) {
+    const resolved = resolveAgenticError(error);
+    console.error('[executeInstantRequestAction]', resolved.code, resolved.debugMessage || error);
+    return {
+      success: false,
+      response: resolved.userMessage,
+      errorCode: resolved.code,
+    };
+  }
+}
+
+async function executeInstantRequestActionInner(
+  prompt: string,
+  jwt?: string,
+  pageContext?: {
+    zone: string;
+    route: string;
+    title: string;
+    systemHint: string;
+    resourceId?: string;
+    /** Exact user-facing sentence for chat history. Model still receives `prompt`. */
+    userMessage?: string;
+  },
+  options?: {
+    userMessage?: string;
+  },
+): Promise<{
+  success: boolean;
+  response: string;
+  errorCode?: AgenticErrorCode;
   toolCalls?: any[];
   nextSteps?: Array<{ label: string; prompt: string }>;
   sessionId?: string;

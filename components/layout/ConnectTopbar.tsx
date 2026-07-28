@@ -37,6 +37,7 @@ import {
   Activity,
   RefreshCw,
   ChevronRight,
+  Keyboard,
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
@@ -68,6 +69,67 @@ interface PageMatch {
   text: string;
   tag: string;
   element: HTMLElement;
+}
+
+const SYSTEM_SHORTCUTS = [
+  { key: 'Ctrl + F', desc: 'Search ecosystem' },
+  { key: 'Ctrl + K', desc: 'Open Kylie assistant' },
+  { key: 'Ctrl + S', desc: 'Ecosystem apps directory' },
+  { key: 'Ctrl + M', desc: 'Profile system panel' },
+  { key: 'Ctrl + P', desc: 'Navigate to workspaces' },
+  { key: 'Ctrl + N', desc: 'Navigate to ideas' },
+  { key: 'Ctrl + T', desc: 'Navigate to tags' },
+  { key: 'Ctrl + X', desc: 'Navigate to settings' },
+  { key: 'Ctrl + Shift + V', desc: 'Navigate to vault' },
+  { key: 'Ctrl + G', desc: 'Navigate to goals' },
+  { key: 'Ctrl + Q', desc: 'Navigate to forms' },
+  { key: 'Ctrl + E', desc: 'Navigate to events' },
+  { key: 'Ctrl + H', desc: 'Navigate to calls / huddles' },
+  { key: 'Ctrl + /', desc: 'Full keyboard shortcuts reference' },
+] as const;
+
+function renderShortcutsList() {
+  return (
+    <Box sx={{ display: 'grid', gap: 1 }}>
+      {SYSTEM_SHORTCUTS.map((item) => (
+        <Box
+          key={item.key}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1.5,
+            p: 1.5,
+            borderRadius: '16px',
+            bgcolor: 'rgba(255,255,255,0.015)',
+            border: '1px solid rgba(255,255,255,0.04)',
+          }}
+        >
+          <Typography sx={{ color: 'rgba(255,255,255,0.78)', fontSize: '0.84rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)', lineHeight: 1.35, minWidth: 0 }}>
+            {item.desc}
+          </Typography>
+          <Typography
+            component="span"
+            sx={{
+              color: '#6366F1',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              fontFamily: 'var(--font-mono)',
+              bgcolor: 'rgba(99, 102, 241, 0.08)',
+              px: 1.1,
+              py: 0.55,
+              borderRadius: '8px',
+              border: '1px solid rgba(99, 102, 241, 0.18)',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {item.key}
+          </Typography>
+        </Box>
+      ))}
+    </Box>
+  );
 }
 
 function searchOnPage(query: string): PageMatch[] {
@@ -261,7 +323,7 @@ export default function ConnectTopbar({
   const [searchQuery, setSearchQuery] = useState('');
   const [peopleResults, setPeopleResults] = useState<any[]>([]);
   const [searchingPeople, setSearchingPeople] = useState(false);
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [searchShortcutsView, setSearchShortcutsView] = useState(false);
   const [onPageResults, setOnPageResults] = useState<PageMatch[]>([]);
 
   useEffect(() => {
@@ -403,6 +465,7 @@ export default function ConnectTopbar({
   const openSearch = useCallback(() => {
     setProfileMenuAnchorEl(null);
     setAppMenuAnchorEl(null);
+    setSearchShortcutsView(false);
     setSearchOpen(true);
     setTimeout(() => {
       searchInputRef.current?.focus();
@@ -413,9 +476,9 @@ export default function ConnectTopbar({
     setProfileMenuAnchorEl(null);
     setAppMenuAnchorEl(null);
     setSearchOpen(false);
+    setSearchShortcutsView(false);
     setNotificationsOpen(false);
     setNotifHint(null);
-    setShortcutsOpen(false);
     closeAgenticDrawer();
   }, [closeAgenticDrawer]);
 
@@ -423,11 +486,20 @@ export default function ConnectTopbar({
     setProfileMenuAnchorEl(null);
     setAppMenuAnchorEl(null);
     setSearchOpen(false);
+    setSearchShortcutsView(false);
     setNotificationsOpen(false);
     setNotifHint(null);
-    setShortcutsOpen(false);
     openAgenticDrawer();
   }, [openAgenticDrawer]);
+
+  const openSearchShortcuts = useCallback(() => {
+    setProfileMenuAnchorEl(null);
+    setAppMenuAnchorEl(null);
+    setNotificationsOpen(false);
+    setNotifHint(null);
+    setSearchOpen(true);
+    setSearchShortcutsView(true);
+  }, []);
 
   const toggleNotifications = useCallback(() => {
     if (!notificationsOpen) {
@@ -595,7 +667,7 @@ export default function ConnectTopbar({
 
   const appPanelMotion = useMemo(() => createTopbarPanelMotion(), []);
 
-  const activePanel = searchOpen ? 'search' : notificationsOpen ? 'notifications' : shortcutsOpen ? 'shortcuts' : profileMenuAnchorEl ? 'profile' : appMenuAnchorEl ? 'ecosystem' : null;
+  const activePanel = searchOpen ? 'search' : notificationsOpen ? 'notifications' : profileMenuAnchorEl ? 'profile' : appMenuAnchorEl ? 'ecosystem' : null;
 
   useEffect(() => {
     if (!activePanel) return;
@@ -618,6 +690,14 @@ export default function ConnectTopbar({
     window.addEventListener('pointerdown', handlePointerDown, true);
     return () => window.removeEventListener('pointerdown', handlePointerDown, true);
   }, [activePanel, handleCloseAll]);
+
+  useEffect(() => {
+    const handleOpenTopbarSearch = () => {
+      openSearch();
+    };
+    window.addEventListener('kylrix:open-topbar-search' as any, handleOpenTopbarSearch);
+    return () => window.removeEventListener('kylrix:open-topbar-search' as any, handleOpenTopbarSearch);
+  }, [openSearch]);
 
   useEffect(() => {
     const handleGlobalEscape = (event: KeyboardEvent) => {
@@ -671,10 +751,9 @@ export default function ConnectTopbar({
       // Default system shortcuts
       const builtInActions: Record<string, string> = {
         f: 'search',
+        k: 'agent',
         s: 'apps',
         m: 'profile',
-        a: 'agent',
-        k: 'shortcuts',
         p: '/projects',
         n: '/app',
         t: '/tags',
@@ -710,9 +789,6 @@ export default function ConnectTopbar({
           break;
         case 'agent':
           openAgenticFromTopbar();
-          break;
-        case 'shortcuts':
-          setShortcutsOpen(true);
           break;
         default:
           break;
@@ -982,7 +1058,43 @@ export default function ConnectTopbar({
         )}
 
         <Stack spacing={2.5} sx={{ mt: isDesktop ? 0 : 1.5 }}>
-          {!hasQuery ? (
+          {searchShortcutsView ? (
+            <Box sx={{ display: 'grid', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                  <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
+                    <Keyboard size={16} />
+                  </Box>
+                  <Box>
+                    <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1rem', lineHeight: 1.1 }}>
+                      Keyboard shortcuts
+                    </Typography>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.38)', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Quick keys
+                    </Typography>
+                  </Box>
+                </Box>
+                <Button
+                  onClick={() => setSearchShortcutsView(false)}
+                  sx={{
+                    minWidth: 0,
+                    borderRadius: '12px',
+                    bgcolor: 'rgba(255,255,255,0.03)',
+                    color: 'rgba(255,255,255,0.7)',
+                    px: 1.5,
+                    py: 0.75,
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    textTransform: 'none',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.06)', color: 'white' },
+                  }}
+                >
+                  Back to search
+                </Button>
+              </Box>
+              {renderShortcutsList()}
+            </Box>
+          ) : !hasQuery ? (
             <>
               {/* Applications section */}
               <Box sx={{ display: 'grid', gap: 1 }}>
@@ -1073,6 +1185,43 @@ export default function ConnectTopbar({
                       </Typography>
                       <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }}>
                         Share secure files and notes
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  <Box
+                    component="button"
+                    onClick={openSearchShortcuts}
+                    sx={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.25,
+                      px: 2,
+                      py: 1.25,
+                      borderRadius: '20px',
+                      bgcolor: 'rgba(255,255,255,0.015)',
+                      border: '1px solid rgba(255,255,255,0.04)',
+                      color: 'white',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        bgcolor: 'rgba(255,255,255,0.035)',
+                        borderColor: 'rgba(99, 102, 241, 0.3)',
+                        transform: 'translateX(2px)',
+                      },
+                    }}
+                  >
+                    <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.12)', color: '#6366F1', flexShrink: 0 }}>
+                      <Keyboard size={15} />
+                    </Box>
+                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                      <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }}>
+                        Keyboard shortcuts
+                      </Typography>
+                      <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }}>
+                        View all quick keys · Ctrl+F to search
                       </Typography>
                     </Box>
                   </Box>
@@ -2060,181 +2209,6 @@ export default function ConnectTopbar({
     );
   };
 
-  const renderShortcutsPanel = () => {
-    if (!shortcutsOpen) return null;
-
-    const shortcutsList = [
-      { key: 'Ctrl + F', desc: 'Search Ecosystem / Ideas' },
-      { key: 'Ctrl + S', desc: 'Ecosystem Apps Directory' },
-      { key: 'Ctrl + M', desc: 'Profile System Panel' },
-      { key: 'Ctrl + A', desc: 'Agentic Assistant' },
-      { key: 'Ctrl + K', desc: 'Keyboard Shortcuts Console' },
-      { key: 'Ctrl + P', desc: 'Navigate to Workspaces' },
-      { key: 'Ctrl + N', desc: 'Navigate to Ideas' },
-      { key: 'Ctrl + T', desc: 'Navigate to Tags' },
-      { key: 'Ctrl + X', desc: 'Navigate to Settings' },
-      { key: 'Ctrl + Shift + V', desc: 'Navigate to Vault' },
-      { key: 'Ctrl + G', desc: 'Navigate to Goals' },
-      { key: 'Ctrl + Q', desc: 'Navigate to Forms' },
-      { key: 'Ctrl + E', desc: 'Navigate to Events' },
-      { key: 'Ctrl + H', desc: 'Navigate to Calls / Huddles' },
-    ];
-
-    const shortcutsContent = (
-      <Box
-        onWheel={(event: React.WheelEvent) => {
-          if (isDesktop) return;
-          const node = event.currentTarget;
-          if (event.deltaY < 0 && isTopbarScrollAtTop(node as HTMLElement)) {
-            event.preventDefault();
-            handleCloseAll();
-          }
-        }}
-        sx={{
-          px: { xs: 2.25, md: 2.75 },
-          py: { xs: 1.25, md: 0 },
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-          maxHeight: isDesktop ? 'none' : '45vh',
-          overflowY: isDesktop ? 'visible' : 'auto',
-          flex: isDesktop ? 1 : undefined,
-          minHeight: isDesktop ? 0 : undefined,
-        }}
-      >
-        {!isDesktop && (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-              <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
-                <Sparkles size={16} />
-              </Box>
-              <Box>
-                <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1rem', lineHeight: 1.1 }}>
-                  System Shortcuts
-                </Typography>
-                <Typography sx={{ color: 'rgba(255,255,255,0.38)', fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  Quick keys
-                </Typography>
-              </Box>
-            </Box>
-            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
-              <CloseIcon size={16} />
-            </IconButton>
-          </Box>
-        )}
-
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: '1fr' },
-            gap: 1,
-            overflowY: isDesktop ? 'auto' : 'visible',
-            maxHeight: isDesktop ? 'calc(100vh - 180px)' : 'none',
-            pr: 0.5,
-            pb: 0.5,
-          }}
-        >
-          {shortcutsList.map((item) => (
-            <Box
-              key={item.key}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 1.5,
-                p: 1.5,
-                borderRadius: '16px',
-                bgcolor: 'rgba(255,255,255,0.015)',
-                border: '1px solid rgba(255,255,255,0.04)',
-              }}
-            >
-              <Typography sx={{ color: 'rgba(255,255,255,0.78)', fontSize: '0.84rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)', lineHeight: 1.35, minWidth: 0 }}>
-                {item.desc}
-              </Typography>
-              <Typography
-                component="span"
-                sx={{
-                  color: '#6366F1',
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  fontFamily: 'var(--font-mono)',
-                  bgcolor: 'rgba(99, 102, 241, 0.08)',
-                  px: 1.1,
-                  py: 0.55,
-                  borderRadius: '8px',
-                  border: '1px solid rgba(99, 102, 241, 0.18)',
-                  flexShrink: 0,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {item.key}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-      </Box>
-    );
-
-    if (isDesktop) {
-      return (
-        <Drawer
-          anchor="left"
-          open={shortcutsOpen}
-          onClose={handleCloseAll}
-          keepMounted={false}
-          disablePortal={true}
-          slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
-          PaperProps={{
-            sx: {
-              bgcolor: '#161412',
-              backgroundImage: 'none',
-              width: 320,
-              height: '100vh',
-              borderRight: '1px solid rgba(255, 255, 255, 0.06)',
-              boxShadow: '0 12px 48px rgba(0,0,0,0.6)',
-              display: 'flex',
-              flexDirection: 'column',
-              boxSizing: 'border-box',
-              p: 2.75,
-            },
-          }}
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5, flexShrink: 0 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-              <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
-                <Sparkles size={16} />
-              </Box>
-              <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
-                System Shortcuts
-              </Typography>
-            </Box>
-            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' }, width: 32, height: 32 }}>
-              <CloseIcon size={16} />
-            </IconButton>
-          </Box>
-          {shortcutsContent}
-        </Drawer>
-      );
-    }
-
-    return (
-      <Box
-        data-kylrix-topbar-panel
-        sx={{
-          width: '100%',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '0 0 28px 28px',
-          bgcolor: '#161412',
-          overflow: 'hidden',
-          boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
-        }}
-      >
-        {shortcutsContent}
-      </Box>
-    );
-  };
-
   return (
     <>
       <AppBar
@@ -2301,6 +2275,7 @@ export default function ConnectTopbar({
                       <Paper elevation={0} sx={{ height: 44, display: 'flex', alignItems: 'center', gap: 1.25, px: 1.5, border: '1px solid rgba(99, 102, 241, 0.25)', bgcolor: '#161412', color: 'white', borderRadius: '24px', boxShadow: '0 0 26px rgba(99, 102, 241, 0.08), 0 0 0 4px rgba(99, 102, 241, 0.12)', overflow: 'hidden' }}>
                         <Search size={16} strokeWidth={2.5} style={{ opacity: 0.6, flexShrink: 0 }} />
                         <InputBase 
+                            id="topbar-search-input"
                             inputRef={searchInputRef} 
                             value={searchQuery} 
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)} 
@@ -2311,6 +2286,22 @@ export default function ConnectTopbar({
                         {/* 🔔 Notifications CTA - The Island Extension */}
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
                             <Box sx={{ width: 1, height: 20, bgcolor: 'white/10', mx: 0.5 }} />
+                            <Tooltip title="Keyboard shortcuts">
+                              <IconButton
+                                onClick={(e: React.MouseEvent) => {
+                                  e.stopPropagation();
+                                  openSearchShortcuts();
+                                }}
+                                sx={{
+                                  color: searchShortcutsView ? '#6366F1' : 'white/35',
+                                  p: 1,
+                                  bgcolor: searchShortcutsView ? 'white/5' : 'transparent',
+                                  '&:hover': { bgcolor: 'white/8', color: 'white' },
+                                }}
+                              >
+                                <Keyboard size={17} strokeWidth={2.25} />
+                              </IconButton>
+                            </Tooltip>
                             <IconButton 
                                 onClick={(e: React.MouseEvent) => {
                                     e.stopPropagation();
@@ -2485,7 +2476,6 @@ export default function ConnectTopbar({
       {renderNotificationDrawer()}
       {renderAppPanel()}
       {renderProfilePanel()}
-      {renderShortcutsPanel()}
     </>
   );
 }

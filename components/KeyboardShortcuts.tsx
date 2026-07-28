@@ -54,7 +54,8 @@ const Shortcut = ({ keys, description }: ShortcutProps) => (
 
 const shortcuts = {
   general: [
-    { keys: ['⌘', 'K'], description: 'Open quick search' },
+    { keys: ['⌘', 'F'], description: 'Open quick search' },
+    { keys: ['⌘', 'K'], description: 'Open Kylie assistant' },
     { keys: ['⌘', 'N'], description: 'Create new note' },
     { keys: ['⌘', '⇧', 'F'], description: 'Toggle fullscreen' },
     { keys: ['⌘', '/'], description: 'Show keyboard shortcuts' }

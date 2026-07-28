@@ -150,13 +150,22 @@ export default function GlobalShortcuts() {
 
       if (!hasMeta) return;
 
-      // Cmd/Ctrl + K => focus top bar search
+      // Cmd/Ctrl + K => open Kylie assistant
       if (key === "k" && !e.altKey) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('kylrix:open-agentic-drawer'));
+        return;
+      }
+
+      // Cmd/Ctrl + F => focus top bar search
+      if (key === "f" && !e.altKey && !e.shiftKey) {
         e.preventDefault();
         const input = document.getElementById("topbar-search-input") as HTMLInputElement | null;
         if (input) {
           input.focus();
           input.select?.();
+        } else {
+          window.dispatchEvent(new CustomEvent('kylrix:open-topbar-search'));
         }
         return;
       }

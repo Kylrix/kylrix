@@ -27,3 +27,11 @@ export {
 } from './access';
 
 export { runInstantAgenticRequest, type InstantAgenticResult } from './runtime';
+
+export {
+  AGENTIC_ERROR_CODES,
+  getAgenticUserMessage,
+  resolveAgenticError,
+  type AgenticErrorCode,
+  type AgenticUserError,
+} from './errors';

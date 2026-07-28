@@ -72,6 +72,7 @@ import {
   userMayUsePaidAi,
   AI_UPGRADE_LABEL,
 } from '@/lib/agentic';
+import { getAgenticUserMessage } from '@/lib/agentic/errors';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { account } from '@/lib/appwrite/client';
@@ -873,9 +874,11 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               );
             }
           }
+        } else {
+          appendMessage('assistant', res.response || 'Something went wrong. Please try again later.');
         }
       } catch (err: unknown) {
-        appendMessage('assistant', err instanceof Error ? err.message : 'Execution failed.');
+        appendMessage('assistant', getAgenticUserMessage(err));
       } finally {
         setExecuting(false);
         setRunningWorkflowId(null);
