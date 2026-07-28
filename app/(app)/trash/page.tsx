@@ -40,6 +40,8 @@ export default function TrashPage() {
   const [purging, setPurging] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [activeTab, setActiveTab] = useState<string>('All');
+
   const fetchTrash = useCallback(async (forceFetch = false) => {
     if (!user?.$id) return;
     try {
@@ -135,6 +137,22 @@ export default function TrashPage() {
           titleField: 'title',
           defaultTitle: 'Untitled Project',
           userField: 'ownerId'
+        },
+        {
+          type: 'File',
+          db: APPWRITE_CONFIG.DATABASES.NOTE,
+          table: 'objects',
+          titleField: 'label',
+          defaultTitle: 'Untitled File',
+          userField: 'userId'
+        },
+        {
+          type: 'GitHub Repository',
+          db: APPWRITE_CONFIG.DATABASES.CONNECT,
+          table: 'source_control',
+          titleField: 'name',
+          defaultTitle: 'Untitled Repository',
+          userField: 'userId'
         }
       ];
 
@@ -158,7 +176,7 @@ export default function TrashPage() {
               });
             });
           } catch (e) {
-            console.warn(`Failed to fetch trash for ${q.type}`, e);
+            // Table might not support isTrash or not exist yet
           }
         })
       );
@@ -265,8 +283,27 @@ export default function TrashPage() {
     );
   }
 
-  // Categorize items by object type
-  const categorized = items.reduce((acc, item) => {
+  // Derive dynamic tabs from available item types plus static object definitions
+  const availableTypes = Array.from(new Set(items.map(i => i.type)));
+  const tabs = [
+    'All',
+    'Note',
+    'Goal',
+    'Event',
+    'Form',
+    'Credential',
+    'File',
+    'GitHub Repository',
+    ...availableTypes.filter(t => !['Note', 'Goal', 'Event', 'Form', 'Credential', 'File', 'GitHub Repository'].includes(t))
+  ];
+
+  // Filter items by active tab selection
+  const filteredItems = activeTab === 'All'
+    ? items
+    : items.filter(item => item.type === activeTab);
+
+  // Categorize filtered items by object type
+  const categorized = filteredItems.reduce((acc, item) => {
     if (!acc[item.type]) acc[item.type] = [];
     acc[item.type].push(item);
     return acc;
@@ -277,7 +314,7 @@ export default function TrashPage() {
       <div className="max-w-[1200px] mx-auto w-full">
         <MultiSectionContainer panels={['note', 'huddles', 'projects']}>
           {/* Header */}
-          <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-5 mb-8 bg-white/[0.01] border border-white/8 rounded-[32px] shadow-2xl relative select-none">
+          <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-5 mb-6 bg-white/[0.01] border border-white/8 rounded-[32px] shadow-2xl relative select-none">
             <div className="absolute top-[-1px] left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-transparent via-[#EF4444] to-transparent" />
             <div className="flex items-center gap-4">
               <button
@@ -316,20 +353,55 @@ export default function TrashPage() {
             </div>
           </header>
 
+          {/* Object Filter Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 scrollbar-none select-none">
+            {tabs.map((tab) => {
+              const count = tab === 'All'
+                ? items.length
+                : items.filter(i => i.type === tab).length;
+              const isActive = activeTab === tab;
+
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`h-9 px-4 rounded-xl text-xs font-mono font-bold flex items-center gap-2 shrink-0 transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-[#EF4444] text-white shadow-lg shadow-[#EF4444]/20 border border-[#EF4444]'
+                      : 'bg-white/[0.02] hover:bg-white/[0.05] text-white/60 hover:text-white border border-white/5'
+                  }`}
+                >
+                  <span>{tab}s</span>
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                    isActive ? 'bg-black/30 text-white' : 'bg-white/5 text-white/40'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           {/* Main content */}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <SpinnerIcon className="animate-spin text-[#EF4444]" size={40} />
               <p className="text-white/40 text-sm font-semibold">Scanning trash archives...</p>
             </div>
-          ) : items.length === 0 ? (
+          ) : filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 px-6 border border-dashed border-white/10 rounded-[32px] bg-white/[0.01]">
               <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center text-white/30 mb-4">
                 <CheckCircle2 size={32} />
               </div>
-              <h3 className="text-white font-black text-lg tracking-tight font-mono">Trash is empty</h3>
+              <h3 className="text-white font-black text-lg tracking-tight font-mono">
+                {activeTab === 'All' ? 'Trash is empty' : `No deleted ${activeTab}s`}
+              </h3>
               <p className="text-white/30 text-xs font-semibold text-center mt-1 max-w-[280px]">
-                No recently deleted items were found. When you delete notes, vault keys, or flow details, they will appear here.
+                {activeTab === 'All'
+                  ? 'No recently deleted items were found. When you delete notes, vault keys, flow details, files, or repos, they will appear here.'
+                  : `No deleted items of type "${activeTab}" found.`
+                }
               </p>
             </div>
           ) : (
@@ -383,7 +455,6 @@ export default function TrashPage() {
             </div>
           )}
         </MultiSectionContainer>
-      </div>
     </div>
   );
 }
