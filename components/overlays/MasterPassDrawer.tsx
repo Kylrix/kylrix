@@ -455,30 +455,34 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
       <Box sx={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
-        alignItems: 'flex-start',
-        mb: 3
+        alignItems: 'center',
+        mb: 3,
+        px: 0,
       }}>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h6" sx={{ 
+        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
+          <Typography component="span" sx={{ 
             fontWeight: 900, 
-            mb: 0.5,
             fontSize: '1.25rem',
-            color: 'white'
+            lineHeight: 1.25,
+            color: 'white',
+            fontFamily: 'var(--font-clash)',
           }}>
-            Unlock Your Vault
+            {isFirstTime ? 'Initialize Vault Security' : 'Unlock Your Vault'}
           </Typography>
-          <Typography variant="caption" sx={{ 
-            color: 'rgba(255, 255, 255, 0.5)',
-            display: 'block'
+          <Typography component="span" sx={{ 
+            color: 'rgba(255, 255, 255, 0.6)',
+            fontWeight: 600,
+            fontSize: '0.82rem',
+            lineHeight: 1.35,
           }}>
-            Enter your master password to continue
+            {isFirstTime ? 'Set a master password to encrypt your state vault' : 'Enter your master password to continue'}
           </Typography>
         </Box>
         {isMobile && (
           <IconButton 
             size="small" 
             onClick={onClose}
-            sx={{ ml: 2 }}
+            sx={{ ml: 2, flexShrink: 0 }}
           >
             <CloseIcon sx={{ fontSize: 20 }} />
           </IconButton>
@@ -490,18 +494,20 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
         <Stack spacing={3} component="form" onSubmit={handleSubmit}>
           {isPendingVault && mode !== 'migrating' && (
               <Box sx={{ 
-                  p: 2, 
+                  p: 2.25, 
                   bgcolor: alpha('#F59E0B', 0.05), 
-                  borderRadius: '16px', 
+                  borderRadius: '18px', 
                   border: '1px solid rgba(245, 158, 11, 0.2)',
                   display: 'flex',
-                  gap: 2,
-                  alignItems: 'flex-start'
+                  gap: 1.75,
+                  alignItems: 'center',
               }}>
-                  <ErrorOutlineIcon sx={{ color: '#F59E0B', mt: 0.25 }} />
-                  <Box>
-                      <Typography sx={{ fontWeight: 800, color: '#fff', fontSize: '0.9rem' }}>Resuming High-Priority Upgrade</Typography>
-                      <Typography variant="caption" sx={{ color: '#9B9691', lineHeight: 1.4, display: 'block', mt: 0.5 }}>
+                  <Box sx={{ width: 38, height: 38, borderRadius: '12px', bgcolor: alpha('#F59E0B', 0.1), display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                    <ErrorOutlineIcon sx={{ color: '#F59E0B' }} />
+                  </Box>
+                  <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
+                      <Typography component="span" sx={{ fontWeight: 800, color: '#fff', fontSize: '0.9rem', lineHeight: 1.25 }}>Resuming High-Priority Upgrade</Typography>
+                      <Typography component="span" sx={{ color: '#9B9691', fontWeight: 600, fontSize: '0.78rem', lineHeight: 1.35 }}>
                           A previous cryptographic transition was interrupted. Please enter your master password to stabilize and finalize your T5 Core upgrade.
                       </Typography>
                   </Box>
@@ -531,7 +537,7 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                         {migrationStatus === 'upgrading' && (
                             <>
                                 <ShieldIcon sx={{ fontSize: 24, color: '#6366F1', mb: 0.5 }} />
-                                <Typography sx={{ fontSize: '0.7rem', fontFamily: 'var(--font-mono)', fontWeight: 900, color: 'white' }}>
+                                <Typography component="span" sx={{ fontSize: '0.7rem', fontFamily: 'var(--font-mono)', fontWeight: 900, color: 'white', lineHeight: 1.2 }}>
                                     {Math.round(migrationProgress)}%
                                 </Typography>
                             </>
@@ -541,13 +547,13 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                     </Box>
                 </Box>
 
-                <Box>
-                    <Typography sx={{ fontWeight: 900, color: 'white', mb: 1, fontFamily: 'var(--font-clash)', fontSize: '1.25rem' }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                    <Typography component="span" sx={{ fontWeight: 900, color: 'white', fontFamily: 'var(--font-clash)', fontSize: '1.25rem', lineHeight: 1.25 }}>
                         {migrationStatus === 'upgrading' && 'Hardening Security...'}
                         {migrationStatus === 'success' && 'Upgrade Complete'}
                         {migrationStatus === 'error' && 'Critical Update Interrupted'}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#9B9691', maxWidth: '320px', mx: 'auto', mb: 3 }}>
+                    <Typography component="span" sx={{ color: '#9B9691', fontWeight: 600, fontSize: '0.84rem', lineHeight: 1.35, maxWidth: '320px', mx: 'auto', mt: 0.5 }}>
                         {migrationStatus === 'upgrading' && 'Upgrading your vault to memory-hard Argon2id protection.'}
                         {migrationStatus === 'success' && 'Your identity is now protected with elite architectural standards.'}
                         {migrationStatus === 'error' && (
@@ -569,8 +575,9 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                                 bgcolor: '#F59E0B',
                                 color: '#000',
                                 fontWeight: 900,
-                                borderRadius: '12px',
+                                borderRadius: '14px',
                                 px: 4,
+                                mt: 2,
                                 '&:hover': { bgcolor: '#D97706' }
                             }}
                         >
@@ -599,35 +606,53 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                     sx: {
                       fontFamily: 'monospace',
                       letterSpacing: '0.5em',
-                      fontSize: '1.5rem',
                       textAlign: 'center',
-                      WebkitTextSecurity: 'disc',
-                    }
-                  }
+                      fontSize: '1.5rem',
+                      py: 1,
+                    },
+                  },
                 }}
                 sx={{
                   '& .ob-input-root': {
                     borderRadius: '16px',
                     bgcolor: alpha(VAULT_PRIMARY, 0.05),
                     border: `1px solid ${alpha(VAULT_PRIMARY, 0.2)}`,
-                  }
+                  },
                 }}
               />
-              <Typography variant="caption" sx={{ 
-                color: 'rgba(255, 255, 255, 0.5)',
-                textAlign: 'center'
-              }}>
-                Enter your 4-digit PIN
-              </Typography>
+              <Button
+                type="button"
+                variant="text"
+                size="small"
+                onClick={() => setMode("password")}
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.5)',
+                  fontWeight: 600,
+                  fontSize: '0.82rem',
+                  '&:hover': { color: 'white', bgcolor: 'rgba(255, 255, 255, 0.03)' },
+                  textTransform: 'none'
+                }}
+              >
+                Use Master Password Instead
+              </Button>
             </>
           )}
 
-          {mode === "password" && (
+          {mode === "passkey" && (
+            <Box sx={{ py: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <CircularProgress size={48} sx={{ color: '#6366F1' }} />
+              <Typography component="span" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, fontSize: '0.9rem', lineHeight: 1.35 }}>
+                Authenticating with passkey…
+              </Typography>
+            </Box>
+          )}
+
+          {(mode === "password" || mode === "initialize") && (
             <>
               <TextField
                 autoFocus
                 type={showPassword ? "text" : "password"}
-                placeholder={isFirstTime ? "Set master password" : "Enter master password"}
+                placeholder={isFirstTime ? "Set master password (min 8 chars)" : "Enter master password"}
                 value={masterPassword}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMasterPassword(e.target.value)}
                 disabled={loading}
@@ -694,9 +719,11 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
               )}
 
               {confirmPassword.length > 0 && (
-                <Typography variant="caption" sx={{ 
+                <Typography component="span" sx={{ 
                   color: confirmPassword === masterPassword ? 'success.main' : 'error.main', 
-                  mt: 1 
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  lineHeight: 1.25,
                 }}>
                   {confirmPassword === masterPassword ? "✓ Passwords match" : "✗ Passwords do not match"}
                 </Typography>
@@ -704,17 +731,23 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
 
               {isFirstTime && (
                 <Box sx={{
-                  p: 2,
-                  borderRadius: '16px',
+                  p: 2.25,
+                  borderRadius: '18px',
                   bgcolor: alpha(VAULT_PRIMARY, 0.05),
                   border: `1px solid ${alpha(VAULT_PRIMARY, 0.15)}`,
                   display: 'flex',
-                  gap: 1.5
+                  alignItems: 'center',
+                  gap: 1.75
                 }}>
-                  <ShieldIcon sx={{ fontSize: 20, color: VAULT_PRIMARY, flexShrink: 0 }} />
-                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)', fontWeight: 500 }}>
-                    <strong>Important:</strong> Your master password encrypts all your data locally. We cannot recover it if you forget it.
-                  </Typography>
+                  <Box sx={{ width: 36, height: 36, borderRadius: '12px', bgcolor: alpha(VAULT_PRIMARY, 0.1), display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                    <ShieldIcon sx={{ fontSize: 20, color: VAULT_PRIMARY }} />
+                  </Box>
+                  <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                    <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.84rem', lineHeight: 1.25 }}>Zero-Knowledge Protection</Typography>
+                    <Typography component="span" sx={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }}>
+                      Your master password encrypts all your data locally. We cannot recover it if forgotten.
+                    </Typography>
+                  </Box>
                 </Box>
               )}
 
@@ -724,7 +757,7 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                 fullWidth
                 disabled={loading}
                 sx={{
-                  py: 2,
+                  py: 1.75,
                   borderRadius: '16px',
                   bgcolor: VAULT_PRIMARY,
                   color: '#000',
