@@ -455,6 +455,7 @@ export default function TrashPage() {
             </div>
           )}
         </MultiSectionContainer>
+      </div>
     </div>
   );
 }
