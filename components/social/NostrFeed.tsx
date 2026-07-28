@@ -97,7 +97,10 @@ export function NostrFeed() {
   const [visibleCount, setVisibleCount] = useState(20);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const resolvedProfilesRef = useRef(resolvedProfiles);
-  resolvedProfilesRef.current = resolvedProfiles;
+
+  useEffect(() => {
+    resolvedProfilesRef.current = resolvedProfiles;
+  }, [resolvedProfiles]);
 
   // 1. Load Ecosystem Moments (0ms Local Copy Hydration)
   const loadEcosystemMoments = useCallback(async () => {

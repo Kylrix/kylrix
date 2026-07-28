@@ -224,7 +224,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const { user } = useAuth();
   const { notes: allNotes, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote } = useNotes();
   const { setCachedData } = useDataNexus();
-  const { addTask, updateTask, deleteTask } = useTask();
+  const { addTask, updateTask, deleteTask, tasks } = useTask();
   const { openProUpgrade } = useProUpgrade();
   const pathname = usePathname() || '/';
   const router = useRouter();
