@@ -13,6 +13,8 @@ import {
   CalendarRange,
   ChevronRight,
   Compass,
+  Copy,
+  ClipboardPaste,
   CreditCard,
   FilePlus,
   Flag,
@@ -26,6 +28,7 @@ import {
   Lock,
   MessageSquare,
   MessagesSquare,
+  MessageSquarePlus,
   Milestone,
   PenLine,
   Plus,
@@ -41,6 +44,7 @@ import {
   Sunrise,
   Tags,
   Target,
+  TextSelect,
   Trash2,
   User,
   Users,
@@ -73,6 +77,7 @@ import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { account } from '@/lib/appwrite/client';
 import { WalletService } from '@/lib/services/wallets';
 import { toast } from 'react-hot-toast';
+import { ContextMenu } from '@/components/ui/ContextMenu';
 
 interface ToolCallDisplay {
   toolKey: string;
@@ -246,7 +251,13 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const [showSessionsDrawer, setShowSessionsDrawer] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [messageMenuTarget, setMessageMenuTarget] = useState<ChatMessage | null>(null);
+  const [composerMenuOpen, setComposerMenuOpen] = useState(false);
   const syncTimeoutRef = useRef<any>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const composerLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const handleInputChange = (val: string) => {
     setChatInput(val);
@@ -361,6 +372,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
       const res = await selectAgentSession(sessionId, jwt);
       if (res.success) {
+        setActiveSessionId(sessionId);
         const historyArr = JSON.parse(res.session.chatHistory || '[]');
         const toolCalls = await listAgentToolCallsAction(sessionId, jwt).catch(() => []);
         setMessages(formatHistoryMessages(historyArr, toolCalls));
@@ -416,6 +428,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
         const { getAgentSession, listAgentToolCallsAction } = await import('@/lib/actions/agentic');
         const session = await getAgentSession(jwt);
+        if (session.rowId) setActiveSessionId(session.rowId);
         const historyArr = JSON.parse(session.chatHistory || '[]');
         if (Array.isArray(historyArr) && historyArr.length > 0) {
           const sessionId = session.rowId || '';
@@ -514,6 +527,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         });
 
         if (res.success) {
+          if (res.sessionId) setActiveSessionId(res.sessionId);
           const assistantId = res.conversationId || `${Date.now()}-a`;
           const executedTools: ToolCallDisplay[] = [];
           const sessionIdForObjects = res.sessionId as string | undefined;
@@ -919,6 +933,312 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     }
   };
 
+  const openMessageMenu = useCallback((msg: ChatMessage) => {
+    setComposerMenuOpen(false);
+    setMessageMenuTarget(msg);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+  }, []);
+
+  const openComposerMenu = useCallback(() => {
+    setMessageMenuTarget(null);
+    setComposerMenuOpen(true);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+  }, []);
+
+  const handleMessageTouchStart = useCallback(
+    (e: React.TouchEvent, msg: ChatMessage) => {
+      const touch = e.touches[0];
+      touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = setTimeout(() => openMessageMenu(msg), 500);
+    },
+    [openMessageMenu],
+  );
+
+  const handleMessageTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStartPosRef.current) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartPosRef.current.x;
+    const dy = touch.clientY - touchStartPosRef.current.y;
+    if (Math.sqrt(dx * dx + dy * dy) > 10 && longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+      touchStartPosRef.current = null;
+    }
+  }, []);
+
+  const handleMessageTouchEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    touchStartPosRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      if (composerLongPressTimerRef.current) clearTimeout(composerLongPressTimerRef.current);
+    };
+  }, []);
+
+  const handleComposerTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      const touch = e.touches[0];
+      touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+      if (composerLongPressTimerRef.current) clearTimeout(composerLongPressTimerRef.current);
+      composerLongPressTimerRef.current = setTimeout(() => openComposerMenu(), 500);
+    },
+    [openComposerMenu],
+  );
+
+  const handleComposerTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStartPosRef.current) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartPosRef.current.x;
+    const dy = touch.clientY - touchStartPosRef.current.y;
+    if (Math.sqrt(dx * dx + dy * dy) > 10 && composerLongPressTimerRef.current) {
+      clearTimeout(composerLongPressTimerRef.current);
+      composerLongPressTimerRef.current = null;
+      touchStartPosRef.current = null;
+    }
+  }, []);
+
+  const handleComposerTouchEnd = useCallback(() => {
+    if (composerLongPressTimerRef.current) {
+      clearTimeout(composerLongPressTimerRef.current);
+      composerLongPressTimerRef.current = null;
+    }
+    touchStartPosRef.current = null;
+  }, []);
+
+  const handleComposerPaste = useCallback(async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) {
+        setComposerMenuOpen(false);
+        return;
+      }
+      const el = textareaRef.current;
+      if (el) {
+        const start = el.selectionStart ?? chatInput.length;
+        const end = el.selectionEnd ?? chatInput.length;
+        const next = `${chatInput.slice(0, start)}${text}${chatInput.slice(end)}`;
+        handleInputChange(next);
+        requestAnimationFrame(() => {
+          el.focus();
+          const pos = start + text.length;
+          el.setSelectionRange(pos, pos);
+        });
+      } else {
+        handleInputChange(chatInput + text);
+      }
+      setComposerMenuOpen(false);
+    } catch {
+      toast.error('Could not paste from clipboard');
+      setComposerMenuOpen(false);
+    }
+  }, [chatInput, handleInputChange]);
+
+  const handleComposerSelectAll = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el || !chatInput) return;
+    el.focus();
+    el.select();
+    setComposerMenuOpen(false);
+  }, [chatInput]);
+
+  const handleComposerCopyAll = useCallback(() => {
+    if (!chatInput) return;
+    void navigator.clipboard.writeText(chatInput);
+    toast.success('Copied to clipboard');
+    setComposerMenuOpen(false);
+  }, [chatInput]);
+
+  const handleComposerClear = useCallback(() => {
+    handleInputChange('');
+    setComposerMenuOpen(false);
+    textareaRef.current?.focus();
+  }, [handleInputChange]);
+
+  const handleCopyMessage = useCallback((content: string) => {
+    void navigator.clipboard.writeText(content);
+    toast.success('Copied to clipboard');
+    setMessageMenuTarget(null);
+  }, []);
+
+  const handleRetryMessage = useCallback(
+    async (msg: ChatMessage) => {
+      setMessageMenuTarget(null);
+      const idx = messages.findIndex((m) => m.id === msg.id);
+      if (idx < 0) return;
+
+      let promptText = '';
+      let truncateTo = idx;
+
+      if (msg.role === 'user') {
+        promptText = msg.content;
+      } else {
+        let userIdx = -1;
+        for (let i = idx - 1; i >= 0; i -= 1) {
+          if (messages[i].role === 'user') {
+            userIdx = i;
+            break;
+          }
+        }
+        if (userIdx < 0) {
+          toast.error('No prompt found to retry.');
+          return;
+        }
+        promptText = messages[userIdx].content;
+        truncateTo = userIdx;
+      }
+
+      if (!promptText.trim()) return;
+
+      try {
+        const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
+        const { flagAgentConversationPointAction } = await import('@/lib/actions/agentic');
+        await flagAgentConversationPointAction(
+          {
+            conversationId: msg.id,
+            messageRole: msg.role,
+            sessionId: activeSessionId || undefined,
+            reason: 'user_retry',
+          },
+          jwt,
+        );
+      } catch (err) {
+        console.warn('[agentic] Failed to flag conversation point:', err);
+      }
+
+      setMessages((prev) => prev.slice(0, truncateTo));
+      await runPrompt(promptText);
+    },
+    [activeSessionId, messages, runPrompt],
+  );
+
+  const handleStartConversationFromPrompt = useCallback(
+    async (msg: ChatMessage, carryContext: boolean) => {
+      setMessageMenuTarget(null);
+      const starter = msg.content?.trim();
+      if (!starter) return;
+
+      try {
+        const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
+        const { startNewAgentSessionFromPromptAction } = await import('@/lib/actions/agentic');
+        const res = await startNewAgentSessionFromPromptAction(
+          {
+            starterPrompt: starter,
+            carryContext,
+            sourceSessionId: activeSessionId || undefined,
+          },
+          jwt,
+        );
+        if (!res.success) {
+          toast.error('Could not start a new conversation.');
+          return;
+        }
+
+        setActiveSessionId(res.sessionId);
+        setMessages([]);
+        if (typeof window !== 'undefined' && user?.$id) {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          void LocalEngine.cacheSet(`kylrix_agentic_chat_history_${user.$id}`, []);
+        }
+
+        toast.success(
+          carryContext
+            ? 'New conversation started with compressed context.'
+            : 'New conversation started.',
+        );
+        await runPrompt(starter);
+      } catch (err) {
+        console.error('[agentic] Failed to fork conversation:', err);
+        toast.error('Could not start a new conversation.');
+      }
+    },
+    [activeSessionId, runPrompt, user?.$id],
+  );
+
+  const messageMenuItems = useMemo(() => {
+    if (!messageMenuTarget) return [];
+    if (messageMenuTarget.role === 'user') {
+      return [
+        {
+          label: 'Copy prompt',
+          icon: <Copy size={16} />,
+          onClick: () => handleCopyMessage(messageMenuTarget.content),
+        },
+        {
+          label: 'Retry',
+          icon: <RefreshCw size={16} />,
+          onClick: () => void handleRetryMessage(messageMenuTarget),
+        },
+        {
+          label: 'Start new conversation',
+          icon: <MessageSquarePlus size={16} />,
+          onClick: () => void handleStartConversationFromPrompt(messageMenuTarget, false),
+        },
+        {
+          label: 'Start new conversation with context',
+          icon: <History size={16} />,
+          onClick: () => void handleStartConversationFromPrompt(messageMenuTarget, true),
+        },
+      ];
+    }
+    return [
+      {
+        label: 'Copy response',
+        icon: <Copy size={16} />,
+        onClick: () => handleCopyMessage(messageMenuTarget.content),
+      },
+    ];
+  }, [
+    messageMenuTarget,
+    handleCopyMessage,
+    handleRetryMessage,
+    handleStartConversationFromPrompt,
+  ]);
+
+  const composerMenuItems = useMemo(() => {
+    const hasText = Boolean(chatInput);
+    const items = [
+      {
+        label: 'Paste',
+        icon: <ClipboardPaste size={16} />,
+        onClick: () => void handleComposerPaste(),
+      },
+    ];
+    if (hasText) {
+      items.push(
+        {
+          label: 'Select all',
+          icon: <TextSelect size={16} />,
+          onClick: handleComposerSelectAll,
+        },
+        {
+          label: 'Copy all',
+          icon: <Copy size={16} />,
+          onClick: handleComposerCopyAll,
+        },
+        {
+          label: 'Clear',
+          icon: <Trash2 size={16} />,
+          onClick: handleComposerClear,
+          variant: 'destructive' as const,
+        },
+      );
+    }
+    return items;
+  }, [
+    chatInput,
+    handleComposerPaste,
+    handleComposerSelectAll,
+    handleComposerCopyAll,
+    handleComposerClear,
+  ]);
+
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden">
       {/* Sticky header */}
@@ -1042,7 +1362,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               </div>
             )}
             <div
-              className={`max-w-[88%] rounded-[16px] px-4 py-3 ${
+              role="button"
+              tabIndex={0}
+              className={`max-w-[88%] rounded-[16px] px-4 py-3 select-none ${
                 msg.role === 'user'
                   ? 'bg-[#1C1A18] border border-white/8 text-white'
                   : 'bg-[#0B0A09] border border-white/5 text-white/92'
@@ -1052,6 +1374,14 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   ? { boxShadow: `inset 3px 0 0 0 ${accent}55` }
                   : undefined
               }
+              onContextMenu={(e) => {
+                e.preventDefault();
+                openMessageMenu(msg);
+              }}
+              onTouchStart={(e) => handleMessageTouchStart(e, msg)}
+              onTouchMove={handleMessageTouchMove}
+              onTouchEnd={handleMessageTouchEnd}
+              onTouchCancel={handleMessageTouchEnd}
             >
               <p className="text-[10px] font-black tracking-wider text-[#9B9691] mb-1.5 leading-none">
                 {msg.role === 'user' ? 'You' : 'Kylie'}
@@ -1232,12 +1562,24 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           <div
             className="flex items-end gap-2 rounded-[18px] border border-white/8 bg-[#0B0A09] px-3 py-2.5 focus-within:border-white/15 transition-colors"
             style={{ boxShadow: executing ? `0 0 0 1px ${accent}44` : undefined }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              openComposerMenu();
+            }}
+            onTouchStart={handleComposerTouchStart}
+            onTouchMove={handleComposerTouchMove}
+            onTouchEnd={handleComposerTouchEnd}
+            onTouchCancel={handleComposerTouchEnd}
           >
             <textarea
               ref={textareaRef}
               value={chatInput}
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleComposerKeyDown}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                openComposerMenu();
+              }}
               placeholder="Ask Kylie to help you with anything…"
               disabled={executing}
               rows={isDesktop ? 2 : 2}
@@ -1278,6 +1620,24 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           </div>
         </form>
       </div>
+
+      {composerMenuOpen && (
+        <ContextMenu
+          x={0}
+          y={0}
+          onCloseAction={() => setComposerMenuOpen(false)}
+          items={composerMenuItems}
+        />
+      )}
+
+      {messageMenuTarget && (
+        <ContextMenu
+          x={0}
+          y={0}
+          onCloseAction={() => setMessageMenuTarget(null)}
+          items={messageMenuItems}
+        />
+      )}
 
       {/* Sessions Bottom Drawer (Capped at 60% height permanently) */}
       {showSessionsDrawer && (

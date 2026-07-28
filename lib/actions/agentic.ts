@@ -714,23 +714,11 @@ ${lifetimeMemoryContext}
       // Compact behind-the-hood session context only — never wipe live chatHistory.
       if (historyArr.length >= 6) {
         try {
-          const compactModel = genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash',
-            systemInstruction: 'You are the context compactor engine. Merge the old context with the new user interactions, keeping only crucial rules, parameters, outcomes, and progress details. Output clean compressed text.'
+          nextContext = await compressSessionContext({
+            apiKey,
+            oldContext: nextContext,
+            history: historyArr.slice(-8),
           });
-          const compactable = historyArr.slice(-6).map((m: any) => {
-            const body = typeof m.content === 'string' ? m.content : '';
-            return `${m.role === 'user' ? 'User' : 'Agent'}: ${body}`;
-          }).join('\n');
-          const compactorPrompt = `
-Old Context:
-${nextContext}
-
-New Chats Added:
-${compactable}
-`;
-          const compactRes = await compactModel.generateContent(compactorPrompt);
-          nextContext = compactRes.response.text().trim();
         } catch (compactErr) {
           console.warn('[executeInstantRequestAction] Context compact failed:', compactErr);
         }
@@ -814,6 +802,51 @@ export async function getAgentSession(jwt?: string) {
   return session;
 }
 
+const SESSION_COMPACTOR_SYSTEM = `You are the Kylrix session context compressor.
+Your job: produce an ultra-dense continuity brief for a future assistant turn.
+
+HARD RULES:
+1. Preserve SPECIFICS — exact names, IDs, routes, tool outcomes, numbers, constraints, user preferences, workflow steps, and stated nuances. Never generalize these away.
+2. Drop fluff — greetings, repeated acknowledgements, filler, and redundant restatements.
+3. Prefer short bullet lines. No preamble, no markdown fences, no commentary about compression.
+4. If old context and new chats conflict, prefer the newer user-stated facts while keeping unresolved open threads.
+5. Keep enough detail that a fresh session can continue without re-asking for specifics the user already gave.`;
+
+async function compressSessionContext(params: {
+  apiKey: string;
+  oldContext: string;
+  history: Array<{ role?: string; content?: string }>;
+}): Promise<string> {
+  const { GoogleGenerativeAI } = await import('@google/generative-ai');
+  const genAI = new GoogleGenerativeAI(params.apiKey);
+  const compactModel = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    systemInstruction: SESSION_COMPACTOR_SYSTEM,
+  });
+
+  const transcript = (params.history || [])
+    .map((m) => {
+      const body = typeof m.content === 'string' ? m.content.trim() : '';
+      if (!body) return '';
+      return `${m.role === 'user' ? 'User' : 'Agent'}: ${body}`;
+    })
+    .filter(Boolean)
+    .join('\n');
+
+  const prompt = `Compress the following into a continuity brief.
+
+OLD SESSION CONTEXT:
+${params.oldContext?.trim() || '(empty)'}
+
+RECENT TRANSCRIPT:
+${transcript || '(empty)'}
+
+OUTPUT: ultra-dense continuity brief only.`;
+
+  const compactRes = await compactModel.generateContent(prompt);
+  return compactRes.response.text().trim();
+}
+
 export async function startNewAgentSession(jwt?: string) {
   const user = await requireUser(jwt);
   const { account } = await createServerClient(jwt);
@@ -825,6 +858,70 @@ export async function startNewAgentSession(jwt?: string) {
   
   await account.updatePrefs({ ...prefs, activeAgentSessionId: newSessionId }).catch(() => {});
   return { success: true, sessionId: newSessionId };
+}
+
+/** Fork a fresh session from a prompt card. Optionally seed with compressed prior-session context. */
+export async function startNewAgentSessionFromPromptAction(
+  params: {
+    starterPrompt: string;
+    carryContext?: boolean;
+    sourceSessionId?: string;
+  },
+  jwt?: string,
+) {
+  const user = await requireUser(jwt);
+  const starter = String(params.starterPrompt || '').trim();
+  if (!starter) return { success: false as const, error: 'Empty prompt' };
+
+  const { account } = await createServerClient(jwt);
+  const prefs = await account.getPrefs().catch(() => ({}));
+  const sourceSessionId =
+    params.sourceSessionId || (prefs as any)?.activeAgentSessionId || undefined;
+
+  const { TelemetryService } = await import('@/lib/services/telemetry');
+  let starterContext = '';
+
+  if (params.carryContext && sourceSessionId) {
+    const source = await TelemetryService.loadSession(user.$id, sourceSessionId);
+    let history: Array<{ role?: string; content?: string }> = [];
+    try {
+      history = JSON.parse(source?.chatHistory || '[]');
+    } catch {
+      history = [];
+    }
+    const apiKey = process.env.GOOGLE_API_KEY;
+    if (apiKey && ((source?.context || '').trim() || history.length > 0)) {
+      try {
+        starterContext = await compressSessionContext({
+          apiKey,
+          oldContext: source?.context || '',
+          history: history.slice(-20),
+        });
+      } catch (err) {
+        console.warn('[startNewAgentSessionFromPrompt] compress failed:', err);
+        starterContext = (source?.context || '').trim();
+      }
+    } else {
+      starterContext = (source?.context || '').trim();
+    }
+  }
+
+  const newSessionId = `session_${Date.now()}`;
+  await TelemetryService.saveSession(
+    user.$id,
+    starterContext,
+    '[]',
+    false,
+    newSessionId,
+  );
+  await account.updatePrefs({ ...prefs, activeAgentSessionId: newSessionId }).catch(() => {});
+
+  return {
+    success: true as const,
+    sessionId: newSessionId,
+    starterPrompt: starter,
+    carriedContext: Boolean(starterContext),
+  };
 }
 
 export async function recordAgentSessionObjectAction(params: {
@@ -981,4 +1078,41 @@ export async function selectAgentSession(sessionId: string, jwt?: string) {
       updatedAt: row.$updatedAt
     }
   };
+}
+
+/** Flag a single conversation turn for quality review (not the whole session). */
+export async function flagAgentConversationPointAction(
+  params: {
+    conversationId: string;
+    messageRole: 'user' | 'assistant';
+    sessionId?: string;
+    reason?: string;
+  },
+  jwt?: string,
+) {
+  const user = await requireUser(jwt);
+  if (!params.conversationId) return { success: false };
+
+  let sessionId = params.sessionId;
+  if (!sessionId) {
+    const session = await getAgentSession(jwt);
+    sessionId = session.rowId || undefined;
+  }
+
+  const { TelemetryService } = await import('@/lib/services/telemetry');
+  await TelemetryService.recordAgenticTelemetry({
+    userId: user.$id,
+    action: 'conversation_flagged',
+    zone: 'intelligence',
+    pointers: sessionId ? `${sessionId}:${params.conversationId}` : params.conversationId,
+    metadata: {
+      sessionId: sessionId || null,
+      conversationId: params.conversationId,
+      messageRole: params.messageRole,
+      reason: params.reason || 'user_retry',
+      flaggedAt: new Date().toISOString(),
+    },
+  });
+
+  return { success: true };
 }

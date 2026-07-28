@@ -99,13 +99,13 @@ export function ContextMenu({ x, y, onCloseAction, items }: ContextMenuProps) {
                   : 'bg-[#161412] border-[#1C1A18] text-[#F5F2ED] hover:border-[#A855F7] hover:text-white'
               }`}
             >
-              <div className="flex items-center gap-3.5 min-w-0 flex-1">
+              <div className="flex items-start gap-3.5 min-w-0 flex-1">
                 {item.icon && (
                   <div className="p-2 rounded-xl bg-[#0A0908] border border-[#1C1A18] text-[#A855F7] shrink-0">
                     {item.icon}
                   </div>
                 )}
-                <span className="truncate">{item.label}</span>
+                <span className="whitespace-normal leading-snug break-words">{item.label}</span>
               </div>
               {item.submenu && (
                 <span className="shrink-0 opacity-40">
