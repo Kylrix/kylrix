@@ -8,9 +8,8 @@ import { bytesToNpub, hexToBytes } from '@/lib/tmp/crypto';
 import { SocialService } from '@/lib/services/social';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/context/auth/AuthContext';
-import { Heart, MessageCircle, Repeat2, Lock, Sparkles, User, Globe, Share2, Shield, Eye, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Heart, MessageCircle, Lock, Sparkles, Globe, Share2, Shield, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { LinkPreviewCard } from '@/components/common/LinkPreviewCard';
 
 export interface UnifiedFeedItem {
   id: string;
@@ -35,6 +34,10 @@ interface ExtractedMedia {
   cleanText: string;
 }
 
+const MAX_IMAGES = 4;
+const MAX_VIDEOS = 1;
+const MAX_AUDIOS = 1;
+
 function extractMediaAndCleanText(content: string): ExtractedMedia {
   if (!content) {
     return { images: [], videos: [], audios: [], webLinks: [], cleanText: '' };
@@ -42,6 +45,7 @@ function extractMediaAndCleanText(content: string): ExtractedMedia {
 
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const matches = content.match(urlRegex) || [];
+  const seen = new Set<string>();
 
   const images: string[] = [];
   const videos: string[] = [];
@@ -49,24 +53,28 @@ function extractMediaAndCleanText(content: string): ExtractedMedia {
   const webLinks: string[] = [];
 
   matches.forEach((url) => {
-    const cleanUrl = url.split('?')[0].toLowerCase();
+    const trimmed = url.replace(/[),.;!?]+$/g, '');
+    if (seen.has(trimmed)) return;
+    seen.add(trimmed);
+
+    const cleanUrl = trimmed.split('?')[0].toLowerCase();
 
     if (/\.(jpg|jpeg|png|gif|webp|svg)$/i.test(cleanUrl)) {
-      images.push(url);
+      if (images.length < MAX_IMAGES) images.push(trimmed);
     } else if (/\.(mp4|webm|mov)$/i.test(cleanUrl)) {
-      videos.push(url);
+      if (videos.length < MAX_VIDEOS) videos.push(trimmed);
     } else if (/\.(mp3|wav|ogg|m4a)$/i.test(cleanUrl)) {
-      audios.push(url);
+      if (audios.length < MAX_AUDIOS) audios.push(trimmed);
     } else if (
-      url.includes('nostr.build/i/') ||
-      url.includes('void.cat/') ||
-      url.includes('imgur.com/') ||
-      url.includes('i.postimg.cc/') ||
-      url.includes('images.unsplash.com/')
+      trimmed.includes('nostr.build/i/') ||
+      trimmed.includes('void.cat/') ||
+      trimmed.includes('imgur.com/') ||
+      trimmed.includes('i.postimg.cc/') ||
+      trimmed.includes('images.unsplash.com/')
     ) {
-      images.push(url);
-    } else {
-      webLinks.push(url);
+      if (images.length < MAX_IMAGES) images.push(trimmed);
+    } else if (webLinks.length < 24) {
+      webLinks.push(trimmed);
     }
   });
 
@@ -229,10 +237,10 @@ export function NostrFeed() {
   const displayedItems = unifiedStream.slice(0, visibleCount);
 
   return (
-    <div className="w-full flex flex-col gap-5 max-w-2xl mx-auto font-satoshi text-white select-none pb-12">
+    <div className="w-full flex flex-col max-w-2xl mx-auto font-satoshi text-white select-none pb-12 bg-[#0A0908]">
       {/* Vault Unlock Banner if locked */}
       {isVaultLocked && (
-        <div className="bg-[#161412] border border-[#F59E0B]/20 rounded-3xl p-4 flex items-center justify-between shadow-lg">
+        <div className="mb-4 bg-[#161412] border border-[#F59E0B]/20 rounded-3xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-2xl bg-[#F59E0B]/10 border border-[#F59E0B]/20 flex items-center justify-center text-[#F59E0B]">
               <Lock size={18} />
@@ -244,15 +252,15 @@ export function NostrFeed() {
           </div>
           <button
             onClick={unlockAndLoad}
-            className="px-4 py-2 bg-[#F59E0B] hover:bg-amber-600 text-black font-extrabold text-xs rounded-xl transition-all shadow-md"
+            className="px-4 py-2 bg-[#F59E0B] hover:bg-amber-600 text-black font-extrabold text-xs rounded-xl"
           >
             Unlock Vault
           </button>
         </div>
       )}
 
-      {/* Feed Stream */}
-      <div className="flex flex-col gap-4">
+      {/* Feed Stream — opaque gutters between cards (no shadow bleed / compositor gaps) */}
+      <div className="flex flex-col gap-3 bg-[#0A0908]">
         {nostrLoading && unifiedStream.length === 0 ? (
           <div className="text-center py-16 text-white/40 flex flex-col items-center gap-3">
             <span className="animate-spin inline-block w-6 h-6 border-2 border-[#F59E0B] border-t-transparent rounded-full" />
@@ -288,11 +296,17 @@ function MomentCard({ item }: { item: UnifiedFeedItem }) {
   const [zoomScale, setZoomScale] = useState(1);
 
   const media = useMemo(() => extractMediaAndCleanText(item.content), [item.content]);
-  const isLong = media.cleanText.length > 260 || media.cleanText.split('\n').length > 4;
+  // JS truncate — never use CSS line-clamp (Chromium compositor tears at card gaps)
+  const COLLAPSED_CHARS = 220;
+  const isLong = media.cleanText.length > COLLAPSED_CHARS;
+  const bodyText =
+    !expanded && isLong
+      ? `${media.cleanText.slice(0, COLLAPSED_CHARS).trimEnd()}…`
+      : media.cleanText;
+  const multiImage = media.images.length > 1;
 
   return (
-    <div className="bg-[#161412] border border-white/10 rounded-3xl p-5 flex flex-col gap-3.5 hover:border-[#F59E0B]/30 transition-[border-color] shadow-md group" style={{ contain: 'content' }}>
-      {/* Header */}
+    <article className="bg-[#161412] border border-white/10 rounded-3xl p-5 flex flex-col gap-3.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-2xl bg-[#F59E0B] p-0.5 shrink-0">
@@ -302,7 +316,7 @@ function MomentCard({ item }: { item: UnifiedFeedItem }) {
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-extrabold text-white truncate group-hover:text-[#F59E0B] transition-colors">
+              <span className="text-sm font-extrabold text-white truncate">
                 {item.authorName}
               </span>
               {item.isEcosystemUser && (
@@ -324,17 +338,16 @@ function MomentCard({ item }: { item: UnifiedFeedItem }) {
         </span>
       </div>
 
-      {/* Cleaned Body Text without raw URLs */}
       {media.cleanText && (
-        <div>
-          <p className={`text-sm text-white/90 leading-relaxed font-sans break-words whitespace-pre-wrap px-0.5 ${!expanded && isLong ? 'line-clamp-4' : ''}`}>
-            {media.cleanText}
+        <div className="min-w-0">
+          <p className="text-sm text-white/90 leading-relaxed font-sans break-words">
+            {bodyText}
           </p>
           {isLong && (
             <button
               type="button"
               onClick={() => setExpanded((prev) => !prev)}
-              className="text-xs font-bold text-[#F59E0B] hover:underline mt-1.5 px-0.5 transition-all"
+              className="text-xs font-bold text-[#F59E0B] hover:underline mt-1.5 px-0.5"
             >
               {expanded ? 'Show less' : 'Show more...'}
             </button>
@@ -342,71 +355,75 @@ function MomentCard({ item }: { item: UnifiedFeedItem }) {
         </div>
       )}
 
-      {/* Rich Embedded Image Cards */}
+      {/* Fixed aspect slots — images paint into reserved space (no layout jump / gap tear) */}
       {media.images.length > 0 && (
-        <div className={`grid gap-2 my-1 ${media.images.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        <div className={`grid gap-2 ${multiImage ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {media.images.map((imgUrl, i) => (
-            <div
+            <button
               key={i}
+              type="button"
               onClick={() => {
                 setLightboxImg(imgUrl);
                 setZoomScale(1);
               }}
-              className="relative group/img cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#0A0908] max-h-72 flex items-center justify-center"
+              className={`relative w-full overflow-hidden rounded-2xl border border-white/10 bg-[#121110] p-0 cursor-pointer ${
+                multiImage ? 'aspect-square' : 'aspect-[16/10]'
+              }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={imgUrl}
-                alt="Moment media"
-                className="w-full h-full object-cover"
+                alt=""
+                width={multiImage ? 400 : 800}
+                height={multiImage ? 400 : 500}
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ opacity: 0 }}
                 loading="lazy"
                 decoding="async"
+                onLoad={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
               />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity text-white">
-                <Eye size={20} className="text-[#F59E0B]" />
-              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {media.videos.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {media.videos.map((vidUrl, i) => (
+            <div key={i} className="relative w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black">
+              <video
+                controls
+                preload="none"
+                src={vidUrl}
+                className="absolute inset-0 w-full h-full object-contain bg-black"
+              />
             </div>
           ))}
         </div>
       )}
 
-      {/* Rich Embedded Video Cards */}
-      {media.videos.length > 0 && (
-        <div className="flex flex-col gap-2 my-1">
-          {media.videos.map((vidUrl, i) => (
-            <video key={i} controls src={vidUrl} className="w-full max-h-80 rounded-2xl bg-black border border-white/10" />
-          ))}
-        </div>
-      )}
-
-      {/* Rich Embedded Audio Cards */}
       {media.audios.length > 0 && (
-        <div className="flex flex-col gap-2 my-1">
+        <div className="flex flex-col gap-2">
           {media.audios.map((audUrl, i) => (
-            <audio key={i} controls src={audUrl} className="w-full rounded-xl bg-[#0A0908] p-1 border border-white/10" />
+            <audio key={i} controls preload="none" src={audUrl} className="w-full rounded-xl bg-[#0A0908] p-1 border border-white/10" />
           ))}
         </div>
       )}
 
-      {/* Rich Web Link Preview Cards */}
-      {media.webLinks.length > 0 && (
-        <div className="flex flex-col gap-2 my-1">
-          {media.webLinks.map((linkUrl, i) => (
-            <LinkPreviewCard key={i} url={linkUrl} />
-          ))}
-        </div>
-      )}
-
-      {/* Action Bar */}
       <div className="flex items-center gap-6 border-t border-white/5 pt-3 text-white/40 text-xs select-none">
         <button
           onClick={() => toast.success('Pulse logged!')}
-          className="flex items-center gap-1.5 hover:text-[#F59E0B] transition-all font-bold"
+          className="flex items-center gap-1.5 hover:text-[#F59E0B] font-bold"
         >
           <Heart size={15} />
           <span>{item.likesCount || 0} Pulse</span>
         </button>
-        <button className="flex items-center gap-1.5 hover:text-white transition-all font-bold">
+        <button className="flex items-center gap-1.5 hover:text-white font-bold">
           <MessageCircle size={15} />
           <span>{item.repliesCount || 0} Reply</span>
         </button>
@@ -419,24 +436,23 @@ function MomentCard({ item }: { item: UnifiedFeedItem }) {
               toast.success('Copied moment link to clipboard');
             }
           }}
-          className="flex items-center gap-1.5 hover:text-white transition-all font-bold"
+          className="flex items-center gap-1.5 hover:text-white font-bold"
         >
           <Share2 size={15} />
           <span>Share</span>
         </button>
       </div>
 
-      {/* Image Lightbox Modal */}
       {lightboxImg && (
         <div
-          className="fixed inset-0 z-[99999] bg-[#0A0908]/95 flex items-center justify-center p-4 animate-fadeIn"
+          className="fixed inset-0 z-[99999] bg-[#0A0908]/95 flex items-center justify-center p-4"
           onClick={() => {
             setLightboxImg(null);
             setZoomScale(1);
           }}
         >
           <div
-            className="relative w-full max-w-4xl max-h-[92vh] bg-[#161412] border border-[#34322F] rounded-3xl p-6 shadow-2xl flex flex-col overflow-hidden"
+            className="relative w-full max-w-4xl max-h-[92vh] bg-[#161412] border border-[#34322F] rounded-3xl p-6 flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
@@ -444,7 +460,7 @@ function MomentCard({ item }: { item: UnifiedFeedItem }) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setZoomScale((s) => Math.max(0.5, s - 0.25))}
-                  className="p-1.5 rounded-lg text-white/60 hover:text-white bg-white/5 transition-all"
+                  className="p-1.5 rounded-lg text-white/60 hover:text-white bg-white/5"
                   title="Zoom Out"
                 >
                   <ZoomOut size={16} />
@@ -454,14 +470,14 @@ function MomentCard({ item }: { item: UnifiedFeedItem }) {
                 </span>
                 <button
                   onClick={() => setZoomScale((s) => Math.min(4, s + 0.25))}
-                  className="p-1.5 rounded-lg text-white/60 hover:text-white bg-white/5 transition-all"
+                  className="p-1.5 rounded-lg text-white/60 hover:text-white bg-white/5"
                   title="Zoom In"
                 >
                   <ZoomIn size={16} />
                 </button>
                 <button
                   onClick={() => setZoomScale(1)}
-                  className="p-1.5 rounded-lg text-white/60 hover:text-white bg-white/5 transition-all"
+                  className="p-1.5 rounded-lg text-white/60 hover:text-white bg-white/5"
                   title="Reset Zoom"
                 >
                   <RotateCcw size={16} />
@@ -471,7 +487,7 @@ function MomentCard({ item }: { item: UnifiedFeedItem }) {
                     setLightboxImg(null);
                     setZoomScale(1);
                   }}
-                  className="p-1.5 rounded-lg text-white/60 hover:text-white bg-white/5 transition-all"
+                  className="p-1.5 rounded-lg text-white/60 hover:text-white bg-white/5"
                 >
                   <X size={18} />
                 </button>
@@ -483,12 +499,13 @@ function MomentCard({ item }: { item: UnifiedFeedItem }) {
                 src={lightboxImg}
                 alt="Enlarged media"
                 style={{ transform: `scale(${zoomScale})` }}
-                className="max-h-[65vh] max-w-full object-contain rounded-2xl transition-transform duration-150 shadow-2xl border border-white/10"
+                className="max-h-[65vh] max-w-full object-contain rounded-2xl border border-white/10"
               />
             </div>
           </div>
         </div>
       )}
-    </div>
+    </article>
   );
 }
+
