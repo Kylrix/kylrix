@@ -11,7 +11,7 @@ import { PostViewClient } from '@/app/(app)/connect/post/[id]/PostViewClient';
 import { NoteDetailSidebar } from '@/components/ui/NoteDetailSidebar';
 import TaskDetails from '@/components/tasks/TaskDetails';
 import EventDetails from '@/components/events/EventDetails';
-import FormDetailsPage from '@/app/(app)/flow/(dashboard)/forms/[formId]/page';
+import FormDetailsPage from '@/app/(app)/forms/[formId]/page';
 import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
 import { TagNotesListSidebar } from '@/components/ui/TagNotesListSidebar';
 import { PublicCall } from '@/app/(app)/connect/call/[id]/PublicCall';

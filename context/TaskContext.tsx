@@ -999,11 +999,12 @@ export function TaskProvider({ children }: { children: ReactNode }) {
               tasks: combinedTasks,
               projects: (cachedCalsRes?.rows || []).map(mapAppwriteCalendarToProject),
             });
-            dispatch({ type: 'SET_LOADING', payload: false });
         }
 
+        // Always release loading after local hydration attempt — show empty state instantly rather than blocking on network
+        dispatch({ type: 'SET_LOADING', payload: false });
+
         if (userId === 'guest') {
-            dispatch({ type: 'SET_LOADING', payload: false });
             return;
         }
 
@@ -1878,6 +1879,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     getSelectedTask,
     getSelectedProject,
     ecosystemTags: state.ecosystemTags,
+    pushLiveTag,
     refreshEcosystemTags,
     getTagFilterOptions,
     refreshTasks,
@@ -1885,6 +1887,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     state,
     addTask,
     pushLiveGoal,
+    pushLiveTag,
     updateTask,
     deleteTask,
     completeTask,

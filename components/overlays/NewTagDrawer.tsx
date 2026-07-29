@@ -31,6 +31,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { ID } from 'appwrite';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useSection } from '@/context/SectionContext';
+import { useTask } from '@/context/TaskContext';
 
 const SURFACE_ASH = '#161412';
 const VOID = '#0A0908';

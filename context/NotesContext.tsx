@@ -260,10 +260,11 @@ export function NotesProvider({ children }: { children: ReactNode }) {
                 setTotalNotes(cachedNotes.totalNotes || 0);
                 setCursor(cachedNotes.cursor || null);
                 setHasMore(cachedNotes.hasMore ?? true);
-                setIsLoading(false); // Stop loading immediately on local hit
                 console.log('[NotesContext] Sub-millisecond cold start via RxDB substrate.');
             }
         }
+        // Always release loading after local hydration — show empty state instantly, network fills in background
+        setIsLoading(false);
         setIsCacheLoaded(true);
     };
     
@@ -299,8 +300,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     }
     
     isFetchingRef.current = true;
-    if (reset && notesRef.current.length === 0) {
-      setIsLoading(true);
+    if (reset) {
       setError(null);
     }
 
