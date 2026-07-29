@@ -126,6 +126,13 @@ jobs:
       # human-owned proof lane, not a generated agent-execution projection.
       - name: Prove and archive bounded native runtime
         run: ota proof runtime --workflow sqlite-dev --mode native --archive --json
+      - name: Upload bounded native runtime proof
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ota-runtime-native-${{ matrix.os }}
+          path: .ota/proof
+          if-no-files-found: warn
 
   runtime-container:
     name: Ubuntu bounded container runtime proof
@@ -138,6 +145,13 @@ jobs:
       # The same explicit, non-agent proof boundary applies in container mode.
       - name: Prove and archive bounded container runtime
         run: ota proof runtime --workflow sqlite-dev --mode container --archive --json
+      - name: Upload bounded container runtime proof
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ota-runtime-container-linux
+          path: .ota/proof
+          if-no-files-found: warn
 
   contract-ci-drift:
     name: Contract-to-CI drift gate
