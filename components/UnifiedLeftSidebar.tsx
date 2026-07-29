@@ -6,7 +6,7 @@ import { Box, Paper, Tooltip } from '@/lib/openbricks/primitives';
 import {
   FileText as NotesIcon,
   Lock as VaultIcon,
-  CheckSquare as FlowIcon,
+  Target as FlowIcon,
   MessageCircle as ConnectIcon,
   GitFork as WorkflowsIcon,
   Tag as TagsIcon,

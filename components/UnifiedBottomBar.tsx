@@ -11,7 +11,7 @@ import {
 import {
   FileText as NotesIcon,
   Lock as VaultIcon,
-  CheckSquare as FlowIcon,
+  Target as FlowIcon,
   MessageCircle as ConnectIcon,
   GitFork as WorkflowIcon,
 } from 'lucide-react';

@@ -27,7 +27,7 @@ import {
   X, 
   Search, 
   FileText, 
-  CheckSquare, 
+  Target, 
   Lock, 
   Plus,
   Calendar,
@@ -620,7 +620,7 @@ export default function ProjectAddObjectModal({
           }}
         >
             <Tab icon={<FileText size={14} />} iconPosition="start" label="Note" />
-            <Tab icon={<CheckSquare size={14} />} iconPosition="start" label="Goal" />
+            <Tab icon={<Target size={14} />} iconPosition="start" label="Goal" />
             <Tab icon={<Lock size={14} />} iconPosition="start" label="Secret" />
             <Tab icon={<ClipboardList size={14} />} iconPosition="start" label="Form" />
             <Tab icon={<Calendar size={14} />} iconPosition="start" label="Event" />
