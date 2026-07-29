@@ -237,7 +237,7 @@ export default function EventList() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-black min-h-screen p-4 md:p-8">
+    <div className="h-full flex flex-col min-h-screen">
       <MultiSectionContainer panels={['note', 'huddles', 'goals']} contextId="event">
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4 p-1">
           <div>

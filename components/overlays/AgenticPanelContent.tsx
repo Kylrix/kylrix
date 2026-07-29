@@ -79,6 +79,7 @@ import { account } from '@/lib/appwrite/client';
 import { WalletService } from '@/lib/services/wallets';
 import { toast } from 'react-hot-toast';
 import { ContextMenu } from '@/components/ui/ContextMenu';
+import { useHintEngine } from '@/hooks/useHintEngine';
 
 interface ToolCallDisplay {
   toolKey: string;
@@ -243,6 +244,12 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const [chatInput, setChatInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [executing, setExecuting] = useState(false);
+  const composerHints = useHintEngine({
+    zone: 'agentic.composer',
+    route: pathname,
+    input: chatInput,
+    enabled: !executing && chatInput.trim().length >= 2,
+  });
   const [runningWorkflowId, setRunningWorkflowId] = useState<string | null>(null);
   const [agentCount, setAgentCount] = useState(0);
 
@@ -1395,6 +1402,26 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         ) : null}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+          {composerHints.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {composerHints.map((hint) => (
+                <button
+                  key={hint.id}
+                  type="button"
+                  onClick={() => {
+                    if (hint.route) {
+                      router.push(hint.route);
+                      return;
+                    }
+                    if (hint.prompt) handleInputChange(hint.prompt);
+                  }}
+                  className="px-2.5 py-1 rounded-lg border border-white/8 bg-white/[0.03] text-[10px] font-bold text-white/70 hover:text-white hover:border-white/15 transition"
+                >
+                  {hint.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div
             className="flex items-end gap-2 rounded-[18px] border border-white/8 bg-[#0B0A09] px-3 py-2.5 focus-within:border-white/15 transition-colors"
             style={{ boxShadow: executing ? `0 0 0 1px ${accent}44` : undefined }}

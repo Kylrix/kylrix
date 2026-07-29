@@ -33,6 +33,7 @@ import { registerLiveGoalGetter } from '@/lib/sync/pending-sync-bridge';
 import { goalPendingKey } from '@/lib/sync/goal-keys';
 import { shouldSoftPull } from '@/lib/sync/local-copy-sync';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
+import { loadGoalsFromLocalCopy } from '@/lib/goals/load-local-goals';
 
 // Mappers
 function coerceCachedTask(row: any): Task | null {
@@ -767,6 +768,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const ghostTasksRef = useRef<Task[]>([]);
   const tasksRef = useRef<Task[]>(state.tasks);
   tasksRef.current = state.tasks;
+  const projectsRef = useRef<Project[]>(state.projects);
+  projectsRef.current = state.projects;
   const { fetchOptimized, invalidate, getCachedData, getCachedDataAsync, setCachedData, refreshInBackground } = useDataNexus();
   const { user: authUser, isLoading: isAuthLoading } = useAuth();
   const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
@@ -951,6 +954,37 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const lastPathnameRef = useRef<string | null>(null);
 
+  // Instant local hydration on mount — do not wait for auth or network
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let cancelled = false;
+
+    const hydrateInstant = async () => {
+      const userId = authUser?.$id || flowWarmOwnerRef.current || 'guest';
+      const instant = await loadGoalsFromLocalCopy({
+        userId,
+        existingTasks: tasksRef.current,
+        getCachedDataSync: (key) => getCachedData(key),
+        getCachedDataAsync: (key) => getCachedDataAsync(key),
+      });
+
+      if (cancelled) return;
+
+      if (instant.length > 0) {
+        dispatchSyncedData({
+          tasks: instant,
+          projects: projectsRef.current,
+        });
+      }
+      dispatch({ type: 'SET_LOADING', payload: false });
+    };
+
+    void hydrateInstant();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser?.$id, getCachedData, getCachedDataAsync, dispatchSyncedData]);
+
   // Initial Data Fetch & Cold Hydration
   useEffect(() => {
     if (isAuthLoading) return;
@@ -978,6 +1012,13 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const db = await import('@/lib/webrtc/RxDBManager').then((m) => m.getRxDB()).catch(() => null);
 
+        const instant = await loadGoalsFromLocalCopy({
+          userId,
+          existingTasks: tasksRef.current,
+          getCachedDataSync: (key) => getCachedData(key, COLD_START_TTL),
+          getCachedDataAsync: (key) => getCachedDataAsync(key, COLD_START_TTL),
+        });
+
         const [cachedTasksRes, cachedCalsRes, guestTasksRes, goalsListCache, rxTasks] = await Promise.all([
             getCachedDataAsync<any>(tasksKey, COLD_START_TTL),
             getCachedDataAsync<any>(calsKey, COLD_START_TTL),
@@ -987,6 +1028,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         ]);
 
         const combinedTasks = mergeTaskRows(
+          instant,
           cachedTasksRes?.rows || (Array.isArray(cachedTasksRes) ? cachedTasksRes : []),
           guestTasksRes?.rows || (Array.isArray(guestTasksRes) ? guestTasksRes : []),
           Array.isArray(goalsListCache) ? goalsListCache : [],
@@ -1001,7 +1043,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
             });
         }
 
-        // Always release loading after local hydration attempt — show empty state instantly rather than blocking on network
         dispatch({ type: 'SET_LOADING', payload: false });
 
         if (userId === 'guest') {
@@ -1036,7 +1077,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     lastPathnameRef.current = pathname;
 
     // Only revalidate if we actually navigated (not first load)
-    if (prevPath && pathname.startsWith('/flow')) {
+    if (prevPath && (pathname.startsWith('/flow') || pathname.startsWith('/goals'))) {
       const uid = state.userId;
       refreshInBackground(`f_route_refresh_${uid}`, async () => {
         const data = await fetchBatch(uid, true);

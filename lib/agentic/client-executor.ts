@@ -100,10 +100,10 @@ export async function executeAgenticToolCall(
     if (key === 'ui.open_drawer' || key === 'create_or_select_agent' || key === 'open_wallet_funding') {
       const drawerType =
         key === 'open_wallet_funding'
-          ? 'wallet-funding'
+          ? 'wallet'
           : key === 'create_or_select_agent'
-            ? 'agent-select'
-            : String(args.drawer || 'agent-select');
+            ? 'agent-create'
+            : String(args.drawer || 'agent-create');
       ctx.openDrawer?.(drawerType, {
         name: args.name,
         goal: args.goal,
@@ -119,7 +119,11 @@ export async function executeAgenticToolCall(
     if (key === 'ui.preview.open' || key === 'open_preview') {
       const previewId = String(args.previewId || call.specifier || `preview_${Date.now()}`);
       await AgenticPreviewPartition.set(previewId, String(args.kind || 'generic'), args.payload || args);
-      ctx.openDrawer?.('agentic-preview', { previewId, kind: args.kind, title: args.title });
+      ctx.openDrawer?.('agentic-preview', {
+        previewId,
+        kind: args.kind,
+        title: args.title || 'Preview',
+      });
       return { success: true, summary: 'Opened preview drawer' };
     }
 
@@ -367,6 +371,64 @@ export async function executeAgenticToolCall(
         title: 'Review form submission',
       });
       return { success: true, summary: 'Form submission preview ready' };
+    }
+
+    // ── Visibility ──────────────────────────────────────────────
+    if (key === 'toggle_privacy' || key === 'objects.visibility.toggle') {
+      const resourceId = String(call.specifier || args.objectId || args.object_id || '');
+      if (!resourceId) {
+        return { success: false, summary: '', error: 'Missing resource id' };
+      }
+
+      const rawType = String(args.type || args.objectType || args.resourceType || 'note');
+      const resourceType =
+        rawType === 'goal' || rawType === 'task' ? 'goal' : (rawType as 'note' | 'project');
+
+      let enablePublic =
+        args.isPublic === true ||
+        args.isPublic === 'true' ||
+        call.subSpecifier === 'true';
+
+      if (call.subSpecifier && call.subSpecifier !== 'true' && call.subSpecifier !== 'false') {
+        const parts = call.subSpecifier.split('.');
+        const tail = parts[parts.length - 1];
+        if (tail === 'true' || tail === 'false') {
+          enablePublic = tail === 'true';
+        }
+      }
+
+      if (args.openDrawer === true) {
+        ctx.openDrawer?.('access-control', {
+          resourceType,
+          resourceId,
+          isPublic: enablePublic,
+          isGuest: args.isGuest === true || args.isGuest === 'true',
+          resourceTitle: String(args.title || resourceId),
+          projectId: args.projectId as string | undefined,
+        });
+        return { success: true, summary: 'Opened visibility controls' };
+      }
+
+      const { toggleResourcePublicGuest } = await import('@/lib/actions/client-ops');
+      const res = await toggleResourcePublicGuest({
+        resourceType,
+        resourceId,
+        mode: enablePublic ? 'publish' : 'make_private',
+        projectId: args.projectId as string | undefined,
+      });
+
+      if (!res?.success) {
+        return { success: false, summary: '', error: 'Visibility update failed' };
+      }
+
+      if (resourceType === 'note') {
+        ctx.pushLiveNote?.({ $id: resourceId, isPublic: enablePublic, isGuest: enablePublic });
+      }
+
+      return {
+        success: true,
+        summary: enablePublic ? 'Resource is now public' : 'Resource is now private',
+      };
     }
 
     // ── Delete ──────────────────────────────────────────────────

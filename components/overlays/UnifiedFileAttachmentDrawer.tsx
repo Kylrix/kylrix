@@ -169,14 +169,11 @@ export function UnifiedFileAttachmentDrawer() {
           items = res.rows || [];
         }
       } else if (activeSubTab === 'goals') {
-        // Goals / Tasks — Unified 0ms Local Copy (Same as Goal Card Page)
-        items = localContextGoals && localContextGoals.length > 0 ? localContextGoals : [];
-        if (items.length === 0) {
-          items = (await db.tasks.find().exec()).map((d) => d.toJSON());
-        }
-        if (items.length === 0) {
-          items = (await LocalEngine.cacheGet<any[]>('f_goals_list')) || [];
-        }
+        const { loadGoalsFromLocalCopy } = await import('@/lib/goals/load-local-goals');
+        items = await loadGoalsFromLocalCopy({
+          userId,
+          existingTasks: localContextGoals,
+        });
         if (items.length === 0) {
           try {
             const res = await tasks.list();

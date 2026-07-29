@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { useTask } from '@/context/TaskContext';
 import { useFAB } from '@/context/FABContext';
 import { ViewMode, SortField, TaskStatus } from '@/types';
-import { MultiSectionContainer } from '@/context/SectionContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { toast } from 'react-hot-toast';
 

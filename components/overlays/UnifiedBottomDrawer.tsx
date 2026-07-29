@@ -28,6 +28,7 @@ const UnifiedFormContent = dynamic(() => import('../forms/UnifiedFormContent').t
 const GithubIntegrationDrawer = dynamic(() => import('./GithubIntegrationDrawer').then(mod => mod.GithubIntegrationDrawer), { ssr: false });
 const TaskAddToProjectDrawerHost = dynamic(() => import('./TaskAddToProjectDrawer').then(mod => mod.TaskAddToProjectDrawerHost), { ssr: false });
 const ResponseDetailDrawer = dynamic(() => import('../forms/ResponseDetailDrawer').then(mod => mod.ResponseDetailDrawer), { ssr: false });
+const AgenticPreviewDrawer = dynamic(() => import('../agentic/AgenticPreviewDrawer').then(mod => mod.AgenticPreviewDrawer), { ssr: false });
 const MomentComposerDrawer = dynamic(() => import('./MomentComposerDrawer').then(mod => mod.MomentComposerDrawer), { ssr: false });
 const ProjectSettingsDrawer = dynamic(() => import('../projects/ProjectSettingsDrawer'), { ssr: false });
 const ProjectVisibilityDrawer = dynamic(() => import('../projects/ProjectVisibilityDrawer'), { ssr: false });
@@ -113,6 +114,16 @@ export function UnifiedBottomDrawer() {
                 submission={drawerData?.submission}
                 schemaMap={drawerData?.schemaMap}
             />;
+        case 'agentic-preview':
+            return (
+              <AgenticPreviewDrawer
+                previewId={String(drawerData?.previewId || '')}
+                kind={drawerData?.kind as string | undefined}
+                title={drawerData?.title as string | undefined}
+                onClose={close}
+                onCommitted={drawerData?.onCommitted as (() => void) | undefined}
+              />
+            );
         case 'github-integration':
             return <GithubIntegrationDrawer isOpen={true} onClose={close} {...drawerData} />;
         case 'project-settings':
@@ -234,7 +245,7 @@ export function UnifiedBottomDrawer() {
             </Box>
         </>
     );
-  } else if (activeContent === 'form-response-detail') {
+  } else if (activeContent === 'form-response-detail' || activeContent === 'agentic-preview') {
     return (
         <>
             {/* Mobile-Only Full Screen Overlay View */}
