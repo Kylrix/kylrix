@@ -98,9 +98,48 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     key: 'navigate_workspace',
     name: 'Navigate Workspace',
     description:
-      'Redirect user to specific active paths (e.g. /settings, /flow, /projects). Specifiers: route_path.',
+      'Navigate user to a page. Prefer args.target (semantic id from UI catalog, e.g. settings.passkeys, goals.home) over raw routes. Args: target (string id) OR route (path). Resolves aliases like "passkeys", "goals", "assistant settings".',
     requiresAuthorization: false,
-    parameters: ['route'],
+    parameters: ['target', 'route'],
+  },
+  {
+    key: 'ui.navigate',
+    name: 'Navigate (Semantic)',
+    description:
+      'Same as navigate_workspace. Use stable target ids from UI catalog (settings.passkeys, goals.home, forms.home, vault.totp, settings.agents).',
+    requiresAuthorization: false,
+    parameters: ['target', 'route'],
+  },
+  {
+    key: 'search_ecosystem',
+    name: 'Search Ecosystem',
+    description:
+      'Intelligent cross-domain search. Use for vague queries ("what is for today", "find backend tasks", "where are passkeys"). Args: query (required). Returns ranked hits across ideas, goals, events, forms, projects, UI.',
+    requiresAuthorization: false,
+    parameters: ['query', 'limit'],
+  },
+  {
+    key: 'objects.form.read',
+    name: 'Read Form Schema',
+    description: 'Load a form definition and schema. Specifier REQUIRED: form $id.',
+    requiresAuthorization: false,
+    parameters: [],
+  },
+  {
+    key: 'objects.form.submit',
+    name: 'Submit Form Response',
+    description:
+      'Prepare a form submission from structured answers. Opens preview drawer before commit. Specifier: form $id. Args: payload (object keyed by field ids).',
+    requiresAuthorization: false,
+    parameters: ['payload', 'formId'],
+  },
+  {
+    key: 'ui.preview.open',
+    name: 'Open Agentic Preview',
+    description:
+      'Show preview drawer for staged changes (form submit, conversions). Args: kind, title, payload.',
+    requiresAuthorization: false,
+    parameters: ['kind', 'title', 'payload', 'previewId'],
   },
   {
     key: 'delete_resource',

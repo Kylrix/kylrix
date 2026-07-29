@@ -528,6 +528,82 @@ function registerCoreTools() {
       return { success: true, data: updated };
     },
   });
+
+  // 7. UI Navigation (semantic — route resolved client-side)
+  toolRegistry.register({
+    id: 'ui.navigate',
+    domain: 'workspace',
+    action: 'custom',
+    name: 'Navigate UI',
+    description: 'Navigate to a semantic UI destination by target id or route.',
+    parameters: {
+      target: { type: 'string', description: 'Semantic destination id e.g. settings.passkeys' },
+      route: { type: 'string', description: 'Direct route fallback' },
+    },
+    execute: async (params) => {
+      const { resolveUiDestination } = await import('@/lib/agentic/ui-catalog');
+      const target = String(params.target || '');
+      const route =
+        String(params.route || '') ||
+        (target ? resolveUiDestination(target)?.route : '') ||
+        '';
+      if (!route) return { success: false, error: 'Could not resolve navigation target.' };
+      return { success: true, data: { route, target: target || null } };
+    },
+  });
+
+  // 8. Forms
+  toolRegistry.register({
+    id: 'objects.form.read',
+    domain: 'form',
+    action: 'read',
+    name: 'Read Form',
+    description: 'Load form schema by id.',
+    parameters: { id: { type: 'string', description: 'Form ID', required: true } },
+    execute: async (params) => {
+      const { FormsService } = await import('@/lib/services/forms');
+      const form = await FormsService.getForm(params.id);
+      return { success: true, data: form };
+    },
+  });
+
+  toolRegistry.register({
+    id: 'objects.form.submit',
+    domain: 'form',
+    action: 'create',
+    name: 'Submit Form Response',
+    description: 'Submit structured answers to a published form.',
+    parameters: {
+      formId: { type: 'string', description: 'Form ID', required: true },
+      payload: { type: 'object', description: 'Field answers JSON', required: true },
+    },
+    execute: async (params) => {
+      const { FormsService } = await import('@/lib/services/forms');
+      const submission = await FormsService.submitForm(
+        params.formId,
+        JSON.stringify(params.payload),
+      );
+      return { success: true, data: submission };
+    },
+  });
+
+  toolRegistry.register({
+    id: 'search.ecosystem',
+    domain: 'workspace',
+    action: 'search',
+    name: 'Search Ecosystem',
+    description: 'Cross-domain intelligent search.',
+    parameters: {
+      query: { type: 'string', description: 'Search query', required: true },
+    },
+    execute: async (params, context) => {
+      const { executeEcosystemSearch } = await import('@/lib/agentic/search-engine');
+      const result = await executeEcosystemSearch(String(params.query || ''), {
+        userId: context?.userId,
+      });
+      return { success: true, data: result };
+    },
+  });
 }
 
 // Self-register core tools on module evaluation

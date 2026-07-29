@@ -288,7 +288,7 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           description: 'Review outcomes',
           icon: 'flag',
           kind: 'navigate',
-          href: '/flow/goals',
+          href: '/goals',
         },
         {
           id: 'flow-events',

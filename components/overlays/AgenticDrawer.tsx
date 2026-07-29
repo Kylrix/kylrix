@@ -20,6 +20,14 @@ export function AgenticDrawer() {
   }, []);
 
   useEffect(() => {
+    let unsub: (() => void) | undefined;
+    void import('@/lib/agentic/spine-bridge').then(({ initAgenticSpineListeners }) => {
+      unsub = initAgenticSpineListeners();
+    });
+    return () => unsub?.();
+  }, []);
+
+  useEffect(() => {
     if (!isOpen) setIsExpanded(false);
   }, [isOpen]);
 

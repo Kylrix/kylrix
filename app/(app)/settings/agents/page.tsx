@@ -361,13 +361,17 @@ export default function AssistantSettingsPage() {
 
 function AgentPermissionsAllowlist() {
   const [whitelist, setWhitelist] = useState<string[]>([]);
+  const [requireDeleteConfirmation, setRequireDeleteConfirmation] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchWhitelist = async () => {
       try {
         const current = await account.getPrefs();
-        setWhitelist(Array.isArray(current?.authorizedTools) ? current.authorizedTools : []);
+        const { parseAgenticPreferences } = await import('@/lib/agentic/preferences');
+        const prefs = parseAgenticPreferences(current as Record<string, unknown>);
+        setWhitelist(prefs.authorizedTools);
+        setRequireDeleteConfirmation(prefs.requireDeleteConfirmation);
       } catch (err) {
         console.error('Failed to load whitelisted preferences:', err);
       } finally {
@@ -376,6 +380,22 @@ function AgentPermissionsAllowlist() {
     };
     void fetchWhitelist();
   }, []);
+
+  const persistPrefs = async (patch: Record<string, unknown>) => {
+    const current = await account.getPrefs();
+    await account.updatePrefs({ ...current, ...patch });
+  };
+
+  const handleToggleRequireDeleteConfirm = async () => {
+    try {
+      const next = !requireDeleteConfirmation;
+      await persistPrefs({ requireDeleteConfirmation: next });
+      setRequireDeleteConfirmation(next);
+      toast.success(next ? 'Delete actions will require confirmation.' : 'Delete auto-confirm enabled for whitelisted tools.');
+    } catch {
+      toast.error('Failed to update delete confirmation setting.');
+    }
+  };
 
   const handleToggleAllowAll = async () => {
     try {
@@ -440,6 +460,26 @@ function AgentPermissionsAllowlist() {
       </div>
 
       <div className="px-5 md:px-6 py-5 md:py-6 flex flex-col gap-4 text-left">
+        <div className="flex items-center justify-between p-4 rounded-[20px] bg-[#0B0A09] border border-white/5 hover:border-white/10 transition">
+          <div className="flex-1 min-w-0 pr-4">
+            <span className="text-white text-sm font-extrabold leading-tight block">Require delete confirmation</span>
+            <span className="text-[#9B9691] text-xs leading-relaxed block mt-0.5">
+              When enabled, Kylie must ask before deleting notes, goals, or projects — even if other tools are whitelisted.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleToggleRequireDeleteConfirm()}
+            className={`h-9 px-4 rounded-xl text-xs font-extrabold transition ${
+              requireDeleteConfirmation
+                ? 'bg-amber-500 hover:bg-amber-600 text-black'
+                : 'border border-white/10 text-white hover:bg-white/[0.04]'
+            }`}
+          >
+            {requireDeleteConfirmation ? 'Required' : 'Off'}
+          </button>
+        </div>
+
         <div className="flex items-center justify-between p-4 rounded-[20px] bg-[#0B0A09] border border-white/5 hover:border-white/10 transition">
           <div className="flex-1 min-w-0 pr-4">
             <span className="text-white text-sm font-extrabold leading-tight block">Sweep Allow All</span>

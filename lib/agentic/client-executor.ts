@@ -1,0 +1,408 @@
+/**
+ * Client-side agentic tool executor — single path for UI + object mutations.
+ */
+
+import { toast } from 'react-hot-toast';
+import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+import { resolveUiDestination } from './ui-catalog';
+import { executeEcosystemSearch } from './search-engine';
+import { AgenticPreviewPartition } from './preview-partition';
+
+export interface AgenticToolCallInput {
+  toolKey: string;
+  specifier?: string;
+  subSpecifier?: string;
+  args?: Record<string, unknown>;
+}
+
+export interface AgenticExecutionContext {
+  user?: { $id?: string } | null;
+  router: AppRouterInstance;
+  onClose?: () => void;
+  tasks?: any[];
+  setCachedData?: (key: string, data: unknown) => void;
+  pushLiveNote?: (note: any, opts?: { pending?: boolean }) => void;
+  removeNote?: (id: string) => void;
+  registerComposeSession?: (id: string) => void;
+  unregisterComposeSession?: (id: string) => void;
+  migrateDraftNoteId?: (from: string, to: string) => void;
+  addTask?: (task: any) => Promise<any>;
+  updateTask?: (id: string, patch: any) => Promise<void>;
+  deleteTask?: (id: string) => Promise<void>;
+  appendMessage?: (role: 'assistant' | 'user', content: string) => void;
+  openDrawer?: (type: string, payload?: Record<string, unknown>) => void;
+  recordSessionObject?: (payload: {
+    objectId: string;
+    objectType: string;
+    title?: string | null;
+    toolKey: string;
+  }) => Promise<void>;
+}
+
+export interface AgenticExecutionResult {
+  success: boolean;
+  summary: string;
+  error?: string;
+  skipToast?: boolean;
+}
+
+export async function executeAgenticToolCall(
+  call: AgenticToolCallInput,
+  ctx: AgenticExecutionContext,
+): Promise<AgenticExecutionResult> {
+  const key = call.toolKey;
+  const args = call.args || {};
+
+  try {
+    // ── Navigation ──────────────────────────────────────────────
+    if (key === 'navigate_workspace' || key === 'ui.navigate') {
+      const target = String(args.target || call.specifier || '').trim();
+      let route = String(args.route || '').trim();
+      if (target && !route) {
+        const dest = resolveUiDestination(target);
+        if (!dest) {
+          return { success: false, summary: '', error: `Unknown navigation target: ${target}` };
+        }
+        route = dest.route;
+        if (dest.drawer && ctx.openDrawer) {
+          ctx.onClose?.();
+          ctx.router.push(route.split('#')[0]);
+          ctx.openDrawer(dest.drawer, dest.drawerPayload);
+          return { success: true, summary: `Opened ${dest.label}` };
+        }
+      }
+      if (!route) {
+        return { success: false, summary: '', error: 'Navigation requires target or route' };
+      }
+      ctx.onClose?.();
+      ctx.router.push(route);
+      return { success: true, summary: `Navigate: ${route}` };
+    }
+
+    // ── Search ──────────────────────────────────────────────────
+    if (key === 'search_ecosystem' || key === 'objects.search') {
+      const query = String(args.query || call.specifier || '').trim();
+      const { plan, hits } = await executeEcosystemSearch(query, {
+        userId: ctx.user?.$id,
+        limit: Number(args.limit) || 15,
+      });
+      const lines = hits.map(
+        (h) => `- **${h.title}** (${h.domain}) — \`${h.id}\`${h.route ? ` → ${h.route}` : ''}`,
+      );
+      ctx.appendMessage?.(
+        'assistant',
+        `### Search: "${query}"\n_Plan: ${plan.reasoning}${plan.temporal ? ` · ${plan.temporal}` : ''}_\n\n${lines.join('\n') || 'No matches.'}`,
+      );
+      return { success: true, summary: `Found ${hits.length} hits`, skipToast: true };
+    }
+
+    // ── Drawers / UI chrome ─────────────────────────────────────
+    if (key === 'ui.open_drawer' || key === 'create_or_select_agent' || key === 'open_wallet_funding') {
+      const drawerType =
+        key === 'open_wallet_funding'
+          ? 'wallet-funding'
+          : key === 'create_or_select_agent'
+            ? 'agent-select'
+            : String(args.drawer || 'agent-select');
+      ctx.openDrawer?.(drawerType, {
+        name: args.name,
+        goal: args.goal,
+        amount: args.amount,
+        chainId: args.chainId,
+        intentId: args.intentId,
+        agentId: args.agentId || call.specifier,
+      });
+      ctx.onClose?.();
+      return { success: true, summary: `Opened ${drawerType} drawer` };
+    }
+
+    if (key === 'ui.preview.open' || key === 'open_preview') {
+      const previewId = String(args.previewId || call.specifier || `preview_${Date.now()}`);
+      await AgenticPreviewPartition.set(previewId, String(args.kind || 'generic'), args.payload || args);
+      ctx.openDrawer?.('agentic-preview', { previewId, kind: args.kind, title: args.title });
+      return { success: true, summary: 'Opened preview drawer' };
+    }
+
+    // ── Ideas ───────────────────────────────────────────────────
+    if (key === 'create_note' || key === 'objects.idea.create') {
+      const title = String(args.title || '').trim() || 'Untitled Idea';
+      const content = String(args.content || '').trim();
+      if (!content) return { success: false, summary: '', error: 'Missing content' };
+
+      const tags = Array.isArray(args.tags) ? args.tags : args.tags ? [args.tags] : [];
+      const isPublic = args.isPublic === true || args.isPublic === 'true';
+
+      const { ID } = await import('appwrite');
+      const { resolveNoteCardTitle } = await import('@/constants/noteTitle');
+      const { markNotePersistedRemote } = await import('@/lib/notes/compose-draft-registry');
+      const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
+      const draftId = ID.unique();
+      const now = new Date().toISOString();
+      const draftNote = {
+        $id: draftId,
+        title: resolveNoteCardTitle(title, content) || title,
+        content,
+        tags,
+        format: 'text',
+        isPublic,
+        isGuest: isPublic,
+        userId: ctx.user?.$id || '',
+        $createdAt: now,
+        $updatedAt: now,
+        updatedAt: now,
+      };
+
+      ctx.registerComposeSession?.(draftId);
+      ctx.pushLiveNote?.(draftNote);
+
+      const { createNote } = await import('@/lib/actions/client-ops');
+      const saved = (await createNote({
+        $id: isValidAppwriteRowId(draftId) ? draftId : undefined,
+        title,
+        content,
+        tags,
+        isPublic,
+        isGuest: isPublic,
+      })) as any;
+
+      markNotePersistedRemote(saved.$id);
+      if (saved.$id && saved.$id !== draftId) ctx.migrateDraftNoteId?.(draftId, saved.$id);
+      ctx.unregisterComposeSession?.(draftId);
+      if (saved.$id) ctx.unregisterComposeSession?.(saved.$id);
+      ctx.pushLiveNote?.(saved, { pending: false });
+
+      const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+      autonomicSyncEngine.ack(saved.$id, saved.updatedAt || now);
+      ctx.setCachedData?.(`note_${saved.$id}`, saved);
+
+      await ctx.recordSessionObject?.({
+        objectId: saved.$id,
+        objectType: 'idea',
+        title: saved.title || title,
+        toolKey: key,
+      });
+      return { success: true, summary: `Created idea: ${saved.title || title}` };
+    }
+
+    if ((key === 'update_note' || key === 'objects.idea.update') && call.specifier) {
+      const { updateNote } = await import('@/lib/actions/client-ops');
+      const saved = await updateNote(call.specifier, {
+        title: args.title as string | undefined,
+        content: args.content as string | undefined,
+        tags:
+          args.tags !== undefined
+            ? Array.isArray(args.tags)
+              ? args.tags
+              : [args.tags]
+            : undefined,
+        isPublic:
+          args.isPublic !== undefined
+            ? args.isPublic === true || args.isPublic === 'true'
+            : undefined,
+        isGuest:
+          args.isPublic !== undefined
+            ? args.isPublic === true || args.isPublic === 'true'
+            : undefined,
+      });
+      ctx.pushLiveNote?.(saved, { pending: false });
+      const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+      autonomicSyncEngine.ack(saved.$id || call.specifier);
+      await ctx.recordSessionObject?.({
+        objectId: saved.$id || call.specifier,
+        objectType: 'idea',
+        title: (saved as any).title || (args.title as string) || null,
+        toolKey: key,
+      });
+      return {
+        success: true,
+        summary: `Updated idea: ${(saved as any).title || args.title || call.specifier}`,
+      };
+    }
+
+    if ((key === 'get_note' || key === 'objects.idea.read') && call.specifier) {
+      const { getNote } = await import('@/lib/appwrite/note');
+      const note = await getNote(call.specifier);
+      ctx.pushLiveNote?.(note, { pending: false });
+      await ctx.recordSessionObject?.({
+        objectId: note.$id,
+        objectType: 'idea',
+        title: note.title || null,
+        toolKey: key,
+      });
+      ctx.appendMessage?.('assistant', `Loaded Idea **${note.title || 'Untitled'}** (\`${note.$id}\`).`);
+      return { success: true, summary: `Loaded idea: ${note.title || 'Untitled'}`, skipToast: true };
+    }
+
+    // ── Goals ───────────────────────────────────────────────────
+    if (key === 'create_goal' || key === 'objects.goal.create') {
+      const goalTitle = String(args.title || 'Untitled Goal');
+      const goalDesc = String(args.description || `Goal: ${goalTitle}`);
+      const created = await ctx.addTask?.({
+        title: goalTitle,
+        description: goalDesc,
+        status: args.status || 'todo',
+        priority: args.priority || 'medium',
+        dueDate: args.dueDate ? new Date(String(args.dueDate)) : null,
+        labels: [],
+        subtasks: [],
+        comments: [],
+        attachments: [],
+        reminders: [],
+        timeEntries: [],
+        assigneeIds: ctx.user?.$id ? [ctx.user.$id] : ['guest'],
+        creatorId: ctx.user?.$id || 'guest',
+        isArchived: false,
+        isPinned: false,
+        isAgentic: args.isAgentic !== false,
+      });
+      const goalId = (created as any)?.id || (created as any)?.$id;
+      if (goalId) {
+        await ctx.recordSessionObject?.({
+          objectId: String(goalId),
+          objectType: 'goal',
+          title: goalTitle,
+          toolKey: key,
+        });
+      }
+      return { success: true, summary: `Created goal: ${goalTitle}` };
+    }
+
+    if (key === 'list_goals' || key === 'objects.goal.search') {
+      const query = String(args.query || call.specifier || '.all').trim();
+      const allTasks = ctx.tasks || [];
+      const filtered =
+        query === '.all' || !query
+          ? allTasks.filter((t) => !t.isArchived)
+          : allTasks.filter(
+              (t) =>
+                !t.isArchived &&
+                (t.title?.toLowerCase().includes(query.toLowerCase()) ||
+                  t.description?.toLowerCase().includes(query.toLowerCase())),
+            );
+      const summaryList = filtered
+        .slice(0, 15)
+        .map(
+          (t) =>
+            `- **${t.title}** (${t.status || 'todo'}${t.priority ? `, ${t.priority}` : ''}) — ID: \`${t.id}\``,
+        )
+        .join('\n');
+      ctx.appendMessage?.(
+        'assistant',
+        `### Active Goals (${filtered.length})\n${summaryList || 'No matching goals found.'}`,
+      );
+      return { success: true, summary: `Listed ${filtered.length} goals`, skipToast: true };
+    }
+
+    if ((key === 'update_goal' || key === 'objects.goal.update') && call.specifier) {
+      await ctx.updateTask?.(call.specifier, {
+        title: args.title,
+        status: args.status,
+        priority: args.priority,
+        dueDate: args.dueDate ? new Date(String(args.dueDate)) : undefined,
+      });
+      return { success: true, summary: `Updated goal: ${call.specifier}` };
+    }
+
+    // ── Projects ────────────────────────────────────────────────
+    if (key === 'create_project' || key === 'objects.workspace.create') {
+      const { ProjectsService } = await import('@/lib/appwrite/projects');
+      const project = await ProjectsService.createProject({
+        ownerId: ctx.user?.$id || 'guest',
+        title: String(args.title || 'Untitled Project'),
+        summary: String(args.summary || ''),
+      });
+      if (project?.$id) {
+        await ctx.recordSessionObject?.({
+          objectId: project.$id,
+          objectType: 'project',
+          title: String(args.title || project.title || 'Untitled Project'),
+          toolKey: key,
+        });
+      }
+      return {
+        success: true,
+        summary: `Created project: ${args.title || project?.title || 'Untitled Project'}`,
+      };
+    }
+
+    if (key === 'link_to_project' && call.specifier) {
+      const objectType = String(args.objectType || 'note');
+      const objectId = String(args.objectId || '').trim();
+      if (!objectId) return { success: false, summary: '', error: 'Missing objectId' };
+      const entityKind = objectType === 'goal' || objectType === 'task' ? 'task' : 'note';
+      const { addObjectToProject } = await import('@/lib/actions/client-ops');
+      await addObjectToProject(call.specifier, entityKind, objectId);
+      await ctx.recordSessionObject?.({
+        objectId,
+        objectType: entityKind === 'task' ? 'goal' : 'idea',
+        title: `Linked to project ${call.specifier}`,
+        toolKey: key,
+      });
+      return { success: true, summary: `Connected ${entityKind} to project` };
+    }
+
+    // ── Forms ───────────────────────────────────────────────────
+    if (key === 'objects.form.read' && (call.specifier || args.formId)) {
+      const formId = String(call.specifier || args.formId);
+      const { FormsService } = await import('@/lib/services/forms');
+      const form = await FormsService.getForm(formId);
+      ctx.appendMessage?.(
+        'assistant',
+        `### Form: ${form.title}\nSchema fields: ${JSON.parse(form.schema || '[]').length}`,
+      );
+      return { success: true, summary: `Loaded form ${form.title}`, skipToast: true };
+    }
+
+    if (key === 'objects.form.submit' || key === 'submit_form_response') {
+      const formId = String(call.specifier || args.formId || '');
+      const payload = args.payload || args.responses;
+      if (!formId || !payload) {
+        return { success: false, summary: '', error: 'formId and payload required' };
+      }
+      const previewId = `form_submit_${formId}_${Date.now()}`;
+      await AgenticPreviewPartition.set(previewId, 'form_submit', { formId, payload });
+      ctx.openDrawer?.('agentic-preview', {
+        previewId,
+        kind: 'form_submit',
+        title: 'Review form submission',
+      });
+      return { success: true, summary: 'Form submission preview ready' };
+    }
+
+    // ── Delete ──────────────────────────────────────────────────
+    if (key === 'delete_resource' || key.startsWith('objects.') && key.endsWith('.delete')) {
+      if (!call.specifier) return { success: false, summary: '', error: 'Missing resource id' };
+      const type = String(args.type || 'note');
+      if (type === 'note') {
+        const { deleteNote } = await import('@/lib/actions/client-ops');
+        await deleteNote(call.specifier);
+        ctx.removeNote?.(call.specifier);
+      } else if (type === 'goal' || type === 'task') {
+        await ctx.deleteTask?.(call.specifier);
+      } else if (type === 'project') {
+        const { deleteProject } = await import('@/lib/actions/client-ops');
+        await deleteProject(call.specifier);
+      }
+      return { success: true, summary: `Deleted ${type}: ${call.specifier}` };
+    }
+
+    return { success: false, summary: '', error: `Unhandled tool: ${key}` };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Tool execution failed';
+    return { success: false, summary: '', error: message };
+  }
+}
+
+export async function executeAgenticToolCallWithToast(
+  call: AgenticToolCallInput,
+  ctx: AgenticExecutionContext,
+  toolName?: string,
+): Promise<AgenticExecutionResult> {
+  const result = await executeAgenticToolCall(call, ctx);
+  if (result.success && !result.skipToast) {
+    toast.success(`Kylie ran ${toolName || call.toolKey}.`);
+  } else if (!result.success) {
+    toast.error(result.error || `Kylie couldn't run ${toolName || call.toolKey}`);
+  }
+  return result;
+}

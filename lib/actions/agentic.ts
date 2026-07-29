@@ -543,8 +543,7 @@ If the target is ambiguous, ask the user to clarify or list the available titles
     .replace(/(password|pass|pin|secret|key|private)\s*[:=]\s*[^\s]+/gi, '$1: [REDACTED]')
     .replace(/(?<=^|\s)[A-Za-z0-9+/]{40,}(?=$|\s)/g, '[REDACTED_HASH]');
 
-  // Inject ecosystem data structures / RLS guidelines, explicitly redacting or dropping security models
-  const { NOTE_TOOL_PAYLOAD_SCHEMA } = await import('@/lib/agentic/tools-registry');
+  const { assembleSystemInstructionBlocks } = await import('@/lib/agentic/prompt-framework');
   const DATA_STRUCTURES_GUIDE = `
 [KYLRIX DATA ECOSYSTEM STRUCTURES & SCHEMAS]
 1. Database Consolidation: All tables live in database: "passwordManagerDb".
@@ -570,9 +569,6 @@ If the target is ambiguous, ask the user to clarify or list the available titles
 - Ground suggestions in: live chat, [RECENT IDEA TITLES], Active Goals/Projects, and [USER RECENT TELEMETRY HISTORY] habits.
 - Prefer concrete chips like: "Create a goal for …", "Connect this idea to project …", "Open Flow", "Draft a follow-up idea".
 - The prompt field must be executable by Kylie alone (no clarifying questions unless absolutely required). One click = full flow via tools.
-
-[NOTE / IDEA TOOL JSON CONTRACT — EXACT]
-${NOTE_TOOL_PAYLOAD_SCHEMA}
 
 [SESSION OBJECTS — THIS THREAD]
 Objects already created or opened in this agent session (prefer these ids for update_note / get_note):
@@ -616,55 +612,40 @@ ${lifetimeMemoryContext}
 `
     : "";
 
-  const { AGENTIC_TOOLS_REGISTRY } = await import('@/lib/agentic/tools-registry');
-  const toolsSnippet = AGENTIC_TOOLS_REGISTRY.map(t => 
-    `- Key: "${t.key}" (${t.name}): ${t.description}. Params: ${t.parameters.join(', ')}`
-  ).join('\n');
+  const systemInstructionCore = assembleSystemInstructionBlocks({
+    dataStructuresGuide: DATA_STRUCTURES_GUIDE,
+    contextBlock,
+    sessionBlock,
+    memoryBlock,
+    hintContext,
+    telemetrySnippet,
+    userResourceSummaries,
+    sessionObjectsSnippet,
+  });
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: process.env.GEMINI_MODEL_NAME || 'gemini-2.0-flash',
     systemInstruction: [
-      'You are Kylie — the friendly Kylrix workspace partner embedded in the user workspace. Speak as Kylie in first person when natural; never call yourself System or Smart System.',
-      'Identity (when asked who you are / what you do): say you are Kylie, their productivity sidekick. Keep it short and warm.',
-      'Steering: if the ask is vague, offer 2–3 concrete next steps tied to the current page. If off-topic, gently redirect to Ideas, Flow, Vault, Connect, or Projects. If unsafe or impossible here, say so plainly and suggest what they can do instead.',
-      'NEXT STEPS: After substantive help, include suggest_next_steps with clickable prompts grounded in recent idea titles, habits, and this chat. Prefer at least one create_goal-oriented chip. Goals matter on every page.',
-      'Respond with concise, actionable output. Prefer bullet steps when planning.',
-      'Stay grounded in the current page context and Kylrix apps: Ideas, Flow, Vault, Connect, Projects.',
-      'MUTATION & MULTI-STEP PROTOCOL (STRICT):',
-      '- Workspace mutations ONLY happen through toolCalls. Prose never creates data.',
-      '- MULTI-STEP REQUESTS: If the user request asks for multiple actions (e.g., "create a goal AND tell me all goals I have currently"), emit ALL relevant toolCalls in a SINGLE response (e.g. emit create_goal AND list_goals together), OR run the requested actions via toolCalls in sequence. NEVER stop after just one action when the prompt asks for multiple!',
-      '- SEARCH & LIST GOALS: Use list_goals toolCall when asked to list, view, find, or search goals/tasks. Set args.query to ".all" to return all non-trashed goals, or to a query string to search. If the user asks "tell me all goals I have", toolCalls MUST include list_goals with specifier ".all" or args.query ".all".',
-      '- GOAL CREATION SCHEMA: When creating a goal, toolCalls MUST include create_goal with BOTH title (string) AND a detailed description (string) outlining what needs to be done. NEVER create a goal with empty description.',
-      '- If the user asks to compose, write, draft, create, or save an Idea/note: toolCalls MUST include create_note with title + content. The response field may describe what you are creating, but MUST NOT claim it already exists unless create_note is present in toolCalls.',
-      '- If the user asks to edit an existing Idea: toolCalls MUST include update_note with specifier = note $id from [SESSION OBJECTS] or prior context.',
-      '- If the user asks to open/show an Idea by id: toolCalls MUST include get_note with that specifier.',
-      '- When Kylie creates a goal: create_goal with isAgentic true.',
-      '- Empty toolCalls is only valid for pure Q&A with no create/update/navigate side effects.',
-      '- NEVER tell the user to create the Idea or Goal manually when tools can do it.',
-      'You MUST return a valid JSON object matching this schema exactly:',
+      systemInstructionCore,
+      'JSON OUTPUT SCHEMA (STRICT):',
       '{',
       '  "response": "Visible reply to the user (markdown). Required.",',
       '  "sessionContextUpdate": "Optional facts to append to session context.",',
       '  "lifetimeMemoryUpdate": "Optional high-quality lifelong memory. Leave blank if none.",',
       '  "toolCalls": [',
       '     {',
-      '        "toolKey": "create_note | update_note | get_note | create_goal | update_goal | list_goals | create_project | create_or_select_agent | open_wallet_funding | link_to_project | suggest_next_steps | toggle_privacy | navigate_workspace | delete_resource",',
-      '        "specifier": "note/goal/project id or route or \'.all\' when required; null otherwise",',
+      '        "toolKey": "create_note | update_note | get_note | create_goal | update_goal | list_goals | create_project | ui.navigate | navigate_workspace | search_ecosystem | objects.form.read | objects.form.submit | link_to_project | suggest_next_steps | toggle_privacy | delete_resource | ui.open_drawer | ui.preview.open",',
+      '        "specifier": "resource id, form id, target id, or \'.all\' when required; null otherwise",',
       '        "subSpecifier": "optional field name",',
-      '        "args": { "title": "...", "content": "...", "description": "...", "query": ".all", "tags": [], "isPublic": false, "isAgentic": true, "suggestions": [{ "label": "...", "prompt": "..." }], "objectType": "note", "objectId": "...", "type": "note" }',
+      '        "args": { "title": "...", "content": "...", "description": "...", "query": ".all", "target": "settings.passkeys", "route": "/settings", "tags": [], "isPublic": false, "isAgentic": true, "suggestions": [{ "label": "...", "prompt": "..." }], "objectType": "note", "objectId": "...", "type": "note", "payload": {} }',
       '     }',
       '  ]',
       '}',
-      'Example — user asks to compose an Idea titled Odyssey:',
-      '{"response":"Creating Idea \\"odyssey, the movie\\" with a concise Greek-mythology write-up.","toolCalls":[{"toolKey":"create_note","specifier":null,"args":{"title":"odyssey, the movie","content":"## Odyssey\\nConcise Greek mythology write-up...","tags":[],"isPublic":false}},{"toolKey":"suggest_next_steps","args":{"suggestions":[{"label":"Create a goal for Odyssey","prompt":"Create a high-priority goal titled \\"Ship Odyssey outline\\" with isAgentic true using create_goal."},{"label":"Connect Odyssey to a project","prompt":"If a matching project exists, link the Odyssey idea to it with link_to_project; otherwise create a project titled Odyssey and link the idea."}]}}]}',
-      '[AVAILABLE TOOLS]',
-      toolsSnippet,
-      DATA_STRUCTURES_GUIDE,
-      contextBlock || 'No page context supplied.',
-      sessionBlock,
-      memoryBlock,
-      hintContext,
+      'NAVIGATION EXAMPLE — user says "take me to passkeys in settings":',
+      '{"response":"Opening Passkeys in Settings now.","toolCalls":[{"toolKey":"ui.navigate","args":{"target":"settings.passkeys"}}]}',
+      'SEARCH EXAMPLE — user says "what is for today":',
+      '{"response":"Searching your goals and events for today.","toolCalls":[{"toolKey":"search_ecosystem","args":{"query":"what is for today"}}]}',
     ].join('\n'),
     generationConfig: {
       responseMimeType: 'application/json'

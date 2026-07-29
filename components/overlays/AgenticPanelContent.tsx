@@ -603,10 +603,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   let isPreAuthorized = false;
                   try {
                     const appPrefs = await account.getPrefs();
-                    const whitelist = appPrefs?.authorizedTools || [];
-                    if (whitelist.includes('allow_all') || whitelist.includes(call.toolKey)) {
-                      isPreAuthorized = true;
-                    }
+                    const { parseAgenticPreferences, toolRequiresAuthorization } = await import('@/lib/agentic/preferences');
+                    const agentPrefs = parseAgenticPreferences(appPrefs as Record<string, unknown>);
+                    isPreAuthorized = !toolRequiresAuthorization(call.toolKey, agentPrefs, toolDef.requiresAuthorization);
                   } catch {}
 
                   if (!isPreAuthorized) {
@@ -645,213 +644,34 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                     }
                   };
 
-                  let resultSummary = toolDef.name;
-                  if (call.toolKey === 'create_note') {
-                    const title = String(call.args?.title || '').trim() || 'Untitled Idea';
-                    const content = String(call.args?.content || '').trim();
-                    if (!content) {
-                      toast.error('Agent create_note missing content.');
-                      await recordToolCall(call, 'error', 'Missing content');
-                      continue;
-                    }
-
-                    const tags = Array.isArray(call.args.tags)
-                      ? call.args.tags
-                      : (call.args.tags ? [call.args.tags] : []);
-                    const isPublic = call.args.isPublic === true || call.args.isPublic === 'true';
-
-                    // Local-first (same as CreateNoteForm): paint the card before cloud write.
-                    const { ID } = await import('appwrite');
-                    const { resolveNoteCardTitle } = await import('@/constants/noteTitle');
-                    const { markNotePersistedRemote } = await import('@/lib/notes/compose-draft-registry');
-                    const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
-                    const draftId = ID.unique();
-                    const now = new Date().toISOString();
-                    const draftNote = {
-                      $id: draftId,
-                      title: resolveNoteCardTitle(title, content) || title,
-                      content,
-                      tags,
-                      format: 'text',
-                      isPublic,
-                      isGuest: isPublic,
-                      userId: user?.$id || '',
-                      $createdAt: now,
-                      $updatedAt: now,
-                      updatedAt: now,
-                    } as any;
-
-                    registerComposeSession(draftId);
-                    pushLiveNote(draftNote);
-
-                    const { createNote } = await import('@/lib/actions/client-ops');
-                    const saved = await createNote({
-                      $id: isValidAppwriteRowId(draftId) ? draftId : undefined,
-                      title,
-                      content,
-                      tags,
-                      isPublic,
-                      isGuest: isPublic,
-                    }) as any;
-
-                    markNotePersistedRemote(saved.$id);
-                    if (saved.$id && saved.$id !== draftId) {
-                      migrateDraftNoteId(draftId, saved.$id);
-                    }
-                    unregisterComposeSession(draftId);
-                    if (saved.$id) unregisterComposeSession(saved.$id);
-                    pushLiveNote(saved, { pending: false });
-                    const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
-                    autonomicSyncEngine.ack(saved.$id, saved.updatedAt || now);
-                    setCachedData(`note_${saved.$id}`, saved);
-
-                    await recordSessionObject({
-                      objectId: saved.$id,
-                      objectType: 'idea',
-                      title: saved.title || title,
-                      toolKey: 'create_note',
-                    });
-                    resultSummary = `Created idea: ${saved.title || title}`;
-                  } else if (call.toolKey === 'update_note' && call.specifier) {
-                    const { updateNote } = await import('@/lib/actions/client-ops');
-                    const saved = await updateNote(call.specifier, {
-                      title: call.args.title,
-                      content: call.args.content,
-                      tags: call.args.tags !== undefined ? (Array.isArray(call.args.tags) ? call.args.tags : [call.args.tags]) : undefined,
-                      isPublic: call.args.isPublic !== undefined ? (call.args.isPublic === true || call.args.isPublic === 'true') : undefined,
-                      isGuest: call.args.isPublic !== undefined ? (call.args.isPublic === true || call.args.isPublic === 'true') : undefined,
-                    });
-                    pushLiveNote(saved, { pending: false });
-                    const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
-                    autonomicSyncEngine.ack(saved.$id || call.specifier);
-                    await recordSessionObject({
-                      objectId: saved.$id || call.specifier,
-                      objectType: 'idea',
-                      title: saved.title || call.args.title || null,
-                      toolKey: 'update_note',
-                    });
-                    resultSummary = `Updated idea: ${saved.title || call.args.title || call.specifier}`;
-                  } else if (call.toolKey === 'get_note' && call.specifier) {
-                    const { getNote } = await import('@/lib/appwrite/note');
-                    const note = await getNote(call.specifier);
-                    pushLiveNote(note, { pending: false });
-                    await recordSessionObject({
-                      objectId: note.$id,
-                      objectType: 'idea',
-                      title: note.title || null,
-                      toolKey: 'get_note',
-                    });
-                    resultSummary = `Loaded idea: ${note.title || 'Untitled'}`;
-                    appendMessage(
-                      'assistant',
-                      `Loaded Idea **${note.title || 'Untitled'}** (\`${note.$id}\`).`,
-                    );
-                  } else if (call.toolKey === 'create_goal') {
-                    const goalTitle = call.args.title || 'Untitled Goal';
-                    const goalDesc = call.args.description || `Goal created by Kylie for "${goalTitle}"`;
-                    const created = await addTask({
-                      title: goalTitle,
-                      description: goalDesc,
-                      status: call.args.status || 'todo',
-                      priority: call.args.priority || 'medium',
-                      dueDate: call.args.dueDate ? new Date(call.args.dueDate) : null,
-                      labels: [],
-                      subtasks: [],
-                      comments: [],
-                      attachments: [],
-                      reminders: [],
-                      timeEntries: [],
-                      assigneeIds: user?.$id ? [user.$id] : ['guest'],
-                      creatorId: user?.$id || 'guest',
-                      isArchived: false,
-                      isPinned: false,
-                      isAgentic: true,
-                    } as any);
-                    const goalId = (created as any)?.id || (created as any)?.$id;
-                    if (goalId) {
-                      await recordSessionObject({
-                        objectId: String(goalId),
-                        objectType: 'goal',
-                        title: goalTitle,
-                        toolKey: 'create_goal',
-                      });
-                    }
-                    resultSummary = `Created goal: ${goalTitle}`;
-                  } else if (call.toolKey === 'list_goals') {
-                    const query = String(call.args?.query || call.specifier || '.all').trim();
-                    const allTasks = tasks || [];
-                    const filteredTasks = query === '.all' || !query
-                      ? allTasks.filter(t => !t.isArchived)
-                      : allTasks.filter(t => !t.isArchived && (t.title?.toLowerCase().includes(query.toLowerCase()) || t.description?.toLowerCase().includes(query.toLowerCase())));
-                    
-                    const summaryList = filteredTasks.slice(0, 15).map(t => `- **${t.title}** (${t.status || 'todo'}${t.priority ? `, ${t.priority}` : ''}) — ID: \`${t.id}\``).join('\n');
-                    appendMessage(
-                      'assistant',
-                      `### Active Goals (${filteredTasks.length})\n${summaryList || 'No matching goals found.'}`,
-                    );
-                    resultSummary = `Listed ${filteredTasks.length} goals matching "${query}"`;
-                  } else if (call.toolKey === 'update_goal' && call.specifier) {
-                    await updateTask(call.specifier, {
-                      title: call.args.title,
-                      status: call.args.status,
-                      priority: call.args.priority,
-                      dueDate: call.args.dueDate ? new Date(call.args.dueDate) : undefined
-                    });
-                    resultSummary = `Updated goal: ${call.specifier}`;
-                  } else if (call.toolKey === 'create_project') {
-                    const { ProjectsService } = await import('@/lib/appwrite/projects');
-                    const project = await ProjectsService.createProject({
-                      ownerId: user?.$id || 'guest',
-                      title: call.args.title || 'Untitled Project',
-                      summary: call.args.summary || '',
-                    });
-                    if (project?.$id) {
-                      await recordSessionObject({
-                        objectId: project.$id,
-                        objectType: 'project',
-                        title: call.args.title || project.title || 'Untitled Project',
-                        toolKey: 'create_project',
-                      });
-                    }
-                    resultSummary = `Created project: ${call.args.title || project?.title || 'Untitled Project'}`;
-                  } else if (call.toolKey === 'link_to_project' && call.specifier) {
-                    const objectType = String(call.args?.objectType || 'note');
-                    const objectId = String(call.args?.objectId || '').trim();
-                    if (!objectId) {
-                      toast.error('Kylie needs an object id to connect to a project.');
-                      await recordToolCall(call, 'error', 'Missing objectId');
-                      continue;
-                    }
-                    const entityKind = objectType === 'goal' || objectType === 'task' ? 'task' : 'note';
-                    const { addObjectToProject } = await import('@/lib/actions/client-ops');
-                    await addObjectToProject(call.specifier, entityKind, objectId);
-                    await recordSessionObject({
-                      objectId,
-                      objectType: entityKind === 'task' ? 'goal' : 'idea',
-                      title: `Linked to project ${call.specifier}`,
-                      toolKey: 'link_to_project',
-                    });
-                    resultSummary = `Connected ${entityKind} to project`;
-                  } else if (call.toolKey === 'delete_resource' && call.specifier) {
-                    const type = String(call.args?.type || 'note');
-                    if (type === 'note') {
-                      const { deleteNote } = await import('@/lib/actions/client-ops');
-                      await deleteNote(call.specifier);
-                      removeNote(call.specifier);
-                    } else if (type === 'goal' || type === 'task') {
-                      await deleteTask(call.specifier);
-                    } else if (type === 'project') {
-                      const { deleteProject } = await import('@/lib/actions/client-ops');
-                      await deleteProject(call.specifier);
-                    }
-                    resultSummary = `Deleted ${type}: ${call.specifier}`;
-                  } else if (call.toolKey === 'navigate_workspace' && call.args.route) {
-                    resultSummary = `Navigate: ${call.args.route}`;
-                    onClose();
-                    router.push(call.args.route);
+                  const { executeAgenticToolCallWithToast } = await import('@/lib/agentic/client-executor');
+                  const result = await executeAgenticToolCallWithToast(
+                    call,
+                    {
+                      user,
+                      router,
+                      onClose,
+                      tasks,
+                      setCachedData,
+                      pushLiveNote,
+                      removeNote,
+                      registerComposeSession,
+                      unregisterComposeSession,
+                      migrateDraftNoteId,
+                      addTask,
+                      updateTask,
+                      deleteTask,
+                      appendMessage,
+                      openDrawer: openUnified,
+                      recordSessionObject,
+                    },
+                    toolDef.name,
+                  );
+                  if (!result.success) {
+                    await recordToolCall(call, 'error', result.error || 'Failed');
+                    continue;
                   }
-                  await recordToolCall(call, 'success', resultSummary);
-                  toast.success(`Kylie ran ${toolDef.name}.`);
+                  await recordToolCall(call, 'success', result.summary);
                 } catch (err: any) {
                   console.error(`Failed to execute tool ${call.toolKey}:`, err);
                   await recordToolCall(call, 'error', err?.message || 'Failed');
@@ -884,7 +704,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         setRunningWorkflowId(null);
       }
     },
-    [appendMessage, isPro, openProUpgrade, pageContext, addTask, updateTask, deleteTask, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote, user, onClose, router],
+    [appendMessage, isPro, openProUpgrade, pageContext, addTask, updateTask, deleteTask, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote, user, onClose, router, openUnified, setCachedData, tasks],
   );
 
   useEffect(() => {

@@ -19,6 +19,14 @@ import {
 | `access.ts` | Shared Pro/Teams gate helpers (client assert + labels) |
 | `runtime.ts` | One-shot `runInstantAgenticRequest` — no drawer/session UI |
 | `tools-registry.ts` | Tool definitions for the model |
+| `client-executor.ts` | Unified client tool execution |
+| `ui-catalog.ts` | Semantic navigation targets |
+| `search-engine.ts` | Cross-domain search |
+| `prompt-framework.ts` | System prompt assembly |
+| `spine-bridge.ts` | Programmatic agent triggers |
+| `workflow-bridge.ts` | Workflow → agent chains |
+| `hint-engine.ts` | Hint provider foundation |
+| `preview-partition.ts` | Staged preview state |
 | `context-workflows.ts` | Page context + quick workflows |
 | `index.ts` | Public barrel |
 

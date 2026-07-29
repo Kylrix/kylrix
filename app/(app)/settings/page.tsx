@@ -176,6 +176,18 @@ export default function SettingsPage() {
     }, []);
 
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const hash = window.location.hash;
+        if (!hash) return;
+        const scrollToHash = () => {
+            const el = document.querySelector(hash);
+            el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+        const timer = setTimeout(scrollToHash, 300);
+        return () => clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
         let active = true;
         async function checkTg() {
             try {
