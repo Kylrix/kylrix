@@ -127,7 +127,7 @@ export const EventViewDrawer = ({ open, onClose, event }: EventViewDrawerProps) 
                         variant="contained" 
                         color="primary"
                         component={NextLink}
-                        href={`/flow/events/${event.$id || event.id}`}
+                        href={`/events/${event.$id || event.id}`}
                         sx={{ borderRadius: 3, py: 1.5, fontWeight: 800, color: 'black' }}
                     >
                         Open in Flow

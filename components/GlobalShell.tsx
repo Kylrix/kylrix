@@ -64,6 +64,8 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     if (!pathname) return false;
     return (
       pathname.includes('/shared/') ||
+      pathname.startsWith('/goals/') ||
+      pathname.startsWith('/events/') ||
       pathname.startsWith('/flow/goal/') ||
       pathname.startsWith('/flow/form/') ||
       pathname.startsWith('/flow/forms/') ||

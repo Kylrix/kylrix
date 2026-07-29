@@ -247,7 +247,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
         {/* Actions */}
         <div className="mt-auto flex flex-col gap-3 pt-4 border-t border-[#34322F]">
           <a
-            href={`/flow/events/${eventIdValue}`}
+            href={`/events/${eventIdValue}`}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full py-3 px-4 rounded-[14px] bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-sm text-center font-satoshi transition-all flex items-center justify-center gap-2 cursor-pointer"

@@ -309,7 +309,7 @@ export default function FormsDashboard() {
               </button>
               <button
                 type="button"
-                onClick={() => router.push('/flow/events')}
+                onClick={() => router.push('/events')}
                 className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
               >
                 Events

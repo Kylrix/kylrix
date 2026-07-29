@@ -8,7 +8,7 @@ import {
   Lock as VaultIcon,
   CheckSquare as FlowIcon,
   MessageCircle as ConnectIcon,
-  FolderKanban as ProjectsIcon,
+  GitFork as WorkflowsIcon,
   Tag as TagsIcon,
 } from 'lucide-react';
 
@@ -20,14 +20,14 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { useAuth } from '@/context/auth/AuthContext';
 
-type NavId = 'note' | 'flow' | 'vault' | 'connect' | 'projects' | 'tags';
+type NavId = 'note' | 'flow' | 'vault' | 'connect' | 'workflows' | 'tags';
 
 const NAV_COLORS: Record<NavId, string> = {
   note: '#EC4899',
   flow: '#A855F7',
   vault: '#10B981',
   connect: '#F59E0B',
-  projects: '#F59E0B',
+  workflows: '#6366F1',
   tags: '#6366F1',
 };
 
@@ -51,26 +51,26 @@ export function UnifiedLeftSidebar() {
 
   const appContext = useMemo((): NavId | null => {
     if (pathname?.startsWith('/tags')) return 'tags';
-    if (pathname?.startsWith('/workspaces') || pathname?.startsWith('/projects')) return 'projects';
+    if (pathname?.startsWith('/workflows')) return 'workflows';
     if (pathname?.startsWith('/app')) return 'note';
     if (pathname?.startsWith('/vault')) return 'vault';
-    if (pathname?.startsWith('/flow')) return 'flow';
+    if (pathname?.startsWith('/flow') || pathname?.startsWith('/goals')) return 'flow';
     if (pathname?.startsWith('/connect')) return 'connect';
     return null;
   }, [pathname]);
 
   const getCurrentTab = (): NavId | null => {
     if (pathname?.startsWith('/tags')) return 'tags';
-    if (pathname?.startsWith('/workspaces') || pathname?.startsWith('/projects')) return 'projects';
+    if (pathname?.startsWith('/workflows')) return 'workflows';
     if (pathname?.startsWith('/app')) return 'note';
-    if (pathname?.startsWith('/flow')) return 'flow';
+    if (pathname?.startsWith('/flow') || pathname?.startsWith('/goals')) return 'flow';
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/connect')) return 'connect';
     return null;
   };
 
   useEffect(() => {
-    ['/app', '/flow', '/vault', '/connect', '/workspaces', '/tags'].forEach((route) => {
+    ['/app', '/flow', '/vault', '/connect', '/workflows', '/tags'].forEach((route) => {
       router.prefetch(route);
     });
   }, [router]);
@@ -81,7 +81,7 @@ export function UnifiedLeftSidebar() {
       flow: '/flow',
       vault: '/vault',
       connect: '/connect',
-      projects: '/workspaces',
+      workflows: '/workflows',
       tags: '/tags',
     };
     router.push(routes[navId] || '/app');
@@ -103,7 +103,7 @@ export function UnifiedLeftSidebar() {
     { id: 'flow', label: 'Flow', icon: FlowIcon },
     { id: 'vault', label: 'Vault', icon: VaultIcon },
     { id: 'connect', label: 'Connect', icon: ConnectIcon },
-    { id: 'projects', label: 'Workspaces', icon: ProjectsIcon },
+    { id: 'workflows', label: 'Workflows', icon: WorkflowsIcon },
     { id: 'tags', label: 'Tags', icon: TagsIcon },
   ];
 

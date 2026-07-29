@@ -62,7 +62,7 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
   }, [event, openUnified, handleMenuClose]);
 
   const handleEditEvent = useCallback(() => {
-    router.push(`/flow/events/${event.id}`);
+    router.push(`/events/${event.id}`);
     handleMenuClose();
   }, [event, router, handleMenuClose]);
 
@@ -118,7 +118,7 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
     { label: pinned ? 'Unpin' : 'Pin', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: handlePinToggle },
     ...accessControlItems,
     ...(isCreator ? [
-      { label: 'Edit Event', icon: <Edit size={16} />, onClick: () => router.push(`/flow/events/${event.id}`) },
+      { label: 'Edit Event', icon: <Edit size={16} />, onClick: () => router.push(`/events/${event.id}`) },
       { label: 'Delete', icon: <Trash2 size={16} />, variant: 'destructive' as const, onClick: () => {
         openUnified('delete-confirm', {
           title: `Delete event: "${event.title}"?`,
