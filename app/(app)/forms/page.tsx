@@ -42,7 +42,7 @@ export default function FormsDashboard() {
     const { user } = useAuth();
     const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
     const router = useRouter();
-    const { invalidate } = useDataNexus();
+    const { invalidate, getCachedDataAsync, setCachedData } = useDataNexus();
     const { open: openDrawer } = useUnifiedDrawer();
     const { setActiveDetail } = useSection();
     const { setConfiguration, resetConfiguration } = useFAB();
@@ -80,33 +80,33 @@ export default function FormsDashboard() {
         return () => window.removeEventListener('resize', checkSize);
     }, []);
 
-    const formsLengthRef = useRef(forms.length);
+    const formsRef = useRef<Forms[]>([]);
     useEffect(() => {
-        formsLengthRef.current = forms.length;
-    }, [forms.length]);
+        formsRef.current = forms;
+    }, [forms]);
 
     const fetchForms = useCallback(async (showLoading = true) => {
         const userId = user?.$id || 'guest';
         const cacheKey = `f_user_forms_${userId}`;
-        
-        // Load RxDB local cache immediately if state is empty
-        if (formsLengthRef.current === 0) {
+        const isStateEmpty = formsRef.current.length === 0;
+        const shouldShowLoading = showLoading && isStateEmpty;
+        if (shouldShowLoading) setLoading(true);
+
+        // 1) Local-first render via DataNexus cache (no direct RxDB in UI).
+        if (isStateEmpty) {
             try {
-                const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-                const db = await getRxDB().catch(() => null);
-                if (db) {
-                    const cachedDoc = await db.cache.findOne(cacheKey).exec().catch(() => null);
-                    if (cachedDoc?.data && Array.isArray(cachedDoc.data)) {
-                        setForms(cachedDoc.data as Forms[]);
-                        setLoading(false);
-                    }
+                const cached = await getCachedDataAsync<Forms[]>(cacheKey);
+                if (Array.isArray(cached)) {
+                    setForms(cached);
                 }
-            } catch {}
+            } catch (e) {
+                console.warn('[Forms] cache read failed:', e);
+            }
+            // Show empty state immediately (avoid "minutes empty" feeling).
+            if (shouldShowLoading) setLoading(false);
         }
 
-        const shouldShowLoading = showLoading && formsLengthRef.current === 0;
-        if (shouldShowLoading) setLoading(true);
-        
+        // 2) Remote refresh (network). If it fails, we keep the local cache as SoT.
         try {
             let response: any = [];
             if (user?.$id) {
@@ -116,60 +116,57 @@ export default function FormsDashboard() {
                     console.error('[Forms] listUserForms failed:', e);
                 }
             }
-            
-            const formRows: any[] = Array.isArray(response) 
-                ? response 
-                : (Array.isArray((response as any)?.rows) 
-                    ? (response as any).rows 
+
+            const formRows: any[] = Array.isArray(response)
+                ? response
+                : (Array.isArray((response as any)?.rows)
+                    ? (response as any).rows
                     : (Array.isArray((response as any)?.documents) ? (response as any).documents : []));
 
-            setForms((prev) => {
-                const byId = new Map<string, Forms>();
-                (prev || []).forEach((f) => f && f.$id && byId.set(f.$id, f));
-                formRows.forEach((f: any) => f && f.$id && byId.set(f.$id, f));
-                const merged = Array.from(byId.values()).sort((a: any, b: any) => {
-                    const aPinned = isResourcePinned('form', a.$id, a.userId, a.isPinned);
-                    const bPinned = isResourcePinned('form', b.$id, b.userId, b.isPinned);
-                    if (aPinned && !bPinned) return -1;
-                    if (!aPinned && bPinned) return 1;
-                    return new Date(b.$createdAt || Date.now()).getTime() - new Date(a.$createdAt || Date.now()).getTime();
-                });
+            const byId = new Map<string, Forms>();
+            (formsRef.current || []).forEach((f) => f && f.$id && byId.set(f.$id, f));
+            formRows.forEach((f: any) => f && f.$id && byId.set(f.$id, f));
 
-                (async () => {
-                    try {
-                        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-                        const db = await getRxDB().catch(() => null);
-                        if (db) {
-                            await db.cache.upsert({
-                                id: cacheKey,
-                                data: merged as any,
-                                timestamp: Date.now(),
-                            }).catch(() => {});
-                        }
-                    } catch {}
-                })();
-
-                return merged;
+            const merged = Array.from(byId.values()).sort((a: any, b: any) => {
+                const aPinned = isResourcePinned('form', a.$id, a.userId, a.isPinned);
+                const bPinned = isResourcePinned('form', b.$id, b.userId, b.isPinned);
+                if (aPinned && !bPinned) return -1;
+                if (!aPinned && bPinned) return 1;
+                return (
+                    new Date(b.$createdAt || Date.now()).getTime() -
+                    new Date(a.$createdAt || Date.now()).getTime()
+                );
             });
 
-            // Load offline drafts
+            setForms(merged);
+            try {
+                await setCachedData(cacheKey, merged as any);
+            } catch {}
+
+            // Load offline drafts (doesn't block initial forms render because loading has been released).
             const manifest = await DraftsService.getManifest();
-            setFormDraftStatus(Object.keys(manifest).reduce((acc, id) => ({ ...acc, [id]: true }), {}));
-            
+            setFormDraftStatus(
+                Object.keys(manifest).reduce((acc, id) => ({ ...acc, [id]: true }), {}),
+            );
+
             const draftList: FormDraft[] = [];
-            const draftPromises = Object.keys(manifest).map(async id => {
+            const draftPromises = Object.keys(manifest).map(async (id) => {
                 const d = await DraftsService.getDraft(id);
                 if (d) draftList.push(d);
             });
             await Promise.all(draftPromises);
-            setOfflineDrafts(draftList.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
-
+            setOfflineDrafts(
+                draftList.sort(
+                    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+                ),
+            );
         } catch (err) {
-            console.error("Failed to fetch forms", err);
+            console.error('Failed to fetch forms', err);
         } finally {
+            // If we never showed loading (because cache existed), leave it as-is.
             if (shouldShowLoading) setLoading(false);
         }
-    }, [user, isResourcePinned]);
+    }, [user, isResourcePinned, getCachedDataAsync, setCachedData]);
 
     const [isRefreshing, setIsRefreshing] = useState(false);
 

@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { MultiSectionContainer } from '@/context/SectionContext';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
+import { useDataNexus } from '@/context/DataNexusContext';
 
 export default function FormDetailsPage({ params, formId: propFormId, onBack }: { params?: Promise<{ formId: string }>; formId?: string; onBack?: () => void }) {
     const resolvedParams = {
@@ -53,6 +54,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
     // Huddle Discussion State & Effects
     const { showSuccess, showError } = useToast();
     const { user } = useAuth();
+    const { getCachedDataAsync, setCachedData } = useDataNexus();
     const [huddleMessages, setHuddleMessages] = useState<any[]>([]);
     const [huddleLoading, setHuddleLoading] = useState(false);
     const [huddleSending, setHuddleSending] = useState(false);
@@ -250,16 +252,42 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
     };
 
     const fetchForm = useCallback(async () => {
+        const formId = resolvedParams.formId;
+        if (!formId) return;
+
+        const cacheKey = `f_form_${formId}`;
         setLoading(true);
+        let hadCache = false;
+
         try {
-            const data = await FormsService.getForm(resolvedParams.formId);
-            setRawForm(data);
-        } catch (err) {
-            console.error("Failed to fetch form", err);
+            // Local-first: render cached form immediately if present.
+            try {
+                const cached = await getCachedDataAsync<Forms>(cacheKey);
+                if (cached) {
+                    hadCache = true;
+                    setRawForm(cached);
+                    setLoading(false);
+                }
+            } catch (e) {
+                console.warn('[Forms] cached form read failed:', e);
+            }
+
+            // Network refresh (permission-aware fetch)
+            try {
+                const data = await FormsService.getForm(formId);
+                setRawForm(data);
+                try {
+                    await setCachedData(cacheKey, data as any);
+                } catch {}
+            } catch (err) {
+                console.error('Failed to fetch form', err);
+            }
         } finally {
-            setLoading(false);
+            if (!hadCache) {
+                setLoading(false);
+            }
         }
-    }, [resolvedParams.formId]);
+    }, [resolvedParams.formId, getCachedDataAsync, setCachedData]);
 
     useEffect(() => {
         fetchForm();
