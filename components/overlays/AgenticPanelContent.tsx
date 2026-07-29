@@ -666,10 +666,16 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       unregisterComposeSession,
                       migrateDraftNoteId,
                       addTask,
-                      updateTask,
-                      deleteTask,
+                      updateTask: async (id: string, patch: any) => {
+                        updateTask(id, patch);
+                      },
+                      deleteTask: async (id: string) => {
+                        deleteTask(id);
+                      },
                       appendMessage,
-                      openDrawer: openUnified,
+                      openDrawer: (type: string, payload?: Record<string, unknown>) => {
+                        openUnified(type as any, payload);
+                      },
                       recordSessionObject,
                     },
                     toolDef.name,
