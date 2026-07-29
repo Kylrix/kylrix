@@ -3,7 +3,7 @@ name: Ota governance
 on:
   push:
     branches:
-      - bobai/kylrix-ota-v1.6.25
+      - master
   pull_request:
   workflow_dispatch:
 
