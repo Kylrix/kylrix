@@ -167,23 +167,25 @@ export default function TaskList() {
       onHeal={refreshTasks}
     >
       <div className="animate-fadeIn pointer-events-auto w-full">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-10 gap-4 sm:gap-6">
+        {/* Desktop & Mobile Header */}
+        <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-5 md:p-6 bg-white/[0.01] border border-white/8 rounded-[32px] shadow-2xl relative select-none mb-6 md:mb-8">
+          <div className="absolute top-[-1px] left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-transparent via-[#A855F7] to-transparent" />
+          
           <div>
-            <h1 className="text-2xl sm:text-3xl font-clash font-extrabold text-[#F5F2ED] tracking-tight mb-1">
+            <h1 className="text-white font-black text-2xl md:text-3xl tracking-tight leading-tight mb-1 font-mono tracking-tighter">
               {getViewTitle()}
             </h1>
             <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#A855F7] shadow-[0_0_8px_#A855F7]" />
-              <span className="font-satoshi text-xs font-semibold text-[#9B9691] uppercase tracking-wider">
-                {tasks.length} {tasks.length === 1 ? 'Goal' : 'Goals'}
+              <span className="w-2 h-2 rounded-full bg-[#A855F7] shadow-[0_0_8px_#A855F7]" />
+              <span className="font-mono text-xs font-bold text-white/40 uppercase tracking-wider">
+                <span className="text-[#A855F7] font-bold">{tasks.length}</span> {tasks.length === 1 ? 'Goal' : 'Goals'}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center justify-between md:justify-end gap-3 w-full md:w-auto">
             {/* View Mode Toggle */}
-            <div className="flex bg-[#161412] p-1 rounded-xl border border-[#1C1A18]">
+            <div className="flex bg-[#161412] p-1 rounded-2xl border border-white/8">
               {[
                 { id: 'list', icon: List, label: 'List' },
                 { id: 'board', icon: LayoutGrid, label: 'Board' },
@@ -193,18 +195,18 @@ export default function TaskList() {
                   key={mode.id}
                   type="button"
                   onClick={() => setViewMode(mode.id as ViewMode)}
-                  className={`rounded-lg px-2 sm:px-3 py-1 transition-colors ${
+                  className={`rounded-xl px-3 py-1.5 transition-all text-xs font-bold ${
                     viewMode === mode.id
-                      ? 'bg-[#1C1A18] text-[#A855F7]'
-                      : 'text-[#9B9691] hover:bg-[#1C1A18]'
+                      ? 'bg-[#A855F7] text-white shadow-[0_4px_12px_rgba(168,85,247,0.25)]'
+                      : 'text-white/40 hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <mode.icon className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
+                  <mode.icon className="h-4 w-4" />
                 </button>
               ))}
             </div>
 
-            <div className="hidden sm:block h-6 w-[1px] bg-[#1C1A18]" />
+            <div className="hidden md:block h-6 w-[1px] bg-white/8" />
 
             {/* Sort & Filter Group */}
             <div className="flex gap-2">
@@ -215,15 +217,15 @@ export default function TaskList() {
                     setIsSortOpen(!isSortOpen);
                     setIsFilterOpen(false);
                   }}
-                  className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-bold bg-[#161412] border border-[#1C1A18] hover:border-[#34322F] text-[#F5F2ED] rounded-xl transition-colors font-satoshi"
+                  className="h-10 px-4 flex items-center gap-1.5 text-xs font-bold bg-white/3 border border-white/8 hover:border-white/15 text-white rounded-xl transition-all font-satoshi"
                 >
-                  <ArrowUpDown className="h-4 w-4" />
+                  <ArrowUpDown className="h-4 w-4 text-[#A855F7]" />
                   <span className="hidden sm:inline">Sort</span>
                 </button>
                 {isSortOpen && (
                   <>
-                    <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsSortOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-[#161412] border border-[#1C1A18] shadow-2xl p-2 z-50 font-satoshi text-left">
+                    <div className="fixed inset-0 z-40 bg-transparent cursor-default" onClick={() => setIsSortOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-[#161412] border border-white/8 shadow-2xl p-2 z-50 font-satoshi text-left">
                       {sortOptions.map((option) => (
                         <button
                           key={option.field}
@@ -232,10 +234,10 @@ export default function TaskList() {
                             handleSortChange(option.field);
                             setIsSortOpen(false);
                           }}
-                          className={`w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-xl transition-colors ${
+                          className={`w-full flex items-center justify-between px-3 py-2.5 text-xs rounded-xl transition-all ${
                             sort.field === option.field
-                              ? 'bg-[#1C1A18] text-[#A855F7] font-bold'
-                              : 'text-[#F5F2ED] hover:bg-[#1C1A18] font-semibold'
+                              ? 'bg-[#A855F7]/10 text-[#A855F7] font-bold border border-[#A855F7]/20'
+                              : 'text-white/70 hover:text-white hover:bg-white/5 font-semibold'
                           }`}
                         >
                           <span>{option.label}</span>
@@ -256,21 +258,21 @@ export default function TaskList() {
                     setIsFilterOpen(!isFilterOpen);
                     setIsSortOpen(false);
                   }}
-                  className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-bold bg-[#161412] border border-[#1C1A18] hover:border-[#34322F] text-[#F5F2ED] rounded-xl transition-colors font-satoshi"
+                  className="h-10 px-4 flex items-center gap-1.5 text-xs font-bold bg-white/3 border border-white/8 hover:border-white/15 text-white rounded-xl transition-all font-satoshi"
                 >
-                  <Filter className="h-4 w-4" />
+                  <Filter className="h-4 w-4 text-[#A855F7]" />
                   <span className="hidden sm:inline">Filter</span>
                   {((filter.status?.length || 0) + (filter.labels?.length || 0)) > 0 && (
-                    <span className="ml-1 w-4.5 h-4.5 rounded-full bg-[#A855F7] text-[#0A0908] text-[10px] flex items-center justify-center font-black font-mono">
+                    <span className="ml-1 w-4.5 h-4.5 rounded-full bg-[#A855F7] text-white text-[9px] flex items-center justify-center font-black font-mono">
                       {(filter.status?.length || 0) + (filter.labels?.length || 0)}
                     </span>
                   )}
                 </button>
                 {isFilterOpen && (
                   <>
-                    <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsFilterOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-60 rounded-2xl bg-[#161412] border border-[#1C1A18] shadow-2xl p-4 z-50 font-satoshi text-left">
-                      <div className="px-2 mb-2 text-[10px] font-extrabold text-[#9B9691] tracking-wider uppercase font-clash">
+                    <div className="fixed inset-0 z-40 bg-transparent cursor-default" onClick={() => setIsFilterOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-60 rounded-2xl bg-[#161412] border border-white/8 shadow-2xl p-4 z-50 font-satoshi text-left">
+                      <div className="px-2 mb-2 text-[9px] font-black text-white/40 tracking-wider uppercase font-mono">
                         STATUS FILTERS
                       </div>
                       {statusFilters.map((item) => (
@@ -278,34 +280,34 @@ export default function TaskList() {
                           key={item.status}
                           type="button"
                           onClick={() => handleStatusFilterToggle(item.status)}
-                          className="w-full flex items-center justify-between px-2.5 py-2.5 mb-1 text-sm rounded-xl text-[#F5F2ED] hover:bg-[#1C1A18] transition-colors"
+                          className="w-full flex items-center justify-between px-3 py-2 mb-1 text-xs rounded-xl text-white/80 hover:text-white hover:bg-white/5 transition-all font-semibold"
                         >
                           <div className="flex items-center gap-2.5">
-                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
                             <span>{item.label}</span>
                           </div>
                           {filter.status?.includes(item.status) && (
-                            <CheckCircle2 className="h-4.5 w-4.5 text-[#A855F7]" />
+                            <CheckCircle2 className="h-4 w-4 text-[#A855F7]" />
                           )}
                         </button>
                       ))}
-                      <div className="my-2 border-t border-[#1C1A18]" />
+                      <div className="my-2 border-t border-white/8" />
                       <button
                         type="button"
                         onClick={() => setFilter({ ...filter, showCompleted: !filter.showCompleted })}
-                        className="w-full flex items-center justify-between px-2.5 py-2.5 text-sm rounded-xl text-[#F5F2ED] hover:bg-[#1C1A18] transition-colors"
+                        className="w-full flex items-center justify-between px-3 py-2 text-xs rounded-xl text-white/80 hover:text-white hover:bg-white/5 transition-all font-semibold"
                       >
                         <span>Include Completed</span>
-                        {filter.showCompleted && <CheckCircle2 className="h-4.5 w-4.5 text-[#A855F7]" />}
+                        {filter.showCompleted && <CheckCircle2 className="h-4 w-4 text-[#A855F7]" />}
                       </button>
-                      <div className="my-2 border-t border-[#1C1A18]" />
+                      <div className="my-2 border-t border-white/8" />
                       <button
                         type="button"
                         onClick={() => {
                           setFilter({ showCompleted: true, showArchived: false });
                           setIsFilterOpen(false);
                         }}
-                        className="w-full text-center px-2.5 py-2.5 text-sm rounded-xl text-[#EF4444] font-bold hover:bg-red-500/5 transition-colors"
+                        className="w-full text-center px-3 py-2 text-xs rounded-xl text-red-400 font-extrabold hover:bg-red-500/10 transition-all"
                       >
                         Reset to Defaults
                       </button>
@@ -326,17 +328,17 @@ export default function TaskList() {
               <RefreshCw size={16} className={`transition-all ${isLoading ? 'animate-spin text-[#A855F7]' : 'text-white/60'}`} />
             </button>
 
-            {/* Add Task Button (Desktop) */}
+            {/* Add Goal Button (Desktop) */}
             <button
               type="button"
               onClick={() => setTaskDialogOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-5 py-2.5 bg-[#A855F7] text-[#0A0908] font-bold rounded-xl transition-all shadow-[0_4px_12px_rgba(168,85,247,0.2)] hover:bg-[#9333EA] hover:shadow-[0_6px_16px_rgba(168,85,247,0.3)] font-satoshi"
+              className="hidden sm:flex items-center gap-1.5 h-10 px-4 bg-[#A855F7]/10 hover:bg-[#A855F7]/20 border border-[#A855F7]/20 hover:border-[#A855F7]/40 text-[#C084FC] font-bold rounded-xl transition-all text-xs"
             >
-              <Plus className="h-4.5 w-4.5" />
-              <span>New Task</span>
+              <Plus className="h-4 w-4" />
+              <span>Create Goal</span>
             </button>
           </div>
-        </div>
+        </header>
 
         {tagFilterOptions.length > 0 && (
           <div className="overflow-x-auto scrollbar-none mb-6 p-2 bg-white/[0.01] border border-white/5 rounded-[24px] flex items-center gap-2 select-none">
