@@ -51,6 +51,8 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   // 1. Route Analysis
   const isAppRoute = useMemo(() => Boolean(
     pathname?.startsWith('/app') ||
+    pathname?.startsWith('/goals') ||
+    pathname?.startsWith('/events') ||
     pathname?.startsWith('/vault') ||
     pathname?.startsWith('/flow') ||
     pathname?.startsWith('/connect') ||
