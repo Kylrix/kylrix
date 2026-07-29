@@ -51,26 +51,26 @@ export function UnifiedLeftSidebar() {
 
   const appContext = useMemo((): NavId | null => {
     if (pathname?.startsWith('/tags')) return 'tags';
-    if (pathname?.startsWith('/workflows')) return 'workflows';
+    if (pathname?.startsWith('/flow') || pathname?.startsWith('/workflows')) return 'workflows';
     if (pathname?.startsWith('/app')) return 'note';
     if (pathname?.startsWith('/vault')) return 'vault';
-    if (pathname?.startsWith('/flow') || pathname?.startsWith('/goals')) return 'flow';
+    if (pathname?.startsWith('/goals')) return 'flow';
     if (pathname?.startsWith('/connect')) return 'connect';
     return null;
   }, [pathname]);
 
   const getCurrentTab = (): NavId | null => {
     if (pathname?.startsWith('/tags')) return 'tags';
-    if (pathname?.startsWith('/workflows')) return 'workflows';
+    if (pathname?.startsWith('/flow') || pathname?.startsWith('/workflows')) return 'workflows';
     if (pathname?.startsWith('/app')) return 'note';
-    if (pathname?.startsWith('/flow') || pathname?.startsWith('/goals')) return 'flow';
+    if (pathname?.startsWith('/goals')) return 'flow';
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/connect')) return 'connect';
     return null;
   };
 
   useEffect(() => {
-    ['/app', '/flow', '/vault', '/connect', '/workflows', '/tags'].forEach((route) => {
+    ['/app', '/goals', '/vault', '/connect', '/flow', '/tags'].forEach((route) => {
       router.prefetch(route);
     });
   }, [router]);
@@ -78,10 +78,10 @@ export function UnifiedLeftSidebar() {
   const handleNavChange = (navId: NavId) => {
     const routes: Record<NavId, string> = {
       note: '/app',
-      flow: '/flow',
+      flow: '/goals',
       vault: '/vault',
       connect: '/connect',
-      workflows: '/workflows',
+      workflows: '/flow',
       tags: '/tags',
     };
     router.push(routes[navId] || '/app');

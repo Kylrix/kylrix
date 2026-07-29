@@ -40,9 +40,9 @@ export function UnifiedBottomBar() {
   const appContext = useMemo(() => {
     if (pathname?.startsWith('/app')) return 'note';
     if (pathname?.startsWith('/vault')) return 'vault';
-    if (pathname?.startsWith('/flow') || pathname?.startsWith('/goals')) return 'flow';
+    if (pathname?.startsWith('/goals')) return 'flow';
     if (pathname?.startsWith('/connect')) return 'connect';
-    if (pathname?.startsWith('/workflows')) return 'workflows';
+    if (pathname?.startsWith('/flow') || pathname?.startsWith('/workflows')) return 'workflows';
     return null;
   }, [pathname]);
 
@@ -64,15 +64,15 @@ export function UnifiedBottomBar() {
 
   const getCurrentTab = () => {
     if (pathname?.startsWith('/app')) return 'note';
-    if (pathname?.startsWith('/flow') || pathname?.startsWith('/goals')) return 'flow';
+    if (pathname?.startsWith('/goals')) return 'flow';
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/connect')) return 'connect';
-    if (pathname?.startsWith('/workflows')) return 'workflows';
+    if (pathname?.startsWith('/flow') || pathname?.startsWith('/workflows')) return 'workflows';
     return null;
   };
 
   React.useEffect(() => {
-    ['/app', '/flow', '/vault', '/connect', '/workflows'].forEach((route) => {
+    ['/app', '/goals', '/vault', '/connect', '/flow'].forEach((route) => {
       router.prefetch(route);
     });
   }, [router]);
@@ -80,10 +80,10 @@ export function UnifiedBottomBar() {
   const handleNavChange = (_: React.SyntheticEvent, newValue: string) => {
     const routes: Record<string, string> = {
       note: '/app',
-      flow: '/flow',
+      flow: '/goals',
       vault: '/vault',
       connect: '/connect',
-      workflows: '/workflows',
+      workflows: '/flow',
     };
     
     const target = routes[newValue];
