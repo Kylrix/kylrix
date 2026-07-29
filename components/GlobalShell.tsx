@@ -52,6 +52,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const isAppRoute = useMemo(() => Boolean(
     pathname?.startsWith('/app') ||
     pathname?.startsWith('/goals') ||
+    pathname?.startsWith('/forms') ||
     pathname?.startsWith('/events') ||
     pathname?.startsWith('/vault') ||
     pathname?.startsWith('/flow') ||
@@ -67,6 +68,8 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     return (
       pathname.includes('/shared/') ||
       pathname.startsWith('/goals/') ||
+      pathname.startsWith('/forms/') ||
+      pathname.startsWith('/form/') ||
       pathname.startsWith('/events/') ||
       pathname.startsWith('/flow/goal/') ||
       pathname.startsWith('/flow/form/') ||

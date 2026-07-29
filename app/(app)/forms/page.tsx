@@ -302,7 +302,7 @@ export default function FormsDashboard() {
               </button>
               <button
                 type="button"
-                onClick={() => router.push('/flow/forms')}
+                onClick={() => router.push('/forms')}
                 className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#A855F7] text-white shadow-[0_4px_12px_rgba(168,85,247,0.25)]"
               >
                 Forms

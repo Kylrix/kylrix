@@ -976,7 +976,7 @@ export default function NotesPage() {
                   Ideas
                 </button>
                 <button
-                  onClick={() => router.push('/flow/forms')}
+                  onClick={() => router.push('/forms')}
                   className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
                 >
                   Forms
@@ -1002,7 +1002,7 @@ export default function NotesPage() {
                   Ideas
                 </button>
                 <button
-                  onClick={() => router.push('/flow/forms')}
+                  onClick={() => router.push('/forms')}
                   className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
                 >
                   Forms

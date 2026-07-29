@@ -307,7 +307,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                         </button>
                     ) : (
                         <Link
-                            href="/flow/forms"
+                            href="/forms"
                             className="p-2.5 bg-[#161412] hover:bg-[#1C1A18] text-[#6366F1] border border-[#34322F] hover:border-[#6366F1] rounded-xl transition-all inline-flex items-center justify-center"
                         >
                             <ArrowLeft className="w-5 h-5" />
