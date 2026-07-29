@@ -14,30 +14,101 @@ jobs:
   verify-native-linux:
     uses: ./.github/workflows/ota-verify-native-linux.yml
     with:
-      ota_projection_identity: sha256:f84e2ea06ac5eaee2d5c2eb26995c4d4cb23f19d42030467abf9617d3ae8f5aa
+      ota_projection_identity: sha256:762e2558c7e97efd8603451e1c69709b9d54523744f50af592a1a94eb56b1a87
       ota_target_os: linux
       ota_runner: ubuntu-latest
 
   verify-native-macos:
     uses: ./.github/workflows/ota-verify-native-macos.yml
     with:
-      ota_projection_identity: sha256:283e11795584f0391bebe1f9b7aff68e17e70e9fd36c376ed00c013728ae4264
+      ota_projection_identity: sha256:0db3ef741dbc7a53feea9c457b0b89e27c3caa3d634ae2d5e504cacd959081e0
       ota_target_os: macos
       ota_runner: macos-latest
 
   verify-native-windows:
     uses: ./.github/workflows/ota-verify-native-windows.yml
     with:
-      ota_projection_identity: sha256:e3fbeb038a40296aaba67a7c5bd987db66f0ea08bc2aed35a32012b430c7cb40
+      ota_projection_identity: sha256:365fa1b76ef98cd81c2a8586916188d5c0bf47659a889cb6f576cea3b203acf4
       ota_target_os: windows
       ota_runner: windows-latest
 
   verify-container-linux:
     uses: ./.github/workflows/ota-verify-container-linux.yml
     with:
-      ota_projection_identity: sha256:40a3f00e0000a3a6c91fdf8368bcc3ecdcbff17f1abb38822aea9706395ac3b8
+      ota_projection_identity: sha256:8b4df2b46b55d84d46151a25309cc1df8aab6bfce1304a0a69f613cb7e7bc066
       ota_target_os: linux
       ota_runner: ubuntu-latest
+
+  strict-replay-policy-refusal:
+    name: Strict replay-input policy refusal
+    runs-on: ubuntu-latest
+    env:
+      OTA_POLICY: .ota/pressure-replay-policy.yaml
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - uses: ota-run/setup@493cba84bf7f7c11c9e8e996d832d93a89c62184
+        with:
+          source: contract
+
+      - name: Prove strict refusal before setup or execution
+        shell: bash
+        run: |
+          test ! -e node_modules
+          test ! -e .env
+          test ! -e .next
+
+          set +e
+          ota doctor --workflow verify --json . > "$RUNNER_TEMP/ota-policy-doctor.json"
+          doctor_status=$?
+          ota up --workflow verify --mode native --agent --dry-run --json . > "$RUNNER_TEMP/ota-policy-preview.json"
+          preview_status=$?
+          ota up --workflow verify --mode native --agent --json --receipt . > "$RUNNER_TEMP/ota-policy-refusal.json"
+          refusal_status=$?
+          ota doctor --workflow verify --fix --json . > "$RUNNER_TEMP/ota-policy-doctor-fix.json"
+          doctor_fix_status=$?
+          set -e
+
+          test "$doctor_status" -ne 0
+          test "$preview_status" -ne 0
+          test "$refusal_status" -ne 0
+          test "$doctor_fix_status" -ne 0
+
+          jq -e '
+            .replay_input_policy.decision == "deny"
+            and .replay_input_policy.coverage == "insufficient"
+            and (.replay_input_policy.inputs | any(
+              .task == "verify"
+              and .id == "pnpm_lockfile"
+              and .status == "unpinned"
+            ))
+          ' "$RUNNER_TEMP/ota-policy-doctor.json"
+          jq -e '
+            .receipt.status == "blocked"
+            and .receipt.failure_origin == "replay_input_policy_deny"
+            and .receipt.replay_input_policy.decision == "deny"
+          ' "$RUNNER_TEMP/ota-policy-preview.json"
+          jq -e '
+            .receipt.status == "blocked"
+            and .receipt.failure_origin == "replay_input_policy_deny"
+            and .receipt.replay_input_policy.decision == "deny"
+          ' "$RUNNER_TEMP/ota-policy-refusal.json"
+          jq -e '
+            .replay_input_policy.decision == "deny"
+          ' "$RUNNER_TEMP/ota-policy-doctor-fix.json"
+
+          test ! -e node_modules
+          test ! -e .env
+          test ! -e .next
+          git diff --exit-code
+
+      - name: Upload strict replay-input refusal evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ota-strict-replay-input-refusal
+          path: ${{ runner.temp }}/ota-policy-*.json
+          if-no-files-found: error
 
   runtime-native:
     name: ${{ matrix.os }} bounded runtime proof

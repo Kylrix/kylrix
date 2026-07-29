@@ -195,6 +195,10 @@ tasks:
 
   verify:
     description: Run the complete finite SQLite-backed verification surface
+    replay_inputs:
+      - id: pnpm_lockfile
+        kind: static_file
+        path: pnpm-lock.yaml
     aggregate:
       tasks: [test, lint, build]
     safe_for_agent: true
@@ -400,8 +404,8 @@ agent:
     ota:
       note: Install the active Ota pressure branch so native and container governance checks exercise the same unreleased runner truth.
       source:
-        kind: branch
-        branch: 1.6.25-implementation
+        kind: git_rev
+        rev: f97b96cc8437fe9e58736cc83422c8bf8e7d4636
   entrypoint: setup
   default_task: verify
   safe_tasks: [setup, test, lint, build, verify]
@@ -430,6 +434,7 @@ agent:
   exceptions:
     sensitive_writes: [.env]
   protected_paths:
+    - .ota/pressure-replay-policy.yaml
     - .github/workflows
     - AGENTS.md
     - docker-compose.app-only.yml
