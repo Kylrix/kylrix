@@ -3,7 +3,7 @@ name: Ota governance
 on:
   push:
     branches:
-      - bobai/kylrix-ota-pressure
+      - bobai/kylrix-ota-v1.6.25
   pull_request:
   workflow_dispatch:
 
@@ -14,28 +14,28 @@ jobs:
   verify-native-linux:
     uses: ./.github/workflows/ota-verify-native-linux.yml
     with:
-      ota_projection_identity: sha256:762e2558c7e97efd8603451e1c69709b9d54523744f50af592a1a94eb56b1a87
+      ota_projection_identity: sha256:90a79930b370ff46b5db7035e0087d45938c78a80c0cde7fad8e35325e2f1784
       ota_target_os: linux
       ota_runner: ubuntu-latest
 
   verify-native-macos:
     uses: ./.github/workflows/ota-verify-native-macos.yml
     with:
-      ota_projection_identity: sha256:0db3ef741dbc7a53feea9c457b0b89e27c3caa3d634ae2d5e504cacd959081e0
+      ota_projection_identity: sha256:b154aa6d4330908e29470ec4e79ee8222efe796d7cbea290b19f6e22ac4f3944
       ota_target_os: macos
       ota_runner: macos-latest
 
   verify-native-windows:
     uses: ./.github/workflows/ota-verify-native-windows.yml
     with:
-      ota_projection_identity: sha256:365fa1b76ef98cd81c2a8586916188d5c0bf47659a889cb6f576cea3b203acf4
+      ota_projection_identity: sha256:b3f5da2f77c0148800fda5410ef84c23924ac22385ed82ba34537cb80a86f8c5
       ota_target_os: windows
       ota_runner: windows-latest
 
   verify-container-linux:
     uses: ./.github/workflows/ota-verify-container-linux.yml
     with:
-      ota_projection_identity: sha256:8b4df2b46b55d84d46151a25309cc1df8aab6bfce1304a0a69f613cb7e7bc066
+      ota_projection_identity: sha256:41ab99843ceb929d2724859edaf3235f8913bc5455ee0fa37acebd03736bdbef
       ota_target_os: linux
       ota_runner: ubuntu-latest
 
@@ -47,7 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
 
-      - uses: ota-run/setup@493cba84bf7f7c11c9e8e996d832d93a89c62184
+      - uses: ota-run/setup@85bf49c11a5aa3ddedfa56c47682cfd40b238f1f # v1.0.9
         with:
           source: contract
 
@@ -119,7 +119,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-      - uses: ota-run/setup@493cba84bf7f7c11c9e8e996d832d93a89c62184
+      - uses: ota-run/setup@85bf49c11a5aa3ddedfa56c47682cfd40b238f1f # v1.0.9
         with:
           source: contract
       # `dev` is intentionally outside agent admission. This is an explicit
@@ -132,7 +132,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-      - uses: ota-run/setup@493cba84bf7f7c11c9e8e996d832d93a89c62184
+      - uses: ota-run/setup@85bf49c11a5aa3ddedfa56c47682cfd40b238f1f # v1.0.9
         with:
           source: contract
       # The same explicit, non-agent proof boundary applies in container mode.

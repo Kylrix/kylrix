@@ -94,6 +94,35 @@ pnpm dev
 
 Open **http://localhost:3005**.
 
+## Ota
+
+This repository includes an [`ota.yaml`](./ota.yaml) contract for contributor setup, deterministic
+verification, the SQLite development runtime, and the self-hosted Compose boundary. Install Ota
+from the [official installation guide](https://ota.run/docs/install), then inspect the declared
+surface before running a task.
+
+```bash
+# validate the contract and inspect readiness
+ota validate .
+ota doctor
+
+# discover human and agent-safe task usage
+ota tasks --use
+ota tasks --safe --use
+
+# run the finite verification workflow on the host
+ota up --workflow verify --mode native
+
+# run the same portable verification workflow in Ota's container boundary
+ota up --workflow verify --mode container
+
+# start the contributor SQLite runtime
+ota up --workflow sqlite-dev
+```
+
+The `selfhost` workflow owns the documented Compose lifecycle, but it does not claim the
+interactive Appwrite setup wizard or schema provisioning. Inspect that workflow before running it.
+
 ## Stack
 
 Next.js · React · TypeScript · Appwrite · Tailwind

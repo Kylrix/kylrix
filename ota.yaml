@@ -402,10 +402,10 @@ workflows:
 agent:
   bootstrap:
     ota:
-      note: Install the active Ota pressure branch so native and container governance checks exercise the same unreleased runner truth.
+      note: Only install Ota if it is missing and installation is approved.
       source:
-        kind: git_rev
-        rev: f97b96cc8437fe9e58736cc83422c8bf8e7d4636
+        kind: version
+        version: v1.6.25
   entrypoint: setup
   default_task: verify
   safe_tasks: [setup, test, lint, build, verify]
