@@ -295,24 +295,17 @@ export default function FormsDashboard() {
             <div className="flex items-center gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-2xl w-fit select-none mb-8">
               <button
                 type="button"
-                onClick={() => router.push('/flow')}
+                onClick={() => router.push('/app')}
                 className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
               >
-                Goals
+                Ideas
               </button>
               <button
                 type="button"
                 onClick={() => router.push('/forms')}
-                className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#A855F7] text-white shadow-[0_4px_12px_rgba(168,85,247,0.25)]"
+                className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#6366F1] text-white shadow-[0_4px_12px_rgba(99,102,241,0.25)]"
               >
                 Forms
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push('/events')}
-                className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
-              >
-                Events
               </button>
             </div>
 

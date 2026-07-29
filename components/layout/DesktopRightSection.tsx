@@ -978,7 +978,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                             onDragStart={(e: React.DragEvent) => {
                               e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'form', id: form.$id, title: form.title }));
                             }}
-                            onClick={() => router.push(`/flow/forms/${form.$id}`)}
+                            onClick={() => router.push(`/forms/${form.$id}`)}
                             sx={{
                               display: 'flex',
                               gap: 1.5,

@@ -27,6 +27,9 @@ export function EcosystemStateTracker({ children }: { children: React.ReactNode 
       pathname.startsWith('/p/') ||
       pathname.startsWith('/call/') ||
       pathname.startsWith('/connect/call/') ||
+      pathname.startsWith('/forms/') ||
+      pathname.startsWith('/events/') ||
+      pathname.startsWith('/goals/') ||
       pathname.startsWith('/flow/forms/') ||
       pathname.startsWith('/flow/events/');
 

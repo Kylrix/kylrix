@@ -101,12 +101,32 @@ const nextConfig = {
       },
       {
         source: '/flow/goals',
-        destination: '/flow',
+        destination: '/goals',
         permanent: true,
       },
       {
         source: '/flow/goals/:path*',
-        destination: '/flow/:path*',
+        destination: '/goals/:path*',
+        permanent: true,
+      },
+      {
+        source: '/flow/forms',
+        destination: '/forms',
+        permanent: true,
+      },
+      {
+        source: '/flow/forms/:path*',
+        destination: '/forms/:path*',
+        permanent: true,
+      },
+      {
+        source: '/flow/events',
+        destination: '/events',
+        permanent: true,
+      },
+      {
+        source: '/flow/events/:path*',
+        destination: '/events/:path*',
         permanent: true,
       },
       {
