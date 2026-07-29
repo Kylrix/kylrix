@@ -686,6 +686,7 @@ interface TaskContextType extends TaskState {
   getSelectedTask: () => Task | null;
   getSelectedProject: () => Project | null;
   ecosystemTags: Tags[];
+  pushLiveTag: (tag: Tags) => void;
   refreshEcosystemTags: () => Promise<void>;
   getTagFilterOptions: () => string[];
   refreshTasks: () => Promise<void>;
@@ -826,14 +827,40 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     return true;
   }, [clearStalePendingPatches]);
 
+  const pushLiveTag = useCallback((tag: Tags) => {
+    if (!tag?.name) return;
+    dispatch({
+      type: 'SET_ECOSYSTEM_TAGS',
+      payload: [tag, ...state.ecosystemTags.filter(t => t.name !== tag.name && t.$id !== tag.$id)],
+    });
+    if (typeof window !== 'undefined' && state.userId) {
+      const tagsKey = `f_tags_${state.userId}`;
+      const updated = [tag, ...state.ecosystemTags.filter(t => t.name !== tag.name && t.$id !== tag.$id)];
+      void setCachedData(tagsKey, { rows: updated, total: updated.length });
+    }
+  }, [state.ecosystemTags, state.userId, setCachedData]);
+
   const refreshEcosystemTags = useCallback(async () => {
+    const uid = state.userId || flowWarmOwnerRef.current || 'guest';
+    const tagsKey = `f_tags_${uid}`;
+    const COLD_START_TTL = 1000 * 60 * 60 * 24 * 7;
+    try {
+      const cached = await getCachedDataAsync<any>(tagsKey, COLD_START_TTL);
+      if (cached?.rows && Array.isArray(cached.rows) && cached.rows.length > 0) {
+        dispatch({ type: 'SET_ECOSYSTEM_TAGS', payload: cached.rows });
+      }
+    } catch {}
+
     try {
       const { rows } = await getAllTags();
       dispatch({ type: 'SET_ECOSYSTEM_TAGS', payload: rows });
+      if (uid !== 'guest') {
+        void setCachedData(tagsKey, { rows, total: rows.length });
+      }
     } catch (error) {
       console.warn('[TaskContext] Remote tags fetch failed, keeping local tags:', error);
     }
-  }, []);
+  }, [state.userId, getCachedDataAsync, setCachedData]);
 
   const fetchBatch = useCallback(async (uid: string, force = false) => {
     const FLOW_WARM_TTL = 1000 * 60 * 30;
@@ -1893,6 +1920,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     getTaskStats,
     getSelectedTask,
     getSelectedProject,
+    pushLiveTag,
     refreshEcosystemTags,
     getTagFilterOptions,
     refreshTasks]);

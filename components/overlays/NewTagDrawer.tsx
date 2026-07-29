@@ -66,6 +66,7 @@ export function NewTagDrawer() {
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { activeContent, drawerData, close } = useUnifiedDrawer();
   const { setActiveDetail } = useSection();
+  const { pushLiveTag } = useTask();
   const isOpen = activeContent === 'new-tag';
   const { user } = useAuth();
   
@@ -137,16 +138,32 @@ export function NewTagDrawer() {
     setIsSaving(true);
     setError(null);
 
+    const tagName = formData.name.trim();
+    const tagId = editingTag ? editingTag.$id : ID.unique();
+    const now = new Date().toISOString();
+    const liveTag: Tags = {
+      $id: tagId,
+      name: tagName,
+      nameLower: tagName.toLowerCase(),
+      description: formData.description.trim(),
+      color: formData.color,
+      userId: user.$id,
+      $createdAt: editingTag?.$createdAt || now,
+      $updatedAt: now,
+    } as any;
+
+    pushLiveTag(liveTag);
+
     try {
       if (editingTag) {
         await updateTag(editingTag.$id, {
-          name: formData.name.trim(),
+          name: tagName,
           description: formData.description.trim(),
           color: formData.color,
         });
       } else {
         await createTag({
-          name: formData.name.trim(),
+          name: tagName,
           description: formData.description.trim(),
           color: formData.color,
         });
@@ -170,17 +187,33 @@ export function NewTagDrawer() {
     setIsSaving(true);
     setError(null);
 
+    const tagName = formData.name.trim();
+    const tagId = editingTag ? editingTag.$id : ID.unique();
+    const now = new Date().toISOString();
+    const liveTag: Tags = {
+      $id: tagId,
+      name: tagName,
+      nameLower: tagName.toLowerCase(),
+      description: formData.description.trim(),
+      color: formData.color,
+      userId: user.$id,
+      $createdAt: editingTag?.$createdAt || now,
+      $updatedAt: now,
+    } as any;
+
+    pushLiveTag(liveTag);
+
     try {
       let savedTag: any;
       if (editingTag) {
         savedTag = await updateTag(editingTag.$id, {
-          name: formData.name.trim(),
+          name: tagName,
           description: formData.description.trim(),
           color: formData.color,
         });
       } else {
         savedTag = await createTag({
-          name: formData.name.trim(),
+          name: tagName,
           description: formData.description.trim(),
           color: formData.color,
         });
@@ -190,9 +223,8 @@ export function NewTagDrawer() {
         localStorage.removeItem('kylrix:draft:tag');
       }
       if (onSuccess) onSuccess();
-      if (savedTag) {
-        setActiveDetail({ type: 'tag', id: savedTag.$id || savedTag.id || formData.name.trim(), data: savedTag });
-      }
+      const targetTag = savedTag || liveTag;
+      setActiveDetail({ type: 'tag', id: targetTag.$id || targetTag.id || tagName, data: targetTag });
       close();
     } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to save tag');
