@@ -976,14 +976,10 @@ export default function NotesPage() {
                   Ideas
                 </button>
                 <button
-                  onClick={() => router.push('/tags')}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
-                    activeTab === 'tags'
-                      ? 'bg-[#10B981] text-white shadow-[0_4px_12px_rgba(16,185,129,0.25)]'
-                      : 'text-white/50 hover:text-white hover:bg-white/5'
-                  }`}
+                  onClick={() => router.push('/flow/forms')}
+                  className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
                 >
-                  Tags
+                  Forms
                 </button>
               </div>
 
@@ -1006,14 +1002,10 @@ export default function NotesPage() {
                   Ideas
                 </button>
                 <button
-                  onClick={() => router.push('/tags')}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
-                    activeTab === 'tags'
-                      ? 'bg-[#10B981] text-white shadow-[0_4px_12px_rgba(16,185,129,0.25)]'
-                      : 'text-white/50 hover:text-white hover:bg-white/5'
-                  }`}
+                  onClick={() => router.push('/flow/forms')}
+                  className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
                 >
-                  Tags
+                  Forms
                 </button>
               </div>
 

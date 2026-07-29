@@ -104,6 +104,7 @@ export function UnifiedLeftSidebar() {
     { id: 'vault', label: 'Vault', icon: VaultIcon },
     { id: 'connect', label: 'Connect', icon: ConnectIcon },
     { id: 'projects', label: 'Workspaces', icon: ProjectsIcon },
+    { id: 'tags', label: 'Tags', icon: TagsIcon },
   ];
 
   return (
