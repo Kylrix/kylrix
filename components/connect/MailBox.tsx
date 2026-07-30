@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mail, Send, Inbox, Star, Trash2, Edit3, Search, ChevronRight, Paperclip, Copy } from 'lucide-react';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
-import { NostrRelayPool, signEvent, NostrEvent } from '@/lib/tmp/nostr';
-import { buildEnvelope, wrapForNostr } from '@/lib/tmp/builder';
-import { resolveIdentifier } from '@/lib/tmp/resolver';
-import { decodeEnvelope } from '@/lib/tmp/codec';
-import { bytesToHex, hexToBytes, bytesToNpub } from '@/lib/tmp/crypto';
+import { NostrRelayPool, signEvent, NostrEvent } from '@/lib/nostr/nostr';
+import { buildEnvelope, wrapForNostr } from '@/lib/nostr/builder';
+import { resolveIdentifier } from '@/lib/nostr/resolver';
+import { decodeEnvelope } from '@/lib/nostr/codec';
+import { bytesToHex, hexToBytes, bytesToNpub } from '@/lib/nostr/crypto';
 import * as secp256k1 from '@noble/secp256k1';
 import toast from 'react-hot-toast';
 

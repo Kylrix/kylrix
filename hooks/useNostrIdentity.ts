@@ -8,7 +8,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { account } from '@/lib/appwrite';
 import { sha256 } from '@noble/hashes/sha2.js';
 import * as secp256k1 from '@noble/secp256k1';
-import { bytesToNpub, bytesToNsec, bytesToHex, hexToBytes } from '@/lib/tmp/crypto';
+import { bytesToNpub, bytesToNsec, bytesToHex, hexToBytes } from '@/lib/nostr/crypto';
 import toast from 'react-hot-toast';
 
 export interface NostrIdentity {

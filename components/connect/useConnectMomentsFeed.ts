@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNostrFeed } from '@/hooks/useNostrFeed';
 import { resolveNostrPubkeysAction } from '@/lib/actions/secure-ops';
-import { bytesToNpub, hexToBytes } from '@/lib/tmp/crypto';
+import { bytesToNpub, hexToBytes } from '@/lib/nostr/crypto';
 import { SocialService } from '@/lib/services/social';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/context/auth/AuthContext';
