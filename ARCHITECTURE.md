@@ -388,8 +388,6 @@ Middleware reads a cookie copy to fast-resume authenticated users to their last 
 Dockerfile               Multi-stage Node 22 build → standalone Next.js output
 docker-compose.yml       Full stack: Next.js app + Appwrite stack
 docker-compose.app-only.yml  App only (for existing Appwrite instances)
-setup.sh                 14 KB interactive setup script
-Makefile                 Common dev tasks
 ota.yaml                 Ota contract (verify, sqlite-dev, selfhost workflows)
 appwrite.config.json     Declarative full schema (tables, indexes, buckets, functions)
 ```

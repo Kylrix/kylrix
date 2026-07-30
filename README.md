@@ -15,7 +15,6 @@
 <p align="center">
   <a href="LICENSE">AGPL-3.0-or-later</a> ·
   <a href="ARCHITECTURE.md">Architecture</a> ·
-  <a href="CONTRIBUTING.md">Contributing</a> ·
   <a href="https://www.kylrix.space">kylrix.space</a>
 </p>
 
@@ -80,15 +79,10 @@ Replace placeholders with real captures. Use the route path as the alt text.
 ## Quick start
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/setup.sh | bash
-```
-
-Or manually:
-
-```bash
 git clone https://github.com/Kylrix/kylrix.git
 cd kylrix
-./setup.sh
+cp .env.example .env
+pnpm install
 pnpm dev
 ```
 
@@ -120,8 +114,7 @@ ota up --workflow verify --mode container
 ota up --workflow sqlite-dev
 ```
 
-The `selfhost` workflow owns the documented Compose lifecycle, but it does not claim the
-interactive Appwrite setup wizard or schema provisioning. Inspect that workflow before running it.
+The `selfhost` workflow owns the Compose lifecycle. Inspect that workflow before running it.
 
 ## Stack
 
