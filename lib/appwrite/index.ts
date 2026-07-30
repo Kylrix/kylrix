@@ -22,13 +22,14 @@ export const AppwriteService = {
   getUsersByIds: UsersService.getUsersByIds,
   recordProfileEvent: SharedService.recordProfileEvent,
 
-  // --- Security & Keychain ---
-  listKeychainEntries: SharedService.listKeychainEntries,
-  createKeychainEntry: SharedService.createKeychainEntry,
-  updateKeychainEntry: SharedService.updateKeychainEntry,
-  deleteKeychainEntry: SharedService.deleteKeychainEntry,
-  setMasterpassFlag: VaultService.setMasterpassFlag,
-  hasMasterpass: SharedService.hasMasterpass,
+  // --- Security & Keychain (enclave-backed; local-first for offline unlock) ---
+  listKeychainEntries: VaultService.listKeychainEntries.bind(VaultService),
+  createKeychainEntry: VaultService.createKeychainEntry.bind(VaultService),
+  updateKeychainEntry: VaultService.updateKeychainEntry.bind(VaultService),
+  deleteKeychainEntry: VaultService.deleteKeychainEntry.bind(VaultService),
+  setMasterpassFlag: VaultService.setMasterpassFlag.bind(VaultService),
+  hasMasterpass: VaultService.hasMasterpass.bind(VaultService),
+  hasPasskey: VaultService.hasPasskey.bind(VaultService),
 
   // --- Vault & User State ---
   getUserDoc: VaultService.getUserDoc,

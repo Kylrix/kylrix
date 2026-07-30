@@ -76,6 +76,8 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       pathname.startsWith('/flow/forms/') ||
       pathname.startsWith('/flow/events/') ||
       pathname.startsWith('/connect/call/') ||
+      pathname.startsWith('/agents/session/') ||
+      pathname.startsWith('/agents/chat/') ||
       pathname.startsWith('/send') ||
       pathname.startsWith('/i/') ||
       pathname.startsWith('/u/')

@@ -333,9 +333,18 @@ export const APPWRITE_COLLECTION_KEYCHAIN_ID = APPWRITE_CONFIG.TABLES.VAULT.KEYC
 
 export class AppwriteService {
     static async hasMasterpass(userId: string): Promise<boolean> {
+        const { SecurityEnclave } = await import('@/lib/security/enclave');
+        const probe = await SecurityEnclave.probeCapabilities(userId);
+        if (probe.hasMasterpass || probe.hasPasskey) return true;
+
         try {
             const FLOW_DB = APPWRITE_CONFIG.DATABASES.FLOW;
             const USERS_TABLE = 'users';
+
+            const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+            if (offline) {
+                return probe.hasMasterpass || probe.hasPasskey;
+            }
 
             const res = await tablesDB.listRows<any>({
                 databaseId: FLOW_DB,
@@ -349,26 +358,37 @@ export class AppwriteService {
             const entries = await this.listKeychainEntries(userId);
             return entries.some(e => e.type === 'password' || e.type === 'passkey');
         } catch (_e: unknown) {
-            const { LocalEngine } = await import('@/lib/services/LocalEngine');
-            const entries = (await LocalEngine.cacheGet<any[]>(`kylrix_keychain_${userId}`)) || [];
-            return entries.some(e => e.type === 'password' || e.type === 'passkey');
+            return probe.hasMasterpass || probe.hasPasskey;
         }
     }
 
     static async listKeychainEntries(userId: string): Promise<any[]> {
-        const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const cached = (await LocalEngine.cacheGet<any[]>(`kylrix_keychain_${userId}`)) || [];
+        const { SecurityEnclave, raceNetworkOrLocal } = await import('@/lib/security/enclave');
+        const cached = await SecurityEnclave.getKeychain(userId);
+
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            return cached;
+        }
+
         try {
-            const res = await tablesDB.listRows<any>({
-                databaseId: APPWRITE_DATABASE_ID,
-                tableId: APPWRITE_COLLECTION_KEYCHAIN_ID,
-                queries: [Query.equal("userId", userId)]
+            const { value, source } = await raceNetworkOrLocal({
+                timeoutMs: 2500,
+                network: async () => {
+                    const res = await tablesDB.listRows<any>({
+                        databaseId: APPWRITE_DATABASE_ID,
+                        tableId: APPWRITE_COLLECTION_KEYCHAIN_ID,
+                        queries: [Query.equal("userId", userId)]
+                    });
+                    return res.rows || [];
+                },
+                local: async () => cached,
             });
-            if (res.rows && res.rows.length > 0) {
-                await LocalEngine.cacheSet(`kylrix_keychain_${userId}`, res.rows);
-                return res.rows;
+
+            if (source === 'network' && Array.isArray(value) && value.length > 0) {
+                await SecurityEnclave.setKeychain(userId, value);
+                return value;
             }
-            return cached.length > 0 ? cached : res.rows;
+            return cached.length > 0 ? cached : (Array.isArray(value) ? value : []);
         } catch (_e: unknown) {
             if (cached.length > 0) return cached;
             console.error('listKeychainEntries error', _e);

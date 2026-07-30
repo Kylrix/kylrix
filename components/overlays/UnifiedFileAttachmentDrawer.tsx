@@ -35,6 +35,7 @@ import {
   FolderKanban,
   MessageSquare,
   ShieldAlert,
+  Bot,
   ZoomIn,
   ZoomOut,
   RotateCcw,
@@ -79,7 +80,8 @@ type ObjectSubTab =
   | 'forms'
   | 'events'
   | 'vault'
-  | 'tags';
+  | 'tags'
+  | 'sessions';
 
 function isLikelyEncrypted(str?: string | null): boolean {
   if (!str || typeof str !== 'string') return false;
@@ -262,6 +264,20 @@ export function UnifiedFileAttachmentDrawer() {
             items = (await LocalEngine.cacheGet<any[]>('f_events_list')) || [];
           }
         }
+      } else if (activeSubTab === 'sessions') {
+        const { AgenticSessionLocalStore } = await import('@/lib/agentic/session-local-store');
+        const sessions = await AgenticSessionLocalStore.getSessionsList(userId);
+        items = sessions.map((s) => {
+          let title = `Session ${new Date(s.createdAt || Date.now()).toLocaleDateString()}`;
+          try {
+            const hist = JSON.parse(s.chatHistory || '[]');
+            const firstUser = hist.find((m: any) => m.role === 'user');
+            if (firstUser?.content) title = String(firstUser.content).slice(0, 80);
+          } catch {
+            /* ignore */
+          }
+          return { $id: s.id, id: s.id, title, chatHistory: s.chatHistory, isPublic: s.isPublic };
+        });
       }
 
       setObjectItems(items);
@@ -375,6 +391,13 @@ export function UnifiedFileAttachmentDrawer() {
     else if (activeSubTab === 'totps') childKind = 'vault';
     else if (activeSubTab === 'vault') childKind = 'vault';
     else if (activeSubTab === 'forms') childKind = 'form';
+    else if (activeSubTab === 'sessions') {
+      const ok = window.confirm(
+        'Attaching a Kylie session makes the entire conversation visible to anyone who can see this note. Continue?',
+      );
+      if (!ok) return;
+      childKind = 'session';
+    }
 
     const objectBlock = serializeObjectBlock({
       childId,
@@ -485,6 +508,7 @@ export function UnifiedFileAttachmentDrawer() {
       case 'events': return Calendar;
       case 'vault': return Key;
       case 'tags': return TagIcon;
+      case 'sessions': return Bot;
       default: return Layers;
     }
   };
@@ -578,6 +602,7 @@ export function UnifiedFileAttachmentDrawer() {
                 { id: 'totps', label: 'TOTPs', icon: ShieldAlert },
                 { id: 'forms', label: 'Forms', icon: FileCode },
                 { id: 'events', label: 'Events', icon: Calendar },
+                { id: 'sessions', label: 'Chats', icon: Bot },
                 { id: 'vault', label: 'Vault', icon: Key },
                 { id: 'tags', label: 'Tags', icon: TagIcon },
               ].map((sub) => {

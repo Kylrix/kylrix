@@ -2174,6 +2174,9 @@ function getResourceConfig(type: PublicResourceType) {
     case 'event': return { databaseId: APPWRITE_CONFIG.DATABASES.FLOW, tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS };
     case 'project': return { databaseId: APPWRITE_CONFIG.DATABASES.CHAT, tableId: 'projects' };
     case 'moment': return { databaseId: APPWRITE_CONFIG.DATABASES.CHAT, tableId: APPWRITE_CONFIG.TABLES.CHAT.MOMENTS };
+    case 'agent_session':
+    case 'agent_conversation':
+      return { databaseId: APPWRITE_CONFIG.DATABASES.NOTE, tableId: 'agentic_sessions' };
     default: return null;
   }
 }

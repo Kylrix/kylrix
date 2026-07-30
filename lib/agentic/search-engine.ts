@@ -98,7 +98,12 @@ function isToday(iso?: string | null): boolean {
 
 export async function executeEcosystemSearch(
   query: string,
-  opts?: { limit?: number; userId?: string },
+  opts?: {
+    limit?: number;
+    userId?: string;
+    localNotes?: any[];
+    localTasks?: any[];
+  },
 ): Promise<{ plan: SearchPlan; hits: SearchHit[] }> {
   const limit = opts?.limit ?? 20;
   const plan = planSearchQuery(query);
@@ -110,9 +115,13 @@ export async function executeEcosystemSearch(
   for (const domain of domains) {
     try {
       if (domain === 'idea') {
-        const { listNotes } = await import('@/lib/appwrite/note');
-        const res = await listNotes();
-        for (const row of res.rows || []) {
+        let rows: any[] = Array.isArray(opts?.localNotes) ? opts!.localNotes! : [];
+        if (!rows.length) {
+          const { listNotes } = await import('@/lib/appwrite/note');
+          const res = await listNotes();
+          rows = res.rows || [];
+        }
+        for (const row of rows) {
           const title = String((row as any).title || 'Untitled');
           const content = String((row as any).content || '');
           const score = Math.max(scoreMatch(title, query), scoreMatch(content.slice(0, 500), query));
@@ -128,9 +137,13 @@ export async function executeEcosystemSearch(
           }
         }
       } else if (domain === 'goal') {
-        const { listFlowTasks } = await import('@/lib/appwrite/note');
-        const res = await listFlowTasks();
-        for (const row of res.rows || []) {
+        let rows: any[] = Array.isArray(opts?.localTasks) ? opts!.localTasks! : [];
+        if (!rows.length) {
+          const { listFlowTasks } = await import('@/lib/appwrite/note');
+          const res = await listFlowTasks();
+          rows = res.rows || [];
+        }
+        for (const row of rows) {
           const title = String((row as any).title || 'Untitled');
           const desc = String((row as any).description || '');
           let score = Math.max(scoreMatch(title, query), scoreMatch(desc, query));

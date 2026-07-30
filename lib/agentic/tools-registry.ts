@@ -114,7 +114,7 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     key: 'search_ecosystem',
     name: 'Search Ecosystem',
     description:
-      'Intelligent cross-domain search. Use for vague queries ("what is for today", "find backend tasks", "where are passkeys"). Args: query (required). Returns ranked hits across ideas, goals, events, forms, projects, UI.',
+      'Intelligent cross-domain search. Args: query (required). Engine receives id-only hit refs; client renders rich local-copy cards. Do not paste hit lists in response text — summarize or chain get_note / ui.navigate.',
     requiresAuthorization: false,
     parameters: ['query', 'limit'],
   },

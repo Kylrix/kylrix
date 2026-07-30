@@ -273,12 +273,31 @@ const parseRootEnvelope = async (encryptedSecret: string): Promise<WalletRootEnv
 };
 
 const listWalletRows = async (userId: string) => {
-    const response = await tablesDB.listRows(PASSWORD_MANAGER_DB, WALLETS_TABLE, [
-        Query.equal('ownerId', ownerIdForUser(userId)),
-        Query.equal('type', 'main'),
-        Query.limit(100)]);
+    const { SecurityEnclave, raceNetworkOrLocal } = await import('@/lib/security/enclave');
+    const local = await SecurityEnclave.getWallets(userId);
 
-    return sortWallets(response.rows);
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        return sortWallets(local);
+    }
+
+    const { value, source } = await raceNetworkOrLocal({
+        timeoutMs: 2500,
+        network: async () => {
+            const response = await tablesDB.listRows(PASSWORD_MANAGER_DB, WALLETS_TABLE, [
+                Query.equal('ownerId', ownerIdForUser(userId)),
+                Query.equal('type', 'main'),
+                Query.limit(100),
+            ]);
+            return response.rows || [];
+        },
+        local: async () => local,
+    });
+
+    if (source === 'network' && Array.isArray(value) && value.length > 0) {
+        await SecurityEnclave.setWallets(userId, value);
+        return sortWallets(value);
+    }
+    return sortWallets(local.length > 0 ? local : (Array.isArray(value) ? value : []));
 };
 
 const createWalletRow = async (
@@ -400,6 +419,9 @@ export const WalletService = {
         }
 
         const allWallets = sortWallets([...existingRows, ...createdRows]);
+        const { SecurityEnclave } = await import('@/lib/security/enclave');
+        await SecurityEnclave.setWallets(userId, allWallets);
+        await SecurityEnclave.markDirty(userId);
         await publishWalletAddresses(userId, allWallets);
 
         return allWallets.map(toWalletSummary);

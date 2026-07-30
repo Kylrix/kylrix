@@ -9,7 +9,9 @@ export type PublicResourceType =
   | 'project' 
   | 'huddle' 
   | 'call' 
-  | 'moment';
+  | 'moment'
+  | 'agent_session'
+  | 'agent_conversation';
 
 export interface PublicUrlOptions {
   projectId?: string;

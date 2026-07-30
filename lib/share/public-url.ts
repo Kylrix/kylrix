@@ -51,6 +51,10 @@ export function buildPublicResourcePath(
       return `/connect/call/${id}`;
     case 'moment':
       return `/connect/post/${id}`;
+    case 'agent_session':
+      return `/agents/session/${id}`;
+    case 'agent_conversation':
+      return `/agents/chat/${id}`;
     default:
       return `/${type}/${id}`;
   }

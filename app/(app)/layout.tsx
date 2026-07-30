@@ -56,7 +56,9 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         path.startsWith('/flow/form/') ||
         path.startsWith('/flow/goal/') ||
         path.startsWith('/flow/forms/') ||
-        path.startsWith('/flow/events/');
+        path.startsWith('/flow/events/') ||
+        path.startsWith('/agents/session/') ||
+        path.startsWith('/agents/chat/');
 
       if (isPublic) return;
 
@@ -67,7 +69,14 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         '/agents'
       ];
 
-      const isDashboard = protectedDashboardPrefixes.some(prefix => path.startsWith(prefix));
+      const isDashboard = protectedDashboardPrefixes.some((prefix) => {
+        if (prefix === '/agents') {
+          return path === '/agents' || path.startsWith('/agents/');
+        }
+        return path.startsWith(prefix);
+      });
+
+      // Public agent share routes already returned above; remaining /agents* stay gated.
 
       if (isDashboard) {
         if (typeof window !== 'undefined') {
