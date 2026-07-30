@@ -58,16 +58,7 @@ const {
   getRowCached,
   isEnvAdminUser,
   isEnvSERVERSDKUser,
-  hasWriteAccess,
-  serializeMomentRow,
   verifyResourcePermissionSecure,
-  verifyNotePermission,
-  verifyProjectPermission,
-  verifyFormPermission,
-  verifyEventPermission,
-  sanitizeEventData,
-  serializeTokenMintResult,
-  rowCache,
   CACHE_TTL_MS,
   VIEWER_COOKIE,
   isViewerTokenValid,
@@ -126,8 +117,7 @@ export async function runTokenOperationSecure(body: any) {
       idempotencyKey: String(body?.idempotencyKey || '').trim(),
       sourceType: String(body?.sourceType || 'transfer'),
       sourceId: String(body?.sourceId || ''),
-      metadata: body?.metadata || undefined,
-    });
+      metadata: body?.metadata || undefined});
   }
   if (action === 'ledger') {
     const userId = String(body?.userId || actor.$id || '').trim();
@@ -149,8 +139,7 @@ export async function runTokenOperationSecure(body: any) {
       reason: String(body?.reason || 'policy_violation'),
       sourceType: String(body?.sourceType || 'moderation'),
       sourceId: String(body?.sourceId || ''),
-      metadata: body?.metadata || undefined,
-    });
+      metadata: body?.metadata || undefined});
   }
   if (action === 'lock_claim') {
       return InternalKylrixTokenService.lockClaim({
@@ -158,8 +147,7 @@ export async function runTokenOperationSecure(body: any) {
           amountMicro: String(body?.amountMicro || ''),
           destinationWallet: String(body?.destinationWallet || ''),
           chain: String(body?.chain || 'solana'),
-          idempotencyKey: String(body?.idempotencyKey || ''),
-      });
+          idempotencyKey: String(body?.idempotencyKey || '')});
   }
   if (action === 'settle_claim') {
       if (!isSERVERSDK) throw new Error('Forbidden');
@@ -169,8 +157,7 @@ export async function runTokenOperationSecure(body: any) {
           destinationWallet: String(body?.destinationWallet || ''),
           chain: String(body?.chain || 'solana'),
           onchainTxHash: String(body?.onchainTxHash || ''),
-          idempotencyKey: String(body?.idempotencyKey || ''),
-      });
+          idempotencyKey: String(body?.idempotencyKey || '')});
   }
   if (action === 'mint_activity' && isSERVERSDK) {
       return InternalKylrixTokenService.mintForActivity({
@@ -181,8 +168,7 @@ export async function runTokenOperationSecure(body: any) {
           trustScore: Number(body?.trustScore || 70),
           sourceType: String(body?.sourceType || ''),
           sourceId: String(body?.sourceId || ''),
-          metadata: body?.metadata,
-      });
+          metadata: body?.metadata});
   }
 
   throw new Error('Unknown token action');
@@ -199,15 +185,13 @@ export async function trackEngagementViewSecure(input: Omit<TrackEngagementInput
       sameSite: 'lax',
       secure: true,
       path: '/',
-      maxAge: 60 * 60 * 24 * 365,
-    });
+      maxAge: 60 * 60 * 24 * 365});
   }
   return trackEngagementView({
     ...input,
     viewerKind: actor?.$id ? 'user' : 'anon',
     viewerUserId: actor?.$id || null,
-    viewerTokenHash: token,
-  });
+    viewerTokenHash: token});
 }
 
 export async function recordAnonymizedTelemetrySecure(params: {
@@ -227,19 +211,6 @@ export async function recordAnonymizedTelemetrySecure(params: {
   });
 }
 
-export async function executeSessionRuntimeJobSecure(job: string, jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor?.$id) {
-    throw new Error('Unauthorized');
-  }
-
-  if (!isSessionRuntimeJobId(job)) {
-    throw new Error('Unknown or forbidden job');
-  }
-
-  return executeSessionRuntimeJob(job, actor.$id);
-}
-
 export async function dispatchEmailSecure(payload: any, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor?.$id) {
@@ -252,8 +223,7 @@ export async function dispatchEmailSecure(payload: any, jwt?: string) {
   return dispatchEmail({
     ...payload,
     actorId: actor.$id,
-    actorName: actor.name || actor.email || payload.actorName,
-  });
+    actorName: actor.name || actor.email || payload.actorName});
 }
 
 export async function createHandoffSessionSecure(jwt?: string) {
@@ -282,8 +252,7 @@ export async function createHandoffSessionSecure(jwt?: string) {
   return {
     userId: actor.$id,
     secret: sessionToken.secret,
-    expire: sessionToken.expire,
-  };
+    expire: sessionToken.expire};
 }
 
 export async function getSharedProfilesSecure(userIds: string[], jwt?: string) {
@@ -311,7 +280,7 @@ export async function getSharedProfilesSecure(userIds: string[], jwt?: string) {
     ]
   );
 
-  const publicProfiles = res.rows.map(doc => ({
+  const publicProfiles = res.rows.map((doc: any) => ({
     $id: doc.$id,
     name: doc.displayName || doc.username,
     displayName: doc.displayName || null,
@@ -319,53 +288,9 @@ export async function getSharedProfilesSecure(userIds: string[], jwt?: string) {
     avatar: doc.avatar || null,
     bio: doc.bio || null,
     walletAddress: doc.walletAddress || null,
-    publicKey: doc.publicKey || null,
-  }));
+    publicKey: doc.publicKey || null}));
 
   return { rows: publicProfiles };
-}
-
-export async function getReferralStatusSecure(jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor?.$id) throw new Error('Unauthorized');
-
-  const { databases } = createSystemClient();
-  const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
-  
-  const [profiles, events] = await Promise.all([
-    databases.listRows(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
-      Query.equal('userId', actor.$id),
-      Query.limit(1)
-    ]),
-    databases.listRows(dbId, APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS, [
-      Query.equal('userId', actor.$id),
-      Query.equal('type', 'referral'),
-      Query.limit(1)
-    ]),
-  ]);
-  const profile = profiles.rows[0] || null;
-  const referralEvent = events.rows[0] || null;
-
-  const referrerProfile = referralEvent?.actorId ? await databases.getRow(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, referralEvent.actorId).catch(() => null) : null;
-
-  const username = profile?.username || (actor as any).prefs?.username || null;
-  const referralLink = username ? `https://www.kylrix.space/referral/${encodeURIComponent(username)}` : null;
-
-  return {
-    success: true,
-    referralLink,
-    currentUsername: username,
-    hasReferral: Boolean(referralEvent),
-    referralEvent: referralEvent || null,
-    referrer: referrerProfile
-      ? {
-          userId: referrerProfile.userId || referrerProfile.$id,
-          username: referrerProfile.username,
-          displayName: referrerProfile.displayName || referrerProfile.username,
-          avatar: referrerProfile.avatar || null,
-        }
-      : null,
-  };
 }
 
 export async function applyReferralSecure(params: { referrerUsername?: string; referrerUserId?: string }, jwt?: string) {
@@ -411,8 +336,7 @@ export async function applyReferralSecure(params: { referrerUsername?: string; r
       source: 'referral-link',
       referrerUsername: referrerProfile.username,
       referrerUserId: referrerId,
-      refereeUserId: actor.$id,
-    }),
+      refereeUserId: actor.$id}),
   }, [Permission.read(Role.user(actor.$id))]);
 
   // Reward referrer
@@ -427,8 +351,7 @@ export async function applyReferralSecure(params: { referrerUsername?: string; r
       source: 'referral-reward',
       referrerUsername: referrerProfile.username,
       referrerUserId: referrerId,
-      refereeUserId: actor.$id,
-    }),
+      refereeUserId: actor.$id}),
   }, [Permission.read(Role.user(referrerId))]);
 
   return { success: true, applied: true, referralEvent: event };
@@ -512,7 +435,7 @@ export async function executeMasterPurgeSecure(jwt?: string) {
         for (const conv of convsRes.rows) {
           const isSelfChat = conv.participants.every((p: string) => p === userId);
           const msgsRes = await databases.listRows(chatDb, APPWRITE_CONFIG.TABLES.CHAT.MESSAGES, [Query.equal('conversationId', conv.$id), Query.equal('senderId', userId), Query.limit(1000)]);
-          msgsRes.rows.forEach(m => subActions.push(databases.deleteRow(chatDb, APPWRITE_CONFIG.TABLES.CHAT.MESSAGES, m.$id)));
+          msgsRes.rows.forEach((m: any) => subActions.push(databases.deleteRow(chatDb, APPWRITE_CONFIG.TABLES.CHAT.MESSAGES, m.$id)));
           if (isSelfChat) subActions.push(databases.deleteRow(chatDb, APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS, conv.$id));
         }
         await Promise.all(subActions);
@@ -520,8 +443,8 @@ export async function executeMasterPurgeSecure(jwt?: string) {
   }
 
   // 3. Purge Keychain
-  identitiesRes.rows.forEach(id => purgeActions.push(databases.deleteRow(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES, id.$id)));
-  mappingsRes.rows.forEach(m => purgeActions.push(databases.deleteRow(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, m.$id)));
+  identitiesRes.rows.forEach((id: any) => purgeActions.push(databases.deleteRow(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES, id.$id)));
+  mappingsRes.rows.forEach((m: any) => purgeActions.push(databases.deleteRow(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, m.$id)));
 
   // 4. Reset Profiles
   if (profilesRes.total > 0) {
@@ -535,16 +458,6 @@ export async function executeMasterPurgeSecure(jwt?: string) {
 
   await Promise.all(purgeActions);
   return { success: true };
-}
-
-export async function verifyAdminSecure(jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor?.$id) throw new Error('Unauthorized');
-  
-  const admin = isEnvAdminUser(actor);
-  if (!admin) throw new Error('Forbidden: admin privileges required');
-
-  return { success: true, userId: actor.$id };
 }
 
 export async function createReportSecure(params: any, jwt?: string) {
@@ -581,8 +494,7 @@ export async function createReportSecure(params: any, jwt?: string) {
           contextId: params.contextId || null,
           contextUrl: params.contextUrl || null,
           notes: params.notes || null,
-          reviewState: 'unverified',
-        },
+          reviewState: 'unverified'},
       }),
     };
 
@@ -591,102 +503,6 @@ export async function createReportSecure(params: any, jwt?: string) {
   }
 
   return { success: true, count: created.length, reports: created };
-}
-
-export async function listReportsSecure(statusFilter?: string, jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor?.$id) throw new Error('Unauthorized');
-
-  const { databases } = createSystemClient();
-  const queries = [
-    Query.equal('type', 'report'),
-    Query.or([Query.equal('actorId', actor.$id), Query.equal('userId', actor.$id)])
-  ];
-  if (statusFilter) queries.push(Query.equal('status', statusFilter.toLowerCase()));
-
-  const result = await databases.listRows(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS, queries);
-  return { success: true, reports: result.rows };
-}
-
-export async function verifyTurnstileSecure(token: string) {
-  if (!token) throw new Error('token is required');
-  const result = await verifyTurnstileToken(token);
-  if (!result.success) {
-    throw new Error(`Turnstile verification failed: ${result.error_codes?.join(', ') || 'unknown'}`);
-  }
-  return { success: true };
-}
-
-export async function getQuickProfileSecure(userId: string, jwt?: string) {
-  const requester = await getActor(jwt);
-  if (!requester?.$id) throw new Error('Unauthorized');
-  const targetUserId = String(userId || '').trim();
-  if (!targetUserId) throw new Error('userId is required');
-
-  const tables = createSystemTablesDB();
-  const getProfile = async () => {
-    try {
-      const byUserId = await tables.listRows({
-      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-      tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
-      queries: [Query.equal('userId', targetUserId), Query.limit(1)],
-    });
-      if (byUserId.rows[0]) return byUserId.rows[0];
-    } catch {}
-    try {
-      return await tables.getRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-      tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
-      rowId: targetUserId,
-    });
-    } catch {
-      return null;
-    }
-  };
-
-  const getWallets = async () => {
-    const ownerId = `user:${targetUserId}`;
-    const rows = await tables.listRows({
-      databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
-      tableId: APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.WALLETS,
-      queries: [
-        Query.equal('ownerId', ownerId),
-        Query.equal('type', 'main'),
-        Query.limit(50),
-        Query.select(['$id', 'chain', 'address', 'type', 'updatedAt', '$updatedAt'])],
-    });
-    const dedupedByChain = new Map<string, any>();
-    for (const row of rows.rows) {
-      const chain = String((row as any).chain || '').trim().toLowerCase();
-      const address = String((row as any).address || '').trim();
-      if (!chain || !address) continue;
-      if (!dedupedByChain.has(chain)) {
-        dedupedByChain.set(chain, {
-          chain,
-          address,
-          updatedAt: (row as any).updatedAt || row.$updatedAt || null,
-        });
-      }
-    }
-    return Array.from(dedupedByChain.values());
-  };
-
-  const [profile, wallets] = await Promise.all([getProfile(), getWallets()]);
-  return {
-    profile: profile
-      ? {
-          $id: profile.$id,
-          userId: (profile as any).userId || profile.$id,
-          username: (profile as any).username || null,
-          displayName: (profile as any).displayName || null,
-          bio: (profile as any).bio || null,
-          avatar: (profile as any).avatar || null,
-          tier: (profile as any).tier || null,
-          publicKey: (profile as any).publicKey || null,
-        }
-      : null,
-    wallets,
-  };
 }
 
 export async function getUsersByIdsSecure(ids: string[]) {
@@ -790,8 +606,7 @@ export async function createRowSecure(
       const form = await tables.getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
         tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-        rowId: (rowData as any).formId,
-      });
+        rowId: (rowData as any).formId});
       if (form && form.status === 'published') {
         let settings: any = {};
         try {
@@ -841,8 +656,7 @@ export async function createRowSecure(
             tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
             rowId: taskId,
             actorId: actor?.$id,
-            action: 'update',
-          });
+            action: 'update'});
           if (!isAllowed) throw new Error('Forbidden: Insufficient permissions on parent task');
         }
       } else if (tblId === 'formSubmissions') {
@@ -920,8 +734,7 @@ export async function createRowSecure(
           const form = await tables.getRow({
             databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
             tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-            rowId: (rowData as any).formId,
-          });
+            rowId: (rowData as any).formId});
           formOwnerId = form?.userId || null;
         } catch (_) {}
       }
@@ -985,8 +798,7 @@ export async function updateRowSecure(
           tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
           rowId: taskId,
           actorId: actor.$id,
-          action: 'update',
-        });
+          action: 'update'});
       } else {
         isAllowed = true;
       }
@@ -1002,8 +814,7 @@ export async function updateRowSecure(
             tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
             rowId: parentFormId,
             actorId: actor.$id,
-            action: 'update',
-          });
+            action: 'update'});
         }
       }
     } else if (tblId === 'wallets') {
@@ -1024,8 +835,7 @@ export async function updateRowSecure(
       rowId: rId,
       actorId: actor.$id,
       action: 'update',
-      data: rowData,
-    });
+      data: rowData});
   }
 
   if (!isAllowed) throw new Error('Forbidden');
@@ -1070,8 +880,7 @@ export async function deleteRowSecure(
           tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
           rowId: taskId,
           actorId: actor.$id,
-          action: 'update',
-        });
+          action: 'update'});
       } else {
         isAllowed = true;
       }
@@ -1087,8 +896,7 @@ export async function deleteRowSecure(
             tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
             rowId: parentFormId,
             actorId: actor.$id,
-            action: 'delete',
-          });
+            action: 'delete'});
         }
       }
     } else if (tblId === 'wallets') {
@@ -1108,8 +916,7 @@ export async function deleteRowSecure(
       tableId: tblId,
       rowId: rId,
       actorId: actor.$id,
-      action: 'delete',
-    });
+      action: 'delete'});
   }
 
   if (!isAllowed) throw new Error('Forbidden');
@@ -1168,14 +975,12 @@ export async function searchGlobalUsersSecure(query: string, limit = 10) {
         profile = await tables.getRow({
           databaseId,
           tableId,
-          rowId: authUser.$id,
-        });
+          rowId: authUser.$id});
       } catch {
         const profRes = await tables.listRows({
           databaseId,
           tableId,
-          queries: [Query.equal('userId', authUser.$id), Query.limit(1)] as any,
-        });
+          queries: [Query.equal('userId', authUser.$id), Query.limit(1)] as any});
         profile = profRes.rows?.[0] || null;
       }
 
@@ -1211,8 +1016,7 @@ export async function searchGlobalUsersSecure(query: string, limit = 10) {
         ]),
         Query.notEqual('isPublic', false),
         Query.limit(limit)
-      ] as any,
-    });
+      ] as any});
 
     return JSON.parse(JSON.stringify(res.rows));
   } catch (error: any) {
@@ -1236,8 +1040,7 @@ export async function getProfileByUsernameSecure(username: string) {
       queries: [
         Query.equal('username', normalized),
         Query.limit(1)
-      ] as any,
-    });
+      ] as any});
 
     return JSON.parse(JSON.stringify(res.rows[0] || null));
   } catch (error: any) {
@@ -1256,8 +1059,7 @@ export async function listRowsSecure(databaseId: string, tableId: string, querie
     // Unified response: 'rows' is now the primary key, 'documents' is legacy
     return JSON.parse(JSON.stringify({
         total: res.total,
-        rows: res.rows,
-    }));
+        rows: res.rows}));
   } catch (error: any) {
     console.error('[listRowsSecure] Failed:', error?.message);
     throw error;
@@ -1285,8 +1087,7 @@ export async function getRowSecure(databaseId: string, tableId: string, rowId: s
           const adminRes = await adminTables.getRow({
             databaseId,
             tableId,
-            rowId,
-          });
+            rowId});
           
           if (adminRes) {
             let isAuthorized = false;
@@ -1356,8 +1157,7 @@ export async function getFilePreviewSecure(bucketId: string, fileId: string, wid
     const res = await fetch(url.toString(), {
       headers: {
         'X-Appwrite-Project': APPWRITE_CONFIG.PROJECT_ID,
-        'X-Appwrite-Key': process.env.APPWRITE_API || '',
-      },
+        'X-Appwrite-Key': process.env.APPWRITE_API || ''},
     });
     if (!res.ok) {
       console.warn('[getFilePreviewSecure] Failed to fetch url:', url.toString(), 'status:', res.status);
@@ -1833,8 +1633,7 @@ export async function deleteGhostThreadSecure(threadId: string, jwt?: string) {
     const result = await tables.deleteRow({
         databaseId: dbId,
         tableId: tableId,
-        rowId: threadId,
-    });
+        rowId: threadId});
 
     return { success: true, result: JSON.parse(JSON.stringify(result)) };
 }
@@ -1901,8 +1700,7 @@ export async function claimSendObjectSecure(payload: {
         dueDate: data.dueAt || null,
         userId: actor.$id,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
+        updatedAt: new Date().toISOString()},
       [
         Permission.read(Role.user(actor.$id)),
         Permission.write(Role.user(actor.$id)),
@@ -1974,8 +1772,7 @@ export async function claimSendObjectSecure(payload: {
         ownerId: actor.$id,
         visibility: 'private',
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
+        updatedAt: new Date().toISOString()},
       [
         Permission.read(Role.user(actor.$id)),
         Permission.write(Role.user(actor.$id)),
@@ -2095,8 +1892,7 @@ export async function toggleResourcePublicGuestSecure(params: {
 
   const updateData: Record<string, unknown> = {
     isPublic,
-    isGuest,
-  };
+    isGuest};
 
   // Only tables with a custom updatedAt column — tasks/events/forms omit it.
   if (resourceType === 'note' || resourceType === 'project' || resourceType === 'credential' || resourceType === 'totp') {
@@ -2201,8 +1997,7 @@ export async function attachObjectSecure(params: {
     const note = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
       tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-      rowId: params.parentId,
-    }).catch(() => null as any);
+      rowId: params.parentId}).catch(() => null as any);
 
     if (!note) throw new Error('Parent note not found');
 
@@ -2222,7 +2017,6 @@ export async function attachObjectSecure(params: {
     }
   }
 
-  const userTier = getUserSubscriptionTier(actor);
   const { users } = createSystemClient();
 
   // Get parent resource (e.g. project) to check the parent's owner tier
@@ -2245,7 +2039,6 @@ export async function attachObjectSecure(params: {
   const parentOwnerTier = getUserSubscriptionTier(parentOwner);
 
   // Total limit of the parent container
-  const containerLimit = getContainerObjectCap(parentOwnerTier);
 
   // Count existing attachments for the container
   const containerExisting = await tables.listRows({
@@ -2501,8 +2294,7 @@ export async function toggleTaskReminderSecure(taskId: string, enabled: boolean,
   const task = await tables.getRow({
     databaseId: FLOW_DATABASE_ID,
     tableId: TASKS_TABLE,
-    rowId: taskId,
-  }) as any;
+    rowId: taskId}) as any;
 
   if (!task) throw new Error('Task not found');
   
@@ -2569,8 +2361,7 @@ export async function toggleTaskReminderSecure(taskId: string, enabled: boolean,
       rowId: taskId,
       data: {
         scheduled: false,
-        recurrenceRule: null,
-      }
+        recurrenceRule: null}
     });
 
     return JSON.parse(JSON.stringify(updated));

@@ -1,6 +1,6 @@
 import { AI_REQUIRES_PRO_CODE, AI_REQUIRES_PRO_MESSAGE } from './access';
 
-export const AGENTIC_ERROR_CODES = {
+const AGENTIC_ERROR_CODES = {
   AI_PROVIDER_UNAVAILABLE: 'AI_PROVIDER_UNAVAILABLE',
   AI_RATE_LIMITED: 'AI_RATE_LIMITED',
   AI_AUTH_FAILED: 'AI_AUTH_FAILED',
@@ -12,8 +12,7 @@ export const AGENTIC_ERROR_CODES = {
   PRO_REQUIRED: 'PRO_REQUIRED',
   UNAUTHORIZED: 'UNAUTHORIZED',
   NETWORK_ERROR: 'NETWORK_ERROR',
-  UNKNOWN: 'UNKNOWN',
-} as const;
+  UNKNOWN: 'UNKNOWN'} as const;
 
 export type AgenticErrorCode = (typeof AGENTIC_ERROR_CODES)[keyof typeof AGENTIC_ERROR_CODES];
 
@@ -40,16 +39,14 @@ export function resolveAgenticError(error: unknown): AgenticUserError {
     return {
       code: AGENTIC_ERROR_CODES.PRO_REQUIRED,
       userMessage: AI_REQUIRES_PRO_MESSAGE,
-      debugMessage: raw,
-    };
+      debugMessage: raw};
   }
 
   if (lower.includes('unauthorized') || lower.includes('not authenticated')) {
     return {
       code: AGENTIC_ERROR_CODES.UNAUTHORIZED,
       userMessage: 'Please sign in and try again.',
-      debugMessage: raw,
-    };
+      debugMessage: raw};
   }
 
   if (
@@ -60,16 +57,14 @@ export function resolveAgenticError(error: unknown): AgenticUserError {
     return {
       code: AGENTIC_ERROR_CODES.COMPUTE_LIMIT_EXCEEDED,
       userMessage: 'You have reached your compute limit for now. Please try again later.',
-      debugMessage: raw,
-    };
+      debugMessage: raw};
   }
 
   if (lower.includes('gemini is not configured') || lower.includes('google_api_key')) {
     return {
       code: AGENTIC_ERROR_CODES.AI_PROVIDER_MISCONFIGURED,
       userMessage: 'Kylie is not available right now. Please try again later.',
-      debugMessage: raw,
-    };
+      debugMessage: raw};
   }
 
   if (
@@ -81,8 +76,7 @@ export function resolveAgenticError(error: unknown): AgenticUserError {
     return {
       code: AGENTIC_ERROR_CODES.AI_PROVIDER_UNAVAILABLE,
       userMessage: 'Something went wrong. Please try again in a moment.',
-      debugMessage: raw,
-    };
+      debugMessage: raw};
   }
 
   if (
@@ -94,16 +88,14 @@ export function resolveAgenticError(error: unknown): AgenticUserError {
     return {
       code: AGENTIC_ERROR_CODES.AI_RATE_LIMITED,
       userMessage: 'Kylie is busy right now. Please try again shortly.',
-      debugMessage: raw,
-    };
+      debugMessage: raw};
   }
 
   if (httpStatus === 408 || lower.includes('timeout') || lower.includes('timed out')) {
     return {
       code: AGENTIC_ERROR_CODES.AI_TIMEOUT,
       userMessage: 'That took too long. Please try again.',
-      debugMessage: raw,
-    };
+      debugMessage: raw};
   }
 
   if (
@@ -115,8 +107,7 @@ export function resolveAgenticError(error: unknown): AgenticUserError {
     return {
       code: AGENTIC_ERROR_CODES.AI_QUOTA_EXCEEDED,
       userMessage: 'Kylie is temporarily unavailable. Please try again later.',
-      debugMessage: raw,
-    };
+      debugMessage: raw};
   }
 
   if (
@@ -128,16 +119,14 @@ export function resolveAgenticError(error: unknown): AgenticUserError {
     return {
       code: AGENTIC_ERROR_CODES.AI_AUTH_FAILED,
       userMessage: 'Something went wrong. Please try again later.',
-      debugMessage: raw,
-    };
+      debugMessage: raw};
   }
 
   if (httpStatus === 404 || lower.includes('model not found') || lower.includes('not found for api')) {
     return {
       code: AGENTIC_ERROR_CODES.AI_MODEL_NOT_FOUND,
       userMessage: 'Something went wrong. Please try again later.',
-      debugMessage: raw,
-    };
+      debugMessage: raw};
   }
 
   if (
@@ -151,15 +140,13 @@ export function resolveAgenticError(error: unknown): AgenticUserError {
     return {
       code: AGENTIC_ERROR_CODES.NETWORK_ERROR,
       userMessage: 'Something went wrong. Please try again later.',
-      debugMessage: raw,
-    };
+      debugMessage: raw};
   }
 
   return {
     code: AGENTIC_ERROR_CODES.UNKNOWN,
     userMessage: 'Something went wrong. Please try again later.',
-    debugMessage: raw,
-  };
+    debugMessage: raw};
 }
 
 export function getAgenticUserMessage(error: unknown): string {

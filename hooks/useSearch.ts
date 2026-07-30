@@ -25,18 +25,18 @@ function fuzzySearch<T>(data: T[], query: string, keys: string[]): T[] {
       return { item, score: maxScore };
     })
     .filter(res => res.score >= 0)
-    .sort((a, b) => b.score - a.score)
+    .sort((a: any, b: any) => b.score - a.score)
     .map(res => res.item);
 }
 
-export interface SearchConfig {
+interface SearchConfig {
   searchFields: string[]; // Fields to search in
   localSearch?: boolean; // Whether to use frontend search for small datasets
   threshold?: number; // Threshold for switching to backend search
   debounceMs?: number; // Debounce delay for search
 }
 
-export interface PaginationConfig {
+interface PaginationConfig {
   pageSize: number;
   cursorsEnabled?: boolean; // Use cursor-based pagination
 }

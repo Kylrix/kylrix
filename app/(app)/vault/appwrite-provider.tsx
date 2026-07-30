@@ -6,16 +6,14 @@ import {
   useCallback,
   useMemo,
   ReactNode,
-  useRef,
-} from 'react';
+  useRef} from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   getCurrentUser,
   getCurrentUserSnapshot,
   onCurrentUserChanged,
   resetMasterpassAndWipe,
-  logoutAppwrite,
-} from '@/lib/appwrite';
+  logoutAppwrite} from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getAuthOrigin, openAuthPopup } from '@/lib/authUrl';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
@@ -99,8 +97,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
         const unlocked = masterPassCrypto.isVaultUnlocked();
         if (verbose)
           logDebug("[auth] master password status", {
-            unlocked,
-          });
+            unlocked});
         
         // Skip masterpass modal on public landing pages
         const isAuthPage = pathname === '/' || pathname === '/landing';
@@ -458,8 +455,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
                 resourceType: 'login_method',
                 templateKey: enabled ? 'accounts:masterpass-login-enabled' : 'accounts:masterpass-login-disabled',
                 ctaUrl: '/settings',
-                ctaText: 'Review security settings',
-              });
+                ctaText: 'Review security settings'});
             } catch (emailErr) {
               console.warn('[Vault] Failed to queue masterpass login toggle email', emailErr);
             }
@@ -488,8 +484,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
     usePasskeysByDefault,
     setUsePasskeysByDefault,
     masterpassForLoginEnabled,
-    setMasterpassForLoginEnabled,
-  }), [user, loading, isAuthenticating, isAuthReady, isVaultUnlocked, needsMasterPassword, logout, resetMasterpass, refresh, openIDMWindow, closeIDMWindow, idmWindowOpen, isVaultBlurEnabled, setVaultBlurEnabled, usePasskeysByDefault, setUsePasskeysByDefault, masterpassForLoginEnabled, setMasterpassForLoginEnabled]);
+    setMasterpassForLoginEnabled}), [user, loading, isAuthenticating, isAuthReady, isVaultUnlocked, needsMasterPassword, logout, resetMasterpass, refresh, openIDMWindow, closeIDMWindow, idmWindowOpen, isVaultBlurEnabled, setVaultBlurEnabled, usePasskeysByDefault, setUsePasskeysByDefault, masterpassForLoginEnabled, setMasterpassForLoginEnabled]);
 
   return (
     <AppwriteContext.Provider

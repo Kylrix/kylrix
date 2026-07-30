@@ -26,8 +26,7 @@ export class KylrixSecurity {
         name: 'PBKDF2',
         salt: saltBytes,
         iterations: 100000,
-        hash: 'SHA-256',
-      },
+        hash: 'SHA-256'},
       passwordKey,
       { name: this.ALGORITHM, length: this.KEY_SIZE },
       true,
@@ -49,8 +48,7 @@ export class KylrixSecurity {
 
     return {
       cipher: btoa(String.fromCharCode(...new Uint8Array(cipherBuffer))),
-      iv: btoa(String.fromCharCode(...iv)),
-    };
+      iv: btoa(String.fromCharCode(...iv))};
   }
 
   /**

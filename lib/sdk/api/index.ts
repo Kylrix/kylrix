@@ -42,4 +42,3 @@ export function createApiModulePaths(basePath = '/api'): ApiModulePaths {
   };
 }
 
-export const KYLRIX_API_PATHS = createApiModulePaths();

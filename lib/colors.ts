@@ -13,4 +13,3 @@ export const colorsLight = {
   background: '#FFFFFF',
 };
 
-export const colors = colorsDark;

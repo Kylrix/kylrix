@@ -6,8 +6,7 @@ describe('KylrixConnect', () => {
     const mockSdk = {
       createRow: vi.fn().mockImplementation(async (db, table, data) => ({
         $id: 'msg-123',
-        ...data,
-      })),
+        ...data})),
       getRow: vi.fn(),
       updateRow: vi.fn(),
     };
@@ -27,8 +26,7 @@ describe('KylrixConnect', () => {
       conversationId: 'conv-456',
       senderId: 'user-789',
       type: 'text',
-      content: 'Hello, World!',
-    }));
+      content: 'Hello, World!'}));
     expect(result).toHaveProperty('$id', 'msg-123');
     expect(result).toHaveProperty('createdAt');
     expect(result).toHaveProperty('updatedAt');
@@ -45,8 +43,7 @@ describe('KylrixConnect', () => {
       getRow: vi.fn().mockResolvedValue(existingMessage),
       updateRow: vi.fn().mockImplementation(async (db, table, rowId, data) => ({
         ...existingMessage,
-        ...data,
-      })),
+        ...data})),
     };
 
     const connect = new KylrixConnect(mockSdk);
@@ -62,8 +59,7 @@ describe('KylrixConnect', () => {
     // Test adding an already existing user (should remain unique)
     mockSdk.getRow.mockResolvedValueOnce({
       $id: 'msg-123',
-      readBy: ['user-abc', 'user-xyz'],
-    });
+      readBy: ['user-abc', 'user-xyz']});
     await connect.markAsRead('db-id', 'table-id', 'msg-123', 'user-xyz');
     expect(mockSdk.updateRow).toHaveBeenLastCalledWith('db-id', 'table-id', 'msg-123', {
       readBy: ['user-abc', 'user-xyz'],

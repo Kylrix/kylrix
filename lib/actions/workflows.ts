@@ -42,10 +42,9 @@ export async function listWorkflowsAction(jwt?: string) {
 /**
  * Server action to list shared public workflows
  */
-export async function listPublicWorkflowsAction() {
+async function listPublicWorkflowsAction() {
   try {
     // Public listings don't necessarily require auth, but we should still track the actor if available
-    const actor = await getActor();
     
     const list = await WorkflowDbService.listPublicWorkflows();
     return { success: true, data: list };

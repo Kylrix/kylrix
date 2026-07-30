@@ -1,7 +1,7 @@
 import { Query } from 'appwrite';
 import type { KylrixApp } from '../design';
 
-export type ForwardTargetKind = 'person' | 'conversation';
+type ForwardTargetKind = 'person' | 'conversation';
 
 export interface ForwardProfile {
   userId: string;
@@ -69,13 +69,13 @@ export interface ForwardMessageRequest {
   permissionSyncAuth?: { jwt?: string; cookie?: string };
 }
 
-export interface ForwardConversationCreator {
+interface ForwardConversationCreator {
   participantIds: string[];
   type?: 'direct' | 'group';
   name?: string;
 }
 
-export interface ForwardSource {
+interface ForwardSource {
   listConversations(userId: string): Promise<ForwardConversation[]>;
   listContacts(userId: string): Promise<ForwardContact[]>;
   resolveProfiles(userIds: string[]): Promise<ForwardProfile[]>;
@@ -133,7 +133,7 @@ const getConversationLabel = (conversation: ForwardConversation, fallback: strin
 const pickConversationAvatar = (conversation: ForwardConversation) =>
   conversation.avatarUrl || conversation.avatarFileId || null;
 
-export function isMasterpassRequired(security?: ForwardSecurityGate | null) {
+function isMasterpassRequired(security?: ForwardSecurityGate | null) {
   if (!security) return false;
   return !security.status.isUnlocked || !security.getMasterKey();
 }
@@ -359,8 +359,7 @@ export function createForwardDirectory(deps: ForwardDirectoryDeps) {
 
       const conversation = await deps.source.createConversation({
         participantIds: [currentUserId, target.userId],
-        type: 'direct',
-      });
+        type: 'direct'});
 
       if (!conversation?.$id) {
         throw new Error('FAILED_TO_CREATE_FORWARD_CONVERSATION');
@@ -402,8 +401,7 @@ export function createForwardDirectory(deps: ForwardDirectoryDeps) {
         attachments: payload.attachments || [],
         replyTo: payload.replyTo,
         metadata,
-        permissionSyncAuth: payload.permissionSyncAuth,
-      };
+        permissionSyncAuth: payload.permissionSyncAuth};
     },
 
     async forwardToTarget(
@@ -431,15 +429,14 @@ export function createForwardDirectory(deps: ForwardDirectoryDeps) {
       const request = service.buildForwardMessageRequest(currentUserId, { ...target, conversationId }, payload);
       return await deps.source.sendMessage({
         ...request,
-        conversationId,
-      });
+        conversationId});
     },
   };
 
   return service;
 }
 
-export interface AppwriteForwardSourceConfig {
+interface AppwriteForwardSourceConfig {
   databaseId: string;
   conversationsTableId: string;
   conversationMembersTableId: string;
@@ -447,106 +444,9 @@ export interface AppwriteForwardSourceConfig {
   profilesTableId: string;
 }
 
-export interface AppwriteForwardSourceClient {
+interface AppwriteForwardSourceClient {
   listRows(databaseId: string, tableId: string, queries?: string[]): Promise<{ rows: any[] }>;
 }
 
-export function createAppwriteForwardSource(client: AppwriteForwardSourceClient, config: AppwriteForwardSourceConfig) {
-  return {
-    async listConversations(userId: string) {
-      const membershipRows = await client.listRows(config.databaseId, config.conversationMembersTableId, [
-        Query.equal('userId', userId),
-        Query.limit(1000)]).catch(() => ({ rows: [] as any[] }));
 
-      const conversationIds = uniqueStrings((membershipRows.rows || []).map((row: any) => row.conversationId));
-      if (conversationIds.length === 0) {
-        const legacy = await client.listRows(config.databaseId, config.conversationsTableId, [
-          Query.equal('participants', userId),
-          Query.limit(100)]).catch(() => ({ rows: [] as any[] }));
-        return legacy.rows || [];
-      }
-
-      const conversationsResult = await client.listRows(config.databaseId, config.conversationsTableId, [
-        Query.equal('$id', conversationIds),
-        Query.limit(conversationIds.length)]).catch(() => ({ rows: [] as any[] }));
-
-      const allMembers = await client.listRows(config.databaseId, config.conversationMembersTableId, [
-        Query.equal('conversationId', conversationIds),
-        Query.limit(Math.min(1000, conversationIds.length * 10))]).catch(() => ({ rows: [] as any[] }));
-
-      const memberRowsByConversation = new Map<string, string[]>();
-      for (const row of allMembers.rows || []) {
-        if (!row?.conversationId || !row?.userId) continue;
-        const existing = memberRowsByConversation.get(row.conversationId) || [];
-        if (!existing.includes(row.userId)) existing.push(row.userId);
-        memberRowsByConversation.set(row.conversationId, existing);
-      }
-
-      return (conversationsResult.rows || []).map((conversation: any) => ({
-        ...conversation,
-        participants: memberRowsByConversation.get(conversation.$id) || conversation.participants || [],
-      }));
-    },
-
-    async listContacts(userId: string) {
-      const contactsResult = await client.listRows(config.databaseId, config.contactsTableId, [
-        Query.equal('userId', userId),
-        Query.limit(1000)]).catch(() => ({ rows: [] as any[] }));
-
-      return contactsResult.rows || [];
-    },
-
-    async resolveProfiles(userIds: string[]) {
-      if (!userIds.length) return [];
-      const profileRows = await client.listRows(config.databaseId, config.profilesTableId, [
-        Query.equal('userId', userIds),
-        Query.limit(userIds.length)]).catch(() => ({ rows: [] as any[] }));
-
-      return (profileRows.rows || []).map((profile: any) => ({
-        userId: profile.userId || profile.$id,
-        username: profile.username || null,
-        displayName: profile.displayName || profile.name || profile.username || profile.userId || null,
-        avatar: profile.avatar || profile.avatarUrl || profile.avatarFileId || null,
-        publicKey: profile.publicKey || null,
-        email: profile.email || null,
-      }));
-    },
-
-    async searchProfiles(query: string, limit = 10) {
-      const cleaned = normalizeText(query);
-      if (!cleaned) return [];
-
-      const [byUsername, byDisplayName] = await Promise.all([
-        client.listRows(config.databaseId, config.profilesTableId, [
-          Query.search('username', cleaned),
-          Query.limit(limit)]).catch(() => ({ rows: [] as any[] })),
-        client.listRows(config.databaseId, config.profilesTableId, [
-          Query.search('displayName', cleaned),
-          Query.limit(limit)]).catch(() => ({ rows: [] as any[] }))]);
-
-      const rowsByUserId = new Map<string, any>();
-      for (const profile of [...(byUsername.rows || []), ...(byDisplayName.rows || [])]) {
-        const userId = profile.userId || profile.$id;
-        if (!userId || rowsByUserId.has(userId)) continue;
-        rowsByUserId.set(userId, profile);
-      }
-
-      return Array.from(rowsByUserId.values()).map((profile: any) => ({
-        userId: profile.userId || profile.$id,
-        username: profile.username || null,
-        displayName: profile.displayName || profile.name || profile.username || profile.userId || null,
-        avatar: profile.avatar || profile.avatarUrl || profile.avatarFileId || null,
-        publicKey: profile.publicKey || null,
-        email: profile.email || null,
-      }));
-    },
-  };
-}
-
-export function buildForwardTargetSearchIndex(targets: ForwardTarget[]) {
-  return targets.map((target) => ({
-    ...target,
-    searchableText: target.searchableTerms.join(' '),
-  }));
-}
 

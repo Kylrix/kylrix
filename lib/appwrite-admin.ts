@@ -2,8 +2,7 @@ import { Client, Account, Databases, Messaging, Storage, Users, TablesDB, Teams 
 import { PROJECT_ID, ENDPOINT } from '../generated/appwrite/constants';
 import {
   experimental_taintUniqueValue,
-  experimental_taintObjectReference,
-} from 'react';
+  experimental_taintObjectReference} from 'react';
 
 // Setup Next.js React Taint security boundaries for all sensitive credentials on module load
 try {
@@ -50,7 +49,7 @@ try {
       process.env.TELEGRAM_BOT_API
     );
   }
-} catch (e) {
+} catch (_e) {
   // Silent fail-safe for non-next execution environments
 }
 
@@ -88,15 +87,14 @@ export function createSystemClient() {
     messaging: new Messaging(client),
     storage: new Storage(client),
     users: new Users(client),
-    teams: new Teams(client),
-  };
+    teams: new Teams(client)};
 
   try {
     experimental_taintObjectReference(
       'Security Boundary Violation: High-privilege System Client must never be passed to the client.',
       cachedSystemClient
     );
-  } catch (e) {
+  } catch (_e) {
     // Fail-silent
   }
 
@@ -171,7 +169,7 @@ export function createSystemTablesDB() {
       'Security Boundary Violation: High-privilege System TablesDB must never be passed to the client.',
       cachedSystemTablesDB
     );
-  } catch (e) {
+  } catch (_e) {
     // Fail-silent
   }
 
@@ -187,7 +185,7 @@ export function isEmailInAdminList(email?: string | null): boolean {
 
   const adminList = String(process.env.ADMINS || '')
     .split(',')
-    .map((e) => e.trim().toLowerCase())
+    .map((e: any) => e.trim().toLowerCase())
     .filter(Boolean);
 
   return adminList.includes(normalized);
@@ -222,15 +220,14 @@ export function createAdminClient(actorEmail: string) {
     messaging: new Messaging(client),
     storage: new Storage(client),
     users: new Users(client),
-    teams: new Teams(client),
-  };
+    teams: new Teams(client)};
 
   try {
     experimental_taintObjectReference(
       'Security Boundary Violation: High-privilege Admin Client must never be passed to the client.',
       adminClient
     );
-  } catch (e) {
+  } catch (_e) {
     // Fail-silent
   }
 
@@ -266,7 +263,7 @@ export function createAdminTablesDB(actorEmail: string) {
       'Security Boundary Violation: High-privilege Admin TablesDB must never be passed to the client.',
       adminTablesDB
     );
-  } catch (e) {
+  } catch (_e) {
     // Fail-silent
   }
 

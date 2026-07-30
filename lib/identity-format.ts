@@ -45,6 +45,3 @@ export function resolveIdentity(identity?: IdentityLike | null, fallbackId?: str
   };
 }
 
-export function resolveIdentityUsername(identity?: IdentityLike | null, fallbackId?: string | null) {
-  return resolveIdentity(identity, fallbackId).username;
-}

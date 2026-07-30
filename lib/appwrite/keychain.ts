@@ -20,8 +20,7 @@ export const KeychainService = {
         const response = await tablesDB.listRows<any>({
           databaseId: DB_ID,
           tableId: KEYCHAIN_TABLE,
-          queries: [Query.equal('userId', userId)],
-        });
+          queries: [Query.equal('userId', userId)]});
         return response.rows || [];
       },
       local: async () => local,

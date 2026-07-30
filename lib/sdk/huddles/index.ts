@@ -1,4 +1,4 @@
-export interface HuddleSignal {
+interface HuddleSignal {
   id: string;
   roomId: string;
   hostId: string;
@@ -6,6 +6,5 @@ export interface HuddleSignal {
   active?: boolean;
 }
 
-export function createHuddleSignal(signal: HuddleSignal) {
-  return signal;
-}
+
+export {};

@@ -1,3 +1,8 @@
+---
+name: flow.realtime-input-rxdb-sync
+description: Realtime form/input sync through RxDB local copy before Appwrite confirm.
+---
+
 # Real-Time Input RxDB Sync Pattern
 
 ## Intent

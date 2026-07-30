@@ -70,7 +70,7 @@ const formatJoinedAt = (value?: string | null) => {
   return new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric' }).format(date);
 };
 
-export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
+function ProfileRedesign({ username, initialProfile }: ProfileProps) {
   const { user: currentUser } = useAuth();
   const { profile: myProfile, refreshProfile: refreshMyProfile } = useProfile();
   const router = useRouter();
@@ -157,8 +157,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
     username: profile?.username || null,
     bio: profile?.bio || null,
     tier: profile?.tier || null,
-    publicKey: profile?.publicKey || null,
-  });
+    publicKey: profile?.publicKey || null});
 
   const joinedAt = formatJoinedAt(profile?.$createdAt || profile?.createdAt || null);
 
@@ -191,8 +190,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
     () => ({
       moments: categorized.moments.length,
       replies: categorized.replies.length,
-      pulses: categorized.pulses.length,
-    }),
+      pulses: categorized.pulses.length}),
     [categorized.moments.length, categorized.pulses.length, categorized.replies.length],
   );
 
@@ -232,8 +230,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
         setMoments(feedRes.rows || []);
         setStats({
           followers: typeof followStats.followers === 'number' ? followStats.followers : 0,
-          following: typeof followStats.following === 'number' ? followStats.following : 0,
-        });
+          following: typeof followStats.following === 'number' ? followStats.following : 0});
         setIsFollowing(Boolean(followingStatus));
       } catch (loadErr) {
         console.error('Failed to load profile activity:', loadErr);
@@ -378,8 +375,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
       const newStats = await SocialService.getFollowStats(actualTargetId);
       setStats({
         followers: newStats.followers,
-        following: newStats.following,
-      });
+        following: newStats.following});
     } catch (followErr: any) {
       console.error('Follow operation failed:', followErr);
       toast.error(followErr?.message || 'Follow action failed');
@@ -431,10 +427,6 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
     }
   };
 
-  const handleMessage = () => {
-    if (!profile?.username) return;
-    router.push(`/connect/chat/${profile.userId || profile.$id}`);
-  };
 
   const handleTip = () => {
     if (!profile) return;
@@ -928,8 +920,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
                 const type = moment?.metadata?.type || 'post';
                 const publishedAt = new Date(moment.$createdAt).toLocaleDateString(undefined, {
                   month: 'short',
-                  day: 'numeric',
-                });
+                  day: 'numeric'});
                 return (
                   <div
                     key={moment.$id}
@@ -1063,4 +1054,3 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
 }
 
 export const Profile = ProfileRedesign;
-export default Profile;

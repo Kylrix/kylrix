@@ -8,8 +8,7 @@ import {
   Button, 
   Stack, 
   Alert, 
-  CircularProgress,
-} from '@/lib/openbricks/primitives';
+  CircularProgress} from '@/lib/openbricks/primitives';
 import { Lock, Shield, CheckCircle } from '@/lib/openbricks/icons';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { AppwriteService } from '@/lib/appwrite';
@@ -78,8 +77,7 @@ export default function MasterPassManager({ userId }: { userId: string }) {
           gap: 2,
           transition: 'all 0.2s ease-out',
           '&:hover': {
-            backgroundColor: '#1F1D1B',
-          },
+            backgroundColor: '#1F1D1B'},
         }}
       >
         <Box sx={{ 
@@ -135,19 +133,15 @@ export default function MasterPassManager({ userId }: { userId: string }) {
                     bgcolor: '#161514',
                     borderRadius: '8px',
                     '& fieldset': {
-                      borderColor: 'rgba(255, 255, 255, 0.1)',
-                    },
+                      borderColor: 'rgba(255, 255, 255, 0.1)'},
                     '&:hover fieldset': {
-                      borderColor: 'rgba(255, 255, 255, 0.2)',
-                    },
+                      borderColor: 'rgba(255, 255, 255, 0.2)'},
                     '&.ob-focused fieldset': {
-                      borderColor: '#6366F1',
-                    },
+                      borderColor: '#6366F1'},
                   },
                   '& .ob-outlined-input::placeholder': {
                     color: 'rgba(255, 255, 255, 0.4)',
-                    opacity: 1,
-                  },
+                    opacity: 1},
                 }}
               />
               {error && <Typography sx={{ color: '#ef4444', fontSize: '0.875rem' }}>{error}</Typography>}
@@ -185,8 +179,7 @@ export default function MasterPassManager({ userId }: { userId: string }) {
                   fontWeight: 600,
                   color: '#ef4444',
                   textTransform: 'none',
-                  fontSize: '0.875rem',
-              }}
+                  fontSize: '0.875rem'}}
           >
               Lock Session Now
           </Button>

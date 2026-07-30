@@ -12,7 +12,7 @@ const TASK_COLLABORATOR_RESOURCE_PREFIX = 'task:';
 const TASK_COLLABORATOR_TABLE = TABLES.FLOW.COLLABORATORS;
 const TASK_COLLABORATOR_DATABASE = FLOW_DATABASE_ID;
 
-export { realtime };
+;
 
 export function subscribeToTable<T extends Models.Row>(
     tableId: string,
@@ -92,8 +92,7 @@ const normalizeCollaborator = (row: any): TaskCollaborator => ({
     userId: row.userId,
     permission: row.permission,
     invitedAt: row.invitedAt ? new Date(row.invitedAt) : null,
-    accepted: row.accepted ?? null,
-});
+    accepted: row.accepted ?? null});
 
 const mapPermissionsByUser = (creatorId: string | null, assigneeIds: string[] = [], collaborators: TaskCollaborator[] = []) => {
     const permissionsByUser = new Map<string, CollaboratorPermission>();
@@ -134,8 +133,7 @@ async function listTaskCollaborators(taskId: string): Promise<TaskCollaborator[]
         queries: [
             Query.equal('resourceId', taskId),
             Query.equal('resourceType', 'task'),
-        ],
-    });
+        ]});
 
     return res.rows.map(normalizeCollaborator);
 }
@@ -149,8 +147,7 @@ async function createTaskCollaborator(taskId: string, userId: string, permission
             Query.equal('resourceType', 'task'),
             Query.equal('userId', userId),
             Query.limit(1)
-        ],
-    });
+        ]});
 
     const nextPermissions = permissions ?? mergePermissions(
         creatorId && creatorId !== 'guest' ? taskPermissionForLevel('admin', creatorId) : [],
@@ -168,8 +165,7 @@ async function createTaskCollaborator(taskId: string, userId: string, permission
                 permission,
                 invitedAt: current.invitedAt ? current.invitedAt.toISOString() : new Date().toISOString(),
                 accepted: true,
-                status: 'accepted',
-            },
+                status: 'accepted'},
             nextPermissions,
             TASK_COLLABORATOR_DATABASE
         );
@@ -185,8 +181,7 @@ async function createTaskCollaborator(taskId: string, userId: string, permission
             permission,
             invitedAt: new Date().toISOString(),
             accepted: true,
-            status: 'accepted',
-        },
+            status: 'accepted'},
         nextPermissions,
         ID.unique(),
         TASK_COLLABORATOR_DATABASE
@@ -198,8 +193,7 @@ async function updateTaskCollaborator(rowId: string, data: Partial<{ permission:
     const current = await tablesDB.getRow<any>({
         databaseId: TASK_COLLABORATOR_DATABASE,
         tableId: TASK_COLLABORATOR_TABLE,
-        rowId,
-    });
+        rowId});
     const nextPermission = data.permission ?? current.permission;
     const updated = await updateRow<any>(
         TASK_COLLABORATOR_TABLE,
@@ -209,8 +203,7 @@ async function updateTaskCollaborator(rowId: string, data: Partial<{ permission:
             resourceId: taskId,
             resourceType: 'task',
             userId: current.userId,
-            permission: nextPermission,
-        },
+            permission: nextPermission},
         permissions ?? mergePermissions(
             creatorId && creatorId !== 'guest' ? taskPermissionForLevel('admin', creatorId) : [],
             taskPermissionForLevel(nextPermission, current.userId)
@@ -228,7 +221,7 @@ async function createRow<T extends Models.Row>(
     tableId: string,
     data: TableCreateData<T>,
     permissions?: string[],
-    rowId: string = ID.unique(),
+    _rowId: string = ID.unique(),
     dbId: string = FLOW_DATABASE_ID
 ): Promise<T> {
     let res: T;
@@ -411,8 +404,7 @@ export const eventGuests = {
                     ctaUrl: `${getEcosystemUrl('flow')}/events/${String((data as any).eventId || '')}`,
                     ctaText: 'Open event',
                     metadata: {
-                        guestId: row.$id,
-                    },
+                        guestId: row.$id},
                 });
             }
         } catch (error) {
@@ -427,13 +419,6 @@ export const eventGuests = {
 
 // --- Focus Sessions ---
 
-export const focusSessions = {
-    list: (queries?: string[]) => listRows<FocusSession>(TABLES.FOCUS_SESSIONS, queries),
-    create: (data: TableCreateData<FocusSession>) => createRow<FocusSession>(TABLES.FOCUS_SESSIONS, data),
-    get: (id: string) => getRow<FocusSession>(TABLES.FOCUS_SESSIONS, id),
-    update: (id: string, data: TableUpdateData<FocusSession>) => updateRow<FocusSession>(TABLES.FOCUS_SESSIONS, id, data),
-    delete: (id: string) => deleteRow(TABLES.FOCUS_SESSIONS, id)
-};
 
 // --- Notes ---
 
@@ -458,21 +443,3 @@ export const notes = {
 
 // --- Secrets (Keep) ---
 
-export const secrets = {
-    list: (queries?: string[]) => tablesDB.listRows({
-        databaseId: 'passwordManagerDb',
-        tableId: 'credentials',
-        queries
-    }),
-    get: (id: string) => tablesDB.getRow({
-        databaseId: 'passwordManagerDb',
-        tableId: 'credentials',
-        rowId: id
-    }),
-    update: (id: string, data: any) => tablesDB.updateRow({
-        databaseId: 'passwordManagerDb',
-        tableId: 'credentials',
-        rowId: id,
-        data
-    })
-};

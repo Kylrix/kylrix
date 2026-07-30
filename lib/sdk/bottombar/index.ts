@@ -1,4 +1,4 @@
-export interface BottomBarItem {
+interface BottomBarItem {
   id: string;
   label: string;
   href: string;
@@ -29,8 +29,7 @@ export function createBottomBarSurface(input: BottomBarSurfaceInput): BottomBarS
   return {
     items: input.items.map((item) => ({
       ...item,
-      active: item.active ?? bottomBarMatches(input.activeHref, item.href),
-    })),
+      active: item.active ?? bottomBarMatches(input.activeHref, item.href)})),
     mobileDockHeight: input.mobileDockHeight ?? 72,
     mobileInset: input.mobileInset ?? 20,
     desktopRailWidth: input.desktopRailWidth ?? 280,

@@ -56,7 +56,7 @@ export default function ChatPage() {
                         // Already exists!
                         router.replace(`/connect/chat/${deterministicId}`);
                         return;
-                    } catch (e) {
+                    } catch (_e) {
                         // Does not exist, create it!
                         await createGhostNoteChat(
                             `@${targetProfile.username || 'user'}'s Discussion`,
@@ -76,7 +76,7 @@ export default function ChatPage() {
                 } else {
                     setIsHuddleChat(false);
                 }
-            } catch (e) {
+            } catch (_e) {
                 // Not a ghost-note, standard E2EE chat
                 setIsHuddleChat(false);
             } finally {

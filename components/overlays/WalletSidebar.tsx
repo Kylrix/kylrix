@@ -16,8 +16,7 @@ import {
     CircularProgress,
     Paper,
     Switch,
-    FormControlLabel,
-} from '@/lib/openbricks/primitives';
+    FormControlLabel} from '@/lib/openbricks/primitives';
 import {
     X,
     Wallet as WalletIcon,
@@ -34,8 +33,7 @@ import {
     Maximize2,
     Minimize2,
     ArrowUpRight,
-    ArrowDownLeft,
-} from 'lucide-react';
+    ArrowDownLeft} from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSudo } from '@/context/SudoContext';
 import { account } from '@/lib/appwrite/client';
@@ -186,7 +184,6 @@ function shortenUserId(id: string) {
 }
 
 export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTokenIntent }: WalletSidebarProps) => {
-    const router = useRouter();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { user } = useAuth();
@@ -216,7 +213,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
     const [showSettings, setShowSettings] = useState(false);
     const [testnetMode, setTestnetMode] = useState(false);
     const [onChainBalances, setOnChainBalances] = useState<Record<string, string>>({});
-    const [balancesLoading, setBalancesLoading] = useState(false);
+    const [_balancesLoading, setBalancesLoading] = useState(false);
     const [pinnedToken, setPinnedToken] = useState<string>('SOL');
     const [longPressedToken, setLongPressedToken] = useState<string | null>(null);
     const pressTimerRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -637,8 +634,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             fromUserId: user.$id,
             source: 'wallet_sidebar',
             preselectedUser: kylrixIntentRecipient,
-            prefilledAmount: kylrixSendAmount,
-        });
+            prefilledAmount: kylrixSendAmount});
     };
 
     useEffect(() => {
@@ -843,8 +839,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                         textTransform: 'none',
                         fontWeight: 700,
                         fontSize: '0.75rem',
-                        minWidth: 0,
-                    }}
+                        minWidth: 0}}
                 >
                     Refresh
                 </Button>
@@ -1090,8 +1085,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             'base': 'B',
             'polygon': '⬟', // Polygon symbol
             'sui': 'S',
-            'arbitrum': 'ARB',
-        };
+            'arbitrum': 'ARB'};
         return logoMap[chain] || '?';
     };
 
@@ -1104,8 +1098,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             'base': '#0052FF',
             'polygon': '#8247E5',
             'sui': '#6FB3D2',
-            'arbitrum': '#28A0F0',
-        };
+            'arbitrum': '#28A0F0'};
         return colorMap[chain] || '#666';
     };
 
@@ -1936,8 +1929,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                             bgcolor: '#252321',
                                             display: 'grid',
                                             placeItems: 'center',
-                                            flexShrink: 0,
-                                        }}>
+                                            flexShrink: 0}}>
                                             <Logo app="root" variant="icon" size={20} />
                                         </Box>
                                         <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>

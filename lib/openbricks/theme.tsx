@@ -1,18 +1,6 @@
 'use client';
 
 // Helper function to stretch colors with alpha opacity
-export function alpha(color: string, value: number): string {
-  if (color.startsWith('#')) {
-    const r = parseInt(color.slice(1, 3), 16);
-    const g = parseInt(color.slice(3, 5), 16);
-    const b = parseInt(color.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${value})`;
-  }
-  if (color.startsWith('rgba')) {
-    return color.replace(/[^,]+(?=\))/, String(value));
-  }
-  return color;
-}
 
 export function useTheme() {
   return {
@@ -29,30 +17,9 @@ export function useTheme() {
   };
 }
 
-export function useCreateTheme(options: any = {}) {
-  const defaultTheme = useTheme();
-  return {
-    ...defaultTheme,
-    ...options,
-    palette: {
-      ...defaultTheme.palette,
-      ...options.palette,
-    },
-  };
-}
 
-export const ThemeProvider = ({ children, theme }: any) => {
+const ThemeProvider = ({ children}: any) => {
   return <>{children}</>;
 };
 ThemeProvider.displayName = 'ThemeProvider';
 
-export const styled = (Component: any) => {
-  return (stylesOrFn: any) => {
-    const StyledComponent = (props: any) => {
-      // Return Component with styles applied or forwarded
-      return <Component {...props} />;
-    };
-    StyledComponent.displayName = `Styled(${Component.displayName || Component.name || 'Component'})`;
-    return StyledComponent;
-  };
-};

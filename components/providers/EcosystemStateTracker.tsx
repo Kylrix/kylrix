@@ -21,7 +21,7 @@ export function EcosystemStateTracker({ children }: { children: React.ReactNode 
       pathname.startsWith('/send') ||
       pathname === '/' ||
       pathname.startsWith('/i/') ||
-      pathname.startsWith('/app/shared') ||
+      pathname.startsWith('/app') ||
       pathname.startsWith('/idea') ||
       pathname.startsWith('/u/') ||
       pathname.startsWith('/p/') ||
@@ -30,8 +30,8 @@ export function EcosystemStateTracker({ children }: { children: React.ReactNode 
       pathname.startsWith('/forms/') ||
       pathname.startsWith('/events/') ||
       pathname.startsWith('/goals/') ||
-      pathname.startsWith('/flow/forms/') ||
-      pathname.startsWith('/flow/events/');
+      pathname.startsWith('/forms/') ||
+      pathname.startsWith('/events/');
 
     if (isPublic) {
       return;

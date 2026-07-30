@@ -22,8 +22,8 @@ import {
   CircularProgress,
   Drawer,
   useMediaQuery,
-  useTheme,
-} from '@/lib/openbricks/primitives';
+  useTheme} from '@/lib/openbricks/primitives';
+import { isFlowPath } from '@/lib/routing/app-paths';
 import {
   Bot,
   ChevronDown,
@@ -37,8 +37,7 @@ import {
   Activity,
   RefreshCw,
   ChevronRight,
-  Keyboard,
-} from 'lucide-react';
+  Keyboard} from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -102,8 +101,7 @@ function renderShortcutsList() {
             p: 1.5,
             borderRadius: '16px',
             bgcolor: 'rgba(255,255,255,0.015)',
-            border: '1px solid rgba(255,255,255,0.04)',
-          }}
+            border: '1px solid rgba(255,255,255,0.04)'}}
         >
           <Typography sx={{ color: 'rgba(255,255,255,0.78)', fontSize: '0.84rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)', lineHeight: 1.35, minWidth: 0 }}>
             {item.desc}
@@ -121,8 +119,7 @@ function renderShortcutsList() {
               borderRadius: '8px',
               border: '1px solid rgba(99, 102, 241, 0.18)',
               flexShrink: 0,
-              whiteSpace: 'nowrap',
-            }}
+              whiteSpace: 'nowrap'}}
           >
             {item.key}
           </Typography>
@@ -215,10 +212,6 @@ interface ConnectTopbarProps {
   className?: string;
 }
 
-function isRenderableImageSrc(value?: string | null) {
-  if (!value) return false;
-  return /^(https?:)?\/\//.test(value) || value.startsWith('data:') || value.startsWith('blob:');
-}
 
 function shortenUserId(fullId?: string | null) {
   if (!fullId) return null;
@@ -261,8 +254,7 @@ function SyncIndicator() {
         alignItems: 'center',
         gap: '8px',
         boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)',
-        zIndex: 100,
-      }}
+        zIndex: 100}}
     >
       <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} />
       SYNCING WORKSPACE
@@ -271,8 +263,7 @@ function SyncIndicator() {
 }
 
 export default function ConnectTopbar({
-  className,
-}: ConnectTopbarProps) {
+  className}: ConnectTopbarProps) {
   const { user, logout, isAuthenticating, updatePreferences } = useAuth();
   const { openWallet } = useWalletOverlay();
   const { openAgenticDrawer, closeAgenticDrawer } = useAgenticDrawer();
@@ -283,7 +274,7 @@ export default function ConnectTopbar({
   const router = useRouter();
   const pathname = usePathname();
   const { setIsCollapsed } = useSidebar();
-  const { activeWorkspace, workspaces, setActiveWorkspaceId, createWorkspace } = useWorkspace();
+  const { activeWorkspace, workspaces, setActiveWorkspaceId} = useWorkspace();
   const { notes = [] } = useNotes();
   const { tasks = [], projects = [] } = useTask();
   // To let any drawer communicate full state expansion globally:
@@ -298,12 +289,12 @@ export default function ConnectTopbar({
 
   const activeApp = useMemo<KylrixApp>(() => {
     if (pathname?.startsWith('/app')) return 'note';
-    if (pathname?.startsWith('/flow')) return 'flow';
+    if (isFlowPath(pathname)) return 'flow';
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/connect')) return 'connect';
     if (pathname?.startsWith('/accounts')) return 'accounts';
     if (pathname?.startsWith('/send')) return 'send';
-    if (pathname?.startsWith('/projects')) return 'projects';
+    if (pathname?.startsWith('/workspaces')) return 'projects';
     return 'kylrix';
   }, [pathname]);
 
@@ -410,7 +401,7 @@ export default function ConnectTopbar({
   const profileName = user?.name || user?.email || 'User';
   const profileUsername = myProfile?.username || (user as any)?.username || (user as any)?.prefs?.username || null;
   
-  const [isClient, setIsClient] = useState(true);
+  const [_isClient, setIsClient] = useState(true);
   useEffect(() => setIsClient(true), []);
 
   const profileSeed = useMemo(
@@ -418,8 +409,7 @@ export default function ConnectTopbar({
       username: profileUsername ? String(profileUsername).replace(/^@+/, '').toLowerCase() : null,
       displayName: profileName,
       avatar: profileAvatarUrl || profilePicId || null,
-      userId: (user as any)?.$id || null,
-    }),
+      userId: (user as any)?.$id || null}),
     [profileAvatarUrl, profileName, profilePicId, profileUsername, user],
   );
 
@@ -569,14 +559,14 @@ export default function ConnectTopbar({
         { id: 'view-settings', title: 'Security Preferences', description: 'Adjust your ideas security & encryption rules', href: '/settings', kind: 'system', accent: '#6366F1' }
       ],
       projects: [
-        { id: 'create-proj', title: 'Start Fresh Project', description: 'Spin up outcome-aware container', href: '/projects', kind: 'flow', accent: '#6366F1' },
-        { id: 'view-wf', title: 'Manage Action Workflows', description: 'Automate repetitive workflows', href: '/projects/workflows', kind: 'note', accent: '#A855F7' }
+        { id: 'create-proj', title: 'Start Fresh Project', description: 'Spin up outcome-aware container', href: '/workspaces', kind: 'flow', accent: '#6366F1' },
+        { id: 'view-wf', title: 'Manage Action Workflows', description: 'Automate repetitive workflows', href: '/flows', kind: 'note', accent: '#A855F7' }
       ],
       flow: [
-        { id: 'manage-tasks', title: 'View Outstanding Tasks', description: 'Review scheduled deliverables and actions', href: '/flow', kind: 'flow', accent: '#A855F7' }
+        { id: 'manage-tasks', title: 'View Outstanding Tasks', description: 'Review scheduled deliverables and actions', href: '/flows', kind: 'flow', accent: '#A855F7' }
       ],
       vault: [
-        { id: 'share-secrets', title: 'Audit Ephemeral Secrets', description: 'Review sharing keychains and rules', href: '/vault/sharing', kind: 'vault', accent: '#10B981' }
+        { id: 'share-secrets', title: 'Audit Ephemeral Secrets', description: 'Review sharing keychains and rules', href: '/vault', kind: 'vault', accent: '#10B981' }
       ],
       connect: [
         { id: 'start-huddle', title: 'Start Connect Huddle', description: 'Centralize calls and group threads', href: '/connect', kind: 'connect', accent: '#F59E0B' }
@@ -615,7 +605,7 @@ export default function ConnectTopbar({
         id: 'hist-flow',
         title: 'Coordinate Action Items',
         description: 'Manage outstanding roadmaps and deliverables',
-        href: '/flow',
+        href: '/flows',
         kind: 'flow',
         accent: '#A855F7'
       });
@@ -625,7 +615,7 @@ export default function ConnectTopbar({
         id: 'hist-vault',
         title: 'Audit Vault Keychain',
         description: 'Manage passwords and TOTP codes safely',
-        href: '/vault/sharing',
+        href: '/vault',
         kind: 'vault',
         accent: '#10B981'
       });
@@ -659,8 +649,7 @@ export default function ConnectTopbar({
     () => {
       return createEcosystemPanelItems(activeApp).map((item) => ({
         ...item,
-        href: getEcosystemUrl(item.app),
-      }));
+        href: getEcosystemUrl(item.app)}));
     },
     [activeApp],
   );
@@ -754,15 +743,14 @@ export default function ConnectTopbar({
         k: 'agent',
         s: 'apps',
         m: 'profile',
-        p: '/projects',
+        p: '/workspaces',
         n: '/app',
         t: '/tags',
         x: '/settings',
-        g: '/flow/goals',
-        q: '/flow/forms',
-        e: '/flow/events',
-        h: '/connect/calls',
-      };
+        g: '/goals',
+        q: '/forms',
+        e: '/events',
+        h: '/connect/calls'};
 
       const action = builtInActions[key];
       if (action) {
@@ -960,8 +948,7 @@ export default function ConnectTopbar({
           borderRadius: '0 0 28px 28px',
           bgcolor: '#161412',
           overflow: 'hidden',
-          boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
-        }}
+          boxShadow: '0 12px 32px rgba(0,0,0,0.35)'}}
       >
         {content}
       </Box>
@@ -1022,8 +1009,7 @@ export default function ConnectTopbar({
                 '&:focus-within': {
                   borderColor: '#6366F1',
                   boxShadow: '0 0 0 4px rgba(99, 102, 241, 0.15)',
-                  bgcolor: 'rgba(0, 0, 0, 0.4)',
-                }
+                  bgcolor: 'rgba(0, 0, 0, 0.4)'}
               }}
             >
               <Search size={16} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 8, flexShrink: 0 }} />
@@ -1104,7 +1090,7 @@ export default function ConnectTopbar({
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25 }}>
                   {[
                     { name: 'note', label: 'Ideas', color: '#EC4899', href: '/app' },
-                    { name: 'flow', label: 'Flow', color: '#A855F7', href: '/flow' },
+                    { name: 'flow', label: 'Flow', color: '#A855F7', href: '/flows' },
                     { name: 'vault', label: 'Vault', color: '#10B981', href: '/vault' },
                     { name: 'connect', label: 'Connect', color: '#F59E0B', href: '/connect' }
                   ].map((app) => (
@@ -1209,8 +1195,7 @@ export default function ConnectTopbar({
                       '&:hover': {
                         bgcolor: 'rgba(255,255,255,0.035)',
                         borderColor: 'rgba(99, 102, 241, 0.3)',
-                        transform: 'translateX(2px)',
-                      },
+                        transform: 'translateX(2px)'},
                     }}
                   >
                     <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.12)', color: '#6366F1', flexShrink: 0 }}>
@@ -1336,7 +1321,7 @@ export default function ConnectTopbar({
                         component="button"
                         onClick={() => {
                           handleCloseAll();
-                          router.push(`/projects/${proj.id}`);
+                          router.push(`/workspaces/${proj.id}`);
                         }}
                         sx={{
                           width: '100%',
@@ -1373,7 +1358,7 @@ export default function ConnectTopbar({
                         component="button"
                         onClick={() => {
                           handleCloseAll();
-                          router.push(`/flow?task=${task.id}`);
+                          router.push(`/goals?task=${task.id}`);
                         }}
                         sx={{
                           width: '100%',
@@ -1586,8 +1571,7 @@ export default function ConnectTopbar({
               p: 2.75,
               display: 'flex',
               flexDirection: 'column',
-              boxSizing: 'border-box',
-            }
+              boxSizing: 'border-box'}
           }}
         >
           {/* Header */}
@@ -1615,8 +1599,7 @@ export default function ConnectTopbar({
               '&:focus-within': {
                 borderColor: '#6366F1',
                 boxShadow: '0 0 0 4px rgba(99, 102, 241, 0.15)',
-                bgcolor: 'rgba(0, 0, 0, 0.4)',
-              }
+                bgcolor: 'rgba(0, 0, 0, 0.4)'}
             }}
           >
             <Search size={18} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 10, flexShrink: 0 }} />
@@ -1665,8 +1648,7 @@ export default function ConnectTopbar({
           borderRadius: '0 0 28px 28px',
           bgcolor: '#161412',
           overflow: 'hidden',
-          boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
-        }}
+          boxShadow: '0 12px 32px rgba(0,0,0,0.35)'}}
       >
         {searchContent}
       </Box>
@@ -1896,8 +1878,7 @@ export default function ConnectTopbar({
               p: 0,
               display: 'flex',
               flexDirection: 'column',
-              boxSizing: 'border-box',
-            }
+              boxSizing: 'border-box'}
           }}
         >
           {profileContent}
@@ -1915,8 +1896,7 @@ export default function ConnectTopbar({
           borderRadius: '0 0 28px 28px',
           bgcolor: '#161412',
           overflow: 'hidden',
-          boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
-        }}
+          boxShadow: '0 12px 32px rgba(0,0,0,0.35)'}}
       >
         {profileContent}
       </Box>
@@ -1944,8 +1924,7 @@ export default function ConnectTopbar({
               p: 2.75,
               display: 'flex',
               flexDirection: 'column',
-              boxSizing: 'border-box',
-            }
+              boxSizing: 'border-box'}
           }}
         >
           {/* Header */}
@@ -1993,8 +1972,7 @@ export default function ConnectTopbar({
                     '&:hover': {
                       bgcolor: alpha(appTone.secondary, 0.1),
                       borderColor: alpha(appTone.secondary, 0.2),
-                      transform: 'translateX(3px)',
-                    }
+                      transform: 'translateX(3px)'}
                   }}
                 >
                   <Stack direction="row" spacing={1.25} alignItems="center" sx={{ width: '100%' }}>
@@ -2035,8 +2013,7 @@ export default function ConnectTopbar({
             overflow: 'hidden',
             borderBottom: '1px solid rgba(255,255,255,0.08)',
             borderRadius: '0 0 28px 28px',
-            boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
-          }}
+            boxShadow: '0 12px 32px rgba(0,0,0,0.35)'}}
         >
           <Box
             onWheel={(event: React.WheelEvent) => {
@@ -2182,8 +2159,7 @@ export default function ConnectTopbar({
                       transition: 'all 0.2s',
                       '&:hover': {
                         bgcolor: alpha(appTone.secondary, 0.1),
-                        borderColor: alpha(appTone.secondary, 0.2),
-                      },
+                        borderColor: alpha(appTone.secondary, 0.2)},
                     }}
                   >
                     <Stack direction="row" spacing={1.25} alignItems="center" sx={{ width: '100%' }}>
@@ -2225,8 +2201,7 @@ export default function ConnectTopbar({
           backgroundImage: 'none',
           overflow: 'visible',
           pointerEvents: 'auto',
-          height: isDesktop ? '88px' : (activePanel ? 'auto' : '88px'),
-        }}
+          height: isDesktop ? '88px' : (activePanel ? 'auto' : '88px')}}
       >
         <SyncIndicator />
         <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 4 }, width: '100%', height: '88px', display: activePanel ? 'none' : 'flex', alignItems: 'center' }}>

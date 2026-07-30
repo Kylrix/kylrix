@@ -6,9 +6,7 @@ import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 export function Drawer({
   open,
   onClose,
-  children,
-  _className = "",
-}: {
+  children}: {
   open: boolean;
   onClose: () => void;
   children: ReactNode;

@@ -90,8 +90,7 @@ export const Web3WalletService = {
       {
         symbol: chain.toUpperCase(),
         formatted: parseFloat(formatEther(nativeValue)).toFixed(4),
-        value: nativeValue.toString(),
-      }
+        value: nativeValue.toString()}
     ];
 
     tokenAddresses.forEach((token, index) => {
@@ -101,8 +100,7 @@ export const Web3WalletService = {
       balances.push({
         symbol: token.symbol,
         formatted,
-        value: val.toString(),
-      });
+        value: val.toString()});
     });
 
     return balances;

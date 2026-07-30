@@ -27,7 +27,7 @@ export async function provisionHybridTeamExpansionSecure(
   targetUserId: string,
   targetRole: string
 ): Promise<{ isTeamExpanded: boolean, newAcl: string | null }> {
-  const { users, teams } = createSystemClient();
+  const { teams } = createSystemClient();
   
   // 1. Check current collaborator count
   const existingCollabsRes = await databases.listRows(
@@ -40,7 +40,7 @@ export async function provisionHybridTeamExpansionSecure(
     ]
   ).catch(() => ({ rows: [] }));
 
-  const uniqueCollabIds = Array.from(new Set(existingCollabsRes.rows.map(r => r.userId)));
+  const uniqueCollabIds = Array.from(new Set(existingCollabsRes.rows.map((r: any) => r.userId)));
   if (!uniqueCollabIds.includes(targetUserId)) {
       uniqueCollabIds.push(targetUserId);
   }
@@ -127,7 +127,7 @@ export async function provisionHybridTeamExpansionSecure(
 }
 
 export type PermissionLevel = 'read' | 'write' | 'admin';
-export type PermissionAction = 'grant' | 'revoke' | 'rotate_epoch' | 'pin_ghost_note';
+type PermissionAction = 'grant' | 'revoke' | 'rotate_epoch' | 'pin_ghost_note';
 
 export interface PermissionMutationInput {
   databaseId?: string;
@@ -166,64 +166,19 @@ function makeKeyMappingDocumentId(resourceType: string, resourceId: string, gran
     .slice(0, 32);
 }
 
-export function getCorsHeaders(req: NextRequest) {
-  return {
-    'Access-Control-Allow-Origin': req.headers.get('origin') || '*',
-    'Access-Control-Allow-Credentials': 'true',
-  };
-}
 
-export async function verifyUser(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    const jwt = authHeader.split(' ')[1];
-    const client = new Client()
-      .setEndpoint(process.env.APPWRITE_ENDPOINT || APPWRITE_CONFIG.ENDPOINT)
-      .setProject(process.env.NEXT_PUBLIC_APPWRITE_PROJECT || process.env.APPWRITE_PROJECT || APPWRITE_CONFIG.PROJECT_ID)
-      .setJWT(jwt);
-
-    try {
-      const account = new Account(client);
-      return await account.get();
-    } catch (error) {
-      console.error('[Permission Updater] JWT verification failed:', error);
-    }
-  }
-
-  const cookieHeader = req.headers.get('cookie') || req.headers.get('Cookie');
-  if (!cookieHeader) return null;
-
-  try {
-    const response = await fetch(`${process.env.APPWRITE_ENDPOINT || APPWRITE_CONFIG.ENDPOINT}/account`, {
-      method: 'GET',
-      headers: {
-        'X-Appwrite-Project': process.env.NEXT_PUBLIC_APPWRITE_PROJECT || process.env.APPWRITE_PROJECT || APPWRITE_CONFIG.PROJECT_ID,
-        Cookie: cookieHeader,
-        Accept: 'application/json',
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data && typeof data === 'object' && data.$id ? data : null;
-  } catch (error) {
-    console.error('[Permission Updater] Cookie verification failed:', error);
-    return null;
-  }
-}
 
 export function normalizeTargetUserIds(input: PermissionMutationInput['targetUserIds']) {
   if (!input) return [];
   const ids = Array.isArray(input) ? input : [input];
-  return Array.from(new Set(ids.map((id) => String(id).trim()).filter(Boolean)));
+  return Array.from(new Set(ids.map((id: any) => String(id).trim()).filter(Boolean)));
 }
 
 export function normalizeKeyMappings(input?: KeyMappingInput[] | KeyMappingInput | null) {
   if (!input) return [];
   const mappings = Array.isArray(input) ? input : [input];
   return mappings
-    .map((mapping) => ({
+    .map((mapping: any) => ({
       resourceId: String(mapping.resourceId || '').trim(),
       resourceType: String(mapping.resourceType || '').trim(),
       grantee: String(mapping.grantee || '').trim(),
@@ -233,8 +188,7 @@ export function normalizeKeyMappings(input?: KeyMappingInput[] | KeyMappingInput
           ? mapping.metadata
           : mapping.metadata
             ? JSON.stringify(mapping.metadata)
-            : null,
-    }))
+            : null}))
     .filter((mapping) => mapping.resourceId && mapping.resourceType && mapping.grantee && mapping.wrappedKey);
 }
 
@@ -250,10 +204,6 @@ function buildRecipientPermissions(userId: string, permission: PermissionLevel) 
   return grants;
 }
 
-function buildOwnerPermissions(ownerId: string) {
-  return [
-    Permission.read(Role.user(ownerId))];
-}
 
 function buildStoragePermissions(targetUserIds: string[], permission: PermissionLevel) {
   const grants = new Set<string>();
@@ -278,8 +228,7 @@ async function upsertKeyMapping(databases: Databases, actorId: string, mapping: 
     resourceType: normalized.resourceType,
     grantee: normalized.grantee,
     wrappedKey: normalized.wrappedKey,
-    metadata: normalized.metadata,
-  };
+    metadata: normalized.metadata};
 
   const permissions = [
     Permission.read(Role.user(normalized.grantee))];
@@ -317,7 +266,7 @@ async function deleteKeyMappings(
     Query.equal('resourceType', resourceType),
     Query.equal('resourceId', resourceId)];
 
-  const normalizedGrantees = Array.from(new Set((grantees || []).map((value) => String(value).trim()).filter(Boolean)));
+  const normalizedGrantees = Array.from(new Set((grantees || []).map((value: any) => String(value).trim()).filter(Boolean)));
   if (normalizedGrantees.length > 0) {
     queries.push(Query.equal('grantee', normalizedGrantees));
   }
@@ -326,7 +275,7 @@ async function deleteKeyMappings(
   if (existing.rows.length === 0) return [];
 
   await Promise.all(
-    existing.rows.map((row) => databases.deleteRow(PASSWORD_MANAGER_DB, KEY_MAPPING_TABLE, row.$id)),
+    existing.rows.map((row: any) => databases.deleteRow(PASSWORD_MANAGER_DB, KEY_MAPPING_TABLE, row.$id)),
   );
 
   return existing.rows;
@@ -339,10 +288,10 @@ async function createEpoch(
   epochNumber: number,
   participantIds: string[] = [],
 ) {
-  const uniqueParticipants = Array.from(new Set(participantIds.map((value) => String(value).trim()).filter(Boolean)));
+  const uniqueParticipants = Array.from(new Set(participantIds.map((value: any) => String(value).trim()).filter(Boolean)));
   const permissions = [
     Permission.read(Role.user(actorId)),
-    ...uniqueParticipants.map((participantId) => Permission.read(Role.user(participantId)))];
+    ...uniqueParticipants.map((participantId: any) => Permission.read(Role.user(participantId)))];
 
   return await databases.createRow(
     CHAT_DB,
@@ -351,8 +300,7 @@ async function createEpoch(
     {
       resourceId,
       epochNumber,
-      createdBy: actorId,
-    },
+      createdBy: actorId},
     permissions,
   );
 }
@@ -467,8 +415,8 @@ export async function mutateRowPermissions(
     }
   } else {
     // Revoke: filter out all permissions for these specific users
-    const removalRoles = targetUserIds.map(id => Role.user(id).toString());
-    nextPermissions = nextPermissions.filter(perm => {
+    const removalRoles = targetUserIds.map((id: any) => Role.user(id).toString());
+    nextPermissions = nextPermissions.filter((perm: any) => {
         return !removalRoles.some(role => perm.includes(role));
     });
   }
@@ -485,8 +433,7 @@ export async function mutateRowPermissions(
 
   return {
     row: updated,
-    permissions: dedupedPermissions,
-  };
+    permissions: dedupedPermissions};
 }
 
 export async function upsertLockboxRows(
@@ -496,7 +443,7 @@ export async function upsertLockboxRows(
 ) {
   const mappings = normalizeKeyMappings(keyMappings);
   if (mappings.length === 0) return [];
-  return Promise.all(mappings.map((mapping) => upsertKeyMapping(databases, actorId, mapping)));
+  return Promise.all(mappings.map((mapping: any) => upsertKeyMapping(databases, actorId, mapping)));
 }
 
 export async function removeLockboxRows(
@@ -517,13 +464,12 @@ export async function createEpochRows(
   keyMappings?: KeyMappingInput[] | KeyMappingInput | null,
 ) {
   const epoch = await createEpoch(databases, actorId, resourceId, epochNumber, participantIds);
-  const mappings = normalizeKeyMappings(keyMappings).map((mapping) => ({
+  const mappings = normalizeKeyMappings(keyMappings).map((mapping: any) => ({
     ...mapping,
     resourceId: epoch.$id,
-    resourceType: 'epoch',
-  }));
+    resourceType: 'epoch'}));
   if (mappings.length === 0) return { epoch, keyMappings: [] };
 
-  const rows = await Promise.all(mappings.map((mapping) => upsertKeyMapping(databases, actorId, mapping)));
+  const rows = await Promise.all(mappings.map((mapping: any) => upsertKeyMapping(databases, actorId, mapping)));
   return { epoch, keyMappings: rows };
 }

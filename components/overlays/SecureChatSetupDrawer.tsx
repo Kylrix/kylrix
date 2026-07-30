@@ -30,7 +30,6 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { UsersService } from '@/lib/services/users';
 
 export function SecureChatSetupDrawer() {
-  const theme = useTheme();
   const router = useRouter();
   const { user } = useAuth();
   const { requestSudo } = useSudo();

@@ -28,7 +28,7 @@ async function getJwt(): Promise<string | undefined> {
   try {
     const res = await account.createJWT().catch(() => null);
     return res?.jwt;
-  } catch (e) {
+  } catch (_e) {
     return undefined;
   }
 }
@@ -117,8 +117,7 @@ const databasesProxy = new Proxy(originalDatabases, {
                 const res = await listRowsSecure(databaseId, tableId, queries, jwt);
                 return { 
                     total: res.total, 
-                    rows: res.rows,
-                };
+                    rows: res.rows};
             };
         }
         if (prop === 'getRow' || prop === 'getRow') {
@@ -475,8 +474,7 @@ export function setKylrixPulse(user: any, avatarBase64?: string | null) {
         const pulse = {
             $id: user.$id,
             name: user.name || user.username || 'User',
-            profilePicId: user.prefs?.profilePicId || user.profilePicId || null,
-        };
+            profilePicId: user.prefs?.profilePicId || user.profilePicId || null};
         
         // On localhost, set cookie without domain (path-only). On production, use .domain format
         const hostname = window.location.hostname;
@@ -547,7 +545,7 @@ export async function getCurrentUser(force = false): Promise<any | null> {
             emitCurrentUserChange(user);
             return user;
         })
-        .catch((error) => {
+        .catch((error: any) => {
             const isUnauthorized =
                 error?.code === 401 ||
                 error?.code === 'user_unauthorized' ||

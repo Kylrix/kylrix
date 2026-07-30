@@ -1,3 +1,8 @@
+---
+name: system.build-errors
+description: Known Next/tsc build failure modes and the fastest surgical fixes.
+---
+
 # Build Errors Skill
 
 ## Purpose

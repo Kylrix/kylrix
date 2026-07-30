@@ -33,11 +33,10 @@ export async function getAdminStats(actorEmail: string) {
     ).catch(() => null),
   ]);
   const totalUsers = userList.total;
-  const recentUsers = userList.users.map((u) => ({
+  const recentUsers = userList.users.map((u: any) => ({
     name: u.name || 'Anonymous',
     email: u.email,
-    date: u.$createdAt,
-  }));
+    date: u.$createdAt}));
   const activeNow = activityResult ? activityResult.total : Math.floor(totalUsers * 0.05);
 
   return {
@@ -84,7 +83,7 @@ export async function listAdminUsers(
   const hasMore = response.users.length === limit;
 
   return {
-    users: visibleUsers.map((user) => ({
+    users: visibleUsers.map((user: any) => ({
       id: user.$id,
       name: user.name || 'Anonymous',
       email: user.email,
@@ -93,8 +92,7 @@ export async function listAdminUsers(
       joinDate: new Date(user.$createdAt).toLocaleDateString('en-US', {
         month: 'short',
         day: '2-digit',
-        year: 'numeric',
-      }),
+        year: 'numeric'}),
       emailVerification: user.emailVerification,
       labels: user.labels,
     })),

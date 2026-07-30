@@ -13,20 +13,17 @@ import { AuthErrorBoundary } from '@/components/ui/ErrorBoundary';
 const mono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
-  display: "swap",
-});
+  display: "swap"});
 
 const outfit = Outfit({
   subsets: ['latin'],
   variable: '--font-outfit',
-  display: 'swap',
-});
+  display: 'swap'});
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
   variable: '--font-space-grotesk',
-  display: 'swap',
-});
+  display: 'swap'});
 
 import GlobalShell from '@/components/GlobalShell';
 
@@ -34,13 +31,11 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://kylrix.space'),
   title: {
     default: 'Kylrix · The agentic workspace that 10x the productivity of high agency builders',
-    template: '%s · Kylrix',
-  },
+    template: '%s · Kylrix'},
   description: 'The agentic workspace that 10x the productivity of high agency builders.',
   icons: {
     icon: '/favicon.ico',
-    apple: '/apple-touch-icon.png',
-  },
+    apple: '/apple-touch-icon.png'},
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -51,23 +46,20 @@ export const metadata: Metadata = {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'Kylrix Ecosystem',
-      },
+        alt: 'Kylrix Ecosystem'},
     ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Kylrix · The agentic workspace that 10x the productivity of high agency builders',
     description: 'The agentic workspace that 10x the productivity of high agency builders.',
-    images: ['/opengraph-image'],
-  },
+    images: ['/opengraph-image']},
 };
 
 export const viewport: Viewport = {
   themeColor: '#6366F1',
   width: 'device-width',
-  initialScale: 1,
-};
+  initialScale: 1};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -104,7 +96,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                       var routes = JSON.parse(hist);
                       for (var i = 0; i < routes.length; i++) {
                         var p = routes[i] && routes[i].path;
-                        if (p && p !== '/' && p.indexOf('/send') !== 0 && p.indexOf('/app/shared') !== 0 && p.indexOf('/idea') !== 0) {
+                        if (p && p !== '/' && p.indexOf('/send') !== 0 && p.indexOf('/app') !== 0 && p.indexOf('/idea') !== 0) {
                           dest = p;
                           break;
                         }

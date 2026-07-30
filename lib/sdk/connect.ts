@@ -24,8 +24,7 @@ export class KylrixConnect {
     return await this.sdk.createRow(databaseId, tableId, {
       ...data,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
+      updatedAt: new Date().toISOString()});
   }
 
   /**
@@ -37,8 +36,7 @@ export class KylrixConnect {
     readBy.add(userId);
     
     return await this.sdk.updateRow(databaseId, tableId, messageId, {
-      readBy: Array.from(readBy),
-    });
+      readBy: Array.from(readBy)});
   }
 
   /**

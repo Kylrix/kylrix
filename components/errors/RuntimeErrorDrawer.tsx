@@ -13,8 +13,7 @@ export default function RuntimeErrorDrawer({
   error,
   reset,
   heading = 'Something went wrong',
-  description = 'We hit an unexpected problem. Use one of the options below to recover.',
-}: RuntimeErrorDrawerProps) {
+  description = 'We hit an unexpected problem. Use one of the options below to recover.'}: RuntimeErrorDrawerProps) {
   useEffect(() => {
     console.error('Application crash:', error);
   }, [error]);

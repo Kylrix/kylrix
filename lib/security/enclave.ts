@@ -123,8 +123,7 @@ export const SecurityEnclave = {
     await this.touchMeta(userId, {
       keychainCount: list.length,
       hasMasterpass: list.some((e) => e?.type === 'password'),
-      hasPasskey: list.some((e) => e?.type === 'passkey'),
-    });
+      hasPasskey: list.some((e) => e?.type === 'passkey')});
   },
 
   async getPasswordEntry(userId: string): Promise<any | null> {
@@ -157,8 +156,7 @@ export const SecurityEnclave = {
     await LocalEngine.cacheSet(`kylrix_userdoc_${userId}`, doc);
     await this.touchMeta(userId, {
       hasMasterpass: !!(doc?.masterpass === true),
-      hasPasskey: !!(doc?.isPasskey === true),
-    });
+      hasPasskey: !!(doc?.isPasskey === true)});
   },
 
   async getIdentity(userId: string): Promise<any | null> {
@@ -192,13 +190,11 @@ export const SecurityEnclave = {
       hydratedAt: '',
       hasMasterpass: false,
       hasPasskey: false,
-      keychainCount: 0,
-    };
+      keychainCount: 0};
     await LocalEngine.cacheSet(metaKey(userId), {
       ...prev,
       ...patch,
-      hydratedAt: patch.hydratedAt || prev.hydratedAt || new Date().toISOString(),
-    });
+      hydratedAt: patch.hydratedAt || prev.hydratedAt || new Date().toISOString()});
   },
 
   /**
@@ -255,15 +251,13 @@ export const SecurityEnclave = {
           .listRows({
             databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
             tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
-            queries: [Query.equal('userId', userId), Query.limit(50)],
-          })
+            queries: [Query.equal('userId', userId), Query.limit(50)]})
           .catch(() => ({ rows: [] as any[] })),
         tablesDB
           .listRows({
             databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
             tableId: APPWRITE_CONFIG.TABLES.VAULT.USER,
-            queries: [Query.equal('userId', userId), Query.limit(1)],
-          })
+            queries: [Query.equal('userId', userId), Query.limit(1)]})
           .catch(() => ({ rows: [] as any[] })),
         tablesDB
           .listRows({
@@ -273,8 +267,7 @@ export const SecurityEnclave = {
               Query.equal('userId', userId),
               Query.equal('identityType', 'e2e_connect'),
               Query.limit(1),
-            ],
-          })
+            ]})
           .catch(() => ({ rows: [] as any[] })),
         tablesDB
           .listRows({
@@ -311,8 +304,7 @@ export const SecurityEnclave = {
         hasPasskey: !!(
           userDoc?.isPasskey === true || keychainRows.some((e: any) => e?.type === 'passkey')
         ),
-        keychainCount: keychainRows.length || localKeychain.length,
-      });
+        keychainCount: keychainRows.length || localKeychain.length});
 
       return this.getMeta(userId);
     } catch (err) {

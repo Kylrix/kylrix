@@ -7,7 +7,7 @@ export interface TotpParseResult {
   period: number;
 }
 
-export function parseTotpUri(totpUri: string): TotpParseResult | null {
+function parseTotpUri(totpUri: string): TotpParseResult | null {
   try {
     // Handle different TOTP URI formats
     if (totpUri.startsWith("otpauth://totp/")) {
@@ -119,13 +119,13 @@ function extractIssuerFromName(name: string): string {
   return cleanName || name;
 }
 
-export function generateTotpCode(secret: string, timestamp?: number): string {
+function generateTotpCode(secret: string, timestamp?: number): string {
   // This would need a TOTP library implementation
   // For now, return a placeholder - you'd implement actual TOTP generation here
   // using libraries like 'otplib' or similar
   return "000000";
 }
 
-export function validateTotpSecret(secret: string): boolean {
+function validateTotpSecret(secret: string): boolean {
   return isBase32Secret(secret);
 }

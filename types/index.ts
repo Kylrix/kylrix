@@ -2,7 +2,7 @@
 
 export type Priority = 'low' | 'medium' | 'high' | 'urgent';
 export type TaskStatus = 'todo' | 'in-progress' | 'done' | 'blocked' | 'cancelled';
-export type RecurrenceType = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+type RecurrenceType = 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
 export type ViewMode = 'list' | 'board' | 'calendar' | 'timeline' | 'matrix';
 
 export interface Label {
@@ -30,7 +30,7 @@ export interface Comment {
   attachments?: Attachment[];
 }
 
-export interface Attachment {
+interface Attachment {
   id: string;
   name: string;
   url: string;
@@ -39,14 +39,14 @@ export interface Attachment {
   uploadedAt: Date;
 }
 
-export interface Reminder {
+interface Reminder {
   id: string;
   time: Date;
   type: 'notification' | 'email' | 'sms';
   sent: boolean;
 }
 
-export interface Recurrence {
+interface Recurrence {
   type: RecurrenceType;
   interval: number;
   endDate?: Date;
@@ -56,7 +56,7 @@ export interface Recurrence {
   monthOfYear?: number;
 }
 
-export interface TimeEntry {
+interface TimeEntry {
   id: string;
   startTime: Date;
   endTime?: Date;
@@ -134,7 +134,7 @@ export interface Project {
   settings: ProjectSettings;
 }
 
-export interface ProjectSettings {
+interface ProjectSettings {
   defaultPriority: Priority;
   allowSubtasks: boolean;
   allowTimeTracking: boolean;
@@ -143,7 +143,7 @@ export interface ProjectSettings {
   autoArchiveCompletedAfterDays?: number;
 }
 
-export interface User {
+interface User {
   id: string;
   name: string;
   email: string;
@@ -153,7 +153,7 @@ export interface User {
   createdAt: Date;
 }
 
-export interface UserSettings {
+interface UserSettings {
   defaultView: ViewMode;
   theme: 'light' | 'dark' | 'system';
   startOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -163,7 +163,7 @@ export interface UserSettings {
   integrations: IntegrationSettings;
 }
 
-export interface NotificationSettings {
+interface NotificationSettings {
   email: boolean;
   push: boolean;
   reminders: boolean;
@@ -173,7 +173,7 @@ export interface NotificationSettings {
   projectUpdates: boolean;
 }
 
-export interface IntegrationSettings {
+interface IntegrationSettings {
   kylrixnote: {
     enabled: boolean;
     autoLinkNotes: boolean;
@@ -216,7 +216,7 @@ export interface TaskFilter {
 }
 
 export type SortField = 'dueDate' | 'priority' | 'createdAt' | 'updatedAt' | 'title' | 'status' | 'position';
-export type SortDirection = 'asc' | 'desc';
+type SortDirection = 'asc' | 'desc';
 
 export interface TaskSort {
   field: SortField;
@@ -224,7 +224,7 @@ export interface TaskSort {
 }
 
 // Quick Action Types
-export interface QuickAction {
+interface QuickAction {
   id: string;
   label: string;
   icon: string;
@@ -233,7 +233,7 @@ export interface QuickAction {
 }
 
 // Stats Types
-export interface TaskStats {
+interface TaskStats {
   total: number;
   completed: number;
   overdue: number;
@@ -250,7 +250,7 @@ export interface TaskStats {
 }
 
 // Kanban Board Types
-export interface KanbanColumn {
+interface KanbanColumn {
   id: string;
   title: string;
   status: TaskStatus;
@@ -259,13 +259,13 @@ export interface KanbanColumn {
   limit?: number;
 }
 
-export interface KanbanBoard {
+interface KanbanBoard {
   columns: KanbanColumn[];
   columnOrder: string[];
 }
 
 // Timeline Types
-export interface TimelineEntry {
+interface TimelineEntry {
   id: string;
   taskId: string;
   type: 'created' | 'updated' | 'completed' | 'commented' | 'moved' | 'assigned';
@@ -276,7 +276,7 @@ export interface TimelineEntry {
 }
 
 // Eisenhower Matrix Types
-export interface MatrixQuadrant {
+interface MatrixQuadrant {
   id: 'urgent-important' | 'not-urgent-important' | 'urgent-not-important' | 'not-urgent-not-important';
   title: string;
   description: string;
@@ -285,7 +285,7 @@ export interface MatrixQuadrant {
 }
 
 // Productivity Metrics
-export interface ProductivityMetrics {
+interface ProductivityMetrics {
   date: Date;
   tasksCompleted: number;
   timeTracked: number; // in minutes
@@ -294,7 +294,7 @@ export interface ProductivityMetrics {
 }
 
 // Workspace/Team Types (for future multi-workspace support)
-export interface Workspace {
+interface Workspace {
   id: string;
   name: string;
   description?: string;
@@ -305,7 +305,7 @@ export interface Workspace {
   createdAt: Date;
 }
 
-export interface WorkspaceSettings {
+interface WorkspaceSettings {
   defaultProject?: string;
   requireTimeTracking: boolean;
   allowGuestAccess: boolean;
@@ -313,7 +313,7 @@ export interface WorkspaceSettings {
 }
 
 // Template Types
-export interface TaskTemplate {
+interface TaskTemplate {
   id: string;
   name: string;
   description?: string;
@@ -323,7 +323,7 @@ export interface TaskTemplate {
   createdAt: Date;
 }
 
-export interface ProjectTemplate {
+interface ProjectTemplate {
   id: string;
   name: string;
   description?: string;
@@ -355,7 +355,7 @@ export interface Event {
 }
 
 // Focus Mode Types
-export interface FocusSession {
+interface FocusSession {
   id: string;
   startTime: Date;
   endTime?: Date;

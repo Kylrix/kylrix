@@ -4,13 +4,13 @@
  * Executed by both the User UI interactions and the AI Agentic Engine.
  */
 
-export interface ToolParameterSpec {
+interface ToolParameterSpec {
   type: string;
   description: string;
   required?: boolean;
 }
 
-export interface EcosystemToolDefinition {
+interface EcosystemToolDefinition {
   id: string;
   domain:
     | 'workspace'
@@ -74,7 +74,7 @@ class ToolRegistry {
   }
 }
 
-export const toolRegistry = new ToolRegistry();
+const toolRegistry = new ToolRegistry();
 
 /**
  * PII and Security Redaction Boundary
@@ -84,7 +84,7 @@ export function redactPIIAndSensitiveFields<T>(payload: T): T {
   if (!payload || typeof payload !== 'object') return payload;
 
   if (Array.isArray(payload)) {
-    return payload.map((item) => redactPIIAndSensitiveFields(item)) as unknown as T;
+    return payload.map((item: any) => redactPIIAndSensitiveFields(item)) as unknown as T;
   }
 
   const redacted: Record<string, any> = {};
@@ -599,8 +599,7 @@ function registerCoreTools() {
     execute: async (params, context) => {
       const { executeEcosystemSearch } = await import('@/lib/agentic/search-engine');
       const result = await executeEcosystemSearch(String(params.query || ''), {
-        userId: context?.userId,
-      });
+        userId: context?.userId});
       return { success: true, data: result };
     },
   });

@@ -44,7 +44,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const authContext = useAuth();
     user = authContext.user;
     isAuthenticated = authContext.isAuthenticated;
-  } catch (e) {
+  } catch (_e) {
     // AuthProvider not available yet, that's fine
   }
 
@@ -106,7 +106,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         if (Notification.permission === 'granted') {
           new Notification(`Kylrix ${payload.targetType}`, {
             body: payload.action,
-            icon: '/logo/kylrixnote.png'
+            icon: '/logo.svg'
           });
         }
       } else if (isUpdate) {
@@ -150,7 +150,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       // Pessimistic UI update for immediate feedback
       setNotifications(prev => prev.map(n => n.$id === id ? { ...n, details: JSON.stringify(newMetadata) } : n));
 
-      await updateRow(APPWRITE_TABLE_ID_ACTIVITYLOG, id, {
+      await updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_ACTIVITYLOG, id, {
         details: JSON.stringify(newMetadata)
       });
     } catch (error: any) {
@@ -191,8 +191,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       isLoading,
       markAsRead,
       markAllAsRead,
-      clearNotifications,
-    }),
+      clearNotifications}),
     [notifications, unreadCount, isLoading, markAsRead, markAllAsRead, clearNotifications]
   );
 
@@ -203,10 +202,3 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useNotifications() {
-  const context = useContext(NotificationContext);
-  if (context === undefined) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
-  }
-  return context;
-}

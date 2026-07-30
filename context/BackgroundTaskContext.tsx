@@ -51,8 +51,7 @@ export function BackgroundTaskProvider({ children }: { children: ReactNode }) {
           message: "Importing via server (bypassing rate limits)...",
           itemsProcessed: 0,
           itemsTotal: 0,
-          errors: [],
-        });
+          errors: []});
 
         serverResult = await porterImport(userId, type as 'bitwarden' | 'kylrixvault', parsedData);
         console.log("[BackgroundTask] Server-side import succeeded:", serverResult.summary);

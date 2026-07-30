@@ -18,7 +18,7 @@ function toTime(value?: string | null) {
 export function pickLatestSubscription(rows: SubscriptionRow[], preferredStatus = 'active') {
   if (!rows.length) return null;
 
-  return [...rows].sort((a, b) => {
+  return [...rows].sort((a: any, b: any) => {
     const aPreferred = String(a.status || '').toLowerCase() === preferredStatus ? 1 : 0;
     const bPreferred = String(b.status || '').toLowerCase() === preferredStatus ? 1 : 0;
     if (aPreferred !== bPreferred) return bPreferred - aPreferred;
@@ -36,7 +36,3 @@ export function pickLatestSubscription(rows: SubscriptionRow[], preferredStatus 
   })[0] || null;
 }
 
-export function getSubscriptionExpiryHint(rows: SubscriptionRow[]) {
-  const latest = pickLatestSubscription(rows);
-  return latest?.currentPeriodEnd || null;
-}

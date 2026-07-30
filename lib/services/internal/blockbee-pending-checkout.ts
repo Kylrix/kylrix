@@ -24,11 +24,11 @@ function hashDocSegment(input: string): string {
   return crypto.createHash('sha256').update(input).digest('hex').slice(0, 28);
 }
 
-export function blockBeePendingCheckoutDocId(paymentId: string): string {
+function blockBeePendingCheckoutDocId(paymentId: string): string {
   return `bbp_${hashDocSegment(`pend:${paymentId}`)}`;
 }
 
-export function blockBeeIpnReceiptDocId(paymentId: string): string {
+function blockBeeIpnReceiptDocId(paymentId: string): string {
   return `bbi_${hashDocSegment(`ipn:${paymentId}`)}`;
 }
 
@@ -43,8 +43,7 @@ export async function registerBlockBeePendingCheckout(meta: Omit<BlockBeePending
   const docId = blockBeePendingCheckoutDocId(meta.paymentId);
   const payload: BlockBeePendingCheckoutMeta = {
     ...meta,
-    createdAt: new Date().toISOString(),
-  };
+    createdAt: new Date().toISOString()};
 
   try {
     await databases.createRow(
@@ -59,8 +58,7 @@ export async function registerBlockBeePendingCheckout(meta: Omit<BlockBeePending
         status: 'pending',
         expiresAt: null,
         delta: null,
-        metadata: JSON.stringify(payload),
-      },
+        metadata: JSON.stringify(payload)},
       [Permission.read(Role.user(meta.payerUserId))],
     );
   } catch (e) {
@@ -95,8 +93,7 @@ export async function markBlockBeePendingCheckoutConsumed(paymentId: string) {
       status: 'applied',
       metadata: JSON.stringify({
         ...meta,
-        consumedAt: new Date().toISOString(),
-      }),
+        consumedAt: new Date().toISOString()}),
     });
   } catch {
     /* non-fatal */
@@ -152,7 +149,6 @@ export async function completeBlockBeeIpnLock(paymentId: string, payerUserId: st
     metadata: JSON.stringify({
       paymentId,
       completedAt: new Date().toISOString(),
-      snapshot,
-    }),
+      snapshot}),
   });
 }

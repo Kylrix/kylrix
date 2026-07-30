@@ -2,7 +2,7 @@
  * Namespaced pending keys so notes and goals share one engine queue without collisions.
  */
 
-export const GOAL_PENDING_PREFIX = 'goal:';
+const GOAL_PENDING_PREFIX = 'goal:';
 
 export function goalPendingKey(goalId: string): string {
   const id = String(goalId || '').trim();
@@ -18,6 +18,3 @@ export function parseGoalPendingKey(pendingId: string): string | null {
   return id || null;
 }
 
-export function isGoalPendingKey(pendingId: string): boolean {
-  return parseGoalPendingKey(pendingId) !== null;
-}

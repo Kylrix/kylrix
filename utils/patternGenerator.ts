@@ -1,6 +1,6 @@
 // Utility to generate deterministic patterns based on a seed string (e.g. event ID)
 
-export function generatePattern(seed: string): string {
+function generatePattern(seed: string): string {
   // Simple hash function
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {

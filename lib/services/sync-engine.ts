@@ -21,6 +21,8 @@ import { pickGoalAutosavePayload } from '@/lib/goals/pick-goal-autosave-payload'
 import type { Notes } from '@/types/appwrite';
 import type { Task } from '@/types';
 
+let lastSuccessfulSyncTime = 0;
+
 const PENDING_QUEUE_KEY = 'kylrix:sync:pending-queue';
 const PENDING_PAYLOADS_KEY = 'kylrix:sync:pending-payloads';
 
@@ -31,7 +33,6 @@ const pendingPayloads = new Map<string, any>();
 const statusListeners = new Set<() => void>();
 
 const failedSyncAttempts = new Map<string, { count: number; lastFailedAt: number }>();
-let lastSuccessfulSyncTime = 0;
 
 let globalIntensity = 0;
 let lastKeystrokeTime = 0;
@@ -98,13 +99,11 @@ function writePersistedQueue() {
       await db.cache.upsert({
         id: PENDING_QUEUE_KEY,
         data: snapshot,
-        timestamp: Date.now(),
-      });
+        timestamp: Date.now()});
       await db.cache.upsert({
         id: PENDING_PAYLOADS_KEY,
         data: payloads,
-        timestamp: Date.now(),
-      });
+        timestamp: Date.now()});
     } catch {
       // ignore storage failures — in-memory map still drives the UI
     }
@@ -166,14 +165,12 @@ async function hydratePendingQueue() {
       await db.cache.upsert({
         id: PENDING_QUEUE_KEY,
         data: queueSnapshot(),
-        timestamp: Date.now(),
-      });
+        timestamp: Date.now()});
       if (migrated) {
         await db.cache.upsert({
           id: PENDING_PAYLOADS_KEY,
           data: payloadsSnapshot(),
-          timestamp: Date.now(),
-        });
+          timestamp: Date.now()});
       }
 
       // Unblock goals that spent days in exponential backoff under the old re-queue bug.
@@ -356,7 +353,7 @@ async function flushGoalPending(
       payloadAny.userId = activeUserId;
       payload.creatorId = activeUserId;
       if (Array.isArray(payload.assigneeIds)) {
-        payload.assigneeIds = payload.assigneeIds.map((id) => (id === 'guest' || !id ? activeUserId : id));
+        payload.assigneeIds = payload.assigneeIds.map((id: any) => (id === 'guest' || !id ? activeUserId : id));
       }
       if (db) {
         await db.cache.upsert({
@@ -410,8 +407,7 @@ async function flushGoalPending(
         {
           ...(dataPayload as any),
           $id: goalId,
-          userId: creatorId,
-        },
+          userId: creatorId},
         permissions,
       );
       try {
@@ -437,8 +433,7 @@ async function flushGoalPending(
           id: synced.$id || goalId,
           userId: creatorId,
           creatorId,
-          updatedAt: new Date(synced.$updatedAt || Date.now()),
-        },
+          updatedAt: new Date(synced.$updatedAt || Date.now())},
         timestamp: Date.now(),
       })
       .catch(() => {});
@@ -518,8 +513,7 @@ async function flushNotePending(
   const dataPayload = {
     ...pickNoteAutosavePayload(payload),
     isPublic: getNotePublicState(payload),
-    isGuest: !!payload.isGuest,
-  };
+    isGuest: !!payload.isGuest};
 
   if (!String(dataPayload.content || '').trim() && !String(dataPayload.title || '').trim()) {
     console.warn(`[SyncEngine] Ignored empty pending note: ${noteId}`);
@@ -538,8 +532,7 @@ async function flushNotePending(
     if (isNotFound || isForbiddenOrMissing) {
       syncedNote = await createNote({
         ...dataPayload,
-        $id: noteId,
-      });
+        $id: noteId});
     } else {
       throw err;
     }

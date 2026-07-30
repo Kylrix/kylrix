@@ -41,7 +41,7 @@ export function AIModal({ onClose }: { onClose: () => void }) {
       case "NAVIGATE":
         if (data?.target) {
             const target = data.target.toLowerCase();
-            const validPaths = ["/vault", "/vault/settings", "/vault/import", "/vault/totp", "/vault/sharing", "/vault/credentials/new"];
+            const validPaths = ["/vault", "/vault/settings", "/vault/import", "/vault/totp", "/vault", "/vault"];
             const finalPath = validPaths.find(p => p.includes(target)) || "/vault";
             router.push(finalPath);
             onClose();

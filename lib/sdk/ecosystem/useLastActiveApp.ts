@@ -1,32 +1,25 @@
 "use client";
 import { useEffect } from 'react';
+import { isFlowPath } from '@/lib/routing/app-paths';
 
-export type AppName = 'accounts' | 'note' | 'vault' | 'flow' | 'connect';
+type AppName = 'accounts' | 'note' | 'vault' | 'flow' | 'connect';
 
 /**
  * Automatically detect and track the current app in localStorage
  * Call this hook in each app's root layout to ensure lastActiveApp stays current
  */
-export function useLastActiveApp(): void {
-  useEffect(() => {
-    const currentApp = detectCurrentApp();
-    if (currentApp) {
-      localStorage.setItem('kylrix_last_active_app', currentApp);
-    }
-  }, []);
-}
 
 /**
  * Detect which Kylrix app the user is currently in by parsing window.location
  */
-export function detectCurrentApp(): AppName | null {
+function detectCurrentApp(): AppName | null {
   if (typeof window === 'undefined') return null;
 
   const pathname = window.location.pathname.toLowerCase();
   if (pathname === '/accounts' || pathname.startsWith('/accounts/')) return 'accounts';
   if (pathname === '/app' || pathname.startsWith('/app/') || pathname.startsWith('/idea/')) return 'note';
   if (pathname === '/vault' || pathname.startsWith('/vault/')) return 'vault';
-  if (pathname === '/flow' || pathname.startsWith('/flow/')) return 'flow';
+  if (isFlowPath(pathname)) return 'flow';
   if (pathname === '/connect' || pathname.startsWith('/connect/')) return 'connect';
 
   const hostname = window.location.hostname.toLowerCase();
@@ -52,7 +45,7 @@ export function detectCurrentApp(): AppName | null {
 /**
  * Get the last active app, or default to 'connect' if none found
  */
-export function getLastActiveApp(): AppName {
+function getLastActiveApp(): AppName {
   if (typeof window === 'undefined') return 'connect';
   const saved = localStorage.getItem('kylrix_last_active_app') as AppName | null;
   return saved || 'connect';
@@ -72,8 +65,7 @@ export function getLastActiveAppRedirectUrl(baseUrl: string): string {
     note: '/app',
     vault: '/vault',
     flow: '/flow',
-    connect: '/connect',
-  };
+    connect: '/connect'};
 
   return `${baseUri}${dashboards[app]}`;
 }

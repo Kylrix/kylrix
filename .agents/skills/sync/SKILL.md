@@ -3,7 +3,7 @@ name: sync
 description: >-
   Canonical offline-first local-copy sync for Kylrix. Live copy = UI content SoT;
   autonomic sync engine pending queue (RxDB) = amber/green SoT; Appwrite confirms
-  and replenishes. Use when wiring notes or porting goals, vault, projects, forms,
+  and replenishes. Use when wiring notes or porting goals, vault, workspaces (projects table), forms,
   tasks, events to the same offline-first pattern — including guest/no-account use.
 ---
 
@@ -14,7 +14,7 @@ description: >-
 | Companion | Purpose |
 |-----------|---------|
 | [journey.md](./journey.md) | Full history: failed layers → scorched-earth resolution (read before reinventing) |
-| [porting.md](./porting.md) | Object-agnostic checklist to add offline-first to goals, vault, projects, etc. |
+| [porting.md](./porting.md) | Object-agnostic checklist to add offline-first to goals, vault, workspaces, etc. |
 
 Related substrate only: `rxdb-appwrite-sync` (IndexedDB/RxDB mechanics). **Do not** invent a second pending model from that skill — follow **this** skill first.
 

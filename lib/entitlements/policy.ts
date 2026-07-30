@@ -7,11 +7,10 @@ import { isSelfHostedDeployment } from '@/lib/deployment/surface';
 import {
   billingTierHasPaidAccess,
   normalizeBillingPrefsTier,
-  type BillingUiTier,
-} from '@/lib/subscription/tier-resolution';
+  type BillingUiTier} from '@/lib/subscription/tier-resolution';
 
 /** Tier used when the full suite is open (self-hosted). */
-export const OPEN_SUITE_TIER: BillingUiTier = 'LIFETIME';
+const OPEN_SUITE_TIER: BillingUiTier = 'LIFETIME';
 
 export type OpenEntitlement = {
   uiTier: BillingUiTier;
@@ -25,8 +24,7 @@ export function getOpenSuiteEntitlement(): OpenEntitlement {
     uiTier: OPEN_SUITE_TIER,
     active: true,
     expiresAt: null,
-    source: 'selfhosted',
-  };
+    source: 'selfhosted'};
 }
 
 export function resolveEffectiveBillingTier(
@@ -38,17 +36,6 @@ export function resolveEffectiveBillingTier(
   return normalizeBillingPrefsTier(prefs);
 }
 
-export function resolveEffectiveBillingTierFromLabel(tier: string | null | undefined): BillingUiTier {
-  if (isSelfHostedDeployment()) {
-    return OPEN_SUITE_TIER;
-  }
-  const normalized = String(tier || 'FREE').trim().toUpperCase();
-  if (normalized === 'LIFETIME') return 'LIFETIME';
-  if (normalized === 'TEAMS') return 'TEAMS';
-  if (normalized === 'ORG') return 'ORG';
-  if (normalized === 'PRO') return 'PRO';
-  return 'FREE';
-}
 
 export function effectiveTierHasPaidAccess(tier?: BillingUiTier | string | null): boolean {
   if (isSelfHostedDeployment()) {
@@ -87,15 +74,15 @@ export function getCollaboratorCap(tier: BillingUiTier | string, resourceType?: 
   return 0;
 }
 
-export function getProjectCap(tier: BillingUiTier | string): number {
+export function getProjectCap(_tier: BillingUiTier | string): number {
   return Number.POSITIVE_INFINITY;
 }
 
-export function getContainerObjectCap(tier: BillingUiTier | string): number {
+export function getContainerObjectCap(_tier: BillingUiTier | string): number {
   return Number.POSITIVE_INFINITY;
 }
 
-export function allowsGroupHangouts(tier: BillingUiTier | string): boolean {
+export function allowsGroupHangouts(_tier: BillingUiTier | string): boolean {
   return true;
 }
 
@@ -107,14 +94,4 @@ export function allowsGroupCalls(tier: BillingUiTier | string): boolean {
   return normalized === 'TEAMS' || normalized === 'ORG' || normalized === 'LIFETIME';
 }
 
-export function allowsAudioRecordings(tier: BillingUiTier | string): boolean {
-  if (isSelfHostedDeployment()) {
-    return true;
-  }
-  const normalized = String(tier || 'FREE').toUpperCase();
-  return normalized === 'PRO' || normalized === 'TEAMS' || normalized === 'ORG' || normalized === 'LIFETIME';
-}
 
-export function getNoteContentCharLimit(tier: BillingUiTier | string): number {
-  return 655350000;
-}

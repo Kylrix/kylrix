@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
-import EventCard from './EventCard';
+import { EventObjectRow } from './EventObjectRow';
 import EventDialog from './EventDialog';
 import { Event } from '@/types';
 import { events as eventApi } from '@/lib/kylrixflow';
@@ -24,12 +24,12 @@ export default function EventList() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { projects, userId } = useTask();
-  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { openSidebar} = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
   const { isAuthenticated, openIDMWindow } = useAuth();
   const { setConfiguration, resetConfiguration } = useFAB();
 
-  const [isDesktop, setIsDesktop] = useState(true);
+  const [isDesktop, _setIsDesktop] = useState(true);
 
   useEffect(() => {
     // Configure FAB for this page
@@ -67,8 +67,7 @@ export default function EventList() {
               startTime: new Date(e.startTime),
               endTime: new Date(e.endTime),
               createdAt: new Date(e.createdAt),
-              updatedAt: new Date(e.updatedAt),
-            }));
+              updatedAt: new Date(e.updatedAt)}));
             setEvents(parsed);
             setIsLoading(false);
           }
@@ -119,8 +118,7 @@ export default function EventList() {
                 await db.cache.upsert({
                   id: cacheKey,
                   data: merged as any,
-                  timestamp: Date.now(),
-                }).catch(() => {});
+                  timestamp: Date.now()}).catch(() => {});
               }
             } catch {}
           })();
@@ -142,7 +140,6 @@ export default function EventList() {
 
   const handleCreateEvent = async (eventData: any) => {
     try {
-      const calendarId = projects[0]?.id || 'default';
       const currentUserId = userId || 'guest';
       const visibility: EventVisibility = eventData.visibility || 'public';
       
@@ -183,7 +180,7 @@ export default function EventList() {
           coverImageId: eventData.coverImage || '',
           maxAttendees: 0,
           recurrenceRule: eventData.recurrenceRule || '',
-        },
+        } as any,
         eventPermissions
       );
 
@@ -216,8 +213,7 @@ export default function EventList() {
           await db.cache.upsert({
             id: cacheKey,
             data: [createdEvent, ...currentList.filter((e: any) => e.id !== createdEvent.id)],
-            timestamp: Date.now(),
-          }).catch(() => {});
+            timestamp: Date.now()}).catch(() => {});
         }
       } catch {}
       setIsDialogOpen(false);
@@ -298,13 +294,8 @@ export default function EventList() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {events.map((event) => (
             <div key={event.id}>
-              <EventCard 
-                event={event} 
-                onDelete={() => {
-                  setEvents(prev => prev.filter(e => e.id !== event.id));
-                  closeSidebar();
-                  closeOverlay();
-                }}
+              <EventObjectRow
+                event={event}
                 onClick={() => {
                   if (isDesktop) {
                     openSidebar(
@@ -317,7 +308,7 @@ export default function EventList() {
                       <EventDetails eventId={event.id} initialData={event} onBack={closeOverlay} />
                     );
                   }
-                }} 
+                }}
               />
             </div>
           ))}

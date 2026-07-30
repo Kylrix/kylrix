@@ -3,7 +3,7 @@ import { marked } from 'marked';
 /**
  * Downloads a text file dynamically on the client.
  */
-export function downloadFile(content: string, filename: string, mimeType: string) {
+function downloadFile(content: string, filename: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -42,7 +42,7 @@ export function exportToPDF(title: string, markdownContent: string) {
   let parsedHtml = '';
   try {
     parsedHtml = String(marked.parse(markdownContent));
-  } catch (err) {
+  } catch (_err) {
     parsedHtml = markdownContent.replace(/\n/g, '<br/>');
   }
   

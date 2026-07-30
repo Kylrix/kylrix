@@ -175,8 +175,7 @@ export default function SharedTotpClient({ totpId, keySegments, rawTotp }: Share
               seed: params.seed,
               algo: params.algo || 'SHA1',
               isTemp: true,
-              tempExpiry: expiry,
-            });
+              tempExpiry: expiry});
             startLive(params.seed, params.digits || 6, params.step || 30, params.algo || 'SHA1', expiry);
           }
           return;

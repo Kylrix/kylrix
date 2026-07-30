@@ -130,6 +130,16 @@ const nextConfig = {
         permanent: true,
       },
       {
+        source: '/flow/form/:id',
+        destination: '/form/:id',
+        permanent: true,
+      },
+      {
+        source: '/flow/form/:id/:path*',
+        destination: '/form/:id/:path*',
+        permanent: true,
+      },
+      {
         source: '/flow/events',
         destination: '/events',
         permanent: true,
@@ -140,13 +150,68 @@ const nextConfig = {
         permanent: true,
       },
       {
+        source: '/flow/event/:id',
+        destination: '/events/:id',
+        permanent: true,
+      },
+      {
+        source: '/flow/event/:id/:path*',
+        destination: '/events/:id/:path*',
+        permanent: true,
+      },
+      {
         source: '/flow/tasks',
-        destination: '/flow',
+        destination: '/goals',
         permanent: true,
       },
       {
         source: '/flow/tasks/:path*',
-        destination: '/flow/:path*',
+        destination: '/goals/:path*',
+        permanent: true,
+      },
+      {
+        source: '/flow',
+        destination: '/flows',
+        permanent: true,
+      },
+      {
+        source: '/flow/:path*',
+        destination: '/flows',
+        permanent: true,
+      },
+      {
+        source: '/workflows',
+        destination: '/flows',
+        permanent: true,
+      },
+      {
+        source: '/workflows/:path*',
+        destination: '/flows',
+        permanent: true,
+      },
+      {
+        source: '/projects/workflows',
+        destination: '/flows',
+        permanent: true,
+      },
+      {
+        source: '/projects/workflows/:path*',
+        destination: '/flows',
+        permanent: true,
+      },
+      {
+        source: '/projects',
+        destination: '/workspaces',
+        permanent: true,
+      },
+      {
+        source: '/projects/:projectId',
+        destination: '/workspaces/:projectId',
+        permanent: true,
+      },
+      {
+        source: '/projects/:projectId/:path*',
+        destination: '/workspaces/:projectId/:path*',
         permanent: true,
       },
       {
@@ -163,6 +228,71 @@ const nextConfig = {
         source: '/accounts/billing',
         destination: '/settings',
         permanent: true,
+      },
+      {
+        source: '/accounts/login',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/accounts',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/accounts/subscription/pro/checkout',
+        destination: '/billing/checkout',
+        permanent: true,
+      },
+      {
+        source: '/accounts/subscription/pro/checkout/:path*',
+        destination: '/billing/checkout',
+        permanent: true,
+      },
+      {
+        source: '/accounts/pro/success',
+        destination: '/billing/success',
+        permanent: true,
+      },
+      {
+        source: '/accounts/coupon/:id',
+        destination: '/billing/coupon/:id',
+        permanent: true,
+      },
+      {
+        source: '/accounts/admin',
+        destination: '/settings?section=admin',
+        permanent: false,
+      },
+      {
+        source: '/accounts/admin/:path*',
+        destination: '/settings?section=admin',
+        permanent: false,
+      },
+      {
+        source: '/accounts/handoff',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/accounts/resume',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/accounts/silent-check',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/accounts/referral/:username',
+        destination: '/r/:username',
+        permanent: true,
+      },
+      {
+        source: '/accounts/api/pro/notify',
+        destination: '/billing/api/pro/notify',
+        permanent: false,
       },
     ];
   },

@@ -6,7 +6,7 @@ import { getNotesByTag } from '@/lib/appwrite';
 import { Box, Typography, IconButton, Stack, Alert } from '@/lib/openbricks/primitives';
 import { ArrowBack as ArrowBackIcon } from '@/lib/openbricks/icons';
 import { NoteDetailSidebar } from './NoteDetailSidebar';
-import NoteCard from '@/components/ui/NoteCard';
+import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
 import { useNotes } from '@/context/NotesContext';
 
 interface TagNotesListSidebarProps {
@@ -20,8 +20,7 @@ export function TagNotesListSidebar({
   tag,
   onBack,
   onNoteUpdate,
-  onNoteDelete,
-}: TagNotesListSidebarProps) {
+  onNoteDelete}: TagNotesListSidebarProps) {
   const [notes, setNotes] = useState<Notes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +97,7 @@ export function TagNotesListSidebar({
         {loading ? (
           <Stack spacing={2}>
             {Array.from({ length: 3 }).map((_, index) => (
-              <NoteCard key={`skeleton-${index}`} note={{ $id: `skeleton-${index}`, title: 'Loading...', content: '', tags: [], isPublic: false, status: 'loading' } as any} />
+              <div key={`skeleton-${index}`} className="h-20 rounded-2xl border border-[#2C2A28] bg-[#141210] animate-pulse" />
             ))}
           </Stack>
         ) : error ? (
@@ -130,12 +129,10 @@ export function TagNotesListSidebar({
         ) : (
           <Stack spacing={2}>
             {sortedNotes.map((note) => (
-              <NoteCard
+              <NoteObjectRow
                 key={note.$id}
                 note={note}
-                onUpdate={handleNoteUpdate}
-                onDelete={handleNoteDelete}
-                onNoteSelect={setSelectedNote}
+                onSelect={setSelectedNote}
               />
             ))}
           </Stack>

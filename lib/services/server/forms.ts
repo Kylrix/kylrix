@@ -12,8 +12,7 @@ export const FormsServerService = {
                 method: 'GET',
                 headers: {
                     'X-Appwrite-Project': APPWRITE_CONFIG.PROJECT_ID,
-                    'Content-Type': 'application/json',
-                },
+                    'Content-Type': 'application/json'},
                 next: { revalidate: 60 } // Cache for 1 minute
             });
 

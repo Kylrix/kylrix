@@ -35,14 +35,6 @@ import { ActivityService } from '@/lib/services/activity';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 
 // Brand Colors
-const COLORS = {
-    background: '#0A0908',
-    surface: '#161412',
-    hover: '#1C1A18',
-    primary: '#6366F1', // Ecosystem Primary (Indigo)
-    secondary: '#F59E0B', // Connect Primary (Amber)
-    rim: 'rgba(255, 255, 255, 0.05)'
-};
 
 const truncate = (value: string, max = 44) => {
     const text = String(value || '').trim();
@@ -56,8 +48,7 @@ const shortTime = () =>
 export const CallActionModal = ({
     open,
     onClose,
-    launchContext,
-}: {
+    launchContext}: {
     open: boolean;
     onClose: () => void;
     launchContext?: CallLaunchContext;
@@ -81,7 +72,7 @@ export const CallActionModal = ({
     }, []);
 
     const [conversations, setConversations] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [_loading, setLoading] = useState(false);
     const [showScheduleForm, setShowScheduleForm] = useState(false);
     const [showJoinWithId, setShowJoinWithId] = useState(false);
     const [scheduleTitle, setScheduleTitle] = useState('');
@@ -204,8 +195,7 @@ export const CallActionModal = ({
                     callId: launchContext.existingCallId,
                     title: launchContext.title || launchContext.conversationName || 'Live Call',
                     participantIds: participants,
-                    type: 'video',
-                });
+                    type: 'video'});
             }
         }
     }, [launchContext, open, user, loadConversations, resolveDefaultInstantTitle]);
@@ -233,8 +223,7 @@ export const CallActionModal = ({
                     type: 'audio',
                     title: instantTitle || launchContext.title || conversation?.name || undefined,
                     durationMinutes: duration,
-                    scope: conversation?.type === 'group' ? 'group' : 'direct',
-                });
+                    scope: conversation?.type === 'group' ? 'group' : 'direct'});
                 _link = { $id: serverResult.$id };
             } else if (launchContext?.noteId) {
                 const participants: string[] = Array.from(new Set(launchContext.participantIds || [user.$id]));
@@ -253,10 +242,8 @@ export const CallActionModal = ({
                 });
                 const startedAtIso = new Date().toISOString();
                 await updateNote(launchContext.noteId, {
-                    huddleCallId: _link.$id,
                     huddleStartedAt: startedAtIso,
-                    huddleDurationMinutes: duration,
-                } as any);
+                    huddleDurationMinutes: duration} as any);
             } else if (launchContext?.taskId) {
                 const participants: string[] = Array.from(new Set(launchContext.participantIds || [user.$id]));
                 _link = await CallService.createScopedCallLink({
@@ -269,8 +256,7 @@ export const CallActionModal = ({
                     participantIds: participants,
                     isPrivate: true,
                     allowGuests,
-                    approveParticipants,
-                });
+                    approveParticipants});
                 await annotateTaskHuddle(launchContext.taskId, _link.$id, new Date().toISOString(), duration);
             } else {
                 _link = await CallService.createScopedCallLink({
@@ -281,8 +267,7 @@ export const CallActionModal = ({
                     scope: 'link',
                     sourceApp: 'connect',
                     allowGuests,
-                    approveParticipants,
-                });
+                    approveParticipants});
             }
             await ActivityService.setLiveCallActivity(
                 user.$id,
@@ -296,8 +281,7 @@ export const CallActionModal = ({
                 callId: _link.$id,
                 title: instantTitle || launchContext?.title || 'Live Call',
                 participantIds: participants,
-                type: 'video',
-            });
+                type: 'video'});
         } catch (e: any) {
             console.error('[CallActionModal] Failed to start public call:', e);
             const errorMessage = e.message || "Failed to start public call";
@@ -336,52 +320,7 @@ export const CallActionModal = ({
         }
     };
 
-    const handleJoinWithId = () => {
-        if (!joinId.trim()) {
-            toast.error("Please enter a meeting ID");
-            return;
-        }
-        router.push(`/connect/call/${joinId.trim()}`);
-        onClose();
-    };
 
-    const handleCallIndividual = async (convId: string, type: 'audio' | 'video' = 'video') => {
-        if (!user) return;
-        setCreating(true);
-        try {
-            const conversation = conversations.find((c: any) => c.$id === convId);
-            const participantIds: string[] = Array.isArray(conversation?.participants)
-                ? Array.from(
-                      new Set(
-                          (conversation.participants as unknown[]).map((id) => String(id)),
-                      ),
-                  )
-                : [];
-            const link = await CallService.createScopedCallLink({
-                userId: user.$id,
-                type,
-                title: conversation?.name || (type === 'audio' ? 'Audio Call' : 'Video Call'),
-                durationMinutes: duration,
-                scope: conversation?.type === 'group' ? 'group' : 'direct',
-                sourceApp: 'connect',
-                conversationId: convId,
-                participantIds,
-                isPrivate: true,
-                allowGuests: false,
-            });
-            await ActivityService.setLiveCallActivity(user.$id, link.$id, 'connect').catch(() => undefined);
-            setLiveCallState({
-                callId: link.$id,
-                title: conversation?.name || (type === 'audio' ? 'Audio Call' : 'Video Call'),
-                participantIds: Array.from(new Set([user.$id, ...participantIds])),
-                type,
-            });
-        } catch (error: any) {
-            toast.error(error?.message || 'Failed to start call');
-        } finally {
-            setCreating(false);
-        }
-    };
 
     const liveCallUrl = liveCallState ? `/connect/call/${liveCallState.callId}` : '';
 

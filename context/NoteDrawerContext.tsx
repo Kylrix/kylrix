@@ -20,8 +20,3 @@ export function NoteDrawerProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useNoteDrawer() {
-  const context = useContext(NoteDrawerContext);
-  if (!context) throw new Error('useNoteDrawer must be used within NoteDrawerProvider');
-  return context;
-}

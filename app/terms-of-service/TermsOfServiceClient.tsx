@@ -10,8 +10,7 @@ import {
   IconButton,
   Paper,
   alpha,
-  Divider,
-} from '@/lib/openbricks/primitives';
+  Divider} from '@/lib/openbricks/primitives';
 import { 
   ArrowLeft, 
   Scale, 
@@ -31,15 +30,6 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const cardSx = {
-  p: 4,
-  borderRadius: '24px',
-  bgcolor: '#141312',
-  border: '1px solid rgba(255, 255, 255, 0.06)',
-  position: 'relative' as const,
-  overflow: 'hidden',
-  transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-};
 
 interface LegalCardProps {
   id: string;
@@ -443,8 +433,7 @@ export default function TermsOfServiceClient() {
               borderRadius: '24px',
               bgcolor: 'rgba(99, 102, 241, 0.02)',
               border: '1px dashed rgba(99, 102, 241, 0.15)',
-              textAlign: 'center',
-            }}
+              textAlign: 'center'}}
           >
             <Scale size={28} style={{ color: '#6366F1', marginBottom: 12 }} />
             <Typography variant="body1" sx={{ color: '#fff', fontWeight: 800, mb: 1 }}>

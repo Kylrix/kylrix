@@ -1,6 +1,6 @@
 import { KylrixApp, TOPBAR_LAYOUT, getAppTone } from '../design';
 
-export type TopbarPanel = 'ecosystem' | 'profile' | 'search';
+type TopbarPanel = 'ecosystem' | 'profile' | 'search';
 
 export interface TopbarSnippet {
   id: string;
@@ -36,16 +36,6 @@ export interface TopbarSurface {
   layout: typeof TOPBAR_LAYOUT;
 }
 
-export interface TopbarNotification {
-  id: string;
-  type: 'success' | 'error' | 'warning' | 'info' | 'pro' | 'system' | 'suggestion' | 'connect';
-  title: string;
-  message?: string;
-  app?: KylrixApp;
-  duration?: number;
-  majestic?: boolean;
-  defaultExpanded?: boolean;
-}
 
 export interface ConnectTopbarIdentity {
   displayName: string;
@@ -62,7 +52,7 @@ export interface ConnectTopbarSurface extends TopbarSurface {
   showConnectCta: boolean;
 }
 
-export interface TopbarPanelSurface extends TopbarSurface {
+interface TopbarPanelSurface extends TopbarSurface {
   panel: TopbarPanel | null;
   panelItems: TopbarPanelItem[];
   searchPlaceholder: string;
@@ -76,7 +66,7 @@ export interface TopbarPanelMotion {
   transition: { duration: number; ease: 'easeOut' };
 }
 
-export interface TopbarSearchCard {
+interface TopbarSearchCard {
   id: string;
   kind: string;
   title: string;
@@ -98,7 +88,7 @@ export interface TopbarSearchSurface extends Omit<TopbarSurface, 'quickActions' 
   searchTargets: TopbarSearchCard[];
 }
 
-export interface TopbarProfileSurface {
+interface TopbarProfileSurface {
   displayName: string;
   username?: string | null;
   bio?: string | null;
@@ -112,15 +102,13 @@ export function createTopbarAction(action: Omit<TopbarAction, 'accent'> & { app?
   return {
     ...action,
     accent,
-    app: action.app,
-  };
+    app: action.app};
 }
 
 export function createTopbarSurface(params: Omit<TopbarSurface, 'layout'>): TopbarSurface {
   return {
     ...params,
-    layout: TOPBAR_LAYOUT,
-  };
+    layout: TOPBAR_LAYOUT};
 }
 
 export function createConnectTopbarSurface(params: {
@@ -141,34 +129,9 @@ export function createConnectTopbarSurface(params: {
     identity: params.identity,
     searchPlaceholder: params.searchPlaceholder || 'Search notes, goals, moments, calls, people, apps',
     walletLabel: params.walletLabel || 'Wallet',
-    showConnectCta: params.showConnectCta ?? !params.identity.walletConnected,
-  };
+    showConnectCta: params.showConnectCta ?? !params.identity.walletConnected};
 }
 
-export function createTopbarPanelSurface(params: {
-  routeLabel?: string;
-  currentApp?: KylrixApp;
-  snippets?: TopbarSnippet[];
-  quickActions?: TopbarAction[];
-  searchTargets?: TopbarAction[];
-  panel?: TopbarPanel | null;
-  panelItems?: TopbarPanelItem[];
-  searchPlaceholder?: string;
-  panelMaxHeight?: string;
-}): TopbarPanelSurface {
-  return {
-    routeLabel: params.routeLabel || 'Note',
-    currentApp: params.currentApp || 'note',
-    snippets: params.snippets || [],
-    quickActions: params.quickActions || [],
-    searchTargets: params.searchTargets || [],
-    layout: TOPBAR_LAYOUT,
-    panel: params.panel || null,
-    panelItems: params.panelItems || [],
-    searchPlaceholder: params.searchPlaceholder || 'Search notes, tags, shared links, people',
-    panelMaxHeight: params.panelMaxHeight || TOPBAR_LAYOUT.searchDockMaxHeight,
-  };
-}
 
 export function createEcosystemPanelItems(currentApp: KylrixApp = 'note'): TopbarPanelItem[] {
   return [
@@ -217,8 +180,7 @@ export function createTopbarSearchSurface(params: {
       description: 'Capture the current context before it disappears.',
       href: resolveUrl('note', '?mode=compose'),
       accent: '#EC4899',
-      terms: ['note', 'draft', 'capture', 'write'],
-    },
+      terms: ['note', 'draft', 'capture', 'write']},
     {
       id: 'create-goal',
       kind: 'goal',
@@ -226,8 +188,7 @@ export function createTopbarSearchSurface(params: {
       description: 'Convert the current moment into a premium follow-through.',
       href: resolveUrl('flow', '?mode=create'),
       accent: '#A855F7',
-      terms: ['goal', 'task', 'plan', 'follow up', 'follow-up'],
-    },
+      terms: ['goal', 'task', 'plan', 'follow up', 'follow-up']},
     {
       id: 'open-moment',
       kind: 'moment',
@@ -235,8 +196,7 @@ export function createTopbarSearchSurface(params: {
       description: 'Jump into the feed and surface recent moments.',
       href: resolveUrl('kylrix', ''),
       accent: '#F59E0B',
-      terms: ['moment', 'moments', 'feed', 'post'],
-    },
+      terms: ['moment', 'moments', 'feed', 'post']},
     {
       id: 'start-call',
       kind: 'call',
@@ -244,8 +204,7 @@ export function createTopbarSearchSurface(params: {
       description: 'Move straight from thought to voice.',
       href: resolveUrl('connect', '/calls'),
       accent: '#10B981',
-      terms: ['call', 'voice', 'video', 'phone'],
-    },
+      terms: ['call', 'voice', 'video', 'phone']},
     {
       id: 'find-people',
       kind: 'person',
@@ -253,8 +212,7 @@ export function createTopbarSearchSurface(params: {
       description: 'Search usernames and open a direct chat.',
       href: resolveUrl('connect', '/chats'),
       accent: '#6366F1',
-      terms: ['people', 'person', 'user', 'contact', 'chat'],
-    }];
+      terms: ['people', 'person', 'user', 'contact', 'chat']}];
 
   const searchTargets: TopbarSearchCard[] = [
     {
@@ -300,8 +258,7 @@ export function createTopbarSearchSurface(params: {
       description: 'Find contacts, usernames, and collaborators.',
       href: resolveUrl('connect', '/chats'),
       accent: '#6366F1',
-      terms: ['people', 'person', 'users', 'chat', 'contacts'],
-    },
+      terms: ['people', 'person', 'users', 'chat', 'contacts']},
     {
       id: 'search-apps',
       kind: 'app',
@@ -309,8 +266,7 @@ export function createTopbarSearchSurface(params: {
       description: 'Jump between Kylrix apps instantly.',
       href: resolveUrl('kylrix', '/'),
       accent: '#F59E0B',
-      terms: ['app', 'apps', 'note', 'flow', 'vault', 'connect'],
-    }];
+      terms: ['app', 'apps', 'note', 'flow', 'vault', 'connect']}];
 
   const contextualHints = snippets.map((snippet) => ({
     id: snippet.id,
@@ -319,8 +275,7 @@ export function createTopbarSearchSurface(params: {
     description: snippet.description,
     href: snippet.href || resolveUrl(currentApp, '/'),
     accent: snippet.kind === 'goal' ? '#A855F7' : snippet.kind === 'moment' ? '#F59E0B' : snippet.kind === 'call' ? '#10B981' : '#6366F1',
-    terms: [snippet.title, snippet.description, params.routeLabel || ''].map((value) => value.toLowerCase()),
-  }));
+    terms: [snippet.title, snippet.description, params.routeLabel || ''].map((value) => value.toLowerCase())}));
 
   const pool = [...quickActions, ...searchTargets, ...contextualHints];
   const filtered = query ? pool.filter((item) => matchesTopbarTerms(query, item.terms)) : pool;
@@ -336,16 +291,9 @@ export function createTopbarSearchSurface(params: {
     searchPlaceholder: 'Search notes, goals, moments, calls, people, apps',
     quickActionLabel: 'Quick actions',
     searchAcrossLabel: 'Search across apps',
-    peopleLabel: 'People',
-  };
+    peopleLabel: 'People'};
 }
 
-export function createTopbarProfileSurface(params: TopbarProfileSurface): TopbarProfileSurface {
-  return {
-    handlePosition: 'bottom',
-    ...params,
-  };
-}
 
 export function isTopbarScrollAtTop(node: HTMLElement | null) {
   if (!node) return false;
@@ -366,14 +314,3 @@ export function topbarMatches(query: string, terms: string[]) {
  * Get the href for topbar logo based on the app
  * Returns the landing page or dashboard for the given app
  */
-export function getTopbarLogoHref(app: 'accounts' | 'note' | 'vault' | 'flow' | 'connect' | 'kylrix'): string {
-  const paths: Record<string, string> = {
-    'accounts': '/accounts/settings/profile',
-    'note': '/app',
-    'vault': '/vault',
-    'flow': '/flow',
-    'connect': '/connect',
-    'kylrix': '/',
-  };
-  return paths[app] || '/';
-}

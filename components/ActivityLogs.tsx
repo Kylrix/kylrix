@@ -18,8 +18,7 @@ import {
   TableHead,
   TableRow,
   TablePagination,
-  TextField,
-} from '@/lib/openbricks/primitives';
+  TextField} from '@/lib/openbricks/primitives';
 import { Refresh as RefreshIcon } from '@/lib/openbricks/icons';
 import { Models } from 'appwrite';
 
@@ -47,8 +46,7 @@ const EVENT_ICONS: Record<string, string> = {
   'wallet.create': '💰',
   'wallet.update': '💰',
   'mfa.create': '🔐',
-  'mfa.delete': '🚪',
-};
+  'mfa.delete': '🚪'};
 
 const EVENT_COLORS: Record<string, string> = {
   'account.sessions.create': '#22c55e',
@@ -58,8 +56,7 @@ const EVENT_COLORS: Record<string, string> = {
   'passkey.create': '#ec4899',
   'passkey.delete': '#ef4444',
   'wallet.create': '#f59e0b',
-  'oauth.create': '#06b6d4',
-};
+  'oauth.create': '#06b6d4'};
 
 export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
   const dynamicColors = useColors();
@@ -77,8 +74,7 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
       const logList = await account.listLogs();
       const formattedLogs = (logList.logs || []).map((log) => ({
         ...log,
-        eventType: log.event,
-      }));
+        eventType: log.event}));
       setLogs(formattedLogs);
       onLogsLoaded?.(formattedLogs.length);
     } catch (err: unknown) {
@@ -139,8 +135,7 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
             borderRadius: '12px',
             bgcolor: 'rgba(239, 68, 68, 0.1)',
             border: '1px solid rgba(239, 68, 68, 0.2)',
-            color: '#FCA5A5',
-          }}
+            color: '#FCA5A5'}}
         >
           <AlertTitle sx={{ fontWeight: 700 }}>Error</AlertTitle>
           {error}
@@ -153,8 +148,7 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
             backgroundColor: '#161514',
             borderRadius: '12px',
             p: 4,
-            textAlign: 'center',
-          }}
+            textAlign: 'center'}}
         >
           <Typography sx={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.95rem' }}>No activity logs found.</Typography>
         </Box>
@@ -176,19 +170,15 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
                   color: 'white',
                   borderRadius: '8px',
                   '& fieldset': {
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                  },
+                    borderColor: 'rgba(255, 255, 255, 0.2)'},
                   '&:hover fieldset': {
-                    borderColor: 'rgba(255, 255, 255, 0.3)',
-                  },
+                    borderColor: 'rgba(255, 255, 255, 0.3)'},
                   '&.ob-focused fieldset': {
-                    borderColor: '#6366F1',
-                  },
+                    borderColor: '#6366F1'},
                 },
                 '& .ob-outlined-input::placeholder': {
                   color: 'rgba(255, 255, 255, 0.4)',
-                  opacity: 1,
-                },
+                  opacity: 1},
               }}
             />
             <Button
@@ -215,8 +205,7 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
               backgroundColor: '#161514',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               borderRadius: '12px',
-              overflow: 'hidden',
-            }}
+              overflow: 'hidden'}}
           >
             <Table size="small">
               <TableHead>
@@ -288,14 +277,11 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
               borderBottomLeftRadius: '12px',
               borderBottomRightRadius: '12px',
               '& .ob-table-pagination-toolbar': {
-                color: 'rgba(255, 255, 255, 0.7)',
-              },
+                color: 'rgba(255, 255, 255, 0.7)'},
               '& .ob-icon-button': {
-                color: 'rgba(255, 255, 255, 0.7)',
-              },
+                color: 'rgba(255, 255, 255, 0.7)'},
               '& .ob-icon-button:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              },
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'},
             }}
           />
         </Box>

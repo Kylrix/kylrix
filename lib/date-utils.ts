@@ -10,7 +10,7 @@ import type { Notes } from '@/types/appwrite';
  * 2. Fall back to Appwrite's $createdAt/$updatedAt 
  * 3. Return '-' if all are null/invalid
  */
-export function formatNoteDate(
+function formatNoteDate(
   customDate: string | null | undefined,
   appwriteDate: string | undefined,
   options?: Intl.DateTimeFormatOptions
@@ -68,25 +68,6 @@ export function formatNoteUpdatedDate(
 /**
  * Check if a note has been updated (different from creation date)
  */
-export function noteHasBeenUpdated(note: Notes): boolean {
-  const createdDate = note.createdAt || note.$createdAt;
-  const updatedDate = note.updatedAt || note.$updatedAt;
-  
-  // If we don't have both dates, don't show updated
-  if (!createdDate || !updatedDate) {
-    return false;
-  }
-  
-  // For legacy notes, if they only have $createdAt and $updatedAt, 
-  // show updated if they're different by more than 1 second
-  const created = new Date(createdDate).getTime();
-  const updated = new Date(updatedDate).getTime();
-  
-  // Show updated field if:
-  // 1. Dates are significantly different (more than 1 second)
-  // 2. OR we have custom updatedAt field (indicating manual update)
-  return Math.abs(updated - created) > 1000 || !!note.updatedAt;
-}
 
 /**
  * Simple date formatter that returns '-' for invalid dates

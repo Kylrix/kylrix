@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import type { KylrixApp } from '@/lib/sdk/design';
 
 import { useAuth } from '@/context/auth/AuthContext';
+import { isFlowPath } from '@/lib/routing/app-paths';
 
 interface SudoOptions {
     onSuccess: () => void;
@@ -65,7 +66,7 @@ export function SudoProvider({ children }: { children: ReactNode }) {
 
     const sudoApp: KylrixApp = (() => {
         if (pathname?.startsWith('/vault')) return 'vault';
-        if (pathname?.startsWith('/flow')) return 'flow';
+        if (isFlowPath(pathname)) return 'flow';
         if (pathname?.startsWith('/connect')) return 'connect';
         if (pathname?.startsWith('/accounts')) return 'accounts';
         if (pathname?.startsWith('/settings')) return 'root';

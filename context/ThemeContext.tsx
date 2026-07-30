@@ -13,8 +13,6 @@ const ColorModeContext = createContext<ColorModeContextType>({
   mode: 'dark',
 });
 
-export const useColorMode = () => useContext(ColorModeContext);
-
 export const ThemeModeProvider = ({ children }: { children: React.ReactNode }) => {
   const [mode, setMode] = useState<PaletteMode>('dark');
 

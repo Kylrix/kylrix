@@ -11,16 +11,14 @@ import {
   Image as ImageIcon,
   LayoutGrid,
   Paperclip,
-  Sparkles,
-} from 'lucide-react';
+  Sparkles} from 'lucide-react';
 import { useNotes } from '@/context/NotesContext';
 import { useTask } from '@/context/TaskContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import {
   ecosystemDomainLabel,
   hydrateEcosystemHitsSync,
-  type HydratedEcosystemHit,
-} from '@/lib/agentic/hydrate-ecosystem-hits';
+  type HydratedEcosystemHit} from '@/lib/agentic/hydrate-ecosystem-hits';
 import type { EcosystemHitRef } from '@/lib/agentic/message-blocks';
 import type { SearchPlan } from '@/lib/agentic/search-engine';
 
@@ -32,8 +30,7 @@ const DOMAIN_ICONS: Record<HydratedEcosystemHit['domain'], React.ComponentType<{
   form: FileText,
   project: FolderKanban,
   tag: Paperclip,
-  ui: LayoutGrid,
-};
+  ui: LayoutGrid};
 
 function HitCard({ hit, onOpen }: { hit: HydratedEcosystemHit; onOpen: () => void }) {
   const IconComponent = DOMAIN_ICONS[hit.domain] || FileText;
@@ -116,8 +113,7 @@ export function EcosystemHitCards({
   query,
   plan,
   hits,
-  onPick,
-}: {
+  onPick}: {
   query: string;
   plan?: Pick<SearchPlan, 'reasoning' | 'temporal' | 'domains'>;
   hits: EcosystemHitRef[];
@@ -133,8 +129,7 @@ export function EcosystemHitCards({
       hydrateEcosystemHitsSync(hits, {
         notes,
         tasks,
-        getCachedData,
-      }),
+        getCachedData}),
     [hits, notes, tasks, getCachedData],
   );
 

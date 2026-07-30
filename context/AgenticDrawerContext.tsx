@@ -52,8 +52,7 @@ export function AgenticDrawerProvider({ children }: { children: ReactNode }) {
       pendingAutoRun,
       openAgenticDrawer,
       closeAgenticDrawer,
-      consumePendingPrompt,
-    }),
+      consumePendingPrompt}),
     [consumePendingPrompt, isOpen, openAgenticDrawer, closeAgenticDrawer, pendingAutoRun, pendingPrompt],
   );
 

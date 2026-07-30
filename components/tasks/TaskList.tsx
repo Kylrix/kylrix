@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, ArrowUpDown, Filter, List, LayoutGrid, Calendar, ArrowUp, ArrowDown, CheckCircle2, Trash2, Sparkles, ChevronDown, ChevronUp, Tag, X, RefreshCw } from 'lucide-react';
-import TaskItem from './TaskItem';
+import GoalObjectRow from './GoalObjectRow';
 import { useRouter } from 'next/navigation';
 import { useTask } from '@/context/TaskContext';
 import { useFAB } from '@/context/FABContext';
@@ -28,22 +28,9 @@ export default function TaskList() {
     getTagFilterOptions,
     labels,
     isLoading,
-    refreshTasks,
-  } = useTask();
+    refreshTasks} = useTask();
   const { setConfiguration, resetConfiguration } = useFAB();
   const { open } = useUnifiedDrawer();
-  const router = useRouter();
-
-  React.useEffect(() => {
-    setConfiguration({
-      isVisible: true,
-      mainColor: '#A855F7',
-      mainIcon: <Plus size={32} strokeWidth={3} />,
-      onMainClick: () => setTaskDialogOpen(true),
-      actions: []
-    });
-    return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, setTaskDialogOpen]);
 
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -121,13 +108,11 @@ export default function TaskList() {
     if (currentStatuses.includes(status)) {
       setFilter({
         ...filter,
-        status: currentStatuses.filter((s) => s !== status),
-      });
+        status: currentStatuses.filter((s) => s !== status)});
     } else {
       setFilter({
         ...filter,
-        status: [...currentStatuses, status],
-      });
+        status: [...currentStatuses, status]});
     }
   };
 
@@ -154,8 +139,7 @@ export default function TaskList() {
     todo: tasks.filter((t) => t.status === 'todo'),
     'in-progress': tasks.filter((t) => t.status === 'in-progress'),
     blocked: tasks.filter((t) => t.status === 'blocked'),
-    done: tasks.filter((t) => t.status === 'done'),
-  };
+    done: tasks.filter((t) => t.status === 'done')};
 
   return (
     <EmptyStateAnomalyDetector
@@ -411,7 +395,7 @@ export default function TaskList() {
                         <div className="flex-1 h-px bg-gradient-to-r from-[#A855F7]/20 to-transparent" />
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {activeTasks.map((task) => <TaskItem key={task.id} task={task} />)}
+                        {activeTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
                       </div>
                     </div>
                   )}
@@ -458,7 +442,7 @@ export default function TaskList() {
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500">
-                            {completedTasks.map((task) => <TaskItem key={task.id} task={task} />)}
+                            {completedTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
                           </div>
                         </>
                       )}
@@ -500,7 +484,7 @@ export default function TaskList() {
                   </div>
                   <div className="flex flex-col gap-3">
                     {groupedTasks[status].map((task) => (
-                      <TaskItem key={task.id} task={task} compact />
+                      <GoalObjectRow key={task.id} task={task} compact />
                     ))}
                   </div>
                 </div>

@@ -26,7 +26,7 @@ export interface AttachObjectToProjectInput {
   metadata?: Record<string, unknown> | string | null;
 }
 
-export function normalizeProjectObjectKind(kind: ProjectObjectKind): string {
+function normalizeProjectObjectKind(kind: ProjectObjectKind): string {
   const lower = String(kind || '').toLowerCase().trim();
   if (lower === 'task') return 'goal';
   if (lower === 'credential' || lower === 'secret') return 'password';

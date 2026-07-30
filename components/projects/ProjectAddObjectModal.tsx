@@ -21,8 +21,7 @@ import {
   Button,
   Dialog,
   DialogTitle,
-  DialogContent,
-} from '@/lib/openbricks/primitives';
+  DialogContent} from '@/lib/openbricks/primitives';
 import { 
   X, 
   Search, 
@@ -35,8 +34,7 @@ import {
   ClipboardList,
   KeyRound,
   Sparkles,
-  PhoneCall,
-} from 'lucide-react';
+  PhoneCall} from 'lucide-react';
 import { listNotes, listFlowTasks, listKeepCredentials, Query, listTags, listTagsByUser } from '@/lib/appwrite';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';
@@ -48,8 +46,7 @@ import { useTask } from '@/context/TaskContext';
 import { useNotes } from '@/context/NotesContext';
 import {
   attachObjectToProject,
-  isAlreadyAttachedProjectObjectError,
-} from '@/lib/projects/object-attachment';
+  isAlreadyAttachedProjectObjectError} from '@/lib/projects/object-attachment';
 
 // Service Imports
 import { FormsService } from '@/lib/services/forms';
@@ -60,7 +57,6 @@ import { events as eventApi } from '@/lib/kylrixflow';
 import { permissions } from '@/lib/permissions';
 
 // Dialog/Form Imports
-import CreateNoteForm from '@/app/(app)/app/(app)/notes/CreateNoteForm';
 import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
 import FormDialog from '@/components/forms/FormDialog';
 import { EventDialog } from '@/components/events/EventDialog';
@@ -148,8 +144,7 @@ function CreateMomentDialog({
           border: '1px solid rgba(255,255,255,0.06)',
           backgroundImage: 'none',
           maxWidth: '400px',
-          width: '100%',
-        }
+          width: '100%'}
       }}
     >
       <DialogTitle sx={{ color: 'white', fontWeight: 900, fontFamily: 'var(--font-satoshi)' }}>Create New Moment</DialogTitle>
@@ -211,8 +206,7 @@ export default function ProjectAddObjectModal({
   initialTab = 0,
   linkedObjects = [],
   linkedTags = [],
-  onRemoveLinked,
-}: ProjectAddObjectModalProps) {
+  onRemoveLinked}: ProjectAddObjectModalProps) {
   const theme = useTheme();
   const { showSuccess, showError } = useToast();
   const { fetchOptimized } = useDataNexus();
@@ -420,15 +414,8 @@ export default function ProjectAddObjectModal({
     
     switch (tab) {
       case 0: // Note
-        openOverlay(
-          <CreateNoteForm
-            onNoteCreated={(newNote) => {
-              handleAdd(newNote.$id);
-              closeOverlay();
-            }}
-            noteKind="note"
-          />
-        );
+        openUnified('note');
+        onClose();
         break;
       case 1: // Goal
         setTaskDialogOpen(true);
@@ -498,7 +485,7 @@ export default function ProjectAddObjectModal({
                   userId: user.$id,
                   isPublic: visibility === 'public',
                   isGuest: visibility === 'public',
-                }, eventPermissions);
+                } as any, eventPermissions);
 
                 showSuccess('Event created');
                 await ProjectsService.addObjectToProject(projectId, 'event', newDoc.$id);
@@ -657,8 +644,7 @@ export default function ProjectAddObjectModal({
               color: 'white',
               '&:hover': {
                 borderColor: theme.palette.primary.main,
-                bgcolor: 'rgba(255,255,255,0.02)',
-              }
+                bgcolor: 'rgba(255,255,255,0.02)'}
             }}
           >
             Create New
@@ -683,8 +669,7 @@ export default function ProjectAddObjectModal({
                       py: 1.25,
                       borderRadius: '12px',
                       bgcolor: 'rgba(99,102,241,0.08)',
-                      border: '1px solid rgba(99,102,241,0.18)',
-                    }}
+                      border: '1px solid rgba(99,102,241,0.18)'}}
                   >
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <TagIcon size={16} color="#6366F1" />

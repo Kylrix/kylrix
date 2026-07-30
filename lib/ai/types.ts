@@ -23,7 +23,3 @@ export interface AIResponse {
   error?: string;
 }
 
-export interface AIProvider {
-  name: string;
-  generate(payload: AIRequestPayload): Promise<AIResponse>;
-}

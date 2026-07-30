@@ -28,8 +28,7 @@ export const AgenticService = {
       const res = await tablesDB.listRows<AgentRecord>({
         databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
         tableId: APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-        queries: [Query.equal('ownerId', userId), Query.orderDesc('$updatedAt'), Query.limit(100)],
-      });
+        queries: [Query.equal('ownerId', userId), Query.orderDesc('$updatedAt'), Query.limit(100)]});
 
       return res.rows ?? [];
     }, force);
@@ -54,8 +53,7 @@ export const AgenticService = {
         config: JSON.stringify({
           name: input.name.trim(),
           goal: input.goal?.trim() || null,
-          framework,
-        }),
+          framework}),
       },
       agentPermissions(input.userId),
     );

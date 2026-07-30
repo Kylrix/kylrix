@@ -39,7 +39,6 @@ interface ProjectLinkerProps {
 }
 
 export default function ProjectLinker({ open, onClose, entityId, entityKind, onLinked }: ProjectLinkerProps) {
-  const theme = useTheme();
   const { showSuccess, showError } = useToast();
   const { user } = useAuth();
   const { getCachedDataAsync, fetchOptimized } = useDataNexus();
@@ -56,8 +55,7 @@ export default function ProjectLinker({ open, onClose, entityId, entityKind, onL
       const rows = await warmProjectsList({
         userId: user.$id,
         getCachedDataAsync,
-        fetchOptimized,
-      });
+        fetchOptimized});
       setProjects(rows);
     } catch (err: any) {
       console.error('Failed to load projects', err);

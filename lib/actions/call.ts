@@ -52,12 +52,11 @@ export async function createChatCallAction(input: any, jwt?: string) {
     allowGuests: false,
     startsAt: startTime.toISOString(),
     expiresAt,
-    title: validated.title,
-  });
+    title: validated.title});
 
   // Build strict per-participant permissions using System Client
   const permissions = [
-    ...uniqueParticipants.map((pId) => Permission.read(Role.user(pId)))];
+    ...uniqueParticipants.map((pId: any) => Permission.read(Role.user(pId)))];
 
   const systemTables = createSystemTablesDB();
 
@@ -72,8 +71,7 @@ export async function createChatCallAction(input: any, jwt?: string) {
       startsAt: startTime.toISOString(),
       title: validated.title || undefined,
       metadata,
-      conversationId: validated.conversationId,
-    },
+      conversationId: validated.conversationId},
     permissions,
   });
 

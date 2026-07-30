@@ -55,147 +55,9 @@ import { PermissionChangeInput, PermissionLevel, TokenAction } from './shared';
 // Bind shared helper properties and variables to local scope for convenience
 const {
   getActor,
-  getRowCached,
-  isEnvAdminUser,
-  isEnvSERVERSDKUser,
-  hasWriteAccess,
-  serializeMomentRow,
   verifyResourcePermissionSecure,
-  verifyNotePermission,
-  verifyProjectPermission,
-  verifyFormPermission,
-  verifyEventPermission,
-  sanitizeEventData,
-  serializeTokenMintResult,
-  rowCache,
   CACHE_TTL_MS,
-  VIEWER_COOKIE,
-  isViewerTokenValid,
-  issueViewerToken,
-  cookies
-} = shared;
-
-export async function initCloudflareCallSessionSecure(jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor?.$id) throw new Error('Unauthorized');
-
-  const CLOUDFLARE_API_KEY = process.env.CLOUDFLARE_API;
-  const CLOUDFLARE_APP_ID = process.env.NEXT_PUBLIC_CLOUDFLARE_APP_ID;
-
-  if (!CLOUDFLARE_API_KEY || !CLOUDFLARE_APP_ID) {
-    throw new Error('Cloudflare configuration missing');
-  }
-
-  const response = await fetch(`https://rtc.live.cloudflare.com/v1/apps/${CLOUDFLARE_APP_ID}/sessions/new`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(await response.text());
-  }
-
-  return await response.json();
-}
-
-export async function initCloudflareCallTracksSecure(params: { sessionId: string; tracks: any[] }, jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor?.$id) throw new Error('Unauthorized');
-
-  const { sessionId, tracks } = params;
-  const CLOUDFLARE_API_KEY = process.env.CLOUDFLARE_API;
-  const CLOUDFLARE_APP_ID = process.env.NEXT_PUBLIC_CLOUDFLARE_APP_ID;
-
-  if (!CLOUDFLARE_API_KEY || !CLOUDFLARE_APP_ID) {
-    throw new Error('Cloudflare configuration missing');
-  }
-
-  const response = await fetch(`https://rtc.live.cloudflare.com/v1/apps/${CLOUDFLARE_APP_ID}/sessions/${sessionId}/tracks/new`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ tracks }),
-  });
-
-  if (!response.ok) {
-    throw new Error(await response.text());
-  }
-
-  return await response.json();
-}
-
-export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?: string | null; cleanupAll?: boolean }) {
-  const requester = await getActor();
-  if (!requester) return { success: false, reason: 'Unauthorized' };
-
-  const admin = isEnvAdminUser(requester);
-  const targetUserId = String(input?.userId || requester.$id || '').trim();
-  const callId = String(input?.callId || '').trim() || null;
-  const cleanupAll = Boolean(input?.cleanupAll);
-
-  const tables = createSystemTablesDB();
-  const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
-  const LINKS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS;
-
-  if (cleanupAll && admin) {
-    const rows = await tables.listRows({
-      databaseId: DB_ID,
-      tableId: LINKS_TABLE,
-      queries: [
-      Query.lessThan('expiresAt', new Date().toISOString()),
-      Query.limit(500)],
-    });
-    for (const row of rows.rows) {
-      await tables.deleteRow({
-      databaseId: DB_ID,
-      tableId: LINKS_TABLE,
-      rowId: row.$id,
-    });
-    }
-    return { deleted: rows.rows.length, callIds: rows.rows.map((row) => row.$id) };
-  }
-
-  if (targetUserId !== requester.$id && !admin && !callId) throw new Error('Forbidden');
-
-  if (callId) {
-    const call = await tables.getRow({
-      databaseId: DB_ID,
-      tableId: LINKS_TABLE,
-      rowId: callId,
-    });
-    if (String((call as any)?.userId || '') !== (admin ? (targetUserId || requester.$id) : requester.$id)) {
-      throw new Error('Forbidden');
-    }
-    const result = await deleteCallIfExpired(tables as any, callId);
-    const presenceUser = targetUserId || requester.$id;
-    await reconcileStaleLiveCallPresenceForUser(presenceUser).catch(() => undefined);
-    return result.deleted ? { deleted: 1, callIds: [callId] } : { deleted: 0, callIds: [] as string[] };
-  }
-
-  const expiredRows = await tables.listRows({
-      databaseId: DB_ID,
-      tableId: LINKS_TABLE,
-      queries: [
-    Query.equal('userId', targetUserId || requester.$id),
-    Query.lessThan('expiresAt', new Date().toISOString()),
-    Query.limit(200)],
-    });
-  for (const row of expiredRows.rows) {
-    await tables.deleteRow({
-      databaseId: DB_ID,
-      tableId: LINKS_TABLE,
-      rowId: row.$id,
-    });
-  }
-  const presenceUser = targetUserId || requester.$id;
-  await reconcileStaleLiveCallPresenceForUser(presenceUser).catch(() => undefined);
-  return { deleted: expiredRows.rows.length, callIds: expiredRows.rows.map((row) => row.$id) };
-}
+  VIEWER_COOKIE} = shared;
 
 export async function addCallCohostSecureAction(callId: string, cohostId: string, allowEndCall: boolean = false, jwt?: string) {
   const actor = await getActor(jwt);
@@ -208,8 +70,7 @@ export async function addCallCohostSecureAction(callId: string, cohostId: string
   const call = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-      rowId: callId,
-    });
+      rowId: callId});
 
   const ownerId = String(call.userId || '').trim();
   if (ownerId !== actor.$id) {
@@ -241,8 +102,7 @@ export async function addCallCohostSecureAction(callId: string, cohostId: string
       tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
       rowId: callId,
       data: {
-      metadata: JSON.stringify(meta),
-    },
+      metadata: JSON.stringify(meta)},
       permissions: Array.from(permissions),
     });
 
@@ -258,8 +118,7 @@ export async function addCallCohostSecureAction(callId: string, cohostId: string
         Query.equal('resourceType', 'call'),
         Query.equal('userId', cohostId),
         Query.limit(1),
-      ] as any,
-    });
+      ] as any});
 
     const permission = allowEndCall ? 'admin' : 'write';
 
@@ -273,8 +132,7 @@ export async function addCallCohostSecureAction(callId: string, cohostId: string
           invitedAt: existing.rows[0].invitedAt || new Date().toISOString(),
           accepted: true,
           status: 'accepted',
-          role: 'cohost',
-        },
+          role: 'cohost'},
       });
     } else {
       await tables.createRow({
@@ -289,8 +147,7 @@ export async function addCallCohostSecureAction(callId: string, cohostId: string
           invitedAt: new Date().toISOString(),
           accepted: true,
           status: 'accepted',
-          role: 'cohost',
-        },
+          role: 'cohost'},
       });
     }
   } catch (err) {
@@ -311,8 +168,7 @@ export async function endCallSecureAction(callId: string, jwt?: string) {
   const call = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-      rowId: callId,
-    });
+      rowId: callId});
 
   const ownerId = String(call.userId || '').trim();
   let isAllowed = (ownerId === actor.$id);
@@ -331,8 +187,7 @@ export async function endCallSecureAction(callId: string, jwt?: string) {
           Query.equal('resourceType', 'call'),
           Query.equal('userId', actor.$id),
           Query.limit(1),
-        ] as any,
-      });
+        ] as any});
       if (collabsRes.rows.length > 0) {
         const collab = collabsRes.rows[0];
         if (collab.permission === 'admin' && collab.role === 'cohost') {
@@ -373,8 +228,7 @@ export async function endCallSecureAction(callId: string, jwt?: string) {
   const result = await tables.deleteRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-      rowId: callId,
-    });
+      rowId: callId});
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -390,8 +244,7 @@ export async function updateCallMetadataSecureAction(callId: string, extraMetada
   const call = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-      rowId: callId,
-    });
+      rowId: callId});
 
   const ownerId = String(call.userId || '').trim();
   let isAllowed = (ownerId === actor.$id);
@@ -409,8 +262,7 @@ export async function updateCallMetadataSecureAction(callId: string, extraMetada
           Query.equal('resourceType', 'call'),
           Query.equal('userId', actor.$id),
           Query.limit(1),
-        ] as any,
-      });
+        ] as any});
       if (collabsRes.rows.length > 0 && collabsRes.rows[0].role === 'cohost') {
         isAllowed = true;
       }
@@ -441,8 +293,7 @@ export async function updateCallMetadataSecureAction(callId: string, extraMetada
 
   const mergedMeta = {
     ...currentMeta,
-    ...extraMetadata,
-  };
+    ...extraMetadata};
 
   const updatedCall = await tables.updateRow({
 
@@ -450,8 +301,7 @@ export async function updateCallMetadataSecureAction(callId: string, extraMetada
       tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
       rowId: callId,
       data: {
-      metadata: JSON.stringify(mergedMeta),
-    },
+      metadata: JSON.stringify(mergedMeta)},
     });
 
   return JSON.parse(JSON.stringify(updatedCall));
@@ -472,8 +322,7 @@ export async function createCallSecure(data: any, jwt?: string) {
     actorId: actor.$id,
     action: 'create',
     ownerFields: ['userId'],
-    data,
-  });
+    data});
   if (!isCreateAllowed) {
     throw new Error('Forbidden: Create operation must be mathematically tied to the current user');
   }
@@ -498,16 +347,14 @@ export async function createCallSecure(data: any, jwt?: string) {
     startsAt: data.startsAt || now,
     title: data.title || undefined,
     metadata: data.metadata || undefined,
-    conversationId: data.conversationId || undefined,
-  };
+    conversationId: data.conversationId || undefined};
 
   const result = await tables.createRow({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
     rowId: ID.unique(),
     data: payload,
-    permissions,
-  });
+    permissions});
 
   return JSON.parse(JSON.stringify(result));
 }

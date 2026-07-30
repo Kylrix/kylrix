@@ -1,3 +1,8 @@
+---
+name: security.kylrix-integrity
+description: Integrity checks and trust boundaries for Kylrix secure operations and shared objects.
+---
+
 # Kylrix Security Integrity — Architectural Guardrails
 
 ## Overview

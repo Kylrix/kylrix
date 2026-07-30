@@ -261,7 +261,7 @@ export default function FormsDashboard() {
                 prev.map((f) => (f.$id === form.$id && isOwner ? { ...f, isPinned: nextPinned } : f)),
             );
             toast.success(nextPinned ? 'Pinned to top' : 'Unpinned');
-        } catch (err) {
+        } catch (_err) {
             if (!isOwner) {
                 setLocalPin('form', form.$id, currentlyPinned);
             }
@@ -474,7 +474,7 @@ export default function FormsDashboard() {
                                                         if (isDesktop) {
                                                             setActiveDetail({ type: 'form', id: form.$id, data: form });
                                                         } else {
-                                                            router.push(`/flow/forms/${form.$id}`);
+                                                            router.push(`/forms/${form.$id}`);
                                                         }
                                                     }}
                                                     onContextMenu={handleRightClick}

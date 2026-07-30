@@ -66,8 +66,7 @@ export function TaskAddToProjectDrawer({
       const rows = await warmProjectsList({
         userId: user.$id,
         getCachedDataAsync,
-        fetchOptimized,
-      });
+        fetchOptimized});
       setProjects(rows);
     } catch (error) {
       console.error('[TaskAddToProject] Failed to load projects', error);
@@ -110,8 +109,7 @@ export function TaskAddToProjectDrawer({
       await attachObjectToProject({
         projectId: project.$id,
         entityKind: 'goal',
-        entityId: taskId,
-      });
+        entityId: taskId});
       toast.success(`Added to "${project.title}"`);
       onClose();
     } catch (error: any) {

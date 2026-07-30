@@ -6,7 +6,7 @@
 /**
  * Email validation using RFC 5322 compliant regex
  */
-export function validateEmail(email: string): { valid: boolean; error?: string } {
+function validateEmail(email: string): { valid: boolean; error?: string } {
   if (!email || typeof email !== 'string') {
     return { valid: false, error: 'Email is required' };
   }
@@ -34,7 +34,7 @@ export function validateEmail(email: string): { valid: boolean; error?: string }
 /**
  * Password strength validation
  */
-export function validatePassword(password: string): { valid: boolean; error?: string; strength?: 'weak' | 'medium' | 'strong' } {
+function validatePassword(password: string): { valid: boolean; error?: string; strength?: 'weak' | 'medium' | 'strong' } {
   if (!password || typeof password !== 'string') {
     return { valid: false, error: 'Password is required' };
   }
@@ -101,7 +101,7 @@ export function sanitizeString(input: string, maxLength: number = 1000): string 
 /**
  * Validate and sanitize credential name
  */
-export function validateCredentialName(name: string): { valid: boolean; error?: string; sanitized?: string } {
+function validateCredentialName(name: string): { valid: boolean; error?: string; sanitized?: string } {
   if (!name || typeof name !== 'string') {
     return { valid: false, error: 'Name is required' };
   }
@@ -122,7 +122,7 @@ export function validateCredentialName(name: string): { valid: boolean; error?: 
 /**
  * Validate and sanitize URL
  */
-export function validateUrl(url: string): { valid: boolean; error?: string; sanitized?: string } {
+function validateUrl(url: string): { valid: boolean; error?: string; sanitized?: string } {
   if (!url || typeof url !== 'string') {
     return { valid: false, error: 'URL is required' };
   }
@@ -160,7 +160,7 @@ export function validateUrl(url: string): { valid: boolean; error?: string; sani
 /**
  * Validate notes/description field
  */
-export function validateNotes(notes: string): { valid: boolean; error?: string; sanitized?: string } {
+function validateNotes(notes: string): { valid: boolean; error?: string; sanitized?: string } {
   if (!notes || typeof notes !== 'string') {
     return { valid: true, sanitized: '' }; // Notes are optional
   }
@@ -177,7 +177,7 @@ export function validateNotes(notes: string): { valid: boolean; error?: string; 
 /**
  * Validate username field
  */
-export function validateUsername(username: string): { valid: boolean; error?: string; sanitized?: string } {
+function validateUsername(username: string): { valid: boolean; error?: string; sanitized?: string } {
   if (!username || typeof username !== 'string') {
     return { valid: false, error: 'Username is required' };
   }
@@ -198,7 +198,7 @@ export function validateUsername(username: string): { valid: boolean; error?: st
 /**
  * Validate folder name
  */
-export function validateFolderName(name: string): { valid: boolean; error?: string; sanitized?: string } {
+function validateFolderName(name: string): { valid: boolean; error?: string; sanitized?: string } {
   if (!name || typeof name !== 'string') {
     return { valid: false, error: 'Folder name is required' };
   }
@@ -224,7 +224,7 @@ export function validateFolderName(name: string): { valid: boolean; error?: stri
 /**
  * Validate TOTP issuer
  */
-export function validateTotpIssuer(issuer: string): { valid: boolean; error?: string; sanitized?: string } {
+function validateTotpIssuer(issuer: string): { valid: boolean; error?: string; sanitized?: string } {
   if (!issuer || typeof issuer !== 'string') {
     return { valid: false, error: 'Issuer is required' };
   }
@@ -241,7 +241,7 @@ export function validateTotpIssuer(issuer: string): { valid: boolean; error?: st
 /**
  * Validate TOTP account name
  */
-export function validateTotpAccountName(accountName: string): { valid: boolean; error?: string; sanitized?: string } {
+function validateTotpAccountName(accountName: string): { valid: boolean; error?: string; sanitized?: string } {
   if (!accountName || typeof accountName !== 'string') {
     return { valid: false, error: 'Account name is required' };
   }
@@ -258,7 +258,7 @@ export function validateTotpAccountName(accountName: string): { valid: boolean; 
 /**
  * Validate and sanitize generic string input
  */
-export function validateString(
+function validateString(
   value: string,
   fieldName: string,
   options: {
@@ -301,7 +301,7 @@ export function validateString(
 /**
  * Validate OTP code
  */
-export function validateOtpCode(code: string): { valid: boolean; error?: string } {
+function validateOtpCode(code: string): { valid: boolean; error?: string } {
   if (!code || typeof code !== 'string') {
     return { valid: false, error: 'OTP code is required' };
   }
@@ -319,7 +319,7 @@ export function validateOtpCode(code: string): { valid: boolean; error?: string 
 /**
  * Prevent common security vulnerabilities in custom fields
  */
-export function validateCustomFields(customFields: string): { valid: boolean; error?: string; sanitized?: string } {
+function validateCustomFields(customFields: string): { valid: boolean; error?: string; sanitized?: string } {
   if (!customFields || typeof customFields !== 'string') {
     return { valid: true, sanitized: '' };
   }

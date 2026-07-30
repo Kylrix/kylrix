@@ -85,8 +85,7 @@ function getActiveMentionToken(value: string, caret: number | null | undefined) 
   return {
     query: match[1] || '',
     start,
-    end: cursor,
-  };
+    end: cursor};
 }
 
 function renderCommentText(text: string): ReactNode {
@@ -118,8 +117,7 @@ function renderCommentText(text: string): ReactNode {
           bgcolor: 'rgba(99, 102, 241, 0.08)',
           px: 0.4,
           py: 0.1,
-          borderRadius: 0.8,
-        }}
+          borderRadius: 0.8}}
       >
         @{username}
       </Box>
@@ -158,8 +156,7 @@ function MentionComposer({
   submitLabel,
   disabled,
   minRows = 3,
-  autoFocus = false,
-}: {
+  autoFocus = false}: {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
@@ -237,8 +234,7 @@ function MentionComposer({
 
             return {
               ...item,
-              avatar,
-            };
+              avatar};
           }),
         );
         const filtered = mapped.filter((item): item is MentionResult => Boolean(item));
@@ -251,8 +247,7 @@ function MentionComposer({
             displayName: item.title,
             name: item.title,
             avatar: item.avatar,
-            profilePicId: item.profilePicId,
-          })),
+            profilePicId: item.profilePicId})),
         );
       } catch {
         if (alive) setResults([]);
@@ -367,8 +362,7 @@ function MentionComposer({
                       bgcolor: alpha(MENTION_COLOR, 0.14),
                       color: MENTION_COLOR,
                       fontSize: 12,
-                      fontWeight: 900,
-                    }}
+                      fontWeight: 900}}
                   >
                     {item.title.charAt(0).toUpperCase()}
                   </Avatar>
@@ -529,8 +523,7 @@ function CommentItem({ comment, onReply, onUpdate, onDelete, depth = 0, userMap,
       ml: depth * 3,
       mt: 1,
       borderLeft: depth > 0 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-      pl: depth > 0 ? 2 : 0,
-    }}>
+      pl: depth > 0 ? 2 : 0}}>
       <ListItem
         alignItems="flex-start"
         sx={{
@@ -773,8 +766,7 @@ export default function CommentsSection({ noteId, decryptionKey }: CommentsProps
           $id: userId,
           id: u.id || userId,
           profilePicId,
-          avatar,
-        } as Users;
+          avatar} as Users;
       })
     );
 
@@ -805,7 +797,7 @@ export default function CommentsSection({ noteId, decryptionKey }: CommentsProps
           try {
             const res = await listComments(noteId);
             return res.rows as unknown as Comments[];
-          } catch (sdkError) {
+          } catch (_sdkError) {
             console.warn('Comments fetch: SDK path failed, trying shared API fallback');
             const { getPublicNoteCommentsSecure } = await import('@/lib/actions/secure-ops');
             const res = await getPublicNoteCommentsSecure(noteId);
@@ -902,12 +894,12 @@ export default function CommentsSection({ noteId, decryptionKey }: CommentsProps
       // If the user who commented isn't in userMap, we might want to refresh or add them
       // For now, we refresh to be safe or just wait for the user to be there
       if (user?.$id) {
-        upsertCommentIdentity(user as Users);
+        upsertCommentIdentity(user as unknown as Users);
         setUserMap((prev) => ({
           ...prev,
           [user.$id]: {
             ...(prev[user.$id] || {}),
-            ...(user as Users),
+            ...(user as unknown as Users),
           },
         }));
       }

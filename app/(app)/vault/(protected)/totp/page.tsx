@@ -128,8 +128,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
               await db.cache.upsert({
                 id: cacheKey,
                 data: secretsResult.value as any,
-                timestamp: Date.now(),
-              }).catch(() => {});
+                timestamp: Date.now()}).catch(() => {});
             }
           } catch {}
         } else {
@@ -322,8 +321,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
             dek: wrappedDek,
             secretKey: decryptedSecret,
             issuer: decryptedIssuer ?? undefined,
-            accountName: decryptedAccount ?? undefined,
-          });
+            accountName: decryptedAccount ?? undefined});
           
           totp.dek = wrappedDek;
           totp.secretKey = decryptedSecret;
@@ -584,8 +582,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
                       dek: wrappedDek,
                       secretKey: decryptedSecret,
                       issuer: decryptedIssuer ?? undefined,
-                      accountName: decryptedAccount ?? undefined,
-                    });
+                      accountName: decryptedAccount ?? undefined});
                     
                     totp.dek = wrappedDek;
                     totp.secretKey = decryptedSecret;
@@ -762,8 +759,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
         style={{
           filter: showMasterPassDrawer ? 'blur(8px)' : 'none',
           pointerEvents: showMasterPassDrawer ? 'none' : 'auto',
-          opacity: showMasterPassDrawer ? 0.3 : 1,
-        }}
+          opacity: showMasterPassDrawer ? 0.3 : 1}}
       >
         <MultiSectionContainer panels={['secrets', 'secret_chat']} contextId={selectedTotp?.issuer || selectedTotp?.accountName || undefined}>
         {/* Header & Back Action */}

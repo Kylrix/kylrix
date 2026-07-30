@@ -30,7 +30,7 @@ export interface PaymentProvider {
   handleWebhook(payload: any, signature?: string): Promise<void>;
 }
 
-export class BillingManager {
+class BillingManager {
   private providers: Map<PaymentMethod, PaymentProvider> = new Map();
 
   registerProvider(provider: PaymentProvider) {

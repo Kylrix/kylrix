@@ -60,6 +60,3 @@ export function createProfilePreviewManager(fetcher: ProfilePreviewFetcher, stor
   };
 }
 
-export function toAppwriteRowId(id?: string | null) {
-  return id || null;
-}

@@ -1,7 +1,7 @@
-export type KylrixApp = 'accounts' | 'note' | 'flow' | 'connect' | 'vault' | 'kylrix';
+type KylrixApp = 'accounts' | 'note' | 'flow' | 'connect' | 'vault' | 'kylrix';
 
-export type EcosystemSurfaceKind = 'page' | 'topbar' | 'drawer' | 'sidebar' | 'modal' | 'inline';
-export type EcosystemObjectKind = 'note' | 'task' | 'event' | 'form' | 'huddle' | 'call' | 'coupon' | 'subscription' | 'referral' | 'message' | 'credential';
+type EcosystemSurfaceKind = 'page' | 'topbar' | 'drawer' | 'sidebar' | 'modal' | 'inline';
+type EcosystemObjectKind = 'note' | 'task' | 'event' | 'form' | 'huddle' | 'call' | 'coupon' | 'subscription' | 'referral' | 'message' | 'credential';
 export type EcosystemOpenMode = 'same-tab' | 'maximize' | 'drawer' | 'topbar' | 'sidebar' | 'modal';
 
 export interface CrossObjectOrigin {
@@ -13,7 +13,7 @@ export interface CrossObjectOrigin {
   sourceLabel?: string | null;
 }
 
-export interface CrossObjectMetadata extends CrossObjectOrigin {
+interface CrossObjectMetadata extends CrossObjectOrigin {
   sourceApp: KylrixApp;
   sourceId: string | null;
   sourceKind: EcosystemObjectKind | null;
@@ -25,7 +25,7 @@ export interface CrossObjectMetadata extends CrossObjectOrigin {
   maximizedRoute: string | null;
 }
 
-export interface EcosystemIntent {
+interface EcosystemIntent {
   kind: EcosystemObjectKind;
   targetApp: KylrixApp;
   targetRoute: string;
@@ -35,7 +35,7 @@ export interface EcosystemIntent {
   metadata?: Record<string, unknown>;
 }
 
-export interface NavigationPolicyInput {
+interface NavigationPolicyInput {
   suppressBrowserMenu?: boolean;
   suppressReload?: boolean;
   allowModifiedClicks?: boolean;
@@ -65,47 +65,11 @@ export function createCrossObjectMetadata(
   } as CrossObjectMetadata & Record<string, unknown>;
 }
 
-export function createEcosystemIntent(intent: EcosystemIntent) {
-  return {
-    ...intent,
-    metadata: {
-      ...(intent.metadata || {}),
-      origin: createCrossObjectMetadata(intent.origin, {
-        openMode: intent.openMode,
-        minimized: intent.openMode !== 'maximize',
-        maximizedRoute: intent.targetRoute,
-      }),
-      intentKind: intent.kind,
-      targetApp: intent.targetApp,
-      targetRoute: intent.targetRoute,
-      openMode: intent.openMode,
-      title: intent.title || null,
-    },
-  };
-}
 
-export function shouldOpenInSameTab(event?: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean; altKey?: boolean; button?: number }) {
+function shouldOpenInSameTab(event?: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean; altKey?: boolean; button?: number }) {
   if (!event) return true;
   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false;
   if (typeof event.button === 'number' && event.button !== 0) return false;
   return true;
 }
 
-export function createNavigationPolicy(input: NavigationPolicyInput = {}) {
-  const suppressBrowserMenu = input.suppressBrowserMenu ?? true;
-  const suppressReload = input.suppressReload ?? true;
-  const allowModifiedClicks = input.allowModifiedClicks ?? false;
-
-  return {
-    suppressBrowserMenu,
-    suppressReload,
-    allowModifiedClicks,
-    shouldSuppressContextMenu: () => suppressBrowserMenu,
-    shouldSuppressReload: (event?: { key?: string; metaKey?: boolean; ctrlKey?: boolean }) => {
-      if (!suppressReload || !event) return false;
-      const key = String(event.key || '').toLowerCase();
-      return key === 'f5' || ((event.metaKey || event.ctrlKey) && key === 'r');
-    },
-    shouldOpenInSameTab,
-  };
-}

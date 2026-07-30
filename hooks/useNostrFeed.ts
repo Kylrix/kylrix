@@ -25,7 +25,7 @@ function mergeEvents(prev: NostrEvent[], incoming: NostrEvent[]): NostrEvent[] {
   for (const event of prev) byId.set(event.id, event);
   for (const event of incoming) byId.set(event.id, event);
   return Array.from(byId.values())
-    .sort((a, b) => b.created_at - a.created_at)
+    .sort((a: any, b: any) => b.created_at - a.created_at)
     .slice(0, MAX_EVENTS);
 }
 
@@ -127,8 +127,7 @@ export function useNostrFeed() {
         created_at: Math.floor(Date.now() / 1000),
         kind: 1,
         tags: [['t', 'sovereignengineering'], ['client', 'kylrix']],
-        content,
-      };
+        content};
 
       const signed = signEvent(unsignedEvent, identity.privateKeyBytes);
       await poolRef.current.publish(signed);
@@ -171,6 +170,5 @@ export function useNostrFeed() {
     loading,
     publishPost,
     refresh,
-    filterTags: FILTER_TAGS,
-  };
+    filterTags: FILTER_TAGS};
 }

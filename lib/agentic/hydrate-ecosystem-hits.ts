@@ -33,8 +33,7 @@ const DOMAIN_ACCENT: Record<SearchDomain, string> = {
   project: '#10B981',
   tag: '#F59E0B',
   ui: '#818CF8',
-  all: '#9B9691',
-};
+  all: '#9B9691'};
 
 const DOMAIN_LABEL: Record<SearchDomain, string> = {
   idea: 'Idea',
@@ -44,8 +43,7 @@ const DOMAIN_LABEL: Record<SearchDomain, string> = {
   project: 'Project',
   tag: 'Tag',
   ui: 'Page',
-  all: 'Item',
-};
+  all: 'Item'};
 
 export function ecosystemDomainLabel(domain: SearchDomain): string {
   return DOMAIN_LABEL[domain] || 'Item';
@@ -109,11 +107,11 @@ export function hydrateEcosystemHitsSync(
     getCachedData?: (key: string) => unknown;
   },
 ): HydratedEcosystemHit[] {
-  const notesById = new Map((sources.notes || []).map((n) => [n.$id || n.id, n]));
-  const tasksById = new Map((sources.tasks || []).map((t) => [t.id || t.$id, t]));
+  const notesById = new Map((sources.notes || []).map((n: any) => [n.$id || n.id, n]));
+  const tasksById = new Map((sources.tasks || []).map((t: any) => [t.id || t.$id, t]));
 
-  return refs.map((ref) => {
-    const accent = DOMAIN_ACCENT[ref.domain] || DOMAIN_ACCENT.all;
+  return refs.map((ref: any) => {
+    const accent = DOMAIN_ACCENT[ref.domain as keyof typeof DOMAIN_ACCENT] || DOMAIN_ACCENT.all;
 
     if (ref.domain === 'idea') {
       const note =
@@ -138,8 +136,7 @@ export function hydrateEcosystemHitsSync(
           attachmentCount: Array.isArray(note?.attachments) ? note.attachments.length : 0,
           hasImage: !!previewImageUrl,
           previewImageUrl,
-          updatedAt: note?.$updatedAt || note?.updatedAt,
-        },
+          updatedAt: note?.$updatedAt || note?.updatedAt},
       };
     }
 
@@ -156,8 +153,7 @@ export function hydrateEcosystemHitsSync(
         meta: {
           dueDate: task?.dueDate ? String(task.dueDate) : undefined,
           status: task?.status,
-          updatedAt: task?.updatedAt ? String(task.updatedAt) : undefined,
-        },
+          updatedAt: task?.updatedAt ? String(task.updatedAt) : undefined},
       };
     }
 
@@ -169,8 +165,7 @@ export function hydrateEcosystemHitsSync(
         title: dest?.label || ref.id,
         snippet: dest?.description,
         route: dest?.route,
-        accent,
-      };
+        accent};
     }
 
     if (ref.domain === 'form') {
@@ -196,7 +191,7 @@ export function hydrateEcosystemHitsSync(
         id: ref.id,
         title: project?.title || 'Project',
         snippet: project?.summary ? plainSnippet(String(project.summary)) : undefined,
-        route: `/projects/${ref.id}`,
+        route: `/workspaces/${ref.id}`,
         accent,
       };
     }
@@ -205,7 +200,6 @@ export function hydrateEcosystemHitsSync(
       domain: ref.domain,
       id: ref.id,
       title: ecosystemDomainLabel(ref.domain),
-      accent,
-    };
+      accent};
   });
 }

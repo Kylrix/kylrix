@@ -9,44 +9,37 @@
 
 export type FileTypeCategory = 'image' | 'audio' | 'video' | 'document' | 'other';
 
-export interface StorageGatingConfig {
+interface StorageGatingConfig {
   maxSizeBytes: number;
   allowedExtensions?: string[];
   compress: boolean;
 }
 
 // Global Bucket Size Gating Configuration
-export const BUCKET_LIMITS: Record<string, StorageGatingConfig> = {
+const BUCKET_LIMITS: Record<string, StorageGatingConfig> = {
   profile_pictures: {
     maxSizeBytes: 1 * 1024 * 1024, // 1 MB
     allowedExtensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'],
-    compress: true,
-  },
+    compress: true},
   messages: {
     maxSizeBytes: 1 * 1024 * 1024, // 1 MB
-    compress: true,
-  },
+    compress: true},
   notes_attachments: {
     maxSizeBytes: 5 * 1024 * 1024, // 5 MB
-    compress: true,
-  },
+    compress: true},
   vault_attachments: {
     maxSizeBytes: 5 * 1024 * 1024, // 5 MB
-    compress: true,
-  },
+    compress: true},
   form_media: {
     maxSizeBytes: 10 * 1024 * 1024, // 10 MB
-    compress: true,
-  },
+    compress: true},
   chat_uploads: {
     maxSizeBytes: 10 * 1024 * 1024, // 10 MB
-    compress: true,
-  },
+    compress: true},
   // Default fallback limit for any other discrete upload in the ecosystem
   default: {
     maxSizeBytes: 10 * 1024 * 1024, // 10 MB Guideline Upper Limit
-    compress: false,
-  },
+    compress: false},
 };
 
 
@@ -142,8 +135,7 @@ export async function compressImageToWebP(file: File, maxDimension = 1920, quali
               const newFilename = file.name.replace(/\.[^/.]+$/, '') + '.webp';
               const compressedFile = new File([blob], newFilename, {
                 type: 'image/webp',
-                lastModified: Date.now(),
-              });
+                lastModified: Date.now()});
               resolve(compressedFile);
             } else {
               resolve(file);
@@ -187,12 +179,3 @@ export function validateFileUploadLimit(file: File, bucketId: string): void {
 /**
  * Resolves appropriate UI rendering elements/metadata based on file category.
  */
-export function resolveFileRenderer(mimeType: string, filename?: string) {
-  const category = getFileTypeCategory(mimeType, filename);
-  
-  return {
-    category,
-    isRenderableInline: ['image', 'audio', 'video'].includes(category),
-    icon: category === 'image' ? 'Image' : category === 'audio' ? 'Volume2' : category === 'video' ? 'Video' : 'FileText',
-  };
-}

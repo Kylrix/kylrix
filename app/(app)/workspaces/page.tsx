@@ -17,8 +17,7 @@ import {
   Typography,
   CircularProgress,
   alpha,
-  useTheme,
-} from '@/lib/openbricks/primitives';
+  useTheme} from '@/lib/openbricks/primitives';
 import {
   Plus,
   FolderKanban,
@@ -163,13 +162,6 @@ const projectTemplates = [
 const NAV_SURFACE = '#161412';
 
 /** Fluid card grid: wraps by available width, never forces 3 squeezed columns. */
-const PROJECT_CARD_GRID_SX = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))',
-  gap: 3,
-  width: '100%',
-  alignItems: 'stretch',
-} as const;
 
 function TemplateCard({ template, onSelect }: { template: typeof projectTemplates[0], onSelect: (t: any) => void }) {
     const [expanded, setExpanded] = useState(false);
@@ -279,8 +271,7 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin, onUpdate }:
         x: e.clientX,
         y: e.clientY,
         items: accessControlItems,
-        appType: 'project' as any,
-      });
+        appType: 'project' as any});
     }
   };
 
@@ -312,8 +303,7 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin, onUpdate }:
       onContextMenu={handleRightClick}
       className="relative flex flex-col justify-between gap-5 p-6 w-full min-h-[196px] rounded-[28px] bg-[#161412] border transition-all duration-300 ease-out cursor-pointer overflow-hidden group select-none max-w-full"
       style={{
-        borderColor: 'rgba(255, 255, 255, 0.06)',
-      }}
+        borderColor: 'rgba(255, 255, 255, 0.06)'}}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = `${projColor}66`;
         e.currentTarget.style.boxShadow = `0 0 20px ${projColor}08`;
@@ -373,7 +363,7 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin, onUpdate }:
                 if (onUpdate) {
                   onUpdate({
                     ...project,
-                    visibility: res.isPublic ? 'public' : res.isGuest ? 'shared' : 'private'
+                    visibility: (res.isPublic ? 'public' : res.isGuest ? 'shared' : 'private') as any
                   });
                 }
               }}
@@ -437,7 +427,6 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin, onUpdate }:
 }
 
 export default function ProjectsPage() {
-  const theme = useTheme();
   const router = useRouter();
   const { showSuccess, showError } = useToast();
   const { open } = useUnifiedDrawer();
@@ -464,7 +453,7 @@ export default function ProjectsPage() {
     setProjects(prev => prev.map(p => p.$id === updated.$id ? updated : p));
   }, [setProjects]);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [teams, setTeams] = useState<Models.Team[]>([]);
+  const [teams, _setTeams] = useState<Models.Team[]>([]);
   const [showAllTemplates, setShowAllTemplates] = useState(false);
 
   // Workflow Simulator States
@@ -578,7 +567,7 @@ export default function ProjectsPage() {
       onMainClick: () => openCreateDrawerRef.current(),
       actions: [
         { id: 'create-project', label: 'CREATE WORKSPACE', icon: <Plus size={20} />, onClick: () => openCreateDrawerRef.current() },
-        { id: 'workflows-nav', label: 'ACTION WORKFLOWS', icon: <Workflow size={20} />, onClick: () => router.push('/projects/workflows') },
+        { id: 'workflows-nav', label: 'ACTION WORKFLOWS', icon: <Workflow size={20} />, onClick: () => router.push('/flows') },
         { id: 'insights', label: 'AI INSIGHTS', icon: <Sparkles size={20} />, onClick: () => router.push('/app') }]
     });
     return () => resetConfiguration();
@@ -652,7 +641,7 @@ export default function ProjectsPage() {
         project: selectedProj,
         onAccepted: () => {
           fetchProjects().then(() => {
-            router.push(`/projects/${projectId}`);
+            router.push(`/workspaces/${projectId}`);
           });
         }
       });
@@ -662,7 +651,7 @@ export default function ProjectsPage() {
         isRequested: true
       });
     } else {
-      router.push(`/projects/${projectId}`);
+      router.push(`/workspaces/${projectId}`);
     }
   };
 
@@ -820,8 +809,7 @@ export default function ProjectsPage() {
                 '&:hover': {
                   color: '#fff',
                   bgcolor: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.12)',
-                }
+                  borderColor: 'rgba(255, 255, 255, 0.12)'}
               }}
             >
               <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
@@ -855,8 +843,7 @@ export default function ProjectsPage() {
               borderRadius: '32px',
               p: 8,
               textAlign: 'center',
-              backgroundImage: 'none',
-            }}
+              backgroundImage: 'none'}}
           >
             <Box sx={{ width: 80, height: 80, borderRadius: '24px', bgcolor: alpha('#6366F1', 0.05), color: '#6366F1', display: 'grid', placeItems: 'center', mx: 'auto', mb: 3 }}>
               <FolderKanban size={40} />

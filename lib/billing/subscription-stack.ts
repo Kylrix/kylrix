@@ -49,6 +49,5 @@ export async function calculateStackedSubscriptionCredit(
     currentPeriodStart,
     currentPeriodEnd,
     creditMs,
-    intendedDurationMs,
-  };
+    intendedDurationMs};
 }

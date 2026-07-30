@@ -22,7 +22,6 @@ interface PaginationProps {
 export function Pagination({
   currentPage,
   totalPages,
-  onPageChange,
   onNextPage,
   onPreviousPage,
   hasNextPage,

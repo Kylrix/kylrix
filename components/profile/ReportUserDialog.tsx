@@ -36,8 +36,7 @@ export default function ReportUserDialog({
   contextType = 'profile',
   contextId = null,
   contextUrl = null,
-  sourceApp = 'kylrix',
-}: ReportUserDialogProps) {
+  sourceApp = 'kylrix'}: ReportUserDialogProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [reason, setReason] = useState('');
@@ -70,8 +69,7 @@ export default function ReportUserDialog({
         contextId: contextId || undefined,
         contextUrl: contextUrl || undefined,
         sourceApp,
-        targetUsername,
-      });
+        targetUsername});
 
       if (!data.success) {
         throw new Error('Failed to submit report');

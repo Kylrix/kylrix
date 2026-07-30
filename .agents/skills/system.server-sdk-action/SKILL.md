@@ -1,3 +1,8 @@
+---
+name: system.server-sdk-action
+description: Server Actions vs Admin SDK patterns for privileged TablesDB mutations.
+---
+
 # Server-Side SDK CRUD Architecture
 
 ## Purpose

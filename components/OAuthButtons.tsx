@@ -65,7 +65,7 @@ export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) 
         cache: 'no-store'
       });
       clearTimeout(timeoutId);
-    } catch (e) {
+    } catch (_e) {
       setError('Unable to connect to Kylrix services. Please check your internet connection.');
       setLoading(false);
       return;
@@ -113,8 +113,7 @@ export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) 
             }`}
             style={{
               backgroundColor: provider.bgColor,
-              color: provider.textColor,
-            }}
+              color: provider.textColor}}
           >
             <div className="flex items-center gap-3 font-extrabold text-sm font-satoshi">
               {loading ? (

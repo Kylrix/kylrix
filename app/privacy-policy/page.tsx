@@ -72,8 +72,7 @@ export async function generateMetadata({ searchParams }: PageProps) {
       card: 'summary_large_image',
       title,
       description,
-      images: [ogImageUrl],
-    },
+      images: [ogImageUrl]},
   };
 }
 

@@ -25,30 +25,26 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     isOpen: false,
     type: null,
     itemId: null,
-    data: null,
-  });
+    data: null});
 
   const openSecondarySidebar = useCallback((type: ItemType, itemId: string, data?: any) => {
     setSecondarySidebar({
       isOpen: true,
       type,
       itemId,
-      data,
-    });
+      data});
   }, []);
 
   const closeSecondarySidebar = useCallback(() => {
     setSecondarySidebar((prev) => ({
       ...prev,
-      isOpen: false,
-    }));
+      isOpen: false}));
   }, []);
 
   const toggleSecondarySidebar = useCallback(() => {
     setSecondarySidebar((prev) => ({
       ...prev,
-      isOpen: !prev.isOpen,
-    }));
+      isOpen: !prev.isOpen}));
   }, []);
 
   const value = useMemo<LayoutContextType>(
@@ -56,8 +52,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
       secondarySidebar,
       openSecondarySidebar,
       closeSecondarySidebar,
-      toggleSecondarySidebar,
-    }),
+      toggleSecondarySidebar}),
     [secondarySidebar, openSecondarySidebar, closeSecondarySidebar, toggleSecondarySidebar]
   );
 

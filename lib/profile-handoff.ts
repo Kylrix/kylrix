@@ -22,8 +22,7 @@ export function stageProfileView(profile: ProfileSeed, avatarId?: string | null)
       username: profile.username,
       name: profile.name,
       avatar: avatarId || profile.avatar,
-      timestamp: Date.now(),
-    };
+      timestamp: Date.now()};
     sessionStorage.setItem('kylrix_staged_profile', JSON.stringify(staged));
   } catch (_e) {
     // Fail silently if sessionStorage is unavailable
@@ -41,7 +40,7 @@ export function getProfileView(username?: string | null) {
  * Retrieves a staged profile view from sessionStorage
  * @returns The staged profile data or null if not found/expired
  */
-export function getStagedProfileView(): ProfileSeed | null {
+function getStagedProfileView(): ProfileSeed | null {
   try {
     const data = sessionStorage.getItem('kylrix_staged_profile');
     if (!data) return null;
@@ -62,10 +61,3 @@ export function getStagedProfileView(): ProfileSeed | null {
 /**
  * Clears the staged profile view
  */
-export function clearStagedProfileView() {
-  try {
-    sessionStorage.removeItem('kylrix_staged_profile');
-  } catch (_e) {
-    // Fail silently
-  }
-}

@@ -5,13 +5,6 @@ import toast from 'react-hot-toast';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
-export interface Toast {
-  id: string;
-  type: ToastType;
-  title: string;
-  message?: string;
-  duration?: number;
-}
 
 interface ToastContextType {
   showToast: (type: ToastType, title: string, message?: string, duration?: number, defaultExpanded?: boolean) => void;
@@ -82,8 +75,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
     showError,
     showSuccess,
     showWarning,
-    showInfo,
-  };
+    showInfo};
 
   return (
     <ToastContext.Provider value={value}>

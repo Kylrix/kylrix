@@ -29,10 +29,8 @@ import {
   History,
   Globe,
   RefreshCw,
-  Check,
-} from 'lucide-react';
+  Check} from 'lucide-react';
 import { ProjectsService } from '@/lib/appwrite/projects';
-import { SourceControlService, SourceControlRow } from '@/lib/services/sourceControl';
 import { useToast } from '@/components/ui/Toast';
 import toast from 'react-hot-toast';
 import { usePresence } from '@/components/providers/PresenceProvider';
@@ -91,8 +89,7 @@ import {
   PROJECT_ENTITIES_TTL,
   PROJECT_TAGGED_TTL,
   EMPTY_TAGGED_RESOURCES,
-  type ProjectDetailCache,
-} from '@/lib/projects/projects-cache';
+  type ProjectDetailCache} from '@/lib/projects/projects-cache';
 import { normalizeProjectVisibility } from '@/lib/projects/normalize-project';
 import { SweptService } from '@/lib/services/swept';
 import { MultiSectionContainer } from '@/context/SectionContext';
@@ -132,14 +129,13 @@ function CustomTabPanel(props: TabPanelProps) {
 }
 
 export default function ProjectDetailPage() {
-  const theme = useTheme();
   const router = useRouter();
   const { projectId } = useParams();
   const { showSuccess, showError } = useToast();
   const { open: openUnified } = useUnifiedDrawer();
   const { user } = useAuth();
   const { joinResource, resourcePresence } = usePresence();
-  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { openSidebar} = useDynamicSidebar();
   const { openSecondarySidebar } = useLayout();
   const { openOverlay, closeOverlay } = useOverlay();
   const { openProUpgrade } = useProUpgrade();
@@ -177,9 +173,8 @@ export default function ProjectDetailPage() {
   const [isExtractModalOpen, setIsExtractModalOpen] = useState(false);
   const [extractGoalsNote, setExtractGoalsNote] = useState<Notes | null>(null);
   const [isAddSubProjectModalOpen, setIsAddSubProjectModalOpen] = useState(false);
-  const [gitIntegration, setGitIntegration] = useState<SourceControlRow | null>(null);
   const [initializingHuddle, setInitializingHuddle] = useState(false);
-  const [discussionMenuAnchor, setDiscussionMenuAnchor] = useState<HTMLElement | null>(null);
+  const [_discussionMenuAnchor, _setDiscussionMenuAnchor] = useState<HTMLElement | null>(null);
   const [tabMenuAnchorEl, setTabMenuAnchorEl] = useState<{ x: number, y: number } | null>(null);
   const [activeTabMenuIndex, setActiveTabMenuIndex] = useState<number | null>(null);
   const [ownerProfile, setOwnerProfile] = useState<any | null>(null);
@@ -212,8 +207,7 @@ export default function ProjectDetailPage() {
       await ProjectsService.updateProject(project.$id, {
         title,
         summary,
-        status
-      });
+        status: status as any});
       showSuccess('Project settings updated successfully!');
       fetchProjectData();
     } catch (err: any) {
@@ -227,10 +221,9 @@ export default function ProjectDetailPage() {
     try {
       invalidate(projectMetaCacheKey(project.$id));
       await ProjectsService.updateProject(project.$id, {
-        visibility,
+        visibility: visibility as any,
         isPublic: visibility === 'public',
-        isGuest: visibility === 'public' ? isGuest : false,
-      });
+        isGuest: visibility === 'public' ? isGuest : false});
       showSuccess('Project visibility updated successfully!');
       fetchProjectData();
     } catch (err: any) {
@@ -250,7 +243,7 @@ export default function ProjectDetailPage() {
         try {
           await ProjectsService.deleteProject(project.$id, deleteMode);
           showSuccess('Project deleted successfully');
-          router.push('/projects');
+          router.push('/workspaces');
         } catch (err: any) {
           showError('Failed to delete project', err.message);
         }
@@ -452,7 +445,6 @@ export default function ProjectDetailPage() {
     setCalls(parsed.calls || []);
     setTaggedResources(parsed.taggedResources || EMPTY_TAGGED_RESOURCES);
     setOwnerProfile(parsed.ownerProfile || null);
-    setGitIntegration(parsed.gitIntegration || null);
     setLoading(false);
   }, []);
 
@@ -533,23 +525,12 @@ export default function ProjectDetailPage() {
       // Resolve other entities and capture their resolved values
       const resolvedEntitiesData = await resolveEntities(objects.rows);
 
-      // Fetch Git integration details
-      let resolvedGit: any = null;
-      try {
-        const integrations = await SourceControlService.listIntegrations(projectId as string);
-        resolvedGit = integrations[0] || null;
-        setGitIntegration(resolvedGit);
-      } catch (gitErr) {
-        console.error('Failed to load project git integration:', gitErr);
-      }
-
       // Save everything to session cache for instant subsequent loads
       const cachePayload = {
         project: p,
         projectObjects: objects.rows,
         collaborators: resolvedCollabs,
         ownerProfile: resolvedOwner,
-        gitIntegration: resolvedGit,
         ...(resolvedEntitiesData as any)
       };
       setSessionProjectDetail(projectId as string, cachePayload);
@@ -882,7 +863,7 @@ export default function ProjectDetailPage() {
           Project not found
         </h3>
         <button 
-          onClick={() => router.push('/projects')} 
+          onClick={() => router.push('/workspaces')} 
           className="text-[#6366F1] hover:text-[#818CF8] font-bold text-sm"
         >
           Back to projects
@@ -927,7 +908,7 @@ export default function ProjectDetailPage() {
         <div className="flex flex-col md:flex-row gap-4 md:gap-0 items-start md:items-center justify-between mb-8 select-none">
             <div className="flex items-center gap-3.5 w-full md:w-auto min-w-0">
                 <button
-                    onClick={() => router.push('/projects')}
+                    onClick={() => router.push('/workspaces')}
                     className="w-11 h-11 bg-[#161412] text-white border border-white/6 rounded-[14px] flex items-center justify-center hover:bg-[#1C1A18] hover:-translate-x-0.5 transition-all flex-shrink-0"
                 >
                     <ArrowLeft size={20} />
@@ -1190,7 +1171,7 @@ export default function ProjectDetailPage() {
                                             title={sub.title || 'Untitled Project'}
                                             kind="project"
                                             metadata={sub.summary || 'Private Container'}
-                                            onOpen={() => router.push(`/projects/${sub.$id}`)}
+                                            onOpen={() => router.push(`/workspaces/${sub.$id}`)}
                                             onUnlink={() => handleRemoveObject(sub.$id)}
                                         />
                                     ))}
@@ -1443,41 +1424,6 @@ export default function ProjectDetailPage() {
                         ))}
                     </div>
                 </div>
-
-                {/* Integrations Section */}
-                <div className="mt-8 select-none">
-                    <span className="text-[10px] text-white/30 font-black uppercase tracking-wider block mb-4">
-                        Integrations
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full">
-                        <div 
-                            onClick={() => openUnified('github-integration', { context: 'project', projectId: projectId as string, tasks: tasks, onSaved: fetchProjectData })}
-                            className="relative flex flex-col justify-between gap-4 p-5 rounded-[24px] bg-[#161412] border border-white/6 hover:border-[#6366F1]/30 hover:bg-[#1C1A18] transition-all duration-300 ease-out cursor-pointer overflow-hidden group"
-                            style={{
-                                borderLeft: '3px solid #6366F1'
-                            }}
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="text-[#6366F1] flex-shrink-0">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-                                    </svg>
-                                </div>
-                                <h4 className="text-white text-sm font-black tracking-tight leading-tight">GitHub</h4>
-                                {gitIntegration?.enabled && (
-                                    <span className="ml-auto bg-[#10B981]/15 text-[#10B981] text-[9px] font-black tracking-wider px-2 py-0.5 rounded border border-[#10B981]/20">
-                                        CONNECTED
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-xs text-white/40 font-medium leading-relaxed min-h-[36px]">
-                                {gitIntegration?.enabled 
-                                    ? `Connected to ${gitIntegration.ownerName}/${gitIntegration.repoName}` 
-                                            : 'Link your GitHub repository to sync tasks, issues, and pull requests.'}
-                            </p>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             {/* Right Sidebar Column */}
@@ -1696,8 +1642,7 @@ export default function ProjectDetailPage() {
           initialTab={addModalTab}
           linkedObjects={projectObjects.map((o) => ({
             entityKind: o.entityKind,
-            entityId: o.entityId,
-          }))}
+            entityId: o.entityId}))}
           linkedTags={tags}
           onRemoveLinked={async (entityId) => {
             const obj = projectObjects.find((o) => o.entityId === entityId && o.entityKind === 'tag');
@@ -1903,7 +1848,6 @@ function LoadingPlaceholder() {
     );
 }
 
-function ResourceGridSkeleton() { return null; }
 
 function EmptyState({ kind }: { kind: string }) {
     const icon = kind === 'note' ? <FileText size={32} /> : kind === 'goal' ? <CheckSquare size={32} /> : kind === 'sub-project' ? <FolderKanban size={32} /> : <Lock size={32} />;
@@ -1939,7 +1883,7 @@ function GitHubExternalObjectsTab({
       try {
         const cached = localStorage.getItem(`kylrix_github_cache_${projectId}`);
         return cached ? JSON.parse(cached) : {};
-      } catch (e) {
+      } catch (_e) {
         return {};
       }
     }
@@ -1958,7 +1902,7 @@ function GitHubExternalObjectsTab({
       try {
         const cached = localStorage.getItem(cacheKey);
         if (cached) cachedStats = JSON.parse(cached);
-      } catch (e) {}
+      } catch (_e) {}
     }
     const hasCache = !!cachedStats[repoPath] || (currentMetadata && Object.keys(currentMetadata).length > 0);
 
@@ -2010,7 +1954,7 @@ function GitHubExternalObjectsTab({
         if (typeof window !== 'undefined') {
           try {
             localStorage.setItem(cacheKey, JSON.stringify(updated));
-          } catch (e) {}
+          } catch (_e) {}
         }
         return updated;
       });
@@ -2055,7 +1999,7 @@ function GitHubExternalObjectsTab({
       let dbCached: any = {};
       try {
         dbCached = typeof repo.metadata === 'string' ? JSON.parse(repo.metadata) : repo.metadata || {};
-      } catch (e) {}
+      } catch (_e) {}
 
       // If not in state, initialize from database cache instantly
       if (!liveStats[repoPath] && Object.keys(dbCached).length > 0) {
@@ -2140,8 +2084,7 @@ function GitHubExternalObjectsTab({
         entityKind: 'unverified_github',
         entityId: fullPath,
         role: 'viewer',
-        metadata,
-      });
+        metadata});
 
       toast.success('Unverified repository added to project successfully!', { id: toastId });
       setRepoInput('');
@@ -2235,7 +2178,7 @@ function GitHubExternalObjectsTab({
             let cached: any = {};
             try {
               cached = typeof repo.metadata === 'string' ? JSON.parse(repo.metadata) : repo.metadata || {};
-            } catch (e) {}
+            } catch (_e) {}
 
             const stats = liveStats[path] || cached || {};
             const loading = loadingLive[path];
@@ -2358,9 +2301,6 @@ function UnverifiedGithubRepoDrawer({
   const [stats, setStats] = useState<any>(null);
   const { user } = useAuth();
 
-  const repoObject = useMemo(() => {
-    return projectObjects.find(o => o.entityKind === 'unverified_github' && o.entityId === repoPath);
-  }, [projectObjects, repoPath]);
 
   const isAlreadyLinked = useCallback((issue: any) => {
     return tasks.some(task => {
@@ -2430,8 +2370,7 @@ function UnverifiedGithubRepoDrawer({
       await attachObjectToProject({
         projectId: projectId as string,
         entityKind: 'goal',
-        entityId: taskId,
-      });
+        entityId: taskId});
 
       toast.success('Successfully converted to Execution Goal!', { id: toastId });
       fetchProjectData();

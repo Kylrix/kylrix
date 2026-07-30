@@ -77,7 +77,6 @@ export default function UserSearch({
   onSelect,
   onRemove,
   excludeIds = [],
-  multiple: _multiple = true,
   inlineResults = false
 }: UserSearchProps) {
   const [query, setQuery] = useState('');
@@ -131,8 +130,7 @@ export default function UserSearch({
           username: normalizeHandle(u.username) || undefined,
           avatar: u.avatar || null,
           profilePicId: u.avatar || null,
-          email: isEmailLike(searchQuery) ? (u.email || undefined) : undefined,
-        };
+          email: isEmailLike(searchQuery) ? (u.email || undefined) : undefined};
       });
       setRawResults(normalized as User[]);
     } catch (err) {

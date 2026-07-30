@@ -118,7 +118,7 @@ export async function resolveNostrPubkeysAction(npubs: string[]) {
     if (res.total === 0) return {};
 
     // 2. Fetch corresponding profiles
-    const userIds = res.documents.map((doc) => doc.userId);
+    const userIds = res.documents.map((doc: any) => doc.userId);
     const profilesRes = await databases.listDocuments(
       APPWRITE_CONFIG.DATABASE_ID,
       APPWRITE_CONFIG.TABLES.CONNECT.PROFILES,

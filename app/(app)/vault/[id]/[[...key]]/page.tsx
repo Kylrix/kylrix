@@ -19,8 +19,7 @@ export async function generateMetadata({
       return buildOgMetadata({
         title: 'Shared Secret · Kylrix',
         description: 'View this shared credential securely.',
-        imageUrl: previewImage,
-      });
+        imageUrl: previewImage});
     }
 
     // name is encrypted, so we show a generic preview (safe: no secret data in OG)
@@ -33,8 +32,7 @@ export async function generateMetadata({
     return buildOgMetadata({
       title: 'Shared Secret · Kylrix',
       description: 'View shared credentials securely.',
-      imageUrl: 'https://www.kylrix.space/opengraph-image',
-    });
+      imageUrl: 'https://www.kylrix.space/opengraph-image'});
   }
 }
 

@@ -36,8 +36,7 @@ export default function CredentialDetail({
   credential,
   onClose,
   isMobile,
-  inline = false,
-}: {
+  inline = false}: {
   credential: Credentials;
   onClose: () => void;
   isMobile: boolean;
@@ -178,8 +177,7 @@ export default function CredentialDetail({
         month: "short",
         day: "numeric",
         hour: "2-digit",
-        minute: "2-digit",
-      });
+        minute: "2-digit"});
     } catch {
       return dateString;
     }

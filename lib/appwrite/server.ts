@@ -37,12 +37,11 @@ export const createServerClient = cache(async (jwt?: string) => {
     if (sessionCookie?.value) {
         client.setSession(sessionCookie.value);
     }
-  } catch (err) {
+  } catch (_err) {
     // Non-request context (e.g. build time or background task)
   }
 
   return {
     client,
-    account: new Account(client),
-  };
+    account: new Account(client)};
 });

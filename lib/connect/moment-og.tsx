@@ -110,8 +110,7 @@ function fallbackOg() {
                         fontWeight: 800,
                         letterSpacing: '-0.03em',
                         color: '#fff',
-                        marginBottom: 14,
-                    }}
+                        marginBottom: 14}}
                 >
                     Kylrix Connect
                 </div>
@@ -179,8 +178,7 @@ export async function createMomentOpenGraphImage(momentId: string) {
                             top: 0,
                             right: 0,
                             height: 5,
-                            background: 'linear-gradient(90deg, #F59E0B 0%, #6366F1 72%, transparent 100%)',
-                        }}
+                            background: 'linear-gradient(90deg, #F59E0B 0%, #6366F1 72%, transparent 100%)'}}
                     />
 
                     <div
@@ -193,8 +191,7 @@ export async function createMomentOpenGraphImage(momentId: string) {
                             fontSize: 22,
                             fontWeight: 700,
                             letterSpacing: '0.18em',
-                            textTransform: 'uppercase',
-                        }}
+                            textTransform: 'uppercase'}}
                     >
                         <svg width="32" height="32" viewBox="0 0 100 100" fill="none">
                             <line x1="15" y1="30" x2="50" y2="10" stroke="#EC4899" strokeWidth="6" strokeLinecap="round" />
@@ -250,8 +247,7 @@ export async function createMomentOpenGraphImage(momentId: string) {
                                         width: '100%',
                                         height: '100%',
                                         objectFit: 'cover',
-                                        display: 'block',
-                                    }}
+                                        display: 'block'}}
                                 />
                             ) : (
                                 <div
@@ -280,8 +276,7 @@ export async function createMomentOpenGraphImage(momentId: string) {
                                 display: 'flex',
                                 flexDirection: 'column',
                                 minWidth: 0,
-                                gap: 10,
-                            }}
+                                gap: 10}}
                         >
                             <div
                                 style={{
@@ -289,8 +284,7 @@ export async function createMomentOpenGraphImage(momentId: string) {
                                     fontWeight: 800,
                                     letterSpacing: '-0.025em',
                                     color: '#ffffff',
-                                    lineHeight: 1.15,
-                                }}
+                                    lineHeight: 1.15}}
                             >
                                 {identity.displayName}
                             </div>
@@ -300,8 +294,7 @@ export async function createMomentOpenGraphImage(momentId: string) {
                                     color: 'rgba(249,245,239,0.55)',
                                     fontWeight: 600,
                                     marginBottom: 14,
-                                    fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-                                }}
+                                    fontFamily: '"JetBrains Mono", ui-monospace, monospace'}}
                             >
                                 {identity.handle}
                             </div>
@@ -345,8 +338,7 @@ export async function createMomentOpenGraphImage(momentId: string) {
                                         color: 'rgba(236,229,217,0.85)',
                                         fontWeight: 600,
                                         alignItems: 'center',
-                                        fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-                                    }}
+                                        fontFamily: '"JetBrains Mono", ui-monospace, monospace'}}
                                 >
                                     <span style={{ color: '#F59E0B' }}>{stats}</span>
                                 </div>

@@ -12,8 +12,7 @@ import {
   CircularProgress,
   useTheme,
   useMediaQuery,
-  Divider,
-} from '@/lib/openbricks/primitives';
+  Divider} from '@/lib/openbricks/primitives';
 import { startRegistration } from '@simplewebauthn/browser';
 import { AppwriteService } from '@/lib/appwrite';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -25,8 +24,7 @@ import { bufferToBase64Url } from '@/lib/webauthn-utils';
 import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
-  CheckCircle as CheckCircleIcon,
-} from '@/lib/openbricks/icons';
+  CheckCircle as CheckCircleIcon} from '@/lib/openbricks/icons';
 import { Fingerprint, X, Key, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -55,8 +53,7 @@ export function PasskeySetupPanel({
   onClose,
   userId,
   onSuccess,
-  trustUnlocked = false,
-}: PasskeySetupPanelProps) {
+  trustUnlocked = false}: PasskeySetupPanelProps) {
   const router = useRouter();
   const obTheme = useTheme();
   const isDesktop = useMediaQuery(obTheme.breakpoints.up('md'));
@@ -166,19 +163,16 @@ export function PasskeySetupPanel({
         challenge: challengeBase64,
         rp: {
           name: "Kylrix",
-          id: rpId,
-        },
+          id: rpId},
         user: {
           id: arrayBufferToBase64(userIdBytes.buffer as ArrayBuffer),
           name: userId,
-          displayName: userId,
-        },
+          displayName: userId},
         pubKeyCredParams: [{ alg: -7, type: "public-key" as const }, { alg: -257, type: "public-key" as const }],
         authenticatorSelection: {
           authenticatorAttachment: "platform" as const,
           residentKey: "required" as const,
-          userVerification: "preferred" as const,
-        },
+          userVerification: "preferred" as const},
         timeout: 60000,
         attestation: "none" as const,
       };
@@ -274,8 +268,7 @@ export function PasskeySetupPanel({
           transports: regResp.response.transports || [],
           created: new Date().toISOString(),
           rpId,
-          prf: !!(alsoUseForLogin && extensionResults?.prf?.enabled && extensionResults?.prf?.results?.first),
-        }),
+          prf: !!(alsoUseForLogin && extensionResults?.prf?.enabled && extensionResults?.prf?.results?.first)}),
         isBackup: false,
         authPass: false,
         publicKey: cosePublicKey,
@@ -300,8 +293,7 @@ export function PasskeySetupPanel({
           resourceType: 'passkey',
           templateKey: 'accounts:passkey-added',
           ctaUrl: '/settings',
-          ctaText: 'Review security settings',
-        });
+          ctaText: 'Review security settings'});
       } catch (emailErr) {
         console.warn('[PasskeySetup] Failed to queue passkey added email', emailErr);
       }
@@ -341,8 +333,7 @@ export function PasskeySetupPanel({
             justifyContent: 'center',
             pt: 1.5,
             pb: 0.5,
-            cursor: 'pointer',
-          }}
+            cursor: 'pointer'}}
           onClick={handleClose}
         >
           <Box sx={{ width: 40, height: 4, borderRadius: 999, bgcolor: 'rgba(255,255,255,0.15)' }} />
@@ -435,8 +426,7 @@ export function PasskeySetupPanel({
                   fontWeight: 'bold',
                   cursor: 'pointer',
                   padding: 0,
-                  outline: 'none',
-                }}
+                  outline: 'none'}}
               >
                 <span>{showAdvanced ? "Hide Advanced Options" : "Show Advanced Options"}</span>
                 {showAdvanced ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -472,8 +462,7 @@ export function PasskeySetupPanel({
                       width: '16px',
                       height: '16px',
                       accentColor: '#6366F1',
-                      cursor: 'pointer',
-                    }}
+                      cursor: 'pointer'}}
                   />
                 </Box>
               )}
@@ -617,8 +606,7 @@ export function PasskeySetup({
   onClose,
   userId,
   onSuccess,
-  trustUnlocked = false,
-}: PasskeySetupProps) {
+  trustUnlocked = false}: PasskeySetupProps) {
   const obTheme = useTheme();
   const isDesktop = useMediaQuery(obTheme.breakpoints.up('md'));
 

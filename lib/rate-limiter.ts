@@ -31,8 +31,7 @@ class RateLimiter {
       this.attempts.set(key, {
         count: 1,
         firstAttempt: now,
-        lastAttempt: now,
-      });
+        lastAttempt: now});
       return true;
     }
 
@@ -47,8 +46,7 @@ class RateLimiter {
       this.attempts.set(key, {
         count: 1,
         firstAttempt: now,
-        lastAttempt: now,
-      });
+        lastAttempt: now});
       return true;
     }
 
@@ -126,16 +124,8 @@ class RateLimiter {
 }
 
 // Export singleton instance
-export const rateLimiter = new RateLimiter();
+const rateLimiter = new RateLimiter();
 
 // Export utility functions
 export const checkRateLimit = (key: string): boolean => rateLimiter.isAllowed(key);
-export const getRemainingAttempts = (key: string): number => rateLimiter.getRemainingAttempts(key);
 export const getBlockedDuration = (key: string): number => rateLimiter.getBlockedDuration(key);
-export const resetRateLimit = (key: string): void => rateLimiter.reset(key);
-export const clearAllRateLimits = (): void => rateLimiter.clearAll();
-
-// Run cleanup periodically (every 5 minutes)
-if (typeof window !== 'undefined') {
-  setInterval(() => rateLimiter.cleanup(), 5 * 60 * 1000);
-}

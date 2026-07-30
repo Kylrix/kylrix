@@ -11,8 +11,7 @@ describe('KylrixVault', () => {
       listRows: vi.fn().mockResolvedValue({
         rows: mockRows,
         rows: mockRows,
-        total: 2,
-      }),
+        total: 2}),
       createRow: vi.fn(),
     };
 
@@ -31,8 +30,7 @@ describe('KylrixVault', () => {
     const mockSdk = {
       listRows: vi.fn().mockResolvedValue({
         rows: [],
-        rows: [],
-      }),
+        rows: []}),
       createRow: vi.fn(),
     };
 
@@ -53,8 +51,7 @@ describe('KylrixVault', () => {
       listRows: vi.fn(),
       createRow: vi.fn().mockImplementation(async (db, table, data) => ({
         $id: 'cred-123',
-        ...data,
-      })),
+        ...data})),
     };
 
     const vault = new KylrixVault(mockSdk);
@@ -76,8 +73,7 @@ describe('KylrixVault', () => {
     const mockSdk = {
       listRows: vi.fn().mockResolvedValue({
         rows: [mockSettings],
-        rows: [mockSettings],
-      }),
+        rows: [mockSettings]}),
       createRow: vi.fn(),
     };
 
@@ -94,8 +90,7 @@ describe('KylrixVault', () => {
     const mockSdk = {
       listRows: vi.fn().mockResolvedValue({
         rows: [],
-        rows: [],
-      }),
+        rows: []}),
       createRow: vi.fn(),
     };
 

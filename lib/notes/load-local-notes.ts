@@ -78,7 +78,7 @@ export async function loadNotesFromLocalCopy(opts: {
     const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
     const db = await getRxDB().catch(() => null);
     if (db?.notes) {
-      const rxRows = (await db.notes.find().exec()).map((d) => d.toJSON());
+      const rxRows = (await db.notes.find().exec()).map((d: any) => d.toJSON());
       const notes = rxRows.map(normalizeNoteRow).filter((n): n is Notes => !!n);
       if (notes.length) {
         return {

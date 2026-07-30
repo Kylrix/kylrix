@@ -31,8 +31,7 @@ export function ConfirmationDialog({
   isDestructive = false,
   isLoading = false,
   onClose,
-  onConfirm,
-}: ConfirmationDialogProps) {
+  onConfirm}: ConfirmationDialogProps) {
   const dynamicColors = useColors();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));

@@ -25,7 +25,7 @@ export interface WorkflowChain {
 /**
  * Reversible Action Negation Mappings
  */
-export const REVERSIBLE_NEGATIONS: Record<string, string> = {
+const REVERSIBLE_NEGATIONS: Record<string, string> = {
   // Note/Workspace toggles
   'workspace.note.editor.click.make_public': 'workspace.note.editor.click.make_private',
   'workspace.note.editor.click.make_private': 'workspace.note.editor.click.make_public',
@@ -46,7 +46,7 @@ export const REVERSIBLE_NEGATIONS: Record<string, string> = {
 /**
  * Irreversible Actions that cannot be negated
  */
-export const IRREVERSIBLE_ACTIONS = new Set<string>([
+const IRREVERSIBLE_ACTIONS = new Set<string>([
   'workspace.note.editor.click.delete_note',
   'productivity.flow.board.click.delete_task',
   'security.vault.credentials.click.delete_credential',
@@ -56,16 +56,6 @@ export const IRREVERSIBLE_ACTIONS = new Set<string>([
 /**
  * Creates an unambiguous hierarchical action ID following our niche terminology.
  */
-export function makeActionId(
-  niche: TelemetryNiche,
-  app: string,
-  context: string,
-  action: string,
-  element: string
-): string {
-  const clean = (str: string) => String(str || '').trim().replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
-  return `${clean(niche)}.${clean(app)}.${clean(context)}.${clean(action)}.${clean(element)}`;
-}
 
 /**
  * Automatically determine action step importance to filter noise

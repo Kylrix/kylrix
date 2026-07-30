@@ -6,7 +6,7 @@ import {
   resolveEffectivePinned,
 } from '@/lib/services/user-resource-pins';
 
-export { resolveEffectivePinned };
+;
 
 const PER_USER_ONLY_TYPES: PinnableResourceType[] = ['message', 'conversation'];
 

@@ -3,8 +3,7 @@ import { PaymentMethod } from '../types';
 import { calculateSubscriptionPrice } from '../../subscription/ppp';
 import {
   resolveBlockBeeNotifyBaseUrl,
-  resolveBlockBeeRedirectBaseUrl,
-} from '../blockbee-urls';
+  resolveBlockBeeRedirectBaseUrl} from '../blockbee-urls';
 
 export class CryptoPaymentProvider implements PaymentProvider {
   name = PaymentMethod.CRYPTO;
@@ -81,8 +80,7 @@ export class CryptoPaymentProvider implements PaymentProvider {
       return {
         id: paymentId,
         url: data.payment_url,
-        provider: this.name,
-      };
+        provider: this.name};
     } catch (error) {
       console.error('[BlockBee] Failed to create session:', error);
       throw error;

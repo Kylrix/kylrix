@@ -5,14 +5,14 @@
 import { AGENTIC_TOOLS_REGISTRY, NOTE_TOOL_PAYLOAD_SCHEMA } from './tools-registry';
 import { buildUiCatalogPrompt } from './ui-catalog';
 
-export function buildToolsPromptSnippet(): string {
+function buildToolsPromptSnippet(): string {
   return AGENTIC_TOOLS_REGISTRY.map(
     (t) =>
       `- Key: "${t.key}" (${t.name}): ${t.description}. Params: ${t.parameters.join(', ')}. Auth: ${t.requiresAuthorization ? 'yes' : 'no'}`,
   ).join('\n');
 }
 
-export function buildNavigationGuide(): string {
+function buildNavigationGuide(): string {
   return `
 [NAVIGATION — SEMANTIC UI CATALOG]
 Use ui.navigate (or navigate_workspace) with args.target = stable id OR args.route = path.
@@ -26,7 +26,7 @@ Examples:
 `;
 }
 
-export function buildSearchGuide(): string {
+function buildSearchGuide(): string {
   return `
 [SEARCH — MULTI-STEP REASONING]
 For vague queries ("what's for today", "find my backend tasks", "look through my notes"):
@@ -39,7 +39,7 @@ When user asks to "explain an interesting note", search first, then get_note on 
 `;
 }
 
-export function buildMultiTurnGuide(): string {
+function buildMultiTurnGuide(): string {
   return `
 [MULTI-TURN & COMPRESSION]
 - Carry session objects across turns; prefer update over recreate.
@@ -49,7 +49,7 @@ export function buildMultiTurnGuide(): string {
 `;
 }
 
-export function buildWorkflowGuide(): string {
+function buildWorkflowGuide(): string {
   return `
 [WORKFLOWS & SPINE]
 Programmatic triggers may enqueue agent runs via workflow steps or spine events.
@@ -57,7 +57,7 @@ User-defined workflows (e.g. "create todo from each form response") map to tool 
 `;
 }
 
-export function buildAgenticDataStructuresGuide(): string {
+function buildAgenticDataStructuresGuide(): string {
   return `
 [DATA STRUCTURES & TABLES]
 1. Database: passwordManagerDb only.

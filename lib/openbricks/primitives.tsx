@@ -13,8 +13,7 @@ const OPENBRICKS_TOKENS = {
   text: '#F5F2ED',
   textMuted: 'rgba(245,242,237,0.68)',
   connectAccent: '#F59E0B',
-  primary: '#6366F1',
-} as const;
+  primary: '#6366F1'} as const;
 
 export const alpha = (color: string, value: number) => {
   const a = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 1));
@@ -50,11 +49,11 @@ export const alpha = (color: string, value: number) => {
 
   return input;
 };
-export const createTheme = (theme: any) => theme;
-export const ThemeProvider = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
-export const AppRouterCacheProvider = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
-export const styled = (Component: any) => Component;
-export const CssBaseline = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
+const createTheme = (theme: any) => theme;
+const ThemeProvider = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
+const AppRouterCacheProvider = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
+const styled = (Component: any) => Component;
+const CssBaseline = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
 export const useTheme = () => ({
   palette: {
     mode: 'dark',
@@ -138,8 +137,7 @@ const sxKeyMap: Record<string, string> = {
   mt: 'marginTop',
   mb: 'marginBottom',
   ml: 'marginLeft',
-  mr: 'marginRight',
-};
+  mr: 'marginRight'};
 
 const splitSx = (sx: any) => {
   const root: any = {};
@@ -295,8 +293,7 @@ export const IconButton = React.forwardRef(({ children, className, sx, disabled,
         minHeight: rootResolved?.minHeight ?? pixelSize,
         padding: rootResolved?.padding ?? rootResolved?.p ?? 4,
         ...rootResolved,
-        ...hoverResolved,
-      }}
+        ...hoverResolved}}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       {...props}
@@ -349,7 +346,7 @@ export const CardContent = ({ children, className, sx, ...props }: any) => {
     <div className={`${hasPaddingInSx ? '' : 'p-1'} ${className || ''}`} style={cleanSx(sx)} {...props}>{children}</div>
   );
 };
-export const CardActions = ({ children, className, sx, ...props }: any) => (
+const CardActions = ({ children, className, sx, ...props }: any) => (
   <div className={`flex items-center gap-2 pt-4 ${className || ''}`} style={cleanSx(sx)} {...props}>{children}</div>
 );
 
@@ -425,8 +422,7 @@ export const Tabs = React.forwardRef(({
           maxWidth: '100%',
           WebkitOverflowScrolling: 'touch',
           scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-        } : {}),
+          msOverflowStyle: 'none'} : {}),
       }}
       {...props}
     >
@@ -473,8 +469,7 @@ export const Tab = React.forwardRef(({
     style={{
       ...__tabRootSx,
       ...(selected ? __tabSelectedSx : __tabHoverSx),
-      ...cleanSx(sx),
-    }}
+      ...cleanSx(sx)}}
     {...props}
   >
     {icon ? (
@@ -483,8 +478,7 @@ export const Tab = React.forwardRef(({
           display: 'inline-flex',
           alignItems: 'center',
           gap: '8px',
-          flexDirection: iconPosition === 'end' ? 'row-reverse' : 'row',
-        }}
+          flexDirection: iconPosition === 'end' ? 'row-reverse' : 'row'}}
       >
         {icon}
         <span>{label ?? children}</span>
@@ -667,8 +661,7 @@ const COL_SPANS: Record<number, string> = {
   9: 'col-span-9',
   10: 'col-span-10',
   11: 'col-span-11',
-  12: 'col-span-12',
-};
+  12: 'col-span-12'};
 
 const SM_COL_SPANS: Record<number, string> = {
   1: 'sm:col-span-1',
@@ -682,8 +675,7 @@ const SM_COL_SPANS: Record<number, string> = {
   9: 'sm:col-span-9',
   10: 'sm:col-span-10',
   11: 'sm:col-span-11',
-  12: 'sm:col-span-12',
-};
+  12: 'sm:col-span-12'};
 
 const MD_COL_SPANS: Record<number, string> = {
   1: 'md:col-span-1',
@@ -697,8 +689,7 @@ const MD_COL_SPANS: Record<number, string> = {
   9: 'md:col-span-9',
   10: 'md:col-span-10',
   11: 'md:col-span-11',
-  12: 'md:col-span-12',
-};
+  12: 'md:col-span-12'};
 
 const LG_COL_SPANS: Record<number, string> = {
   1: 'lg:col-span-1',
@@ -712,8 +703,7 @@ const LG_COL_SPANS: Record<number, string> = {
   9: 'lg:col-span-9',
   10: 'lg:col-span-10',
   11: 'lg:col-span-11',
-  12: 'lg:col-span-12',
-};
+  12: 'lg:col-span-12'};
 
 const XL_COL_SPANS: Record<number, string> = {
   1: 'xl:col-span-1',
@@ -727,8 +717,7 @@ const XL_COL_SPANS: Record<number, string> = {
   9: 'xl:col-span-9',
   10: 'xl:col-span-10',
   11: 'xl:col-span-11',
-  12: 'xl:col-span-12',
-};
+  12: 'xl:col-span-12'};
 
 // 8. Grid Component
 export const Grid = React.forwardRef(({ children, container, item, size, xs, sm, md, lg, xl, spacing, className, sx, component: Component = 'div', ...props }: any, ref) => {
@@ -917,7 +906,7 @@ export const TextField = React.forwardRef(({
 });
 TextField.displayName = 'TextField';
 
-export type TextFieldProps = {
+type TextFieldProps = {
   label?: React.ReactNode;
   placeholder?: string;
   value?: string;
@@ -940,7 +929,7 @@ export type TextFieldProps = {
   [key: string]: unknown;
 };
 
-export type InputLabelProps = {
+type InputLabelProps = {
   children?: React.ReactNode;
   className?: string;
   sx?: Record<string, unknown>;
@@ -1251,8 +1240,7 @@ export const Menu = React.forwardRef(({
       const horizontal = anchorOrigin?.horizontal === 'right' ? 'right' : 'left';
       setBaseCoords({
         top: vertical === 'top' ? rect.top - 4 : rect.bottom + 4,
-        left: horizontal === 'right' ? rect.right : rect.left,
-      });
+        left: horizontal === 'right' ? rect.right : rect.left});
     }
   }, [open, anchorEl, anchorReference, anchorPosition?.top, anchorPosition?.left, anchorOrigin?.vertical, anchorOrigin?.horizontal]);
 
@@ -1325,8 +1313,7 @@ export const Menu = React.forwardRef(({
           left: finalCoords.left,
           opacity: finalCoords.opacity,
           minWidth: 220,
-          ...paperSx,
-        }}
+          ...paperSx}}
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
         {...props}
@@ -1409,7 +1396,7 @@ export const InputLabel = React.forwardRef(({ children, className, sx, ...props 
 ));
 InputLabel.displayName = 'InputLabel';
 
-export const Radio = React.forwardRef(({ checked, onChange, disabled, className, sx, ...props }: any, ref) => (
+const Radio = React.forwardRef(({ checked, onChange, disabled, className, sx, ...props }: any, ref) => (
   <button
     ref={ref}
     onClick={() => !disabled && onChange?.({ target: { checked: !checked } })}
@@ -1423,7 +1410,7 @@ export const Radio = React.forwardRef(({ checked, onChange, disabled, className,
 ));
 Radio.displayName = 'Radio';
 
-export const RadioGroup = React.forwardRef(({ children, value, onChange, className, sx, ...props }: any, ref) => (
+const RadioGroup = React.forwardRef(({ children, value, onChange, className, sx, ...props }: any, ref) => (
   <div
     ref={ref}
     className={`flex flex-col gap-2 ${className || ''}`}
@@ -1473,7 +1460,7 @@ export const Collapse = React.forwardRef(({ in: isOpen, children, className, sx,
 });
 Collapse.displayName = 'Collapse';
 
-export const Snackbar = React.forwardRef(({ open, message, autoHideDuration, onClose, className, sx, ...props }: any, ref) => {
+const Snackbar = React.forwardRef(({ open, message, autoHideDuration, onClose, className, sx, ...props }: any, ref) => {
   if (!open) return null;
   return (
     <div
@@ -1489,22 +1476,22 @@ export const Snackbar = React.forwardRef(({ open, message, autoHideDuration, onC
 });
 Snackbar.displayName = 'Snackbar';
 
-export const Abc = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const AccessTime = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Abc = ({ children, ...props }: any) => React.createElement('div', props, children);
+const AccessTime = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Accordion = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const AccordionDetails = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const AccordionSummary = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const AddCircleOutline = ({ children, ...props }: any) => React.createElement('div', props, children);
+const AddCircleOutline = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const AlertTitle = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const AlternateEmail = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Apps = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Archive = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const ArrowBackIosNew = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const ArrowForwardIos = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Assignment = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const AutoAwesome = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const AutoFixHigh = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Autocomplete = ({ children, ...props }: any) => React.createElement('div', props, children);
+const AlternateEmail = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Apps = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Archive = ({ children, ...props }: any) => React.createElement('div', props, children);
+const ArrowBackIosNew = ({ children, ...props }: any) => React.createElement('div', props, children);
+const ArrowForwardIos = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Assignment = ({ children, ...props }: any) => React.createElement('div', props, children);
+const AutoAwesome = ({ children, ...props }: any) => React.createElement('div', props, children);
+const AutoFixHigh = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Autocomplete = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const AvatarGroup = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Backdrop = ({ open = false, onClick, children, className, sx, ...props }: any) => {
   if (!open) return null;
@@ -1519,15 +1506,14 @@ export const Backdrop = ({ open = false, onClick, children, className, sx, ...pr
         zIndex: 1300,
         backgroundColor: 'rgba(0, 0, 0, 0.72)',
         animation: 'kylrixBackdropIn 0.28s ease',
-        ...cleanSx(sx),
-      }}
+        ...cleanSx(sx)}}
       {...props}
     >
       {children}
     </div>
   );
 };
-export const Block = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Block = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const BottomNavigation = React.forwardRef(({ children, value, onChange, actionColor, className, sx, showLabels, ...props }: any, ref) => {
   return (
     <div
@@ -1536,8 +1522,7 @@ export const BottomNavigation = React.forwardRef(({ children, value, onChange, a
       style={{
         background: 'transparent',
         height: 72,
-        ...cleanSx(sx),
-      }}
+        ...cleanSx(sx)}}
       {...props}
     >
       {React.Children.map(children, (child) => {
@@ -1575,8 +1560,7 @@ export const BottomNavigationAction = React.forwardRef(({ label, icon, selected,
         cursor: 'pointer',
         color: selected ? accent : 'rgba(255, 255, 255, 0.4)',
         backgroundColor: 'transparent',
-        ...cleanSx(sx),
-      }}
+        ...cleanSx(sx)}}
       onPointerDown={() => setPressing(true)}
       onPointerUp={() => setPressing(false)}
       onPointerLeave={() => setPressing(false)}
@@ -1607,8 +1591,8 @@ export const BottomNavigationAction = React.forwardRef(({ label, icon, selected,
   );
 });
 BottomNavigationAction.displayName = 'BottomNavigationAction';
-export const Breadcrumbs = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Brush = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Breadcrumbs = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Brush = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const ButtonBase = React.forwardRef(({ children, className, sx, component, ...props }: any, ref) => {
   const Component = component || 'button';
   return (
@@ -1623,8 +1607,8 @@ export const ButtonBase = React.forwardRef(({ children, className, sx, component
   );
 });
 ButtonBase.displayName = 'ButtonBase';
-export const CalendarMonth = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Campaign = ({ children, ...props }: any) => React.createElement('div', props, children);
+const CalendarMonth = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Campaign = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const CardHeader = React.forwardRef(({ avatar, action, title, subheader, children, className, sx, ...props }: any, ref) => (
   <div
     ref={ref}
@@ -1646,7 +1630,7 @@ export const CardHeader = React.forwardRef(({ avatar, action, title, subheader, 
   </div>
 ));
 CardHeader.displayName = 'CardHeader';
-export const CardMedia = React.forwardRef(({ component, image, src, alt, className, sx, children, ...props }: any, ref) => {
+const CardMedia = React.forwardRef(({ component, image, src, alt, className, sx, children, ...props }: any, ref) => {
   const Component = component || 'img';
   if (Component === 'img' || image || src) {
     return (
@@ -1672,9 +1656,9 @@ export const CardMedia = React.forwardRef(({ component, image, src, alt, classNa
   );
 });
 CardMedia.displayName = 'CardMedia';
-export const ChatBubbleOutline = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Circle = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Construction = ({ children, ...props }: any) => React.createElement('div', props, children);
+const ChatBubbleOutline = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Circle = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Construction = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Container = React.forwardRef(({ children, className, sx, maxWidth = 'lg', fixed, disableGutters, ...props }: any, ref) => {
   let maxWClass = "max-w-7xl";
   if (maxWidth === 'xs') maxWClass = "max-w-xs";
@@ -1697,18 +1681,18 @@ export const Container = React.forwardRef(({ children, className, sx, maxWidth =
   );
 });
 Container.displayName = 'Container';
-export const ContentPaste = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Dashboard = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const DataObject = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const DeleteOutline = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const DragHandle = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const EmojiEmotionsOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const ErrorOutline = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const EventBusy = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const EventNote = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const ExpandLess = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const ExpandMore = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Extension = ({ children, ...props }: any) => React.createElement('div', props, children);
+const ContentPaste = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Dashboard = ({ children, ...props }: any) => React.createElement('div', props, children);
+const DataObject = ({ children, ...props }: any) => React.createElement('div', props, children);
+const DeleteOutline = ({ children, ...props }: any) => React.createElement('div', props, children);
+const DragHandle = ({ children, ...props }: any) => React.createElement('div', props, children);
+const EmojiEmotionsOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
+const ErrorOutline = ({ children, ...props }: any) => React.createElement('div', props, children);
+const EventBusy = ({ children, ...props }: any) => React.createElement('div', props, children);
+const EventNote = ({ children, ...props }: any) => React.createElement('div', props, children);
+const ExpandLess = ({ children, ...props }: any) => React.createElement('div', props, children);
+const ExpandMore = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Extension = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Fab = React.forwardRef(({ children, className, sx, color, ...props }: any, ref) => (
   <button
     ref={ref}
@@ -1736,16 +1720,16 @@ export const Fade = ({ children, in: inProp, timeout, sx, ...props }: any) => (
     {children}
   </div>
 );
-export const FiberPin = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const FingerprintOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Flag = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const FlagOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const FolderOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const FolderSpecial = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const FormGroup = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Fullscreen = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const FullscreenExit = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const InfoOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
+const FiberPin = ({ children, ...props }: any) => React.createElement('div', props, children);
+const FingerprintOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Flag = ({ children, ...props }: any) => React.createElement('div', props, children);
+const FlagOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
+const FolderOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
+const FolderSpecial = ({ children, ...props }: any) => React.createElement('div', props, children);
+const FormGroup = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Fullscreen = ({ children, ...props }: any) => React.createElement('div', props, children);
+const FullscreenExit = ({ children, ...props }: any) => React.createElement('div', props, children);
+const InfoOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const InputBase = React.forwardRef(({ className, sx, inputRef, endAdornment, startAdornment, fullWidth, ...props }: any, ref) => {
   const { root, nested } = splitSx(sx);
   const placeholderStyle = nested['& input::placeholder'] || {};
@@ -1772,12 +1756,12 @@ export const InputBase = React.forwardRef(({ className, sx, inputRef, endAdornme
   );
 });
 InputBase.displayName = 'InputBase';
-export const Insights = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Keyboard = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Label = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Launch = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const LibraryAdd = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const LightbulbOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Insights = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Keyboard = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Label = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Launch = ({ children, ...props }: any) => React.createElement('div', props, children);
+const LibraryAdd = ({ children, ...props }: any) => React.createElement('div', props, children);
+const LightbulbOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Link = React.forwardRef(({ children, href, className, sx, target, rel, ...props }: any, ref) => (
   <a
     ref={ref}
@@ -1792,7 +1776,7 @@ export const Link = React.forwardRef(({ children, href, className, sx, target, r
   </a>
 ));
 Link.displayName = 'Link';
-export const LinkOff = ({ children, ...props }: any) => React.createElement('div', props, children);
+const LinkOff = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const ListItemIcon = React.forwardRef(({ children, className, sx, ...props }: any, ref) => {
   const resolved = cleanSx(sx);
   const compact = resolved?.minWidth === 'auto' || resolved?.minWidth === 0;
@@ -1808,20 +1792,20 @@ export const ListItemIcon = React.forwardRef(({ children, className, sx, ...prop
   );
 });
 ListItemIcon.displayName = 'ListItemIcon';
-export const LocalOffer = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const LocalOfferOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const LocationOn = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const LockOpen = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Login = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Logout = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const MarkEmailRead = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const MarkEmailUnread = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const NoteAdd = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const NoteOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Notes = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Numbers = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const OpenInFull = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Pagination = React.forwardRef(
+const LocalOffer = ({ children, ...props }: any) => React.createElement('div', props, children);
+const LocalOfferOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
+const LocationOn = ({ children, ...props }: any) => React.createElement('div', props, children);
+const LockOpen = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Login = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Logout = ({ children, ...props }: any) => React.createElement('div', props, children);
+const MarkEmailRead = ({ children, ...props }: any) => React.createElement('div', props, children);
+const MarkEmailUnread = ({ children, ...props }: any) => React.createElement('div', props, children);
+const NoteAdd = ({ children, ...props }: any) => React.createElement('div', props, children);
+const NoteOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Notes = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Numbers = ({ children, ...props }: any) => React.createElement('div', props, children);
+const OpenInFull = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Pagination = React.forwardRef(
   (
     {
       count,
@@ -1853,8 +1837,7 @@ export const Pagination = React.forwardRef(
         type: 'previous',
         page: Math.max(1, safePage - 1),
         selected: false,
-        disabled: safePage <= 1,
-      })
+        disabled: safePage <= 1})
     );
     for (let i = 1; i <= safeCount; i++) {
       items.push(makeItem({ type: 'page', page: i, selected: i === safePage, disabled: false }));
@@ -1864,8 +1847,7 @@ export const Pagination = React.forwardRef(
         type: 'next',
         page: Math.min(safeCount, safePage + 1),
         selected: false,
-        disabled: safePage >= safeCount,
-      })
+        disabled: safePage >= safeCount})
     );
 
     return (
@@ -1886,7 +1868,7 @@ export const Pagination = React.forwardRef(
 );
 Pagination.displayName = 'Pagination';
 
-export const PaginationItem = React.forwardRef(
+const PaginationItem = React.forwardRef(
   (
     {
       type,
@@ -1933,10 +1915,10 @@ export const PaginationItem = React.forwardRef(
   }
 );
 PaginationItem.displayName = 'PaginationItem';
-export const PhotoCamera = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const PictureInPictureAlt = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const PlaylistAdd = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const PlaylistAddCheck = ({ children, ...props }: any) => React.createElement('div', props, children);
+const PhotoCamera = ({ children, ...props }: any) => React.createElement('div', props, children);
+const PictureInPictureAlt = ({ children, ...props }: any) => React.createElement('div', props, children);
+const PlaylistAdd = ({ children, ...props }: any) => React.createElement('div', props, children);
+const PlaylistAddCheck = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Popover = React.forwardRef(({ open, anchorEl, onClose, children, sx, className, ...props }: any, ref) => {
   const [coords, setCoords] = React.useState({ top: 0, left: 0 });
 
@@ -1945,8 +1927,7 @@ export const Popover = React.forwardRef(({ open, anchorEl, onClose, children, sx
       const rect = anchorEl.getBoundingClientRect();
       setCoords({
         top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-      });
+        left: rect.left + window.scrollX});
     }
   }, [open, anchorEl]);
 
@@ -1971,15 +1952,15 @@ export const Popover = React.forwardRef(({ open, anchorEl, onClose, children, sx
   );
 });
 Popover.displayName = 'Popover';
-export const Preview = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const PushPin = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const PushPinOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const RadioButtonChecked = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Reply = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const RotateLeft = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Save = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const ShieldOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const SpeedDial = React.forwardRef(
+const Preview = ({ children, ...props }: any) => React.createElement('div', props, children);
+const PushPin = ({ children, ...props }: any) => React.createElement('div', props, children);
+const PushPinOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
+const RadioButtonChecked = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Reply = ({ children, ...props }: any) => React.createElement('div', props, children);
+const RotateLeft = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Save = ({ children, ...props }: any) => React.createElement('div', props, children);
+const ShieldOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
+const SpeedDial = React.forwardRef(
   (
     {
       ariaLabel,
@@ -2043,8 +2024,7 @@ export const SpeedDial = React.forwardRef(
               flexDirection: direction === 'up' ? 'column-reverse' : 'column',
               gap: 10,
               alignItems: 'flex-end',
-              marginTop: 10,
-            }}
+              marginTop: 10}}
           >
             {React.Children.map(children, (child) => {
               if (!React.isValidElement(child)) return child;
@@ -2058,7 +2038,7 @@ export const SpeedDial = React.forwardRef(
 );
 SpeedDial.displayName = 'SpeedDial';
 
-export const SpeedDialIcon = React.forwardRef<HTMLSpanElement, any>(({ icon, openIcon, open }: any, ref) => {
+const SpeedDialIcon = React.forwardRef<HTMLSpanElement, any>(({ icon, openIcon, open }: any, ref) => {
   return (
     <span ref={ref} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
       {open ? openIcon : icon}
@@ -2067,7 +2047,7 @@ export const SpeedDialIcon = React.forwardRef<HTMLSpanElement, any>(({ icon, ope
 });
 SpeedDialIcon.displayName = 'SpeedDialIcon';
 
-export const SpeedDialAction = React.forwardRef(
+const SpeedDialAction = React.forwardRef(
   (
     {
       icon,
@@ -2142,11 +2122,11 @@ export const SpeedDialAction = React.forwardRef(
   }
 );
 SpeedDialAction.displayName = 'SpeedDialAction';
-export const Spellcheck = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Stop = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Summarize = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const SwapVert = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Sync = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Spellcheck = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Stop = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Summarize = ({ children, ...props }: any) => React.createElement('div', props, children);
+const SwapVert = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Sync = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const TableContainer = React.forwardRef(({ children, className, sx, component: Component = 'div', ...props }: any, ref) => {
   return (
     <Component
@@ -2296,21 +2276,19 @@ export const TablePagination = React.forwardRef(({
 });
 TablePagination.displayName = 'TablePagination';
 
-export const TableRows = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Tag = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Today = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const ToggleButton = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const ToggleButtonGroup = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const ToggleOn = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Undo = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const UploadFile = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const VerifiedUser = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Zoom = ({ children, in: _in, timeout, sx, ...props }: any) => React.createElement('div', { 
+const TableRows = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Tag = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Today = ({ children, ...props }: any) => React.createElement('div', props, children);
+const ToggleButton = ({ children, ...props }: any) => React.createElement('div', props, children);
+const ToggleButtonGroup = ({ children, ...props }: any) => React.createElement('div', props, children);
+const ToggleOn = ({ children, ...props }: any) => React.createElement('div', props, children);
+const Undo = ({ children, ...props }: any) => React.createElement('div', props, children);
+const UploadFile = ({ children, ...props }: any) => React.createElement('div', props, children);
+const VerifiedUser = ({ children, ...props }: any) => React.createElement('div', props, children);
+export const Zoom = ({ children, timeout, sx, ...props }: any) => React.createElement('div', { 
     ...props, 
-    style: { 
-        display: _in === false ? 'none' : 'contents',
+    style: {
         ...cleanSx(sx)
     } 
 }, children);
-export const keyframes = (...args: any[]) => String(args[0] ?? '');
-export default {};
+const keyframes = (...args: any[]) => String(args[0] ?? '');

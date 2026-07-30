@@ -56,7 +56,6 @@ const alpha = (hexColor: string, opacity: number) => {
 };
 
 const GlobalSearchAvatar = ({ u }: { u: any }) => {
-    const userId = u.userId || u.$id;
     const profilePicId = u.avatar || u.profilePicId || null;
     
     return (
@@ -96,8 +95,7 @@ export const ChatList = ({
     onTabChange,
     hideTabs = false,
     skipSecureLoad = false,
-    skipThreadsLoad = false,
-}: { 
+    skipThreadsLoad = false}: { 
     externalQuery?: string;
     activeTab?: 'secure' | 'public';
     onTabChange?: (tab: 'secure' | 'public') => void;
@@ -130,7 +128,7 @@ export const ChatList = ({
     const [loading, setLoading] = useState(() => !skipSecureLoad && initialSecureCache.length === 0);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<any[]>([]);
-    const [searching, setSearching] = useState(false);
+    const [_searching, setSearching] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const isUnlockedRef = React.useRef(isUnlocked);
     isUnlockedRef.current = isUnlocked;
@@ -146,7 +144,7 @@ export const ChatList = ({
         lastMessageAt: string;
     }>>({});
     const [activePreviewConversationId, setActivePreviewConversationId] = useState<string | null>(null);
-    const [isPending, startTransition] = useTransition();
+    const [_isPending, startTransition] = useTransition();
     const [activeTabState, setActiveTabState] = useState<'secure' | 'public'>(() => {
         return propActiveTab || (ecosystemSecurity.status.isUnlocked ? 'secure' : 'public');
     });
@@ -451,8 +449,7 @@ export const ChatList = ({
                     linkedResourceId,
                     linkedResourceName,
                     lastMessageText: note.content || 'Huddle discussion initialized',
-                    lastMessageAt: note.updatedAt || note.$createdAt,
-                };
+                    lastMessageAt: note.updatedAt || note.$createdAt};
             });
 
             mapped.sort((a: any, b: any) => new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime());
@@ -488,8 +485,7 @@ export const ChatList = ({
                     return {
                         ...entry,
                         name: identity.displayName || identity.username || entry.name,
-                        avatarUrl,
-                    };
+                        avatarUrl};
                 }));
 
                 enriched.sort((a: any, b: any) => new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime());
@@ -744,8 +740,7 @@ export const ChatList = ({
             }
 
             const response = await ChatService.getConversations(user!.$id, {
-                forceRefresh: options?.forceRefresh,
-            });
+                forceRefresh: options?.forceRefresh});
             let rows = [...response.rows];
 
             const hasEncrypted = rows.some(c => c.isEncrypted);
@@ -829,8 +824,7 @@ export const ChatList = ({
                         lastMessageText: previewText,
                         lastMessageAt: previewAt,
                         lastMessageId: previewId,
-                        lastMessageSenderId: previewSenderId,
-                    };
+                        lastMessageSenderId: previewSenderId};
                 }
 
                 const isActuallySelf = conv.participants && (conv.participants.length === 1 || conv.participants.length === 2) && conv.participants.every((p: string) => p === user!.$id);
@@ -1070,8 +1064,7 @@ export const ChatList = ({
                 try {
                     const convRow = conversationsRef.current[existingIndex];
                     const latest = await ChatService.getMessages(relatedConversationId, 1, 0, user?.$id, {
-                        prefetchedConversation: convRow,
-                    });
+                        prefetchedConversation: convRow});
                     const latestMessage = latest.rows?.[0];
                     if (latestMessage) {
                         livePreviewText = formatPreviewFromMessage(latestMessage);
@@ -1085,8 +1078,7 @@ export const ChatList = ({
                     [relatedConversationId]: {
                         lastMessageId: payload.$id,
                         lastMessageText: livePreviewText,
-                        lastMessageAt: livePreviewAt,
-                    },
+                        lastMessageAt: livePreviewAt},
                 }));
                 setActivePreviewConversationId(relatedConversationId);
                 window.setTimeout(() => {
@@ -1102,8 +1094,7 @@ export const ChatList = ({
                             lastMessageAt: livePreviewAt,
                             lastMessageId: payload.$id,
                             lastMessageSenderId: payload.senderId || current.lastMessageSenderId,
-                            lastMessageText: livePreviewText,
-                        };
+                            lastMessageText: livePreviewText};
 
                         next.sort((a, b) => new Date(b.lastMessageAt || b.createdAt || 0).getTime() - new Date(a.lastMessageAt || a.createdAt || 0).getTime());
                         conversationsRef.current = next;
@@ -1122,8 +1113,7 @@ export const ChatList = ({
                         lastMessageAt: payload.$createdAt || payload.createdAt || current.lastMessageAt,
                         lastMessageId: payload.$id || current.lastMessageId,
                         lastMessageSenderId: payload.senderId || current.lastMessageSenderId,
-                        lastMessageText: formatPreviewFromMessage(payload) || current.lastMessageText,
-                    };
+                        lastMessageText: formatPreviewFromMessage(payload) || current.lastMessageText};
 
                     next.sort((a, b) => new Date(b.lastMessageAt || b.createdAt || 0).getTime() - new Date(a.lastMessageAt || a.createdAt || 0).getTime());
                     conversationsRef.current = next;

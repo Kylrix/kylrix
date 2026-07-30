@@ -3,7 +3,7 @@ import { markSudoActive, resetSudo } from '@/lib/sudo-mode';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 
 // Enhanced crypto configuration for maximum security with optimal performance
-export class MasterPassCrypto {
+class MasterPassCrypto {
   private static instance: MasterPassCrypto;
   private masterKey: CryptoKey | null = null;
   private isUnlocked = false;
@@ -48,8 +48,7 @@ export class MasterPassCrypto {
       iterations: MasterPassCrypto.ARGON2_ITERATIONS,
       memorySize: MasterPassCrypto.ARGON2_MEMORY,
       hashLength: 32, // 256 bits
-      outputType: 'binary',
-    });
+      outputType: 'binary'});
 
     return crypto.subtle.importKey(
       "raw",
@@ -79,8 +78,7 @@ export class MasterPassCrypto {
         name: "PBKDF2",
         salt: salt as any,
         iterations: MasterPassCrypto.PBKDF2_ITERATIONS,
-        hash: "SHA-256",
-      },
+        hash: "SHA-256"},
       keyMaterial,
       { name: "AES-GCM", length: MasterPassCrypto.KEY_SIZE },
       true, // Make extractable for passkey functionality
@@ -240,7 +238,7 @@ export class MasterPassCrypto {
             const { syncMasterpassToAccountPassword } = await import("./actions/client-ops");
             syncMasterpassToAccountPassword(userId, masterPassword)
               .then(() => console.log('[Vault] Silently synchronized masterpass to account password.'))
-              .catch((err) => console.error('[Vault] Masterpass sync failed:', err));
+              .catch((err: any) => console.error('[Vault] Masterpass sync failed:', err));
           }
         } catch (e) {
           console.warn('[Vault] Failed to check keychain entry for authPass sync:', e);
@@ -280,7 +278,7 @@ export class MasterPassCrypto {
             const { syncMasterpassToAccountPassword } = await import("./actions/client-ops");
             syncMasterpassToAccountPassword(userId, masterPassword)
               .then(() => console.log('[Vault] Silently synchronized masterpass to account password on first-time setup.'))
-              .catch((err) => console.error('[Vault] Masterpass first-time sync failed:', err));
+              .catch((err: any) => console.error('[Vault] Masterpass first-time sync failed:', err));
           }
         } catch (e) {
           console.warn('[Vault] Failed to trigger first-time masterpass auth sync:', e);
@@ -324,7 +322,7 @@ export class MasterPassCrypto {
         const { syncMasterpassToAccountPassword } = await import("./actions/client-ops");
         await syncMasterpassToAccountPassword(userId, newPassword)
           .then(() => console.log('[Vault] Silently synchronized masterpass to account password on masterpass change.'))
-          .catch((err) => console.error('[Vault] Masterpass sync failed on change:', err));
+          .catch((err: any) => console.error('[Vault] Masterpass sync failed on change:', err));
       }
     } catch (e) {
       console.warn('[Vault] Failed to trigger masterpass auth sync on change:', e);
@@ -336,8 +334,7 @@ export class MasterPassCrypto {
     return await crypto.subtle.generateKey(
       {
         name: "AES-GCM",
-        length: 256,
-      },
+        length: 256},
       true,
       ["encrypt", "decrypt", "wrapKey", "unwrapKey"]
     );
@@ -704,7 +701,7 @@ export class MasterPassCrypto {
       const combined = new Uint8Array(
         atob(encryptedData)
           .split("")
-          .map((char) => char.charCodeAt(0)),
+          .map((char: any) => char.charCodeAt(0)),
       );
 
       // Extract IV (now 16 bytes) and encrypted data
@@ -796,13 +793,7 @@ export class MasterPassCrypto {
 export const masterPassCrypto = MasterPassCrypto.getInstance();
 
 // Export utility functions for settings page
-export const setVaultTimeout = (minutes: number) => {
-  MasterPassCrypto.setTimeoutMinutes(minutes);
-};
 
-export const getVaultTimeout = () => {
-  return MasterPassCrypto.getTimeoutMinutes();
-};
 
 // Utility functions for field-specific encryption with validation
 export const encryptField = async (value: string): Promise<string> => {
@@ -836,6 +827,3 @@ export const decryptField = async (encryptedValue: string): Promise<string> => {
 };
 
 // Add utility function for reset
-export const resetMasterPasswordVault = () => {
-  masterPassCrypto.resetMasterPassword();
-};

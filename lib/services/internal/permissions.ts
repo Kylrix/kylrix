@@ -9,8 +9,7 @@ import {
   createEpochRows,
   removeLockboxRows,
   resolveNextEpochNumber,
-  upsertLockboxRows,
-} from '@/lib/api/permission-updater';
+  upsertLockboxRows} from '@/lib/api/permission-updater';
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { createServerClient } from '@/lib/appwrite/server';
 import { ID, Permission, Role } from 'node-appwrite';
@@ -44,8 +43,7 @@ function getResourceKeyMappings(body: any) {
         resourceId,
         grantee: String(grantee),
         wrappedKey: String(key),
-        metadata: body?.metadata || null,
-      }))
+        metadata: body?.metadata || null}))
       .filter((entry) => entry.grantee && entry.wrappedKey);
   }
 
@@ -56,8 +54,7 @@ function getResourceKeyMappings(body: any) {
     resourceId,
     grantee,
     wrappedKey,
-    metadata: body?.metadata || null,
-  }));
+    metadata: body?.metadata || null}));
 }
 
 function getParticipantIds(body: any) {
@@ -76,13 +73,12 @@ export async function applyPermissionMutation(actorId: string, body: any) {
     if (noteIds.length === 0) throw new Error('At least one noteId is required');
     if (!wrappedKey) throw new Error('wrappedKey is required');
 
-    const ghostKeyMappings = noteIds.map((noteId) => ({
+    const ghostKeyMappings = noteIds.map((noteId: any) => ({
       resourceId: noteId,
       resourceType: (body?.resourceType as string) || DEFAULT_GHOST_RESOURCE_TYPE,
       grantee: actorId,
       wrappedKey: wrappedKey as string,
-      metadata: body?.metadata as any || null,
-    }));
+      metadata: body?.metadata as any || null}));
 
     return await upsertLockboxRows(databases, actorId, ghostKeyMappings);
   }
@@ -110,8 +106,7 @@ export async function applyPermissionMutation(actorId: string, body: any) {
       bucketId: body?.storageBucketId || body?.bucketId,
       fileId: body?.fileId,
       targetUserIds,
-      permission: getPermissionLevel(body),
-    };
+      permission: getPermissionLevel(body)};
     if (action === 'revoke') {
       await revokeStorageFilePermissions(storage, actorId, storageInput);
     } else {
@@ -127,8 +122,7 @@ export async function applyPermissionMutation(actorId: string, body: any) {
       targetUserIds,
       permission: getPermissionLevel(body),
       action: action === 'revoke' ? 'revoke' : 'grant',
-      ownerId: body?.ownerId,
-    });
+      ownerId: body?.ownerId});
   }
 
   if (action === 'revoke') {
@@ -153,8 +147,7 @@ export async function revokePermissionMutation(actorId: string, body: any, query
       rowId: body.rowId,
       targetUserIds,
       action: 'revoke',
-      ownerId: body?.ownerId,
-    });
+      ownerId: body?.ownerId});
   }
 
   const resourceType = body?.resourceType || body?.mappingResourceType;
@@ -167,7 +160,7 @@ export async function revokePermissionMutation(actorId: string, body: any, query
 function normalizeTargetUserIds(value: unknown): string[] {
   if (!value) return [];
   if (Array.isArray(value)) {
-    return value.map((v) => String(v || '').trim()).filter(Boolean);
+    return value.map((v: any) => String(v || '').trim()).filter(Boolean);
   }
   return [String(value).trim()].filter(Boolean);
 }

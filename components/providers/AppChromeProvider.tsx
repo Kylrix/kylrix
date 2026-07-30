@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
-export type AppChromeMode = 'default' | 'compact' | 'hidden';
+type AppChromeMode = 'default' | 'compact' | 'hidden';
 
 interface AppChromeState {
   mode: AppChromeMode;
@@ -20,8 +20,7 @@ interface AppChromeContextType extends AppChromeState {
 const DEFAULT_STATE: AppChromeState = {
   mode: 'default',
   label: null,
-  dockHeight: 0,
-};
+  dockHeight: 0};
 
 const AppChromeContext = createContext<AppChromeContextType | undefined>(undefined);
 
@@ -68,8 +67,7 @@ export function AppChromeProvider({ children }: { children: React.ReactNode }) {
       ...state,
       headerHeight,
       setChromeState,
-      resetChromeState,
-    };
+      resetChromeState};
   }, [resetChromeState, setChromeState, state]);
 
   return <AppChromeContext.Provider value={value}>{children}</AppChromeContext.Provider>;

@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { account } from '@/lib/appwrite/client';
-import { createBillingCheckoutSessionAction } from '@/app/(app)/(auth)/accounts/actions/billing';
+import { createBillingCheckoutSessionAction } from '@/lib/actions/billing/billing';
 import { calculateTotalSubscriptionPrice, getBundledFreeMonths, getYearlyDiscountedPrice, getYearlyListPrice } from '@/lib/subscription/ppp';
 
 const CHECKOUT_CACHE_KEY = 'kylrix_pricing_checkout_v1';
@@ -57,8 +57,7 @@ export default function PricingPage() {
         method: 'CRYPTO',
         countryCode,
         months: checkoutMonths,
-        jwt,
-      });
+        jwt});
 
       if (session?.url) {
         sessionStorage.removeItem(CHECKOUT_CACHE_KEY);
@@ -100,8 +99,7 @@ export default function PricingPage() {
         planId,
         months,
         countryCode: 'US',
-        tier: selectedTier,
-      };
+        tier: selectedTier};
       sessionStorage.setItem(CHECKOUT_CACHE_KEY, JSON.stringify(intent));
       openUnified('login');
       return;

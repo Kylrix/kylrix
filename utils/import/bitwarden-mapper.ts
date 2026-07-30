@@ -7,7 +7,7 @@ import type {
 import { BITWARDEN_ITEM_TYPES } from "./bitwarden-types";
 import { extractTotpFromBitwardenLogin } from "./totp-parser";
 
-export interface ImportMapping {
+interface ImportMapping {
   folders: Map<string, string>; // Bitwarden folder ID -> Our folder ID
   statistics: {
     totalItems: number;

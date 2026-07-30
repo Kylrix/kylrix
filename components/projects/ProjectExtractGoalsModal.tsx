@@ -18,8 +18,7 @@ import {
   CircularProgress,
   alpha,
   useTheme,
-  Stack,
-} from '@/lib/openbricks/primitives';
+  Stack} from '@/lib/openbricks/primitives';
 import { X, Sparkles, AlertCircle } from 'lucide-react';
 import { ID } from 'appwrite';
 import { databases } from '@/lib/appwrite/client';
@@ -49,8 +48,7 @@ export default function ProjectExtractGoalsModal({
   projectId,
   noteTitle,
   noteContent,
-  onExtracted,
-}: ProjectExtractGoalsModalProps) {
+  onExtracted}: ProjectExtractGoalsModalProps) {
   const theme = useTheme();
   const { showSuccess, showError } = useToast();
   const { user } = useAuth();
@@ -150,8 +148,7 @@ export default function ProjectExtractGoalsModal({
           border: '1px solid rgba(255,255,255,0.06)',
           borderRadius: '28px',
           backgroundImage: 'none',
-          overflow: 'hidden',
-        },
+          overflow: 'hidden'},
       }}
     >
       <DialogTitle sx={{ p: 3, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -164,8 +161,7 @@ export default function ProjectExtractGoalsModal({
               bgcolor: alpha(theme.palette.primary.main, 0.1),
               color: theme.palette.primary.main,
               display: 'grid',
-              placeItems: 'center',
-            }}
+              placeItems: 'center'}}
           >
             <Sparkles size={16} />
           </Box>
@@ -206,15 +202,13 @@ export default function ProjectExtractGoalsModal({
                     sx={{
                       color: 'rgba(255,255,255,0.2)',
                       '&.ob-checked': {
-                        color: theme.palette.primary.main,
-                      },
+                        color: theme.palette.primary.main},
                     }}
                   />
                 }
                 sx={{
                   borderBottom: '1px solid rgba(255,255,255,0.02)',
-                  px: 3,
-                }}
+                  px: 3}}
               >
                 <ListItemText
                   primary={task.title}
@@ -223,8 +217,7 @@ export default function ProjectExtractGoalsModal({
                       fontWeight: 600,
                       fontSize: '0.85rem',
                       color: task.selected ? '#fff' : 'rgba(255,255,255,0.4)',
-                      transition: 'color 0.2s ease',
-                    },
+                      transition: 'color 0.2s ease'},
                   }}
                 />
               </ListItem>

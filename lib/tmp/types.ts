@@ -2,7 +2,7 @@ export const TMP_PROTOCOL_VERSION = 3;
 
 export type PayloadKind = "unicast_mail" | "multicast_chat" | "system_directive";
 
-export type AttachmentMetadata = {
+type AttachmentMetadata = {
   content_address_hash: string;
   storage_size_bytes: number;
   file_mime_type: string;
@@ -10,7 +10,7 @@ export type AttachmentMetadata = {
   file_decryption_key: string;
 };
 
-export type UnicastMail = {
+type UnicastMail = {
   message_id: string;
   thread_id: string;
   subject: string;
@@ -19,7 +19,7 @@ export type UnicastMail = {
   attachments: AttachmentMetadata[];
 };
 
-export type MulticastChat = {
+type MulticastChat = {
   group_id: string;
   group_epoch: number;
   client_message_id: string;
@@ -27,15 +27,14 @@ export type MulticastChat = {
   interactive_mentions: string[];
 };
 
-export enum CommandType {
+enum CommandType {
   UNKNOWN = 0,
   KEY_ROTATION_NOTICE = 1,
   CAPABILITY_REVOCATION = 2,
   GROUP_MEMBERSHIP_SYNC = 3,
-  EPOCH_COMMIT = 4,
-}
+  EPOCH_COMMIT = 4}
 
-export type SystemDirective = {
+type SystemDirective = {
   command: CommandType;
   payload_bytes: string;
 };

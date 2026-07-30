@@ -3,8 +3,6 @@
 import React, { createContext, useContext, useMemo, useState, ReactNode, useCallback, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useToast } from './Toast';
-import { useOverlay } from './OverlayContext';
-import { useNotes } from '@/context/NotesContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import {
   NoteAdd as NoteAddIcon,
@@ -18,6 +16,7 @@ import {
 } from '@/lib/openbricks/icons';
 
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { isFlowPath } from '@/lib/routing/app-paths';
 
 type KylrixApp = 'root' | 'accounts' | 'kylrix' | 'vault' | 'flow' | 'note' | 'connect';
 
@@ -69,8 +68,6 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
   const router = useRouter();
   const { showSuccess } = useToast();
-  const { openOverlay } = useOverlay();
-  const { upsertNote } = useNotes();
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
 
   // Global listeners for close click/keyboard (deferred so opening click does not instantly dismiss)
@@ -123,7 +120,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
       if (pathname?.startsWith('/app')) appType = 'note';
       else if (pathname?.startsWith('/connect')) appType = 'connect';
       else if (pathname?.startsWith('/vault')) appType = 'vault';
-      else if (pathname?.startsWith('/flow')) appType = 'flow';
+      else if (isFlowPath(pathname)) appType = 'flow';
       else if (pathname?.startsWith('/accounts')) appType = 'accounts';
       else if (pathname?.startsWith('/settings')) appType = 'accounts';
 
@@ -136,9 +133,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
 
       // Helper function for quick note capture
       const triggerQuickNote = () => {
-        import("@/app/(app)/app/(app)/notes/CreateNoteForm").then(({ default: CreateNoteForm }) => {
-          openOverlay(<CreateNoteForm onNoteCreated={(n) => upsertNote(n)} />);
-        });
+        openUnifiedDrawer('note');
       };
 
       // Helper for topbar search focus
@@ -205,7 +200,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
 
     window.addEventListener('contextmenu', handleGlobalContextMenu);
     return () => window.removeEventListener('contextmenu', handleGlobalContextMenu);
-  }, [pathname, router, showSuccess, openOverlay, upsertNote, openUnifiedDrawer]);
+  }, [pathname, router, showSuccess, openUnifiedDrawer]);
 
   const value = useMemo<ContextMenuContextType>(
     () => ({ openMenu, closeMenu, isOpen, state }),

@@ -5,7 +5,7 @@ import { getEcosystemUrl } from './constants';
  * Generate the auth/accounts IDM subdomain URL
  * Handles both http and https protocols
  */
-export function getAuthURL(): string {
+function getAuthURL(): string {
   return getEcosystemUrl('accounts');
 }
 
@@ -20,7 +20,7 @@ export function getAuthOrigin(): string {
  * Generate the source URL for IDM redirect
  * Points to current hostname + /dashboard so IDM redirects back here after auth
  */
-export function getSourceURL(): string {
+function getSourceURL(): string {
   if (typeof window !== "undefined") {
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
@@ -39,7 +39,7 @@ export function getSourceURL(): string {
  */
 export function openAuthPopup(navigate?: (url: string) => void): Window | null {
   const authURL = getAuthURL();
-  const loginPath = "/accounts/login";
+  const loginPath = "/";
   const normalizedLoginPath = loginPath.startsWith("/")
     ? loginPath
     : `/${loginPath}`;

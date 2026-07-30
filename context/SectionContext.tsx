@@ -9,7 +9,7 @@ import DesktopRightSection, { PanelType } from '@/components/layout/DesktopRight
 // Object detail components imports
 import { PostViewClient } from '@/app/(app)/connect/post/[id]/PostViewClient';
 import { NoteDetailSidebar } from '@/components/ui/NoteDetailSidebar';
-import TaskDetails from '@/components/tasks/TaskDetails';
+import { GoalObjectDetail } from '@/components/objects/GoalObjectDetail';
 import EventDetails from '@/components/events/EventDetails';
 import FormDetailsPage from '@/app/(app)/forms/[formId]/page';
 import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
@@ -17,7 +17,6 @@ import { TagNotesListSidebar } from '@/components/ui/TagNotesListSidebar';
 import { PublicCall } from '@/app/(app)/connect/call/[id]/PublicCall';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { HuddleChatWindow } from '@/components/chat/HuddleChatWindow';
-import { GithubIntegrationDrawer } from '@/components/overlays/GithubIntegrationDrawer';
 
 // Helper imports for note detail (live-copy plugin — no open-path getNote)
 import { Notes } from '@/types/appwrite';
@@ -31,7 +30,7 @@ import { getNote as getChatNote } from '@/lib/appwrite/note';
 import { useNotes } from '@/context/NotesContext';
 
 export interface ActiveDetail {
-  type: 'note' | 'moment' | 'goal' | 'form' | 'event' | 'tag' | 'secret' | 'chat' | 'call' | 'github' | 'huddle';
+  type: 'note' | 'moment' | 'goal' | 'form' | 'event' | 'tag' | 'secret' | 'chat' | 'call' | 'huddle';
   id: string;
   data?: any; // Extra initial payload if we have it
 }
@@ -73,19 +72,17 @@ const SectionContext = createContext<SectionContextType | undefined>(undefined);
 const DEFAULT_LAYOUTS: Record<string, PanelType[]> = {
   '/app': ['note', 'huddles', 'projects'],
   '/tags': ['note', 'huddles', 'projects'],
-  '/app/shared': ['tags', 'huddles', 'projects'],
   '/idea': ['tags', 'huddles', 'projects'],
   '/goals': ['forms', 'huddles', 'projects'],
-  '/flow': ['forms', 'huddles', 'projects'],
-  '/flow/forms': ['projects', 'huddles', 'goals'],
+  '/flows': ['forms', 'huddles', 'projects'],
+  '/forms': ['projects', 'huddles', 'goals'],
   '/events': ['note', 'huddles', 'goals'],
   '/vault': ['note', 'totp', 'projects'],
   '/vault/totp': ['secrets', 'secret_chat'],
-  '/vault/sharing': ['secrets', 'totp', 'secret_chat'],
   '/connect/chats': ['projects', 'huddles', 'note'],
   '/connect/calls': ['projects', 'threads'],
-  '/projects': ['projects_stats', 'projects_templates'],
-  '/projects/[projectId]': ['note', 'huddles', 'goals'],
+  '/workspaces': ['projects_stats', 'projects_templates'],
+  '/workspaces/[projectId]': ['note', 'huddles', 'goals'],
   '/send': ['stash'],
 };
 
@@ -185,7 +182,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
             }
           }
         }
-      } catch (err) {
+      } catch (_err) {
         // Safe to ignore
       }
     };
@@ -279,8 +276,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
               route,
               screenWidth,
               columnsCount: override.columnsCount,
-              overriddenAt: new Date().toISOString(),
-            }
+              overriddenAt: new Date().toISOString()}
           }).catch(err => console.warn('[SectionProvider] Telemetry failed:', err));
         }
       }
@@ -307,8 +303,8 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
       return ['stash'];
     }
 
-    // /projects/[projectId] fallback: display relevant execution panels
-    if (cleanRoute.startsWith('/projects/')) {
+    // /workspaces/[projectId] fallback: display relevant execution panels
+    if (cleanRoute.startsWith('/workspaces/')) {
       return ['note', 'huddles', 'goals'];
     }
 
@@ -377,8 +373,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
     // Apply any active overrides
     const finalConfig = {
       columnsCount: userOverride?.columnsCount ?? columnsCount,
-      sections: userOverride?.sections ?? sections,
-    };
+      sections: userOverride?.sections ?? sections};
 
     return finalConfig;
     }, [overrides, screenWidth, analyzeAndPartitionRoute]);
@@ -419,11 +414,10 @@ export function useSection() {
  * NoteDetailContainer
  * Stateful plugin on the notes live copy — no open-path getNote.
  */
-export function NoteDetailContainer({
+function NoteDetailContainer({
   noteId,
   onBack,
-  seed = null,
-}: {
+  seed = null}: {
   noteId: string;
   onBack: () => void;
   seed?: Notes | null;
@@ -508,7 +502,7 @@ export function NoteDetailContainer({
  * ChatDetailContainer
  * Unified loader for Chats / Huddle chats thread routing inside E2E and public flows.
  */
-export function ChatDetailContainer({ conversationId, onBack }: { conversationId: string; onBack: () => void }) {
+function ChatDetailContainer({ conversationId, onBack }: { conversationId: string; onBack: () => void }) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [isHuddleChat, setIsHuddleChat] = useState(false);
@@ -523,7 +517,7 @@ export function ChatDetailContainer({ conversationId, onBack }: { conversationId
           setIsHuddleChat(true);
           setHuddleTitle(note.title || 'Huddle Chat');
         }
-      } catch (e) {
+      } catch (_e) {
         setIsHuddleChat(false);
       } finally {
         setLoading(false);
@@ -560,14 +554,14 @@ export function ChatDetailContainer({ conversationId, onBack }: { conversationId
  * DetailSectionWrapper
  * Maps dynamic detail types to unified responsive components.
  */
-export function DetailSectionWrapper({ detail, onClose }: { detail: ActiveDetail; onClose: () => void }) {
+function DetailSectionWrapper({ detail, onClose }: { detail: ActiveDetail; onClose: () => void }) {
   switch (detail.type) {
     case 'moment':
       return <PostViewClient id={detail.id} onBack={onClose} />;
     case 'note':
       return <NoteDetailContainer noteId={detail.id} seed={detail.data || null} onBack={onClose} />;
     case 'goal':
-      return <TaskDetails taskId={detail.id} onBack={onClose} />;
+      return <GoalObjectDetail taskId={detail.id} onClose={onClose} embedded />;
     case 'event':
       return <EventDetails eventId={detail.id} initialData={detail.data} onBack={onClose} />;
     case 'form':
@@ -587,8 +581,6 @@ export function DetailSectionWrapper({ detail, onClose }: { detail: ActiveDetail
       return <PublicCall id={detail.id} />;
     case 'chat':
       return <ChatDetailContainer conversationId={detail.id} onBack={onClose} />;
-    case 'github':
-      return <GithubIntegrationDrawer isOpen={true} onClose={onClose} {...detail.data} isFlapover={true} />;
     default:
       return null;
   }
@@ -599,7 +591,7 @@ export function DetailSectionWrapper({ detail, onClose }: { detail: ActiveDetail
  * 100dvh full-screen drawer overlay representing target screens.
  * Overlays EVERYTHING including Topbar.
  */
-export function GlobalDetailDrawer({ activeDetail, onClose }: { activeDetail: ActiveDetail | null; onClose: () => void }) {
+function GlobalDetailDrawer({ activeDetail, onClose }: { activeDetail: ActiveDetail | null; onClose: () => void }) {
   const isOpen = activeDetail !== null;
 
   return (
@@ -610,8 +602,7 @@ export function GlobalDetailDrawer({ activeDetail, onClose }: { activeDetail: Ac
       variant="temporary"
       ModalProps={{
         keepMounted: false,
-        disablePortal: true,
-      }}
+        disablePortal: true}}
       PaperProps={{
         sx: {
           height: '100dvh',
@@ -644,7 +635,7 @@ interface MultiSectionContainerProps {
   contextId?: string;
 }
 
-export function MultiSectionContainer({ children, panels, contextId }: MultiSectionContainerProps) {
+export function MultiSectionContainer({ children, panels}: MultiSectionContainerProps) {
   const pathname = usePathname();
   const { getLayoutForRoute, activeDetail, setActiveDetail } = useSection();
 

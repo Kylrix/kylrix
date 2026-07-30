@@ -11,8 +11,7 @@ import {
   CircularProgress,
   Stack,
   Drawer,
-  IconButton,
-} from '@/lib/openbricks/primitives';
+  IconButton} from '@/lib/openbricks/primitives';
 import { Delete as DeleteIcon } from '@/lib/openbricks/icons';
 import { Models } from 'appwrite';
 
@@ -34,8 +33,7 @@ const PROVIDER_LOGOS: Record<string, string> = {
   amazon: '🛒',
   reddit: '🔴',
   twitch: '💬',
-  spotify: '🎵',
-};
+  spotify: '🎵'};
 
 const PROVIDER_ICONS: Record<string, ReactElement> = {
   google: (
@@ -65,8 +63,7 @@ const PROVIDER_NAMES: Record<string, string> = {
   amazon: 'Amazon',
   reddit: 'Reddit',
   twitch: 'Twitch',
-  spotify: 'Spotify',
-};
+  spotify: 'Spotify'};
 
 export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIdentitiesProps) {
   const [loading, setLoading] = useState(true);
@@ -154,8 +151,7 @@ export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIde
             backgroundColor: '#161514',
             borderRadius: '12px',
             p: 4,
-            textAlign: 'center',
-          }}
+            textAlign: 'center'}}
         >
           <Typography sx={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.95rem' }}>
             No connected identities. Connect a social account to link your profile.
@@ -177,8 +173,7 @@ export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIde
                 overflow: 'hidden',
                 transition: 'all 0.2s ease-out',
                 '&:hover': {
-                  backgroundColor: '#1F1D1B',
-                },
+                  backgroundColor: '#1F1D1B'},
               }}
             >
               {/* Content Section */}
@@ -249,8 +244,7 @@ export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIde
                   transition: 'all 0.2s ease-out',
                   '&:hover': {
                     backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                    borderColor: 'rgba(239, 68, 68, 0.4)',
-                  },
+                    borderColor: 'rgba(239, 68, 68, 0.4)'},
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -275,8 +269,7 @@ export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIde
             borderBottomLeftRadius: 0,
             borderBottomRightRadius: 0,
             borderTopLeftRadius: '20px',
-            borderTopRightRadius: '20px',
-          },
+            borderTopRightRadius: '20px'},
         }}
       >
         <Box sx={{ p: 3 }}>
@@ -309,11 +302,9 @@ export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIde
                 fontSize: '1rem',
                 transition: 'all 0.2s ease-out',
                 '&:hover': {
-                  backgroundColor: '#DC2626',
-                },
+                  backgroundColor: '#DC2626'},
                 '&:disabled': {
-                  backgroundColor: 'rgba(239, 68, 68, 0.5)',
-                },
+                  backgroundColor: 'rgba(239, 68, 68, 0.5)'},
               }}
             >
               {deleting ? 'Disconnecting...' : 'Disconnect'}
@@ -334,8 +325,7 @@ export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIde
                 transition: 'all 0.2s ease-out',
                 '&:hover': {
                   backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
-                },
+                  borderColor: 'rgba(255, 255, 255, 0.3)'},
               }}
             >
               Cancel

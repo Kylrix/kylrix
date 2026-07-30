@@ -15,8 +15,7 @@ import {
   Popover,
   Checkbox,
   FormControlLabel,
-  TextField,
-} from '@/lib/openbricks/primitives';
+  TextField} from '@/lib/openbricks/primitives';
 import {
   ArrowLeft,
   Trash2,
@@ -29,8 +28,7 @@ import {
   ChevronLeft,
   Send,
   Users,
-  Edit,
-} from 'lucide-react';
+  Edit} from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -55,8 +53,7 @@ interface HuddleChatWindowProps {
   shareLink?: string;
 }
 
-export function HuddleChatWindow({ chatNoteId, user, title, participants = [], onBack, standalone = false, expiresAt, shareLink }: HuddleChatWindowProps) {
-  const router = useRouter();
+export function HuddleChatWindow({ chatNoteId, user, title, participants = [], onBack, expiresAt, shareLink }: HuddleChatWindowProps) {
   const { openProUpgrade } = useProUpgrade();
   const { showSuccess, showError } = useToast();
   const [messages, setMessages] = useState<any[]>([]);
@@ -116,7 +113,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [_isPending, _startTransition] = useTransition();
 
   const messageEndRef = useRef<HTMLDivElement>(null);
   const threadEndRef = useRef<HTMLDivElement>(null);
@@ -540,8 +537,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
       zIndex: 1200,
       overflow: 'hidden',
       display: 'flex', 
-      flexDirection: 'column', 
-    }}>
+      flexDirection: 'column'}}>
 
       {/* Dynamic Pinned Header */}
 
@@ -726,8 +722,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                           transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                           '&:hover': {
                               transform: 'translateY(-1px)',
-                              boxShadow: '0 6px 16px -4px rgba(0,0,0,0.9)',
-                          }
+                              boxShadow: '0 6px 16px -4px rgba(0,0,0,0.9)'}
                         }}
                       >
                         {parsed.type === 'voice' && parsed.voiceFileId ? (
@@ -1068,8 +1063,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                             zIndex: 2,
                             '&:hover': {
                                 transform: 'translateY(-1px)',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                            }
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.5)'}
                           }}
                         >
                           {parsedReply.type === 'voice' && parsedReply.voiceFileId ? (
@@ -1144,12 +1138,10 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
         onClose={() => setMessageAnchorEl(null)}
         anchorOrigin={{
           vertical: 'bottom',
-          horizontal: 'center',
-        }}
+          horizontal: 'center'}}
         transformOrigin={{
           vertical: 'top',
-          horizontal: 'center',
-        }}
+          horizontal: 'center'}}
         PaperProps={{
           sx: {
             bgcolor: '#13110F',
@@ -1368,8 +1360,7 @@ function HuddleMainInput({
             '&:hover': {
               bgcolor: '#1C1A18',
               borderColor: isRecording ? '#ff4d4d' : '#F59E0B',
-              color: '#fff',
-            },
+              color: '#fff'},
           }}
         >
           {isRecording ? <Square size={18} fill="#ff4d4d" /> : <Mic size={20} />}
@@ -1388,15 +1379,13 @@ function HuddleMainInput({
               px: 2,
               gap: 2,
               zIndex: 2,
-              animation: 'pulse 2s infinite ease-in-out',
-            }}>
+              animation: 'pulse 2s infinite ease-in-out'}}>
               <Box sx={{
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
                 bgcolor: '#ff4d4d',
-                animation: 'blink 1s infinite',
-              }} />
+                animation: 'blink 1s infinite'}} />
               <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', fontWeight: 800, flexGrow: 1 }}>
                 Recording audio note... click square to send
               </Typography>
@@ -1443,7 +1432,7 @@ function HuddleMainInput({
                   });
                   
                   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-                  const url = `${origin}/send/${note.$id}/${titleEnc.key}`;
+                  const url = `${origin}/idea/${note.$id}/${titleEnc.key}`;
                   
                   // Cache in localStorage stash
                   try {
@@ -1453,8 +1442,7 @@ function HuddleMainInput({
                       kind: 'note',
                       title: 'Secure Note',
                       url,
-                      expiresAt,
-                    };
+                      expiresAt};
                     localStorage.setItem('kylrix_send_sparks', JSON.stringify([newSpark, ...existing]));
                   } catch (err) {
                     console.warn('Failed to cache spark:', err);
@@ -1587,7 +1575,7 @@ function HuddleThreadInput({
                   });
                   
                   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-                  const url = `${origin}/send/${note.$id}/${titleEnc.key}`;
+                  const url = `${origin}/idea/${note.$id}/${titleEnc.key}`;
                   
                   // Cache in localStorage stash
                   try {
@@ -1597,8 +1585,7 @@ function HuddleThreadInput({
                       kind: 'note',
                       title: 'Secure Note',
                       url,
-                      expiresAt,
-                    };
+                      expiresAt};
                     localStorage.setItem('kylrix_send_sparks', JSON.stringify([newSpark, ...existing]));
                   } catch (err) {
                     console.warn('Failed to cache spark:', err);

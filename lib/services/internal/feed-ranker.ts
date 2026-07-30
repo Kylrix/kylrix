@@ -23,8 +23,7 @@ export class FeedRanker {
           saves: m.saveCount || 0,
           views: m.viewCount || 0,
           totalDwellTime: m.totalDwellTime || 0,
-          viewCount: m.viewCount || 1,
-        };
+          viewCount: m.viewCount || 1};
 
         const ageMinutes = (Date.now() - new Date(m.$createdAt).getTime()) / 60000;
         const signals = await EngagementAnalyzer.analyzeEngagement(engagement, ageMinutes);
@@ -37,8 +36,8 @@ export class FeedRanker {
     );
 
     return rankedMoments
-      .sort((a, b) => b.score - a.score)
+      .sort((a: any, b: any) => b.score - a.score)
       .slice(0, limit)
-      .map((m) => m.momentId);
+      .map((m: any) => m.momentId);
   }
 }

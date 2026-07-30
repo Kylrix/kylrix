@@ -35,8 +35,7 @@ export async function generateMetadata({
     return buildOgMetadata({
       title: 'Shared TOTP · Kylrix',
       description: 'View a shared TOTP authenticator code securely.',
-      imageUrl: 'https://www.kylrix.space/opengraph-image',
-    });
+      imageUrl: 'https://www.kylrix.space/opengraph-image'});
   }
 }
 

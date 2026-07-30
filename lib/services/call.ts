@@ -18,8 +18,7 @@ export const CallService = {
             return await tablesDB.getRow({
                 databaseId: DB_ID,
                 tableId: LINKS_TABLE,
-                rowId: id,
-            });
+                rowId: id});
         } catch (_e) {
             return null;
         }
@@ -50,8 +49,7 @@ export const CallService = {
                 type,
                 expiresAt,
                 startsAt: startTime.toISOString(),
-                allowGuests,
-            };
+                allowGuests};
 
             if (title) payload.title = title;
             if (metadata) payload.metadata = metadata;
@@ -138,8 +136,7 @@ export const CallService = {
             await tablesDB.deleteRow({
                 databaseId: DB_ID,
                 tableId: LINKS_TABLE,
-                rowId: id,
-            });
+                rowId: id});
         } catch (_e) {
             return;
         }
@@ -163,8 +160,7 @@ export const CallService = {
                             active.push({
                                 userId: row.userId,
                                 lastSeen: row.lastSeen,
-                                status: row.status,
-                            });
+                                status: row.status});
                         }
                     } catch {
                         // ignore
@@ -185,8 +181,7 @@ export const CallService = {
         } catch (_e) {
             return {
                 $id: ID.unique(),
-                createdAt: new Date().toISOString(),
-            };
+                createdAt: new Date().toISOString()};
         }
     },
 
@@ -217,16 +212,14 @@ export const CallService = {
                             Query.equal('receiverId', userId)]),
                         Query.limit(50),
                         Query.orderDesc('startsAt')
-                    ],
-                });
+                    ]});
                 
                 return (res.rows || []).map(row => ({
                     ...row,
                     isLink: true,
                     status: new Date(row.expiresAt).getTime() > Date.now() ? 'active' : 'ended',
                     startedAt: row.startsAt,
-                    callerId: row.userId,
-                }));
+                    callerId: row.userId}));
             } catch (_e) {
                 return [];
             }
@@ -245,16 +238,14 @@ export const CallService = {
                             Query.equal('receiverId', userId)]),
                         Query.greaterThanEqual('expiresAt', new Date().toISOString()),
                         Query.limit(50)
-                    ],
-                });
+                    ]});
 
                 return (res.rows || []).map(row => ({
                     ...row,
                     isLink: true,
                     status: 'active',
                     startedAt: row.startsAt,
-                    callerId: row.userId,
-                })).filter(link => new Date(link.startedAt).getTime() <= Date.now());
+                    callerId: row.userId})).filter(link => new Date(link.startedAt).getTime() <= Date.now());
             } catch (_e) {
                 return [];
             }

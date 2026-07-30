@@ -12,7 +12,7 @@ import { decodeBase64ToBytes, normalizeStoredSecretString } from '@/lib/crypto/p
 
 const PW_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
 
-export class EcosystemSecurity {
+class EcosystemSecurity {
   private static instance: EcosystemSecurity;
   private masterKey: CryptoKey | null = null;
   private identityKeyPair: CryptoKeyPair | null = null;
@@ -207,8 +207,7 @@ export class EcosystemSecurity {
       iterations: EcosystemSecurity.ARGON2_ITERATIONS,
       memorySize: EcosystemSecurity.ARGON2_MEMORY,
       hashLength: 32, // 256 bits
-      outputType: 'binary',
-    });
+      outputType: 'binary'});
 
     return crypto.subtle.importKey(
       "raw",
@@ -237,8 +236,7 @@ export class EcosystemSecurity {
         name: "PBKDF2",
         salt: salt as any,
         iterations: EcosystemSecurity.PBKDF2_ITERATIONS,
-        hash: "SHA-256",
-      },
+        hash: "SHA-256"},
       keyMaterial,
       { name: "AES-GCM", length: EcosystemSecurity.KEY_SIZE },
       true,
@@ -406,7 +404,7 @@ export class EcosystemSecurity {
     if (this.decryptionCache.has(encryptedData)) return this.decryptionCache.get(encryptedData)!;
 
     const combined = new Uint8Array(
-      atob(encryptedData).split("").map((char) => char.charCodeAt(0)),
+      atob(encryptedData).split("").map((char: any) => char.charCodeAt(0)),
     );
 
     const iv = combined.slice(0, EcosystemSecurity.IV_SIZE);
@@ -436,8 +434,7 @@ export class EcosystemSecurity {
       kind: 'recovery',
       recoveryCodes: codes,
       savedAt: new Date().toISOString(),
-      ...metadata,
-    }));
+      ...metadata}));
 
     const tableId = APPWRITE_CONFIG.TABLES.VAULT.USER;
     const existing = await tablesDB.listRows({
@@ -445,20 +442,17 @@ export class EcosystemSecurity {
       tableId,
       queries: [
         Query.equal('userId', userId),
-        Query.limit(1)],
-    });
+        Query.limit(1)]});
 
     if (existing.rows[0]) {
       await tablesDB.updateRow(APPWRITE_CONFIG.DATABASES.VAULT, tableId, existing.rows[0].$id, {
-        backupCodes: encryptedPayload,
-      });
+        backupCodes: encryptedPayload});
       return true;
     }
 
     await tablesDB.createRow(APPWRITE_CONFIG.DATABASES.VAULT, tableId, ID.unique(), {
       userId,
-      backupCodes: encryptedPayload,
-    });
+      backupCodes: encryptedPayload});
     return true;
   }
 
@@ -472,8 +466,7 @@ export class EcosystemSecurity {
       tableId,
       queries: [
         Query.equal('userId', userId),
-        Query.limit(1)],
-    });
+        Query.limit(1)]});
 
     const payload = existing.rows[0]?.backupCodes;
     if (!payload || typeof payload !== 'string') {
@@ -507,8 +500,7 @@ export class EcosystemSecurity {
 
     const verifier = {
       salt: btoa(String.fromCharCode(...salt)),
-      hash: btoa(String.fromCharCode(...new Uint8Array(hash))),
-    };
+      hash: btoa(String.fromCharCode(...new Uint8Array(hash)))};
 
     localStorage.setItem("kylrix_pin_verifier", JSON.stringify(verifier));
   }
@@ -539,8 +531,7 @@ export class EcosystemSecurity {
 
     const ephemeralData = {
       wrappedMek: btoa(String.fromCharCode(...combined)),
-      sessionSalt: btoa(String.fromCharCode(...sessionSalt)),
-    };
+      sessionSalt: btoa(String.fromCharCode(...sessionSalt))};
 
     sessionStorage.setItem("kylrix_ephemeral_session", JSON.stringify(ephemeralData));
   }
@@ -619,8 +610,7 @@ export class EcosystemSecurity {
         name: "PBKDF2",
         salt: salt as any,
         iterations: EcosystemSecurity.PIN_ITERATIONS,
-        hash: "SHA-256",
-      },
+        hash: "SHA-256"},
       keyMaterial,
       256
     );
@@ -649,8 +639,7 @@ export class EcosystemSecurity {
         name: "PBKDF2",
         salt: salt as any,
         iterations: 10000, // Optimized for instant (<20ms) unlock speed
-        hash: "SHA-256",
-      },
+        hash: "SHA-256"},
       keyMaterial,
       { name: "AES-GCM", length: 256 },
       false, // SECURITY: Non-extractable. Key cannot be exported by XSS.
@@ -711,8 +700,7 @@ export class EcosystemSecurity {
             Query.equal('userId', userId),
             Query.equal('identityType', 'e2e_connect'),
             Query.limit(1),
-          ],
-        }),
+          ]}),
       local: async () => ({ rows: localIdentity ? [localIdentity] : [] }),
     });
 
@@ -1001,20 +989,17 @@ export class EcosystemSecurity {
       tableId,
       queries: [
         Query.equal('userId', userId),
-        Query.limit(1)],
-    });
+        Query.limit(1)]});
 
     const reminderAt = date ? date.toISOString() : null;
 
     if (existing.rows[0]) {
       await tablesDB.updateRow(APPWRITE_CONFIG.DATABASES.VAULT, tableId, existing.rows[0].$id, {
-        passkey_reminder_at: reminderAt,
-      });
+        passkey_reminder_at: reminderAt});
     } else {
       await tablesDB.createRow(APPWRITE_CONFIG.DATABASES.VAULT, tableId, ID.unique(), {
         userId,
-        passkey_reminder_at: reminderAt,
-      });
+        passkey_reminder_at: reminderAt});
     }
     
     this.passkeyReminderAtState = reminderAt;

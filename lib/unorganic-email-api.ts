@@ -24,7 +24,7 @@ export type UnorganicEmailEventType =
   | 'masterpass_login_enabled'
   | 'masterpass_login_disabled';
 
-export type UnorganicEmailRecipientInput =
+type UnorganicEmailRecipientInput =
   | { userId: string; email?: never }
   | { email: string; userId?: never };
 
@@ -74,8 +74,7 @@ const SOURCE_PRIORITY: Record<UnorganicEmailSource, number> = {
   connect: 40,
   note: 30,
   vault: 20,
-  accounts: 10,
-};
+  accounts: 10};
 
 const EVENT_PRIORITY: Record<UnorganicEmailEventType, number> = {
   task_assigned: 50,
@@ -93,8 +92,7 @@ const EVENT_PRIORITY: Record<UnorganicEmailEventType, number> = {
   coupon_issued: 80,
   passkey_added: 36,
   masterpass_login_enabled: 34,
-  masterpass_login_disabled: 34,
-};
+  masterpass_login_disabled: 34};
 
 const MAX_UNORGANIC_EMAILS = 5;
 const UNORGANIC_EMAIL_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
@@ -108,8 +106,7 @@ const PRIORITY_RANK: Record<PriorityLabel, number> = {
   low: 1,
   medium: 2,
   high: 3,
-  critical: 4,
-};
+  critical: 4};
 
 // Memory cache for dispatched row IDs to prevent duplicate database writes and network overhead
 class EmailQueueCache {
@@ -130,8 +127,7 @@ class EmailQueueCache {
   set(queueId: string, status: string, ttlMs = 10 * 60 * 1000): void {
     this.cache.set(queueId, {
       status,
-      expiresAt: Date.now() + ttlMs,
-    });
+      expiresAt: Date.now() + ttlMs});
   }
 
   // Inspect the cached status of a queue ID
@@ -145,7 +141,7 @@ class EmailQueueCache {
   }
 }
 
-export const emailQueueCache = new EmailQueueCache();
+const emailQueueCache = new EmailQueueCache();
 
 function createSystemTablesClient() {
   const apiKey = process.env.APPWRITE_API;
@@ -557,8 +553,7 @@ async function resolveRecipient(
     return {
       userId: user.$id,
       name: displayName,
-      email: user.email,
-    };
+      email: user.email};
   }
 
   const found = await users.list([Query.equal('email', target.value), Query.limit(1)]);
@@ -579,8 +574,7 @@ async function resolveRecipient(
   return {
     userId: user.$id,
     name: displayName,
-    email: target.value,
-  };
+    email: target.value};
 }
 
 async function getRecentSentCount(tablesDB: TablesDB, recipientId: string, now = new Date()) {
@@ -654,8 +648,7 @@ async function createOrLoadQueueRow(tablesDB: TablesDB, rowId: string, data: Rec
 
   return {
     row: await tablesDB.createRow(CHAT_DATABASE_ID, UNORGANIC_EMAILS_TABLE_ID, rowId, data),
-    created: true,
-  };
+    created: true};
 }
 
 function evaluateAntiSpamAndQuota(
@@ -688,8 +681,7 @@ function evaluateAntiSpamAndQuota(
   if (rapidSuccessionMatch) {
     return {
       allowed: false,
-      blockedReason: `Anti-spam trigger: Rapid succession block. Similar event dispatched within the last 10 minutes.`,
-    };
+      blockedReason: `Anti-spam trigger: Rapid succession block. Similar event dispatched within the last 10 minutes.`};
   }
 
   // Token transfer anti-spam: Max 1 email per hour from the same sender
@@ -705,8 +697,7 @@ function evaluateAntiSpamAndQuota(
     if (recentTransfer) {
       return {
         allowed: false,
-        blockedReason: `Anti-spam trigger: Token transfers from the same wallet are rate-limited to 1 per hour.`,
-      };
+        blockedReason: `Anti-spam trigger: Token transfers from the same wallet are rate-limited to 1 per hour.`};
     }
   }
 
@@ -723,8 +714,7 @@ function evaluateAntiSpamAndQuota(
     if (recentInvite) {
       return {
         allowed: false,
-        blockedReason: `Anti-spam trigger: Duplicate project invitation suppressed. Already invited within the last 24 hours.`,
-      };
+        blockedReason: `Anti-spam trigger: Duplicate project invitation suppressed. Already invited within the last 24 hours.`};
     }
   }
 
@@ -783,15 +773,13 @@ function evaluateAntiSpamAndQuota(
     if (ordinaryEmails30d.length >= 5) {
       return {
         allowed: false,
-        blockedReason: `Quota limit: Ordinary email limit of 5 per month reached.`,
-      };
+        blockedReason: `Quota limit: Ordinary email limit of 5 per month reached.`};
     }
 
     if (ordinaryEmails7d.length >= 2) {
       return {
         allowed: false,
-        blockedReason: `Quota limit: Ordinary email limit of 2 per week reached.`,
-      };
+        blockedReason: `Quota limit: Ordinary email limit of 2 per week reached.`};
     }
   }
 
@@ -816,8 +804,7 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
   const copy = resolveEventCopy({
     ...input,
     eventType,
-    sourceApp,
-  });
+    sourceApp});
   const now = new Date();
   const queueResults: DispatchOutcome[] = [];
   const resolvedRecipients = new Set<string>();
@@ -856,8 +843,7 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
         title: copy.title,
         body: copy.body,
         ctaText: copy.ctaText,
-        ctaUrl: copy.ctaUrl,
-      }),
+        ctaUrl: copy.ctaUrl}),
     };
   }
 
@@ -912,8 +898,7 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
         {
           eventType,
           resourceId: input.resourceId || null,
-          actorId: input.actorId || null,
-        },
+          actorId: input.actorId || null},
         now
       );
 
@@ -975,8 +960,7 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
           priority,
           priorityScore,
           quotaRemaining,
-          blockedReason: queueRow.row.blockedReason || null,
-        });
+          blockedReason: queueRow.row.blockedReason || null});
         continue;
       }
 
@@ -1006,16 +990,14 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
         title: copy.title,
         body: copy.body,
         ctaText: copy.ctaText,
-        ctaUrl: copy.ctaUrl,
-      });
+        ctaUrl: copy.ctaUrl});
 
       const info = await messaging.createEmail({
         messageId: ID.unique(),
         subject: copy.subject,
         content: html,
         users: [recipient.userId],
-        html: true,
-      });
+        html: true});
 
       const sentAt = new Date().toISOString();
       await tablesDB.updateRow(CHAT_DATABASE_ID, UNORGANIC_EMAILS_TABLE_ID, queueRowId, {
@@ -1051,8 +1033,7 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
         templateKey,
         priority,
         priorityScore,
-        quotaRemaining,
-      });
+        quotaRemaining});
     } catch (error: any) {
       if (!queueRowId) {
         queueRowId = hashQueueKey(`row:${eventType}:${sourceApp}:${recipientId}:${templateKey}`);
@@ -1065,8 +1046,7 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
           status: 'failed',
           attempts: 1,
           processedAt: new Date().toISOString(),
-          blockedReason: error?.message || 'Failed to dispatch email',
-        });
+          blockedReason: error?.message || 'Failed to dispatch email'});
       } catch {
         // If the queue row never existed, preserve the original failure below.
       }
@@ -1081,8 +1061,7 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
         templateKey,
         priority,
         priorityScore,
-        quotaRemaining: 0,
-      });
+        quotaRemaining: 0});
     }
   }
 
@@ -1098,8 +1077,7 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
     sent: queueResults.filter((result) => result.queueStatus === 'sent').length,
     suppressed: queueResults.filter((result) => result.queueStatus === 'suppressed').length,
     failed: queueResults.filter((result) => result.queueStatus === 'failed').length,
-    results: queueResults,
-  };
+    results: queueResults};
 }
 
-export { getPriorityScore, getPriorityLabel, resolveEventCopy, SOURCE_THEMES };
+;

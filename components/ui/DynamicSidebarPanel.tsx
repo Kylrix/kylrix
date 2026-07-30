@@ -51,10 +51,12 @@ export function DynamicSidebar() {
   const isNoteDetail =
     content &&
     React.isValidElement(content) &&
-    ((typeof content.type === 'function' && content.type.name === 'NoteDetailSidebar') ||
+    ((typeof content.type === 'function' &&
+      (content.type.name === 'NoteDetailSidebar' || content.type.name === 'NoteObjectDetail')) ||
       (typeof content.type === 'object' &&
         content.type !== null &&
-        (content.type as { type?: { name?: string } }).type?.name === 'NoteDetailSidebar') ||
+        ((content.type as { type?: { name?: string } }).type?.name === 'NoteDetailSidebar' ||
+          (content.type as { type?: { name?: string } }).type?.name === 'NoteObjectDetail')) ||
       (content.props as { note?: unknown })?.note !== undefined);
 
   const shouldHideHeader = options?.hideHeader || isNoteDetail;

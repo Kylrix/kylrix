@@ -13,8 +13,7 @@ import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 const AgenticDrawer = dynamic(() => import('@/components/overlays/AgenticDrawer').then((m) => m.AgenticDrawer), { ssr: false });
 
 export default function AppLayout({
-  children,
-}: {
+  children}: {
   children: React.ReactNode;
 }) {
   return <AppLayoutContent>{children}</AppLayoutContent>;
@@ -46,33 +45,38 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       const isPublic = 
         path === '/' ||
         path.startsWith('/send') ||
-        path.startsWith('/app/shared') ||
+        path.startsWith('/') ||
+        path.startsWith('/billing/coupon') ||
+        path.startsWith('/') ||
+        path.startsWith('/') ||
+        path.startsWith('/r/') ||
+        path.startsWith('/app') ||
         path.startsWith('/idea') ||
         path.startsWith('/i/') ||
         path.startsWith('/u/') ||
         path.startsWith('/p/') ||
         path.startsWith('/call/') ||
         path.startsWith('/connect/call/') ||
-        path.startsWith('/flow/form/') ||
-        path.startsWith('/flow/goal/') ||
+        path.startsWith('/form/') ||
         path.startsWith('/goal/') ||
-        path.startsWith('/flow/forms/') ||
-        path.startsWith('/flow/events/') ||
+        path.startsWith('/goal/') ||
+        path.startsWith('/forms/') ||
+        path.startsWith('/events/') ||
         path.startsWith('/agents/session/') ||
         path.startsWith('/agents/chat/');
 
       if (isPublic) return;
 
       const protectedDashboardPrefixes = [
-        '/projects',
-        '/accounts',
+        '/workspaces',
+        '/billing',
         '/settings',
-        '/agents'
+        '/settings/agents'
       ];
 
       const isDashboard = protectedDashboardPrefixes.some((prefix) => {
-        if (prefix === '/agents') {
-          return path === '/agents' || path.startsWith('/agents/');
+        if (prefix === '/settings/agents') {
+          return path === '/settings/agents' || path.startsWith('/agents/');
         }
         return path.startsWith(prefix);
       });
@@ -83,7 +87,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('kylrix_send_redirect_source', path);
         }
-        router.replace('/send?login=1');
+        router.replace('/app?login=1');
       }
     }
   }, [isAuthenticated, isLoading, pathname, router]);

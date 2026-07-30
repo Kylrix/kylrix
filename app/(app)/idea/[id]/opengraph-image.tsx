@@ -15,7 +15,7 @@ function stripPreview(content: string): string {
     .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
     .replace(/```[\s\S]*?```/g, '')
     .replace(/`[^`]*`/g, '')
-    .replace(/^[#>\-\*\+]{1,}\s?/gm, '')
+    .replace(/^[#>\-\*\+]{1}\s?/gm, '')
     .replace(/[\*\_\~\#\>]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -102,8 +102,7 @@ async function resolveOptionalPreviewImage(note: any, isEncrypted: boolean): Pro
 }
 
 export default async function SharedNoteOGImage({
-  params,
-}: {
+  params}: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
@@ -140,8 +139,7 @@ export default async function SharedNoteOGImage({
         dateText = new Date(note.$createdAt).toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric',
-          year: 'numeric',
-        });
+          year: 'numeric'});
       }
 
       const owner = await resolveOwnerForOg(note.userId);
@@ -163,8 +161,7 @@ export default async function SharedNoteOGImage({
       ownerAvatarDataUrl,
       chips: [dateText, ...tags].filter(Boolean).slice(0, 3),
       previewImageDataUrl,
-      previewImageAlt: noteTitle,
-    }),
+      previewImageAlt: noteTitle}),
     { ...size }
   );
 }

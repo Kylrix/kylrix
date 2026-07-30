@@ -60,12 +60,3 @@ export async function fetchNoteObjectPreviewCached(
   return promise;
 }
 
-export function invalidateNoteObjectPreviewCache(noteId?: string) {
-  if (!noteId) {
-    cache.clear();
-    return;
-  }
-  for (const key of cache.keys()) {
-    if (key.startsWith(`${noteId}:`)) cache.delete(key);
-  }
-}

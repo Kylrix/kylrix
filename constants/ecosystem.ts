@@ -1,4 +1,4 @@
-export interface EcosystemApp {
+interface EcosystemApp {
   id: string;
   label: string;
   subdomain: string;
@@ -8,18 +8,18 @@ export interface EcosystemApp {
   description: string;
 }
 
-export const KYLRIX_DOMAIN = 'kylrix.space';
-export const KYLRIX_AUTH_SUBDOMAIN = 'accounts';
-export const KYLRIX_AUTH_URI = `https://${KYLRIX_AUTH_SUBDOMAIN}.${KYLRIX_DOMAIN}`;
+const KYLRIX_DOMAIN = 'kylrix.space';
+const KYLRIX_AUTH_SUBDOMAIN = 'accounts';
+const KYLRIX_AUTH_URI = `https://${KYLRIX_AUTH_SUBDOMAIN}.${KYLRIX_DOMAIN}`;
 
-export const ECOSYSTEM_APPS: EcosystemApp[] = [
+const ECOSYSTEM_APPS: EcosystemApp[] = [
   { id: 'note', label: 'Note', subdomain: 'note', type: 'app', icon: 'file-text', color: '#EC4899', description: 'Secure notes and research.' },
   { id: 'vault', label: 'Vault', subdomain: 'vault', type: 'app', icon: 'shield', color: '#10B981', description: 'Passwords, 2FA, and keys.' },
-  { id: 'flow', label: 'Flow', subdomain: 'flow', type: 'app', icon: 'zap', color: '#A855F7', description: 'Tasks and workflows.' },
+  { id: 'flow', label: 'Flow', subdomain: 'flow', type: 'app', icon: 'zap', color: '#A855F7', description: 'Action workflows.' },
   { id: 'connect', label: 'Connect', subdomain: 'connect', type: 'app', icon: 'waypoints', color: '#F59E0B', description: 'Secure messages and sharing.' },
   { id: 'accounts', label: 'Accounts', subdomain: KYLRIX_AUTH_SUBDOMAIN, type: 'accounts', icon: 'fingerprint', color: '#6366F1', description: 'Your Kylrix account.' }];
 
-export const DEFAULT_ECOSYSTEM_LOGO = '/logo/rall.svg';
+const DEFAULT_ECOSYSTEM_LOGO = '/logo.svg';
 
 /**
  * Get the path for an app within the unified kylrix application.
@@ -35,7 +35,7 @@ export function getEcosystemUrl(subdomain: string) {
     'accounts': '/accounts',
     'note': '/app',
     'vault': '/vault',
-    'flow': '/flow',
+    'flow': '/flows',
     'connect': '/connect',
     'id': '/accounts',
     'kylrix': '/'

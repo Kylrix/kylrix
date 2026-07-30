@@ -59,7 +59,7 @@ const fetchRowsByIds = async (databaseId: string, tableId: string, ids: string[]
             Query.limit(uniqueIds.length)]);
         return result.rows || [];
     } catch (_e) {
-        return await Promise.all(uniqueIds.map((id) => tablesDB.getRow(databaseId, tableId, id).catch(() => null)))
+        return await Promise.all(uniqueIds.map((id: any) => tablesDB.getRow(databaseId, tableId, id).catch(() => null)))
             .then((rows) => rows.filter(Boolean));
     }
 };
@@ -241,8 +241,7 @@ export const SocialService = {
             ? {
                 type: resolvedKind || parsedMetadata?.type || 'post',
                 sourceId: resolvedSourceId || parsedMetadata?.sourceId || undefined,
-                attachments: parsedMetadata?.attachments || [],
-            }
+                attachments: parsedMetadata?.attachments || []}
             : null;
 
         const enriched = { 
@@ -285,8 +284,7 @@ export const SocialService = {
                         {
                             databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
                             tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-                            rowId: att.id,
-                        },
+                            rowId: att.id},
                         () =>
                             tablesDB.getRow(
                                 APPWRITE_CONFIG.DATABASES.NOTE,
@@ -300,8 +298,7 @@ export const SocialService = {
                         {
                             databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW,
                             tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-                            rowId: att.id,
-                        },
+                            rowId: att.id},
                         () =>
                             tablesDB.getRow(
                                 APPWRITE_CONFIG.DATABASES.KYLRIXFLOW,
@@ -315,8 +312,7 @@ export const SocialService = {
                         {
                             databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
                             tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-                            rowId: att.id,
-                        },
+                            rowId: att.id},
                         () =>
                             tablesDB.getRow(
                                 APPWRITE_CONFIG.DATABASES.CHAT,
@@ -358,7 +354,7 @@ export const SocialService = {
                         Query.equal('$id', rankedIds),
                         Query.limit(50),
                     ]);
-                    const rankedRows = moments.rows.sort((a, b) => rankedIds.indexOf(a.$id) - rankedIds.indexOf(b.$id));
+                    const rankedRows = moments.rows.sort((a: any, b: any) => rankedIds.indexOf(a.$id) - rankedIds.indexOf(b.$id));
                     return { ...moments, rows: rankedRows };
                 }
             } catch (error) {
@@ -441,8 +437,7 @@ export const SocialService = {
             const metadata = {
                 type: getMomentKind(moment) || parsedMetadata?.type || 'post',
                 sourceId: getMomentSourceId(moment) || parsedMetadata?.sourceId || undefined,
-                attachments: parsedMetadata?.attachments || [],
-            };
+                attachments: parsedMetadata?.attachments || []};
             const counts = engagementBySource.get(moment.$id) || { replies: 0, pulses: 0 };
             const likes = likesByMoment.get(moment.$id) || 0;
 
@@ -452,8 +447,7 @@ export const SocialService = {
                 stats: {
                     likes,
                     replies: counts.replies,
-                    pulses: counts.pulses,
-                },
+                    pulses: counts.pulses},
                 isLiked: Boolean(userId && likedMomentIds.has(moment.$id)),
                 isPulsed: Boolean(userId && pulsedMomentIds.has(moment.$id)),
             };
@@ -485,7 +479,7 @@ export const SocialService = {
         });
 
         // Sort by final score then by date
-        const sortedRows = filteredRows.sort((a, b) => {
+        const sortedRows = filteredRows.sort((a: any, b: any) => {
             if (Math.abs(b._rankScore - a._rankScore) > 0.1) {
                 return b._rankScore - a._rankScore;
             }
@@ -497,8 +491,7 @@ export const SocialService = {
         const attachmentGroups = {
             note: new Set<string>(),
             event: new Set<string>(),
-            call: new Set<string>(),
-        };
+            call: new Set<string>()};
 
         topRows.forEach((moment: any) => {
             const attachments = moment.metadata?.attachments || [];
@@ -532,8 +525,7 @@ export const SocialService = {
                 sourceMoment: moment.metadata?.sourceId ? sourceMomentMap.get(moment.metadata.sourceId) || null : null,
                 attachedNote: attachedNote ? noteMap.get(attachedNote.id) : undefined,
                 attachedEvent: attachedEvent ? eventMap.get(attachedEvent.id) : undefined,
-                attachedCall: attachedCall ? callMap.get(attachedCall.id) : undefined,
-            };
+                attachedCall: attachedCall ? callMap.get(attachedCall.id) : undefined};
         });
 
         return { ...moments, rows: hydratedRows, total: sortedRows.length };
@@ -542,7 +534,7 @@ export const SocialService = {
     async getTrendingFeed(userId?: string) {
         const feed = await this.getFeed(userId);
         // Simply sort by rank score exclusively for trending
-        const trendingRows = [...feed.rows].sort((a, b) => (b._rankScore || 0) - (a._rankScore || 0));
+        const trendingRows = [...feed.rows].sort((a: any, b: any) => (b._rankScore || 0) - (a._rankScore || 0));
         return { ...feed, rows: trendingRows };
     },
 
@@ -741,7 +733,7 @@ export const SocialService = {
             if (childMoments.rows && childMoments.rows.length > 0) {
                 await Promise.all(
                     childMoments.rows.map((child: any) =>
-                        this.deleteMoment(child.$id).catch((err) =>
+                        this.deleteMoment(child.$id).catch((err: any) =>
                             console.warn(`[Cascade Delete] Failed to delete child moment ${child.$id}:`, err?.message)
                         )
                     )
@@ -760,7 +752,7 @@ export const SocialService = {
             if (interactions.rows && interactions.rows.length > 0) {
                 await Promise.all(
                     interactions.rows.map((item: any) =>
-                        tablesDB.deleteRow(DB_ID, INTERACTIONS_TABLE, item.$id).catch((err) =>
+                        tablesDB.deleteRow(DB_ID, INTERACTIONS_TABLE, item.$id).catch((err: any) =>
                             console.warn(`[Cascade Delete] Failed to delete interaction ${item.$id}:`, err?.message)
                         )
                     )

@@ -59,7 +59,7 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
     profile_pictures: 1 * 1024 * 1024,   // 1 MB
     messages: 1 * 1024 * 1024,           // 1 MB
     notes_attachments: 5 * 1024 * 1024,   // 5 MB
-    general_storage: 10 * 1024 * 1024,    // 10 MB
+    generalstorage: 10 * 1024 * 1024,    // 10 MB
     vault_attachments: 5 * 1024 * 1024,   // 5 MB
     form_media: 10 * 1024 * 1024,        // 10 MB
     form_attachments: 5 * 1024 * 1024,   // 5 MB
@@ -105,7 +105,7 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
         if (shouldDelete) {
           await Registry.getStorage().deleteFile(bucketId, fileId);
         }
-      } catch (err) {
+      } catch (_err) {
         // File may not exist or deletion failed, proceed with upload
       }
     }
@@ -119,8 +119,7 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
       name: file.name,
       type: file.type,
       size: file.size,
-      buffer,
-    }, permissions);
+      buffer}, permissions);
     
     return JSON.parse(JSON.stringify(uploadedFile));
   } catch (error: any) {

@@ -213,4 +213,3 @@ export function ActorsListDrawer({ open, onClose, title, actors, mobile = false,
     );
 }
 
-export default ActorsListDrawer;

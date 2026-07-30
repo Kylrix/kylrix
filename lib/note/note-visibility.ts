@@ -29,7 +29,7 @@ export function isClientEncryptedNote(note: Notes | null | undefined): boolean {
 /** Map pinned IDs to loaded note rows, preserving pin order. */
 export function resolvePinnedNoteRows(pinnedIds: string[], notes: Notes[]): Notes[] {
   return pinnedIds
-    .map((id) => notes.find((n) => n.$id === id))
+    .map((id: any) => notes.find((n) => n.$id === id))
     .filter((n): n is Notes => Boolean(n))
     .filter((n) => !isClientEncryptedNote(n));
 }

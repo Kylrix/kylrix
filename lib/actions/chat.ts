@@ -38,8 +38,7 @@ export async function createMessageAction(payload: any) {
   const securedPayload = {
     ...validated,
     senderId: actor.$id,
-    actorId: actor.$id,
-  };
+    actorId: actor.$id};
 
   return await createMessageInternal(securedPayload);
 }
@@ -58,8 +57,7 @@ export async function toggleReactionAction(payload: any) {
 
   return await toggleReactionInternal({
     ...validated,
-    actorId: actor.$id,
-  });
+    actorId: actor.$id});
 }
 
 export async function repairConversationAction(payload: {
@@ -87,8 +85,7 @@ export async function repairConversationAction(payload: {
     userId: targetUserId,
     conversationId: validatedConversationId,
     actorId: actor.$id,
-    actorLabels: isAdmin ? ['admin'] : [],
-  };
+    actorLabels: isAdmin ? ['admin'] : []};
 
   return await repairConversationInternal(securedPayload);
 }
@@ -110,8 +107,7 @@ export async function clearConversationFootprintAction(payload: {
 
   return await clearConversationFootprintInternal({
     conversationId: validatedConversationId,
-    actorId: actor.$id,
-  });
+    actorId: actor.$id});
 }
 
 export async function nuclearWipeConversationAction(payload: {
@@ -131,8 +127,7 @@ export async function nuclearWipeConversationAction(payload: {
 
   return await nuclearWipeConversationInternal({
     conversationId: validatedConversationId,
-    actorId: actor.$id,
-  });
+    actorId: actor.$id});
 }
 
 export async function deleteConversationFullyAction(payload: {
@@ -152,8 +147,7 @@ export async function deleteConversationFullyAction(payload: {
 
   return await deleteConversationFullyInternal({
     conversationId: validatedConversationId,
-    actorId: actor.$id,
-  });
+    actorId: actor.$id});
 }
 
 export async function joinRequestAction(payload: any) {
@@ -167,8 +161,7 @@ export async function joinRequestAction(payload: any) {
 
   const securedPayload = {
     ...validated,
-    actorId: actor?.$id,
-  };
+    actorId: actor?.$id};
 
   if (validated.method === 'POST') {
     if (!actor?.$id) {

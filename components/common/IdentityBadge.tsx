@@ -37,7 +37,6 @@ export function computeIdentityFlags(signals: IdentitySignals) {
 }
 
 // Thread-safe in-memory cache for user profiles fetched from the server SDK
-const profileCache = new Map<string, any>();
 
 export function IdentityAvatar({
   src,
@@ -60,8 +59,7 @@ export function IdentityAvatar({
   displayName,
   username,
   accountName,
-  email,
-}: {
+  email}: {
   src?: string | null;
   alt?: string;
   fallback?: string;
@@ -297,17 +295,14 @@ export function IdentityAvatar({
           ? {
               border: '2px dotted rgba(99, 102, 241, 0.5)',
               backgroundColor: 'rgba(99, 102, 241, 0.05)',
-              padding: '2px',
-            }
+              padding: '2px'}
           : resolvedPro
           ? {
               padding: '2px',
               backgroundImage: RING_GRADIENT,
-              boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 0 18px rgba(99,102,241,0.18)',
-            }
+              boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 0 18px rgba(99,102,241,0.18)'}
           : {
-              padding: '0px',
-            }),
+              padding: '0px'}),
         ...(sx || {}),
       }}
     >
@@ -370,8 +365,7 @@ export function IdentityAvatar({
             bgcolor: '#0A0908',
             display: 'grid',
             placeItems: 'center',
-            boxShadow: '0 0 0 2px rgba(10,9,8,1)',
-          }}
+            boxShadow: '0 0 0 2px rgba(10,9,8,1)'}}
         >
           <CheckCircleIcon sx={{ fontSize: verifiedSize, color: '#6366F1' }} />
         </Box>
@@ -385,8 +379,7 @@ export function IdentityAvatar({
 export function IdentityName({
   children,
   verified,
-  sx,
-}: {
+  sx}: {
   children: React.ReactNode;
   verified?: boolean;
   sx?: Record<string, unknown>;

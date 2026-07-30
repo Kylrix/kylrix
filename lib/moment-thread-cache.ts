@@ -5,7 +5,7 @@ type CachedThread = {
   cachedAt: number;
 };
 
-export const THREAD_CACHE_STALE_AFTER_MS = 1000 * 60 * 5;
+const THREAD_CACHE_STALE_AFTER_MS = 1000 * 60 * 5;
 
 const STORAGE_KEY = 'kylrix_connect_thread_cache_v1';
 const MAX_ENTRIES = 20;
@@ -32,8 +32,7 @@ function hydrate() {
           moment: value.moment || null,
           replies: Array.isArray(value.replies) ? value.replies : [],
           ancestors: Array.isArray(value.ancestors) ? value.ancestors : [],
-          cachedAt: value.cachedAt || Date.now(),
-        });
+          cachedAt: value.cachedAt || Date.now()});
       }
     });
   } catch {
@@ -52,21 +51,6 @@ function persist() {
   }
 }
 
-export function seedMomentThread(rootId: string | null | undefined, thread: Partial<CachedThread> | null | undefined) {
-  hydrate();
-  if (!rootId || !thread?.moment?.$id) return null;
-
-  const cached: CachedThread = {
-    moment: thread.moment || null,
-    replies: Array.isArray(thread.replies) ? thread.replies : [],
-    ancestors: Array.isArray(thread.ancestors) ? thread.ancestors : [],
-    cachedAt: Date.now(),
-  };
-
-  memoryCache.set(rootId, cached);
-  persist();
-  return cached;
-}
 
 export function getCachedMomentThread(rootId?: string | null) {
   if (!rootId) return null;
@@ -74,8 +58,3 @@ export function getCachedMomentThread(rootId?: string | null) {
   return memoryCache.get(rootId) || null;
 }
 
-export function isFreshMomentThread(rootId?: string | null, staleAfterMs: number = THREAD_CACHE_STALE_AFTER_MS) {
-  const cached = getCachedMomentThread(rootId);
-  if (!cached) return false;
-  return Date.now() - cached.cachedAt < staleAfterMs;
-}

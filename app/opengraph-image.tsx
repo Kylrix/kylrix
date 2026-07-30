@@ -15,8 +15,7 @@ export default async function Image() {
       accent: 'indigo',
       ownerLabel: 'Built for',
       ownerName: 'High agency builders',
-      chips: ['Notes', 'Vault', 'Flow', 'Projects', 'Agents'],
-    }),
+      chips: ['Notes', 'Vault', 'Flow', 'Projects', 'Agents']}),
     size
   );
 }

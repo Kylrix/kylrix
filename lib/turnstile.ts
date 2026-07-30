@@ -1,4 +1,3 @@
-export const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_KEY || '';
 const TURNSTILE_SECRET_KEY = process.env.CLOUDFLARE_TURNSTILE_SECRET || '';
 
 export interface TurnstileVerifyResponse {
@@ -20,12 +19,10 @@ export async function verifyTurnstileToken(token: string): Promise<TurnstileVeri
     const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'},
       body: JSON.stringify({
         secret: TURNSTILE_SECRET_KEY,
-        response: token,
-      }),
+        response: token}),
     });
 
     if (!response.ok) {

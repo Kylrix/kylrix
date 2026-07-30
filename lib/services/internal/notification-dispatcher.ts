@@ -36,12 +36,12 @@ export async function dispatchSecureNotification(input: SecureNotificationInput)
   let ctaUrl = input.ctaUrl;
   if (!ctaUrl && input.resourceId) {
     if (input.resourceType === 'project') {
-      // Invite link for project is /project/[id] (not /projects/[id])
+      // Invite link for project is /project/[id] (not /workspaces/[id])
       ctaUrl = `${appBaseUrl}/project/${input.resourceId}`;
     } else if (input.resourceType === 'note') {
       ctaUrl = `${appBaseUrl}/idea/${input.resourceId}`;
     } else if (input.resourceType === 'task') {
-      ctaUrl = `${appBaseUrl}/flow/${input.resourceId}`;
+      ctaUrl = `${appBaseUrl}/goal/${input.resourceId}`;
     }
   }
 
@@ -81,8 +81,7 @@ export async function dispatchSecureNotification(input: SecureNotificationInput)
       notificationType: input.type,
       title: input.title,
       resourceType: input.resourceType,
-      resourceId: input.resourceId,
-    });
+      resourceId: input.resourceId});
     if (tgSuccess) {
       console.log('[dispatchSecureNotification] Primary Telegram dispatch successful');
     }

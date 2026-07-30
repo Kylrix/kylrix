@@ -44,7 +44,7 @@ export interface AgenticSessionListItem {
 }
 
 function sortSessions(rows: AgenticSessionListItem[]): AgenticSessionListItem[] {
-  return [...rows].sort((a, b) => {
+  return [...rows].sort((a: any, b: any) => {
     const pinDelta = Number(b.isPinned === true) - Number(a.isPinned === true);
     if (pinDelta !== 0) return pinDelta;
     const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
@@ -110,8 +110,7 @@ export const AgenticSessionLocalStore = {
     const row: AgenticLocalSession = {
       ...session,
       updatedAt: now,
-      createdAt: session.createdAt || now,
-    };
+      createdAt: session.createdAt || now};
     await LocalEngine.cacheSet(sessionKey(session.id), row);
 
     const list = await this.getSessionsList(session.userId);
@@ -126,8 +125,7 @@ export const AgenticSessionLocalStore = {
       isGuest: session.isGuest,
       isPinned: session.isPinned,
       createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    };
+      updatedAt: row.updatedAt};
     if (idx >= 0) list[idx] = summary;
     else list.unshift(summary);
     await this.setSessionsList(session.userId, list.slice(0, 120));
@@ -156,14 +154,12 @@ export const AgenticSessionLocalStore = {
     const existing = (await this.getSession(sessionId)) || {
       id: sessionId,
       userId,
-      chatHistory: [],
-    };
+      chatHistory: []};
     await this.upsertSession({
       ...existing,
       id: sessionId,
       userId,
-      chatHistory: messages,
-    });
+      chatHistory: messages});
     await this.setActiveSessionId(userId, sessionId);
   },
 
@@ -175,8 +171,7 @@ export const AgenticSessionLocalStore = {
     const existing = (await this.getSession(sessionId)) || {
       id: sessionId,
       userId,
-      chatHistory: [],
-    };
+      chatHistory: []};
     const merged = [...(existing.chatHistory || []), ...messages];
     await this.upsertSession({ ...existing, id: sessionId, userId, chatHistory: merged });
     await this.setActiveSessionId(userId, sessionId);
@@ -189,7 +184,7 @@ export const AgenticSessionLocalStore = {
   ): Promise<void> {
     const session = await this.getSession(sessionId);
     if (!session) return;
-    const next = session.chatHistory.map((m) => (m.id === messageId ? { ...m, ...patch } : m));
+    const next = session.chatHistory.map((m: any) => (m.id === messageId ? { ...m, ...patch } : m));
     await this.upsertSession({ ...session, chatHistory: next });
   },
 
@@ -197,7 +192,7 @@ export const AgenticSessionLocalStore = {
     const session = await this.getSession(sessionId);
     if (!session) return;
     const idSet = new Set(messageIds);
-    const next = session.chatHistory.map((m) =>
+    const next = session.chatHistory.map((m: any) =>
       idSet.has(m.id) ? { ...m, syncStatus: 'synced' as const } : m,
     );
     await this.upsertSession({ ...session, chatHistory: next });
@@ -228,7 +223,7 @@ export const AgenticSessionLocalStore = {
     }
 
     const list = await this.getSessionsList(userId);
-    const next = list.map((row) => (row.id === sessionId ? { ...row, ...patch } : row));
+    const next = list.map((row: any) => (row.id === sessionId ? { ...row, ...patch } : row));
     await this.setSessionsList(userId, next);
   },
 
@@ -238,16 +233,3 @@ export const AgenticSessionLocalStore = {
   },
 };
 
-export function toChatMessagesFromLocal(rows: AgenticLocalMessage[]) {
-  return rows.map((m) => ({
-    id: m.id,
-    role: m.role,
-    content: m.content,
-    blocks: m.blocks,
-    syncStatus: m.syncStatus,
-    isPublic: m.isPublic,
-    isGuest: m.isGuest,
-    nextSteps: m.nextSteps,
-    tools: m.tools as any,
-  }));
-}

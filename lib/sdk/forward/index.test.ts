@@ -87,14 +87,12 @@ describe('forward directory', () => {
 
     expect(createConversation).toHaveBeenCalledWith({
       participantIds: ['me', 'user-1'],
-      type: 'direct',
-    });
+      type: 'direct'});
     expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
       conversationId: 'new-conv',
       senderId: 'me',
       content: 'Forwarded resource',
-      type: 'attachment',
-    }));
+      type: 'attachment'}));
     expect(result).toEqual({ $id: 'msg-1' });
   });
 });

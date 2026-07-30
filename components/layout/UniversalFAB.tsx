@@ -9,14 +9,14 @@ import {
   Zoom,
   alpha,
   useMediaQuery,
-  useTheme,
-} from '@/lib/openbricks/primitives';
+  useTheme} from '@/lib/openbricks/primitives';
 import { Plus, X } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import { usePathname } from 'next/navigation';
 import { useLocalContext } from '@/lib/context-engine';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
+import { isFlowPath, isWorkspacesPath, isGoalsSurfacePath } from '@/lib/routing/app-paths';
 
 const FAB_BOTTOM = {
   landing: 32,
@@ -37,9 +37,10 @@ export default function UniversalFAB() {
   const isLandingPage = pathname === '/';
 
   const isAppRoute = pathname && (
-    pathname.startsWith('/projects') ||
+    isWorkspacesPath(pathname) ||
     pathname.startsWith('/app') ||
-    (pathname.startsWith('/flow') && !pathname.startsWith('/flow/form/')) ||
+    isFlowPath(pathname) ||
+    isGoalsSurfacePath(pathname) ||
     pathname.startsWith('/vault') ||
     (pathname.startsWith('/connect') && !pathname.includes('/invite/'))
   );
@@ -142,8 +143,7 @@ export default function UniversalFAB() {
                   borderRadius: '12px',
                   bgcolor: 'rgba(10, 10, 10, 0.94)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
-                }}
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.45)'}}
               >
                 <Typography
                   component="span"
@@ -155,8 +155,7 @@ export default function UniversalFAB() {
                     textTransform: 'uppercase',
                     lineHeight: 1.3,
                     whiteSpace: 'nowrap',
-                    display: 'block',
-                  }}
+                    display: 'block'}}
                 >
                   {action.label}
                 </Typography>
@@ -205,8 +204,7 @@ export default function UniversalFAB() {
               display: 'grid',
               placeItems: 'center',
               transform: isExpanded ? 'rotate(45deg)' : 'rotate(0deg)',
-              transition: 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            }}
+              transition: 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)'}}
           >
             {isExpanded ? <X size={28} strokeWidth={2} /> : (mainIcon || <Plus size={28} strokeWidth={2} />)}
           </Box>

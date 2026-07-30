@@ -20,8 +20,7 @@ import {
   ExternalLink,
   CheckCircle2,
   Lock,
-  AlertTriangle,
-} from 'lucide-react';
+  AlertTriangle} from 'lucide-react';
 
 interface SharedVaultClientProps {
   credentialId: string;
@@ -38,7 +37,7 @@ interface DecryptedCredential {
   itemType: string;
 }
 
-const ENCRYPTED_FIELDS_CREDENTIALS = ['name', 'url', 'username', 'password', 'notes', 'customFields'];
+
 const DEK_IV_SIZE = 16;
 
 async function importDek(dekBase64Safe: string): Promise<CryptoKey> {
@@ -108,8 +107,7 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
             password: null,
             url: null,
             notes: null,
-            itemType: raw.itemType || 'login',
-          });
+            itemType: raw.itemType || 'login'});
           return;
         }
 
@@ -130,8 +128,7 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
           password: await decrypt(raw.password),
           url: await decrypt(raw.url),
           notes: await decrypt(raw.notes),
-          itemType: raw.itemType || 'login',
-        };
+          itemType: raw.itemType || 'login'};
 
         if (!cancelled) setCredential(decrypted);
       } catch (err: any) {

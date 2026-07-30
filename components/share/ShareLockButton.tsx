@@ -108,8 +108,7 @@ export function ShareLockButton({
       onPublished?.({
         isPublic: !!res.isPublic,
         isGuest: !!res.isGuest,
-        publicUrl,
-      });
+        publicUrl});
 
       const copied = await copyPublicUrl(publicUrl);
       if (copied) {

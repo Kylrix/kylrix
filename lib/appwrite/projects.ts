@@ -7,8 +7,7 @@ import { getNamedListCache } from '@/lib/services/list-cache';
 import {
   clearSessionProjectsList,
   clearSessionProjectDetail,
-  setSessionProjectsList,
-} from '@/lib/projects/projects-cache';
+  setSessionProjectsList} from '@/lib/projects/projects-cache';
 import { invalidateCache } from '@/lib/ecosystem/nexus-fetcher';
 
 const DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
@@ -44,7 +43,7 @@ export const ProjectsService = {
     return { rows };
   },
 
-  async fetchRemoteProjects(force = false) {
+  async fetchRemoteProjects(_force = false) {
     let result: any[] = [];
     if (typeof window !== 'undefined') {
       let jwt: string | undefined = undefined;
@@ -64,7 +63,7 @@ export const ProjectsService = {
     return result;
   },
   async getProject(projectId: string) {
-    return databases.getRow<any>(
+    return  (databases as any).getRow(
       DATABASE_ID,
       PROJECTS_COLLECTION_ID,
       projectId
@@ -91,7 +90,7 @@ export const ProjectsService = {
   },
 
   async listProjectCollaborators(projectId: string) {
-    return databases.listRows<any>(
+    return (databases as any).listRows(
       DATABASE_ID,
       PROJECT_OBJECTS_COLLECTION_ID,
       [
@@ -166,7 +165,7 @@ export const ProjectsService = {
   },
 
   async listProjectObjects(projectId: string) {
-    return databases.listRows<any>(
+    return (databases as any).listRows(
       DATABASE_ID,
       PROJECT_OBJECTS_COLLECTION_ID,
       [Query.equal('projectId', projectId)]

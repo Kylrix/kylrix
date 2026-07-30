@@ -8,7 +8,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 import { CircularProgress } from '@/lib/openbricks/primitives';
 import type { Notes } from '@/types/appwrite';
-import NoteCard from '@/components/ui/NoteCard';
+import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
 import { useSearch } from '@/hooks/useSearch';
@@ -41,18 +41,15 @@ import { useAuth } from '@/context/auth/AuthContext';
 import {
   getSessionSharedNotes,
   setSessionSharedNotes,
-  sharedNotesCacheKey,
-} from '@/lib/note/shared-notes-cache';
+  sharedNotesCacheKey} from '@/lib/note/shared-notes-cache';
 import {
   getSessionProjectsList,
   setSessionProjectsList,
-  projectsListCacheKey,
-} from '@/lib/projects/projects-cache';
+  projectsListCacheKey} from '@/lib/projects/projects-cache';
 import { ProjectsService } from '@/lib/appwrite/projects';
-import CreateNoteForm from './notes/CreateNoteForm';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
-import { NoteDetailSidebar } from '@/components/ui/NoteDetailSidebar';
+import { NoteObjectDetail } from '@/components/objects/NoteObjectDetail';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
 import { NotesErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
@@ -86,7 +83,6 @@ export default function NotesPage() {
     notes: allNotes, 
     totalNotes, 
     isLoading: isNotesLoading, 
-    upsertNote, 
     registerComposeSession,
     pushLiveNote,
     removeNote,
@@ -113,8 +109,8 @@ export default function NotesPage() {
   const { setCachedData } = useDataNexus();
 
   // Collapsible accordion state for the desktop right pane
-  const [sharedNotesOpen, setSharedNotesOpen] = useState(true);
-  const [projectsOpen, setProjectsOpen] = useState(true);
+  const [_sharedNotesOpen, _setSharedNotesOpen] = useState(true);
+  const [_projectsOpen, _setProjectsOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<'notes' | 'tags'>('notes');
 
   // Tags data state
@@ -201,12 +197,12 @@ export default function NotesPage() {
   };
 
   // Projects data state
-  const [projects, setProjects] = useState<any[]>(() => getSessionProjectsList() || []);
-  const [projectsLoading, setProjectsLoading] = useState(() => !getSessionProjectsList());
+  const [_projects, setProjects] = useState<any[]>(() => getSessionProjectsList() || []);
+  const [_projectsLoading, setProjectsLoading] = useState(() => !getSessionProjectsList());
 
   // Shared Notes data state
-  const [sharedNotes, setSharedNotes] = useState<any[]>(() => getSessionSharedNotes() || []);
-  const [sharedNotesLoading, setSharedNotesLoading] = useState(() => !getSessionSharedNotes());
+  const [_sharedNotes, setSharedNotes] = useState<any[]>(() => getSessionSharedNotes() || []);
+  const [_sharedNotesLoading, setSharedNotesLoading] = useState(() => !getSessionSharedNotes());
 
   useEffect(() => {
     let mounted = true;
@@ -335,23 +331,14 @@ export default function NotesPage() {
     return paginatedNotes;
   }, [paginatedNotes]);
 
-  const handleNoteCreated = useCallback((newNote: Notes) => {
-    if (newNote?.$id) {
-      registerComposeSession(newNote.$id);
-      pushLiveNote(newNote);
-    }
-    clearSearch();
-    goToPage(1);
-  }, [clearSearch, goToPage, pushLiveNote, registerComposeSession]);
 
   const openComposer = useCallback((kind: 'note' | 'project') => {
-    openOverlay(
-      <CreateNoteForm
-        onNoteCreated={handleNoteCreated}
-        noteKind={kind}
-      />
-    );
-  }, [handleNoteCreated, openOverlay]);
+    if (kind === 'project') {
+      openUnified('new-project');
+      return;
+    }
+    openUnified('note');
+  }, [openUnified]);
 
   useEffect(() => {
     if (isDynamicSidebarOpen || isDesktop) {
@@ -434,10 +421,11 @@ export default function NotesPage() {
 
     if (isDesktop) {
       openSidebar(
-        <NoteDetailSidebar
+        <NoteObjectDetail
           note={note}
           onUpdate={handleNoteUpdated}
           onDelete={handleNoteDeleted}
+          embedded
         />,
         note.$id || null,
         { hideHeader: true }
@@ -446,18 +434,15 @@ export default function NotesPage() {
     }
 
     openOverlay(
-      <NoteDetailSidebar
+      <NoteObjectDetail
         note={note}
         onUpdate={handleNoteUpdated}
         onDelete={handleNoteDeleted}
-        onBack={closeOverlay}
+        onClose={closeOverlay}
       />
     );
   }, [isDesktop, openSidebar, openOverlay, closeOverlay, handleNoteUpdated, handleNoteDeleted, promptSudo]);
 
-  const handleSharedNoteClick = useCallback((note: any) => {
-    openNoteDetailSurface(note);
-  }, [openNoteDetailSurface]);
 
   const hasReopenedRef = useRef(false);
   useEffect(() => {
@@ -492,7 +477,7 @@ export default function NotesPage() {
   }, [openNoteIdParam, visibleNotes, openNoteDetailSurface, router]);
 
   const handleCreateNoteClick = () => {
-    openOverlay(<CreateNoteForm onNoteCreated={handleNoteCreated} />);
+    openUnified('note');
   };
 
 
@@ -870,12 +855,10 @@ export default function NotesPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {pinnedNotes.slice(0, 3).map((note) => (
-                  <NoteCard
+                  <NoteObjectRow
                     key={note.$id}
                     note={note}
-                    onUpdate={handleNoteUpdated}
-                    onDelete={handleNoteDeleted}
-                    onNoteSelect={openNoteDetailSurface}
+                    onSelect={openNoteDetailSurface}
                   />
                 ))}
               </div>
@@ -906,12 +889,10 @@ export default function NotesPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {regularNotes.map((note) => (
-                  <NoteCard
+                  <NoteObjectRow
                     key={note.$id}
                     note={note}
-                    onUpdate={handleNoteUpdated}
-                    onDelete={handleNoteDeleted}
-                    onNoteSelect={openNoteDetailSurface}
+                    onSelect={openNoteDetailSurface}
                   />
                 ))}
               </div>

@@ -42,8 +42,7 @@ export async function unlockWithPasskey(userId: string): Promise<boolean> {
       allowCredentials: passkeyEntries.map((entry: any) => ({
         id: entry.credentialId!,
         type: 'public-key' as const,
-        transports: transportsForPasskeyEntry(entry),
-      })),
+        transports: transportsForPasskeyEntry(entry)})),
       userVerification: 'preferred' as UserVerificationRequirement,
       timeout: 60000,
     };
@@ -77,7 +76,7 @@ export async function unlockWithPasskey(userId: string): Promise<boolean> {
       try {
         const paramsObj = JSON.parse(matchingEntry.params);
         usePrf = !!paramsObj.prf;
-      } catch (e) {}
+      } catch (_e) {}
     }
 
     if (usePrf) {

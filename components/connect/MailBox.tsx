@@ -68,7 +68,7 @@ export function MailBox() {
   useEffect(() => {
     try {
       localStorage.setItem('kylrix_mail_draft', JSON.stringify({ composeTo, composeSubject, composeBody }));
-    } catch (e) {}
+    } catch (_e) {}
   }, [composeTo, composeSubject, composeBody]);
 
   // Load emails from localStorage cache on mount
@@ -78,7 +78,7 @@ export function MailBox() {
       if (saved) {
         setEmails(JSON.parse(saved));
       }
-    } catch (e) {}
+    } catch (_e) {}
   }, []);
 
   // Save emails to localStorage cache when updated
@@ -86,7 +86,7 @@ export function MailBox() {
     if (emails.length > 0) {
       try {
         localStorage.setItem('tendon_emails_cache', JSON.stringify(emails));
-      } catch (e) {}
+      } catch (_e) {}
     }
   }, [emails]);
 
@@ -223,7 +223,7 @@ export function MailBox() {
       setComposeBody('');
       try {
         localStorage.removeItem('kylrix_mail_draft');
-      } catch (e) {}
+      } catch (_e) {}
       toast.success('Encrypted unicast mail signed and published to relays!', { id: 'send-mail' });
     } catch (err: any) {
       console.error('Failed to send TMP mail:', err);

@@ -42,8 +42,7 @@ export class SubscriptionService {
       currentPeriodEnd: currentPeriodEnd.toISOString(),
       seats: 1,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString()};
 
     await databases.createRow(NOTE_DB_ID, SUB_COLLECTION_ID, ID.unique(), subData, [
       Permission.read(Role.user(targetUserId))]);
@@ -61,8 +60,7 @@ export class SubscriptionService {
         Query.limit(2)]);
       if (profileRes.total > 0) {
         await databases.updateRow(CHAT_DB_ID, PROFILES_COLLECTION_ID, profileRes.rows[0].$id, {
-          tier: planTier,
-        });
+          tier: planTier});
       }
     } catch (err) {
       console.warn('[SubscriptionService] Failed to sync profile tier:', err);
@@ -99,8 +97,7 @@ export class SubscriptionService {
       months,
       currentPeriodEnd: currentPeriodEnd.toISOString(),
       sourceLabel: 'Manual activation',
-      bodyCopy: 'Your Pro subscription has been activated by the Accounts team.',
-    }).catch((error) => {
+      bodyCopy: 'Your Pro subscription has been activated by the Accounts team.'}).catch((error) => {
       console.warn('[SubscriptionService] Failed to send manual activation email:', error);
     });
 
@@ -114,8 +111,7 @@ export class SubscriptionService {
         details: JSON.stringify({
           reason: trimmedReason,
           actorEmail,
-          durationMonths: months,
-        }),
+          durationMonths: months}),
         timestamp: new Date().toISOString(),
       });
     } catch (err) {

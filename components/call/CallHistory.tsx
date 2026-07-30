@@ -54,7 +54,7 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
           resourceId: call.$id,
           ownerId: call.callerId,
           rowIsPinned: call.isPinned,
-          setOwnerRowPin: async (pinned) => {
+          setOwnerRowPin: async (_pinned) => {
               // Update logic if needed
           },
         });

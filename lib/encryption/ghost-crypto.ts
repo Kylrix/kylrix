@@ -34,8 +34,7 @@ export async function encryptGhostData(text: string, providedKey?: string): Prom
 
     return {
         encrypted: makeUrlSafe(result),
-        key: makeUrlSafe(key.toString('base64')),
-    };
+        key: makeUrlSafe(key.toString('base64'))};
 }
 
 /**
@@ -67,17 +66,6 @@ export async function decryptGhostData(encryptedData: string, keyBase64: string)
 }
 
 /** AES-256-GCM encrypt arbitrary bytes with the same 32-byte key material as ghost notes / Send URLs (URL-safe base64 key). */
-export function encryptGhostBinaryToBytes(data: ArrayBuffer, keyBase64Url: string): Uint8Array {
-    const key = Buffer.from(restoreStandardBase64(keyBase64Url), 'base64');
-    if (key.length !== 32) {
-        throw new Error('Invalid encryption key length');
-    }
-    const iv = randomBytes(IV_LENGTH);
-    const cipher = createCipheriv(ALGORITHM, key, iv);
-    const enc = Buffer.concat([cipher.update(Buffer.from(data)), cipher.final()]);
-    const authTag = cipher.getAuthTag();
-    return new Uint8Array(Buffer.concat([iv, enc, authTag]));
-}
 
 export function decryptGhostBinaryFromBytes(data: ArrayBuffer, keyBase64Url: string): ArrayBuffer {
     const buf = Buffer.from(data);

@@ -16,14 +16,12 @@ const DRAWER_SX = {
   backgroundImage: 'none',
   maxWidth: 720,
   width: '100%',
-  mx: 'auto',
-};
+  mx: 'auto'};
 
 export default function NewTotpDialog({
   open,
   onClose,
-  initialData,
-}: {
+  initialData}: {
   open: boolean;
   onClose: () => void;
   initialData?: {
@@ -47,8 +45,7 @@ export default function NewTotpDialog({
     folderId: "",
     algorithm: "SHA1",
     digits: 6,
-    period: 30,
-  });
+    period: 30});
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -66,8 +63,7 @@ export default function NewTotpDialog({
         folderId: initialData.folderId || "",
         algorithm: initialData.algorithm || "SHA1",
         digits: initialData.digits || 6,
-        period: initialData.period || 30,
-      });
+        period: initialData.period || 30});
     } else {
       setForm({
         issuer: "",
@@ -76,8 +72,7 @@ export default function NewTotpDialog({
         folderId: "",
         algorithm: "SHA1",
         digits: 6,
-        period: 30,
-      });
+        period: 30});
     }
   }, [initialData, open]);
 
@@ -95,8 +90,7 @@ export default function NewTotpDialog({
       if (initialData && initialData.$id) {
         await updateTotpSecret(initialData.$id, {
           ...form,
-          updatedAt: new Date().toISOString(),
-        });
+          updatedAt: new Date().toISOString()});
         toast.success("Smart Code updated!");
       } else {
         await createTotpSecret({
@@ -107,8 +101,7 @@ export default function NewTotpDialog({
           isFavorite: false,
           isDeleted: false,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
+          updatedAt: new Date().toISOString()});
         toast.success("Smart Code added!");
       }
       handleClose();
@@ -131,14 +124,12 @@ export default function NewTotpDialog({
         sx: {
           ...DRAWER_SX,
           height: '65dvh',
-          pointerEvents: 'auto',
-        }
+          pointerEvents: 'auto'}
       }}
       ModalProps={{
         keepMounted: false,
         disableScrollLock: false,
-        disablePortal: true,
-      }}
+        disablePortal: true}}
     >
       {/* Drag handle decoration */}
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 1.5 }}>

@@ -175,7 +175,7 @@ export default function TrashPage() {
                 tableId: q.table
               });
             });
-          } catch (e) {
+          } catch (_e) {
             // Table might not support isTrash or not exist yet
           }
         })
@@ -196,7 +196,7 @@ export default function TrashPage() {
       const activeTrash = trashList.filter(item => new Date(item.deletedAt).getTime() >= thirtyDaysAgo).sort((a, b) => new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime());
       setItems(activeTrash);
       localStorage.setItem(cacheKey, JSON.stringify(activeTrash));
-    } catch (e: any) {
+    } catch (_e: any) {
       toast.error('Failed to load trash contents.');
     } finally {
       setLoading(false);
@@ -257,7 +257,7 @@ export default function TrashPage() {
           );
           toast.success('Trash bin emptied!', { id: 'empty-trash' });
           await fetchTrash(true);
-        } catch (e: any) {
+        } catch (_e: any) {
           toast.error('Failed to empty trash entirely.');
         } finally {
           setPurging(false);

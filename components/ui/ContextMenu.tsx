@@ -21,7 +21,7 @@ interface ContextMenuProps {
   appType?: KylrixApp;
 }
 
-export function ContextMenu({ x, y, onCloseAction, items }: ContextMenuProps) {
+export function ContextMenu({ onCloseAction, items }: ContextMenuProps) {
   // Navigation Stack for Dynamic Sub-menus
   const [menuStack, setMenuStack] = useState<ContextMenuItem[][]>([items]);
   const currentItems = menuStack[menuStack.length - 1];

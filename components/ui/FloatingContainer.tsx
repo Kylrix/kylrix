@@ -36,8 +36,7 @@ export function FloatingContainer({
       
       setPosition((prev) => ({
         x: prev.x + dx,
-        y: prev.y + dy,
-      }));
+        y: prev.y + dy}));
       
       dragStart.current = { x: e.clientX, y: e.clientY };
     };

@@ -20,8 +20,3 @@ export function LoginDrawerProvider({ children }: { children: React.ReactNode })
   );
 }
 
-export function useLoginDrawer() {
-  const context = useContext(LoginDrawerContext);
-  if (!context) throw new Error('useLoginDrawer must be used within LoginDrawerProvider');
-  return context;
-}

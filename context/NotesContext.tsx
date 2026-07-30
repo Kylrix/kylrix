@@ -29,13 +29,11 @@ import {
   markComposePersisted,
   isUnpersistedComposeDraft,
   isNotePersistedRemote,
-  markNotePersistedRemote,
-} from '@/lib/notes/compose-draft-registry';
+  markNotePersistedRemote} from '@/lib/notes/compose-draft-registry';
 import {
   mergeServerPageWithLocalCopy,
   sortPinnedThenCreatedAt,
-  shouldSoftPull,
-} from '@/lib/sync/local-copy-sync';
+  shouldSoftPull} from '@/lib/sync/local-copy-sync';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { registerLiveNoteGetter } from '@/lib/sync/pending-sync-bridge';
 import { loadNotesFromLocalCopy, warmNotesLocalCopy } from '@/lib/notes/load-local-notes';
@@ -47,11 +45,8 @@ type LiveEditGuard = {
   at: number;
 };
 
-export function isLiveDraftNoteId(noteId?: string | null): boolean {
-  return isEphemeralComposeNoteId(noteId);
-}
 
-export { isUnpersistedComposeDraft };
+;
 
 function mergeFetchedNotesWithLocalDrafts(
   serverBatch: Notes[],
@@ -70,8 +65,7 @@ function mergeFetchedNotesWithLocalDrafts(
         title: guard.title || '',
         content: guard.content || '',
         tags: Array.isArray(guard.tags) ? guard.tags : [],
-        at: guard.at || Date.now(),
-      }),
+        at: guard.at || Date.now()}),
   });
 }
 
@@ -90,8 +84,7 @@ function mergeServerWithLiveGuard(serverNote: Notes, guard: LiveEditGuard): Note
     ...serverNote,
     title: displayTitle,
     content: guard.content,
-    tags: guard.tags.length ? guard.tags : serverNote.tags,
-  });
+    tags: guard.tags.length ? guard.tags : serverNote.tags});
 }
 
 interface NotesContextType {
@@ -207,7 +200,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [cursor, setCursor] = useState<string | null>(null);
-  const [pinnedIds, setPinnedIds] = useState<string[]>([]);
+  const [_pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [isCacheLoaded, setIsCacheLoaded] = useState(false);
   const hydratedUserIdRef = useRef<string | null>(null);
 
@@ -221,7 +214,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     user = authContext.user;
     isAuthenticated = authContext.isAuthenticated;
     isAuthLoading = authContext.isLoading;
-  } catch (e) {
+  } catch (_e) {
     // AuthProvider not available yet, that's fine
     isAuthLoading = false;
   }
@@ -265,8 +258,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         userId,
         existingNotes: notesRef.current,
         getCachedDataSync: (key) => getCachedData(key),
-        getCachedDataAsync: (key) => getCachedDataAsync(key),
-      });
+        getCachedDataAsync: (key) => getCachedDataAsync(key)});
 
       if (cancelled) return;
 
@@ -358,8 +350,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         const fetcher = () => listNotesPaginated({
           limit: PAGE_SIZE,
           cursor: null,
-          userId: user?.$id,
-        });
+          userId: user?.$id});
         
         const optimizedRes = await fetchOptimized(INITIAL_NOTES_CACHE_KEY, fetcher);
         res = optimizedRes;
@@ -395,8 +386,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         res = await listNotesPaginated({
           limit: PAGE_SIZE,
           cursor: reset ? null : (cursorRef.current || null),
-          userId: user?.$id,
-        });
+          userId: user?.$id});
 
         const mergedBatch = mergeFetchedNotesWithLocalDrafts(
           (res?.rows || []).map((note: Notes) => normalizeVisibility(note)).filter((n: any) => !deletedIds.has(n.$id)),
@@ -476,8 +466,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       if (
         !shouldSoftPull({
           lastPullAt: lastPullAtRef.current || autonomicSyncEngine.getLastPullAt(),
-          activityIntensity: autonomicSyncEngine.getActivityIntensity(),
-        })
+          activityIntensity: autonomicSyncEngine.getActivityIntensity()})
       ) {
         return;
       }
@@ -546,8 +535,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
             notes: updated,
             totalNotes: updated.length,
             cursor: cursorRef.current,
-            hasMore: true,
-          });
+            hasMore: true});
         }
         return updated;
       }
@@ -559,8 +547,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           notes: updated,
           totalNotes: updated.length,
           cursor: cursorRef.current,
-          hasMore: true,
-        });
+          hasMore: true});
       }
       return updated;
     });
@@ -578,16 +565,14 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       title: cardTitle,
       content: note.content || '',
       tags,
-      at: Date.now(),
-    });
+      at: Date.now()});
     const stamped: Notes = {
       ...note,
       title: cardTitle,
       content: note.content || '',
       tags,
       $updatedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString()};
     upsertNote(stamped);
     // Sync engine is SoT for amber — enqueue live revision (never an Appwrite field).
     if (options?.pending !== false) {
@@ -938,8 +923,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         const res = await listNotesPaginated({
           limit: Math.min(Math.max(stillMissing.length, 1), 100),
           queries: [Query.equal('$id', stillMissing)],
-          hydrateTags: true,
-        });
+          hydrateTags: true});
 
         let fetched = ((res?.rows || []) as Notes[]).map((note) => normalizeVisibility(note));
 
@@ -1033,8 +1017,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       pinNote,
       unpinNote,
       isPinned,
-      isUnpersistedComposeDraft: isUnpersistedComposeDraftLocal,
-    }),
+      isUnpersistedComposeDraft: isUnpersistedComposeDraftLocal}),
     [
       sortedNotes,
       totalNotes,

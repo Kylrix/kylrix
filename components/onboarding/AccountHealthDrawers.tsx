@@ -17,8 +17,7 @@ import {
     DialogContent,
     DialogActions,
     Chip,
-    Paper,
-} from '@/lib/openbricks/primitives';
+    Paper} from '@/lib/openbricks/primitives';
 import { X, ShieldAlert, Shield, User, Fingerprint, Bell, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSetup } from '@/context/SetupContext';
@@ -42,7 +41,6 @@ const normalizeHandleInput = (raw: string) =>
     raw.toLowerCase().trim().replace(/^@/, '').replace(/[^a-z0-9_]/g, '');
 
 export function AccountHealthDrawers() {
-    const router = useRouter();
     const { user } = useAuth();
     const { activeContent } = useUnifiedDrawer();
     const { currentStep, dismissStep, profile, triggerCheck } = useSetup();

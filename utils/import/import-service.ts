@@ -787,7 +787,7 @@ export class ImportService {
 }
 
 // Security logging for imports
-export async function logImportEvent(
+async function logImportEvent(
   userId: string,
   importType: string,
   summary: ImportResult["summary"],

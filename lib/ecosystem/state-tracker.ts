@@ -1,13 +1,12 @@
 import {
   isPublicResumePath,
-  LAST_ROUTE_COOKIE,
-} from '@/lib/ecosystem/resume-route';
+  LAST_ROUTE_COOKIE} from '@/lib/ecosystem/resume-route';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
-export const STATE_STORAGE_KEY = 'kylrix_ecosystem_state_tracker';
+const STATE_STORAGE_KEY = 'kylrix_ecosystem_state_tracker';
 const MAX_HISTORY = 15;
 
-export interface RouteState {
+interface RouteState {
   path: string;
   scrollY: number;
   timestamp: number;
@@ -48,17 +47,3 @@ export function saveEcosystemState(path: string, scrollY: number) {
   }
 }
 
-export function getLastEcosystemRoute(): RouteState | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(STATE_STORAGE_KEY);
-    if (!raw) return null;
-    const history: RouteState[] = JSON.parse(raw);
-
-    const validHistory = history.filter(s => !isPublicResumePath(s.path));
-
-    return validHistory.length > 0 ? validHistory[0] : null;
-  } catch {
-    return null;
-  }
-}

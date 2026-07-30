@@ -31,11 +31,6 @@ import { ChatList } from '@/components/chat/ChatList';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import toast from 'react-hot-toast';
 
-interface PanelState {
-  isOpen: boolean;
-  data: any[];
-  loading: boolean;
-}
 
 export type PanelType = 
   | 'note' 
@@ -62,10 +57,10 @@ interface DesktopRightSectionProps {
 }
 
 export default function DesktopRightSection({ panels, contextId, onAction }: DesktopRightSectionProps) {
+  const { open: openUnified } = useUnifiedDrawer();
+
   const router = useRouter();
   const { user } = useAuth();
-  const theme = useTheme();
-  const { open: openUnified } = useUnifiedDrawer();
 
   // Unified panel open/collapse states
   const [openStates, setOpenStates] = useState<Record<string, boolean>>(() => {
@@ -127,8 +122,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
         const rows = await warmProjectsList({
           userId: user?.$id || '',
           getCachedDataAsync,
-          fetchOptimized,
-        });
+          fetchOptimized});
         if (mounted) setProjects(rows);
       } catch (e) {
         console.error('Failed loading projects:', e);
@@ -301,7 +295,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
   }, [panels]);
 
   // Load Send Sparks (stash)
-  const [sendSparks, setSendSparks] = useState<any[]>([]);
+  const [_sendSparks, setSendSparks] = useState<any[]>([]);
   const [, setSendSparksLoaded] = useState(false);
 
   useEffect(() => {
@@ -324,15 +318,6 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
     return () => window.removeEventListener('kylrix:storage-update' as any, load);
   }, [panels]);
 
-  const saveSendSparks = (next: any[]) => {
-    try {
-      localStorage.setItem('send_sparks', JSON.stringify(next));
-      setSendSparks(next);
-      window.dispatchEvent(new Event('kylrix:storage-update'));
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   // Render list panel skeleton helper
   const renderSkeletonList = () => (
@@ -384,8 +369,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 flex: '0 0 auto',
                 height: isOpen ? 'auto' : '68px',
-                maxHeight: isOpen ? '380px' : '68px',
-              }}>
+                maxHeight: isOpen ? '380px' : '68px'}}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
                     Workspaces
@@ -394,7 +378,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                     <IconButton onClick={() => togglePanel(panel)} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
                       {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </IconButton>
-                    <IconButton onClick={() => router.push('/projects')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#F59E0B' } }}>
+                    <IconButton onClick={() => router.push('/workspaces')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#F59E0B' } }}>
                       <Maximize2 size={14} />
                     </IconButton>
                   </Box>
@@ -413,7 +397,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                         {projects.map((proj) => (
                           <Box
                             key={proj.$id}
-                            onClick={() => router.push(`/projects/${proj.$id}`)}
+                            onClick={() => router.push(`/workspaces/${proj.$id}`)}
                             sx={{
                               display: 'flex',
                               gap: 1.5,
@@ -426,8 +410,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                               '&:hover': {
                                 bgcolor: 'rgba(255,255,255,0.04)',
                                 borderColor: 'rgba(255,255,255,0.08)',
-                                transform: 'translateX(3px)',
-                              }
+                                transform: 'translateX(3px)'}
                             }}
                           >
                             <Box sx={{
@@ -473,8 +456,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 flex: '0 0 auto',
                 height: isOpen ? 'auto' : '68px',
-                maxHeight: isOpen ? '380px' : '68px',
-              }}>
+                maxHeight: isOpen ? '380px' : '68px'}}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
                     Huddles
@@ -525,8 +507,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                               transition: 'all 0.2s ease',
                               '&:hover': {
                                 bgcolor: 'rgba(16, 185, 129, 0.08)',
-                                transform: 'translateX(3px)',
-                              }
+                                transform: 'translateX(3px)'}
                             }}
                           >
                             <Box sx={{
@@ -538,8 +519,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                               justifyContent: 'center',
                               bgcolor: 'rgba(16, 185, 129, 0.15)',
                               color: '#10B981',
-                              flexShrink: 0,
-                            }}>
+                              flexShrink: 0}}>
                               <Phone size={18} />
                             </Box>
                             <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -572,8 +552,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 flex: '0 0 auto',
                 height: isOpen ? 'auto' : '68px',
-                maxHeight: isOpen ? '380px' : '68px',
-              }}>
+                maxHeight: isOpen ? '380px' : '68px'}}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
                     Notes
@@ -614,8 +593,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                               '&:hover': {
                                 bgcolor: 'rgba(255,255,255,0.04)',
                                 borderColor: 'rgba(255,255,255,0.08)',
-                                transform: 'translateX(3px)',
-                              }
+                                transform: 'translateX(3px)'}
                             }}
                           >
                             <Box sx={{
@@ -627,8 +605,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                               justifyContent: 'center',
                               bgcolor: 'rgba(236, 72, 153, 0.1)',
                               color: '#EC4899',
-                              flexShrink: 0,
-                            }}>
+                              flexShrink: 0}}>
                               <FileText size={18} />
                             </Box>
                             <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -661,8 +638,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 flex: '0 0 auto',
                 height: isOpen ? 'auto' : '68px',
-                maxHeight: isOpen ? '380px' : '68px',
-              }}>
+                maxHeight: isOpen ? '380px' : '68px'}}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
                     Threads
@@ -698,8 +674,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 flex: '0 0 auto',
                 height: isOpen ? 'auto' : '68px',
-                maxHeight: isOpen ? '380px' : '68px',
-              }}>
+                maxHeight: isOpen ? '380px' : '68px'}}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
                     Tags
@@ -737,8 +712,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                               fontSize: '0.8rem',
                               fontFamily: 'var(--font-satoshi)',
                               '&:hover': {
-                                bgcolor: alpha(tag.color || '#6366F1', 0.15),
-                              }
+                                bgcolor: alpha(tag.color || '#6366F1', 0.15)}
                             }}
                           />
                         ))}
@@ -762,8 +736,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 flex: '0 0 auto',
                 height: isOpen ? 'auto' : '68px',
-                maxHeight: isOpen ? '380px' : '68px',
-              }}>
+                maxHeight: isOpen ? '380px' : '68px'}}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff', display: 'flex', alignItems: 'center', gap: 1 }}>
                     TOTP Keys
@@ -812,8 +785,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                               p: 1.5,
                               borderRadius: '16px',
                               bgcolor: 'rgba(255,255,255,0.02)',
-                              border: '1px solid rgba(255,255,255,0.03)',
-                            }}
+                              border: '1px solid rgba(255,255,255,0.03)'}}
                           >
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }}>
@@ -856,8 +828,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 flex: '0 0 auto',
                 height: isOpen ? 'auto' : '68px',
-                maxHeight: isOpen ? '380px' : '68px',
-              }}>
+                maxHeight: isOpen ? '380px' : '68px'}}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
                     Vault Secrets
@@ -898,8 +869,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                               '&:hover': {
                                 bgcolor: 'rgba(255,255,255,0.04)',
                                 borderColor: 'rgba(255,255,255,0.08)',
-                                transform: 'translateX(3px)',
-                              }
+                                transform: 'translateX(3px)'}
                             }}
                           >
                             <Box sx={{
@@ -911,8 +881,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                               justifyContent: 'center',
                               bgcolor: 'rgba(16, 185, 129, 0.1)',
                               color: '#10B981',
-                              flexShrink: 0,
-                            }}>
+                              flexShrink: 0}}>
                               <Key size={18} />
                             </Box>
                             <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -945,8 +914,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 flex: '0 0 auto',
                 height: isOpen ? 'auto' : '68px',
-                maxHeight: isOpen ? '380px' : '68px',
-              }}>
+                maxHeight: isOpen ? '380px' : '68px'}}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
                     Forms
@@ -955,7 +923,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                     <IconButton onClick={() => togglePanel(panel)} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
                       {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </IconButton>
-                    <IconButton onClick={() => router.push('/flow/forms')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#10B981' } }}>
+                    <IconButton onClick={() => router.push('/forms')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#10B981' } }}>
                       <Maximize2 size={14} />
                     </IconButton>
                   </Box>
@@ -991,8 +959,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                               '&:hover': {
                                 bgcolor: 'rgba(255,255,255,0.04)',
                                 borderColor: 'rgba(255,255,255,0.08)',
-                                transform: 'translateX(3px)',
-                              }
+                                transform: 'translateX(3px)'}
                             }}
                           >
                             <Box sx={{
@@ -1004,8 +971,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                               justifyContent: 'center',
                               bgcolor: 'rgba(16, 185, 129, 0.1)',
                               color: '#10B981',
-                              flexShrink: 0,
-                            }}>
+                              flexShrink: 0}}>
                               <FileText size={18} />
                             </Box>
                             <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -1038,8 +1004,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 flex: '0 0 auto',
                 height: isOpen ? 'auto' : '68px',
-                maxHeight: isOpen ? '380px' : '68px',
-              }}>
+                maxHeight: isOpen ? '380px' : '68px'}}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
                     Goals
@@ -1048,7 +1013,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                     <IconButton onClick={() => togglePanel(panel)} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
                       {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </IconButton>
-                    <IconButton onClick={() => router.push('/flow')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#10B981' } }}>
+                    <IconButton onClick={() => router.push('/flows')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#10B981' } }}>
                       <Maximize2 size={14} />
                     </IconButton>
                   </Box>
@@ -1071,7 +1036,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                             onDragStart={(e: React.DragEvent) => {
                               e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'goal', id: goal.$id, title: goal.title }));
                             }}
-                            onClick={() => router.push('/flow')}
+                            onClick={() => router.push('/flows')}
                             sx={{
                               display: 'flex',
                               gap: 1.5,
@@ -1084,8 +1049,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                               '&:hover': {
                                 bgcolor: 'rgba(255,255,255,0.04)',
                                 borderColor: 'rgba(255,255,255,0.08)',
-                                transform: 'translateX(3px)',
-                              }
+                                transform: 'translateX(3px)'}
                             }}
                           >
                             <Box sx={{
@@ -1097,8 +1061,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                               justifyContent: 'center',
                               bgcolor: 'rgba(16, 185, 129, 0.1)',
                               color: '#10B981',
-                              flexShrink: 0,
-                            }}>
+                              flexShrink: 0}}>
                               <Activity size={18} />
                             </Box>
                             <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -1131,8 +1094,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 flex: '0 0 auto',
                 height: isOpen ? 'auto' : '68px',
-                maxHeight: isOpen ? '380px' : '68px',
-              }}>
+                maxHeight: isOpen ? '380px' : '68px'}}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff', display: 'flex', alignItems: 'center', gap: 1 }}>
                     Secret Chat
@@ -1276,13 +1238,6 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                         >
                           <MessageSquare size={15} className="text-[#F59E0B] group-hover:scale-110 transition-transform" />
                           <span className="text-[11px] font-bold text-white leading-tight">New Chat</span>
-                        </button>
-                        <button
-                          onClick={() => openUnified('github-integration')}
-                          className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.06] hover:border-white/10 text-left transition-all group"
-                        >
-                          <Send size={15} className="text-[#10B981] group-hover:scale-110 transition-transform" />
-                          <span className="text-[11px] font-bold text-white leading-tight">Link Github</span>
                         </button>
                       </div>
                     </div>

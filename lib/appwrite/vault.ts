@@ -5,8 +5,7 @@ import {
   Models,
   Permission,
   Role,
-  AuthenticatorType,
-} from "appwrite";
+  AuthenticatorType} from "appwrite";
 import { 
   account, 
   databases, 
@@ -38,8 +37,7 @@ import type {
   Keychain,
   KeychainCreate,
   KeyMapping,
-  KeyMappingCreate,
-} from "./types";
+  KeyMappingCreate} from "./types";
 import { sanitizeString } from "../validation";
 import { getEcosystemUrl } from "../ecosystem";
 
@@ -259,8 +257,7 @@ async function encryptShareEnvelope<T extends Record<string, unknown>>(
 
   return {
     wrappedKey: bytesToBase64(combined),
-    senderPublicKey: await exportX25519PublicKey(ephemeralKeyPair.publicKey),
-  };
+    senderPublicKey: await exportX25519PublicKey(ephemeralKeyPair.publicKey)};
 }
 
 async function decryptShareEnvelope<T extends Record<string, unknown>>(
@@ -311,12 +308,12 @@ async function listRowsWithRetry(
 }
 
 // --- Appwrite Config ---
-export const APPWRITE_COLLECTION_CREDENTIALS_ID = APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS;
-export const APPWRITE_COLLECTION_TOTPSECRETS_ID = APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS;
-export const APPWRITE_COLLECTION_FOLDERS_ID = APPWRITE_CONFIG.TABLES.VAULT.FOLDERS;
-export const APPWRITE_COLLECTION_SECURITYLOGS_ID = APPWRITE_CONFIG.TABLES.VAULT.SECURITY_LOGS;
-export const APPWRITE_COLLECTION_USER_ID = APPWRITE_CONFIG.TABLES.VAULT.USER;
-export const APPWRITE_COLLECTION_KEY_MAPPING_ID = APPWRITE_CONFIG.TABLES.VAULT.KEY_MAPPING;
+const APPWRITE_COLLECTION_CREDENTIALS_ID = APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS;
+const APPWRITE_COLLECTION_TOTPSECRETS_ID = APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS;
+const APPWRITE_COLLECTION_FOLDERS_ID = APPWRITE_CONFIG.TABLES.VAULT.FOLDERS;
+const APPWRITE_COLLECTION_SECURITYLOGS_ID = APPWRITE_CONFIG.TABLES.VAULT.SECURITY_LOGS;
+const APPWRITE_COLLECTION_USER_ID = APPWRITE_CONFIG.TABLES.VAULT.USER;
+const APPWRITE_COLLECTION_KEY_MAPPING_ID = APPWRITE_CONFIG.TABLES.VAULT.KEY_MAPPING;
 
 // Ecosystem: Kylrix Flow
 const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
@@ -324,16 +321,16 @@ const FLOW_COLLECTION_ID_TASKS = APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 const FLOW_COLLECTION_ID_EVENTS = APPWRITE_CONFIG.TABLES.FLOW.EVENTS;
 
 // Ecosystem: Kylrix Note
-export const NOTE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
-export const NOTE_COLLECTION_ID = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+const NOTE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
+const NOTE_COLLECTION_ID = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
 
 // Ecosystem: Unified Identity & Chat
-export const PASSWORD_MANAGER_DATABASE_ID = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
-export const APPWRITE_COLLECTION_IDENTITIES_ID = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES;
-export const CHAT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
-export const CHAT_COLLECTION_CONVERSATIONS_ID = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
-export const CHAT_COLLECTION_MESSAGES_ID = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
-export const CHAT_COLLECTION_USERS_ID = APPWRITE_CONFIG.TABLES.CHAT.USERS;
+const PASSWORD_MANAGER_DATABASE_ID = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
+const APPWRITE_COLLECTION_IDENTITIES_ID = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES;
+const CHAT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
+const CHAT_COLLECTION_CONVERSATIONS_ID = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
+const CHAT_COLLECTION_MESSAGES_ID = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
+const CHAT_COLLECTION_USERS_ID = APPWRITE_CONFIG.TABLES.CHAT.USERS;
 
 // --- Table Structure & Field Mappings ---
 // Dynamically derive encrypted/plaintext fields from the types
@@ -465,8 +462,7 @@ export const COLLECTION_SCHEMAS = {
         "$createdAt",
         "$updatedAt"],
       ENCRYPTED_FIELDS.folders,
-    ),
-  },
+    )},
   securityLogs: {
     encrypted: ENCRYPTED_FIELDS.securityLogs,
     plaintext: getPlaintextFields<SecurityLogs>(
@@ -484,8 +480,7 @@ export const COLLECTION_SCHEMAS = {
         "$createdAt",
         "$updatedAt"],
       ENCRYPTED_FIELDS.securityLogs,
-    ),
-  },
+    )},
   user: {
     encrypted: ENCRYPTED_FIELDS.user,
     plaintext: getPlaintextFields<User>(
@@ -506,8 +501,7 @@ export const COLLECTION_SCHEMAS = {
         "$createdAt",
         "$updatedAt"],
       ENCRYPTED_FIELDS.user,
-    ),
-  },
+    )},
   keychain: {
     encrypted: ENCRYPTED_FIELDS.keychain,
     plaintext: getPlaintextFields<Keychain>(
@@ -525,8 +519,7 @@ export const COLLECTION_SCHEMAS = {
         "$createdAt",
         "$updatedAt"],
       ENCRYPTED_FIELDS.keychain,
-    ),
-  },
+    )},
 };
 
 import { fetchOptimized, invalidateCache } from '@/lib/ecosystem/nexus-fetcher';
@@ -591,8 +584,7 @@ export class VaultService {
     if (Array.isArray(response)) {
       return {
         total: response.length,
-        rows: response as unknown as T[],
-      };
+        rows: response as unknown as T[]};
     }
 
     const resp = response as {
@@ -602,8 +594,7 @@ export class VaultService {
     };
     return {
       total: resp.total ?? 0,
-      rows: (resp.rows ?? resp.items ?? []) as unknown as T[],
-    };
+      rows: (resp.rows ?? resp.items ?? []) as unknown as T[]};
   }
   // Create with automatic encryption
   static async createCredential(
@@ -696,8 +687,7 @@ export class VaultService {
       ID.unique(),
       {
         ...data,
-        metadata: data.metadata ?? null,
-      },
+        metadata: data.metadata ?? null},
       permissions,
     );
     return doc as unknown as KeyMapping;
@@ -758,8 +748,7 @@ export class VaultService {
       cardholderName: existing.cardholderName,
       cardExpiry: existing.cardExpiry,
       cardCVV: existing.cardCVV,
-      cardPIN: existing.cardPIN,
-    };
+      cardPIN: existing.cardPIN};
 
     return await this.updateCredential(credentialId, dataToUpdate);
   }
@@ -774,8 +763,7 @@ export class VaultService {
       issuer: existing.issuer,
       accountName: existing.accountName,
       secretKey: existing.secretKey,
-      url: existing.url,
-    };
+      url: existing.url};
 
     return await this.updateTOTPSecret(totpSecretId, dataToUpdate);
   }
@@ -817,8 +805,7 @@ export class VaultService {
           senderId: credential.userId,
           senderPublicKey: senderPublicKey,
           sourceName: credential.name,
-          createdAt: new Date().toISOString(),
-        }),
+          createdAt: new Date().toISOString()}),
       },
       [
         Permission.read(Role.user(recipient.userId)),
@@ -835,8 +822,7 @@ export class VaultService {
           targetUserId: recipient.userId,
           permission: 'viewer',
           actorName: currentUser?.name || currentUser?.email || credential.userId,
-          skipEmail: true,
-        });
+          skipEmail: true});
       } else {
         const { grantPermissionSecure } = await import('@/lib/actions/secure-ops');
         await grantPermissionSecure({
@@ -847,8 +833,7 @@ export class VaultService {
           targetUserId: recipient.userId,
           permission: 'viewer',
           actorName: currentUser?.name || currentUser?.email || credential.userId,
-          skipEmail: true,
-        });
+          skipEmail: true});
       }
     } catch (permError) {
       console.error("[Vault] Failed to grant read permission for shared credential:", permError);
@@ -1002,8 +987,7 @@ export class VaultService {
   ): Promise<Folders> {
     const sanitizedData = {
       ...data,
-      name: sanitizeString(data.name, 100),
-    };
+      name: sanitizeString(data.name, 100)};
     const doc = await appwriteDatabases.createRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_FOLDERS_ID,
@@ -1176,8 +1160,7 @@ export class VaultService {
         {
           userId,
           email,
-          masterpass: true,
-        },
+          masterpass: true},
       );
       await SecurityEnclave.setUserDoc(userId, created);
       await SecurityEnclave.markDirty(userId);
@@ -1219,8 +1202,7 @@ export class VaultService {
           passkeyBlob,
           credentialId: newCredential.credentialID,
           publicKey: newCredential.publicKey,
-          counter: newCredential.counter,
-        },
+          counter: newCredential.counter},
       );
     }
   }
@@ -1343,8 +1325,7 @@ export class VaultService {
     const response = await listRowsWithRetry(tableId, queries);
     return {
       total: response.total,
-      rows: response.rows as unknown as T[],
-    };
+      rows: response.rows as unknown as T[]};
   }
 
   static async listCredentials(
@@ -1377,8 +1358,7 @@ export class VaultService {
 
     return {
       total: mergedRows.length,
-      rows: decryptedRows,
-    };
+      rows: decryptedRows};
   }
 
   // Enhanced search with database-level filtering for better performance
@@ -1411,8 +1391,7 @@ export class VaultService {
 
     return {
       total: mergedRows.length,
-      rows: decryptedRows,
-    };
+      rows: decryptedRows};
   }
 
   /**
@@ -1773,8 +1752,7 @@ export class VaultService {
       ipAddress: ipAddress || null,
       userAgent: userAgent || null,
       timestamp: new Date().toISOString(),
-      $permissions: [],
-    } as any);
+      $permissions: []} as any);
   }
 
   static async setCredentialPinned(id: string, pinned: boolean): Promise<void> {
@@ -1871,8 +1849,7 @@ export class VaultService {
   ): Promise<Record<string, unknown>> {
     const schema = COLLECTION_SCHEMAS[tableType];
     const result: Record<string, unknown> = {
-      ...(data as Record<string, unknown>),
-    };
+      ...(data as Record<string, unknown>)};
 
     const { encryptField, decryptField, masterPassCrypto } = await import("../masterpass-crypto");
     const { ecosystemSecurity } = await import("../ecosystem/security");
@@ -1944,8 +1921,7 @@ export class VaultService {
   ): Promise<Record<string, unknown>> {
     const schema = COLLECTION_SCHEMAS[tableType];
     const result: Record<string, unknown> = {
-      ...(doc as Record<string, unknown>),
-    };
+      ...(doc as Record<string, unknown>)};
 
     try {
       const { decryptField, masterPassCrypto } = await import(
@@ -2150,8 +2126,7 @@ export class VaultService {
       totpSecrets,
       folders,
       version: "1.0",
-      exportedAt: new Date().toISOString(),
-    };
+      exportedAt: new Date().toISOString()};
   }
 
   // --- Storage Operations ---
@@ -2183,7 +2158,7 @@ export class VaultService {
  * Generate recovery codes - MUST be done before enabling MFA
  * These are single-use passwords for account recovery
  */
-export async function generateRecoveryCodes(): Promise<{
+async function generateRecoveryCodes(): Promise<{
   recoveryCodes: string[];
 }> {
   return await appwriteAccount.createMfaRecoveryCodes();
@@ -2200,40 +2175,40 @@ export async function updateTotpSecret(
   return await VaultService.updateTOTPSecret(id, data, options);
 }
 
-export async function shareCredential(
+async function shareCredential(
   credentialId: string,
   recipient: { userId: string; publicKey: string },
 ) {
   return await VaultService.shareCredential(credentialId, recipient);
 }
 
-export async function shareTotpSecret(
+async function shareTotpSecret(
   totpSecretId: string,
   recipient: { userId: string; publicKey: string },
 ) {
   return await VaultService.shareTotpSecret(totpSecretId, recipient);
 }
 
-export async function listIncomingKeyMappings(userId: string) {
+async function listIncomingKeyMappings(userId: string) {
   return await VaultService.listIncomingKeyMappings(userId);
 }
 
-export async function acceptSharedCredential(mapping: KeyMapping) {
+async function acceptSharedCredential(mapping: KeyMapping) {
   return await VaultService.acceptSharedCredential(mapping);
 }
 
-export async function acceptSharedTotp(mapping: KeyMapping) {
+async function acceptSharedTotp(mapping: KeyMapping) {
   return await VaultService.acceptSharedTotp(mapping);
 }
 
-export async function deleteKeyMapping(id: string) {
+async function deleteKeyMapping(id: string) {
   return await VaultService.deleteKeyMapping(id);
 }
 
 /**
  * List the most recently updated credentials for a user.
  */
-export async function listRecentCredentials(userId: string, limit: number = 5) {
+async function listRecentCredentials(userId: string, limit: number = 5) {
   return await VaultService.listRecentCredentials(userId, limit);
 }
 
@@ -2241,7 +2216,7 @@ export async function listRecentCredentials(userId: string, limit: number = 5) {
  * List enabled MFA factors for current user
  * Returns: { totp: boolean, email: boolean, phone: boolean }
  */
-export async function listMfaFactors(): Promise<{
+async function listMfaFactors(): Promise<{
   totp: boolean;
   email: boolean;
   phone: boolean;
@@ -2253,7 +2228,7 @@ export async function listMfaFactors(): Promise<{
  * Enable/disable MFA enforcement on the account
  * Note: User must have at least 2 factors before MFA is enforced
  */
-export async function updateMfaStatus(
+async function updateMfaStatus(
   enabled: boolean,
 ): Promise<Models.Preferences> {
   return await appwriteAccount.updateMFA(enabled);
@@ -2263,7 +2238,7 @@ export async function updateMfaStatus(
  * Add TOTP authenticator factor (does NOT enable MFA yet)
  * Returns QR code URL and secret for authenticator app
  */
-export async function addTotpFactor(): Promise<{
+async function addTotpFactor(): Promise<{
   qrUrl: string;
   secret: string;
 }> {
@@ -2274,14 +2249,13 @@ export async function addTotpFactor(): Promise<{
   const qrUrl = appwriteAvatars.getQR(result.uri, 200);
   return {
     qrUrl,
-    secret: result.secret,
-  };
+    secret: result.secret};
 }
 
 /**
  * Remove TOTP authenticator factor
  */
-export async function removeTotpFactor(): Promise<void> {
+async function removeTotpFactor(): Promise<void> {
   await appwriteAccount.deleteMfaAuthenticator(AuthenticatorType.Totp);
 }
 
@@ -2289,7 +2263,7 @@ export async function removeTotpFactor(): Promise<void> {
  * Verify TOTP factor using the proper MFA authenticator verification
  * This step confirms the authenticator app is working
  */
-export async function verifyTotpFactor(otp: string): Promise<boolean> {
+async function verifyTotpFactor(otp: string): Promise<boolean> {
   try {
     // Use the proper MFA authenticator verification method
     await appwriteAccount.updateMfaAuthenticator(AuthenticatorType.Totp, otp);
@@ -2304,7 +2278,7 @@ export async function verifyTotpFactor(otp: string): Promise<boolean> {
  * Create MFA challenge for login flow
  * factor: "totp" | "email" | "phone" | "recoverycode"
  */
-export async function createMfaChallenge(
+async function createMfaChallenge(
   factor: "totp" | "email" | "phone" | "recoverycode",
 ): Promise<{ $id: string }> {
   let authFactor: AuthenticationFactor;
@@ -2332,7 +2306,7 @@ export async function createMfaChallenge(
 /**
  * Complete MFA challenge with code
  */
-export async function completeMfaChallenge(
+async function completeMfaChallenge(
   challengeId: string,
   code: string,
 ): Promise<Models.Session> {
@@ -2343,7 +2317,7 @@ export async function completeMfaChallenge(
  * Check if user needs MFA after login
  * Returns true if MFA is required, false if not required, throws for other errors
  */
-export async function checkMfaRequired(): Promise<boolean> {
+async function checkMfaRequired(): Promise<boolean> {
   try {
     await appwriteAccount.get();
     return false; // If account.get() succeeds, no MFA required
@@ -2377,16 +2351,14 @@ export async function getMfaAuthenticationStatus(): Promise<{
     // If successful, user is fully authenticated
     return {
       needsMfa: false,
-      isFullyAuthenticated: true,
-    };
+      isFullyAuthenticated: true};
   } catch (error: unknown) {
     const err = error as { type?: string; code?: number; message?: string };
     console.log("getMfaAuthenticationStatus: Error caught", {
       error,
       type: err.type,
       code: err.code,
-      message: err.message,
-    });
+      message: err.message});
 
     // Check for MFA requirement using multiple possible error indicators
     if (
@@ -2399,8 +2371,7 @@ export async function getMfaAuthenticationStatus(): Promise<{
       // User is partially authenticated but needs MFA
       return {
         needsMfa: true,
-        isFullyAuthenticated: false,
-      };
+        isFullyAuthenticated: false};
     }
 
     console.log("getMfaAuthenticationStatus: Not authenticated");
@@ -2408,8 +2379,7 @@ export async function getMfaAuthenticationStatus(): Promise<{
     return {
       needsMfa: false,
       isFullyAuthenticated: false,
-      error: err.message || "Authentication check failed",
-    };
+      error: err.message || "Authentication check failed"};
   }
 }
 
@@ -2417,7 +2387,7 @@ export async function getMfaAuthenticationStatus(): Promise<{
  * Add Email as an MFA factor (must be verified first).
  * Note: If email is already verified for login, it should automatically be available as MFA factor
  */
-export async function addEmailFactor(
+async function addEmailFactor(
   email: string,
   password?: string,
 ): Promise<{ email: string }> {
@@ -2456,7 +2426,7 @@ export async function addEmailFactor(
  * @param email User's email
  * @param redirectUrl URL to redirect after clicking email link (must be allowed in Appwrite console)
  */
-export async function createPasswordRecovery(
+async function createPasswordRecovery(
   email: string,
   redirectUrl: string,
 ) {
@@ -2469,7 +2439,7 @@ export async function createPasswordRecovery(
  * @param secret Secret from query param
  * @param password New password
  */
-export async function updatePasswordRecovery(
+async function updatePasswordRecovery(
   userId: string,
   secret: string,
   password: string,
@@ -2482,14 +2452,14 @@ export async function updatePasswordRecovery(
 /**
  * Email/password login
  */
-export async function loginWithEmailPassword(email: string, password: string) {
+async function loginWithEmailPassword(email: string, password: string) {
   return await appwriteAccount.createEmailPasswordSession(email, password);
 }
 
 /**
  * Register with email/password
  */
-export async function registerWithEmailPassword(
+async function registerWithEmailPassword(
   email: string,
   password: string,
   name?: string,
@@ -2500,7 +2470,7 @@ export async function registerWithEmailPassword(
 /**
  * Email OTP: Send OTP to email (returns { userId, phrase? })
  */
-export async function sendEmailOtp(email: string, enablePhrase = false) {
+async function sendEmailOtp(email: string, enablePhrase = false) {
   return await appwriteAccount.createEmailToken(
     ID.unique(),
     email,
@@ -2511,7 +2481,7 @@ export async function sendEmailOtp(email: string, enablePhrase = false) {
 /**
  * Email OTP: Complete OTP login (returns session)
  */
-export async function completeEmailOtp(userId: string, otp: string) {
+async function completeEmailOtp(userId: string, otp: string) {
   return await appwriteAccount.createSession(userId, otp);
 }
 
@@ -2527,11 +2497,11 @@ export async function listFolders(userId: string, queries: string[] = []) {
   return (response.rows ?? response) as unknown as Folders[];
 }
 
-export async function updateFolder(id: string, data: Partial<Folders>) {
+async function updateFolder(id: string, data: Partial<Folders>) {
   return await VaultService.updateFolder(id, data);
 }
 
-export async function deleteFolder(id: string) {
+async function deleteFolder(id: string) {
   return await VaultService.deleteFolder(id);
 }
 
@@ -2572,7 +2542,7 @@ export async function deleteTotpSecret(id: string) {
  * Update user profile (name/email).
  * A password must be provided if the user wants to change their email.
  */
-export async function updateUserProfile(
+async function updateUserProfile(
   userId: string,
   data: { name?: string; email?: string },
   password?: string,
@@ -2598,7 +2568,7 @@ export async function updateUserProfile(
 /**
  * Export all user data (credentials, totp, folders).
  */
-export async function exportAllUserData(userId: string, options?: {
+async function exportAllUserData(userId: string, options?: {
   credentials?: boolean;
   totpSecrets?: boolean;
   folders?: boolean;
@@ -2609,14 +2579,14 @@ export async function exportAllUserData(userId: string, options?: {
 /**
  * Backup user data to cloud storage.
  */
-export async function cloudBackup(userId: string) {
+async function cloudBackup(userId: string) {
   return await VaultService.cloudBackup(userId);
 }
 
 /**
  * List user's cloud backups.
  */
-export async function listCloudBackups(userId: string) {
+async function listCloudBackups(userId: string) {
   return await VaultService.listCloudBackups(userId);
 }
 
@@ -2625,7 +2595,7 @@ export async function listCloudBackups(userId: string) {
  * Delete user account and all associated data.
  * This is a hard delete and is irreversible.
  */
-export async function deleteUserAccount(_userId: string) {
+async function deleteUserAccount(_userId: string) {
   // Delete all user data from the database first
   const [creds, totps, folders, logs, userDoc] = await Promise.all([
     VaultService.listAllCredentials(_userId), // Use listAllCredentials to ensure all are deleted
@@ -2654,7 +2624,7 @@ export async function deleteUserAccount(_userId: string) {
 /**
  * Check if user has set master password (returns boolean).
  */
-export async function hasMasterpass(userId: string): Promise<boolean> {
+async function hasMasterpass(userId: string): Promise<boolean> {
   return await VaultService.hasMasterpass(userId);
 }
 
@@ -2693,10 +2663,10 @@ export async function resetMasterpassAndWipe(userId: string): Promise<void> {
 
         // Delete in parallel
         await Promise.all(
-          response.rows.map((doc) =>
+          response.rows.map((doc: any) =>
             appwriteDatabases
               .deleteRow(databaseId, tableId, doc.$id)
-              .catch((e) => console.warn(`Failed to delete doc ${doc.$id} in ${tableId}`, e))
+              .catch((e: any) => console.warn(`Failed to delete doc ${doc.$id} in ${tableId}`, e))
           )
         );
 
@@ -2755,7 +2725,7 @@ export async function resetMasterpassAndWipe(userId: string): Promise<void> {
       }
 
       // 2. Clear publicKey in Chat Users (this makes existing encrypted chats un-addressable with old identity)
-      const chatUserDoc = await appwriteDatabases.listRows(CHAT_DATABASE_ID, CHAT_COLLECTION_USERS_ID, [Query.equal("$id", userId)]).then(res => res.rows[0]).catch(() => null);
+      const chatUserDoc = await appwriteDatabases.listRows(CHAT_DATABASE_ID, CHAT_COLLECTION_USERS_ID, [Query.equal("$id", userId)]).then((res: any) => res.rows[0]).catch(() => null);
       if (chatUserDoc) {
         await appwriteDatabases.updateRow(CHAT_DATABASE_ID, CHAT_COLLECTION_USERS_ID, userId, {
           publicKey: ""
@@ -2772,7 +2742,7 @@ export async function resetMasterpassAndWipe(userId: string): Promise<void> {
 /**
  * Search credentials for a user (Client-side only for encrypted data)
  */
-export async function searchCredentials(
+async function searchCredentials(
   userId: string,
   searchTerm: string,
 ): Promise<Credentials[]> {
@@ -2784,7 +2754,7 @@ export async function searchCredentials(
 /**
  * List all credentials for a user (decrypted and paginated).
  */
-export async function listCredentials(
+async function listCredentials(
   userId: string,
   limit: number = 25,
   offset: number = 0,
@@ -2835,7 +2805,7 @@ export async function deleteCredential(id: string) {
  * Unified authentication state handler
  * Determines the correct next route after login/registration
  */
-export async function getAuthenticationNextRoute(
+async function getAuthenticationNextRoute(
   userId: string,
 ): Promise<string> {
   try {
@@ -2881,7 +2851,7 @@ export async function getAuthenticationNextRoute(
  * Redirects authenticated users to /vault (after master password unlock in drawer) as appropriate.
  * Updated to use the new MFA-aware authentication flow
  */
-export async function redirectIfAuthenticated(
+async function redirectIfAuthenticated(
   user: { $id: string },
   isVaultUnlocked: () => boolean,
   router: { replace: (path: string) => void },
@@ -2927,7 +2897,7 @@ export async function logoutAppwrite() {
 /**
  * Remove individual MFA factors and update user doc accordingly
  */
-export async function removeMfaFactor(
+async function removeMfaFactor(
   factorType: "totp" | "email" | "phone",
 ): Promise<void> {
   if (factorType === "totp") {
@@ -2942,7 +2912,7 @@ export async function removeMfaFactor(
  * Unified MFA status check that returns comprehensive MFA information
  * This should be used everywhere for consistent MFA status detection
  */
-export async function getUnifiedMfaStatus(userId?: string): Promise<{
+async function getUnifiedMfaStatus(userId?: string): Promise<{
   isEnforced: boolean;
   factors: { totp: boolean; email: boolean; phone: boolean };
   requiresSetup: boolean;
@@ -2983,8 +2953,7 @@ export async function getUnifiedMfaStatus(userId?: string): Promise<{
         // If database status doesn't match actual enforcement, update it
         if (dbMfaStatus !== isEnforced && userDoc?.$id) {
           await VaultService.updateUserDoc(userDoc.$id, {
-            twofa: isEnforced,
-          });
+            twofa: isEnforced});
         }
       } catch (error: unknown) {
         console.warn("Failed to sync MFA status with database:", error);
@@ -2995,8 +2964,7 @@ export async function getUnifiedMfaStatus(userId?: string): Promise<{
       isEnforced,
       factors,
       requiresSetup,
-      needsAuthentication,
-    };
+      needsAuthentication};
   } catch (error: unknown) {
     const err = error as { message?: string };
     return {
@@ -3012,7 +2980,7 @@ export async function getUnifiedMfaStatus(userId?: string): Promise<{
 /**
  * Get MFA status directly from Appwrite account (native method)
  */
-export async function getAppwriteMfaStatus(): Promise<{
+async function getAppwriteMfaStatus(): Promise<{
   isEnforced: boolean;
   factors: { totp: boolean; email: boolean; phone: boolean };
 }> {
@@ -3029,8 +2997,7 @@ export async function getAppwriteMfaStatus(): Promise<{
 
     return {
       isEnforced,
-      factors,
-    };
+      factors};
   } catch (error: unknown) {
     console.error("Failed to get Appwrite MFA status:", error);
     return {
@@ -3044,7 +3011,7 @@ export async function getAppwriteMfaStatus(): Promise<{
  * Sync and validate MFA status between Appwrite and database
  * This function ensures the database user.twofa field matches Appwrite's actual MFA status
  */
-export async function syncAndValidateMfaStatus(userId: string): Promise<{
+async function syncAndValidateMfaStatus(userId: string): Promise<{
   wasOutOfSync: boolean;
   currentStatus: boolean;
   error?: string;
@@ -3074,8 +3041,7 @@ export async function syncAndValidateMfaStatus(userId: string): Promise<{
       return {
         wasOutOfSync: false,
         currentStatus: appwriteStatus.isEnforced,
-        error: "Could not access database",
-      };
+        error: "Could not access database"};
     }
 
     // Check if they're out of sync
@@ -3098,23 +3064,20 @@ export async function syncAndValidateMfaStatus(userId: string): Promise<{
         return {
           wasOutOfSync,
           currentStatus: appwriteStatus.isEnforced,
-          error: "Could not update database",
-        };
+          error: "Could not update database"};
       }
     }
 
     return {
       wasOutOfSync,
-      currentStatus: appwriteStatus.isEnforced,
-    };
+      currentStatus: appwriteStatus.isEnforced};
   } catch (error: unknown) {
     console.error("Failed to sync MFA status:", error);
     const err = error as { message?: string };
     return {
       wasOutOfSync: false,
       currentStatus: false,
-      error: err.message || "Sync failed",
-    };
+      error: err.message || "Sync failed"};
   }
 }
 
@@ -3216,7 +3179,7 @@ export async function deleteCredentialAttachment(credentialId: string, fileId: s
   return updated;
 }
 
-export async function listCredentialAttachments(credentialId: string): Promise<EmbeddedCredentialAttachmentMeta[]> {
+async function listCredentialAttachments(credentialId: string): Promise<EmbeddedCredentialAttachmentMeta[]> {
   const credential = await VaultService.getCredential(credentialId);
   if (!credential) return [];
   return normalizeCredentialAttachmentsField(credential);
@@ -3230,11 +3193,11 @@ export async function setTotpPinned(id: string, pinned: boolean) {
   return await VaultService.setTotpPinned(id, pinned);
 }
 
-export async function toggleCredentialPin(id: string) {
+async function toggleCredentialPin(id: string) {
     return await VaultService.toggleCredentialPin(id);
 }
 
-export async function toggleTOTPPin(id: string) {
+async function toggleTOTPPin(id: string) {
     return await VaultService.toggleTOTPPin(id);
 }
 

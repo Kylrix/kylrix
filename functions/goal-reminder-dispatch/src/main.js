@@ -56,7 +56,7 @@ export default async ({ req, res, log, error }) => {
     const deadline = task.dueDate ? new Date(task.dueDate).toLocaleString() : 'Soon';
     const messageTitle = `⏰ Goal Reminder: ${task.title}`;
     const messageBody = `Reminder for your goal: "${task.title}".\n\nDeadline: ${deadline}`;
-    const ctaUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space'}/flow/${task.$id}`;
+    const ctaUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space'}/goal/${task.$id}`;
 
     // 3. Prefer Telegram broadcast if connected, fallback to email
     let sentChannel = 'none';

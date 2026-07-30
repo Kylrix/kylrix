@@ -14,7 +14,7 @@ export default function EventsPage() {
           {/* Tab Switcher */}
           <div className="flex items-center gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-2xl w-fit select-none">
             <button
-              onClick={() => router.push('/flow')}
+              onClick={() => router.push('/goals')}
               className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
             >
               Goals

@@ -2,9 +2,9 @@ const CANONICAL_ORIGIN = 'https://www.kylrix.space';
 
 /**
  * BlockBee dashboard URLs are whitelisted to production hosts only.
- * Always resolve billing callbacks to the canonical www origin + /accounts prefix.
+ * Billing callbacks use the canonical www origin + /billing prefix.
  */
-export function resolveBlockBeeBillingBaseUrl(): string {
+function resolveBlockBeeBillingBaseUrl(): string {
   const raw = String(
     process.env.BLOCKBEE_BILLING_BASE_URL ||
       process.env.NEXT_PUBLIC_APP_URL ||
@@ -13,8 +13,9 @@ export function resolveBlockBeeBillingBaseUrl(): string {
     .trim()
     .replace(/\/+$/, '');
 
-  if (raw.endsWith('/accounts')) return raw;
-  return `${raw}/accounts`;
+  if (raw.endsWith('/billing')) return raw;
+  if (raw.endsWith('/accounts')) return `${raw.slice(0, -'/accounts'.length)}/billing`;
+  return `${raw}/billing`;
 }
 
 export function resolveBlockBeeNotifyBaseUrl(): string {
@@ -26,5 +27,5 @@ export function resolveBlockBeeNotifyBaseUrl(): string {
 export function resolveBlockBeeRedirectBaseUrl(): string {
   const override = String(process.env.BLOCKBEE_REDIRECT_URL || '').trim().replace(/\/+$/, '');
   if (override) return override;
-  return `${resolveBlockBeeBillingBaseUrl()}/pro/success`;
+  return `${resolveBlockBeeBillingBaseUrl()}/success`;
 }

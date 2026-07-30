@@ -82,8 +82,7 @@ export async function porterImport(
                 action: 'import',
                 userId,
                 format,
-                data,
-            }),
+                data}),
             false, // async = false (synchronous execution, we wait for result)
             '/', // path
             ExecutionMethod.POST // method
@@ -111,8 +110,7 @@ export async function porterExport(userId: string): Promise<PorterExportResult> 
             DATA_PORTER_FUNCTION_ID,
             JSON.stringify({
                 action: 'export',
-                userId,
-            }),
+                userId}),
             false,
             '/',
             ExecutionMethod.POST
@@ -133,15 +131,3 @@ export async function porterExport(userId: string): Promise<PorterExportResult> 
 /**
  * Download export data as a JSON file.
  */
-export function downloadExportAsFile(data: PorterExportResult['data'], filename?: string) {
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename || `kylrix-workspace-export-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}

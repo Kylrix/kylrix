@@ -55,7 +55,7 @@ export function SourceProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
 
-      const handoffUrl = new URL('/handoff', window.location.origin);
+      const handoffUrl = new URL('/', window.location.origin);
       handoffUrl.searchParams.set('source', source);
       handoffUrl.searchParams.set('redirect_uri', redirectUri);
       return handoffUrl.toString();
@@ -79,18 +79,10 @@ export function SourceProvider({ children }: { children: React.ReactNode }) {
         setSource: handleSetSource,
         redirectUri,
         setRedirectUri: handleSetRedirectUri,
-        getBackUrl,
-      }}
+        getBackUrl}}
     >
       {children}
     </SourceContext.Provider>
   );
 }
 
-export function useSource() {
-  const context = useContext(SourceContext);
-  if (!context) {
-    throw new Error('useSource must be used within SourceProvider');
-  }
-  return context;
-}

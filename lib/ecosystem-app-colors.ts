@@ -3,7 +3,6 @@
  * Maps each Kylrix app to its brand identity color and secondary accent
  */
 
-export type EcosystemApp = 'root' | 'accounts' | 'vault' | 'flow' | 'connect' | 'note';
 
 export interface AppColorScheme {
   primary: string;
@@ -11,7 +10,7 @@ export interface AppColorScheme {
   accent: string;
 }
 
-export const ECOSYSTEM_APP_COLORS: Record<string, AppColorScheme> = {
+const ECOSYSTEM_APP_COLORS: Record<string, AppColorScheme> = {
   root: {
     primary: '#6366F1', // Indigo - Root of Trust
     secondary: '#818CF8', // Lighter Indigo
@@ -60,13 +59,7 @@ export function getAppColor(
 /**
  * Get Connect app secondary color for borrowed/cross-app components
  */
-export function getConnectSecondaryColor(): string {
-  return ECOSYSTEM_APP_COLORS.connect.secondary;
-}
 
 /**
  * Get Connect app primary color for borrowed/cross-app components
  */
-export function getConnectPrimaryColor(): string {
-  return ECOSYSTEM_APP_COLORS.connect.primary;
-}

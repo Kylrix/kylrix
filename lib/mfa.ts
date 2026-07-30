@@ -13,14 +13,14 @@ export type MfaFactorsLike = {
   phone?: boolean;
 };
 
-export type SessionLike = {
+type SessionLike = {
   $createdAt?: string | null;
   mfaUpdatedAt?: string | null;
   factors?: string[] | null;
   provider?: string | null;
 };
 
-export function resolveLoginMethod(provider?: string | null): MfaLoginMethod {
+function resolveLoginMethod(provider?: string | null): MfaLoginMethod {
   const value = (provider || '').toLowerCase();
   if (value.includes('email')) return 'email-otp';
   if (value.includes('oauth')) return 'oauth2';
@@ -28,7 +28,7 @@ export function resolveLoginMethod(provider?: string | null): MfaLoginMethod {
   return 'unknown';
 }
 
-export function normalizeMfaFactors(value: unknown): MfaFactorsLike | null {
+function normalizeMfaFactors(value: unknown): MfaFactorsLike | null {
   if (!value || typeof value !== 'object') {
     return null;
   }
@@ -91,27 +91,13 @@ export async function assertAuthenticatedAccount(
   return target.get();
 }
 
-export async function requiresMfaChallenge(
-  target: Account = account,
-): Promise<boolean> {
-  try {
-    await target.get();
-    return false;
-  } catch (error) {
-    if (isMfaRequiredError(error)) {
-      return true;
-    }
-    throw error;
-  }
-}
 
 export async function beginMfaChallenge(
   factor: MfaChallengeFactor,
   target: Account = account,
 ): Promise<string> {
   const response = await target.createMfaChallenge({
-    factor: factor as AuthenticationFactor,
-  });
+    factor: factor as AuthenticationFactor});
   return (response as { $id: string }).$id;
 }
 
@@ -122,8 +108,7 @@ export async function completeMfaChallenge(
 ): Promise<void> {
   await target.updateMfaChallenge({
     challengeId,
-    otp: otp.trim(),
-  });
+    otp: otp.trim()});
   await assertAuthenticatedAccount(target);
 }
 
@@ -138,7 +123,7 @@ export async function enableAccountMfa(target: Account = account): Promise<void>
   await target.updateMFA({ mfa: true });
 }
 
-export async function disableAccountMfa(target: Account = account): Promise<void> {
+async function disableAccountMfa(target: Account = account): Promise<void> {
   await target.updateMFA({ mfa: false });
 }
 
@@ -152,15 +137,14 @@ export async function verifyTotpAuthenticator(
 ): Promise<void> {
   await target.updateMfaAuthenticator({
     type: AuthenticatorType.Totp,
-    otp: otp.trim(),
-  });
+    otp: otp.trim()});
 }
 
-export async function deleteTotpAuthenticator(target: Account = account): Promise<void> {
+async function deleteTotpAuthenticator(target: Account = account): Promise<void> {
   await target.deleteMfaAuthenticator({ type: AuthenticatorType.Totp });
 }
 
-export async function deleteEmailAuthenticator(target: Account = account): Promise<void> {
+async function deleteEmailAuthenticator(target: Account = account): Promise<void> {
   await (target as Account & {
     deleteMfaAuthenticator: (params: { type: string }) => Promise<unknown>;
   }).deleteMfaAuthenticator({ type: 'email' });

@@ -7,7 +7,7 @@ const CANONICAL_SHARE_BASE_URL = 'https://www.kylrix.space';
  * - Browser: current origin for self-hosted and local installs.
  * - Server-only (email, notifications): canonical public host.
  */
-export function resolveShareBaseUrl(): string {
+function resolveShareBaseUrl(): string {
   if (typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin.replace(/\/$/, '');
   }
@@ -18,7 +18,7 @@ export function resolveShareBaseUrl(): string {
  * Path-only public guest URL (no origin).
  * Law: {appPrefix}/{singularNoun}/{id}
  */
-export function buildPublicResourcePath(
+function buildPublicResourcePath(
   type: PublicResourceType,
   id: string,
   options: PublicUrlOptions = {}
@@ -27,7 +27,7 @@ export function buildPublicResourcePath(
 
   if (projectId) {
     const kind = getProjectKind(type);
-    return `/projects/${projectId}/${kind}/${id}`;
+    return `/workspaces/${projectId}/${kind}/${id}`;
   }
 
   switch (type) {
@@ -41,11 +41,11 @@ export function buildPublicResourcePath(
     case 'task':
       return `/goal/${id}`;
     case 'form':
-      return `/flow/form/${id}`;
+      return `/form/${id}`;
     case 'event':
-      return `/flow/event/${id}`;
+      return `/events/${id}`;
     case 'project':
-      return `/project/${id}`;
+      return `/workspaces/${id}`;
     case 'huddle':
     case 'call':
       return `/connect/call/${id}`;
@@ -76,9 +76,6 @@ export function buildPublicResourceUrl(
 /**
  * Flagship collapses: /note -> /note, etc.
  */
-export function buildInternalFlagshipUrl(app: 'note' | 'vault' | 'flow'): string {
-  return `/${app}`;
-}
 
 function getProjectKind(type: PublicResourceType): string {
   switch (type) {

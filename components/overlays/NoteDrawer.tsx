@@ -1,101 +1,73 @@
-import React from 'react';
-import { Box, Typography, IconButton } from '@/lib/openbricks/primitives';
-import { Check } from 'lucide-react';
-import { Drawer } from '@/lib/openbricks/primitives';
-import { useNoteDrawer } from '@/context/NoteDrawerContext';
+'use client';
+
+import React, { useCallback } from 'react';
+import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useNotes } from '@/context/NotesContext';
+import { useAuth } from '@/context/auth/AuthContext';
+import { useDataNexus } from '@/context/DataNexusContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
-import CreateNoteForm from '@/app/(app)/app/(app)/notes/CreateNoteForm';
+import { buildNoteShell } from '@/lib/objects/create';
+import { useSection } from '@/context/SectionContext';
+import { toast } from 'react-hot-toast';
 
-const DRAWER_SX = {
-  borderTopLeftRadius: '24px',
-  borderTopRightRadius: '24px',
-  bgcolor: '#161412',
-  borderTop: '1px solid #34322F',
-  backgroundImage: 'none',
-  maxWidth: 720,
-  width: '100%',
-  mx: 'auto'
-};
-
+/**
+ * Unified note create — mounted only while unified drawer content is `note`.
+ * drawerData: { isPublic?, isGuest?, copyShareLink? }
+ */
 export function NoteDrawer() {
-  const { isOpen, close } = useNoteDrawer();
+  const { close, drawerData } = useUnifiedDrawer();
   const { setIsDrawerOpen } = useDrawerState();
-  const [isExpanded, setIsExpanded] = React.useState(false);
-  const composerCloseRef = React.useRef<(() => void) | null>(null);
+  const { pushLiveNote } = useNotes();
+  const { user } = useAuth();
+  const { setCachedData } = useDataNexus();
+  const { setActiveDetail } = useSection();
 
-  const closeDrawerShell = React.useCallback(() => {
+  const isPublic = Boolean(drawerData?.isPublic);
+  const isGuest = Boolean(drawerData?.isGuest);
+  const copyShareLink = Boolean(drawerData?.copyShareLink);
+
+  React.useEffect(() => {
+    setIsDrawerOpen(true);
+    return () => setIsDrawerOpen(false);
+  }, [setIsDrawerOpen]);
+
+  const handleClose = useCallback(() => {
     setIsDrawerOpen(false);
     close();
   }, [close, setIsDrawerOpen]);
 
-  const requestComposerClose = React.useCallback(() => {
-    if (composerCloseRef.current) {
-      composerCloseRef.current();
-      return;
-    }
-    closeDrawerShell();
-  }, [closeDrawerShell]);
+  const handleSubmit = useCallback(
+    async (draft: { kind: string; title: string; body: string }) => {
+      const shell = buildNoteShell(
+        { kind: 'note', title: draft.title, body: draft.body },
+        user?.$id,
+        { isPublic, isGuest },
+      );
+      pushLiveNote(shell);
+      setCachedData(`note_${shell.$id}`, shell);
+      setActiveDetail({ type: 'note', id: shell.$id });
 
-  React.useEffect(() => {
-    setIsDrawerOpen(isOpen);
-    return () => setIsDrawerOpen(false);
-  }, [isOpen, setIsDrawerOpen]);
+      if (copyShareLink && typeof window !== 'undefined') {
+        const shareUrl = `${window.location.origin}/idea/${shell.$id}`;
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          toast.success('Public link copied');
+        } catch {
+          toast.success('Idea created');
+        }
+      }
+    },
+    [copyShareLink, isGuest, isPublic, pushLiveNote, setActiveDetail, setCachedData, user?.$id],
+  );
 
   return (
-    <Drawer 
-      anchor="bottom" 
-      open={isOpen} 
-      onClose={requestComposerClose}
-      PaperProps={{ 
-          sx: { 
-            ...DRAWER_SX,
-            height: isExpanded ? '92dvh' : '60dvh',
-            transition: 'height 0.3s ease-in-out',
-            pointerEvents: 'auto'
-          }
-      }}
-      ModalProps={{
-          keepMounted: false,
-          disableScrollLock: false,
-          disablePortal: true,
-      }}
-    >
-      <Box 
-        sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            py: 1.5, 
-            cursor: 'pointer',
-            borderBottom: '1px solid #34322F',
-            pointerEvents: 'auto'
-        }}
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
-      </Box>
-
-      <Box sx={{ p: 1.5, flex: 1, overflowY: 'auto', pointerEvents: 'auto' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-          <Typography sx={{ fontWeight: 900, fontSize: '1.2rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
-            {isExpanded ? 'Full Screen Note' : 'New Note'}
-          </Typography>
-          <IconButton onClick={requestComposerClose} sx={{ color: '#9B9691' }}>
-            <Check size={20} />
-          </IconButton>
-        </Box>
-
-        <CreateNoteForm
-            onNoteCreated={() => {
-              setIsExpanded(false);
-            }}
-            onRegisterClose={(close) => {
-              composerCloseRef.current = close;
-            }}
-            isExpanded={isExpanded}
-            onToggleExpand={() => setIsExpanded(!isExpanded)}
-            onClose={closeDrawerShell}
-        />
-      </Box>
-    </Drawer>
+    <ObjectCreateDrawer
+      open
+      kind="note"
+      onClose={handleClose}
+      onSubmit={handleSubmit}
+      submitLabel={isPublic ? 'Create & share' : 'Create'}
+    />
   );
 }

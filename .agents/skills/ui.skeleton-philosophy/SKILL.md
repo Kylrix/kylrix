@@ -1,3 +1,8 @@
+---
+name: ui.skeleton-philosophy
+description: Skeleton loading patterns for perceived performance without layout thrash.
+---
+
 # ui.skeleton-philosophy
 
 ## Description

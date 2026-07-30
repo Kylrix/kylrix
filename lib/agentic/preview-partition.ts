@@ -24,8 +24,7 @@ export const AgenticPreviewPartition = {
       kind,
       payload,
       createdAt: new Date(now).toISOString(),
-      expiresAt: new Date(now + ttlMs).toISOString(),
-    };
+      expiresAt: new Date(now + ttlMs).toISOString()};
     await LocalEngine.cacheSet(`${PREFIX}${id}`, envelope);
   },
 

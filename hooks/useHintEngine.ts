@@ -26,8 +26,7 @@ export function useHintEngine(opts: {
         route: opts.route,
         input: opts.input,
         resourceId: opts.resourceId,
-        limit: 5,
-      }).then(setHints);
+        limit: 5}).then(setHints);
     }, opts.debounceMs ?? 280);
 
     return () => clearTimeout(timer);

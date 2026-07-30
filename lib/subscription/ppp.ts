@@ -13,7 +13,7 @@ export interface RegionConfig {
   name: string;
 }
 
-export const GLOBAL_SUBSCRIPTION_CONFIG = {
+const GLOBAL_SUBSCRIPTION_CONFIG = {
   tier_multipliers: {
     pro: 1.0,        // Base reference
     teams: 5.0,      // 5x Pro price flat rate ($50)
@@ -27,7 +27,7 @@ export const PPP_DATA: Record<string, RegionConfig> = {
   "DEFAULT": { multiplier: 1.0, currency: "USD", symbol: "$", name: "Global" }
 };
 
-export function getTierMonthlyPrice(tier: SubscriptionTier | string): number {
+function getTierMonthlyPrice(tier: SubscriptionTier | string): number {
   const baseProPrice = GLOBAL_SUBSCRIPTION_CONFIG.base_pro_price;
   if (String(tier).toUpperCase().startsWith('TEAMS')) {
     return baseProPrice * GLOBAL_SUBSCRIPTION_CONFIG.tier_multipliers.teams;

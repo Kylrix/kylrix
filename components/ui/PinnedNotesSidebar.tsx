@@ -5,11 +5,12 @@ import { Query } from 'appwrite';
 import { Box, Typography, Stack, IconButton, useTheme, alpha, CircularProgress } from '@/lib/openbricks/primitives';
 import { Close as CloseIcon, PushPin as PinIcon } from '@/lib/openbricks/icons';
 import { useNotes } from '@/context/NotesContext';
-import NoteCard from '@/components/ui/NoteCard';
+import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { Notes } from '@/types/appwrite';
 import { getPinnedNoteIds, listNotes, getNote } from '@/lib/appwrite';
 import { isClientEncryptedNote, resolvePinnedNoteRows } from '@/lib/note/note-visibility';
+import { useSection } from '@/context/SectionContext';
 
 async function fetchPinnedNoteRows(ids: string[], seed: Notes[]): Promise<Notes[]> {
   if (!ids.length) return [];
@@ -46,8 +47,9 @@ async function fetchPinnedNoteRows(ids: string[], seed: Notes[]): Promise<Notes[
 
 export function PinnedNotesSidebar() {
   const theme = useTheme();
-  const { notes: allNotes, pinnedIds, upsertNote, removeNote } = useNotes();
+  const { notes: allNotes, pinnedIds } = useNotes();
   const { closeSidebar } = useDynamicSidebar();
+  const { setActiveDetail } = useSection();
   const safePinnedIds = useMemo(() => pinnedIds ?? [], [pinnedIds]);
 
   const contextPinned = useMemo(
@@ -100,16 +102,6 @@ export function PinnedNotesSidebar() {
       cancelled = true;
     };
   }, [safePinnedIds, allNotes]);
-
-  const handleNoteUpdated = (updatedNote: Notes) => {
-    upsertNote?.(updatedNote);
-    setPinnedNotes((prev) => prev.map((n) => (n.$id === updatedNote.$id ? updatedNote : n)));
-  };
-
-  const handleNoteDeleted = (noteId: string) => {
-    removeNote?.(noteId);
-    setPinnedNotes((prev) => prev.filter((n) => n.$id !== noteId));
-  };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#161412', overflow: 'hidden' }}>
@@ -180,11 +172,13 @@ export function PinnedNotesSidebar() {
         ) : (
           <>
             {pinnedNotes.map((note) => (
-              <NoteCard
+              <NoteObjectRow
                 key={note.$id}
                 note={note}
-                onUpdate={handleNoteUpdated}
-                onDelete={handleNoteDeleted}
+                onSelect={(n) => {
+                  setActiveDetail({ type: 'note', id: n.$id });
+                  closeSidebar();
+                }}
               />
             ))}
             {loading && (

@@ -22,6 +22,8 @@ const eslintConfig = [
       reportUnusedDisableDirectives: "off",
     },
     rules: {
+      // Intra-file unused locals: use knip for cross-file dead code (`pnpm exec knip`).
+      // Do not enable @typescript-eslint/no-unused-vars here — it floods past --max-warnings 50.
       // Matches common intentional patterns (mounted effects, hydrate-from-async, compose URL cleanup).
       "react-hooks/set-state-in-effect": "off",
       "react-hooks/exhaustive-deps": "off",

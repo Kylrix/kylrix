@@ -9,8 +9,7 @@ import {
   getSessionProjectsList,
   setSessionProjectsList,
   projectsListCacheKey,
-  PROJECTS_LIST_TTL,
-} from '@/lib/projects/projects-cache';
+  PROJECTS_LIST_TTL} from '@/lib/projects/projects-cache';
 
 export function useProjectsList(options?: { enabled?: boolean }) {
   const enabled = options?.enabled ?? true;

@@ -34,8 +34,7 @@ export default async function Image({
       accent: 'violet',
       ownerName: owner.ownerName,
       ownerAvatarDataUrl: owner.ownerAvatarDataUrl,
-      chips: [status, priority],
-    }),
+      chips: [status, priority]}),
     {
       ...size,
     }

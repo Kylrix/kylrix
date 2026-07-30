@@ -8,6 +8,7 @@ import {
   getStepImportance, 
   getNegationActionId 
 } from './workflow-engine';
+import { isFlowPath, isWorkspacesPath, isGoalsSurfacePath } from '@/lib/routing/app-paths';
 
 export type TelemetryNiche = 
   | 'workspace'      // Notes, Sheets, Document management
@@ -180,17 +181,17 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
               title = 'Workflow Hub Suggestion';
               description = 'We notice you are actively working in Projects. Manage your recorded workflows to speed up task automation?';
               actionLabel = 'Manage workflows';
-              actionHref = '/projects/workflows';
+              actionHref = '/flows';
             } else if (app === 'flow') {
               title = 'Synergize Your Tasks';
               description = 'You frequently update your tasks and flows. Review outstanding goals in the Productivity Center?';
               actionLabel = 'Open flows';
-              actionHref = '/flow';
+              actionHref = '/flows';
             } else if (app === 'vault') {
               title = 'Secure Password Manager';
               description = 'You frequently access credentials. Review and audit vault item sharing rules?';
               actionLabel = 'Manage secrets';
-              actionHref = '/vault/sharing';
+              actionHref = '/vault';
             } else if (app === 'connect') {
               title = 'Connect Huddles & Channels';
               description = 'You frequently connect with teammates. Start a persistent workspace call?';
@@ -327,12 +328,13 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
     const getNicheAndApp = (path: string): { niche: TelemetryNiche; app: string } => {
       if (path.startsWith('/app')) return { niche: 'workspace', app: 'note' };
       if (path.startsWith('/vault')) return { niche: 'security', app: 'vault' };
-      if (path.startsWith('/flow')) return { niche: 'productivity', app: 'flow' };
+      if (isFlowPath(path)) return { niche: 'productivity', app: 'flow' };
+      if (isGoalsSurfacePath(path)) return { niche: 'productivity', app: 'goals' };
       if (path.startsWith('/connect')) return { niche: 'connect', app: 'connect' };
-      if (path.startsWith('/projects')) return { niche: 'workspace', app: 'projects' };
+      if (isWorkspacesPath(path)) return { niche: 'workspace', app: 'projects' };
       if (path.startsWith('/settings/agents')) return { niche: 'intelligence', app: 'agents' };
       if (path.startsWith('/settings')) return { niche: 'system', app: 'settings' };
-      if (path.startsWith('/agents')) return { niche: 'intelligence', app: 'agents' };
+      if (path.startsWith('/settings/agents')) return { niche: 'intelligence', app: 'agents' };
       return { niche: 'system', app: 'home' };
     };
 

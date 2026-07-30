@@ -15,8 +15,7 @@ import {
   FileText,
   AlertTriangle,
   Info,
-  Copy,
-} from 'lucide-react';
+  Copy} from 'lucide-react';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { useBackgroundTask } from '@/context/BackgroundTaskContext';
 import { validateBitwardenExport, analyzeBitwardenExport } from '@/utils/import/bitwarden-mapper';
@@ -156,8 +155,7 @@ export function VaultPorterDrawer({ isOpen, onClose }: VaultPorterDrawerProps) {
               format: 'kylrix-vault',
               credentials: importTarget === 'password' ? parsedItems : [],
               totpSecrets: importTarget === 'totp' ? parsedItems : [],
-              folders: [],
-            });
+              folders: []});
           } else {
             // Map other vendor data to native format
             payload = JSON.stringify({
@@ -165,8 +163,7 @@ export function VaultPorterDrawer({ isOpen, onClose }: VaultPorterDrawerProps) {
               format: 'kylrix-vault',
               credentials: importTarget === 'password' ? parsedItems : [],
               totpSecrets: importTarget === 'totp' ? parsedItems : [],
-              folders: [],
-            });
+              folders: []});
           }
 
           startImport('kylrixvault', payload, user?.$id || '');

@@ -11,7 +11,7 @@ export interface SecurityConfirmStep {
   tone: 'warning' | 'danger' | 'neutral';
 }
 
-export const VAULT_WIPE_STEPS: SecurityConfirmStep[] = [
+const VAULT_WIPE_STEPS: SecurityConfirmStep[] = [
   {
     id: 'vault-wipe-scope',
     stepLabel: 'Step 1 of 3',
@@ -23,8 +23,7 @@ export const VAULT_WIPE_STEPS: SecurityConfirmStep[] = [
       'Vault identities tied to this account',
     ],
     confirmLabel: 'I understand the scope',
-    tone: 'warning',
-  },
+    tone: 'warning'},
   {
     id: 'vault-wipe-loss',
     stepLabel: 'Step 2 of 3',
@@ -32,8 +31,7 @@ export const VAULT_WIPE_STEPS: SecurityConfirmStep[] = [
     description: 'Wiped secrets are removed from your account and cannot be restored from backups on our side.',
     checkboxLabel: 'I accept that all vault data will be permanently lost',
     confirmLabel: 'Continue',
-    tone: 'danger',
-  },
+    tone: 'danger'},
   {
     id: 'vault-wipe-final',
     stepLabel: 'Step 3 of 3',
@@ -41,11 +39,10 @@ export const VAULT_WIPE_STEPS: SecurityConfirmStep[] = [
     description: 'After this step you will verify your identity before the wipe runs.',
     checkboxLabel: 'I want to reset my vault and wipe all encrypted data',
     confirmLabel: 'Proceed to identity check',
-    tone: 'danger',
-  },
+    tone: 'danger'},
 ];
 
-export const CHANGE_PASSWORD_STEPS: SecurityConfirmStep[] = [
+const CHANGE_PASSWORD_STEPS: SecurityConfirmStep[] = [
   {
     id: 'password-change-impact',
     stepLabel: 'Step 1 of 2',
@@ -57,8 +54,7 @@ export const CHANGE_PASSWORD_STEPS: SecurityConfirmStep[] = [
       'Choose a password you can store safely',
     ],
     confirmLabel: 'I understand',
-    tone: 'warning',
-  },
+    tone: 'warning'},
   {
     id: 'password-change-ready',
     stepLabel: 'Step 2 of 2',
@@ -66,8 +62,7 @@ export const CHANGE_PASSWORD_STEPS: SecurityConfirmStep[] = [
     description: 'Next you will verify your current vault password before setting a new one.',
     checkboxLabel: 'I have my new password ready and stored somewhere safe',
     confirmLabel: 'Proceed to identity check',
-    tone: 'neutral',
-  },
+    tone: 'neutral'},
 ];
 
 export function getSecurityConfirmSteps(flow: SecurityConfirmFlow): SecurityConfirmStep[] {

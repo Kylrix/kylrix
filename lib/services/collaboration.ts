@@ -41,7 +41,7 @@ export const CollaborationService = {
                             documents: result.documents as any[],
                             checkpoint: result.checkpoint
                         };
-                    } catch (err) {
+                    } catch (_err) {
                         return { documents: [], checkpoint: lastCheckpoint };
                     }
                 }
@@ -56,7 +56,7 @@ export const CollaborationService = {
                         if (!jwtRes?.jwt) return [];
                         const conflicts = await pushNotesDeltaSecure(rows, jwtRes.jwt);
                         return conflicts as any[];
-                    } catch (err) {
+                    } catch (_err) {
                         return [];
                     }
                 },

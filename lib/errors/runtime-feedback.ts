@@ -27,13 +27,12 @@ function parseSchema(schemaRaw: string | null | undefined): FormSchemaField[] {
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
-      .map((item) => ({
+      .map((item: any) => ({
         id: String(item.id ?? ''),
         label: typeof item.label === 'string' ? item.label : '',
         type: typeof item.type === 'string' ? item.type : 'text',
         required: Boolean(item.required),
-        options: Array.isArray(item.options) ? item.options.map(String) : [],
-      }))
+        options: Array.isArray(item.options) ? item.options.map(String) : []}))
       .filter((field) => field.id.length > 0);
   } catch (err) {
     console.error('[RuntimeFeedback] Failed to parse form schema.', err);
@@ -43,7 +42,7 @@ function parseSchema(schemaRaw: string | null | undefined): FormSchemaField[] {
 
 function pickOption(options: string[] | undefined, priorities: string[]): string {
   const list = options ?? [];
-  const lowered = list.map((opt) => ({ raw: opt, lower: opt.toLowerCase() }));
+  const lowered = list.map((opt: any) => ({ raw: opt, lower: opt.toLowerCase() }));
   for (const keyword of priorities) {
     const match = lowered.find((opt) => opt.lower.includes(keyword));
     if (match) return match.raw;

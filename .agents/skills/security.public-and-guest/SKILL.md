@@ -1,3 +1,8 @@
+---
+name: security.public-and-guest
+description: Native isPublic / isGuest / isGeneral columns as server-side escape hatches for sharing.
+---
+
 # Public & Guest Paradigm (Global Resource Perms)
 
 ## The Evolution from Metadata to Native Columns

@@ -6,8 +6,16 @@ import {
   DEFAULT_KYLRIX_TOKEN_POLICY,
   type KylrixActivitySignal,
   type KylrixActivityType,
-  type KylrixTokenEventType,
-} from '@/lib/sdk/token';
+  type KylrixTokenEventType} from '@/lib/sdk/token';
+
+const tokenPermissionsForSystemEvent = (userId: string, counterpartyUserId?: string | null) => {
+  const grants = new Set<string>();
+  grants.add(Permission.read(Role.user(userId)));
+  if (counterpartyUserId) {
+    grants.add(Permission.read(Role.user(counterpartyUserId)));
+  }
+  return Array.from(grants);
+};
 
 const TOKEN_DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const TOKEN_TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.KYLRIX_TOKEN_LEDGER;
@@ -66,8 +74,7 @@ const defaultState = (): TokenState => ({
   createdAt: new Date().toISOString(),
   lastActivityAt: null,
   lastSpikeAt: null,
-  updatedAt: new Date().toISOString(),
-});
+  updatedAt: new Date().toISOString()});
 
 const parseMicro = (value: unknown) => {
   try {
@@ -83,18 +90,6 @@ const toMicroString = (value: bigint) => value.toString();
 
 const nowIso = () => new Date().toISOString();
 
-const tokenPermissionsForUser = (userId: string) => [
-  Permission.read(Role.user(userId))];
-
-/** Mirrors internal ledger: read for `userId`; add counterparty read for paired flows (transfer_out/in, fine/recovery). */
-const tokenPermissionsForSystemEvent = (userId: string, counterpartyUserId?: string | null) => {
-  const grants = new Set<string>();
-  grants.add(Permission.read(Role.user(userId)));
-  if (counterpartyUserId) {
-    grants.add(Permission.read(Role.user(counterpartyUserId)));
-  }
-  return Array.from(grants);
-};
 
 const statePermissions = [
   Permission.read(Role.users())];
@@ -104,8 +99,7 @@ async function getStateRow(): Promise<any | null> {
     return await tablesDB.getRow({
       databaseId: TOKEN_DB_ID,
       tableId: TOKEN_TABLE_ID,
-      rowId: STATE_ROW_ID,
-    });
+      rowId: STATE_ROW_ID});
   } catch {
     return null;
   }
@@ -120,8 +114,7 @@ async function ensureStateRow() {
     tableId: TOKEN_TABLE_ID,
     rowId: STATE_ROW_ID,
     data: state,
-    permissions: statePermissions,
-  });
+    permissions: statePermissions});
 }
 
 async function updateStateRow(patch: Partial<TokenState>) {
@@ -129,14 +122,12 @@ async function updateStateRow(patch: Partial<TokenState>) {
   const next = {
     ...state,
     ...patch,
-    updatedAt: nowIso(),
-  };
+    updatedAt: nowIso()};
   return await tablesDB.updateRow({
     databaseId: TOKEN_DB_ID,
     tableId: TOKEN_TABLE_ID,
     rowId: STATE_ROW_ID,
-    data: next,
-  });
+    data: next});
 }
 
 async function lookupEventByIdempotency(idempotencyKey: string) {
@@ -146,8 +137,7 @@ async function lookupEventByIdempotency(idempotencyKey: string) {
     queries: [
       Query.equal('rowType', 'event'),
       Query.equal('idempotencyKey', idempotencyKey),
-      Query.limit(1)],
-  });
+      Query.limit(1)]});
   return result.rows?.[0] || null;
 }
 
@@ -157,15 +147,13 @@ async function listUserLedgerEventsDescending(userId: string, limit: number) {
     const result = await tablesDB.listRows({
       databaseId: TOKEN_DB_ID,
       tableId: TOKEN_TABLE_ID,
-      queries: [...base, Query.orderDesc('$createdAt'), Query.limit(limit)],
-    });
+      queries: [...base, Query.orderDesc('$createdAt'), Query.limit(limit)]});
     return result.rows ?? [];
   } catch {
     const result = await tablesDB.listRows({
       databaseId: TOKEN_DB_ID,
       tableId: TOKEN_TABLE_ID,
-      queries: [...base, Query.orderDesc('createdAt'), Query.limit(limit)],
-    });
+      queries: [...base, Query.orderDesc('createdAt'), Query.limit(limit)]});
     return result.rows ?? [];
   }
 }
@@ -192,8 +180,7 @@ async function getUserDailyMintedMicro(userId: string) {
       Query.equal('userId', userId),
       Query.equal('eventType', 'mint_activity'),
       Query.greaterThanEqual('createdAt', since.toISOString()),
-      Query.limit(5000)],
-  });
+      Query.limit(5000)]});
   return (result.rows || []).reduce((sum: bigint, row: any) => sum + parseMicro(row.amountMicro), 0n);
 }
 
@@ -205,8 +192,7 @@ async function getRecentVolume(windowMinutes: number) {
     queries: [
       Query.equal('rowType', 'event'),
       Query.greaterThanEqual('createdAt', since),
-      Query.limit(5000)],
-  });
+      Query.limit(5000)]});
   return result.rows?.length || 0;
 }
 
@@ -219,8 +205,7 @@ async function getUserRecentOperationCount(userId: string, windowMinutes: number
       Query.equal('rowType', 'event'),
       Query.equal('userId', userId),
       Query.greaterThanEqual('createdAt', since),
-      Query.limit(5000)],
-  });
+      Query.limit(5000)]});
   return result.rows?.length || 0;
 }
 
@@ -286,8 +271,7 @@ export const KylrixTokenService = {
       rootBalanceMicro: state.rootBalanceMicro,
       genesisAt: state.genesisAt,
       riskLevel: state.riskLevel,
-      contractVersion: state.contractVersion,
-    };
+      contractVersion: state.contractVersion};
   },
 
   async getUserBalance(userId: string) {
@@ -295,8 +279,7 @@ export const KylrixTokenService = {
     return {
       amountMicro: micro.toString(),
       amount: toDisplayToken(micro),
-      symbol: contract.policy.symbol,
-    };
+      symbol: contract.policy.symbol};
   },
 
   async mintForActivity(input: {
@@ -317,8 +300,7 @@ export const KylrixTokenService = {
       mintedMicro: parseMicro(state.totalMintedMicro),
       burnedMicro: parseMicro(state.totalBurnedMicro),
       genesisAt: state.genesisAt || null,
-      nowIso: nowIso(),
-    };
+      nowIso: nowIso()};
 
     const signal: KylrixActivitySignal = {
       activityType: input.activityType,
@@ -326,8 +308,7 @@ export const KylrixTokenService = {
       trustScore: input.trustScore,
       recentSpikeFactorBps:
         recentVolume >= contract.policy.spikeEventThreshold ? contract.policy.spikeTightenBps : 0,
-      accountAgeDays: 0,
-    };
+      accountAgeDays: 0};
 
     const decision = contract.decideMintForActivity(snapshot, signal, userDailyMintedMicro);
     if (!decision.allowed) {
@@ -335,8 +316,7 @@ export const KylrixTokenService = {
         accepted: false,
         reason: decision.reason,
         amountMicro: '0',
-        amount: '0',
-      };
+        amount: '0'};
     }
 
     const currentBalanceMicro = await getUserLatestBalanceMicro(input.userId);
@@ -357,8 +337,7 @@ export const KylrixTokenService = {
         uniqueActors: input.uniqueActors,
         trustScore: input.trustScore,
         tightenBps: decision.tightenBps,
-        ...input.metadata,
-      },
+        ...input.metadata},
     });
 
     const nextMinted = parseMicro(state.totalMintedMicro) + decision.amountMicro;
@@ -373,16 +352,14 @@ export const KylrixTokenService = {
       circulatingMicro: nextCirculating.toString(),
       riskLevel,
       lastActivityAt: nowIso(),
-      lastSpikeAt: riskLevel !== 'normal' ? nowIso() : state.lastSpikeAt || null,
-    });
+      lastSpikeAt: riskLevel !== 'normal' ? nowIso() : state.lastSpikeAt || null});
 
     return {
       accepted: true,
       event,
       amountMicro: decision.amountMicro.toString(),
       amount: toDisplayToken(decision.amountMicro),
-      symbol: contract.policy.symbol,
-    };
+      symbol: contract.policy.symbol};
   },
 
   async transfer(input: {
@@ -447,8 +424,7 @@ export const KylrixTokenService = {
       credit,
       amountMicro: amountMicro.toString(),
       amount: toDisplayToken(amountMicro),
-      symbol: contract.policy.symbol,
-    };
+      symbol: contract.policy.symbol};
   },
 
   async listUserLedger(userId: string, limit = 100) {
@@ -458,15 +434,13 @@ export const KylrixTokenService = {
       const result = await tablesDB.listRows({
         databaseId: TOKEN_DB_ID,
         tableId: TOKEN_TABLE_ID,
-        queries: [...base, Query.orderDesc('$createdAt'), Query.limit(capped)],
-      });
+        queries: [...base, Query.orderDesc('$createdAt'), Query.limit(capped)]});
       return result.rows || [];
     } catch {
       const result = await tablesDB.listRows({
         databaseId: TOKEN_DB_ID,
         tableId: TOKEN_TABLE_ID,
-        queries: [...base, Query.orderDesc('createdAt'), Query.limit(capped)],
-      });
+        queries: [...base, Query.orderDesc('createdAt'), Query.limit(capped)]});
       return result.rows || [];
     }
   },
@@ -481,8 +455,7 @@ export const KylrixTokenService = {
       suspicious: opSpike || mintSpike,
       reasons: [
         ...(opSpike ? ['HIGH_OPERATION_RATE'] : []),
-        ...(mintSpike ? ['HIGH_MINT_CONCENTRATION'] : [])],
-    };
+        ...(mintSpike ? ['HIGH_MINT_CONCENTRATION'] : [])]};
   },
 
   async applyFineToRoot(input: {
@@ -535,8 +508,7 @@ export const KylrixTokenService = {
 
     await updateStateRow({
       rootBalanceMicro: (rootBalance + actualFine).toString(),
-      lastActivityAt: nowIso(),
-    });
+      lastActivityAt: nowIso()});
 
     return {
       accepted: true,
@@ -544,8 +516,7 @@ export const KylrixTokenService = {
       credit,
       finedAmountMicro: actualFine.toString(),
       finedAmount: toDisplayToken(actualFine),
-      symbol: contract.policy.symbol,
-    };
+      symbol: contract.policy.symbol};
   },
 
   async lockClaim(input: {
@@ -576,16 +547,14 @@ export const KylrixTokenService = {
       sourceId: input.destinationWallet,
       metadata: {
         destinationWallet: input.destinationWallet,
-        chain: input.chain,
-      },
+        chain: input.chain},
     });
 
     return {
       accepted: true,
       event,
       lockedAmountMicro: amountMicro.toString(),
-      lockedAmount: toDisplayToken(amountMicro),
-    };
+      lockedAmount: toDisplayToken(amountMicro)};
   },
 
   async settleClaim(input: {
@@ -618,22 +587,19 @@ export const KylrixTokenService = {
       metadata: {
         destinationWallet: input.destinationWallet,
         chain: input.chain,
-        onchainTxHash: input.onchainTxHash,
-      },
+        onchainTxHash: input.onchainTxHash},
     });
 
     await updateStateRow({
       totalBurnedMicro: nextBurned.toString(),
       circulatingMicro: nextCirculating.toString(),
-      lastActivityAt: nowIso(),
-    });
+      lastActivityAt: nowIso()});
 
     return {
       accepted: true,
       event,
       settledAmountMicro: amountMicro.toString(),
       settledAmount: toDisplayToken(amountMicro),
-      onchainTxHash: input.onchainTxHash,
-    };
+      onchainTxHash: input.onchainTxHash};
   },
 };

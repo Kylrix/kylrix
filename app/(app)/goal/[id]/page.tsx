@@ -31,7 +31,7 @@ function AccessUnavailable() {
           The link may be wrong, or the owner has not shared this goal publicly.
         </p>
         <Link
-          href="/flow"
+          href="/goals"
           className="inline-flex items-center justify-center rounded-xl bg-[#A855F7] px-4 py-2 text-sm font-semibold text-white hover:bg-[#9333EA] transition-colors"
         >
           Open Flow

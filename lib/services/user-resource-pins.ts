@@ -44,7 +44,7 @@ export const UserResourcePinService = {
     if (resourceType) {
       queries.unshift(Query.equal('resourceType', resourceType));
     }
-    const res = await databases.listRows<UserResourcePinRow>(DATABASE_ID, TABLE_ID, queries);
+    const res = await databases.listRows(DATABASE_ID, TABLE_ID, queries);
     return res.rows;
   },
 
@@ -53,7 +53,7 @@ export const UserResourcePinService = {
     if (existing) return existing;
 
     const now = new Date().toISOString();
-    return await databases.createRow<UserResourcePinRow>(
+    return await databases.createRow(
       DATABASE_ID,
       TABLE_ID,
       ID.unique(),
@@ -61,8 +61,7 @@ export const UserResourcePinService = {
         userId,
         resourceType,
         resourceId,
-        pinnedAt: now,
-      },
+        pinnedAt: now},
       pinPermissions(userId),
     );
   },
@@ -78,7 +77,7 @@ export const UserResourcePinService = {
     resourceType: PinnableResourceType,
     resourceId: string,
   ): Promise<UserResourcePinRow | null> {
-    const res = await databases.listRows<UserResourcePinRow>(DATABASE_ID, TABLE_ID, [
+    const res = await databases.listRows(DATABASE_ID, TABLE_ID, [
       Query.equal('userId', userId),
       Query.equal('resourceType', resourceType),
       Query.equal('resourceId', resourceId),

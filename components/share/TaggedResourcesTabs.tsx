@@ -17,7 +17,6 @@ export function ResourceItem({
     metadata, 
     onOpen, 
     onUnlink,
-    onExtractGoals,
     keepPermission,
     onToggleKeepPermission,
     projectId
@@ -232,7 +231,6 @@ export function TaggedResourcesTabs({
   closeOverlay, 
   fetchProjectData,
   handleToggleKeepPermission,
-  handleRemoveObject,
   router,
   showError,
   projectId

@@ -71,8 +71,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
         mode,
         data: sanitizedPayload,
         byokKey,
-        localContext: compileContextForAI(),
-      });
+        localContext: compileContextForAI()});
 
       if (!response.success) {
         throw new Error(response.error);
@@ -104,8 +103,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
         mode: 'GENERAL_QUERY',
         prompt,
         byokKey,
-        localContext: compileContextForAI(),
-      });
+        localContext: compileContextForAI()});
 
       if (!response.success) {
         throw new Error(response.error);
@@ -133,8 +131,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
         mode: 'COMMAND_INTENT',
         prompt,
         byokKey,
-        localContext: compileContextForAI(),
-      });
+        localContext: compileContextForAI()});
 
       if (!response.success) throw new Error(response.error);
       
@@ -163,8 +160,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
     openGlobalCreateModal,
     registerCreateModal,
     isAIModalOpen,
-    isLoading,
-  }), [analyze, askAI, sendCommand, openAIModal, closeAIModal, openGlobalCreateModal, registerCreateModal, isAIModalOpen, isLoading]);
+    isLoading}), [analyze, askAI, sendCommand, openAIModal, closeAIModal, openGlobalCreateModal, registerCreateModal, isAIModalOpen, isLoading]);
 
   return (
     <AIContext.Provider value={contextValue}>

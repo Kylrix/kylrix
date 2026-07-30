@@ -30,11 +30,11 @@ function parseTs(value?: string | null): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-export function getRowUpdatedAt(row: SyncableRow): number {
+function getRowUpdatedAt(row: SyncableRow): number {
   return Math.max(parseTs(row.updatedAt), parseTs(row.$updatedAt), parseTs(row.createdAt), parseTs(row.$createdAt));
 }
 
-export function getRowCreatedAt(row: SyncableRow): number {
+function getRowCreatedAt(row: SyncableRow): number {
   return Math.max(parseTs(row.$createdAt), parseTs(row.createdAt), getRowUpdatedAt(row));
 }
 
@@ -59,10 +59,9 @@ export function mergeServerPageWithLocalCopy<T extends SyncableRow>(params: {
     guards,
     applyGuard,
     normalize = (row) => row,
-    deletedIds,
-  } = params;
+    deletedIds} = params;
 
-  const localById = new Map(localNotes.filter((r) => r?.$id).map((r) => [r.$id, r]));
+  const localById = new Map(localNotes.filter((r) => r?.$id).map((r: any) => [r.$id, r]));
   const mergedById = new Map<string, T>();
 
   for (const serverRow of serverBatch) {
@@ -105,7 +104,7 @@ export function sortPinnedThenCreatedAt<T extends SyncableRow>(
   rows: T[],
   isPinned: (row: T) => boolean,
 ): T[] {
-  return [...rows].sort((a, b) => {
+  return [...rows].sort((a: any, b: any) => {
     const aPinned = isPinned(a);
     const bPinned = isPinned(b);
     if (aPinned && !bPinned) return -1;
@@ -115,9 +114,9 @@ export function sortPinnedThenCreatedAt<T extends SyncableRow>(
 }
 
 /** Soft-pull cadence helpers (activity / heartbeat). */
-export const SYNC_PULL_IDLE_MS = 60_000;
-export const SYNC_PULL_ACTIVE_MS = 10_000;
-export const SYNC_PULL_MIN_GAP_MS = 5_000;
+const SYNC_PULL_IDLE_MS = 60_000;
+const SYNC_PULL_ACTIVE_MS = 10_000;
+const SYNC_PULL_MIN_GAP_MS = 5_000;
 
 export function shouldSoftPull(params: {
   lastPullAt: number;

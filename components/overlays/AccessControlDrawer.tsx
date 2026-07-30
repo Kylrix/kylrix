@@ -55,7 +55,7 @@ export function AccessControlDrawer({
       setCopied(true);
       showSuccess('Link copied');
       setTimeout(() => setCopied(false), 2000);
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       showError('Could not copy link');
     }
   };

@@ -65,8 +65,7 @@ import {
     AtSign,
     Coins,
     Zap,
-    Pin,
-} from 'lucide-react';
+    Pin} from 'lucide-react';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
 import { VoiceMessage } from './VoiceMessage';
@@ -117,8 +116,7 @@ const MessagesType = {
     AUDIO: 'audio',
     FILE: 'file',
     CALL_SIGNAL: 'call_signal',
-    SYSTEM: 'system',
-} as const;
+    SYSTEM: 'system'} as const;
 
 const getMessageTimestamp = (msg: ChatMessage) => new Date(msg.$createdAt || msg.createdAt || Date.now()).getTime();
 
@@ -131,8 +129,7 @@ const getClientReadSegments = (
     if (!currentUserId || !isDirectChat) {
         return {
             outgoingReadAt: 0,
-            firstUnreadIncomingIndex: -1,
-        };
+            firstUnreadIncomingIndex: -1};
     }
 
     let outgoingReadAt = 0;
@@ -148,8 +145,7 @@ const getClientReadSegments = (
 
     return {
         outgoingReadAt,
-        firstUnreadIncomingIndex,
-    };
+        firstUnreadIncomingIndex};
 };
 
 const groupMessageReactions = (reactions: ChatReaction[], currentUserId?: string | null) => {
@@ -169,8 +165,7 @@ const groupMessageReactions = (reactions: ChatReaction[], currentUserId?: string
         groups.set(emoji, {
             emoji,
             count: 1,
-            reactedBySelf: reaction.userId === currentUserId,
-        });
+            reactedBySelf: reaction.userId === currentUserId});
     });
 
     return Array.from(groups.values());
@@ -215,16 +210,13 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
     sending,
     isRecording,
     attachmentDisabled = false,
-    enableMentions,
-    mentionTargets,
     onAttach,
     onUpgradeRequested,
     onSend,
     onToggleRecording,
     typingUsers,
     conversationId,
-    typingTimeoutRef,
-}: {
+    typingTimeoutRef}: {
     attachment: File | null;
     sending: boolean;
     isRecording: boolean;
@@ -240,7 +232,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
     typingTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
 }) {
     const [draft, setDraft] = useState('');
-    const [mentionAnchorEl, setMentionAnchorEl] = useState<null | HTMLElement>(null);
+    const [_mentionAnchorEl, _setMentionAnchorEl] = useState<null | HTMLElement>(null);
     const textRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
     const submitDraft = React.useCallback(async () => {
@@ -248,27 +240,6 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
         if (didSend) setDraft('');
     }, [draft, onSend]);
 
-    const insertMention = React.useCallback((token: string) => {
-        const input = textRef.current;
-        if (!input) {
-            setDraft((prev) => `${prev}${prev && !prev.endsWith(' ') ? ' ' : ''}${token} `);
-            return;
-        }
-
-        const start = input.selectionStart ?? draft.length;
-        const end = input.selectionEnd ?? draft.length;
-        const before = draft.slice(0, start);
-        const after = draft.slice(end);
-        const prefix = before && !before.endsWith(' ') ? ' ' : '';
-        const nextDraft = `${before}${prefix}${token} ${after}`;
-        setDraft(nextDraft);
-
-        requestAnimationFrame(() => {
-            const cursor = before.length + prefix.length + token.length + 1;
-            input.focus();
-            input.setSelectionRange(cursor, cursor);
-        });
-    }, [draft]);
 
     return (
         <>
@@ -288,8 +259,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                             bgcolor: '#1C1A18',
                             borderColor: attachmentDisabled ? '#1C1A18' : '#F59E0B',
                             color: attachmentDisabled ? '#9B9691' : '#fff',
-                            cursor: attachmentDisabled ? 'not-allowed' : 'pointer',
-                        },
+                            cursor: attachmentDisabled ? 'not-allowed' : 'pointer'},
                     }}
                 >
                     <PlusCircle size={20} strokeWidth={2} />
@@ -307,8 +277,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                         '&:hover': {
                             bgcolor: '#1C1A18',
                             borderColor: '#F59E0B',
-                            color: '#fff',
-                        },
+                            color: '#fff'},
                     }}
                 >
                     {isRecording ? <Square size={18} fill="#ff4d4d" /> : <Mic size={20} strokeWidth={2} />}
@@ -378,7 +347,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                                     });
                                     
                                     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-                                    const url = `${origin}/send/${note.$id}/${titleEnc.key}`;
+                                    const url = `${origin}/idea/${note.$id}/${titleEnc.key}`;
                                     
                                     // Cache in localStorage stash
                                     try {
@@ -388,8 +357,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                                             kind: 'note',
                                             title: 'Secure Note',
                                             url,
-                                            expiresAt,
-                                        };
+                                            expiresAt};
                                         localStorage.setItem('kylrix_send_sparks', JSON.stringify([newSpark, ...existing]));
                                     } catch (err) {
                                         console.warn('Failed to cache spark:', err);
@@ -425,8 +393,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                                 fontSize: '0.95rem',
                                 '&:focus-within': {
                                     borderColor: '#6366F1',
-                                    bgcolor: '#1C1A18',
-                                }
+                                    bgcolor: '#1C1A18'}
                             }
                         }}
                     />
@@ -453,11 +420,9 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                         borderColor: (draft.trim() || attachment) ? '#1C1A18' : 'transparent',
                         '&:hover': {
                             bgcolor: '#1C1A18',
-                            borderColor: '#6366F1',
-                        },
+                            borderColor: '#6366F1'},
                         '&.ob-disabled': {
-                            color: 'rgba(255,255,255,0.05)',
-                        }
+                            color: 'rgba(255,255,255,0.05)'}
                     }}
                 >
                     {sending ? <RefreshCw className="animate-spin" size={20} /> : <Send size={20} strokeWidth={2.5} />}
@@ -467,13 +432,13 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
     );
 });
 
-export const ChatWindow = ({ conversationId, onBack }: { conversationId: string; onBack?: () => void }) => {
+export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?: () => void }) => {
     const { user } = useAuth();
     const { openProUpgrade } = useProUpgrade();
     const { markConversationRead: markConversationReadInContext } = useChatNotifications();
     const { openCallLauncher } = useCallLauncher();
-    const { globalPresence, setMyState } = usePresence();
-    const [typingUsers, setTypingUsers] = useState<string[]>([]);
+    const { globalPresence} = usePresence();
+    const [typingUsers, _setTypingUsers] = useState<string[]>([]);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
@@ -500,7 +465,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
     const [reactionPopoverMessageId, setReactionPopoverMessageId] = useState<string | null>(null);
     const initialLoadRef = useRef<string | null>(null);
     const { openFileDrawer } = useUnifiedFileDrawer();
-    const [isPending, startTransition] = useTransition();
+    const [_isPending, startTransition] = useTransition();
     const isProPlan = hasPaidKylrixPlan(user);
     const { openWalletWithIntent } = useWalletOverlay();
     const searchParams = useSearchParams();
@@ -515,8 +480,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                 conversationId,
                 conversationName: conversation?.name,
                 participantIds: Array.isArray(conversation?.participants) ? conversation.participants : [],
-                title: 'Audio Call',
-            });
+                title: 'Audio Call'});
         }
     }, [conversation, startCallParam, conversationId, openCallLauncher]);
 
@@ -533,8 +497,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
             toUser: {
                 id: partnerId,
                 username: conversation?.name?.replace(/^@/, '') || 'User',
-                displayName: conversation?.name || 'User',
-            },
+                displayName: conversation?.name || 'User'},
         });
     };
 
@@ -588,8 +551,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
             const actor = {
                 userId: reaction.userId,
                 label: getReactionActorLabel(reaction.userId, senderProfiles),
-                isSelf: reaction.userId === user?.$id,
-            };
+                isSelf: reaction.userId === user?.$id};
 
             if (existing) {
                 if (!existing.actors.some((entry) => entry.userId === reaction.userId)) {
@@ -721,8 +683,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
             console.log('[ChatWindow] loadMessages: conversation fetched:', conv?.$id);
 
             const response = await ChatService.getMessages(conversationId, 50, 0, user?.$id, {
-                prefetchedConversation: conv,
-            });
+                prefetchedConversation: conv});
             console.log('[ChatWindow] loadMessages: getMessages returned rows:', response.rows?.length);
 
             // Filter by clearedAt if exists in settings
@@ -827,8 +788,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                             username: normalized.username,
                             avatar: normalized.avatar,
                             avatarUrl,
-                            preferences: normalized.preferences,
-                        } as SenderProfile,
+                            preferences: normalized.preferences} as SenderProfile,
                     };
                 } catch (_e) {
                     return null;
@@ -871,8 +831,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                         username: identity.username,
                         avatar: identity.avatar,
                         avatarUrl: identity.avatar && identity.avatar.startsWith('http') ? identity.avatar : prev[identity.userId]?.avatarUrl || null,
-                        preferences: identity.preferences,
-                    },
+                        preferences: identity.preferences},
                 }));
             });
         });
@@ -916,8 +875,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                             username: normalized.username,
                             avatar: normalized.avatar,
                             avatarUrl,
-                            preferences: normalized.preferences,
-                        } as SenderProfile,
+                            preferences: normalized.preferences} as SenderProfile,
                     };
                 } catch (_e) {
                     return null;
@@ -1217,7 +1175,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
         try {
             await ChatService.updateMessage(msg.$id, { isPinned: !msg.isPinned } as any);
             toast.success(msg.isPinned ? "Unpinned" : "Pinned message");
-        } catch (err) {
+        } catch (_err) {
             toast.error("Failed to pin message");
         }
     };
@@ -1304,8 +1262,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
             conversationId,
             conversationName: conversation?.name,
             participantIds: Array.isArray(conversation?.participants) ? conversation.participants : [],
-            title: type === 'audio' ? 'Audio Call' : 'Video Call',
-        });
+            title: type === 'audio' ? 'Audio Call' : 'Video Call'});
     };
 
     const _handleAttachClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -1914,8 +1871,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
             zIndex: 1200,
             overflow: 'hidden',
             display: 'flex',
-            flexDirection: 'column',
-        }}>
+            flexDirection: 'column'}}>
 
             <MuralPattern />
             <AppBar position="absolute" color="transparent" elevation={0} sx={{ 
@@ -1926,8 +1882,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                 bgcolor: '#0A0908',
                 zIndex: 10,
                 pt: 'env(safe-area-inset-top)',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-            }}>
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)'}}>
                 <Toolbar sx={{ gap: 1, minHeight: '72px' }}>
                     <IconButton edge="start" onClick={() => router.back()} sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: '#fff', bgcolor: '#161412' } }}>
                         <ChevronLeft size={20} strokeWidth={2} />
@@ -2051,8 +2006,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                         borderRadius: '24px 24px 0 0',
                         p: 3,
                         pb: isMobile ? 6 : 4,
-                        zIndex: 2000,
-                    }
+                        zIndex: 2000}
                 }}
             >
                 <Box sx={{ maxWidth: 500, mx: 'auto', width: '100%' }}>
@@ -2134,8 +2088,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                                 textTransform: 'none',
                                 px: 3,
                                 '&:hover': {
-                                    bgcolor: '#575CF0',
-                                }
+                                    bgcolor: '#575CF0'}
                             }}
                         >
                             Unlock to Read
@@ -2151,7 +2104,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                                 <></>
                             </Box>
                         </Stack>
-                        {Array.from({ length: 5 }).map((_, index) => (
+                        {Array.from({ length: 5 }).map((_, _index) => (
                             <></>
                         ))}
                     </Box>
@@ -2250,8 +2203,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                                                     transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                                                     '&:hover': {
                                                         transform: 'translateY(-1px)',
-                                                        boxShadow: '0 6px 16px -4px rgba(0,0,0,0.9)',
-                                                    }
+                                                        boxShadow: '0 6px 16px -4px rgba(0,0,0,0.9)'}
                                                 }}
                                             >
                                                 {msg.isPinned && (
@@ -2343,8 +2295,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                                                                     opacity: reaction.reactedBySelf ? 1 : 0.95,
                                                                     '&:hover': {
                                                                         opacity: 1,
-                                                                        transform: 'translateY(-1px)',
-                                                                    },
+                                                                        transform: 'translateY(-1px)'},
                                                                 }}
                                                             >
                                                                 {reaction.emoji}
@@ -2401,8 +2352,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                         border: '1px solid #34322F',
                         backgroundImage: 'none',
                         p: 2,
-                        boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
-                    }
+                        boxShadow: '0 12px 32px rgba(0,0,0,0.5)'}
                 }}
             >
                 <Stack spacing={1}>
@@ -2423,8 +2373,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                                             sx={{
                                                 fontSize: '0.82rem',
                                                 color: actor.isSelf ? '#F59E0B' : 'text.secondary',
-                                                fontWeight: actor.isSelf ? 700 : 500,
-                                            }}
+                                                fontWeight: actor.isSelf ? 700 : 500}}
                                         >
                                             {actor.label}
                                         </Typography>
@@ -2470,8 +2419,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        border: '1px solid #1C1A18',
-                    }}>
+                        border: '1px solid #1C1A18'}}>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                             <Typography variant="caption" sx={{ fontWeight: 900, color: '#F59E0B', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'var(--font-mono)' }}>
                                 Replying to {replyingTo.senderId === user?.$id ? 'yourself' : (conversation?.name || 'Partner')}
@@ -2490,8 +2438,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                     alignItems: 'flex-end',
                     gap: 0.75,
                     position: 'relative',
-                    zIndex: 2,
-                }}>
+                    zIndex: 2}}>
                     <input type="file" hidden ref={fileInputRef} onChange={onFileChange} />
 
                     <Menu
@@ -2508,8 +2455,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                                 border: '1px solid #34322F',
                                 backgroundImage: 'none',
                                 minWidth: 200,
-                                boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
-                            }
+                                boxShadow: '0 12px 32px rgba(0,0,0,0.5)'}
                         }}
                     >
                         <MenuItem onClick={() => { handleFileSelect('*'); setAttachAnchorEl(null); }} sx={{ gap: 1.5, py: 1.5, px: 2, fontWeight: 700, fontSize: '0.85rem', '&:hover': { bgcolor: '#252321' } }}>

@@ -46,8 +46,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
         status: 'draft',
         schema: '[]',
         $createdAt: new Date().toISOString(),
-        $updatedAt: new Date().toISOString(),
-    } as any : null);
+        $updatedAt: new Date().toISOString()} as any : null);
     const [tab, setTab] = useState(0);
     const [isEditing, setIsEditing] = useState(false);
 
@@ -114,7 +113,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                     };
                     updateTimer();
                 }
-            } catch (err) {
+            } catch (_err) {
                 if (active) setIsHuddleInit(false);
             }
         };
@@ -149,8 +148,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                           senderId: doc.userId,
                           senderName,
                           content: doc.content,
-                          timestamp: new Date(doc.createdAt).getTime(),
-                        };
+                          timestamp: new Date(doc.createdAt).getTime()};
                     })
                 );
                 msgs.sort((a: any, b: any) => a.timestamp - b.timestamp);
@@ -186,8 +184,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                         senderId: payload.userId,
                         senderName,
                         content: payload.content,
-                        timestamp: new Date(payload.createdAt).getTime(),
-                    };
+                        timestamp: new Date(payload.createdAt).getTime()};
                     setHuddleMessages(prev => {
                         if (prev.some(m => m.id === msg.id)) return prev;
                         return [...prev, msg].sort((a, b) => a.timestamp - b.timestamp);
@@ -294,7 +291,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
     }, [fetchForm]);
 
     const handleCopyLink = () => {
-        const url = `${window.location.origin}/flow/form/${resolvedParams.formId}`;
+        const url = `${window.location.origin}/form/${resolvedParams.formId}`;
         navigator.clipboard.writeText(url);
         showSuccess('Link Copied', 'Public link copied to clipboard.');
     };
@@ -400,7 +397,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                         <span className="w-2 h-2 rounded-full bg-[#10B981] shadow-[0_0_8px_#10B981] animate-pulse" />
                         <span className="text-[10px] font-black text-[#10B981] tracking-wider uppercase font-mono">FORM IS LIVE & ACCEPTING RESPONSES</span>
                     </div>
-                    <Link href={`/flow/form/${form.$id}`} target="_blank" className="p-1 text-[#10B981] hover:text-white transition-colors">
+                    <Link href={`/form/${form.$id}`} target="_blank" className="p-1 text-[#10B981] hover:text-white transition-colors">
                         <ExternalLink className="w-4 h-4" />
                     </Link>
                 </div>

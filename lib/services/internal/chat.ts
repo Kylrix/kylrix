@@ -10,36 +10,36 @@ const MESSAGES_TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
 const MESSAGE_REACTIONS_TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.MESSAGE_REACTIONS;
 const CONVERSATION_MEMBERS_TABLE_ID = 'conversationMembers';
 
-export function uniqueIds(ids: Array<string | null | undefined>) {
-  return Array.from(new Set(ids.map((value) => String(value || '').trim()).filter(Boolean)));
+function uniqueIds(ids: Array<string | null | undefined>) {
+  return Array.from(new Set(ids.map((value: any) => String(value || '').trim()).filter(Boolean)));
 }
 
-export function buildMessagePermissions(senderId: string, recipientIds: string[]) {
+function buildMessagePermissions(senderId: string, recipientIds: string[]) {
   return [
     Permission.read(Role.user(senderId)),
-    ...recipientIds.map((userId) => Permission.read(Role.user(userId)))];
+    ...recipientIds.map((userId: any) => Permission.read(Role.user(userId)))];
 }
 
-export function buildReactionPermissions(userId: string, recipientIds: string[]) {
+function buildReactionPermissions(userId: string, recipientIds: string[]) {
   return [
     Permission.read(Role.user(userId)),
-    ...recipientIds.map((participantId) => Permission.read(Role.user(participantId)))];
+    ...recipientIds.map((participantId: any) => Permission.read(Role.user(participantId)))];
 }
 
-export function buildReactionDocumentId(userId: string, messageId: string) {
+function buildReactionDocumentId(userId: string, messageId: string) {
   return createHash('sha256')
     .update(`${userId}:${messageId}`)
     .digest('base64url')
     .slice(0, 32);
 }
 
-export function normalizeParticipantIds(row: any): string[] {
+function normalizeParticipantIds(row: any): string[] {
   return Array.isArray(row?.participants)
     ? Array.from(new Set(row.participants.filter((participant: unknown): participant is string => typeof participant === 'string' && participant.trim().length > 0)))
     : [];
 }
 
-export async function resolveConversationParticipants(databases: any, conversation: any): Promise<string[]> {
+async function resolveConversationParticipants(databases: any, conversation: any): Promise<string[]> {
   const directParticipants = normalizeParticipantIds(conversation);
   if (directParticipants.length > 0) return directParticipants;
 
@@ -91,7 +91,7 @@ async function deleteRowsInBatches(
 
   let deleted = 0;
   for (let i = 0; i < uniqueIds.length; i += 10) {
-    const batch = uniqueIds.slice(i, i + 10).map((rowId) => databases.deleteRow(databaseId, tableId, rowId));
+    const batch = uniqueIds.slice(i, i + 10).map((rowId: any) => databases.deleteRow(databaseId, tableId, rowId));
     await Promise.all(batch);
     deleted += batch.length;
   }
@@ -136,17 +136,16 @@ async function deleteConversationArtifacts(databases: any, storage: any, convers
   const attachmentIds = messages.flatMap((message) => Array.isArray(message?.attachments) ? message.attachments : []);
   const reactionRows = await listAllDocuments(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
     Query.equal('conversationId', conversationId)]);
-  const reactionIds = reactionRows.map((row) => row.$id);
+  const reactionIds = reactionRows.map((row: any) => row.$id);
 
   await Promise.all([
-    deleteRowsInBatches(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, messages.map((row) => row.$id)),
+    deleteRowsInBatches(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, messages.map((row: any) => row.$id)),
     deleteRowsInBatches(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, reactionIds)]);
 
   return {
     messagesDeleted: messages.length,
     reactionsDeleted: reactionIds.length,
-    attachmentsDeleted: attachmentIds.length,
-  };
+    attachmentsDeleted: attachmentIds.length};
 }
 
 export async function createMessageInternal(payload: {
@@ -199,8 +198,7 @@ export async function createMessageInternal(payload: {
       readBy: [payload.senderId],
       isVoice: payload.type === 'voice' || payload.content?.startsWith('__voice_note__:'),
       createdAt: now,
-      updatedAt: now,
-    },
+      updatedAt: now},
     buildMessagePermissions(payload.senderId, recipientIds),
   );
 
@@ -231,7 +229,7 @@ export async function clearConversationFootprintInternal(payload: {
   const ownedMessages = await listAllDocuments(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, [
     Query.equal('conversationId', payload.conversationId),
     Query.equal('senderId', verifiedActorId)]);
-  const ownedMessageIds = ownedMessages.map((row) => row.$id);
+  const ownedMessageIds = ownedMessages.map((row: any) => row.$id);
 
   const reactionsByUser = await listAllDocuments(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
     Query.equal('conversationId', payload.conversationId),
@@ -244,8 +242,8 @@ export async function clearConversationFootprintInternal(payload: {
     : [];
 
   const reactionIds = Array.from(new Set([
-    ...reactionsByUser.map((row) => row.$id),
-    ...reactionsOnOwnedMessages.map((row) => row.$id)]));
+    ...reactionsByUser.map((row: any) => row.$id),
+    ...reactionsOnOwnedMessages.map((row: any) => row.$id)]));
 
   await deleteMessageFiles(storage, ownedMessages);
   await Promise.all([
@@ -255,8 +253,7 @@ export async function clearConversationFootprintInternal(payload: {
   return {
     success: true,
     messagesDeleted: ownedMessageIds.length,
-    reactionsDeleted: reactionIds.length,
-  };
+    reactionsDeleted: reactionIds.length};
 }
 
 export async function deleteConversationFullyInternal(payload: {
@@ -306,10 +303,10 @@ export async function deleteConversationFullyInternal(payload: {
 
   await Promise.all([
     deleteRowsInBatches(databases, CHAT_DB_ID, CONVERSATIONS_TABLE_ID, [conversation.$id]),
-    deleteRowsInBatches(databases, CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, members.map((row) => row.$id)),
-    deleteRowsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.EPOCHS, epochs.map((row) => row.$id)),
-    deleteRowsInBatches(databases, APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, keyMappings.map((row) => row.$id)),
-    deleteRowsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, joinRequests.map((row) => row.$id))]);
+    deleteRowsInBatches(databases, CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, members.map((row: any) => row.$id)),
+    deleteRowsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.EPOCHS, epochs.map((row: any) => row.$id)),
+    deleteRowsInBatches(databases, APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, keyMappings.map((row: any) => row.$id)),
+    deleteRowsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, joinRequests.map((row: any) => row.$id))]);
 
   return {
     success: true,
@@ -319,8 +316,7 @@ export async function deleteConversationFullyInternal(payload: {
     membersDeleted: members.length,
     epochsDeleted: epochs.length,
     keyMappingsDeleted: keyMappings.length,
-    joinRequestsDeleted: joinRequests.length,
-  };
+    joinRequestsDeleted: joinRequests.length};
 }
 
 export async function nuclearWipeConversationInternal(payload: {
@@ -393,8 +389,7 @@ export async function toggleReactionInternal(payload: {
       messageId: payload.messageId,
       userId: verifiedActorId,
       emoji: payload.emoji,
-      createdAt: now,
-    };
+      createdAt: now};
 
     const recipientIds = participantIds.filter((id) => id !== verifiedActorId);
     const permissions = buildReactionPermissions(verifiedActorId, recipientIds);
@@ -492,8 +487,7 @@ export async function repairConversationInternal(payload: {
     report.identity = {
       repaired: true,
       deleted: duplicateRows.length,
-      canonicalId: canonicalIdentity.$id,
-    };
+      canonicalId: canonicalIdentity.$id};
 
     if (profile && profile.publicKey !== canonicalIdentity.publicKey) {
       await databases.updateRow(
@@ -501,8 +495,7 @@ export async function repairConversationInternal(payload: {
         APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
         profile.$id,
         {
-          publicKey: canonicalIdentity.publicKey || null,
-        },
+          publicKey: canonicalIdentity.publicKey || null},
       );
       report.identity.profilePublicKeyUpdated = true;
     }
@@ -524,7 +517,7 @@ export async function repairConversationInternal(payload: {
         Query.equal('resourceId', payload.conversationId),
         Query.limit(100)],
     );
-    const epochIds = epochRows.rows.map((row) => row.$id);
+    const epochIds = epochRows.rows.map((row: any) => row.$id);
 
     const mappings = await databases.listRows(
       APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
@@ -552,7 +545,7 @@ export async function repairConversationInternal(payload: {
     let deletedRows = 0;
 
     for (const rows of grouped.values()) {
-      rows.sort((left, right) => {
+      rows.sort((left: any, right: any) => {
         const leftMeta = typeof left.metadata === 'string' ? JSON.parse(left.metadata || '{}') : (left.metadata || {});
         const rightMeta = typeof right.metadata === 'string' ? JSON.parse(right.metadata || '{}') : (right.metadata || {});
         const leftScore = (leftMeta.senderPublicKey ? 2 : 0) + (leftMeta.wrappedByPublicKey ? 1 : 0);
@@ -600,8 +593,7 @@ export async function repairConversationInternal(payload: {
     report.mappings = {
       repaired: repairedRows,
       deleted: deletedRows,
-      considered: relevantMappings.length,
-    };
+      considered: relevantMappings.length};
   }
 
   return JSON.parse(JSON.stringify(report));
@@ -637,7 +629,6 @@ export async function joinRequestInternal(payload: {
   const JOIN_REQUESTS_TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS;
 
   if (payload.method === 'GET') {
-    const resource = await databases.getRow(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, payload.resourceId);
     await getUserLazily();
     const currentRequesterId = payload.requesterId || verifiedActorId || '';
     
@@ -662,8 +653,7 @@ export async function joinRequestInternal(payload: {
 
     return JSON.parse(JSON.stringify({
       alreadyJoined,
-      request,
-    }));
+      request}));
   }
 
   const user = await getUserLazily();
@@ -683,11 +673,10 @@ export async function joinRequestInternal(payload: {
         resourceId: payload.resourceId,
         requesterId: verifiedActorId,
         status: 'pending',
-        createdAt: new Date().toISOString(),
-      },
+        createdAt: new Date().toISOString()},
       [
         Permission.read(Role.user(verifiedActorId!)),
-        ...managers.map((id) => Permission.read(Role.user(id)))],
+        ...managers.map((id: any) => Permission.read(Role.user(id)))],
     );
 
     return JSON.parse(JSON.stringify(request));
@@ -716,8 +705,7 @@ export async function joinRequestInternal(payload: {
       {
         status: nextStatus,
         resolvedAt: new Date().toISOString(),
-        resolvedBy: verifiedActorId,
-      }
+        resolvedBy: verifiedActorId}
     );
 
     if (payload.action === 'accept') {
@@ -729,8 +717,7 @@ export async function joinRequestInternal(payload: {
         {
           participants,
           participantCount: participants.length,
-          updatedAt: new Date().toISOString(),
-        }
+          updatedAt: new Date().toISOString()}
       );
       
       await databases.createRow(
@@ -739,8 +726,7 @@ export async function joinRequestInternal(payload: {
         ID.unique(),
         {
           conversationId: payload.resourceId,
-          userId: payload.requesterId,
-        }
+          userId: payload.requesterId}
       ).catch(() => null);
     }
 

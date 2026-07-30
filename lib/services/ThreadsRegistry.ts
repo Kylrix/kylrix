@@ -33,8 +33,7 @@ export const ThreadsRegistry = {
         resourceId,
         resourceType,
         title: title || 'Discussion Thread',
-        createdAt: Date.now(),
-      });
+        createdAt: Date.now()});
       return existingThreadId;
     }
 
@@ -79,8 +78,7 @@ export const ThreadsRegistry = {
           resourceId,
           resourceType,
           title: title || 'Discussion Thread',
-          createdAt: Date.now(),
-        });
+          createdAt: Date.now()});
       }
       return createdThreadId;
     } finally {

@@ -1,4 +1,4 @@
-export const AUTO_TITLE_CONFIG = {
+const AUTO_TITLE_CONFIG = {
   baseCharLimit: 32,
   minCharLength: 18,
   avgWordThreshold: 6,
@@ -8,12 +8,12 @@ export const AUTO_TITLE_CONFIG = {
 };
 
 /** Appwrite notes.title column max length */
-export const NOTE_TITLE_MAX_LENGTH = 206;
+const NOTE_TITLE_MAX_LENGTH = 206;
 
 const OBJECT_BLOCK_REGEX = /\[\[kylrix-object:(\{.*?\})\]\]/g;
 
 /** Replace inline object blocks with human labels before deriving a title. */
-export function stripObjectBlocksForTitleSource(rawContent: string): string {
+function stripObjectBlocksForTitleSource(rawContent: string): string {
   if (!rawContent) return '';
   const replaced = rawContent.replace(OBJECT_BLOCK_REGEX, (_match, json: string) => {
     try {
@@ -93,7 +93,7 @@ export const buildAutoTitleFromContent = (rawContent: string): string => {
 
 const GENERIC_NOTE_TITLES = new Set<string>();
 
-export const isGenericNoteTitle = (title?: string | null): boolean => {
+const isGenericNoteTitle = (title?: string | null): boolean => {
   return false;
 };
 

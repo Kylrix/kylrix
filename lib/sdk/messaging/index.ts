@@ -1,4 +1,4 @@
-export interface MessageEnvelope {
+interface MessageEnvelope {
   id: string;
   threadId: string;
   senderId: string;
@@ -7,6 +7,5 @@ export interface MessageEnvelope {
   readAt?: string | null;
 }
 
-export function createMessageEnvelope(envelope: MessageEnvelope) {
-  return envelope;
-}
+
+export {};

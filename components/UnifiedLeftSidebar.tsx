@@ -6,11 +6,9 @@ import { Box, Paper, Tooltip } from '@/lib/openbricks/primitives';
 import {
   FileText as NotesIcon,
   Lock as VaultIcon,
-  Target as FlowIcon,
+  GitFork as FlowIcon,
   MessageCircle as ConnectIcon,
-  GitFork as WorkflowsIcon,
-  Tag as TagsIcon,
-} from 'lucide-react';
+  Tag as TagsIcon} from 'lucide-react';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
@@ -20,21 +18,20 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { useAuth } from '@/context/auth/AuthContext';
 
-type NavId = 'note' | 'flow' | 'vault' | 'connect' | 'workflows' | 'tags';
+type NavId = 'note' | 'flow' | 'vault' | 'connect' | 'tags';
 
 const NAV_COLORS: Record<NavId, string> = {
   note: '#EC4899',
   flow: '#A855F7',
   vault: '#10B981',
   connect: '#F59E0B',
-  workflows: '#6366F1',
-  tags: '#6366F1',
-};
+  tags: '#6366F1'};
 
 const NOTE_DETAIL_EXCLUDED = 'shared|landing|admin|pitch|popout|notes|extensions';
 
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { ChevronDown as WorkspaceChevronIcon, Plus as PlusIcon, Check as CheckIcon } from 'lucide-react';
+import { isFlowPath } from '@/lib/routing/app-paths';
 
 export function UnifiedLeftSidebar() {
   const pathname = usePathname();
@@ -42,35 +39,25 @@ export function UnifiedLeftSidebar() {
   const { activeContent } = useUnifiedDrawer();
   const { mode } = useAppChrome();
   const { isDrawerOpen } = useDrawerState();
-  const { isOpen: isCallLauncherOpen } = useCallLauncher();
-  const { isOpen: isOverlayOpen } = useOverlay();
+  const { isOpen: _isCallLauncherOpen } = useCallLauncher();
+  const { isOpen: _isOverlayOpen } = useOverlay();
   const { isCollapsed } = useSidebar();
   const { user, updatePreferences } = useAuth();
   const { activeWorkspace, workspaces, setActiveWorkspaceId } = useWorkspace();
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = React.useState(false);
 
-  const appContext = useMemo((): NavId | null => {
-    if (pathname?.startsWith('/tags')) return 'tags';
-    if (pathname?.startsWith('/flow') || pathname?.startsWith('/workflows')) return 'workflows';
-    if (pathname?.startsWith('/app')) return 'note';
-    if (pathname?.startsWith('/vault')) return 'vault';
-    if (pathname?.startsWith('/goals')) return 'flow';
-    if (pathname?.startsWith('/connect')) return 'connect';
-    return null;
-  }, [pathname]);
 
   const getCurrentTab = (): NavId | null => {
     if (pathname?.startsWith('/tags')) return 'tags';
-    if (pathname?.startsWith('/flow') || pathname?.startsWith('/workflows')) return 'workflows';
+    if (isFlowPath(pathname)) return 'flow';
     if (pathname?.startsWith('/app')) return 'note';
-    if (pathname?.startsWith('/goals')) return 'flow';
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/connect')) return 'connect';
     return null;
   };
 
   useEffect(() => {
-    ['/app', '/goals', '/vault', '/connect', '/flow', '/tags'].forEach((route) => {
+    ['/app', '/goals', '/vault', '/connect', '/flows', '/tags'].forEach((route) => {
       router.prefetch(route);
     });
   }, [router]);
@@ -78,21 +65,13 @@ export function UnifiedLeftSidebar() {
   const handleNavChange = (navId: NavId) => {
     const routes: Record<NavId, string> = {
       note: '/app',
-      flow: '/goals',
+      flow: '/flows',
       vault: '/vault',
       connect: '/connect',
-      workflows: '/flow',
-      tags: '/tags',
-    };
+      tags: '/tags'};
     router.push(routes[navId] || '/app');
   };
 
-  const isNoteFullPageDetail = Boolean(
-    pathname?.match(new RegExp(`^/app/(?!${NOTE_DETAIL_EXCLUDED})[^/]+$`)),
-  );
-  const isConnectCallDetail = Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/));
-  const isConnectChatPage =
-    pathname?.startsWith('/connect/chats') || pathname?.match(/^\/connect\/chat\/[^/]+$/);
 
   if (pathname?.startsWith('/accounts')) return null;
 
@@ -103,7 +82,6 @@ export function UnifiedLeftSidebar() {
     { id: 'flow', label: 'Flow', icon: FlowIcon },
     { id: 'vault', label: 'Vault', icon: VaultIcon },
     { id: 'connect', label: 'Connect', icon: ConnectIcon },
-    { id: 'workflows', label: 'Workflows', icon: WorkflowsIcon },
     { id: 'tags', label: 'Tags', icon: TagsIcon },
   ];
 
@@ -160,8 +138,7 @@ export function UnifiedLeftSidebar() {
                 transition: 'all 0.2s',
                 '&:hover': {
                   bgcolor: 'rgba(255, 255, 255, 0.06)',
-                  borderColor: 'rgba(255, 255, 255, 0.12)',
-                },
+                  borderColor: 'rgba(255, 255, 255, 0.12)'},
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
@@ -176,8 +153,7 @@ export function UnifiedLeftSidebar() {
                     placeItems: 'center',
                     fontWeight: 900,
                     fontSize: '0.8rem',
-                    flexShrink: 0,
-                  }}
+                    flexShrink: 0}}
                 >
                   {activeWorkspace.title.charAt(0).toUpperCase()}
                 </Box>
@@ -199,8 +175,7 @@ export function UnifiedLeftSidebar() {
                     color: 'rgba(255, 255, 255, 0.4)',
                     transition: 'transform 0.2s',
                     transform: workspaceMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                    flexShrink: 0,
-                  }}
+                    flexShrink: 0}}
                 />
               )}
             </Box>
@@ -218,8 +193,7 @@ export function UnifiedLeftSidebar() {
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 0.5,
-                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-              }}
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)'}}
             >
               <Box sx={{ px: 1, py: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -270,8 +244,7 @@ export function UnifiedLeftSidebar() {
                       color: isActive ? '#F59E0B' : 'rgba(255, 255, 255, 0.7)',
                       '&:hover': {
                         bgcolor: isActive ? 'rgba(245, 158, 11, 0.18)' : 'rgba(255, 255, 255, 0.04)',
-                        color: '#fff',
-                      },
+                        color: '#fff'},
                     }}
                   >
                     <span style={{ fontSize: '0.78rem', fontWeight: isActive ? 800 : 600, fontFamily: 'var(--font-satoshi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -317,8 +290,7 @@ export function UnifiedLeftSidebar() {
                     ...(isSelected ? {} : { borderColor: 'rgba(255,255,255,0.08)' }),
                   },
                   '&:active': {
-                    transform: 'translateY(0px)',
-                  },
+                    transform: 'translateY(0px)'},
                 }}
               >
                 {isSelected && (

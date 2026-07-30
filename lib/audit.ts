@@ -7,7 +7,7 @@ import { AppwriteService } from './appwrite';
 import { getDeviceFingerprint } from './security';
 import { logError } from './logger';
 
-export type SecurityEventType =
+type SecurityEventType =
   | 'auth.login.success'
   | 'auth.login.failed'
   | 'auth.login.rate_limited'
@@ -44,7 +44,7 @@ export type SecurityEventType =
   | 'security.xss_attempt'
   | 'security.injection_attempt';
 
-export interface SecurityEvent {
+interface SecurityEvent {
   userId: string;
   eventType: SecurityEventType;
   ipAddress?: string;
@@ -93,8 +93,7 @@ class AuditLogger {
         deviceFingerprint,
         details: this.sanitizeDetails(details),
         success,
-        timestamp: new Date().toISOString(),
-      };
+        timestamp: new Date().toISOString()};
 
       // Add to pending logs
       this.pendingLogs.push(event);
@@ -178,8 +177,7 @@ class AuditLogger {
             userAgent: event.userAgent || null,
             details: event.details ? JSON.stringify(event.details) : null,
             timestamp: event.timestamp,
-            success: event.success,
-          })
+            success: event.success})
         )
       );
     } catch (error: unknown) {
@@ -202,50 +200,50 @@ class AuditLogger {
 }
 
 // Export singleton instance
-export const auditLogger = new AuditLogger();
+const auditLogger = new AuditLogger();
 
 // Export convenience functions
-export const logSecurityEvent = (
+const logSecurityEvent = (
   userId: string,
   eventType: SecurityEventType,
   success: boolean,
   details?: Record<string, unknown>
 ) => auditLogger.log(userId, eventType, success, details);
 
-export const logLoginSuccess = (userId: string, details?: Record<string, unknown>) =>
+const logLoginSuccess = (userId: string, details?: Record<string, unknown>) =>
   auditLogger.log(userId, 'auth.login.success', true, details);
 
-export const logLoginFailed = (userId: string, details?: Record<string, unknown>) =>
+const logLoginFailed = (userId: string, details?: Record<string, unknown>) =>
   auditLogger.log(userId, 'auth.login.failed', false, details);
 
-export const logVaultUnlocked = (userId: string, method?: string) =>
+const logVaultUnlocked = (userId: string, method?: string) =>
   auditLogger.log(userId, 'vault.unlocked', true, { method });
 
-export const logVaultUnlockFailed = (userId: string, reason?: string) =>
+const logVaultUnlockFailed = (userId: string, reason?: string) =>
   auditLogger.log(userId, 'vault.unlock_failed', false, { reason });
 
 export const logPasskeyAdded = (userId: string, details?: Record<string, unknown>) =>
   auditLogger.log(userId, 'passkey.added', true, details);
 
-export const logPasskeyRemoved = (userId: string, details?: Record<string, unknown>) =>
+const logPasskeyRemoved = (userId: string, details?: Record<string, unknown>) =>
   auditLogger.log(userId, 'passkey.removed', true, details);
 
-export const logMFAEnabled = (userId: string, type?: string) =>
+const logMFAEnabled = (userId: string, type?: string) =>
   auditLogger.log(userId, 'mfa.enabled', true, { type });
 
-export const logMFADisabled = (userId: string, type?: string) =>
+const logMFADisabled = (userId: string, type?: string) =>
   auditLogger.log(userId, 'mfa.disabled', true, { type });
 
-export const logCredentialAccessed = (userId: string, credentialId: string, action: 'viewed' | 'copied') =>
+const logCredentialAccessed = (userId: string, credentialId: string, action: 'viewed' | 'copied') =>
   auditLogger.log(userId, 'credential.viewed', true, { credentialId, action });
 
-export const logDataExported = (userId: string, exportType: string, itemCount: number) =>
+const logDataExported = (userId: string, exportType: string, itemCount: number) =>
   auditLogger.log(userId, 'data.exported', true, { exportType, itemCount });
 
-export const logDataImported = (userId: string, importType: string, itemCount: number) =>
+const logDataImported = (userId: string, importType: string, itemCount: number) =>
   auditLogger.log(userId, 'data.imported', true, { importType, itemCount });
 
-export const logSuspiciousActivity = (userId: string, details: Record<string, unknown>) =>
+const logSuspiciousActivity = (userId: string, details: Record<string, unknown>) =>
   auditLogger.log(userId, 'security.suspicious_activity', false, details);
 
 // Clean up on page unload

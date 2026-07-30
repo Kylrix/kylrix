@@ -1,6 +1,6 @@
 import { LayoutDashboard, Lock, MessageSquare, Terminal, StickyNote, ShieldCheck, Zap, Fingerprint, FileText, Shield, Waypoints } from 'lucide-react';
 
-export interface EcosystemApp {
+interface EcosystemApp {
   id: string;
   label: string;
   subdomain: string;
@@ -11,30 +11,19 @@ export interface EcosystemApp {
   description: string;
 }
 
-export const KYLRIX_DOMAIN = 'kylrix.space';
-export const KYLRIX_AUTH_SUBDOMAIN = 'accounts';
-export const APP_BASE_PATHS: Record<string, string> = {
+const KYLRIX_DOMAIN = 'kylrix.space';
+const KYLRIX_AUTH_SUBDOMAIN = 'accounts';
+const APP_BASE_PATHS: Record<string, string> = {
   accounts: '/accounts',
   note: '/app',
   vault: '/vault',
-  flow: '/flow',
+  flow: '/flows',
   connect: '/connect',
-  projects: '/projects',
+  projects: '/workspaces',
   kylrix: '/',
-  send: '/send',
-};
+  send: '/app'};
 
-export const KYLRIX_AUTH_URI =
-  typeof window !== 'undefined'
-    ? `${window.location.origin}${APP_BASE_PATHS.accounts}`
-    : `https://${KYLRIX_AUTH_SUBDOMAIN}.${KYLRIX_DOMAIN}`;
 
-export const ECOSYSTEM_APPS: EcosystemApp[] = [
-  { id: 'note', label: 'Note', subdomain: 'note', type: 'app', icon: 'file-text', logo: '/logo/rall.svg', color: '#F59E0B', description: 'Secure notes and research.' },
-  { id: 'vault', label: 'Vault', subdomain: 'vault', type: 'app', icon: 'shield', logo: '/logo/rall.svg', color: '#A855F7', description: 'Passwords, 2FA, and keys.' },
-  { id: 'flow', label: 'Flow', subdomain: 'flow', type: 'app', icon: 'zap', logo: '/logo/rall.svg', color: '#10B981', description: 'Tasks and workflows.' },
-  { id: 'connect', label: 'Connect', subdomain: 'connect', type: 'app', icon: 'waypoints', logo: '/logo/rall.svg', color: '#F43F5E', description: 'Secure messages and sharing.' },
-  { id: 'accounts', label: 'Accounts', subdomain: KYLRIX_AUTH_SUBDOMAIN, type: 'accounts', icon: 'fingerprint', logo: '/logo/rall.svg', color: '#6366F1', description: 'Your Kylrix account.' }];
 
 export function getEcosystemUrl(subdomain: string, path = '') {
   if (!subdomain) {
@@ -50,11 +39,10 @@ export function getEcosystemUrl(subdomain: string, path = '') {
       accounts: '/accounts',
       note: '/app',
       vault: '/vault',
-      flow: '/flow',
+      flow: '/flows',
       connect: '/connect',
-      projects: '/projects',
-      kylrix: '/',
-    };
+      projects: '/workspaces',
+      kylrix: '/'};
     basePath = rawPaths[subdomain] || `/${subdomain}`;
   } else {
     basePath = APP_BASE_PATHS[subdomain] || `/${subdomain}`;

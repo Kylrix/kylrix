@@ -7,8 +7,7 @@ import {
   allowsCollaboratorSharing,
   getCollaboratorCap,
   getContainerObjectCap,
-  getProjectCap,
-} from '@/lib/entitlements';
+  getProjectCap} from '@/lib/entitlements';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { Registry } from '@/lib/core/di/registry';
 import { createServerClient } from '@/lib/appwrite/server';
@@ -454,7 +453,7 @@ export function isEnvSERVERSDKUser(user: any) {
   const serverSDKSet = new Set(
     String(process.env.ADMINS || '')
       .split(',')
-      .map((email) => email.trim().toLowerCase())
+      .map((email: any) => email.trim().toLowerCase())
       .filter(Boolean),
   );
   return serverSDKSet.has(email);
@@ -493,8 +492,7 @@ export function serializeMomentRow(row: Record<string, unknown>) {
     searchTitle: row?.searchTitle ?? null,
     fileId: row?.fileId ?? '',
     createdAt: row?.createdAt ?? '',
-    expiresAt: row?.expiresAt ?? '',
-  };
+    expiresAt: row?.expiresAt ?? ''};
 }
 
 export function serializeTokenMintResult(raw: unknown): Record<string, unknown> {
@@ -510,8 +508,7 @@ export function serializeTokenMintResult(raw: unknown): Record<string, unknown> 
   }
   return {
     accepted: false,
-    reason: String(r.reason || 'MINT_FAILED'),
-  };
+    reason: String(r.reason || 'MINT_FAILED')};
 }
 
 export async function verifyResourcePermissionSecure(params: {
@@ -533,8 +530,7 @@ export async function verifyResourcePermissionSecure(params: {
     row = await getRowCached({
       databaseId: databaseId,
       tableId: tableId,
-      rowId: rowId,
-    }).catch(() => null);
+      rowId: rowId}).catch(() => null);
 
     // Dynamic Admin RLS Bypass Fallback (Second Gate)
     if (!row) {
@@ -543,8 +539,7 @@ export async function verifyResourcePermissionSecure(params: {
         row = await systemTables.getRow({
           databaseId,
           tableId,
-          rowId,
-        });
+          rowId});
       } catch (err) {
         console.warn('[verifyResourcePermissionSecure] Admin fallback fetch failed:', err);
       }
@@ -629,8 +624,7 @@ export async function verifyResourcePermissionSecure(params: {
       const project = await getRowCached({
         databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
         tableId: 'projects',
-        rowId: row.resourceId,
-      });
+        rowId: row.resourceId});
       if (project && project.ownerId === actorId) {
         return true;
       }
@@ -645,8 +639,7 @@ export async function verifyResourcePermissionSecure(params: {
       const project = await getRowCached({
         databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
         tableId: 'projects',
-        rowId: row.projectId,
-      });
+        rowId: row.projectId});
       if (project && project.ownerId === actorId) {
         return true;
       }
@@ -663,8 +656,7 @@ export async function verifyResourcePermissionSecure(params: {
         tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
         rowId: row.noteId,
         actorId,
-        action: action as any,
-      });
+        action: action as any});
       if (hasParentAccess) return true;
     } catch (err) {
       console.warn('[verifyResourcePermissionSecure] Parent note inheritance check failed:', err);
@@ -843,8 +835,7 @@ export async function verifyNotePermission(noteId: string, actorId: string, minL
   const minToLevelMap: Record<'viewer' | 'editor' | 'admin', 'read' | 'update' | 'delete'> = {
     viewer: 'read',
     editor: 'update',
-    admin: 'delete',
-  };
+    admin: 'delete'};
   return verifyResourcePermissionSecure({
     databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
     tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
@@ -852,16 +843,14 @@ export async function verifyNotePermission(noteId: string, actorId: string, minL
     actorId,
     action: minToLevelMap[minLevel],
     ownerFields: ['userId', 'creatorId', 'ownerId'],
-    metadataField: 'metadata',
-  });
+    metadataField: 'metadata'});
 }
 
 export async function verifyProjectPermission(projectId: string, actorId: string, minLevel: 'viewer' | 'editor' | 'admin') {
   const minToLevelMap: Record<'viewer' | 'editor' | 'admin', 'read' | 'update' | 'delete'> = {
     viewer: 'read',
     editor: 'update',
-    admin: 'delete',
-  };
+    admin: 'delete'};
   return verifyResourcePermissionSecure({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
@@ -869,16 +858,14 @@ export async function verifyProjectPermission(projectId: string, actorId: string
     actorId,
     action: minToLevelMap[minLevel],
     ownerFields: ['ownerId', 'userId'],
-    metadataField: 'metadata',
-  });
+    metadataField: 'metadata'});
 }
 
 export async function verifyFormPermission(formId: string, actorId: string, minLevel: 'viewer' | 'editor' | 'admin') {
   const minToLevelMap: Record<'viewer' | 'editor' | 'admin', 'read' | 'update' | 'delete'> = {
     viewer: 'read',
     editor: 'update',
-    admin: 'delete',
-  };
+    admin: 'delete'};
   return verifyResourcePermissionSecure({
     databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
     tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
@@ -886,8 +873,7 @@ export async function verifyFormPermission(formId: string, actorId: string, minL
     actorId,
     action: minToLevelMap[minLevel],
     ownerFields: ['userId', 'creatorId', 'ownerId'],
-    metadataField: 'settings',
-  });
+    metadataField: 'settings'});
 }
 
 export async function verifyEventPermission(eventId: string, actorId: string, minLevel: 'viewer' | 'editor' | 'admin') {
@@ -896,8 +882,7 @@ export async function verifyEventPermission(eventId: string, actorId: string, mi
   const event = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-      rowId: eventId,
-    });
+      rowId: eventId});
   
   const ownerId = String(event.userId || '').trim();
   if (ownerId && ownerId === actorId) {
@@ -916,8 +901,7 @@ export async function verifyEventPermission(eventId: string, actorId: string, mi
         Query.equal('resourceType', 'event'),
         Query.equal('userId', actorId),
         Query.limit(1),
-      ] as any,
-    });
+      ] as any});
     if (collabsRes.rows.length > 0) {
       const collab = collabsRes.rows[0];
       const p = collab.permission; // 'read' | 'write' | 'admin'
@@ -941,8 +925,7 @@ export async function verifyEventPermission(eventId: string, actorId: string, mi
       Query.equal('eventId', eventId),
       Query.equal('userId', actorId),
       Query.limit(1)
-    ] as any,
-    });
+    ] as any});
 
   if (guestsRes.rows.length === 0) return false;
 

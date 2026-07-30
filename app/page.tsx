@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import LandingPage from './(app)/app/landing/page';
 
 export default function RootPage() {
   const router = useRouter();
@@ -16,10 +15,10 @@ export default function RootPage() {
     if (hasStay) {
       setShouldStay(true);
     } else {
-      // Redirect instantly to /app or last active route
-      const lastRoute = typeof window !== 'undefined'
-        ? document.cookie.split('; ').find(row => row.startsWith('kylrix_last_route='))?.split('=')[1]
-        : null;
+      const lastRoute = document.cookie
+        .split('; ')
+        .find((row) => row.startsWith('kylrix_last_route='))
+        ?.split('=')[1];
       const target = lastRoute ? decodeURIComponent(lastRoute) : '/app';
       router.replace(target);
     }
@@ -33,5 +32,19 @@ export default function RootPage() {
     );
   }
 
-  return <LandingPage />;
+  return (
+    <div className="min-h-screen bg-[#0A0908] text-[#F5F3EF] flex flex-col items-center justify-center gap-6 px-6">
+      <h1 className="font-clash text-4xl font-black tracking-tight">Kylrix</h1>
+      <p className="text-[#9B9691] text-sm max-w-sm text-center">
+        Secure ideas, goals, and workspaces — open the app to continue.
+      </p>
+      <button
+        type="button"
+        onClick={() => router.push('/app')}
+        className="rounded-xl bg-[#A855F7] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#9333EA]"
+      >
+        Open app
+      </button>
+    </div>
+  );
 }

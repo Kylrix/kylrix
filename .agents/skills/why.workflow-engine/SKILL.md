@@ -5,6 +5,8 @@ description: Deep dive into the declarative workflow and task engine in Kylrix. 
 
 # Why: Reversible Action Workflows & Hierarchical Action Mapping
 
+**Product routing:** Flow in the UI means **workflows only** at `/flows` (see `system.routing-canonical`). Goals/forms/events are separate surfaces; this engine still powers reversible playbooks across workspaces and productivity objects.
+
 To build smart, automated, and auditable workspaces, we need to track user actions, record sequences of steps as repeatable playbooks (Workflow Chains), and support undoing operations safely.
 
 We achieve this using the **Workflow and Action Engine** in `lib/workflow-engine.ts`.

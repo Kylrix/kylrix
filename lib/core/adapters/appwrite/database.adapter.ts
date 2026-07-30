@@ -3,8 +3,8 @@ import { DatabasePort, QueryExpression, ListRowsResult } from '../../ports/datab
 import { createServerClient } from '@/lib/appwrite/server';
 import { createSystemTablesDB } from '@/lib/appwrite-admin';
 
-export function mapQueryExpressions(expressions: QueryExpression[]): string[] {
-  return expressions.map((exp) => {
+function mapQueryExpressions(expressions: QueryExpression[]): string[] {
+  return expressions.map((exp: any) => {
     switch (exp.type) {
       case 'equal':
         return Query.equal(exp.attribute!, exp.value);
@@ -65,8 +65,7 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
     const res = await tables.getRow({
       databaseId,
       tableId,
-      rowId,
-    });
+      rowId});
     return JSON.parse(JSON.stringify(res)) as T;
   }
 
@@ -89,8 +88,7 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
     const res = await tables.listRows({
       databaseId,
       tableId,
-      queries: mappedQueries as any[],
-    });
+      queries: mappedQueries as any[]});
 
     return {
       total: res.total,
@@ -122,8 +120,7 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
       tableId,
       rowId: rowId || ID.unique(),
       data: cleanedData,
-      permissions,
-    });
+      permissions});
     return JSON.parse(JSON.stringify(res)) as T;
   }
 
@@ -150,8 +147,7 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
       tableId,
       rowId,
       data: cleanedData,
-      permissions,
-    });
+      permissions});
     return JSON.parse(JSON.stringify(res)) as T;
   }
 
@@ -165,7 +161,6 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
     await tables.deleteRow({
       databaseId,
       tableId,
-      rowId,
-    });
+      rowId});
   }
 }

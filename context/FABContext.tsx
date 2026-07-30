@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
 
-export interface FABAction {
+interface FABAction {
   id: string;
   label: string;
   icon: React.ReactNode;
@@ -29,10 +29,9 @@ interface FABContextType {
 const DEFAULT_CONFIG: FABConfiguration = {
   isVisible: false,
   actions: [],
-  mainColor: '#6366F1',
-};
+  mainColor: '#6366F1'};
 
-export const FABContext = createContext<FABContextType | undefined>(undefined);
+const FABContext = createContext<FABContextType | undefined>(undefined);
 
 export function FABProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<FABConfiguration>(DEFAULT_CONFIG);
@@ -48,8 +47,7 @@ export function FABProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => ({
     config,
     setConfiguration,
-    resetConfiguration,
-  }), [config, setConfiguration, resetConfiguration]);
+    resetConfiguration}), [config, setConfiguration, resetConfiguration]);
 
   return (
     <FABContext.Provider value={value}>

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Button as ObButton, CircularProgress } from '@/lib/openbricks/primitives';
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
   children?: React.ReactNode;
   variant?: 'contained' | 'outlined' | 'text';

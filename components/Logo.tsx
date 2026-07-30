@@ -19,5 +19,5 @@ const Logo: React.FC<LogoProps> = (props) => {
 };
 
 export default Logo;
-export { Logo };
-export type { KylrixApp, LogoProps };
+;
+;

@@ -75,7 +75,7 @@ function buildItems(
     });
   }
 
-  return rows.sort((a, b) => b.createdAt - a.createdAt);
+  return rows.sort((a: any, b: any) => b.createdAt - a.createdAt);
 }
 
 export function useConnectMomentsFeed() {
@@ -145,7 +145,7 @@ export function useConnectMomentsFeed() {
     if (!nostrFeed.length) return;
 
     const unresolved = nostrFeed
-      .map((event) => {
+      .map((event: any) => {
         try {
           return bytesToNpub(hexToBytes(event.pubkey));
         } catch {
@@ -237,6 +237,5 @@ export function useConnectMomentsFeed() {
     goToPage,
     nextPage,
     previousPage,
-    refresh,
-  };
+    refresh};
 }

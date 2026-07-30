@@ -47,8 +47,7 @@ function slimNoteForStorage(note: any): any {
     updatedAt: note.updatedAt,
     $updatedAt: note.$updatedAt,
     content: clampStr(note.content, MAX_PERSIST_NOTE_CONTENT),
-    tags,
-  };
+    tags};
 }
 
 function slimEventForStorage(ev: any): any {
@@ -59,8 +58,7 @@ function slimEventForStorage(ev: any): any {
     description: clampStr(ev.description, 4000),
     startTime: ev.startTime,
     endTime: ev.endTime,
-    userId: ev.userId,
-  };
+    userId: ev.userId};
 }
 
 function slimCallForStorage(call: any): any {
@@ -70,8 +68,7 @@ function slimCallForStorage(call: any): any {
     title: call.title,
     status: call.status,
     createdAt: call.createdAt,
-    userId: call.userId,
-  };
+    userId: call.userId};
 }
 
 function slimCreatorForStorage(c: any): any {
@@ -82,8 +79,7 @@ function slimCreatorForStorage(c: any): any {
     username: c.username,
     displayName: c.displayName,
     avatar: c.avatar,
-    publicKey: c.publicKey,
-  };
+    publicKey: c.publicKey};
 }
 
 /** Single-level slim for quoted / threaded source moments (avoid huge persist payloads). */
@@ -115,8 +111,7 @@ function forSessionStorage(p: MomentPreview): MomentPreview {
     sourceMoment: p.sourceMoment ? slimSourceMomentForStorage(p.sourceMoment) : undefined,
     attachedNote: p.attachedNote ? slimNoteForStorage(p.attachedNote) : undefined,
     attachedEvent: p.attachedEvent ? slimEventForStorage(p.attachedEvent) : undefined,
-    attachedCall: p.attachedCall ? slimCallForStorage(p.attachedCall) : undefined,
-  };
+    attachedCall: p.attachedCall ? slimCallForStorage(p.attachedCall) : undefined};
 }
 
 function hydrate() {

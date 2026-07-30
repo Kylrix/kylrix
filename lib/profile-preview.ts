@@ -89,7 +89,7 @@ export async function fetchProfilePreview(fileId?: string | null, width: number 
       }
       return null;
     }
-  } catch (err) {
+  } catch (_err) {
     return null;
   }
 }

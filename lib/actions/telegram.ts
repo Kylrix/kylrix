@@ -9,8 +9,7 @@ import { JWTSchema } from '@/lib/validations/schemas';
 import {
   TELEGRAM_PREFS_KEY,
   parseTelegramNotificationPreferences,
-  type TelegramNotificationPreferences,
-} from '@/lib/telegram/notification-preferences';
+  type TelegramNotificationPreferences} from '@/lib/telegram/notification-preferences';
 
 /**
  * Stage 1: Initial Connect
@@ -43,7 +42,7 @@ export async function initializeTelegramConnection(jwt?: string, forceRegenerate
         APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
         userId
       );
-    } catch (e) {
+    } catch (_e) {
       // Document doesn't exist, which is fine
     }
 
@@ -53,8 +52,7 @@ export async function initializeTelegramConnection(jwt?: string, forceRegenerate
             success: true,
             isVerified: true,
             tgUsername: existingDoc.tg_username || 'User',
-            userId,
-        };
+            userId};
     }
 
     if (!validatedForce && existingDoc && !existingDoc.is_verified && existingDoc.pair_code) {
@@ -76,8 +74,7 @@ export async function initializeTelegramConnection(jwt?: string, forceRegenerate
           pairCode: existingDoc.pair_code,
           deepLink,
           userId,
-          createdAt: existingDoc.$updatedAt,
-        };
+          createdAt: existingDoc.$updatedAt};
       }
     }
 
@@ -92,8 +89,7 @@ export async function initializeTelegramConnection(jwt?: string, forceRegenerate
           pair_code: pairCode,
           is_verified: false,
           tg_chat_id: null,
-          tg_username: null,
-        }
+          tg_username: null}
       );
     } else {
       // Create a new document with the document ID explicitly set to the user ID.
@@ -104,8 +100,7 @@ export async function initializeTelegramConnection(jwt?: string, forceRegenerate
         userId,
         {
           pair_code: pairCode,
-          is_verified: false,
-        },
+          is_verified: false},
         [
           Permission.read(Role.user(userId))]
       );
@@ -125,8 +120,7 @@ export async function initializeTelegramConnection(jwt?: string, forceRegenerate
       pairCode,
       deepLink,
       userId,
-      createdAt: updatedDoc.$updatedAt || updatedDoc.$createdAt || new Date().toISOString(),
-    };
+      createdAt: updatedDoc.$updatedAt || updatedDoc.$createdAt || new Date().toISOString()};
   } catch (error: any) {
     console.error('[telegram] Failed to initialize connection:', error);
     return { success: false, error: error?.message || 'Failed to initialize connection' };
@@ -166,15 +160,13 @@ export async function checkTelegramConnection(jwt?: string) {
       return {
         success: true,
         isVerified: !!doc?.is_verified,
-        tgUsername: doc?.tg_username || null,
-      };
-    } catch (e: any) {
+        tgUsername: doc?.tg_username || null};
+    } catch (_e: any) {
       // Record not found is not an error, it just means not linked
       return {
         success: true,
         isVerified: false,
-        tgUsername: null,
-      };
+        tgUsername: null};
     }
   } catch (error: any) {
     console.error('[telegram] Failed to check connection:', error);
@@ -225,8 +217,7 @@ export async function updateTelegramNotificationPreferences(
 
     await users.updatePrefs(actor.$id, {
       ...currentPrefs,
-      [TELEGRAM_PREFS_KEY]: normalized,
-    });
+      [TELEGRAM_PREFS_KEY]: normalized});
 
     return { success: true, preferences: normalized };
   } catch (error: any) {
@@ -244,7 +235,7 @@ let isBotPollerRunning = false;
 let lastTelegramUpdateOffset = 0;
 let pollerTimeout: NodeJS.Timeout | null = null;
 
-export async function syncServerTelegramListener(jwt?: string) {
+async function syncServerTelegramListener(jwt?: string) {
   if (jwt) {
     const { getActor } = await import('./secure-ops');
     const actor = await getActor(jwt);
@@ -370,8 +361,7 @@ function runPollerLoop(botToken: string) {
                       {
                         is_verified: true,
                         tg_username: tgUsername,
-                        tg_chat_id: chatId,
-                      }
+                        tg_chat_id: chatId}
                     );
 
                     console.log(`[telegram-bot] Successfully verified Telegram connection for user ${userId} as @${tgUsername}`);
@@ -386,7 +376,7 @@ function runPollerLoop(botToken: string) {
                     });
                   }
                 }
-              } catch (docErr) {
+              } catch (_docErr) {
                 // Ignore document retrieval errors
               }
             }

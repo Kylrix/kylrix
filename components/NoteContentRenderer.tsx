@@ -10,8 +10,7 @@ import {
   StickyNote,
   ListTodo,
   ClipboardList,
-  Shield,
-} from 'lucide-react';
+  Shield} from 'lucide-react';
 import { Box, Typography, alpha } from '@/lib/openbricks/primitives';
 import { isEphemeralComposeNoteId } from '@/lib/notes/compose-draft-registry';
 import { preProcessMarkdown } from '@/lib/markdown';
@@ -25,19 +24,16 @@ import {
   noteObjectPreviewCacheKey,
   readCachedNoteObjectPreview,
   writeCachedNoteObjectPreview,
-  type NoteObjectPreviewResult,
-} from '@/lib/note-object-preview-cache';
+  type NoteObjectPreviewResult} from '@/lib/note-object-preview-cache';
 import {
   inferAttachmentMimeType,
   linkHostname,
   resolveAttachmentVisualKind,
-  type AttachmentVisualKind,
-} from '@/lib/note-object-visual';
+  type AttachmentVisualKind} from '@/lib/note-object-visual';
 
 marked.setOptions({
   gfm: true,
-  breaks: true,
-});
+  breaks: true});
 
 interface NoteContentRendererProps {
   content?: string | null;
@@ -147,8 +143,7 @@ export function NoteContentRenderer({
           bgcolor: alpha('#6366F1', 0.05),
           borderRadius: '0 12px 12px 0',
           fontStyle: 'italic',
-          color: 'rgba(255, 255, 255, 0.8)',
-        },
+          color: 'rgba(255, 255, 255, 0.8)'},
         '& code': {
           bgcolor: 'rgba(255, 255, 255, 0.1)',
           px: 1,
@@ -156,8 +151,7 @@ export function NoteContentRenderer({
           borderRadius: '6px',
           fontSize: '0.9em',
           fontFamily: 'monospace',
-          color: '#6366F1',
-        },
+          color: '#6366F1'},
         '& pre': {
           bgcolor: 'rgba(0, 0, 0, 0.3)',
           p: 3,
@@ -197,8 +191,7 @@ export function NoteContentRenderer({
 
 function SecondaryObjectShell({
   payload,
-  primaryNoteId,
-}: {
+  primaryNoteId}: {
   payload: SecondaryObjectPayload;
   primaryNoteId?: string;
 }) {
@@ -254,8 +247,7 @@ function SecondaryObjectShell({
           bucketId: payload.bucketId,
           label: payload.label,
           href: payload.href,
-          mimeType: typeof payload.metadata?.mimeType === 'string' ? payload.metadata.mimeType : undefined,
-        });
+          mimeType: typeof payload.metadata?.mimeType === 'string' ? payload.metadata.mimeType : undefined});
         return {
           ok: res.ok,
           title: res.ok ? res.title : payload.label,
@@ -265,8 +257,7 @@ function SecondaryObjectShell({
           bucketId: res.ok ? res.bucketId : bucketId,
           fileId: res.ok ? res.fileId : payload.childId,
           mimeType: res.ok ? res.mimeType : mimeType,
-          visualKind: res.ok ? res.visualKind : visualKind,
-        };
+          visualKind: res.ok ? res.visualKind : visualKind};
       });
 
       if (!active) return;
@@ -285,8 +276,7 @@ function SecondaryObjectShell({
             ...result,
             ok: true,
             previewDataUrl: blob.dataUrl,
-            mimeType: blob.mimeType,
-          };
+            mimeType: blob.mimeType};
           writeCachedNoteObjectPreview(cacheKey, enriched);
           setPreview(enriched);
           setStatus('ready');
@@ -359,8 +349,7 @@ function AttachmentVisual({
   themeColor,
   primaryNoteId,
   fileId,
-  bucketId,
-}: {
+  bucketId}: {
   visualKind: AttachmentVisualKind;
   mediaSrc: string | null;
   href: string | null;
@@ -528,8 +517,7 @@ function ecosystemIcon(childKind: string) {
 function InheritedVoiceLoader({
   noteId,
   fileId,
-  bucketId,
-}: {
+  bucketId}: {
   noteId: string;
   fileId: string;
   bucketId: string;

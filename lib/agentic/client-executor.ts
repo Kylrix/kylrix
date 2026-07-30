@@ -53,7 +53,7 @@ export interface AgenticExecutionResult {
   messageBlocks?: AgenticMessageBlock[];
 }
 
-export async function executeAgenticToolCall(
+async function executeAgenticToolCall(
   call: AgenticToolCallInput,
   ctx: AgenticExecutionContext,
 ): Promise<AgenticExecutionResult> {
@@ -93,8 +93,7 @@ export async function executeAgenticToolCall(
         userId: ctx.user?.$id,
         limit: Number(args.limit) || 15,
         localNotes: ctx.notes,
-        localTasks: ctx.tasks,
-      });
+        localTasks: ctx.tasks});
       const blocks: AgenticMessageBlock[] = [
         {
           type: 'ecosystem_hits',
@@ -102,8 +101,7 @@ export async function executeAgenticToolCall(
           plan: {
             reasoning: plan.reasoning,
             temporal: plan.temporal,
-            domains: plan.domains,
-          },
+            domains: plan.domains},
           hits: hitsToRefs(hits),
         },
       ];
@@ -111,8 +109,7 @@ export async function executeAgenticToolCall(
         success: true,
         summary: serializeBlocksForToolSummary(blocks),
         skipToast: true,
-        messageBlocks: blocks,
-      };
+        messageBlocks: blocks};
     }
 
     // ── Drawers / UI chrome ─────────────────────────────────────
@@ -129,8 +126,7 @@ export async function executeAgenticToolCall(
         amount: args.amount,
         chainId: args.chainId,
         intentId: args.intentId,
-        agentId: args.agentId || call.specifier,
-      });
+        agentId: args.agentId || call.specifier});
       ctx.onClose?.();
       return { success: true, summary: `Opened ${drawerType} drawer` };
     }
@@ -141,8 +137,7 @@ export async function executeAgenticToolCall(
       ctx.openDrawer?.('agentic-preview', {
         previewId,
         kind: args.kind,
-        title: args.title || 'Preview',
-      });
+        title: args.title || 'Preview'});
       return { success: true, summary: 'Opened preview drawer' };
     }
 
@@ -172,8 +167,7 @@ export async function executeAgenticToolCall(
         userId: ctx.user?.$id || '',
         $createdAt: now,
         $updatedAt: now,
-        updatedAt: now,
-      };
+        updatedAt: now};
 
       ctx.registerComposeSession?.(draftId);
       ctx.pushLiveNote?.(draftNote);
@@ -185,8 +179,7 @@ export async function executeAgenticToolCall(
         content,
         tags,
         isPublic,
-        isGuest: isPublic,
-      })) as any;
+        isGuest: isPublic})) as any;
 
       markNotePersistedRemote(saved.$id);
       if (saved.$id && saved.$id !== draftId) ctx.migrateDraftNoteId?.(draftId, saved.$id);
@@ -202,8 +195,7 @@ export async function executeAgenticToolCall(
         objectId: saved.$id,
         objectType: 'idea',
         title: saved.title || title,
-        toolKey: key,
-      });
+        toolKey: key});
       return { success: true, summary: `Created idea: ${saved.title || title}` };
     }
 
@@ -234,8 +226,7 @@ export async function executeAgenticToolCall(
         objectId: saved.$id || call.specifier,
         objectType: 'idea',
         title: (saved as any).title || (args.title as string) || null,
-        toolKey: key,
-      });
+        toolKey: key});
       return {
         success: true,
         summary: `Updated idea: ${(saved as any).title || args.title || call.specifier}`,
@@ -250,8 +241,7 @@ export async function executeAgenticToolCall(
         objectId: note.$id,
         objectType: 'idea',
         title: note.title || null,
-        toolKey: key,
-      });
+        toolKey: key});
       ctx.appendMessage?.('assistant', `Loaded Idea **${note.title || 'Untitled'}** (\`${note.$id}\`).`);
       return { success: true, summary: `Loaded idea: ${note.title || 'Untitled'}`, skipToast: true };
     }
@@ -284,8 +274,7 @@ export async function executeAgenticToolCall(
           objectId: String(goalId),
           objectType: 'goal',
           title: goalTitle,
-          toolKey: key,
-        });
+          toolKey: key});
       }
       return { success: true, summary: `Created goal: ${goalTitle}` };
     }
@@ -321,8 +310,7 @@ export async function executeAgenticToolCall(
         title: args.title,
         status: args.status,
         priority: args.priority,
-        dueDate: args.dueDate ? new Date(String(args.dueDate)) : undefined,
-      });
+        dueDate: args.dueDate ? new Date(String(args.dueDate)) : undefined});
       return { success: true, summary: `Updated goal: ${call.specifier}` };
     }
 
@@ -332,15 +320,13 @@ export async function executeAgenticToolCall(
       const project = await ProjectsService.createProject({
         ownerId: ctx.user?.$id || 'guest',
         title: String(args.title || 'Untitled Project'),
-        summary: String(args.summary || ''),
-      });
+        summary: String(args.summary || '')});
       if (project?.$id) {
         await ctx.recordSessionObject?.({
           objectId: project.$id,
           objectType: 'project',
           title: String(args.title || project.title || 'Untitled Project'),
-          toolKey: key,
-        });
+          toolKey: key});
       }
       return {
         success: true,
@@ -387,8 +373,7 @@ export async function executeAgenticToolCall(
       ctx.openDrawer?.('agentic-preview', {
         previewId,
         kind: 'form_submit',
-        title: 'Review form submission',
-      });
+        title: 'Review form submission'});
       return { success: true, summary: 'Form submission preview ready' };
     }
 
@@ -423,8 +408,7 @@ export async function executeAgenticToolCall(
           isPublic: enablePublic,
           isGuest: args.isGuest === true || args.isGuest === 'true',
           resourceTitle: String(args.title || resourceId),
-          projectId: args.projectId as string | undefined,
-        });
+          projectId: args.projectId as string | undefined});
         return { success: true, summary: 'Opened visibility controls' };
       }
 
@@ -433,8 +417,7 @@ export async function executeAgenticToolCall(
         resourceType,
         resourceId,
         mode: enablePublic ? 'publish' : 'make_private',
-        projectId: args.projectId as string | undefined,
-      });
+        projectId: args.projectId as string | undefined});
 
       if (!res?.success) {
         return { success: false, summary: '', error: 'Visibility update failed' };
@@ -446,8 +429,7 @@ export async function executeAgenticToolCall(
 
       return {
         success: true,
-        summary: enablePublic ? 'Resource is now public' : 'Resource is now private',
-      };
+        summary: enablePublic ? 'Resource is now public' : 'Resource is now private'};
     }
 
     // ── Delete ──────────────────────────────────────────────────

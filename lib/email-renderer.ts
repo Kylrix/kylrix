@@ -42,6 +42,3 @@ export async function renderEmailTemplate(
   };
 }
 
-export function renderEmailPreview(templateId: string, vars: EmailRenderVars = {}): Promise<{ subject: string; html: string }> {
-  return renderEmailTemplate(templateId, vars);
-}

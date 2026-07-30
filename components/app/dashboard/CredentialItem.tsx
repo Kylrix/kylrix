@@ -10,7 +10,6 @@ import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 export default function CredentialItem({
   credential,
   onCopy,
-  _isDesktop,
   onEdit,
   onDelete,
   onClick,
@@ -19,8 +18,7 @@ export default function CredentialItem({
   isSelectMode = false,
   isSelected = false,
   onToggleSelect,
-  onShared,
-}: {
+  onShared}: {
   credential: Credentials;
   onCopy: (value: string) => void;
   _isDesktop?: boolean;

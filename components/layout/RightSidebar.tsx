@@ -5,12 +5,12 @@ import { Drawer, Box, IconButton, useTheme, useMediaQuery, alpha } from '@/lib/o
 import { Close as CloseIcon } from '@/lib/openbricks/icons';
 import { useLayout } from '@/context/LayoutContext';
 import TaskDetails from '@/components/tasks/TaskDetails';
+import { GoalObjectDetail } from '@/components/objects/GoalObjectDetail';
 import EventDetails from '@/components/events/EventDetails';
 
 export default function RightSidebar() {
   const { secondarySidebar, closeSecondarySidebar } = useLayout();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const getContent = () => {
     switch (secondarySidebar.type) {

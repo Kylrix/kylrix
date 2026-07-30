@@ -100,8 +100,7 @@ import {
   getRemovedObjectBlocks,
   parseObjectBlocks,
   serializeObjectBlock,
-  type ParsedObjectBlock,
-} from '@/lib/note-object-secondary';
+  type ParsedObjectBlock} from '@/lib/note-object-secondary';
 import { storage } from '@/lib/appwrite/client';
 
 export type NoteAccessRole = 'owner' | 'write-collab' | 'read-collab' | 'guest' | 'public';
@@ -131,9 +130,7 @@ export function NoteDetailSidebar({
   showHeaderDeleteButton = true,
   isLoading = false,
   readOnly = false,
-  accessRole,
-}: NoteDetailSidebarProps) {
-  const successColor = '#10B981';
+  accessRole}: NoteDetailSidebarProps) {
   const { open: openUnified } = useUnifiedDrawer();
   const { openProUpgrade } = useProUpgrade();
   const { user } = useAuth();
@@ -261,8 +258,7 @@ export function NoteDetailSidebar({
       content,
       tags: normalizedTags,
       updatedAt: new Date().toISOString(),
-      $updatedAt: new Date().toISOString(),
-    };
+      $updatedAt: new Date().toISOString()};
 
     pushLiveNote(draftNote);
     void setCachedData(`note_${noteId}`, draftNote);
@@ -280,12 +276,12 @@ export function NoteDetailSidebar({
 
   const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(false);
   const [collaboratorProfiles, setCollaboratorProfiles] = useState<any[]>([]);
-  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
-  const [linkedTasks, setLinkedTasks] = useState<any[]>([]);
-  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
-  const [linkedEvents, setLinkedEvents] = useState<any[]>([]);
-  const [isLoadingSecrets, setIsLoadingSecrets] = useState(false);
-  const [linkedSecrets, setLinkedSecrets] = useState<any[]>([]);
+  const [_isLoadingTasks, setIsLoadingTasks] = useState(false);
+  const [_linkedTasks, setLinkedTasks] = useState<any[]>([]);
+  const [_isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [_linkedEvents, setLinkedEvents] = useState<any[]>([]);
+  const [_isLoadingSecrets, setIsLoadingSecrets] = useState(false);
+  const [_linkedSecrets, setLinkedSecrets] = useState<any[]>([]);
 
   const [showActionHub, setShowActionHub] = useState(false);
   const [showRotateConfirm, setShowRotateConfirm] = useState(false);
@@ -295,7 +291,7 @@ export function NoteDetailSidebar({
   const [crossSuggestions, setCrossSuggestions] = useState<any[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isLocallyDecrypted, setIsLocallyDecrypted] = useState(false);
-  const [attachedObjects, setAttachedObjects] = useState<any[]>([]);
+  const [_attachedObjects, setAttachedObjects] = useState<any[]>([]);
 
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -314,31 +310,7 @@ export function NoteDetailSidebar({
   // ENCRYPTION LOGIC
   const isT4Encrypted = useMemo(() => (noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') && (noteMeta?.encryptionVersion === 'T4' || noteMeta?.encryptionVersion === 'T5') || !!liveNote.dek, [noteMeta, liveNote.dek]);
   const isEncryptedNote = useMemo(() => isT4Encrypted && !noteMeta?.clientDecrypted && !isLocallyDecrypted, [isT4Encrypted, noteMeta, isLocallyDecrypted]);
-  const isT4EncryptedPublicNote = useMemo(() => isPublic && isT4Encrypted, [isPublic, isT4Encrypted]);
   const shouldMaskEncrypted = useMemo(() => isEncryptedNote && !vaultUnlocked, [isEncryptedNote, vaultUnlocked]);
-
-  // Sync state when switching to a different note in detail view
-  const loadedNoteIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    const noteId = liveNote.$id;
-    if (!noteId) return;
-
-    if (loadedNoteIdRef.current && loadedNoteIdRef.current !== noteId) {
-      autonomicSyncEngine.flushImmediately();
-    }
-
-    if (loadedNoteIdRef.current !== noteId) {
-      loadedNoteIdRef.current = noteId;
-      setTitle(liveNote.title || '');
-      setContent(liveNote.content || '');
-      setTags(liveNote.tags?.join(', ') || '');
-      setIsPublic(getNotePublicState(liveNote));
-    }
-
-    return () => {
-      autonomicSyncEngine.flushImmediately();
-    };
-  }, [liveNote.$id, liveNote.title, liveNote.content, liveNote.tags]);
 
 
 
@@ -378,9 +350,17 @@ export function NoteDetailSidebar({
   }, [isEncryptedNote, vaultUnlocked, promptSudo]);
 
   // Linked Content Effects
-  const linkedTaskIds = useMemo(() => liveNote.linkedTaskIds || (liveNote.linkedTaskId ? [liveNote.linkedTaskId] : []), [liveNote]);
-  const linkedEventIds = useMemo(() => liveNote.linkedEventIds || (liveNote.linkedEventId ? [liveNote.linkedEventId] : []), [liveNote]);
-  const linkedCredentialIds = useMemo(() => liveNote.linkedCredentialIds || (liveNote.linkedCredentialId ? [liveNote.linkedCredentialId] : []), [liveNote]);
+  const noteLinks = liveNote as Notes & {
+    linkedTaskIds?: string[] | null;
+    linkedTaskId?: string | null;
+    linkedEventIds?: string[] | null;
+    linkedEventId?: string | null;
+    linkedCredentialIds?: string[] | null;
+    linkedCredentialId?: string | null;
+  };
+  const linkedTaskIds = useMemo(() => noteLinks.linkedTaskIds || (noteLinks.linkedTaskId ? [noteLinks.linkedTaskId] : []), [noteLinks]);
+  const linkedEventIds = useMemo(() => noteLinks.linkedEventIds || (noteLinks.linkedEventId ? [noteLinks.linkedEventId] : []), [noteLinks]);
+  const linkedCredentialIds = useMemo(() => noteLinks.linkedCredentialIds || (noteLinks.linkedCredentialId ? [noteLinks.linkedCredentialId] : []), [noteLinks]);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -636,7 +616,7 @@ export function NoteDetailSidebar({
         showSuccess('Goal created from note');
         setShowActionHub(false);
       }
-    } catch (err) {
+    } catch (_err) {
       showError('Failed to create goal');
     } finally {
       setIsCreatingTaskFromNote(false);
@@ -664,7 +644,7 @@ export function NoteDetailSidebar({
   const [isAttachObjectPickerOpen, setIsAttachObjectPickerOpen] = useState(false);
   const [isObjectPermissionInfoOpen, setIsObjectPermissionInfoOpen] = useState(false);
   const [pendingBlockDelete, setPendingBlockDelete] = useState<ParsedObjectBlock | null>(null);
-  const [isAttachingObject, setIsAttachingObject] = useState(false);
+  const [_isAttachingObject, setIsAttachingObject] = useState(false);
   const objectUploadInputRef = useRef<HTMLInputElement | null>(null);
   const [contentMode, setContentMode] = useState<'edit' | 'preview'>(readOnly ? 'preview' : 'edit');
   // Allow attachment when: not readOnly AND (no role set = own-notes drawer context, OR explicitly owner/write-collab).
@@ -690,14 +670,6 @@ export function NoteDetailSidebar({
 
   const displayTags = useMemo(() => tags.split(',').map((t: string) => t.trim()).filter(Boolean), [tags]);
 
-  const currentAttachments = useMemo(() => {
-      if (liveNote.attachments && Array.isArray(liveNote.attachments)) {
-          try {
-              return liveNote.attachments.map((a: any) => typeof a === 'string' ? JSON.parse(a) : a);
-          } catch { return []; }
-      }
-      return [];
-  }, [liveNote.attachments]);
 
   const toggleRecording = useCallback(async () => {
     if (isRecording) {
@@ -789,24 +761,6 @@ export function NoteDetailSidebar({
     }
   }, [isRecording, showSuccess, showError]);
 
-  const insertTextAtCursor = useCallback(async (text: string) => {
-    const textarea = contentTextareaRef.current;
-    let nextContent = content;
-    if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      nextContent = content.substring(0, start) + text + content.substring(end);
-      setContent(nextContent);
-
-      setTimeout(() => {
-        textarea.focus();
-        textarea.setSelectionRange(start + text.length, start + text.length);
-      }, 50);
-    } else {
-      nextContent = content + text;
-      setContent(nextContent);
-    }
-  }, [content]);
 
   const replaceContentWithSave = useCallback(async (nextContent: string) => {
     setContent(nextContent);
@@ -830,39 +784,6 @@ export function NoteDetailSidebar({
     }
   }, [content, replaceContentWithSave]);
 
-  const attachExternalLink = useCallback(async () => {
-    if (!canAttachSecondaryObject) {
-      showError('No access', 'Only owners and write collaborators can attach objects.');
-      return;
-    }
-    const href = window.prompt('Paste a URL to attach');
-    if (!href) return;
-    setIsAttachingObject(true);
-    try {
-      await attachObject({
-        parentId: liveNote.$id,
-        parentKind: 'note',
-        childId: href,
-        childKind: 'link',
-        metadata: { href, insertLine: getCursorLineNumber() },
-      });
-      await insertObjectBlockAtCursor(serializeObjectBlock({
-        childId: href,
-        childKind: 'link',
-        href,
-        line: getCursorLineNumber(),
-        appTheme: 'idea',
-      }));
-      const { getObjectsByParent } = await import('@/lib/actions/client-ops');
-      setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
-      showSuccess('Link attached');
-    } catch (err: any) {
-      showError('Attach failed', err?.message || 'Unable to attach link.');
-    } finally {
-      setIsAttachingObject(false);
-      setIsContextDrawerOpen(false);
-    }
-  }, [canAttachSecondaryObject, showError, liveNote.$id, getCursorLineNumber, insertObjectBlockAtCursor, showSuccess]);
 
   const attachPickedObject = useCallback(async (payload: { kind: string; entityId: string; item: any }) => {
     if (!canAttachSecondaryObject) {
@@ -878,8 +799,7 @@ export function NoteDetailSidebar({
       tag: 'tag',
       totp: 'totp',
       moment: 'moment',
-      call: 'call',
-    };
+      call: 'call'};
     const childKind = kindToChildKind[payload.kind] || 'note';
     const theme = childKind === 'vault' || childKind === 'totp' ? 'vault' : childKind === 'task' || childKind === 'event' || childKind === 'form' ? 'flow' : 'idea';
     await attachObject({
@@ -894,8 +814,7 @@ export function NoteDetailSidebar({
       childKind: childKind as any,
       line: getCursorLineNumber(),
       appTheme: theme as any,
-      label: payload.item?.title || payload.item?.name || payload.item?.issuer || payload.item?.caption || undefined,
-    }));
+      label: payload.item?.title || payload.item?.name || payload.item?.issuer || payload.item?.caption || undefined}));
     const { getObjectsByParent } = await import('@/lib/actions/client-ops');
     setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
   }, [canAttachSecondaryObject, showError, liveNote.$id, getCursorLineNumber, insertObjectBlockAtCursor]);
@@ -982,8 +901,7 @@ export function NoteDetailSidebar({
         for (const block of removedBlocks) {
           await detachObjectByRelation({
             parentId: liveNote.$id,
-            childId: block.payload.childId,
-          });
+            childId: block.payload.childId});
           if (block.payload.childKind === 'file' || block.payload.childKind === 'image') {
             const bucketId = block.payload.bucketId || APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE;
             try {
@@ -1445,8 +1363,7 @@ export function NoteDetailSidebar({
                     openUnified('share-note', {
                       noteId: liveNote.$id,
                       noteTitle: liveNote.title,
-                      initialCollaborator: p,
-                    })
+                      initialCollaborator: p})
                   }
                   className="w-full p-3 rounded-[16px] bg-[#161412] border border-white/5 flex items-center gap-3 hover:bg-white/[0.02] transition-colors text-left min-w-0"
                 >
@@ -1770,8 +1687,7 @@ export function NoteDetailSidebar({
           }}
           ModalProps={{
             keepMounted: false,
-            disableScrollLock: false,
-          }}
+            disableScrollLock: false}}
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pointerEvents: 'auto' }}>
             <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36', mx: 'auto', mb: 1 }} aria-hidden />
@@ -1832,7 +1748,7 @@ export function NoteDetailSidebar({
                     }
                     showSuccess('Pasted', 'Text pasted from clipboard.');
                   }
-                } catch (err) {
+                } catch (_err) {
                   showError('Paste Failed', 'Could not read from clipboard.');
                 }
               }}
@@ -1915,8 +1831,7 @@ export function NoteDetailSidebar({
           }}
           ModalProps={{
             keepMounted: false,
-            disableScrollLock: false,
-          }}
+            disableScrollLock: false}}
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pointerEvents: 'auto' }}>
             <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36', mx: 'auto', mb: 1 }} aria-hidden />

@@ -55,33 +55,21 @@ import { PermissionChangeInput, PermissionLevel, TokenAction } from './shared';
 // Bind shared helper properties and variables to local scope for convenience
 const {
   getActor,
-  getRowCached,
-  isEnvAdminUser,
-  isEnvSERVERSDKUser,
-  hasWriteAccess,
-  serializeMomentRow,
   verifyResourcePermissionSecure,
-  verifyNotePermission,
   verifyProjectPermission,
   verifyFormPermission,
   verifyEventPermission,
   sanitizeEventData,
-  serializeTokenMintResult,
   rowCache,
   CACHE_TTL_MS,
-  VIEWER_COOKIE,
-  isViewerTokenValid,
-  issueViewerToken,
-  cookies
-} = shared;
+  VIEWER_COOKIE} = shared;
 
 export async function getPublicGoalDataSecure(goalId: string) {
   const tables = createSystemTablesDB();
   const row = await tables.getRow({
     databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
     tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
-    rowId: goalId,
-  }).catch(() => null);
+    rowId: goalId}).catch(() => null);
 
   if (!row) return null;
 
@@ -99,8 +87,7 @@ export async function getPublicGoalDataSecure(goalId: string) {
     userId: row.userId || null,
     isPublic,
     isGuest,
-    updatedAt: row.$updatedAt,
-  }));
+    updatedAt: row.$updatedAt}));
 }
 
 export async function createAccountEventSecure(params: any, jwt?: string) {
@@ -156,16 +143,14 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
         queries: [
           Query.equal('ownerId', actor.$id),
           Query.notEqual('isTrash', true)
-        ],
-    }),
+        ]}),
     tables.listRows({
         databaseId: FLOW_DATABASE_ID,
         tableId: COLLABORATORS_TABLE,
         queries: [
           Query.equal('resourceType', 'project'),
           Query.equal('userId', actor.$id),
-        ] as any,
-    })
+        ] as any})
   ]);
 
   const projectsListMap = new Map<string, any>();
@@ -175,8 +160,7 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
     projectsListMap.set(proj.$id, {
       ...proj,
       collabStatus: 'owner',
-      isPending: false,
-    });
+      isPending: false});
   }
 
   // Identify unique project IDs to fetch that are NOT owned by the user
@@ -190,8 +174,7 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
         const collaboratedProjectsRes = await tables.listRows({
             databaseId: CHAT_DATABASE_ID,
             tableId: 'projects',
-            queries: [Query.equal('$id', targetProjectIds)],
-        });
+            queries: [Query.equal('$id', targetProjectIds)]});
 
         for (const proj of collaboratedProjectsRes.rows) {
             const collabRow = projectsToFetch.find(r => r.resourceId === proj.$id);
@@ -203,8 +186,7 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
                     collabStatus: isJoinRequest ? 'requested' : collabRow.status,
                     isPending: isRealInvite,
                     isRequested: isJoinRequest,
-                    role: collabRow.permission === 'admin' ? 'admin' : (collabRow.permission === 'write' ? 'editor' : 'viewer'),
-                });
+                    role: collabRow.permission === 'admin' ? 'admin' : (collabRow.permission === 'write' ? 'editor' : 'viewer')});
             }
         }
     } catch (e) {
@@ -246,15 +228,13 @@ export async function createProjectSecure(data: any, jwt?: string) {
     visibility,
     isPublic: validated.isPublic ?? visibility === 'public',
     isGuest: validated.isGuest ?? visibility === 'public',
-    ownerId: actor.$id,
-  };
+    ownerId: actor.$id};
 
   const isCreateAllowed = await verifyResourcePermissionSecure({
     actorId: actor.$id,
     action: 'create',
     ownerFields: ['ownerId'],
-    data: projectData,
-  });
+    data: projectData});
   if (!isCreateAllowed) {
     throw new Error('Forbidden: Create operation must be mathematically tied to the current user');
   }
@@ -276,8 +256,7 @@ export async function createProjectSecure(data: any, jwt?: string) {
       data: {
       ...projectData,
       createdAt: now,
-      updatedAt: now,
-    },
+      updatedAt: now},
       permissions: permissions,
     });
   return JSON.parse(JSON.stringify(project));
@@ -298,8 +277,7 @@ export async function updateProjectSecure(projectId: string, data: any, permissi
   const existing = await tables.getRow({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
-    rowId: projectId,
-  }) as { ownerId?: string };
+    rowId: projectId}) as { ownerId?: string };
 
   const patch = { ...data };
   if (Object.prototype.hasOwnProperty.call(patch, 'isPinned') && existing.ownerId !== actor.$id) {
@@ -338,15 +316,14 @@ export async function updateProjectSecure(projectId: string, data: any, permissi
       tableId: 'projects',
       rowId: projectId,
       data: updateData,
-      permissions: permissions,
-    });
+      permissions: permissions});
 
   return JSON.parse(JSON.stringify(project));
 }
 
 export async function deleteProjectSecure(
   projectId: string,
-  deleteMode: 'detach' | 'created_within' | 'all' = 'detach',
+  _deleteMode: 'detach' | 'created_within' | 'all' = 'detach',
   jwt?: string
 ) {
   const actor = await getActor(jwt);
@@ -378,8 +355,7 @@ export async function getProjectInviteDetailsSecure(projectId: string, jwt?: str
   const project = await tables.getRow<any>({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
-    rowId: projectId,
-  }).catch(() => null);
+    rowId: projectId}).catch(() => null);
 
   if (!project) {
     throw new Error('Project not found');
@@ -502,8 +478,7 @@ export async function requestProjectAccessSecure(projectId: string, jwt?: string
   const project = await tables.getRow<any>({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
-    rowId: projectId,
-  }).catch(() => null);
+    rowId: projectId}).catch(() => null);
 
   if (!project) throw new Error('Project not found');
   if (project.visibility !== 'public') {
@@ -561,8 +536,7 @@ export async function acceptProjectInviteSecure(projectId: string, jwt?: string)
   const project = await tables.getRow({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
-    rowId: projectId,
-  }).catch(() => null);
+    rowId: projectId}).catch(() => null);
 
   if (!project) {
     throw new Error('Project not found');
@@ -692,8 +666,7 @@ export async function acceptProjectInviteSecure(projectId: string, jwt?: string)
         Query.equal('projectId', projectId),
         Query.equal('entityKind', 'collaborator'),
         Query.equal('entityId', actor.$id)
-      ] as any,
-    });
+      ] as any});
 
     if (existingObjects.rows.length === 0) {
       await tables.createRow({
@@ -706,8 +679,7 @@ export async function acceptProjectInviteSecure(projectId: string, jwt?: string)
           entityId: actor.$id,
           role: permissionLevel,
           createdAt: now,
-          updatedAt: now,
-        },
+          updatedAt: now},
         permissions: [
           Permission.read(Role.user(project.ownerId)),
           Permission.read(Role.user(actor.$id))
@@ -737,8 +709,7 @@ export async function acceptProjectInviteSecure(projectId: string, jwt?: string)
           rowId: ID.unique(),
           data: {
             conversationId: metadata.encryptedGroupId,
-            userId: actor.$id,
-          },
+            userId: actor.$id},
           permissions: [
             Permission.read(Role.user(project.ownerId)),
             Permission.read(Role.user(actor.$id))
@@ -783,8 +754,7 @@ export async function addObjectToProjectSecure(
       Query.equal('entityKind', entityKind),
       Query.equal('entityId', entityId),
       Query.limit(1),
-    ] as any,
-  });
+    ] as any});
   if (duplicateRes.rows.length > 0) {
     throw new Error('ALREADY_ADDED: This item is already linked to the project.');
   }
@@ -811,8 +781,7 @@ export async function addObjectToProjectSecure(
       role: role || 'member',
       metadata: metadata ? (typeof metadata === 'string' ? metadata : JSON.stringify(metadata)) : null,
       createdAt: now,
-      updatedAt: now,
-    },
+      updatedAt: now},
       permissions: permissions,
     });
 
@@ -863,8 +832,7 @@ const EMPTY_TAGGED: TaggedResourceBundle = {
   totps: [],
   events: [],
   forms: [],
-  moments: [],
-};
+  moments: []};
 
 export async function listProjectTaggedResourcesSecure(
   projectId: string,
@@ -893,15 +861,13 @@ export async function listProjectTaggedResourcesSecure(
   const tagsRes = await tables.listRows({
     databaseId,
     tableId: tagsTable,
-    queries: [Query.equal('$id', tagIds), Query.limit(100)] as any,
-  });
+    queries: [Query.equal('$id', tagIds), Query.limit(100)] as any});
   const tagNames = tagsRes.rows.map((t: any) => t.name).filter(Boolean);
 
   const sweptRes = await tables.listRows({
     databaseId,
     tableId: APPWRITE_CONFIG.TABLES.SWEPT || 'swept',
-    queries: [Query.equal('projectId', projectId), Query.limit(500)] as any,
-  });
+    queries: [Query.equal('projectId', projectId), Query.limit(500)] as any});
   const sweptByUser = new Map<string, boolean>(
     sweptRes.rows.map((row: any) => [row.userId, row.enabled === true]),
   );
@@ -914,14 +880,12 @@ export async function listProjectTaggedResourcesSecure(
     tables.listRows({
       databaseId,
       tableId: pivotTable,
-      queries: [Query.equal('tagId', tagIds), Query.limit(5000)] as any,
-    }),
+      queries: [Query.equal('tagId', tagIds), Query.limit(5000)] as any}),
     tagNames.length
       ? tables.listRows({
           databaseId,
           tableId: pivotTable,
-          queries: [Query.equal('tag', tagNames), Query.limit(5000)] as any,
-        })
+          queries: [Query.equal('tag', tagNames), Query.limit(5000)] as any})
       : Promise.resolve({ rows: [] as any[] }),
   ]);
 
@@ -954,56 +918,49 @@ export async function listProjectTaggedResourcesSecure(
     ? tables.listRows({
         databaseId,
         tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-        queries: [Query.equal('$id', Array.from(resourceIdsByType.note)), Query.limit(500)] as any,
-      }).then((r) => r.rows).catch(() => [])
+        queries: [Query.equal('$id', Array.from(resourceIdsByType.note)), Query.limit(500)] as any}).then((r) => r.rows).catch(() => [])
     : Promise.resolve([]);
 
   const tasksPromise = resourceIdsByType.task?.size
     ? tables.listRows({
         databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
         tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
-        queries: [Query.equal('$id', Array.from(resourceIdsByType.task)), Query.limit(500)] as any,
-      }).then((r) => r.rows).catch(() => [])
+        queries: [Query.equal('$id', Array.from(resourceIdsByType.task)), Query.limit(500)] as any}).then((r) => r.rows).catch(() => [])
     : Promise.resolve([]);
 
   const credentialsPromise = resourceIdsByType.credential?.size
     ? tables.listRows({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
         tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
-        queries: [Query.equal('$id', Array.from(resourceIdsByType.credential)), Query.limit(500)] as any,
-      }).then((r) => r.rows).catch(() => [])
+        queries: [Query.equal('$id', Array.from(resourceIdsByType.credential)), Query.limit(500)] as any}).then((r) => r.rows).catch(() => [])
     : Promise.resolve([]);
 
   const totpsPromise = resourceIdsByType.totp?.size
     ? tables.listRows({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
         tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
-        queries: [Query.equal('$id', Array.from(resourceIdsByType.totp)), Query.limit(500)] as any,
-      }).then((r) => r.rows).catch(() => [])
+        queries: [Query.equal('$id', Array.from(resourceIdsByType.totp)), Query.limit(500)] as any}).then((r) => r.rows).catch(() => [])
     : Promise.resolve([]);
 
   const eventsPromise = resourceIdsByType.event?.size
     ? tables.listRows({
         databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
         tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-        queries: [Query.equal('$id', Array.from(resourceIdsByType.event)), Query.limit(500)] as any,
-      }).then((r) => r.rows).catch(() => [])
+        queries: [Query.equal('$id', Array.from(resourceIdsByType.event)), Query.limit(500)] as any}).then((r) => r.rows).catch(() => [])
     : Promise.resolve([]);
 
   const formsPromise = resourceIdsByType.form?.size
     ? tables.listRows({
         databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
         tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-        queries: [Query.equal('$id', Array.from(resourceIdsByType.form)), Query.limit(500)] as any,
-      }).then((r) => r.rows).catch(() => [])
+        queries: [Query.equal('$id', Array.from(resourceIdsByType.form)), Query.limit(500)] as any}).then((r) => r.rows).catch(() => [])
     : Promise.resolve([]);
 
   const momentsPromise = resourceIdsByType.moment?.size
     ? tables.listRows({
         databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
         tableId: APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS,
-        queries: [Query.equal('$id', Array.from(resourceIdsByType.moment)), Query.limit(500)] as any,
-      }).then((r) => r.rows).catch(() => [])
+        queries: [Query.equal('$id', Array.from(resourceIdsByType.moment)), Query.limit(500)] as any}).then((r) => r.rows).catch(() => [])
     : Promise.resolve([]);
 
   const [notes, tasks, credentials, totps, events, forms, moments] = await Promise.all([
@@ -1038,8 +995,7 @@ export async function getSweptConfigSecure(projectId: string, jwt?: string) {
       Query.equal('userId', actor.$id),
       Query.equal('projectId', projectId),
       Query.limit(1),
-    ] as any,
-  });
+    ] as any});
 
   if (existing.rows[0]) {
     return JSON.parse(JSON.stringify(existing.rows[0]));
@@ -1052,8 +1008,7 @@ export async function getSweptConfigSecure(projectId: string, jwt?: string) {
     scopeType: 'project',
     anchorKind: 'tag',
     anchors: null,
-    policy: null,
-  };
+    policy: null};
 }
 
 export async function upsertSweptConfigSecure(
@@ -1081,16 +1036,14 @@ export async function upsertSweptConfigSecure(
       Query.equal('userId', actor.$id),
       Query.equal('projectId', projectId),
       Query.limit(1),
-    ] as any,
-  });
+    ] as any});
 
   if (patch.enabled === false) {
     if (existing.rows[0]) {
       await tables.deleteRow({
         databaseId: APPWRITE_CONFIG.DATABASE_ID,
         tableId,
-        rowId: existing.rows[0].$id,
-      });
+        rowId: existing.rows[0].$id});
     }
     return JSON.parse(JSON.stringify({
       userId: actor.$id,
@@ -1099,8 +1052,7 @@ export async function upsertSweptConfigSecure(
       scopeType: patch.scopeType ?? 'project',
       anchorKind: patch.anchorKind ?? 'tag',
       anchors: null,
-      policy: null,
-    }));
+      policy: null}));
   }
 
   if (existing.rows[0]) {
@@ -1111,8 +1063,7 @@ export async function upsertSweptConfigSecure(
       data: {
         ...patch,
         enabled: true,
-        updatedAt: now,
-      },
+        updatedAt: now},
     });
     return JSON.parse(JSON.stringify(row));
   }
@@ -1130,8 +1081,7 @@ export async function upsertSweptConfigSecure(
       anchors: patch.anchors ?? null,
       policy: patch.policy ?? null,
       createdAt: now,
-      updatedAt: now,
-    },
+      updatedAt: now},
     permissions: [
       Permission.read(Role.user(actor.$id)),
       Permission.update(Role.user(actor.$id)),
@@ -1153,8 +1103,7 @@ export async function removeObjectFromProjectSecure(objectId: string, jwt?: stri
   const obj = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: 'project_objects',
-      rowId: objectId,
-    });
+      rowId: objectId});
 
   const projectId = obj.projectId;
   const isOwner = obj.$permissions?.some((p: string) => p.includes(actor.$id));
@@ -1167,8 +1116,7 @@ export async function removeObjectFromProjectSecure(objectId: string, jwt?: stri
   const result = await tables.deleteRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: 'project_objects',
-      rowId: objectId,
-    });
+      rowId: objectId});
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -1189,8 +1137,7 @@ export async function createFormSecure(data: any, jwt?: string) {
     actorId: actor.$id,
     action: 'create',
     ownerFields: ['userId'],
-    data,
-  });
+    data});
   if (!isCreateAllowed) {
     throw new Error('Forbidden: Create operation must be mathematically tied to the current user');
   }
@@ -1211,8 +1158,7 @@ export async function createFormSecure(data: any, jwt?: string) {
       userId: actor.$id,
       status: data.status || 'published',
       isPublic: data.isPublic !== undefined ? data.isPublic : true,
-      isGuest: data.isGuest !== undefined ? data.isGuest : true,
-    },
+      isGuest: data.isGuest !== undefined ? data.isGuest : true},
       permissions: permissions,
     });
 
@@ -1240,8 +1186,7 @@ export async function listUserFormsSecure(userId?: string, jwt?: string) {
       Query.equal('userId', targetUserId),
       Query.orderDesc('$createdAt'),
       Query.limit(100),
-    ],
-  });
+    ]});
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -1263,8 +1208,7 @@ export async function updateFormSecure(formId: string, data: any, jwt?: string) 
   const form = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-      rowId: formId,
-    });
+      rowId: formId});
 
   const ownerId = form.userId;
   const currentStatus = data.status || form.status;
@@ -1296,8 +1240,7 @@ export async function updateFormSecure(formId: string, data: any, jwt?: string) 
       tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
       rowId: formId,
       data: data,
-      permissions: permissions,
-    });
+      permissions: permissions});
 
   return JSON.parse(JSON.stringify(updatedForm));
 }
@@ -1365,8 +1308,7 @@ export async function createEventSecure(data: any, jwt?: string) {
     actorId: actor.$id,
     action: 'create',
     ownerFields: ['userId'],
-    data,
-  });
+    data});
   if (!isCreateAllowed) {
     throw new Error('Forbidden: Create operation must be mathematically tied to the current user');
   }
@@ -1378,16 +1320,14 @@ export async function createEventSecure(data: any, jwt?: string) {
 
   const sanitizedData = sanitizeEventData({
     ...data,
-    userId: actor.$id,
-  });
+    userId: actor.$id});
 
   const event = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
       rowId: ID.unique(),
       data: sanitizedData,
-      permissions: permissions,
-    });
+      permissions: permissions});
 
   return JSON.parse(JSON.stringify(event));
 }
@@ -1409,8 +1349,7 @@ export async function updateEventSecure(eventId: string, data: any, jwt?: string
   const event = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-      rowId: eventId,
-    });
+      rowId: eventId});
 
   const ownerId = event.userId;
   const permissions = [
@@ -1421,8 +1360,7 @@ export async function updateEventSecure(eventId: string, data: any, jwt?: string
     const guestsRes = await tables.listRows({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
-      queries: [Query.equal('eventId', eventId)] as any,
-    });
+      queries: [Query.equal('eventId', eventId)] as any});
     guestsRes.rows.forEach((g: any) => {
       if (g.userId && String(g.role || '').startsWith('manager-')) {
         permissions.push(Permission.read(Role.user(g.userId)));
@@ -1439,8 +1377,7 @@ export async function updateEventSecure(eventId: string, data: any, jwt?: string
       tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
       rowId: eventId,
       data: sanitizedData,
-      permissions: permissions,
-    });
+      permissions: permissions});
 
   return JSON.parse(JSON.stringify(updatedEvent));
 }
@@ -1494,8 +1431,7 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
   const event = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-      rowId: eventId,
-    });
+      rowId: eventId});
 
   // Update physical permissions: add READ permission only
   const permissions = new Set(event.$permissions || []);
@@ -1515,8 +1451,7 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
       tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
       queries: [
       Query.equal('eventId', eventId),
-      Query.equal('userId', targetUserId)] as any,
-    });
+      Query.equal('userId', targetUserId)] as any});
 
   const virtualRole = `manager-${permissionLevel}`;
   let guestRow;
@@ -1527,8 +1462,7 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
       tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
       rowId: guestsRes.rows[0].$id,
       data: {
-        role: virtualRole,
-      },
+        role: virtualRole},
     });
   } else {
     // Create new
@@ -1540,8 +1474,7 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
         eventId,
         userId: targetUserId,
         role: virtualRole,
-        status: 'attending',
-      },
+        status: 'attending'},
     });
   }
 
@@ -1557,8 +1490,7 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
         Query.equal('resourceType', 'event'),
         Query.equal('userId', targetUserId),
         Query.limit(1),
-      ] as any,
-    });
+      ] as any});
 
     const permission = permissionLevel === 'admin' ? 'admin' : (permissionLevel === 'editor' ? 'write' : 'read');
 
@@ -1572,8 +1504,7 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
           invitedAt: existingCollab.rows[0].invitedAt || new Date().toISOString(),
           accepted: true,
           status: 'accepted',
-          role: 'manager',
-        },
+          role: 'manager'},
       });
     } else {
       await tables.createRow({
@@ -1588,8 +1519,7 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
           invitedAt: new Date().toISOString(),
           accepted: true,
           status: 'accepted',
-          role: 'manager',
-        },
+          role: 'manager'},
       });
     }
   } catch (err) {
@@ -1617,8 +1547,7 @@ export async function removeEventManagerSecure(eventId: string, targetUserId: st
   const event = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-      rowId: eventId,
-    });
+      rowId: eventId});
 
   // Remove physical read permission
   const rawPermissions = event.$permissions || [];
@@ -1641,16 +1570,14 @@ export async function removeEventManagerSecure(eventId: string, targetUserId: st
       tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
       queries: [
         Query.equal('eventId', eventId),
-        Query.equal('userId', targetUserId)] as any,
-    });
+        Query.equal('userId', targetUserId)] as any});
     await Promise.all(
       guestsRes.rows.map((g: any) => {
         if (String(g.role || '').startsWith('manager-')) {
           return tables.deleteRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
-      rowId: g.$id,
-    });
+      rowId: g.$id});
         }
         return Promise.resolve();
       })
@@ -1670,15 +1597,13 @@ export async function removeEventManagerSecure(eventId: string, targetUserId: st
         Query.equal('resourceId', eventId),
         Query.equal('resourceType', 'event'),
         Query.equal('userId', targetUserId),
-      ] as any,
-    });
+      ] as any});
     await Promise.all(
       collabsRes.rows.map((row: any) =>
         tables.deleteRow({
           databaseId: FLOW_DATABASE_ID,
           tableId: COLLABORATORS_TABLE,
-          rowId: row.$id,
-        })
+          rowId: row.$id})
       )
     );
   } catch (err) {
@@ -1815,28 +1740,6 @@ export async function createEncryptedGroupForProjectSecure(projectId: string, jw
   const convId = ID.unique();
   const permissions = uniqueParticipants.map(id => Permission.read(Role.user(id)));
 
-  const conversation = await tables.createRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-    tableId: 'conversations',
-    rowId: convId,
-    data: {
-      participants: uniqueParticipants,
-      participantCount: uniqueParticipants.length,
-      type: 'group',
-      name: project.title,
-      creatorId: actor.$id,
-      admins: [actor.$id],
-      isPinned: [],
-      isMuted: [],
-      isArchived: [],
-      tags: [],
-      isEncrypted: false,
-      encryptionVersion: '1.0',
-      createdAt: now,
-      updatedAt: now,
-    },
-    permissions
-  });
 
   // 3. Create conversation memberships
   for (const userId of uniqueParticipants) {
@@ -1921,8 +1824,7 @@ export async function initGoalDiscussionSecure(taskId: string, jwt?: string) {
     rowId: taskId,
     data: {
       discussionId: discussionNoteId,
-      updatedAt: now,
-    },
+      updatedAt: now},
   });
 
   return { discussionId: discussionNoteId };
@@ -1946,8 +1848,7 @@ export async function approveProjectJoinRequestSecure(projectId: string, targetU
   const project = await tables.getRow({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
-    rowId: projectId,
-  }).catch(() => null);
+    rowId: projectId}).catch(() => null);
 
   if (!project) throw new Error('Project not found');
 

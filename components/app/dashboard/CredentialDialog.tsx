@@ -28,9 +28,6 @@ import {
 } from 'lucide-react';
 import { useSection } from '@/context/SectionContext';
 
-const VAULT_PRIMARY = "#10B981"; // Emerald
-const SURFACE_COLOR = "#161412";
-const BG_COLOR = "#0A0908";
 
 export default function CredentialDialog({
   open,
@@ -89,8 +86,7 @@ export default function CredentialDialog({
     cardExpiry: "",
     cardCVV: "",
     cardPIN: "",
-    cardType: "",
-  });
+    cardType: ""});
   const [isHydrated, setIsHydrated] = useState(false);
 
   // Load draft when drawer opens
@@ -166,8 +162,7 @@ export default function CredentialDialog({
         cardExpiry: "",
         cardCVV: "",
         cardPIN: "",
-        cardType: "",
-      });
+        cardType: ""});
       setCustomFields([]);
     }
   }, [initial, open, prefill]);

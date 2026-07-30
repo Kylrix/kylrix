@@ -1,6 +1,6 @@
 import { KylrixTokenService } from './token';
 import { WalletService, type WalletSummary } from './wallets';
-import { verifyProEntitlementAction, hydrateSessionAction } from '@/app/(app)/(auth)/accounts/actions/billing';
+import { verifyProEntitlementAction, hydrateSessionAction } from '@/lib/actions/billing/billing';
 import { account } from '../appwrite/client';
 import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitlements';
 import { normalizeBillingPrefsTier, type BillingUiTier } from '../subscription/tier-resolution';
@@ -90,8 +90,7 @@ export const BillingCacheService = {
             const data = {
                 uiTier: open.uiTier,
                 active: open.active,
-                expiresAt: open.expiresAt,
-            };
+                expiresAt: open.expiresAt};
             entitlementCache = { data, expiresAt: Date.now() + TTL };
             if (typeof window !== 'undefined') {
                 localStorage.setItem(`kylrix_entitlement_${userId}`, JSON.stringify(data));
@@ -118,8 +117,7 @@ export const BillingCacheService = {
                     const data = {
                         uiTier: result.uiTier as BillingUiTier,
                         active: result.active,
-                        expiresAt: result.expiresAt,
-                    };
+                        expiresAt: result.expiresAt};
                     entitlementCache = { data, expiresAt: Date.now() + TTL };
                     lastEntitlementFetch = Date.now();
                     if (typeof window !== 'undefined') {

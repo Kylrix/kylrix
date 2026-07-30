@@ -56,8 +56,7 @@ export function buildUsernameHandleSuggestions(user: {
     const candidates = deriveUsernameCandidates({
         $id: user.$id,
         email: user.email ?? undefined,
-        name: user.name ?? undefined,
-    });
+        name: user.name ?? undefined});
     const out: string[] = [];
     for (const c of candidates) {
         const n = normalizeUsernameSuggestion(c);
@@ -197,8 +196,7 @@ export const UsersService = {
                     isContact: data.isContact ?? profile.isContact,
                 },
                 metadata: {
-                    source: 'vault.users-service.updateProfile',
-                },
+                    source: 'vault.users-service.updateProfile'},
             });
             return result;
         }
@@ -231,11 +229,9 @@ export const UsersService = {
                     username,
                     displayName: data.displayName || username,
                     bio: data.bio || '',
-                    publicKey: data.publicKey || null,
-                },
+                    publicKey: data.publicKey || null},
                 metadata: {
-                    source: 'chat.profiles-service.createProfile',
-                },
+                    source: 'chat.profiles-service.createProfile'},
             });
             return row;
         });
@@ -276,8 +272,7 @@ export const UsersService = {
             }
             
             return await this.createProfile(user.$id, username, {
-                displayName: user.name || email,
-            });
+                displayName: user.name || email});
         } catch (error) {
             console.warn('[UsersService] Failed to ensure profile:', error);
             return null;
@@ -386,8 +381,7 @@ export const UsersService = {
             tableId: TABLE_ID,
             queries: [
                 Query.equal('email', email),
-                Query.limit(1)],
-        });
+                Query.limit(1)]});
         return res.rows[0] || null;
     },
 

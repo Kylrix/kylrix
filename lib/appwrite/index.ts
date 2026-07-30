@@ -5,11 +5,14 @@ export * from './auth';
 export * from './note';
 export * from './vault';
 export * from './projects';
+export { updateRow } from '@/lib/actions/client-ops';
 
 import { AppwriteService as SharedService } from './auth';
 import { VaultService } from './vault';
 import { ProjectsService } from './projects';
 import { UsersService } from '../services/users';
+
+export const getUsersByIds = UsersService.getUsersByIds.bind(UsersService);
 
 // Merge AppwriteService methods from all domains into a robust unified interface
 export const AppwriteService = {

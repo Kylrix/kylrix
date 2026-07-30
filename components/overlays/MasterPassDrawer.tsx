@@ -25,8 +25,7 @@ import {
   FingerprintOutlined as FingerprintIcon,
   ErrorOutline as ErrorOutlineIcon,
   Apps as AppsIcon,
-  Close as CloseIcon,
-} from '@/lib/openbricks/icons';
+  Close as CloseIcon} from '@/lib/openbricks/icons';
 import Logo from '../common/Logo';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
@@ -34,8 +33,7 @@ import { useFinalizeAuth } from '@/lib/finalizeAuth';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import {
   setMasterpassFlag,
-  AppwriteService,
-} from '@/lib/appwrite';
+  AppwriteService} from '@/lib/appwrite';
 import { checkRateLimit, getBlockedDuration } from '@/lib/rate-limiter';
 import toast from 'react-hot-toast';
 import { unlockWithPasskey } from '@/lib/passkey';
@@ -71,14 +69,14 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
   const [isFirstTime, setIsFirstTime] = useState<boolean | null>(null);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [capsLock] = useState(false);
-  const [confirmCapsLock] = useState(false);
+  const [_capsLock] = useState(false);
+  const [_confirmCapsLock] = useState(false);
   const [hasPasskey, setHasPasskey] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [showPasskeyIncentive, setShowPasskeyIncentive] = useState(false);
   const passkeyTriggeredRef = useRef(false);
 
-  const [passkeyIncentiveDone, setPasskeyIncentiveDone] = useState(false);
+  const [_passkeyIncentiveDone, _setPasskeyIncentiveDone] = useState(false);
   const [migrationStatus, setMigrationStatus] = useState<'idle' | 'upgrading' | 'success' | 'error'>('idle');
   const [migrationProgress, setMigrationProgress] = useState(0);
   const [isCriticalError, setIsCriticalError] = useState(false);
@@ -261,7 +259,7 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
           try {
             const parsed = typeof e.params === 'string' ? JSON.parse(e.params) : e.params;
             rpId = parsed?.rpId || '';
-          } catch (err) {}
+          } catch (_err) {}
           if (isLocalHost) {
             return rpId === 'localhost' || rpId === '127.0.0.1';
           } else {
@@ -281,7 +279,6 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
         const stableEntry = passwordEntries.find(e => !e.isPending);
         const pendingEntry = passwordEntries.find(e => e.isPending);
 
-        const bestEntry = stableEntry || pendingEntry || passwordEntries[0];
 
         // isPendingVault should be true if we are on a pending entry OR if a zombie pending entry exists
         setIsPendingVault(!!pendingEntry);
@@ -476,24 +473,21 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
         justifyContent: 'space-between', 
         alignItems: 'center',
         mb: 3,
-        px: 0,
-      }}>
+        px: 0}}>
         <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
           <Typography component="span" sx={{ 
             fontWeight: 900, 
             fontSize: '1.25rem',
             lineHeight: 1.25,
             color: 'white',
-            fontFamily: 'var(--font-clash)',
-          }}>
+            fontFamily: 'var(--font-clash)'}}>
             {isFirstTime ? 'Initialize Vault Security' : 'Unlock Your Vault'}
           </Typography>
           <Typography component="span" sx={{ 
             color: 'rgba(255, 255, 255, 0.6)',
             fontWeight: 600,
             fontSize: '0.82rem',
-            lineHeight: 1.35,
-          }}>
+            lineHeight: 1.35}}>
             {isFirstTime ? 'Set a master password to encrypt your state vault' : 'Enter your master password to continue'}
           </Typography>
         </Box>
@@ -519,8 +513,7 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                   border: '1px solid rgba(245, 158, 11, 0.2)',
                   display: 'flex',
                   gap: 1.75,
-                  alignItems: 'center',
-              }}>
+                  alignItems: 'center'}}>
                   <Box sx={{ width: 38, height: 38, borderRadius: '12px', bgcolor: alpha('#F59E0B', 0.1), display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                     <ErrorOutlineIcon sx={{ color: '#F59E0B' }} />
                   </Box>
@@ -619,16 +612,14 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                 disabled={loading}
                 slotProps={{
                   htmlInput: {
-                    maxLength: 4,
-                  },
+                    maxLength: 4},
                   input: {
                     sx: {
                       fontFamily: 'monospace',
                       letterSpacing: '0.5em',
                       textAlign: 'center',
                       fontSize: '1.5rem',
-                      py: 1,
-                    },
+                      py: 1},
                   },
                 }}
                 sx={{
@@ -697,8 +688,7 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                     border: `1px solid ${alpha(VAULT_PRIMARY, 0.2)}`,
                   },
                   '& input': {
-                    WebkitTextSecurity: showPassword ? 'none' : 'disc',
-                  }
+                    WebkitTextSecurity: showPassword ? 'none' : 'disc'}
                 }}
               />
 
@@ -731,8 +721,7 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                       border: `1px solid ${alpha(VAULT_PRIMARY, 0.2)}`,
                     },
                     '& input': {
-                      WebkitTextSecurity: showConfirmPassword ? 'none' : 'disc',
-                    }
+                      WebkitTextSecurity: showConfirmPassword ? 'none' : 'disc'}
                   }}
                 />
               )}
@@ -742,8 +731,7 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                   color: confirmPassword === masterPassword ? 'success.main' : 'error.main', 
                   fontSize: '0.78rem',
                   fontWeight: 700,
-                  lineHeight: 1.25,
-                }}>
+                  lineHeight: 1.25}}>
                   {confirmPassword === masterPassword ? "✓ Passwords match" : "✗ Passwords do not match"}
                 </Typography>
               )}

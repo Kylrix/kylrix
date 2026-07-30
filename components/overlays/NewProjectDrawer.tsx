@@ -18,8 +18,7 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem,
-} from '@/lib/openbricks/primitives';
+  MenuItem} from '@/lib/openbricks/primitives';
 import { 
   X as CloseIcon,
   Plus as PlusIcon,
@@ -180,8 +179,7 @@ export function NewProjectDrawer() {
       // 1. Prepare Metadata based on template
       const metadata: any = {
         templateId: template?.id,
-        createdAt: new Date().toISOString(),
-      };
+        createdAt: new Date().toISOString()};
 
       if (template?.id === 'academic-research') {
           metadata.proFeatures = true;
@@ -213,8 +211,7 @@ export function NewProjectDrawer() {
           await attachObjectToProject({
             projectId: project.$id,
             entityKind: resourceKind,
-            entityId: selectedResourceId,
-          });
+            entityId: selectedResourceId});
           
           // Auto-spin up Task if it's the Form-to-Project flow
           if (template?.id === 'form-to-project' || template?.id === 'service-desk') {
@@ -276,8 +273,7 @@ export function NewProjectDrawer() {
                 borderTopLeftRadius: RADIUS_LARGE,
                 borderTopRightRadius: RADIUS_LARGE,
                 border: BORDER,
-                borderBottom: 0,
-              }),
+                borderBottom: 0}),
           bgcolor: SURFACE_ASH,
           boxShadow: 'none',
           backgroundImage: 'none',
@@ -318,8 +314,7 @@ export function NewProjectDrawer() {
                 placeItems: 'center',
                 bgcolor: VOID,
                 border: BORDER,
-                flexShrink: 0,
-              }}
+                flexShrink: 0}}
             >
               {template?.icon ? <template.icon size={20} color={template.color} strokeWidth={2.5} /> : <ProjectIcon size={20} color={SYSTEM_PRIMARY} strokeWidth={2} />}
             </Box>
@@ -500,8 +495,7 @@ export function NewProjectDrawer() {
                             placeItems: 'center',
                             flexShrink: 0,
                             bgcolor: 'rgba(255,255,255,0.03)',
-                            border: '1px solid rgba(255,255,255,0.05)',
-                          }}
+                            border: '1px solid rgba(255,255,255,0.05)'}}
                         >
                           {visibility === 'private' ? <Lock size={16} color={TEXT_MUTED} /> : <Globe size={16} color="#10B981" />}
                         </Box>
@@ -643,8 +637,7 @@ export function NewProjectDrawer() {
                     placeItems: 'center',
                     flexShrink: 0,
                     bgcolor: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                  }}
+                    border: '1px solid rgba(255,255,255,0.05)'}}
                 >
                   <opt.icon size={18} color={opt.color} />
                 </Box>
@@ -712,8 +705,7 @@ export function NewProjectDrawer() {
                       bgcolor: isGuest ? SYSTEM_PRIMARY : 'rgba(255,255,255,0.08)',
                       display: 'flex',
                       alignItems: 'center',
-                      transition: 'background-color 0.2s',
-                    }}
+                      transition: 'background-color 0.2s'}}
                   >
                     <Box
                       sx={{
@@ -723,8 +715,7 @@ export function NewProjectDrawer() {
                         bgcolor: '#fff',
                         boxShadow: 2,
                         transform: isGuest ? 'translateX(20px)' : 'translateX(0px)',
-                        transition: 'transform 0.2s',
-                      }}
+                        transition: 'transform 0.2s'}}
                     />
                   </Box>
                 </Box>

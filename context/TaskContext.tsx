@@ -27,8 +27,8 @@ import {
   Subtask,
   Comment,
   TaskCollaborator,
-  CollaboratorPermission,
-} from '@/types';
+  CollaboratorPermission} from '@/types';
+import { isFlowPath, isWorkspacesPath, isGoalsSurfacePath } from '@/lib/routing/app-paths';
 import { registerLiveGoalGetter } from '@/lib/sync/pending-sync-bridge';
 import { goalPendingKey } from '@/lib/sync/goal-keys';
 import { shouldSoftPull } from '@/lib/sync/local-copy-sync';
@@ -120,8 +120,7 @@ async function persistGoalsLocalCopy(userId: string | null | undefined, tasks: T
               status: t.status || 'todo',
               userId: t.userId || t.creatorId || 'guest',
               isPublic: Boolean(t.isPublic),
-              updatedAt: (t.updatedAt instanceof Date ? t.updatedAt : new Date()).toISOString(),
-            })
+              updatedAt: (t.updatedAt instanceof Date ? t.updatedAt : new Date()).toISOString()})
             .catch(() => {}),
         ),
       );
@@ -202,8 +201,7 @@ const parseCommentEntry = (entry: any): Comment => {
     return {
       ...entry,
       createdAt: entry.createdAt ? new Date(entry.createdAt) : new Date(),
-      updatedAt: entry.updatedAt ? new Date(entry.updatedAt) : undefined,
-    };
+      updatedAt: entry.updatedAt ? new Date(entry.updatedAt) : undefined};
   }
 
   if (typeof entry === 'string') {
@@ -215,8 +213,7 @@ const parseCommentEntry = (entry: any): Comment => {
         content: entry,
         authorId: 'system',
         authorName: 'System',
-        createdAt: new Date(),
-      };
+        createdAt: new Date()};
     }
   }
 
@@ -225,23 +222,15 @@ const parseCommentEntry = (entry: any): Comment => {
     content: '',
     authorId: 'system',
     authorName: 'System',
-    createdAt: new Date(),
-  };
+    createdAt: new Date()};
 };
 
-const serializeCommentEntry = (comment: Comment) =>
-  JSON.stringify({
-    ...comment,
-    createdAt: comment.createdAt.toISOString(),
-    updatedAt: comment.updatedAt?.toISOString() || null,
-  });
 
 const buildTaskHierarchy = (tasks: Task[]) => {
   const cloned = tasks.map((task) => ({
     ...task,
     subtasks: [...(task.subtasks || [])],
-    comments: [...(task.comments || [])],
-  }));
+    comments: [...(task.comments || [])]}));
   const taskMap = new Map(cloned.map((task) => [task.id, task]));
 
   cloned.forEach((task) => {
@@ -256,8 +245,7 @@ const buildTaskHierarchy = (tasks: Task[]) => {
         title: task.title,
         completed: task.status === 'done',
         createdAt: task.createdAt,
-        completedAt: task.status === 'done' ? task.completedAt : undefined,
-      }];
+        completedAt: task.status === 'done' ? task.completedAt : undefined}];
   });
 
   return cloned.filter((task) => !task.parentTaskId);
@@ -283,8 +271,7 @@ const mapAppwriteCalendarToProject = (doc: AppwriteCalendar): Project => ({
     allowSubtasks: true,
     allowTimeTracking: true,
     allowRecurrence: true,
-    showCompletedTasks: true,
-  },
+    showCompletedTasks: true},
 });
 
 const mapEcosystemTagsToLabels = (tags: Tags[]): Label[] =>
@@ -325,12 +312,10 @@ const initialState: TaskState = {
   selectedProjectId: null,
   filter: {
     showCompleted: true,
-    showArchived: false,
-  },
+    showArchived: false},
   sort: {
     field: 'dueDate',
-    direction: 'asc',
-  },
+    direction: 'asc'},
   viewMode: 'list',
   isLoading: true,
   error: null,
@@ -397,8 +382,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
           ...state,
           tasks: uniqueTasks,
           projects: uniqueProjects,
-          isLoading: false,
-        };
+          isLoading: false};
       }
 
     case 'SET_USER':
@@ -433,8 +417,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
                 ...action.payload.updates,
                 // Prefer caller-provided updatedAt (pushLiveGoal / server). Forcing `new Date()`
                 // here poisoned goal sync: realtime echoes re-queued forever after a successful flush.
-                updatedAt: action.payload.updates.updatedAt || task.updatedAt || new Date(),
-              }
+                updatedAt: action.payload.updates.updatedAt || task.updatedAt || new Date()}
             : task
         ),
       };
@@ -443,8 +426,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return {
         ...state,
         tasks: state.tasks.filter(task => task.id !== action.payload),
-        selectedTaskId: state.selectedTaskId === action.payload ? null : state.selectedTaskId,
-      };
+        selectedTaskId: state.selectedTaskId === action.payload ? null : state.selectedTaskId};
 
     case 'COMPLETE_TASK':
       return {
@@ -455,8 +437,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
                 ...task,
                 status: task.status === 'done' ? 'todo' : 'done',
                 completedAt: task.status === 'done' ? undefined : new Date(),
-                updatedAt: new Date(),
-              }
+                updatedAt: new Date()}
             : task
         ),
       };
@@ -507,8 +488,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         labels: state.labels.filter(label => label.id !== action.payload),
         tasks: state.tasks.map(task => ({
           ...task,
-          labels: task.labels.filter(l => l !== action.payload),
-        })),
+          labels: task.labels.filter(l => l !== action.payload)})),
       };
 
     case 'SET_FILTER':
@@ -566,8 +546,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
             ? {
                 ...task,
                 subtasks: task.subtasks.filter(st => st.id !== action.payload.subtaskId),
-                updatedAt: new Date(),
-              }
+                updatedAt: new Date()}
             : task
         ),
       };
@@ -636,8 +615,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return {
         ...state,
         ecosystemTags: action.payload,
-        labels: mapEcosystemTagsToLabels(action.payload),
-      };
+        labels: mapEcosystemTagsToLabels(action.payload)};
 
     default:
       return state;
@@ -748,8 +726,7 @@ async function syncTaskAccess(taskId: string, creatorId: string, assigneeIds: st
       taskId,
       taskTitle,
       creatorId,
-      recipientIds: newlyAddedAssignees,
-    }).catch((error) => {
+      recipientIds: newlyAddedAssignees}).catch((error) => {
       console.error('[TaskContext] Failed to queue task assignment email', error);
     });
   }
@@ -804,8 +781,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     pendingStatusPatchesRef.current.set(id, {
       status,
       completedAt,
-      at: Date.now(),
-    });
+      at: Date.now()});
   }, []);
 
   const applyPendingPatches = useCallback((tasks: Task[]) => {
@@ -824,8 +800,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         ...task,
         status: patch.status,
         completedAt: patch.status === 'done' ? (patch.completedAt || task.completedAt || new Date()) : undefined,
-        updatedAt: new Date(),
-      };
+        updatedAt: new Date()};
     });
   }, [clearStalePendingPatches]);
 
@@ -844,8 +819,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     if (!tag?.name) return;
     dispatch({
       type: 'SET_ECOSYSTEM_TAGS',
-      payload: [tag, ...state.ecosystemTags.filter(t => t.name !== tag.name && t.$id !== tag.$id)],
-    });
+      payload: [tag, ...state.ecosystemTags.filter(t => t.name !== tag.name && t.$id !== tag.$id)]});
     if (typeof window !== 'undefined' && state.userId) {
       const tagsKey = `f_tags_${state.userId}`;
       const updated = [tag, ...state.ecosystemTags.filter(t => t.name !== tag.name && t.$id !== tag.$id)];
@@ -938,8 +912,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       type: 'SET_DATA',
       payload: {
         tasks: nextTasks,
-        projects: Array.from(projectsMap.values()),
-      },
+        projects: Array.from(projectsMap.values())},
     });
 
     void persistGoalsLocalCopy(state.userId || flowWarmOwnerRef.current, nextTasks);
@@ -975,16 +948,14 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         userId,
         existingTasks: tasksRef.current,
         getCachedDataSync: (key) => getCachedData(key),
-        getCachedDataAsync: (key) => getCachedDataAsync(key),
-      });
+        getCachedDataAsync: (key) => getCachedDataAsync(key)});
 
       if (cancelled) return;
 
       if (instant.length > 0) {
         dispatchSyncedData({
           tasks: instant,
-          projects: projectsRef.current,
-        });
+          projects: projectsRef.current});
       }
       dispatch({ type: 'SET_LOADING', payload: false });
     };
@@ -1026,8 +997,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           userId,
           existingTasks: tasksRef.current,
           getCachedDataSync: (key) => getCachedData(key, COLD_START_TTL),
-          getCachedDataAsync: (key) => getCachedDataAsync(key, COLD_START_TTL),
-        });
+          getCachedDataAsync: (key) => getCachedDataAsync(key, COLD_START_TTL)});
 
         const [cachedTasksRes, cachedCalsRes, guestTasksRes, goalsListCache, rxTasks] = await Promise.all([
             getCachedDataAsync<any>(tasksKey, COLD_START_TTL),
@@ -1049,8 +1019,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
             console.log('[TaskContext] Cold-start hydration from local copy:', combinedTasks.length, 'goals');
             dispatchSyncedData({
               tasks: combinedTasks,
-              projects: (cachedCalsRes?.rows || []).map(mapAppwriteCalendarToProject),
-            });
+              projects: (cachedCalsRes?.rows || []).map(mapAppwriteCalendarToProject)});
         }
 
         dispatch({ type: 'SET_LOADING', payload: false });
@@ -1087,7 +1056,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     lastPathnameRef.current = pathname;
 
     // Only revalidate if we actually navigated (not first load)
-    if (prevPath && (pathname.startsWith('/flow') || pathname.startsWith('/goals'))) {
+    if (prevPath && (isFlowPath(pathname) || isGoalsSurfacePath(pathname) || isWorkspacesPath(pathname))) {
       const uid = state.userId;
       refreshInBackground(`f_route_refresh_${uid}`, async () => {
         const data = await fetchBatch(uid, true);
@@ -1135,8 +1104,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       if (
         !shouldSoftPull({
           lastPullAt: lastTaskPullAtRef.current,
-          activityIntensity: autonomicSyncEngine.getActivityIntensity(),
-        })
+          activityIntensity: autonomicSyncEngine.getActivityIntensity()})
       ) {
         return;
       }
@@ -1228,8 +1196,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         ...task,
         userId: ownerId,
         creatorId: task.creatorId || ownerId,
-        updatedAt: new Date(),
-      };
+        updatedAt: new Date()};
       dispatch({ type: 'UPSERT_TASK', payload: stamped });
       void setCachedData(`goal_${stamped.id}`, stamped);
       const updatedList = [stamped, ...tasksRef.current.filter((t) => t.id !== stamped.id)];
@@ -1383,8 +1350,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           payload: {
             id,
             updates: {
-              scheduled: updatedDoc.scheduled,
-            }
+              scheduled: updatedDoc.scheduled}
           }
         });
         invalidateTasksNexus(state.userId || 'guest');
@@ -1512,8 +1478,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           id,
           updates: {
             status: previousStatus,
-            completedAt: previousCompletedAt,
-          },
+            completedAt: previousCompletedAt},
         },
       });
       console.error('Failed to complete task', error);
@@ -1584,12 +1549,10 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       content,
       authorId: state.userId || task.creatorId || 'user',
       authorName: 'You',
-      createdAt: new Date(),
-    };
+      createdAt: new Date()};
 
     await updateTask(taskId, {
-      comments: [...(task.comments || []), comment],
-    });
+      comments: [...(task.comments || []), comment]});
   }, [state.tasks, state.userId, updateTask]);
 
   const listTaskCollaborators = useCallback(async (taskId: string) => {
@@ -1666,8 +1629,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           name: project.name,
           color: project.color,
           isDefault: false,
-          userId: userId,
-        });
+          userId: userId});
         invalidateCalendarsNexus(userId);
         dispatch({ type: 'ADD_PROJECT', payload: mapAppwriteCalendarToProject(newCalendar) });
       } catch (error: unknown) {
@@ -1710,8 +1672,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const addLabel = useCallback((label: Omit<Label, 'id'>) => {
     const newLabel: Label = {
       ...label,
-      id: ID.unique(),
-    };
+      id: ID.unique()};
     dispatch({ type: 'ADD_LABEL', payload: newLabel });
   }, []);
 
@@ -1880,8 +1841,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       total: activeTasks.length,
       completed,
       overdue,
-      dueToday,
-    };
+      dueToday};
   }, [state.tasks]);
 
   const getSelectedTask = useCallback(() => {

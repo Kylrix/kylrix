@@ -101,7 +101,7 @@ export default function SubmissionViewer({ formId, formSchema }: { formId: strin
   const { open: openDrawer } = useUnifiedDrawer();
   const [submissions, setSubmissions] = useState<FormSubmissions[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSubmission, setSelectedSubmission] = useState<FormSubmissions | null>(null);
+  const [_selectedSubmission, _setSelectedSubmission] = useState<FormSubmissions | null>(null);
 
   // Map of field IDs to labels
   const schemaMap = React.useMemo(() => {

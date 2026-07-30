@@ -1,6 +1,6 @@
 import { npubToBytes, bytesToHex } from "./crypto";
 
-export interface TendonJson {
+interface TendonJson {
   names: Record<string, string>;
   vault_pointer?: {
     relays: string[];
@@ -29,8 +29,7 @@ export async function resolveIdentifier(identifier: string, defaultDomain?: stri
       return {
         npub: clean,
         hex: bytesToHex(bytes),
-        source: "npub",
-      };
+        source: "npub"};
     } catch (e) {
       throw new Error(`Failed to decode npub: ${(e as Error).message}`);
     }

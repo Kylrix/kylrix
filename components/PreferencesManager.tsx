@@ -80,8 +80,7 @@ export default function PreferencesManager({ onSave }: PreferencesManagerProps) 
     dataCollection: false,
     marketingEmails: false,
     publicProfile: true,
-    smartSystemHistory: true,
-  });
+    smartSystemHistory: true});
 
   useEffect(() => {
     loadPreferences();

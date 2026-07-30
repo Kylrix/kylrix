@@ -39,8 +39,7 @@ const DRAWER_SX = {
 export function NewChatDrawer({
     isOpen,
     onClose,
-    mode = 'secure',
-}: {
+    mode = 'secure'}: {
     isOpen: boolean;
     onClose: () => void;
     mode?: 'secure' | 'thread';
@@ -60,8 +59,7 @@ export function NewChatDrawer({
                 helper: 'Search for any user to start a thread.',
                 loading: 'Starting thread...',
                 success: 'Thread ready!',
-                errorPrefix: 'Failed to create thread',
-            };
+                errorPrefix: 'Failed to create thread'};
         }
 
         return {
@@ -69,8 +67,7 @@ export function NewChatDrawer({
             helper: 'Search for any user to start a secure chat.',
             loading: 'Opening secure chat...',
             success: 'Secure chat ready!',
-            errorPrefix: 'Failed to create secure chat',
-        };
+            errorPrefix: 'Failed to create secure chat'};
     }, [mode]);
 
     const startChat = useCallback(async (targetUser: any) => {

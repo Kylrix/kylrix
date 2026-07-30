@@ -33,8 +33,7 @@ export const TELEGRAM_ACTION_LABELS: Record<TelegramNotificationAction, string> 
   messages: 'Chat messages',
   mentions: 'Mentions',
   task_updates: 'Task & goal updates',
-  general: 'General alerts',
-};
+  general: 'General alerts'};
 
 export const TELEGRAM_OBJECT_LABELS: Record<TelegramNotificationObject, string> = {
   note: 'Ideas',
@@ -45,8 +44,7 @@ export const TELEGRAM_OBJECT_LABELS: Record<TelegramNotificationObject, string> 
   call: 'Calls',
   huddle: 'Huddles',
   event: 'Events',
-  form: 'Forms',
-};
+  form: 'Forms'};
 
 export function defaultTelegramNotificationPreferences(): TelegramNotificationPreferences {
   return {
@@ -57,8 +55,7 @@ export function defaultTelegramNotificationPreferences(): TelegramNotificationPr
       messages: true,
       mentions: true,
       task_updates: true,
-      general: true,
-    },
+      general: true},
     objects: {
       note: true,
       project: true,
@@ -68,8 +65,7 @@ export function defaultTelegramNotificationPreferences(): TelegramNotificationPr
       call: true,
       huddle: true,
       event: true,
-      form: true,
-    },
+      form: true},
     watchedResourceIds: [],
   };
 }
@@ -84,12 +80,12 @@ export function parseTelegramNotificationPreferences(raw: unknown): TelegramNoti
     actions: { ...defaults.actions, ...(input.actions || {}) },
     objects: { ...defaults.objects, ...(input.objects || {}) },
     watchedResourceIds: Array.isArray(input.watchedResourceIds)
-      ? input.watchedResourceIds.map((id) => String(id || '').trim()).filter(Boolean)
+      ? input.watchedResourceIds.map((id: any) => String(id || '').trim()).filter(Boolean)
       : [],
   };
 }
 
-export function normalizeTelegramObjectType(
+function normalizeTelegramObjectType(
   resourceType?: string | null
 ): TelegramNotificationObject | null {
   const value = String(resourceType || '').trim().toLowerCase();

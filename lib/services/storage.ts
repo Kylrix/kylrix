@@ -6,8 +6,7 @@ import { APPWRITE_CONFIG } from '../appwrite/config';
 const BUCKETS = {
     MESSAGES: APPWRITE_CONFIG.BUCKETS.MESSAGES,
     VOICE: 'voice',
-    GENERAL_STORAGE: APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE,
-};
+    GENERAL_STORAGE: APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE};
 
 export const StorageService = {
     async uploadFile(file: File, bucketId: string = BUCKETS.MESSAGES) {

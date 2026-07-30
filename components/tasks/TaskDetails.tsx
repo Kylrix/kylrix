@@ -31,8 +31,7 @@ import {
   createGhostNoteForResource, 
   promoteGhostResourceThreadToStory,
   initGoalDiscussion,
-  getResourceCollaborators,
-} from '@/lib/actions/client-ops';
+  getResourceCollaborators} from '@/lib/actions/client-ops';
 import { toLocalDateInputString } from '@/lib/utils';
 import { createComment, listComments, getNote } from '@/lib/appwrite/note';
 import { formatNoteCreatedDate } from '@/lib/date-utils';
@@ -64,8 +63,7 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
-  alpha,
-} from '@/lib/openbricks/primitives';
+  alpha} from '@/lib/openbricks/primitives';
 import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 
@@ -73,16 +71,14 @@ const priorityColors: Record<Priority, string> = {
   low: '#A1A1AA',
   medium: '#14B8A6',
   high: '#F59E0B',
-  urgent: '#EF4444',
-};
+  urgent: '#EF4444'};
 
 const statusLabels: Record<TaskStatus, string> = {
   todo: 'To Do',
   'in-progress': 'In Progress',
   done: 'Completed',
   blocked: 'Blocked',
-  cancelled: 'Cancelled',
-};
+  cancelled: 'Cancelled'};
 
 interface TaskDetailsProps {
   taskId: string;
@@ -92,7 +88,7 @@ interface TaskDetailsProps {
 export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const { user } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
-  const { closeSecondarySidebar, openSecondarySidebar } = useLayout();
+  const { closeSecondarySidebar} = useLayout();
 
   const handleClose = () => {
     if (onBack) {
@@ -101,7 +97,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
       closeSecondarySidebar();
     }
   };
-  const { joinResource, resourcePresence } = usePresence();
+  const { joinResource} = usePresence();
 
   useEffect(() => {
     if (taskId) {
@@ -121,18 +117,15 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
     tasks,
     updateTask,
     pushLiveGoal,
-    completeTask,
     deleteTask,
     addSubtask,
     toggleSubtask,
     deleteSubtask,
-    addComment,
     addTaskCollaborator,
     updateTaskCollaborator,
     deleteTaskCollaborator,
     projects,
-    labels,
-  } = useTask();
+    labels} = useTask();
 
   const task = React.useMemo(() => {
     const current = tasks.find((t) => t.id === taskId);
@@ -145,13 +138,11 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
         title: child.title,
         completed: child.status === 'done',
         createdAt: child.createdAt,
-        completedAt: child.status === 'done' ? child.completedAt : undefined,
-      }));
+        completedAt: child.status === 'done' ? child.completedAt : undefined}));
 
     return {
       ...current,
-      subtasks: [...(current.subtasks || []), ...childSubtasks],
-    };
+      subtasks: [...(current.subtasks || []), ...childSubtasks]};
   }, [tasks, taskId]);
 
   const { openProUpgrade } = useProUpgrade();
@@ -172,22 +163,22 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
 
   const [newSubtask, setNewSubtask] = useState('');
   const [newComment, setNewComment] = useState('');
-  const [noteQuery, setNoteQuery] = useState('');
-  const [noteResults, setNoteResults] = useState<any[]>([]);
-  const [isSearchingNotes, setIsSearchingNotes] = useState(false);
-  const [linkedNoteTitles, setLinkedNoteTitles] = useState<Record<string, string>>({});
+  const [noteQuery, _setNoteQuery] = useState('');
+  const [_noteResults, setNoteResults] = useState<any[]>([]);
+  const [_isSearchingNotes, setIsSearchingNotes] = useState(false);
+  const [_linkedNoteTitles, setLinkedNoteTitles] = useState<Record<string, string>>({});
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isPriorityOpen, setIsPriorityOpen] = useState(false);
-  const [taskParticipantProfiles, setTaskParticipantProfiles] = useState<any[]>([]);
-  const [isLoadingAssignees, setIsLoadingAssignees] = useState(false);
-  const [taskCollaboratorRows, setTaskCollaboratorRows] = useState<TaskCollaborator[]>([]);
+  const [_taskParticipantProfiles, setTaskParticipantProfiles] = useState<any[]>([]);
+  const [_isLoadingAssignees, setIsLoadingAssignees] = useState(false);
+  const [_taskCollaboratorRows, _setTaskCollaboratorRows] = useState<TaskCollaborator[]>([]);
   const [pendingCollaborators, setPendingCollaborators] = useState<any[]>([]);
   const [showProjectLinker, setShowProjectLinker] = useState(false);
-  const [pendingCollaboratorPermission, setPendingCollaboratorPermission] = useState<CollaboratorPermission>('write');
+  const [pendingCollaboratorPermission, _setPendingCollaboratorPermission] = useState<CollaboratorPermission>('write');
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isTagSelectorOpen, setIsTagSelectorOpen] = useState(false);
   const { ecosystemTags, refreshEcosystemTags } = useTask();
@@ -232,8 +223,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               senderName,
               senderAvatar,
               content: row.content,
-              timestamp: new Date(row.createdAt).getTime(),
-            };
+              timestamp: new Date(row.createdAt).getTime()};
           })
         );
 
@@ -275,8 +265,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             senderName,
             senderAvatar,
             content: payload.content,
-            timestamp: new Date(payload.createdAt).getTime(),
-          };
+            timestamp: new Date(payload.createdAt).getTime()};
           setHuddleMessages(prev => {
             if (prev.some(m => m.id === msg.id)) return prev;
             return [...prev, msg].sort((a, b) => a.timestamp - b.timestamp);
@@ -330,34 +319,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
 
   // AI Integration
   const { generate } = useAI();
-  const [isGeneratingSubtasks, setIsGeneratingSubtasks] = useState(false);
+  const [_isGeneratingSubtasks, setIsGeneratingSubtasks] = useState(false);
 
-  const handleGenerateSubtasks = async () => {
-    const currentTask = task;
-    if (!currentTask?.title) return;
-    if (!requirePaidAi()) return;
-    setIsGeneratingSubtasks(true);
-    try {
-      const prompt = `You are a Project Manager. The user wants to '${currentTask.title}'. Generate a JSON array of 5 concrete, actionable sub-tasks. Return ONLY the JSON array of strings.`;
-      const result = await generate(prompt);
-      const text = typeof result === 'string' ? result : (result as any).text;
-      // Clean up markdown code blocks if present
-      const jsonString = text.replace(/```json\n|\n```/g, '').replace(/```/g, '');
-      const subtasks = JSON.parse(jsonString);
-      
-      if (Array.isArray(subtasks)) {
-        await Promise.all(
-          subtasks
-            .filter((st: unknown) => typeof st === 'string')
-            .map((st: string) => addSubtask(currentTask.id, st))
-        );
-      }
-    } catch (error: unknown) {
-      console.error("Failed to generate subtasks", error);
-    } finally {
-      setIsGeneratingSubtasks(false);
-    }
-  };
 
   const handleStartEditTitle = () => {
     const currentTask = task;
@@ -401,8 +364,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
       ...task,
       title: nextTitle,
       description: nextDescription || undefined,
-      updatedAt: new Date(),
-    });
+      updatedAt: new Date()});
   }, [
     editTitle,
     editDescription,
@@ -498,8 +460,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
       try {
         const { collaborators } = await getResourceCollaborators({
           resourceId: taskId,
-          resourceType: 'task',
-        });
+          resourceType: 'task'});
         if (active) setTaskParticipantProfiles(collaborators);
       } catch (err) {
         console.error('Failed to fetch assignee profiles:', err);
@@ -554,25 +515,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
     setIsPriorityOpen(false);
   };
 
-  const handleAddCollaborators = async () => {
-    if (!task || pendingCollaborators.length === 0) return;
-    await Promise.all(
-      pendingCollaborators.map((user) =>
-        addTaskCollaborator(task.id, user.id, pendingCollaboratorPermission)
-      )
-    );
-    setPendingCollaborators([]);
-  };
 
-  const handleCollaboratorPermissionChange = async (collaboratorId: string, permission: CollaboratorPermission) => {
-    if (!task) return;
-    await updateTaskCollaborator(task.id, collaboratorId, permission);
-  };
 
-  const handleRemoveCollaborator = async (collaboratorId: string) => {
-    if (!task) return;
-    await deleteTaskCollaborator(task.id, collaboratorId);
-  };
 
   return (
     <div className="flex flex-col h-full bg-[#161412] text-[#F5F2ED] font-satoshi relative overflow-hidden">
@@ -890,25 +834,6 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                 }}
                 className="w-full bg-transparent border-0 outline-none px-3 py-1.5 text-xs text-[#F5F2ED] focus:ring-0 focus:outline-none font-satoshi"
               />
-              <button
-                type="button"
-                onClick={() => {
-                  if (!requirePaidAi()) return;
-                  openUnified('ai-milestone-suggester', {
-                    taskId: task.id,
-                    taskTitle: task.title,
-                    existingMilestones: task.subtasks.map((s) => s.title),
-                  });
-                }}
-                className="p-1.5 text-[#A855F7] hover:text-white rounded-lg hover:bg-[#A855F7]/10 transition-colors flex shrink-0"
-                title={isPaid ? 'AI Autocomplete Milestones' : 'AI milestones — Pro / Teams'}
-              >
-                {isGeneratingSubtasks ? (
-                  <div className="w-4 h-4 border-2 border-[#A855F7] border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Sparkles className="w-4 h-4" />
-                )}
-              </button>
             </div>
           </div>
         )}
@@ -1161,8 +1086,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               borderTop: '1px solid rgba(255, 255, 255, 0.1)',
               maxHeight: '60vh',
               width: '100%',
-              p: 3,
-            },
+              p: 3},
           }}
         >
           <Stack direction="row" alignItems="center" justifyContent="between" sx={{ mb: 3 }}>

@@ -82,12 +82,6 @@ export class WebRTCManager {
   }
 
   private async handleAppwriteSignal(row: any) {
-      const signal = {
-          type: row.type,
-          payload: row.payload,
-          sender: row.senderId,
-          callId: row.callId
-      };
 
       // Basic protection against self-signals if we can identify sender
       // Usually senderId is the peer.
@@ -130,7 +124,7 @@ export class WebRTCManager {
           const currentServers = this.config.iceServers || [];
           const newServers = Array.isArray(iceServers) ? iceServers : [];
           this.config.iceServers = [...currentServers, ...newServers];
-      } catch (err) {
+      } catch (_err) {
           console.warn('[WebRTCManager] Failed to fetch TURN servers, using STUN-only.');
       }
   }
@@ -166,7 +160,7 @@ export class WebRTCManager {
     
     if (this.peerConnection) {
       const senders = this.peerConnection.getSenders();
-      const sender = senders.find(s => s.track?.kind === (kind === 'audioinput' ? 'audio' : 'video'));
+      const sender = senders.find((s: any) => s.track?.kind === (kind === 'audioinput' ? 'audio' : 'video'));
       if (sender) await sender.replaceTrack(newTrack);
     }
 
@@ -185,7 +179,7 @@ export class WebRTCManager {
       const screenTrack = this.screenStream.getVideoTracks()[0];
       
       if (this.peerConnection) {
-        const sender = this.peerConnection.getSenders().find(s => s.track?.kind === 'video');
+        const sender = this.peerConnection.getSenders().find((s: any) => s.track?.kind === 'video');
         if (sender) await sender.replaceTrack(screenTrack);
       }
 
@@ -193,13 +187,13 @@ export class WebRTCManager {
       return this.screenStream;
     } else {
       if (this.screenStream) {
-        this.screenStream.getTracks().forEach(t => t.stop());
+        this.screenStream.getTracks().forEach((t: any) => t.stop());
         this.screenStream = null;
       }
       
       if (this.localStream && this.peerConnection) {
         const videoTrack = this.localStream.getVideoTracks()[0];
-        const sender = this.peerConnection.getSenders().find(s => s.track?.kind === 'video');
+        const sender = this.peerConnection.getSenders().find((s: any) => s.track?.kind === 'video');
         if (sender) await sender.replaceTrack(videoTrack);
       }
       return null;
@@ -302,7 +296,7 @@ export class WebRTCManager {
     };
 
     if (this.localStream) {
-      this.localStream.getTracks().forEach(track => {
+      this.localStream.getTracks().forEach((track: any) => {
         pc.addTrack(track, this.localStream!);
       });
     }
@@ -336,7 +330,7 @@ export class WebRTCManager {
       if (!this.peerConnection) return;
 
       // Push local tracks to Cloudflare
-      const tracks = this.localStream?.getTracks().map(track => ({
+      const tracks = this.localStream?.getTracks().map((track: any) => ({
         location: "local",
         mid: track.kind === 'audio' ? '0' : '1',
         trackName: `${track.kind}-${senderId}`
@@ -456,7 +450,7 @@ export class WebRTCManager {
     if (!this.sfuPeerConnection) return;
     
     // Cloudflare SFU subscription protocol
-    const tracks = trackNames.map(name => ({
+    const tracks = trackNames.map((name: any) => ({
       location: 'remote',
       sessionId: sessionId, // Peer A's session ID
       trackName: name
@@ -479,7 +473,7 @@ export class WebRTCManager {
   }
 
   public async cleanup() {
-    this.localStream?.getTracks().forEach(track => track.stop());
+    this.localStream?.getTracks().forEach((track: any) => track.stop());
     this.peerConnection?.close();
     this.peerConnection = null;
     this.localStream = null;
@@ -496,14 +490,13 @@ export class WebRTCManager {
     // Section 3: The Self-Cleaning Garbage Collection
     if (this.callId) {
         try {
-            const currentUserId = (window as any).__KYLRIX_PULSE__?.$id;
             const res = await databases.listRows(DB_ID, SIGNALS_TABLE, [
                 Query.equal('callId', this.callId)
             ]);
             
             // Concurrent deletions for active signaling blocks
             await Promise.all(
-                res.rows.map(doc => databases.deleteRow(DB_ID, SIGNALS_TABLE, doc.$id))
+                res.rows.map((doc: any) => databases.deleteRow(DB_ID, SIGNALS_TABLE, doc.$id))
             );
             console.log(`[WebRTCManager] Purged ${res.total} signaling rows for call ${this.callId}`);
         } catch (err) {

@@ -50,8 +50,7 @@ const compressImage = (file: File, maxWidth = 512, maxHeight = 512, quality = 0.
             }
             const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
               type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
+              lastModified: Date.now()});
             resolve(compressedFile);
           },
           'image/jpeg',
@@ -175,7 +174,7 @@ export default function ProfileManager({ onProfileUpdate }: ProfileManagerProps)
         setProfilePic(compressed);
         setProfilePicUrl(URL.createObjectURL(compressed));
         setRemovePicRequested(false);
-      } catch (err) {
+      } catch (_err) {
         if (file.size > 1024 * 1024) {
           setError('Maximum file size of 1MB exceeded.');
           return;

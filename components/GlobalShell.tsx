@@ -27,6 +27,7 @@ import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useCallLauncher } from '@/context/CallLauncherContext';
 import { useServiceWorker } from '@/hooks/useServiceWorker';
+import { isFlowPath, isWorkspacesPath, isGoalsSurfacePath } from '@/lib/routing/app-paths';
 
 import { UnifiedLeftSidebar } from '@/components/UnifiedLeftSidebar';
 
@@ -34,7 +35,6 @@ import { UnifiedLeftSidebar } from '@/components/UnifiedLeftSidebar';
 const UnifiedBottomDrawer = dynamic(() => import('./overlays/UnifiedBottomDrawer').then(m => m.UnifiedBottomDrawer), { ssr: false });
 const ProUpgradeDrawer = dynamic(() => import('./overlays/ProUpgradeDrawer').then(m => m.ProUpgradeDrawer), { ssr: false });
 const TaskDialog = dynamic(() => import('@/components/tasks/TaskDialog'), { ssr: false });
-const PasskeyReminderDrawer = dynamic(() => import('./overlays/PasskeyReminderDrawer').then(m => ({ default: m.PasskeyReminderDrawer })), { ssr: false });
 const Overlay = dynamic(() => import('@/components/ui/Overlay'), { ssr: false });
 const DynamicSidebar = dynamic(() => import('./ui/DynamicSidebarPanel').then(m => m.DynamicSidebar), { ssr: false });
 const RightSidebar = dynamic(() => import('./layout/RightSidebar'), { ssr: false });
@@ -51,13 +51,11 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   // 1. Route Analysis
   const isAppRoute = useMemo(() => Boolean(
     pathname?.startsWith('/app') ||
-    pathname?.startsWith('/goals') ||
-    pathname?.startsWith('/forms') ||
-    pathname?.startsWith('/events') ||
+    isFlowPath(pathname) ||
+    isGoalsSurfacePath(pathname) ||
     pathname?.startsWith('/vault') ||
-    pathname?.startsWith('/flow') ||
+    isWorkspacesPath(pathname) ||
     pathname?.startsWith('/connect') ||
-    pathname?.startsWith('/projects') ||
     pathname?.startsWith('/tags') ||
     pathname?.startsWith('/accounts') ||
     pathname?.startsWith('/settings')
@@ -68,14 +66,8 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     return (
       pathname.includes('/shared/') ||
       pathname.startsWith('/goal/') ||
-      pathname.startsWith('/goals/') ||
-      pathname.startsWith('/forms/') ||
       pathname.startsWith('/form/') ||
       pathname.startsWith('/events/') ||
-      pathname.startsWith('/flow/goal/') ||
-      pathname.startsWith('/flow/form/') ||
-      pathname.startsWith('/flow/forms/') ||
-      pathname.startsWith('/flow/events/') ||
       pathname.startsWith('/connect/call/') ||
       pathname.startsWith('/agents/session/') ||
       pathname.startsWith('/agents/chat/') ||
@@ -86,7 +78,6 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   }, [pathname]);
   const isVaultResetRoute = pathname?.startsWith('/vault/reset');
   const isLandingPage = pathname === '/';
-  const isConnectPage = pathname?.startsWith('/connect');
 
   // 2. UI State
   const { activeContent: unifiedDrawerActive, open: openUnified, close: closeUnified } = useUnifiedDrawer();
@@ -108,9 +99,9 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     [pathname],
   );
   const isConnectCallDetail = useMemo(() => Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/)), [pathname]);
-  const isConnectChatPage = useMemo(() => Boolean(pathname?.startsWith('/connect/chats') || pathname?.match(/^\/connect\/chat\/[^/]+$/)), [pathname]);
-  const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/post/')), [pathname]);
-  const isProjectDetailPage = useMemo(() => Boolean(pathname?.match(/^\/projects\/[^/]+$/)), [pathname]);
+
+const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/post/')), [pathname]);
+  const isProjectDetailPage = useMemo(() => Boolean(pathname?.match(/^\/workspaces\/[^/]+$/)), [pathname]);
 
   const showLeftSidebar = useMemo(() => Boolean(
     isAppRoute &&
@@ -248,8 +239,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
               left: 0, 
               right: 0, 
               zIndex: TOPBAR_Z, 
-              pointerEvents: 'none',
-          }}
+              pointerEvents: 'none'}}
         >
           <Box sx={{ pointerEvents: 'auto' }}>
               <ConnectTopbar />

@@ -157,8 +157,7 @@ export const ActivityService = {
             t: 'call',
             id: callId,
             src: source,
-            s: 'live',
-        };
+            s: 'live'};
         return this.updatePresence(userId, 'busy', JSON.stringify(payload));
     },
 

@@ -25,8 +25,7 @@ export async function generateMetadata({
     return buildOgMetadata({
       title: 'Shared chat · Kylrix',
       description: 'This shared chat is not available.',
-      imageUrl: previewImage,
-    });
+      imageUrl: previewImage});
   }
 
   return buildOgMetadata({

@@ -24,8 +24,7 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
     goToPage,
     nextPage,
     previousPage,
-    refresh,
-  } = useConnectMomentsFeed();
+    refresh} = useConnectMomentsFeed();
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => {

@@ -6,8 +6,7 @@ import type { Credentials } from '@/lib/appwrite/types';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import {
   deleteCredential,
-  listAllCredentials,
-} from '@/lib/appwrite';
+  listAllCredentials} from '@/lib/appwrite';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import toast from 'react-hot-toast';
 import CredentialItem from '@/components/app/dashboard/CredentialItem';
@@ -66,22 +65,6 @@ function DashboardPageContent() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
-  const handleMultiDelete = async () => {
-    if (!user?.$id || selectedIds.length === 0) return;
-    setIsMultiDeleting(true);
-    try {
-      await Promise.all(selectedIds.map(id => deleteCredential(id)));
-      setAllCredentials(prev => prev.filter(c => !selectedIds.includes(c.$id)));
-      toast.success(`${selectedIds.length} secret(s) deleted successfully.`);
-      setIsSelectMode(false);
-      setSelectedIds([]);
-    } catch (error: unknown) {
-      toast.error("Failed to delete some secrets.");
-      console.error("Multi-delete error:", error);
-    } finally {
-      setIsMultiDeleting(false);
-    }
-  };
 
   // Handlers
   const handleAdd = useCallback(() => {
@@ -120,8 +103,7 @@ function DashboardPageContent() {
           await db.cache.upsert({
             id: cacheKey,
             data: credentials as any,
-            timestamp: Date.now(),
-          }).catch(() => {});
+            timestamp: Date.now()}).catch(() => {});
         }
       } catch {}
     } catch (error: unknown) {
@@ -267,7 +249,7 @@ function DashboardPageContent() {
         setAllCredentials((prev) => prev.map((c) => (c.$id === id ? { ...c, isPinned: nextPinned } : c)));
       }
       toast.success(nextPinned ? 'Pinned to top' : 'Unpinned');
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
       if (!isOwner) {
         setLocalPin('credential', id, currentlyPinned);
       }
@@ -334,8 +316,7 @@ function DashboardPageContent() {
         style={{
           filter: showMasterPassDrawer ? 'blur(8px)' : 'none',
           pointerEvents: showMasterPassDrawer ? 'none' : 'auto',
-          opacity: showMasterPassDrawer ? 0.3 : 1,
-        }}
+          opacity: showMasterPassDrawer ? 0.3 : 1}}
       >
         <MultiSectionContainer panels={['note', 'totp', 'projects']}>
           <div>

@@ -36,7 +36,6 @@ import { useTask } from '@/context/TaskContext';
 const SURFACE_ASH = '#161412';
 const VOID = '#0A0908';
 const HOVER = '#1C1A18';
-const LIFTED = '#1F1D1B';
 const BORDER_HAIRLINE = '#34322F';
 const TEXT_MUTED = '#9B9691';
 const SYSTEM_PRIMARY = '#6366F1';
@@ -45,7 +44,6 @@ const SYSTEM_HOVER = '#575CF0';
 const BORDER = `1px solid ${BORDER_HAIRLINE}`;
 const BRAND_TRANSITION = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
 const RADIUS_LARGE = '24px';
-const RADIUS_MEDIUM = '16px';
 const RADIUS_SMALL = '12px';
 
 const predefinedColors = [
@@ -81,8 +79,7 @@ export function NewTagDrawer() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    color: '#6366F1',
-  });
+    color: '#6366F1'});
   const [isHydrated, setIsHydrated] = useState(false);
 
   // Load draft when drawer opens
@@ -119,14 +116,12 @@ export function NewTagDrawer() {
         setFormData({
           name: editingTag.name || '',
           description: editingTag.description || '',
-          color: editingTag.color || '#6366F1',
-        });
+          color: editingTag.color || '#6366F1'});
       } else {
         setFormData({
           name: '',
           description: '',
-          color: '#6366F1',
-        });
+          color: '#6366F1'});
       }
       setError(null);
     }
@@ -150,8 +145,7 @@ export function NewTagDrawer() {
       color: formData.color,
       userId: user.$id,
       $createdAt: editingTag?.$createdAt || now,
-      $updatedAt: now,
-    } as any;
+      $updatedAt: now} as any;
 
     pushLiveTag(liveTag);
 
@@ -160,14 +154,12 @@ export function NewTagDrawer() {
         await updateTag(editingTag.$id, {
           name: tagName,
           description: formData.description.trim(),
-          color: formData.color,
-        });
+          color: formData.color});
       } else {
         await createTag({
           name: tagName,
           description: formData.description.trim(),
-          color: formData.color,
-        });
+          color: formData.color});
       }
       
       if (!editingTag && typeof window !== 'undefined') {
@@ -199,8 +191,7 @@ export function NewTagDrawer() {
       color: formData.color,
       userId: user.$id,
       $createdAt: editingTag?.$createdAt || now,
-      $updatedAt: now,
-    } as any;
+      $updatedAt: now} as any;
 
     pushLiveTag(liveTag);
 
@@ -210,14 +201,12 @@ export function NewTagDrawer() {
         savedTag = await updateTag(editingTag.$id, {
           name: tagName,
           description: formData.description.trim(),
-          color: formData.color,
-        });
+          color: formData.color});
       } else {
         savedTag = await createTag({
           name: tagName,
           description: formData.description.trim(),
-          color: formData.color,
-        });
+          color: formData.color});
       }
       
       if (!editingTag && typeof window !== 'undefined') {
@@ -274,8 +263,7 @@ export function NewTagDrawer() {
                 borderTopRightRadius: RADIUS_LARGE,
                 border: BORDER,
                 borderBottom: 0,
-                zIndex: 2000,
-              }),
+                zIndex: 2000}),
           bgcolor: SURFACE_ASH,
           boxShadow: 'none',
           backgroundImage: 'none',
@@ -306,8 +294,7 @@ export function NewTagDrawer() {
                 display: 'grid',
                 placeItems: 'center',
                 bgcolor: VOID,
-                border: BORDER,
-              }}
+                border: BORDER}}
             >
               <TagIcon size={20} color={SYSTEM_PRIMARY} strokeWidth={2} />
             </Box>
@@ -317,8 +304,7 @@ export function NewTagDrawer() {
                 fontWeight: 900,
                 fontSize: '1.25rem',
                 fontFamily: fontDisplay,
-                letterSpacing: '-0.02em',
-              }}
+                letterSpacing: '-0.02em'}}
             >
               {editingTag ? 'Edit Tag' : 'New Tag'}
             </Typography>

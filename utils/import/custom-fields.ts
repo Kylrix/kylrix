@@ -1,7 +1,7 @@
 import type { BitwardenCustomField } from "./bitwarden-types";
 import { BITWARDEN_FIELD_TYPES } from "./bitwarden-types";
 
-export interface ProcessedCustomField {
+interface ProcessedCustomField {
   name: string;
   value: string;
   type: "text" | "hidden" | "boolean" | "linked";
@@ -45,7 +45,7 @@ export function processCustomFields(
 
   // Create a serialized version for storage
   const serialized = JSON.stringify(
-    processedFields.map((field) => ({
+    processedFields.map((field: any) => ({
       name: field.name,
       value: field.value,
       type: field.type,
@@ -99,7 +99,7 @@ function isSensitiveField(field: BitwardenCustomField): boolean {
   return sensitivePatterns.some((pattern) => pattern.test(field.name));
 }
 
-export function extractFieldValue(
+function extractFieldValue(
   fields: ProcessedCustomField[],
   fieldName: string,
 ): string | null {
@@ -109,27 +109,27 @@ export function extractFieldValue(
   return field ? field.value : null;
 }
 
-export function getFieldsByType(
+function getFieldsByType(
   fields: ProcessedCustomField[],
   type: "text" | "hidden" | "boolean" | "linked",
 ): ProcessedCustomField[] {
   return fields.filter((field) => field.type === type);
 }
 
-export function getSensitiveFields(
+function getSensitiveFields(
   fields: ProcessedCustomField[],
 ): ProcessedCustomField[] {
   return fields.filter((field) => field.sensitive);
 }
 
-export function getNonSensitiveFields(
+function getNonSensitiveFields(
   fields: ProcessedCustomField[],
 ): ProcessedCustomField[] {
   return fields.filter((field) => !field.sensitive);
 }
 
 // Common field name mappings for better organization
-export const COMMON_FIELD_MAPPINGS = {
+const COMMON_FIELD_MAPPINGS = {
   // Security-related
   "Security Question": "security_question",
   "Security Answer": "security_answer",
@@ -156,7 +156,7 @@ export const COMMON_FIELD_MAPPINGS = {
   Host: "host",
 } as const;
 
-export function normalizeFieldName(name: string): string {
+function normalizeFieldName(name: string): string {
   // Check if it matches a common mapping
   const mapping =
     COMMON_FIELD_MAPPINGS[name as keyof typeof COMMON_FIELD_MAPPINGS];

@@ -9,7 +9,6 @@ import { NotesProvider } from '@/context/NotesContext';
 import { BackgroundTaskProvider } from '@/context/BackgroundTaskContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { SourceProvider } from '@/lib/source-context';
-import { PotatoProvider } from '@/components/providers/PotatoProvider';
 import { ProfileProvider } from '@/components/providers/ProfileProvider';
 import { UnifiedDrawerProvider } from '@/context/UnifiedDrawerContext';
 import { NoteDrawerProvider } from '@/context/NoteDrawerContext';
@@ -64,7 +63,6 @@ const ecosystemProvidersList: Array<React.ComponentType<{ children: ReactNode }>
   NoteDrawerProvider,
   LoginDrawerProvider,
   ContextMenuWrapper,
-  PotatoProvider,
   TokenOpsProvider,
   ChatNotificationProvider,
   EcosystemStateTracker,

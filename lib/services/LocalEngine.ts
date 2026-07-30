@@ -37,8 +37,7 @@ export const LocalEngine = {
       await db.cache.upsert({
         id,
         data: data as any,
-        timestamp: Date.now(),
-      }).catch(() => {});
+        timestamp: Date.now()}).catch(() => {});
     } catch (_err) {
       // Non-blocking storage
     }

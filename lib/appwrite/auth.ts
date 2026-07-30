@@ -4,9 +4,9 @@ import { APPWRITE_CONFIG } from './config';
 
 export const CONNECT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 export const CONNECT_TABLE_ID_USERS = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
-export const VAULT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.VAULT;
-export const VAULT_TABLE_ID_KEYCHAIN = APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN;
-export const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+const VAULT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.VAULT;
+const VAULT_TABLE_ID_KEYCHAIN = APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN;
+const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
 
 type ProfileRow = Models.Row & {
   userId?: string | null;
@@ -29,7 +29,7 @@ function parsePreferences(raw: unknown): Record<string, any> {
 }
 
 function buildReferralLink(username: string): string {
-  const path = `/accounts/login#refer=${encodeURIComponent(username)}`;
+  const path = `/#refer=${encodeURIComponent(username)}`;
   return typeof window !== 'undefined' ? new URL(path, window.location.origin).toString() : path;
 }
 
@@ -232,8 +232,7 @@ export class AppwriteService {
               Query.startsWith('displayName', text)
             ]),
             Query.limit(limit)
-          ],
-        });
+          ]});
 
         const merged = new Map<string, ProfileRow>();
         for (const row of res.rows) {
@@ -241,19 +240,17 @@ export class AppwriteService {
           if (key && !merged.has(key)) merged.set(key, row);
         }
         return Array.from(merged.values());
-      } catch (e: any) {
+      } catch (_e: any) {
         // Fallback: Individual startsWith queries
         const [byUsername, byDisplayName] = await Promise.all([
           tablesDB.listRows<ProfileRow>({
             databaseId: CONNECT_DATABASE_ID,
             tableId,
-            queries: [Query.startsWith('username', text.toLowerCase()), Query.limit(limit)],
-          }),
+            queries: [Query.startsWith('username', text.toLowerCase()), Query.limit(limit)]}),
           tablesDB.listRows<ProfileRow>({
             databaseId: CONNECT_DATABASE_ID,
             tableId,
-            queries: [Query.startsWith('displayName', text), Query.limit(limit)],
-          })]);
+            queries: [Query.startsWith('displayName', text), Query.limit(limit)]})]);
 
         const merged = new Map<string, ProfileRow>();
         for (const row of [...byUsername.rows, ...byDisplayName.rows]) {
@@ -276,8 +273,7 @@ export class AppwriteService {
         hasReferral: false,
         referralLink: null,
         referrer: null,
-        currentUsername: null,
-      };
+        currentUsername: null};
     }
 
     const profileStatus = await this.getGlobalProfileStatus(currentUser.$id);
@@ -304,8 +300,7 @@ export class AppwriteService {
         username: String(referrerUsername),
         userId: referrerUserId,
         displayName: referralSource.displayName || null,
-        avatar: referralSource.avatar || null,
-      };
+        avatar: referralSource.avatar || null};
     }
 
     return {
@@ -313,8 +308,7 @@ export class AppwriteService {
       hasReferral: Boolean(referrerUsername || referrerUserId),
       referralLink: currentUsername ? buildReferralLink(String(currentUsername).replace(/^@+/, '')) : null,
       referrer,
-      currentUsername,
-    };
+      currentUsername};
   }
 
   static async applyReferral(referrerUsername: string, referrerUserId?: string): Promise<any> {
@@ -351,13 +345,11 @@ export class AppwriteService {
         userId: referrer.userId || referrerUserId || null,
         displayName: referrer.displayName || null,
         avatar: referrer.avatar || null,
-        linkedAt: new Date().toISOString(),
-      },
+        linkedAt: new Date().toISOString()},
     };
 
     await tablesDB.updateRow(CONNECT_DATABASE_ID, APPWRITE_CONFIG.TABLES.CONNECT.PROFILES, profile.$id, {
-      preferences: JSON.stringify(nextPrefs),
-    });
+      preferences: JSON.stringify(nextPrefs)});
 
     return {
       success: true,
@@ -367,8 +359,7 @@ export class AppwriteService {
         userId: referrer.userId || referrerUserId || referrer.$id,
         username: String(referrer.username || candidate).replace(/^@+/, ''),
         displayName: referrer.displayName || null,
-        avatar: referrer.avatar || null,
-      },
+        avatar: referrer.avatar || null},
       referralEvent: nextPrefs.referral,
       currentUsername: profile.username || currentUser?.prefs?.username || currentUser?.username || null,
     };
@@ -448,7 +439,7 @@ export class AppwriteService {
               newUsername: data.newUsername
             }).slice(0, 990),
           }
-        ).catch((dbErr) => {
+        ).catch((dbErr: any) => {
           console.warn('[recordProfileEvent] Gracefully skipped database logging:', dbErr?.message || dbErr);
         });
       }

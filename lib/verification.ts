@@ -47,18 +47,8 @@ export function getVerificationState(preferences: PreferencesLike): Verification
   return toVerificationState(parsed.verification);
 }
 
-export function formatVerificationTooltip(verification: VerificationState): string {
-  if (verification.verified) {
-    const verifiedOn = verification.verifiedOn || verification.checkedAt;
-    return verifiedOn ? `Verified on ${new Date(verifiedOn).toLocaleString()}` : 'Verified';
-  }
 
-  return verification.checkedAt
-    ? `Last checked ${new Date(verification.checkedAt).toLocaleString()}`
-    : 'Verification not available';
-}
-
-export function mergeVerificationPreferences(
+function mergeVerificationPreferences(
   preferences: PreferencesLike,
   verification: Partial<VerificationState>,
 ) {

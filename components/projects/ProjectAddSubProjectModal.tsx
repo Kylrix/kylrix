@@ -40,8 +40,7 @@ export default function ProjectAddSubProjectModal({
   open,
   onClose,
   projectId,
-  onAdded,
-}: ProjectAddSubProjectModalProps) {
+  onAdded}: ProjectAddSubProjectModalProps) {
   const theme = useTheme();
   const { showSuccess, showError } = useToast();
   const { open: openUnified } = useUnifiedDrawer();
@@ -63,8 +62,7 @@ export default function ProjectAddSubProjectModal({
       const rows = await warmProjectsList({
         userId: user.$id,
         getCachedDataAsync,
-        fetchOptimized,
-      });
+        fetchOptimized});
       const filtered = rows.filter((p: any) => p.$id !== projectId);
       setProjects(filtered);
     } catch (err) {

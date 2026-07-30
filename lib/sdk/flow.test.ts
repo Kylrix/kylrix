@@ -6,8 +6,7 @@ describe('KylrixFlow', () => {
     const mockSdk = {
       createRow: vi.fn().mockImplementation(async (db, table, data) => ({
         $id: 'task-123',
-        ...data,
-      })),
+        ...data})),
     };
 
     const flow = new KylrixFlow(mockSdk);
@@ -23,8 +22,7 @@ describe('KylrixFlow', () => {
       title: 'Finish Unit Tests',
       userId: 'user-789',
       status: 'pending',
-      priority: 'medium',
-    }));
+      priority: 'medium'}));
     expect(result).toHaveProperty('$id', 'task-123');
     expect(result).toHaveProperty('createdAt');
   });
@@ -33,8 +31,7 @@ describe('KylrixFlow', () => {
     const mockSdk = {
       createRow: vi.fn().mockImplementation(async (db, table, data) => ({
         $id: 'task-123',
-        ...data,
-      })),
+        ...data})),
     };
 
     const flow = new KylrixFlow(mockSdk);
@@ -51,8 +48,7 @@ describe('KylrixFlow', () => {
       title: 'High Priority Goal',
       userId: 'user-789',
       status: 'completed',
-      priority: 'high',
-    }));
+      priority: 'high'}));
     expect(result.status).toBe('completed');
     expect(result.priority).toBe('high');
   });
@@ -61,8 +57,7 @@ describe('KylrixFlow', () => {
     const mockSdk = {
       createRow: vi.fn().mockImplementation(async (db, table, data) => ({
         $id: 'session-123',
-        ...data,
-      })),
+        ...data})),
     };
 
     const flow = new KylrixFlow(mockSdk);
@@ -73,8 +68,7 @@ describe('KylrixFlow', () => {
     expect(mockSdk.createRow).toHaveBeenCalledWith('db-id', 'table-id', expect.objectContaining({
       userId: 'user-789',
       taskId: 'task-123',
-      status: 'active',
-    }));
+      status: 'active'}));
     expect(result).toHaveProperty('$id', 'session-123');
     expect(result).toHaveProperty('startTime');
   });

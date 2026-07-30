@@ -357,8 +357,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     verifyEmailOTP,
     verifyMFA,
     getJWT,
-    updatePreferences,
-  }), [user, isLoading, isAuthenticating, logout, refreshUser, openIDMWindow, idmWindowOpen, loginWithEmailOTP, verifyEmailOTP, verifyMFA, getJWT, updatePreferences]);
+    updatePreferences}), [user, isLoading, isAuthenticating, logout, refreshUser, openIDMWindow, idmWindowOpen, loginWithEmailOTP, verifyEmailOTP, verifyMFA, getJWT, updatePreferences]);
 
   return (
     <AuthContext.Provider value={value}>

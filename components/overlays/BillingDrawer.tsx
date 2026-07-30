@@ -20,8 +20,8 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { AppwriteService } from '@/lib/appwrite';
 import { account } from '@/lib/appwrite/client';
-import { getMyCouponsAction } from '@/app/(app)/(auth)/accounts/actions/coupons';
-import { listBillingTransactionsAction } from '@/app/(app)/(auth)/accounts/actions/billing';
+import { getMyCouponsAction } from '@/lib/actions/billing/coupons';
+import { listBillingTransactionsAction } from '@/lib/actions/billing/billing';
 
 interface BillingDrawerProps {
   isOpen: boolean;
@@ -126,7 +126,7 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
       }
       if (!recipientUserId) throw new Error('No matching account found for that username or user ID.');
       const normalizedMonths = Math.max(1, Number.parseInt(giftMonths || '1', 10) || 1);
-      const checkoutUrl = new URL(`${window.location.origin}/accounts/subscription/pro/checkout`);
+      const checkoutUrl = new URL(`${window.location.origin}/billing/checkout`);
       checkoutUrl.searchParams.set('giftRecipientId', recipientUserId);
       checkoutUrl.searchParams.set('giftRecipientName', recipientLabel || recipientUserId);
       checkoutUrl.searchParams.set('months', String(normalizedMonths));
@@ -339,7 +339,7 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
                       type="button"
                       onClick={() => {
                         onClose();
-                        router.push(`/accounts/coupon/${coupon.$id}`);
+                        router.push(`/billing/coupon/${coupon.$id}`);
                       }}
                       className="flex justify-between items-center bg-white/[0.02] border border-[#10B981]/20 hover:border-[#10B981]/40 hover:bg-[#10B981]/5 p-3.5 rounded-xl transition-all text-left cursor-pointer group w-full"
                     >

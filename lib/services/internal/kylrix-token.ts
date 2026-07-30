@@ -6,8 +6,7 @@ import {
   createKylrixTokenContract,
   type KylrixActivitySignal,
   type KylrixActivityType,
-  type KylrixTokenEventType,
-} from '@/lib/sdk/token';
+  type KylrixTokenEventType} from '@/lib/sdk/token';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.KYLRIX_TOKEN_LEDGER;
@@ -63,8 +62,7 @@ async function getStateRow() {
     return await ledgerTables().getRow({
       databaseId: DB_ID,
       tableId: TABLE_ID,
-      rowId: STATE_ROW_ID,
-    });
+      rowId: STATE_ROW_ID});
   } catch {
     return null;
   }
@@ -98,8 +96,7 @@ async function updateStateRow(patch: Partial<TokenStateRow>) {
     data: {
       ...current,
       ...patch,
-      updatedAt: nowIso(),
-    },
+      updatedAt: nowIso()},
   });
 }
 
@@ -112,15 +109,13 @@ async function listUserEventsDescending(userId: string, limit: number) {
     const res = await tables.listRows({
       databaseId: DB_ID,
       tableId: TABLE_ID,
-      queries: [...base, Query.orderDesc('$createdAt'), Query.limit(limit)],
-    });
+      queries: [...base, Query.orderDesc('$createdAt'), Query.limit(limit)]});
     return res.rows ?? [];
   } catch {
     const res = await tables.listRows({
       databaseId: DB_ID,
       tableId: TABLE_ID,
-      queries: [...base, Query.orderDesc('createdAt'), Query.limit(limit)],
-    });
+      queries: [...base, Query.orderDesc('createdAt'), Query.limit(limit)]});
     return res.rows ?? [];
   }
 }
@@ -141,8 +136,7 @@ async function getLatestBalanceMicro(userId: string) {
       const res = await tables.listRows({
         databaseId: DB_ID,
         tableId: TABLE_ID,
-        queries,
-      });
+        queries});
       for (const doc of res.rows ?? []) {
         const bal = (doc as any)?.balanceAfterMicro;
         if (bal === null || bal === undefined) continue;
@@ -174,8 +168,7 @@ async function getUserDailyMinted(userId: string) {
       Query.equal('userId', userId),
       Query.equal('eventType', 'mint_activity'),
       Query.greaterThanEqual('createdAt', since.toISOString()),
-      Query.limit(5000)],
-  });
+      Query.limit(5000)]});
   return (rows ?? []).reduce((sum, doc: any) => sum + asMicro(doc.amountMicro), 0n);
 }
 
@@ -189,8 +182,7 @@ async function getRecentUserMintActivityCount(userId: string, windowHours = 24) 
       Query.equal('userId', userId),
       Query.equal('eventType', 'mint_activity'),
       Query.greaterThanEqual('createdAt', since),
-      Query.limit(200)],
-  });
+      Query.limit(200)]});
   return rows?.length ?? 0;
 }
 
@@ -228,8 +220,7 @@ async function getRecentSystemVolume(windowMinutes: number) {
     queries: [
       Query.equal('rowType', 'event'),
       Query.greaterThanEqual('createdAt', since),
-      Query.limit(5000)],
-  });
+      Query.limit(5000)]});
   return rows?.length ?? 0;
 }
 
@@ -240,8 +231,7 @@ async function ensureNoDuplicateIdempotency(idempotencyKey: string) {
     queries: [
       Query.equal('rowType', 'event'),
       Query.equal('idempotencyKey', idempotencyKey),
-      Query.limit(1)],
-  });
+      Query.limit(1)]});
   return rows?.[0] || null;
 }
 
@@ -320,9 +310,8 @@ async function notifyTokenTransferReceived(input: {
       toUserId: input.toUserId,
       amountMicro: toMicro(input.amountMicro),
       sourceType: input.sourceType,
-      sourceId: input.sourceId,
-    },
-  }).catch((error) => {
+      sourceId: input.sourceId},
+  }).catch((error: any) => {
     console.error('[KYLRIX Token] Failed to dispatch transfer email', error);
   });
 }
@@ -332,8 +321,7 @@ export const InternalKylrixTokenService = {
     const state = await getStateRow();
     return {
       initialized: isInitialized(state),
-      state: state || null,
-    };
+      state: state || null};
   },
 
   async initializeState() {
@@ -392,16 +380,14 @@ export const InternalKylrixTokenService = {
       accountAgeDays: 0,
       recentActivityCount,
       userBaseCount,
-      thermalScore,
-    };
+      thermalScore};
 
     const decision = contract.decideMintForActivity(
       {
         mintedMicro: asMicro(state.totalMintedMicro),
         burnedMicro: asMicro(state.totalBurnedMicro),
         genesisAt: state.genesisAt || null,
-        nowIso: nowIso(),
-      },
+        nowIso: nowIso()},
       signal,
       userDailyMinted,
     );
@@ -439,16 +425,14 @@ export const InternalKylrixTokenService = {
       circulatingMicro: toMicro(minted - burned),
       lastActivityAt: nowIso(),
       riskLevel: recentVolume >= contract.policy.spikeEventThreshold ? 'tightened' : 'normal',
-      lastSpikeAt: recentVolume >= contract.policy.spikeEventThreshold ? nowIso() : state.lastSpikeAt,
-    });
+      lastSpikeAt: recentVolume >= contract.policy.spikeEventThreshold ? nowIso() : state.lastSpikeAt});
 
     return {
       accepted: true,
       event,
       amountMicro: toMicro(decision.amountMicro),
       amount: toToken(decision.amountMicro),
-      symbol: contract.policy.symbol,
-    };
+      symbol: contract.policy.symbol};
   },
 
   async transfer(input: {
@@ -505,8 +489,7 @@ export const InternalKylrixTokenService = {
       amountMicro: amount,
       sourceType: input.sourceType,
       sourceId: input.sourceId,
-      idempotencyKey: input.idempotencyKey,
-    });
+      idempotencyKey: input.idempotencyKey});
     return { accepted: true, debit, credit, amountMicro: toMicro(amount), amount: toToken(amount), symbol: contract.policy.symbol };
   },
 
@@ -562,8 +545,7 @@ export const InternalKylrixTokenService = {
     await updateStateRow({
       rootBalanceMicro: toMicro(rootBalance + fineAmount),
       lastActivityAt: nowIso(),
-      riskLevel: state.riskLevel,
-    });
+      riskLevel: state.riskLevel});
 
     return {
       accepted: true,
@@ -571,8 +553,7 @@ export const InternalKylrixTokenService = {
       credit,
       finedAmountMicro: toMicro(fineAmount),
       finedAmount: toToken(fineAmount),
-      symbol: contract.policy.symbol,
-    };
+      symbol: contract.policy.symbol};
   },
 
   async lockClaim(input: {
@@ -609,8 +590,7 @@ export const InternalKylrixTokenService = {
       event,
       lockedAmountMicro: toMicro(amount),
       lockedAmount: toToken(amount),
-      symbol: contract.policy.symbol,
-    };
+      symbol: contract.policy.symbol};
   },
 
   async settleClaim(input: {
@@ -638,8 +618,7 @@ export const InternalKylrixTokenService = {
       metadata: {
         destinationWallet: input.destinationWallet,
         chain: input.chain,
-        onchainTxHash: input.onchainTxHash,
-      },
+        onchainTxHash: input.onchainTxHash},
     });
 
     const nextBurned = asMicro(state.totalBurnedMicro) + amount;
@@ -647,8 +626,7 @@ export const InternalKylrixTokenService = {
     await updateStateRow({
       totalBurnedMicro: toMicro(nextBurned),
       circulatingMicro: toMicro(nextMinted - nextBurned),
-      lastActivityAt: nowIso(),
-    });
+      lastActivityAt: nowIso()});
 
     return {
       accepted: true,
@@ -656,8 +634,7 @@ export const InternalKylrixTokenService = {
       settledAmountMicro: toMicro(amount),
       settledAmount: toToken(amount),
       symbol: contract.policy.symbol,
-      onchainTxHash: input.onchainTxHash,
-    };
+      onchainTxHash: input.onchainTxHash};
   },
 
   async listUserLedger(userId: string, limit = 100) {
@@ -671,8 +648,7 @@ export const InternalKylrixTokenService = {
           Query.equal('rowType', 'event'),
           Query.equal('userId', userId),
           Query.orderDesc('$createdAt'),
-          Query.limit(capped)],
-      });
+          Query.limit(capped)]});
       return result.rows ?? [];
     } catch {
       const result = await tables.listRows({
@@ -682,8 +658,7 @@ export const InternalKylrixTokenService = {
           Query.equal('rowType', 'event'),
           Query.equal('userId', userId),
           Query.orderDesc('createdAt'),
-          Query.limit(capped)],
-      });
+          Query.limit(capped)]});
       return result.rows ?? [];
     }
   },
@@ -694,7 +669,6 @@ export const InternalKylrixTokenService = {
       userId,
       amountMicro: toMicro(balanceMicro),
       amount: toToken(balanceMicro),
-      symbol: contract.policy.symbol,
-    };
+      symbol: contract.policy.symbol};
   },
 };

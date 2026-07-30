@@ -39,10 +39,3 @@ export function SpineProvider({ children }: { children: ReactNode }) {
   return <SpineContext.Provider value={value}>{children}</SpineContext.Provider>;
 }
 
-export function useSpine() {
-  const ctx = useContext(SpineContext);
-  if (!ctx) {
-    throw new Error('useSpine must be used within a SpineProvider');
-  }
-  return ctx;
-}

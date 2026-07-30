@@ -100,10 +100,3 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   return <SecurityContext.Provider value={value}>{children}</SecurityContext.Provider>;
 }
 
-export function useSecurity() {
-  const ctx = useContext(SecurityContext);
-  if (!ctx) {
-    throw new Error('useSecurity must be used within a SecurityProvider');
-  }
-  return ctx;
-}

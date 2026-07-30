@@ -20,4 +20,3 @@ export const SweptService = {
   },
 };
 
-export const SWEPT_TABLE_ID = APPWRITE_CONFIG.TABLES.SWEPT || 'swept';

@@ -26,9 +26,9 @@ import { decryptGhostData, decryptGhostBinaryFromBytes } from '@/lib/encryption/
 import { LinkPreviewCard } from '@/components/common/LinkPreviewCard';
 import { storage } from '@/lib/appwrite/client';
 
-export type SendPasswordPayload = any;
-export type SendTotpPayload = any;
-export type SendFilePayload = any;
+type SendPasswordPayload = any;
+type SendTotpPayload = any;
+type SendFilePayload = any;
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { usePresence } from '@/components/providers/PresenceProvider';
@@ -120,11 +120,9 @@ export function VoiceNotePlayer({ fileId, audioSrc }: { fileId: string; audioSrc
           bgcolor: '#1F1D1B',
           borderColor: 'rgba(255, 255, 255, 0.16)',
           transform: 'translateY(-1px)',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
-        },
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)'},
         '&:active': {
-          transform: 'translateY(0)',
-        }
+          transform: 'translateY(0)'}
       }}
     >
       <IconButton
@@ -136,8 +134,7 @@ export function VoiceNotePlayer({ fileId, audioSrc }: { fileId: string; audioSrc
           color: isPlaying ? '#6366F1' : '#fff',
           border: `1px solid ${isPlaying ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255, 255, 255, 0.08)'}`,
           '&:hover': {
-            bgcolor: isPlaying ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.1)',
-          }
+            bgcolor: isPlaying ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.1)'}
         }}
       >
         {isPlaying ? <Pause size={14} fill={isPlaying ? '#6366F1' : 'none'} /> : <Play size={14} fill="#fff" />}
@@ -194,7 +191,7 @@ export function VoiceNotePlayer({ fileId, audioSrc }: { fileId: string; audioSrc
   );
 }
 
-export function VaultTotpLink({ href, children }: { href: string; children?: React.ReactNode }) {
+function VaultTotpLink({ href, children }: { href: string; children?: React.ReactNode }) {
   const credentialId = href.replace('source:kylrixvault:', '');
   const { user, isVaultUnlocked } = useAppwriteVault();
   const { getCachedData } = useDataNexus();
@@ -275,7 +272,7 @@ export function VaultTotpLink({ href, children }: { href: string; children?: Rea
             fetchedTotpId = cred.totpId;
           }
         }
-      } catch (e) {
+      } catch (_e) {
         // Not a credential ID, or credential load failed; we will try to fetch directly as a totpSecret
       }
 
@@ -347,13 +344,11 @@ export function VaultTotpLink({ href, children }: { href: string; children?: Rea
               p: 2,
               minWidth: '220px',
               maxWidth: '300px',
-              color: '#fff',
-            }
+              color: '#fff'}
           },
           arrow: {
             sx: {
-              color: 'rgba(10, 9, 8, 0.95)',
-            }
+              color: 'rgba(10, 9, 8, 0.95)'}
           }
         }}
         title={
@@ -393,8 +388,7 @@ export function VaultTotpLink({ href, children }: { href: string; children?: Rea
                     transition: 'all 0.2s',
                     '&:hover': {
                       borderColor: '#10B981',
-                      bgcolor: 'rgba(16, 185, 129, 0.05)',
-                    }
+                      bgcolor: 'rgba(16, 185, 129, 0.05)'}
                   }}
                 >
                   Unlock Vault
@@ -440,8 +434,7 @@ export function VaultTotpLink({ href, children }: { href: string; children?: Rea
                       sx={{
                         color: timeRemaining <= 5 ? '#EF4444' : '#10B981',
                         '& .ob-spinner-circle': {
-                          strokeLinecap: 'round',
-                        }
+                          strokeLinecap: 'round'}
                       }}
                     />
                   </Box>
@@ -456,8 +449,7 @@ export function VaultTotpLink({ href, children }: { href: string; children?: Rea
                       p: 0.5,
                       '&:hover': {
                         color: '#fff',
-                        bgcolor: 'rgba(255, 255, 255, 0.1)',
-                      }
+                        bgcolor: 'rgba(255, 255, 255, 0.1)'}
                     }}
                   >
                     {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -520,82 +512,6 @@ export function VaultTotpLink({ href, children }: { href: string; children?: Rea
  * Custom link component for ReactMarkdown that styles links in Electric Teal
  * Intercepts voice: schema to render high-fidelity audio voice note players inline.
  */
-export function LinkComponent({ href, children }: { href?: string; children?: React.ReactNode }) {
-  if (!href) return <span>{children}</span>;
-
-  if (href.startsWith('voice:')) {
-    const fileId = href.replace('voice:', '');
-    return <VoiceNotePlayer fileId={fileId} />;
-  }
-
-  if (href.startsWith('source:kylrixvault:')) {
-    return <VaultTotpLink href={href}>{children}</VaultTotpLink>;
-  }
-
-  if (href.startsWith('source:kylrixflow:') || href.startsWith('source:kylrixgoal:')) {
-    return <FlowPresencePulseLink href={href}>{children}</FlowPresencePulseLink>;
-  }
-
-  // Parse for `/flow/form/[id]` internal or absolute kylrix form links
-  const formUrlMatch = href.match(/(?:\/flow\/form\/|source:kylrixform:)([a-zA-Z0-9_-]+)/);
-  if (formUrlMatch) {
-    const formId = formUrlMatch[1];
-    return <KylrixFormBadgeLink href={href} formId={formId}>{children}</KylrixFormBadgeLink>;
-  }
-
-  // Parse for `/send/[id]/[key]` or `/send/[id]`
-  const sendMatch = href.match(/\/send\/([a-zA-Z0-9_-]+)(?:\/([a-zA-Z0-9_-]+))?/);
-  if (sendMatch) {
-    const noteId = sendMatch[1];
-    const keyParam = sendMatch[2] || null;
-    return <SendRelayPreviewCard href={href} noteId={noteId} keyParam={keyParam}>{children}</SendRelayPreviewCard>;
-  }
-
-  // Render native link preview card for standard external URLs
-  if (href.startsWith('http://') || href.startsWith('https://')) {
-    return <LinkPreviewCard url={href} />;
-  }
-
-  return (
-    <Link
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
-        // Intercept form links if they are standard absolute links on kylrix domains
-        if (href.includes('/flow/form/')) {
-          const match = href.match(/\/flow\/form\/([a-zA-Z0-9_-]+)/);
-          if (match) {
-            e.preventDefault();
-            e.stopPropagation();
-// eslint-disable-next-line react-hooks/rules-of-hooks
-            const { open } = useUnifiedDrawer();
-            open('form', { formId: match[1] });
-            return;
-          }
-        }
-        e.stopPropagation();
-      }}
-      sx={{
-        color: '#6366F1',
-        textDecoration: 'none',
-        fontWeight: 700,
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        borderBottom: '1px solid transparent',
-        '&:hover': {
-          color: alpha('#6366F1', 0.8),
-          borderBottomColor: alpha('#6366F1', 0.4),
-          bgcolor: alpha('#6366F1', 0.05),
-          borderRadius: '4px',
-          px: 0.5,
-          mx: -0.5
-        }
-      }}
-    >
-      {children}
-    </Link>
-  );
-}
 
 interface SendFlapOverProps {
   isOpen: boolean;
@@ -606,11 +522,10 @@ interface SendFlapOverProps {
   decryptedTitle: string;
 }
 
-export function SendFlapOver({
+function SendFlapOver({
   isOpen,
   onClose,
   note,
-  noteId,
   keyParam,
   decryptedTitle
 }: SendFlapOverProps) {
@@ -768,8 +683,7 @@ export function SendFlapOver({
         backdrop: {
           sx: {
             bgcolor: 'rgba(0, 0, 0, 0.4)',
-            backdropFilter: 'blur(4px)',
-          }
+            backdropFilter: 'blur(4px)'}
         }
       }}
       PaperProps={{
@@ -1034,12 +948,9 @@ export function SendFlapOver({
   );
 }
 
-export function SendRelayPreviewCard({
-  href,
+function SendRelayPreviewCard({
   noteId,
-  keyParam,
-  children
-}: {
+  keyParam}: {
   href: string;
   noteId: string;
   keyParam: string | null;
@@ -1091,7 +1002,7 @@ export function SendRelayPreviewCard({
 
       setDecryptedTitle(title);
       setCachedData(cacheKey, { note: data, title });
-    } catch (err) {
+    } catch (_err) {
       setError('Error');
     } finally {
       setLoading(false);
@@ -1143,11 +1054,9 @@ export function SendRelayPreviewCard({
             bgcolor: 'rgba(255, 255, 255, 0.05)',
             borderColor: '#6366F1',
             transform: 'translateY(-1px)',
-            boxShadow: '0 4px 16px rgba(99, 102, 241, 0.18)',
-          },
+            boxShadow: '0 4px 16px rgba(99, 102, 241, 0.18)'},
           '&:active': {
-            transform: 'translateY(0)',
-          }
+            transform: 'translateY(0)'}
         }}
       >
         <Shield size={14} style={{ color: kindColors[sendKind] || '#6366F1' }} />
@@ -1210,7 +1119,7 @@ interface FlowPresenceFlapOverProps {
   taskId: string;
 }
 
-export function FlowPresenceFlapOver({
+function FlowPresenceFlapOver({
   isOpen,
   onClose,
   task,
@@ -1243,8 +1152,7 @@ export function FlowPresenceFlapOver({
         backdrop: {
           sx: {
             bgcolor: 'rgba(0, 0, 0, 0.4)',
-            backdropFilter: 'blur(4px)',
-          }
+            backdropFilter: 'blur(4px)'}
         }
       }}
       PaperProps={{
@@ -1318,13 +1226,13 @@ export function FlowPresenceFlapOver({
   );
 }
 
-export function FlowPresencePulseLink({ href, children }: { href: string; children?: React.ReactNode }) {
+function FlowPresencePulseLink({ href, children }: { href: string; children?: React.ReactNode }) {
   const taskId = href.replace('source:kylrixflow:', '').replace('source:kylrixgoal:', '');
   const { getCachedData, setCachedData } = useDataNexus();
   const { resourcePresence } = usePresence();
   const { openCallLauncher } = useCallLauncher();
   const [task, setTask] = useState<any | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Fetch task metadata
@@ -1415,8 +1323,7 @@ export function FlowPresencePulseLink({ href, children }: { href: string; childr
           position: 'relative',
           transition: 'color 0.2s',
           '&:hover': {
-            color: alpha(themeColor, 0.8),
-          }
+            color: alpha(themeColor, 0.8)}
         }}
       >
         {children || task?.title || 'Milestone'}
@@ -1435,14 +1342,11 @@ export function FlowPresencePulseLink({ href, children }: { href: string; childr
               animation: 'ashPresencePulse 2s infinite',
               '@keyframes ashPresencePulse': {
                 '0%': {
-                  boxShadow: '0 0 0 0 rgba(161, 161, 170, 0.4)',
-                },
+                  boxShadow: '0 0 0 0 rgba(161, 161, 170, 0.4)'},
                 '70%': {
-                  boxShadow: '0 0 0 6px rgba(161, 161, 170, 0)',
-                },
+                  boxShadow: '0 0 0 6px rgba(161, 161, 170, 0)'},
                 '100%': {
-                  boxShadow: '0 0 0 0 rgba(161, 161, 170, 0)',
-                }
+                  boxShadow: '0 0 0 0 rgba(161, 161, 170, 0)'}
               }
             }}
           />
@@ -1462,7 +1366,7 @@ export function FlowPresencePulseLink({ href, children }: { href: string; childr
   );
 }
 
-export function KylrixFormBadgeLink({ href, formId, children }: { href: string; formId: string; children?: React.ReactNode }) {
+function KylrixFormBadgeLink({ formId, children }: { href: string; formId: string; children?: React.ReactNode }) {
   const { open } = useUnifiedDrawer();
   const { getCachedData, setCachedData } = useDataNexus();
   const [formTitle, setFormTitle] = useState<string>('');

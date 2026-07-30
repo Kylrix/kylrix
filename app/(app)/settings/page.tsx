@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     ArrowLeft,
@@ -74,10 +75,10 @@ import { TwoFactorDrawer } from '@/components/overlays/TwoFactorDrawer';
 import { BillingDrawer } from '@/components/overlays/BillingDrawer';
 import { AppwriteService } from '@/lib/appwrite';
 import { account } from '@/lib/appwrite/client';
-import AdminDashboardPage from '@/app/(app)/(auth)/accounts/admin/page';
-import UsersManagement from '@/app/(app)/(auth)/accounts/admin/users/page';
-import EmailOrchestrator from '@/app/(app)/(auth)/accounts/admin/emails/page';
-import AdminCouponsPage from '@/app/(app)/(auth)/accounts/admin/coupons/page';
+import AdminDashboardPage from '@/components/admin/AdminDashboard';
+import UsersManagement from '@/components/admin/UsersManagement';
+import EmailOrchestrator from '@/components/admin/EmailOrchestrator';
+import AdminCouponsPage from '@/components/admin/AdminCoupons';
 import { PasskeySetup } from '@/components/overlays/PasskeySetup';
 
 // Inline Custom Telegram Icon SVG for lucide alignment
@@ -90,30 +91,28 @@ function TelegramIcon({ className = "w-5 h-5" }: { className?: string }) {
 }
 
 // Reuseable custom Switch
-function Switch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+
+export default function SettingsPage() {
   return (
-    <button
-      type="button"
-      onClick={onChange}
-      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-        checked ? 'bg-[#6366F1]' : 'bg-white/10'
-      }`}
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50vh] items-center justify-center bg-[#0A0908]">
+          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-[#6366F1]" />
+        </div>
+      }
     >
-      <span
-        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-          checked ? 'translate-x-5' : 'translate-x-0'
-        }`}
-      />
-    </button>
+      <SettingsPageInner />
+    </Suspense>
   );
 }
 
-export default function SettingsPage() {
+function SettingsPageInner() {
     const { user, refreshUser, getJWT } = useAuth();
     const { currentTier, expiresAt, refreshEntitlement } = useSubscription();
-    const { usePasskeysByDefault, setUsePasskeysByDefault, masterpassForLoginEnabled, setMasterpassForLoginEnabled } = useAppwriteVault();
+    const { masterpassForLoginEnabled, setMasterpassForLoginEnabled } = useAppwriteVault();
     const router = useRouter();
-    const { requestSudo, promptSudo } = useSudo();
+    const searchParams = useSearchParams();
+    const { requestSudo} = useSudo();
     const { open: openDrawer } = useUnifiedDrawer();
 
     // Tab state
@@ -125,13 +124,34 @@ export default function SettingsPage() {
     const [isAdmin, setIsAdmin] = useState(false);
     const [adminSubTab, setAdminSubTab] = useState<'dashboard' | 'users' | 'email' | 'coupons'>('dashboard');
 
+    useEffect(() => {
+        const section = (searchParams.get('section') || '').toLowerCase();
+        const tab = (searchParams.get('tab') || '').toLowerCase();
+        const allowed = new Set(['general', 'profile', 'security', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
+        if (section.startsWith('admin') || tab === 'admin') {
+            setActiveTab('admin');
+            if (section.includes('user')) setAdminSubTab('users');
+            else if (section.includes('email')) setAdminSubTab('email');
+            else if (section.includes('coupon')) setAdminSubTab('coupons');
+            else setAdminSubTab('dashboard');
+            return;
+        }
+        if (tab && allowed.has(tab)) {
+            setActiveTab(tab as typeof activeTab);
+        }
+        if (typeof window !== 'undefined' && window.location.hash === '#mfa') {
+            setActiveTab('security');
+            setTwoFactorDrawerOpen(true);
+        }
+    }, [searchParams]);
+
     // Delete/export state
-    const [confirmExportOpen, setConfirmExportOpen] = useState(false);
-    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [_confirmExportOpen, _setConfirmExportOpen] = useState(false);
+    const [_confirmDeleteOpen, _setConfirmDeleteOpen] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const [isArgon, setIsArgon] = useState(ecosystemSecurity.status.isArgon);
-    const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
-    const [isAuthPassConfigured, setIsAuthPassConfigured] = useState<boolean>(false);
+    const [_hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
+    const [_isAuthPassConfigured, setIsAuthPassConfigured] = useState<boolean>(false);
 
     // Telegram state
     const [tgDrawerOpen, setTgDrawerOpen] = useState(false);
@@ -144,12 +164,12 @@ export default function SettingsPage() {
     const [loadingPasskeys, setLoadingPasskeys] = useState(true);
 
     // Switches preferences state
-    const [pushEnabled, setPushEnabled] = useState(true);
-    const [statusEnabled, setStatusEnabled] = useState(true);
-    const [isLocalhost, setIsLocalhost] = useState(false);
+    const [_pushEnabled, _setPushEnabled] = useState(true);
+    const [_statusEnabled, _setStatusEnabled] = useState(true);
+    const [_isLocalhost, setIsLocalhost] = useState(false);
     const [demoModeEnabled, setDemoModeEnabled] = useState(false);
     const [computeBalance, setComputeBalance] = useState<{ balance: number; maxBalance: number; tier: string; percent: number } | null>(null);
-    const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+    const [_profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
     const [showPorterDrawer, setShowPorterDrawer] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [profile, setProfile] = useState<any>(null);
@@ -219,7 +239,7 @@ export default function SettingsPage() {
                 const { fetchProfilePreview } = await import('@/lib/profile-preview');
                 const url = await fetchProfilePreview(profilePicId, 80, 80);
                 if (mounted) setProfileAvatarUrl(url);
-            } catch (e) {
+            } catch (_e) {
                 if (mounted) setProfileAvatarUrl(null);
             }
         };
@@ -255,77 +275,6 @@ export default function SettingsPage() {
         }
     }, [user]);
 
-    const handleDemoModeToggle = async () => {
-        const nextVal = !demoModeEnabled;
-        try {
-            const { account, invalidateCurrentUserCache } = await import('@/lib/appwrite');
-            const currentPrefs = await account.getPrefs();
-            await account.updatePrefs({ ...currentPrefs, demo_mode: nextVal });
-            invalidateCurrentUserCache();
-            await refreshUser(true);
-            await refreshEntitlement(true);
-            setDemoModeEnabled(nextVal);
-            toast.success(`Demo Mode ${nextVal ? "activated" : "deactivated"}`);
-        } catch (err: any) {
-            toast.error(err.message || "Failed to update Demo Mode");
-        }
-    };
-    const handleMasterpassLoginToggle = () => {
-        if (masterpassForLoginEnabled) {
-            openDrawer('delete-confirm', {
-                title: 'Disable MasterPass for Sign-In?',
-                description: 'WARNING: Disabling this will prevent you from signing into your account using your MasterPass. If you lose access to your email OTP or passkeys, you could permanently lose access to your account. Are you sure you want to proceed?',
-                confirmLabel: 'Disable',
-                onConfirm: async () => {
-                    await setMasterpassForLoginEnabled(false);
-                    try {
-                        const { account } = await import('@/lib/appwrite/client');
-                        const currentPrefs = user?.prefs || {};
-                        await account.updatePrefs({ ...currentPrefs, hasPass: false });
-                    } catch (e) {
-                        console.error('Failed to update hasPass pref:', e);
-                    }
-                    toast.success('MasterPass sign-in disabled');
-                }
-            });
-        } else {
-            if (!isUnlocked) {
-                openDrawer('delete-confirm', {
-                    title: 'Enable MasterPass Sign-In?',
-                    description: 'To enable MasterPass for sign-in, we need to authenticate and synchronize your local encryption vault password with the server authentication password. Do you want to unlock and synchronize now?',
-                    confirmLabel: 'Proceed',
-                    onConfirm: () => {
-                        requestSudo({
-                            intent: 'unlock',
-                            forcePrompt: true,
-                            onSuccess: async () => {
-                                await setMasterpassForLoginEnabled(true);
-                                try {
-                                    const { account } = await import('@/lib/appwrite/client');
-                                    const currentPrefs = user?.prefs || {};
-                                    await account.updatePrefs({ ...currentPrefs, hasPass: true });
-                                } catch (e) {
-                                    console.error('Failed to update hasPass pref:', e);
-                                }
-                                toast.success('MasterPass sign-in enabled & synchronized.');
-                            }
-                        });
-                    }
-                });
-            } else {
-                setMasterpassForLoginEnabled(true);
-                try {
-                    import('@/lib/appwrite/client').then(async ({ account }) => {
-                        const currentPrefs = user?.prefs || {};
-                        await account.updatePrefs({ ...currentPrefs, hasPass: true });
-                    });
-                } catch (e) {
-                    console.error('Failed to update hasPass pref:', e);
-                }
-                toast.success('MasterPass sign-in enabled');
-            }
-        }
-    };
     const FEATURE_FORM_ID = '6a2a653f002b0f296958';
 
     const handleManualMint = async () => {
@@ -520,8 +469,7 @@ export default function SettingsPage() {
                 profile: {
                     userId: user?.$id,
                     email: user?.email,
-                    name: user?.name,
-                },
+                    name: user?.name},
                 preferences: appPrefs,
                 sessions: (sessions as any).sessions || (sessions as any).rows || [],
                 exportDate: new Date().toISOString(),
@@ -688,42 +636,6 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-8 items-start">
                         {/* Left Column: Discoverability, Integrations & Feedback */}
                         <div className="flex flex-col gap-8">
-                            {/* GitHub Integration panel */}
-                            <div id="github-workspace-settings" className="transition-all duration-300">
-                                <h3 className="text-white font-black text-lg tracking-tight leading-tight flex items-center gap-2 mb-3 font-mono">
-                                    <svg viewBox="0 0 24 24" width="20" height="20" className="fill-white">
-                                      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                                    </svg>
-                                    <span>Connected Integrations</span>
-                                </h3>
-                                <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl">
-                                    <div className="flex items-start md:items-center justify-between gap-4 flex-wrap">
-                                        <div className="flex items-start gap-3 min-w-0 pr-2">
-                                            <div className="w-9 h-9 rounded-xl bg-white/3 border border-white/8 flex items-center justify-center flex-shrink-0 text-white mt-0.5 md:mt-0">
-                                                <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
-                                                    <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
-                                                </svg>
-                                            </div>
-                                            <div className="min-w-0">
-                                                <h4 className="text-white font-extrabold text-sm truncate">
-                                                    GitHub Integration
-                                                </h4>
-                                                <p className="text-white/40 text-xs font-semibold font-sans mt-0.5 leading-relaxed">
-                                                    Connect your GitHub profile to sync code, tasks, issues, and PR boards.
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => openDrawer('github-integration')}
-                                            className="h-10 px-5 rounded-xl bg-[#24292F] hover:bg-[#1F2328] border border-white/5 text-white font-extrabold text-xs flex items-center justify-center transition-all w-full md:w-auto"
-                                        >
-                                            Configure
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
                             {/* Daily Token Mint */}
                             <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-3">
                                 <h4 className="text-white font-black text-base font-mono">Daily Token Mint</h4>

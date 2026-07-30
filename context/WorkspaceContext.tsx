@@ -51,8 +51,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       id: p.$id || p.id,
       title: p.title || p.name || 'Untitled Workspace',
       ownerId: p.ownerId || p.userId || userId,
-      isPersonal: (p.$id || p.id) === userId,
-    }));
+      isPersonal: (p.$id || p.id) === userId}));
     return [personalWorkspace, ...mapped.filter((w) => w.id !== personalWorkspace.id)];
   }, [personalWorkspace, userId]);
 
@@ -69,15 +68,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const rows = await warmProjectsList({
         userId: userId || 'guest',
         getCachedDataAsync,
-        fetchOptimized,
-      });
+        fetchOptimized});
 
       const customItems: WorkspaceItem[] = (rows || []).map((p: any) => ({
         id: p.$id || p.id,
         title: p.title || p.name || 'Untitled Workspace',
         ownerId: p.ownerId || p.userId || userId,
-        isPersonal: (p.$id || p.id) === userId,
-      }));
+        isPersonal: (p.$id || p.id) === userId}));
 
       setWorkspaces([personalWorkspace, ...customItems.filter((w) => w.id !== personalWorkspace.id)]);
     } catch (err) {
@@ -106,8 +103,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         const created = await ProjectsService.createProject({
           title,
           summary: summary || '',
-          ownerId: userId,
-        });
+          ownerId: userId});
         const newItem: WorkspaceItem = {
           id: created.$id,
           title: created.title || title,
@@ -135,8 +131,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         await attachObjectToProject({
           projectId: activeWorkspace.id,
           entityKind,
-          entityId,
-        });
+          entityId});
       } catch (err) {
         console.warn(`[WorkspaceContext] Auto-attach entity ${entityKind} ${entityId} failed:`, err);
       }
@@ -152,8 +147,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setActiveWorkspaceId,
       refreshWorkspaces,
       createWorkspace,
-      attachEntityToActiveWorkspace,
-    }),
+      attachEntityToActiveWorkspace}),
     [
       activeWorkspace,
       workspaces,

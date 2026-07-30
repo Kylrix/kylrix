@@ -232,7 +232,6 @@ export const CallInterface = ({
                 callCode,
                 conversationId,
                 isCaller,
-                callType: _callType,
                 targetId,
                 initialMediaSettings,
                 autoInitiate,
@@ -342,8 +341,7 @@ export const CallInterface = ({
                         senderId: doc.userId,
                         senderName: name,
                         content: doc.content,
-                        timestamp: new Date(doc.createdAt).getTime(),
-                    });
+                        timestamp: new Date(doc.createdAt).getTime()});
                 }
                 msgs.sort((a, b) => a.timestamp - b.timestamp);
                 setChatMessages(msgs);
@@ -369,8 +367,7 @@ export const CallInterface = ({
                             senderId: payload.userId,
                             senderName: name,
                             content: payload.content,
-                            timestamp: new Date(payload.createdAt).getTime(),
-                        };
+                            timestamp: new Date(payload.createdAt).getTime()};
                         setChatMessages(prev => {
                             if (prev.some(m => m.id === msg.id)) return prev;
                             return [...prev, msg].sort((a, b) => a.timestamp - b.timestamp);
@@ -1022,8 +1019,7 @@ export const CallInterface = ({
                         justifyContent: 'space-between',
                         borderBottom: '1px solid rgba(255,255,255,0.08)',
                         bgcolor: '#161412',
-                        position: 'relative',
-                    }}
+                        position: 'relative'}}
                 >
                     <Box sx={{ width: 42, height: 4, borderRadius: 999, bgcolor: 'rgba(255,255,255,0.28)', mx: 'auto', position: 'absolute', left: 0, right: 0, top: 8 }} />
                     <Typography sx={{ color: 'rgba(255,255,255,0.75)', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>

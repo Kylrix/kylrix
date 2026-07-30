@@ -4,8 +4,7 @@ import {
   getSessionProjectsList,
   setSessionProjectsList,
   projectsListCacheKey,
-  PROJECTS_LIST_TTL,
-} from '@/lib/projects/projects-cache';
+  PROJECTS_LIST_TTL} from '@/lib/projects/projects-cache';
 
 type NexusDeps = {
   userId: string;

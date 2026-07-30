@@ -74,61 +74,53 @@ const NETWORKS: Record<SupportedWalletChain, WalletNetworkDefinition> = {
         label: 'Ethereum',
         symbol: 'ETH',
         family: 'evm',
-        publicProfile: true,
-    },
+        publicProfile: true},
     usdc: {
         chain: 'usdc',
         label: 'USDC',
         symbol: 'USDC',
         family: 'evm',
         publicProfile: true,
-        aliasOf: 'eth',
-    },
+        aliasOf: 'eth'},
     sol: {
         chain: 'sol',
         label: 'Solana',
         symbol: 'SOL',
         family: 'solana',
-        publicProfile: true,
-    },
+        publicProfile: true},
     btc: {
         chain: 'btc',
         label: 'Bitcoin',
         symbol: 'BTC',
         family: 'bitcoin',
-        publicProfile: true,
-    },
+        publicProfile: true},
     sui: {
         chain: 'sui',
         label: 'Sui',
         symbol: 'SUI',
         family: 'sui',
-        publicProfile: true,
-    },
+        publicProfile: true},
     base: {
         chain: 'base',
         label: 'Base',
         symbol: 'BASE',
         family: 'evm',
         publicProfile: true,
-        aliasOf: 'eth',
-    },
+        aliasOf: 'eth'},
     polygon: {
         chain: 'polygon',
         label: 'Polygon',
         symbol: 'POL',
         family: 'evm',
         publicProfile: true,
-        aliasOf: 'eth',
-    },
+        aliasOf: 'eth'},
     arbitrum: {
         chain: 'arbitrum',
         label: 'Arbitrum',
         symbol: 'ARB',
         family: 'evm',
         publicProfile: true,
-        aliasOf: 'eth',
-    },
+        aliasOf: 'eth'},
 };
 
 const DEFAULT_MAIN_CHAINS: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc'];
@@ -139,11 +131,11 @@ const ownerIdForUser = (userId: string) => `user:${userId}`;
 const walletPermissions = (userId: string) => [
     Permission.read(Role.user(userId))];
 
-const walletMapPermissions = (userId: string) => [
+const walletMapPermissions = (_userId: string) => [
     Permission.read(Role.any())];
 
 const sortWallets = (wallets: any[]) =>
-    [...wallets].sort((a, b) => {
+    [...wallets].sort((a: any, b: any) => {
         const aIndex = PUBLIC_CHAIN_PRIORITY.indexOf(a.chain as SupportedWalletChain);
         const bIndex = PUBLIC_CHAIN_PRIORITY.indexOf(b.chain as SupportedWalletChain);
         return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
@@ -159,18 +151,16 @@ const toWalletSummary = (row: any): WalletSummary => ({
     family: NETWORKS[row.chain as SupportedWalletChain]?.family || 'evm',
     address: row.address,
     type: row.type,
-    publicProfile: NETWORKS[row.chain as SupportedWalletChain]?.publicProfile ?? false,
-});
+    publicProfile: NETWORKS[row.chain as SupportedWalletChain]?.publicProfile ?? false});
 
 const createRootEnvelope = (): WalletRootEnvelope => ({
     version: 't4.wallet.root.v1',
     walletId: crypto.randomUUID(),
     mnemonic: bip39.generateMnemonic(wordlist, 128),
-    createdAt: new Date().toISOString(),
-});
+    createdAt: new Date().toISOString()});
 
 const buildPublicWalletPayload = (wallets: any[]): string | null => {
-    const byChain = new Map(wallets.map((wallet) => [wallet.chain, wallet.address]));
+    const byChain = new Map(wallets.map((wallet: any) => [wallet.chain, wallet.address]));
     const published: Record<string, string> = {};
 
     for (const chain of PUBLIC_CHAIN_PRIORITY) {
@@ -321,8 +311,7 @@ const createWalletRow = async (
                 address,
                 chain,
                 encryptedSecret,
-                type: 'main',
-            },
+                type: 'main'},
             walletPermissions(userId)
         );
     } catch (error: any) {
@@ -339,7 +328,7 @@ const syncWalletMap = async (userId: string, wallets: any[]) => {
             new Set(
                 wallets
                     .filter((wallet) => NETWORKS[wallet.chain as SupportedWalletChain]?.publicProfile)
-                    .map((wallet) => wallet.address.toLowerCase())
+                    .map((wallet: any) => wallet.address.toLowerCase())
             )
         );
 
@@ -367,8 +356,7 @@ const syncWalletMap = async (userId: string, wallets: any[]) => {
                     {
                         walletAddressLower,
                         userId,
-                        updatedAt: new Date().toISOString(),
-                    },
+                        updatedAt: new Date().toISOString()},
                     walletMapPermissions(userId)
                 );
             } catch (error) {
@@ -384,8 +372,7 @@ const publishWalletAddresses = async (userId: string, wallets: any[]) => {
     const serialized = buildPublicWalletPayload(wallets);
 
     await UsersService.updateProfile(userId, {
-        walletAddress: serialized,
-    });
+        walletAddress: serialized});
 
     await syncWalletMap(userId, wallets);
 };
@@ -408,7 +395,7 @@ export const WalletService = {
         const existingRows = await listWalletRows(userId);
         const cache = new Map<SupportedWalletChain, string>();
         const root = existingRows[0] ? await parseRootEnvelope(existingRows[0].encryptedSecret) : createRootEnvelope();
-        const walletsByChain = new Map(existingRows.map((wallet) => [wallet.chain as SupportedWalletChain, wallet]));
+        const walletsByChain = new Map(existingRows.map((wallet: any) => [wallet.chain as SupportedWalletChain, wallet]));
         const createdRows: any[] = [];
 
         for (const chain of DEFAULT_MAIN_CHAINS) {

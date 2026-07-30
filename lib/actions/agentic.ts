@@ -10,9 +10,8 @@ import { userHasPaidAiAccess } from '@/lib/server/ai-subscription-gate';
 import { AI_REQUIRES_PRO_MESSAGE } from '@/lib/agentic/access';
 import { resolveAgenticError, type AgenticErrorCode } from '@/lib/agentic/errors';
 
-type AgentStatus = 'idle' | 'working';
 
-export interface AgentRecord {
+interface AgentRecord {
   $id: string;
   ownerId: string;
   parentId?: string | null;
@@ -31,16 +30,6 @@ interface AgentConfig {
   lastError?: string | null;
 }
 
-function parseAgentConfig(raw?: string): AgentConfig {
-  if (!raw) return {};
-  try {
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return {};
-    return parsed as AgentConfig;
-  } catch {
-    return {};
-  }
-}
 
 import { getActor } from './secure-ops';
 
@@ -115,170 +104,8 @@ async function debitComputeBalance(userId: string, balanceRow: any, promptText: 
   );
 }
 
-async function getOwnedAgentOrThrow(agentId: string, ownerId: string) {
-  const { databases } = createSystemClient();
-  const id = String(agentId || '').trim();
-  if (!id) throw new Error('agentId is required');
 
-  const agent = (await databases.getRow(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-    id,
-  )) as unknown as AgentRecord;
-  if (!agent) throw new Error('Agent not found.');
-  if (agent.ownerId !== ownerId) throw new Error('Forbidden');
-  return agent;
-}
 
-export async function listMyAgents(jwt?: string): Promise<AgentRecord[]> {
-  const user = await requireUser(jwt);
-  const { databases } = createSystemClient();
-  const res = await databases.listRows(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-    [Query.equal('ownerId', user.$id), Query.orderDesc('$updatedAt'), Query.limit(100)],
-  );
-  return (res.rows || []) as unknown as AgentRecord[];
-}
-
-export async function createMyAgent(input: {
-  name: string;
-  goal?: string;
-  framework?: 'kylrix' | 'openclaw' | 'hermes';
-}, jwt?: string) {
-  const user = await requireUser(jwt);
-  
-  const name = String(input.name || '').trim();
-  if (!name) throw new Error('name is required');
-
-  const framework = input.framework === 'openclaw' || input.framework === 'hermes' ? input.framework : 'kylrix';
-  const { databases } = createSystemClient();
-  await databases.createRow(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-    ID.unique(),
-    {
-      ownerId: user.$id,
-      parentId: null,
-      publicKey: `pending:${Date.now().toString(36)}`,
-      status: 'idle',
-      config: JSON.stringify({
-        name,
-        goal: input.goal?.trim() || null,
-        framework,
-      }),
-    },
-  );
-}
-
-export async function setMyAgentStatus(agentId: string, status: AgentStatus, jwt?: string) {
-  const user = await requireUser(jwt);
-  const id = String(agentId || '').trim();
-  if (!id) throw new Error('agentId is required');
-
-  await getOwnedAgentOrThrow(id, user.$id);
-  const { databases } = createSystemClient();
-  await databases.updateRow(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-    id,
-    { status },
-  );
-}
-
-export async function runMyAgent(agentId: string, jwt?: string): Promise<{ summary: string }> {
-  const user = await requireUser(jwt);
-  const id = String(agentId || '').trim();
-  if (!id) throw new Error('agentId is required');
-
-  const agent = await getOwnedAgentOrThrow(id, user.$id);
-  const config = parseAgentConfig(agent.config);
-  const { databases } = createSystemClient();
-
-  await databases.updateRow(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-    agentId,
-    { status: 'working' },
-  );
-
-  try {
-    const balanceRow = await checkComputeBalance(user.$id);
-
-    const tasksRes = await databases.listRows(
-      APPWRITE_CONFIG.DATABASES.FLOW,
-      APPWRITE_CONFIG.TABLES.FLOW.TASKS,
-      [Query.equal('userId', user.$id), Query.orderDesc('$updatedAt'), Query.limit(20)],
-    );
-
-    const tasks = (tasksRes.rows || []).map((t: any) => ({
-      id: t.$id,
-      title: t.title || 'Untitled',
-      status: t.status || 'todo',
-      priority: t.priority || 'medium',
-      dueDate: t.dueDate || null,
-    }));
-
-    const apiKey = process.env.GOOGLE_API_KEY;
-    if (!apiKey) {
-      throw new Error('Gemini is not configured on this deployment.');
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL_NAME || 'gemini-2.0-flash',
-      systemInstruction:
-        'You are a Kylrix internal autonomous agent. Return concise operational guidance only.',
-    });
-
-    const prompt = [
-      `Agent name: ${config.name || `Agent ${agent.$id.slice(0, 6)}`}`,
-      `Goal: ${config.goal || 'General productivity assistance.'}`,
-      'Generate a short execution summary and next actions based on current tasks.',
-      `Tasks JSON: ${JSON.stringify(tasks)}`].join('\n');
-
-    const result = await model.generateContent(prompt);
-    const summary = result.response.text().trim().slice(0, 6000);
-
-    await debitComputeBalance(user.$id, balanceRow, prompt, summary);
-
-    const nextConfig: AgentConfig = {
-      ...config,
-      lastRunAt: new Date().toISOString(),
-      lastSummary: summary,
-      lastError: null,
-    };
-
-    await databases.updateRow(
-      APPWRITE_CONFIG.DATABASES.FLOW,
-      APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-      agentId,
-      {
-        status: 'idle',
-        config: JSON.stringify(nextConfig),
-      },
-    );
-
-    return { summary };
-  } catch (error) {
-    const nextConfig: AgentConfig = {
-      ...config,
-      lastRunAt: new Date().toISOString(),
-      lastError: error instanceof Error ? error.message : 'Agent run failed.',
-    };
-
-    await databases.updateRow(
-      APPWRITE_CONFIG.DATABASES.FLOW,
-      APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-      agentId,
-      {
-        status: 'idle',
-        config: JSON.stringify(nextConfig),
-      },
-    );
-    throw error;
-  }
-}
 
 export async function executeInstantRequestAction(
   prompt: string,
@@ -312,8 +139,7 @@ export async function executeInstantRequestAction(
     return {
       success: false,
       response: resolved.userMessage,
-      errorCode: resolved.code,
-    };
+      errorCode: resolved.code};
   }
 }
 
@@ -540,7 +366,7 @@ If the target is ambiguous, ask the user to clarify or list the available titles
   // Redact potentially sensitive details (passwords, PINs, auth keys) in prompt
   const redactedPrompt = prompt
     .replace(/(password|pass|pin|secret|key|private)\s*[:=]\s*[^\s]+/gi, '$1: [REDACTED]')
-    .replace(/(?<=^|\s)[A-Za-z0-9+/]{40,}(?=$|\s)/g, '[REDACTED_HASH]');
+    .replace(/(?<=^|\s)[A-Za-z0-9+/]{40}(?=$|\s)/g, '[REDACTED_HASH]');
 
   const { assembleSystemInstructionBlocks } = await import('@/lib/agentic/prompt-framework');
   const DATA_STRUCTURES_GUIDE = `
@@ -619,8 +445,7 @@ ${lifetimeMemoryContext}
     hintContext,
     telemetrySnippet,
     userResourceSummaries,
-    sessionObjectsSnippet,
-  });
+    sessionObjectsSnippet});
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
@@ -688,8 +513,7 @@ ${lifetimeMemoryContext}
   const nextStepsForHistory = [...(parsedNextSteps || []), ...fromTool]
     .map((item: any) => ({
       label: String(item?.label || '').trim(),
-      prompt: String(item?.prompt || '').trim(),
-    }))
+      prompt: String(item?.prompt || '').trim()}))
     .filter((s) => s.label && s.prompt)
     .slice(0, 4);
 
@@ -736,8 +560,7 @@ ${lifetimeMemoryContext}
           nextContext = await compressSessionContext({
             apiKey,
             oldContext: nextContext,
-            history: historyArr.slice(-8),
-          });
+            history: historyArr.slice(-8)});
         } catch (compactErr) {
           console.warn('[executeInstantRequestAction] Context compact failed:', compactErr);
         }
@@ -787,8 +610,7 @@ ${lifetimeMemoryContext}
     toolCalls: parsedToolCalls,
     nextSteps: nextStepsForHistory,
     sessionId: sessionData?.rowId || activeSessionId || undefined,
-    conversationId,
-  };
+    conversationId};
 }
 
 export async function getAgentSession(jwt?: string) {
@@ -839,11 +661,10 @@ async function compressSessionContext(params: {
   const genAI = new GoogleGenerativeAI(params.apiKey);
   const compactModel = genAI.getGenerativeModel({
     model: 'gemini-2.0-flash',
-    systemInstruction: SESSION_COMPACTOR_SYSTEM,
-  });
+    systemInstruction: SESSION_COMPACTOR_SYSTEM});
 
   const transcript = (params.history || [])
-    .map((m) => {
+    .map((m: any) => {
       const body = typeof m.content === 'string' ? m.content.trim() : '';
       if (!body) return '';
       return `${m.role === 'user' ? 'User' : 'Agent'}: ${body}`;
@@ -912,8 +733,7 @@ export async function startNewAgentSessionFromPromptAction(
         starterContext = await compressSessionContext({
           apiKey,
           oldContext: source?.context || '',
-          history: history.slice(-20),
-        });
+          history: history.slice(-20)});
       } catch (err) {
         console.warn('[startNewAgentSessionFromPrompt] compress failed:', err);
         starterContext = (source?.context || '').trim();
@@ -935,8 +755,7 @@ export async function startNewAgentSessionFromPromptAction(
     success: true as const,
     sessionId: newSessionId,
     starterPrompt: starter,
-    carriedContext: Boolean(starterContext),
-  };
+    carriedContext: Boolean(starterContext)};
 }
 
 export async function recordAgentSessionObjectAction(params: {
@@ -957,16 +776,8 @@ export async function recordAgentSessionObjectAction(params: {
     objectId: params.objectId,
     objectType: params.objectType,
     title: params.title,
-    toolKey: params.toolKey,
-  });
+    toolKey: params.toolKey});
   return { success: true };
-}
-
-export async function listAgentSessionObjectsAction(sessionId: string, jwt?: string) {
-  const user = await requireUser(jwt);
-  if (!sessionId) return [];
-  const { TelemetryService } = await import('@/lib/services/telemetry');
-  return TelemetryService.listSessionObjects(user.$id, sessionId, 40);
 }
 
 export async function recordAgentToolCallAction(params: {
@@ -991,8 +802,7 @@ export async function recordAgentToolCallAction(params: {
     specifier: params.specifier,
     args: params.args || null,
     status: params.status || 'success',
-    resultSummary: params.resultSummary,
-  });
+    resultSummary: params.resultSummary});
   return { success: Boolean(id), id };
 }
 
@@ -1040,8 +850,7 @@ export async function toggleAgentSessionShareAction(
     resourceType: 'agent_session',
     resourceId: sessionId,
     mode,
-    jwt,
-  });
+    jwt});
 }
 
 export async function setAgentSessionPinnedAction(
@@ -1056,8 +865,7 @@ export async function setAgentSessionPinnedAction(
   const row = await tables.getRow({
     databaseId: 'passwordManagerDb',
     tableId: 'agentic_sessions',
-    rowId: sessionId,
-  });
+    rowId: sessionId});
   if (row.userId !== user.$id) throw new Error('Unauthorized');
 
   await tables.updateRow({
@@ -1085,8 +893,7 @@ export async function toggleAgentConversationShareAction(
   const row = await tables.getRow({
     databaseId: 'passwordManagerDb',
     tableId: 'agentic_sessions',
-    rowId: params.sessionId,
-  });
+    rowId: params.sessionId});
   if (row.userId !== user.$id) throw new Error('Unauthorized');
 
   let historyArr: any[] = [];
@@ -1104,8 +911,7 @@ export async function toggleAgentConversationShareAction(
     return {
       ...m,
       isPublic: enable,
-      isGuest: enable,
-    };
+      isGuest: enable};
   });
   if (!found) throw new Error('Message not found in session');
 
@@ -1116,8 +922,7 @@ export async function toggleAgentConversationShareAction(
     data: {
       chatHistory: JSON.stringify(next),
       isPublic: row.isPublic,
-      isGuest: row.isGuest,
-    },
+      isGuest: row.isGuest},
   });
 
   const { buildPublicResourceUrl } = await import('@/lib/share/public-url');
@@ -1132,19 +937,13 @@ export async function toggleAgentConversationShareAction(
   };
 }
 
-export async function syncAgentSessionsListFromRemote(jwt?: string) {
-  const rows = await listAgentSessions(jwt);
-  return rows;
-}
-
 function sanitizePublicChatMessage(m: any) {
   return {
     id: String(m?.id || ''),
     role: m?.role === 'assistant' ? ('assistant' as const) : ('user' as const),
     content: String(m?.content || ''),
     isPublic: m?.isPublic === true,
-    isGuest: m?.isGuest === true,
-  };
+    isGuest: m?.isGuest === true};
 }
 
 function parseSessionChatHistory(raw: unknown): any[] {
@@ -1156,7 +955,6 @@ function parseSessionChatHistory(raw: unknown): any[] {
   }
 }
 
-/** Public read for a shared Kylie session (isPublic / isGuest on session row). */
 export async function getPublicAgentSessionSecure(sessionId: string) {
   if (!sessionId) return null;
   const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
@@ -1165,8 +963,7 @@ export async function getPublicAgentSessionSecure(sessionId: string) {
     .getRow({
       databaseId: 'passwordManagerDb',
       tableId: 'agentic_sessions',
-      rowId: sessionId,
-    })
+      rowId: sessionId})
     .catch(() => null);
 
   if (!row || row.isMemory === true) return null;
@@ -1189,8 +986,7 @@ export async function getPublicAgentSessionSecure(sessionId: string) {
       isPublic,
       isGuest,
       updatedAt: row.$updatedAt,
-      createdAt: row.$createdAt,
-    }),
+      createdAt: row.$createdAt}),
   );
 }
 
@@ -1211,8 +1007,7 @@ export async function getPublicAgentConversationSecure(compositeId: string) {
     .getRow({
       databaseId: 'passwordManagerDb',
       tableId: 'agentic_sessions',
-      rowId: sessionId,
-    })
+      rowId: sessionId})
     .catch(() => null);
 
   if (!row || row.isMemory === true) return null;
@@ -1231,8 +1026,7 @@ export async function getPublicAgentConversationSecure(compositeId: string) {
       message: sanitizePublicChatMessage(message),
       userId: row.userId || null,
       sessionIsPublic: sessionPublic,
-      updatedAt: row.$updatedAt,
-    }),
+      updatedAt: row.$updatedAt}),
   );
 }
 
@@ -1255,14 +1049,12 @@ export async function deleteAgentSession(sessionId: string, jwt?: string) {
     const toolRows = await tables.listRows({
       databaseId: 'passwordManagerDb',
       tableId: 'tool_calls',
-      queries: [Query.equal('sessionId', sessionId), Query.limit(500)],
-    });
+      queries: [Query.equal('sessionId', sessionId), Query.limit(500)]});
     for (const tr of toolRows.rows || []) {
       await tables.deleteRow({
         databaseId: 'passwordManagerDb',
         tableId: 'tool_calls',
-        rowId: tr.$id,
-      }).catch(() => {});
+        rowId: tr.$id}).catch(() => {});
     }
   } catch (e) {
     console.warn('[deleteAgentSession] tool_calls cascade failed:', e);
@@ -1356,8 +1148,7 @@ export async function flagAgentConversationPointAction(
       conversationId: params.conversationId,
       messageRole: params.messageRole,
       reason: params.reason || 'user_retry',
-      flaggedAt: new Date().toISOString(),
-    },
+      flaggedAt: new Date().toISOString()},
   });
 
   return { success: true };

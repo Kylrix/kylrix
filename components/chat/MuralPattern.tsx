@@ -127,8 +127,7 @@ const makeMotifs = (): Motif[] => {
         opacity: 0.34 + rng() * 0.34,
         width: 0.82 + rng() * 0.72,
         type,
-        variant: Math.floor(rng() * 3),
-      });
+        variant: Math.floor(rng() * 3)});
     }
   }
 

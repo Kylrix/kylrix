@@ -7,8 +7,7 @@ import { Refresh, Home, ErrorOutline, ExpandMore } from '@/lib/openbricks/icons'
 
 export default function GlobalError({
   error,
-  reset,
-}: {
+  reset}: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
@@ -27,8 +26,7 @@ export default function GlobalError({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            p: 4,
-          }}
+            p: 4}}
         >
           <Container maxWidth="xs">
             <Paper
@@ -38,21 +36,19 @@ export default function GlobalError({
                 textAlign: 'center',
                 bgcolor: 'rgba(15, 13, 12, 0.95)',
                 backdropFilter: 'blur(25px) saturate(180%)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-              }}
+                border: '1px solid rgba(255, 255, 255, 0.1)'}}
             >
               {/* Logo */}
               <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
                 <Box
                   component="img"
-                  src="/logo/kylrixnote.png"
+                  src="/logo.svg"
                   alt="Kylrix Note Logo"
                   sx={{
                     width: 64,
                     height: 64,
                     borderRadius: 4,
-                    boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
-                  }}
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.4)'}}
                 />
               </Box>
 
@@ -98,8 +94,7 @@ export default function GlobalError({
                           overflow: 'auto',
                           maxHeight: 128,
                           whiteSpace: 'pre-wrap',
-                          color: 'text.secondary',
-                        }}
+                          color: 'text.secondary'}}
                       >
                         {error.message}
                         {error.stack && `\n\n${error.stack}`}
@@ -118,8 +113,7 @@ export default function GlobalError({
                   onClick={reset}
                   sx={{
                     py: 1.5,
-                    borderRadius: 3,
-                  }}
+                    borderRadius: 3}}
                 >
                   Reload Application
                 </Button>
@@ -136,8 +130,7 @@ export default function GlobalError({
                     color: 'text.primary',
                     '&:hover': {
                       borderColor: 'primary.main',
-                      bgcolor: 'rgba(99, 102, 241, 0.05)',
-                    },
+                      bgcolor: 'rgba(99, 102, 241, 0.05)'},
                   }}
                 >
                   Go to Home

@@ -23,8 +23,7 @@ describe('identity helpers', () => {
       profilePicId: 'file-1',
       username: 'kylrix',
       bio: 'builds things',
-      tier: 'pro',
-    });
+      tier: 'pro'});
 
     expect(flags.verified).toBe(true);
     expect(flags.pro).toBe(true);

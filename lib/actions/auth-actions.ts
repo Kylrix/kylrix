@@ -41,16 +41,14 @@ export async function getPasskeyLoginOptionsAction(email?: string, hostname: str
 
     const allowCredentials = res.rows.map((row: any) => ({
       id: row.credentialId,
-      type: 'public-key' as const,
-    }));
+      type: 'public-key' as const}));
 
     const rpID = resolvePasskeyRpId(hostname);
 
     const options = await generateAuthenticationOptions({
       rpID,
       allowCredentials,
-      userVerification: 'preferred',
-    });
+      userVerification: 'preferred'});
 
     // Generate stateless challenge token using our APPWRITE_API secret
     const exp = Date.now() + 300000; // 5 minutes
@@ -135,8 +133,7 @@ export async function verifyPasskeyLoginAction(authResp: any, challengeToken: st
       credential: {
         id: row.credentialId,
         publicKey: Uint8Array.from(Buffer.from(row.publicKey, 'base64')),
-        counter: row.params ? (JSON.parse(row.params).counter || 0) : 0,
-      },
+        counter: row.params ? (JSON.parse(row.params).counter || 0) : 0},
     });
 
     if (verification.verified) {
@@ -172,8 +169,7 @@ export async function verifyPasskeyLoginAction(authResp: any, challengeToken: st
         token: token.phrase || token.secret,
         userId: row.userId,
         wrappedKey: row.wrappedKey,
-        fallbackSeed,
-      };
+        fallbackSeed};
     }
 
     return { success: false, error: 'Invalid WebAuthn assertion' };
@@ -283,8 +279,7 @@ export async function verifyPasskeyRegistrationAction(
       response: registrationResponse,
       expectedChallenge,
       expectedOrigin: origin,
-      expectedRPID: rpID,
-    });
+      expectedRPID: rpID});
 
     if (verification.verified && verification.registrationInfo) {
       const regInfo = verification.registrationInfo as any;

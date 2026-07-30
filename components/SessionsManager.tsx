@@ -17,12 +17,10 @@ import {
   DialogActions,
   Stack,
   Chip,
-  IconButton,
-} from '@/lib/openbricks/primitives';
+  IconButton} from '@/lib/openbricks/primitives';
 import {
   Delete as DeleteIcon,
-  PhoneIcon,
-} from '@/lib/openbricks/icons';
+  PhoneIcon} from '@/lib/openbricks/icons';
 import { Laptop, Tablet, RefreshCw } from 'lucide-react';
 import { Models } from 'appwrite';
 
@@ -54,8 +52,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
       
       const formattedSessions = (sessionList.sessions || []).map((session) => ({
         ...session,
-        deviceType: getDeviceType((session as any).userAgent || session.clientName || ''),
-      }));
+        deviceType: getDeviceType((session as any).userAgent || session.clientName || '')}));
       setSessions(formattedSessions);
       onSessionsLoaded?.(formattedSessions.length);
     } catch (err: unknown) {
@@ -150,8 +147,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
             borderRadius: '12px',
             bgcolor: 'rgba(239, 68, 68, 0.1)',
             border: '1px solid rgba(239, 68, 68, 0.2)',
-            color: '#FCA5A5',
-          }}
+            color: '#FCA5A5'}}
         >
           <AlertTitle sx={{ fontWeight: 700 }}>Error</AlertTitle>
           {error}
@@ -164,8 +160,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
             backgroundColor: '#161514',
             borderRadius: '12px',
             p: 4,
-            textAlign: 'center',
-          }}
+            textAlign: 'center'}}
         >
           <Typography sx={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.95rem' }}>
             No active sessions found.
@@ -193,8 +188,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                   boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.2)',
                   '&:hover': {
                     borderColor: 'rgba(255, 255, 255, 0.3)',
-                    boxShadow: '0 2px 4px 0 rgb(0 0 0 / 0.3)',
-                  },
+                    boxShadow: '0 2px 4px 0 rgb(0 0 0 / 0.3)'},
                 }}
               >
                 Refresh
@@ -215,8 +209,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                     '&:hover': {
                       backgroundColor: 'rgba(239, 68, 68, 0.2)',
                       borderColor: 'rgba(239, 68, 68, 0.5)',
-                      boxShadow: '0 2px 4px 0 rgb(0 0 0 / 0.3)',
-                    },
+                      boxShadow: '0 2px 4px 0 rgb(0 0 0 / 0.3)'},
                   }}
                 >
                   Logout All
@@ -240,8 +233,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                   overflow: 'hidden',
                   transition: 'all 0.2s ease-out',
                   '&:hover': {
-                    backgroundColor: '#1F1D1B',
-                  }
+                    backgroundColor: '#1F1D1B'}
                 }}
               >
                 <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -256,8 +248,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                         borderRadius: '10px',
                         backgroundColor: 'rgba(99, 102, 241, 0.15)',
                         color: dynamicColors.primary,
-                        flexShrink: 0,
-                      }}
+                        flexShrink: 0}}
                     >
                       {getDeviceIcon(session.deviceType || 'desktop')}
                     </Box>
@@ -298,8 +289,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                           fontSize: '0.65rem',
                           fontWeight: 500,
                           height: 20,
-                          borderRadius: '0.375rem',
-                        }}
+                          borderRadius: '0.375rem'}}
                       />
                     )}
                   </Box>
@@ -320,8 +310,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                     transition: 'all 0.2s ease-out',
                     '&:hover': {
                       backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                      borderColor: 'rgba(239, 68, 68, 0.4)',
-                    },
+                      borderColor: 'rgba(239, 68, 68, 0.4)'},
                   }}
                 >
                   <DeleteIcon sx={{ fontSize: 20 }} />
@@ -340,8 +329,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
           sx: {
             backgroundColor: '#161514',
             border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px',
-          },
+            borderRadius: '12px'},
         }}
       >
         <DialogTitle sx={{ color: 'white', pb: 1, fontWeight: 600 }}>Logout Session</DialogTitle>
@@ -357,8 +345,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
               color: 'rgba(255, 255, 255, 0.7)',
               borderRadius: '8px',
               textTransform: 'none',
-              fontWeight: 600,
-            }}
+              fontWeight: 600}}
           >
             Cancel
           </Button>
@@ -373,8 +360,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
               textTransform: 'none',
               fontWeight: 600,
               '&:hover': {
-                backgroundColor: '#dc2626',
-              },
+                backgroundColor: '#dc2626'},
             }}
           >
             {deleting ? 'Logging out...' : 'Logout'}

@@ -38,11 +38,3 @@ export const DocsProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-export const useDocs = () => {
-  const context = useContext(DocsContext);
-  if (!context) {
-    // Return a dummy if not in provider, though we should wrap the app
-    return { language: 'typescript' as DocLanguage, setLanguage: () => {} };
-  }
-  return context;
-};

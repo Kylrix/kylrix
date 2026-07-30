@@ -10,8 +10,7 @@ import {
   MessageSquare,
   Globe,
   Loader2,
-  RefreshCw,
-} from 'lucide-react';
+  RefreshCw} from 'lucide-react';
 import {
   Box,
   Paper,
@@ -22,8 +21,7 @@ import {
   Toolbar,
   Stack,
   Button,
-  CircularProgress,
-} from '@/lib/openbricks/primitives';
+  CircularProgress} from '@/lib/openbricks/primitives';
 import { useToast } from '@/components/ui/Toast';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -35,8 +33,7 @@ import {
   listComments,
   createReaction,
   deleteReaction,
-  listReactions,
-} from '@/lib/appwrite/note';
+  listReactions} from '@/lib/appwrite/note';
 import { TargetType } from '@/types/appwrite';
 import { client } from '@/lib/appwrite/client';
 import { createGhostNoteForProject } from '@/lib/actions/client-ops';
@@ -110,8 +107,7 @@ function renderMessageText(text: string): React.ReactNode {
           py: 0.25,
           borderRadius: '4px',
           fontFamily: 'var(--font-mono)',
-          fontSize: '0.92em',
-        }}
+          fontSize: '0.92em'}}
       >
         @{username}
       </Box>
@@ -153,8 +149,7 @@ function secretChatBubbleSx(isOutgoing: boolean) {
       boxShadow: isOutgoing 
         ? '0 6px 20px rgba(99, 102, 241, 0.1)' 
         : '0 6px 20px rgba(0, 0, 0, 0.5)',
-      borderColor: isOutgoing ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255, 255, 255, 0.15)',
-    },
+      borderColor: isOutgoing ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255, 255, 255, 0.15)'},
   };
 }
 
@@ -176,11 +171,10 @@ function groupCommentReactions(reactions: any[] = [], userId?: string) {
 export function ProjectDiscussionSidebar({
   project,
   fetchProjectData,
-  user,
-}: ProjectDiscussionSidebarProps) {
+  user}: ProjectDiscussionSidebarProps) {
   const { closeSidebar } = useDynamicSidebar();
   const { openProUpgrade } = useProUpgrade();
-  const { showSuccess, showError } = useToast();
+  const { showError } = useToast();
 
   const [messages, setMessages] = useState<DiscussionMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -218,7 +212,6 @@ export function ProjectDiscussionSidebar({
   const messageEndRef = useRef<HTMLDivElement>(null);
 
   const draftText = activeThreadParent ? threadInputText : inputText;
-  const setDraftText = activeThreadParent ? setThreadInputText : setInputText;
 
   const closeMentionSuggestions = useCallback(() => {
     setMentionAnchorEl(null);
@@ -267,8 +260,7 @@ export function ProjectDiscussionSidebar({
             id: doc?.$id || doc?.id || doc?.userId,
             title: doc?.displayName || doc?.name || doc?.username || 'Profile',
             username: String(doc?.username || doc?.prefs?.username || '').replace(/^@+/, '').trim().toLowerCase() || null,
-            avatar: doc?.avatar || doc?.profilePicId || doc?.prefs?.profilePicId || null,
-          }))
+            avatar: doc?.avatar || doc?.profilePicId || doc?.prefs?.profilePicId || null}))
         );
       } catch {
         if (alive) setMentionResults([]);
@@ -308,8 +300,7 @@ export function ProjectDiscussionSidebar({
           text: json.text || '',
           type: json.type || 'text',
           voiceFileId: json.voiceFileId || null,
-          sendToGeneral: json.sendToGeneral !== false,
-        };
+          sendToGeneral: json.sendToGeneral !== false};
       } catch {
         /* fall through */
       }
@@ -319,8 +310,7 @@ export function ProjectDiscussionSidebar({
         text: 'Voice Note',
         type: 'voice',
         voiceFileId: rawContent.substring('__voice_note__:'.length),
-        sendToGeneral: true,
-      };
+        sendToGeneral: true};
     }
     return { text: rawContent || '', type: 'text', voiceFileId: null, sendToGeneral: true };
   }, []);
@@ -373,8 +363,7 @@ export function ProjectDiscussionSidebar({
             content: doc.content,
             timestamp: new Date(doc.createdAt).getTime(),
             parentCommentId: doc.parentCommentId || null,
-            reactions: commentReactions[doc.$id] || [],
-          } satisfies DiscussionMessage;
+            reactions: commentReactions[doc.$id] || []} satisfies DiscussionMessage;
         })
       );
       msgs.sort((a, b) => a.timestamp - b.timestamp);
@@ -418,8 +407,7 @@ export function ProjectDiscussionSidebar({
           userId: user.$id,
           targetId: msgId,
           targetType: TargetType.COMMENT,
-          emoji,
-        });
+          emoji});
       }
       loadHuddleMessages();
     } catch (e) {
@@ -573,8 +561,7 @@ export function ProjectDiscussionSidebar({
           display: 'flex',
           justifyContent: isOutgoing ? 'flex-end' : 'flex-start',
           position: 'relative',
-          zIndex: 2,
-        }}
+          zIndex: 2}}
       >
         <Stack
           direction={isOutgoing ? 'row-reverse' : 'row'}
@@ -596,8 +583,7 @@ export function ProjectDiscussionSidebar({
               gap: 0.5,
               minWidth: 0,
               flex: '0 1 auto',
-              alignItems: isOutgoing ? 'flex-end' : 'flex-start',
-            }}
+              alignItems: isOutgoing ? 'flex-end' : 'flex-start'}}
           >
             {!isOutgoing && (
               <Typography
@@ -609,8 +595,7 @@ export function ProjectDiscussionSidebar({
                   pl: 0.5,
                   mb: 0.25,
                   fontFamily: 'var(--font-mono)',
-                  letterSpacing: '0.05em',
-                }}
+                  letterSpacing: '0.05em'}}
               >
                 {msg.senderName}
               </Typography>
@@ -622,8 +607,7 @@ export function ProjectDiscussionSidebar({
               }}
               sx={{
                 ...secretChatBubbleSx(isOutgoing),
-                cursor: opts?.isThreadParent ? 'default' : 'pointer',
-              }}
+                cursor: opts?.isThreadParent ? 'default' : 'pointer'}}
             >
               {renderBubbleBody(msg)}
             </Paper>
@@ -647,8 +631,7 @@ export function ProjectDiscussionSidebar({
                       cursor: 'pointer',
                       fontSize: '1rem',
                       lineHeight: 1,
-                      opacity: group.reactedBySelf ? 1 : 0.95,
-                    }}
+                      opacity: group.reactedBySelf ? 1 : 0.95}}
                   >
                     {group.emoji}
                   </Box>
@@ -710,8 +693,7 @@ export function ProjectDiscussionSidebar({
           backgroundImage: 'none',
           borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
           zIndex: 10,
-          flexShrink: 0,
-        }}
+          flexShrink: 0}}
       >
         <Toolbar sx={{ gap: 1, minHeight: '68px !important', px: 2 }}>
           {activeThreadParent ? (
@@ -732,8 +714,7 @@ export function ProjectDiscussionSidebar({
                 bgcolor: 'rgba(99, 102, 241, 0.1)',
                 border: '1px solid rgba(99, 102, 241, 0.22)',
                 color: '#818CF8',
-                flexShrink: 0,
-              }}
+                flexShrink: 0}}
             >
               <MessageSquare size={18} strokeWidth={2} />
             </Box>
@@ -780,8 +761,7 @@ export function ProjectDiscussionSidebar({
                 backgroundImage: 'none',
                 border: '1px solid rgba(255, 255, 255, 0.05)',
                 borderRadius: '28px',
-                boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
-              }}
+                boxShadow: '0 12px 32px rgba(0,0,0,0.4)'}}
             >
               <Box sx={{ width: 56, height: 56, borderRadius: '16px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)', color: '#818CF8', mx: 'auto', mb: 2.5 }}>
                 <Globe size={26} />
@@ -816,8 +796,7 @@ export function ProjectDiscussionSidebar({
                 gap: 1.75,
                 pb: 'calc(108px + env(safe-area-inset-bottom))',
                 position: 'relative',
-                zIndex: 2,
-              }}
+                zIndex: 2}}
               className="scrollbar-thin"
             >
               {activeThreadParent && (
@@ -829,8 +808,7 @@ export function ProjectDiscussionSidebar({
                     bgcolor: '#0B0A09',
                     backgroundImage: 'none',
                     border: '1px solid rgba(255, 255, 255, 0.05)',
-                    borderRadius: '20px',
-                  }}
+                    borderRadius: '20px'}}
                 >
                   <Typography variant="caption" sx={{ fontWeight: 900, color: '#818CF8', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', mb: 1.25, display: 'block', lineHeight: 1.25 }}>
                     Thread started by {activeThreadParent.senderName}

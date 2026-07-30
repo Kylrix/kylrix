@@ -21,7 +21,7 @@ export interface CreateCallMetadataInput extends Omit<KylrixCallMetadata, 'parti
   participantIds?: Array<string | null | undefined>;
 }
 
-export function normalizeCallParticipants(participants: Array<string | null | undefined> = []) {
+function normalizeCallParticipants(participants: Array<string | null | undefined> = []) {
   return Array.from(
     new Set(participants.map((participant) => String(participant || '').trim()).filter(Boolean))
   );
@@ -31,8 +31,7 @@ export function createCallMetadata(input: CreateCallMetadataInput): string {
   return JSON.stringify({
     ...input,
     participantIds: normalizeCallParticipants(input.participantIds || []),
-    createdAt: new Date().toISOString(),
-  });
+    createdAt: new Date().toISOString()});
 }
 
 export function parseCallMetadata(raw: unknown): KylrixCallMetadata & { createdAt?: string } {
@@ -70,80 +69,6 @@ export function parseCallMetadata(raw: unknown): KylrixCallMetadata & { createdA
   }
 }
 
-export function isCallExpired(call: {
-  expiresAt?: string | null;
-  startsAt?: string | null;
-  metadata?: unknown;
-}, now = Date.now()) {
-  const metadata = parseCallMetadata(call.metadata);
-  const expiresAt = call.expiresAt || metadata.expiresAt || null;
-  const startsAt = call.startsAt || metadata.startsAt || null;
 
-  if (!expiresAt) return false;
 
-  const endTime = new Date(expiresAt).getTime();
-  if (Number.isNaN(endTime)) return false;
 
-  if (startsAt) {
-    const startTime = new Date(startsAt).getTime();
-    if (!Number.isNaN(startTime) && now < startTime) {
-      return false;
-    }
-  }
-
-  return now > endTime;
-}
-
-export function isCallActive(call: {
-  expiresAt?: string | null;
-  startsAt?: string | null;
-  metadata?: unknown;
-}, now = Date.now()) {
-  const metadata = parseCallMetadata(call.metadata);
-  const startsAt = call.startsAt || metadata.startsAt || null;
-  const expiresAt = call.expiresAt || metadata.expiresAt || null;
-
-  if (startsAt) {
-    const startTime = new Date(startsAt).getTime();
-    if (!Number.isNaN(startTime) && now < startTime) {
-      return false;
-    }
-  }
-
-  if (expiresAt) {
-    const endTime = new Date(expiresAt).getTime();
-    if (!Number.isNaN(endTime) && now > endTime) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-export function buildCallJoinUrl(baseUrl: string, callId: string, params: Record<string, string | number | boolean | null | undefined> = {}) {
-  const url = new URL(`/connect/call/${callId}`, baseUrl);
-
-  for (const [key, value] of Object.entries(params)) {
-    if (value === null || value === undefined || value === '') continue;
-    url.searchParams.set(key, String(value));
-  }
-
-  return url.toString();
-}
-
-export function buildCallTitle(scope: KylrixCallScope, title?: string | null) {
-  if (title && title.trim()) return title.trim();
-  switch (scope) {
-    case 'direct':
-      return 'Direct Call';
-    case 'group':
-      return 'Group Call';
-    case 'note':
-      return 'Note Huddle';
-    case 'huddle':
-      return 'Huddle';
-    case 'link':
-    default:
-      return 'Public Call';
-  }
-}

@@ -103,8 +103,7 @@ export default function TagsPage() {
               await db.cache.upsert({
                 id: cacheKey,
                 data: merged as any,
-                timestamp: Date.now(),
-              }).catch(() => {});
+                timestamp: Date.now()}).catch(() => {});
             }
           } catch {}
         })();

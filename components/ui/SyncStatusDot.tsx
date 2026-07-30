@@ -18,8 +18,7 @@ function useEnginePending(resourceId?: string | null) {
  */
 export function SyncStatusDot({
   noteId,
-  resourceId,
-}: {
+  resourceId}: {
   noteId?: string | null;
   resourceId?: string | null;
 }) {
@@ -45,8 +44,7 @@ export function SyncStatusDot({
 /** Layman label bound to the same engine pending queue as SyncStatusDot. */
 export function SyncStatusLabel({
   noteId,
-  resourceId,
-}: {
+  resourceId}: {
   noteId?: string | null;
   resourceId?: string | null;
 }) {

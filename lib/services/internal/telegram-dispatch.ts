@@ -5,8 +5,7 @@ import {
   resolveTelegramAction,
   shouldDeliverTelegramNotification,
   TELEGRAM_PREFS_KEY,
-  type TelegramNotificationAction,
-} from '@/lib/telegram/notification-preferences';
+  type TelegramNotificationAction} from '@/lib/telegram/notification-preferences';
 
 export interface TelegramDispatchContext {
   action?: TelegramNotificationAction;
@@ -43,15 +42,13 @@ export async function dispatchTelegramNotification(
       resolveTelegramAction({
         type: context?.notificationType,
         title: context?.title,
-        resourceType: context?.resourceType || undefined,
-      });
+        resourceType: context?.resourceType || undefined});
 
     if (
       !shouldDeliverTelegramNotification(preferences, {
         action,
         resourceType: context?.resourceType,
-        resourceId: context?.resourceId,
-      })
+        resourceId: context?.resourceId})
     ) {
       return false;
     }
@@ -64,7 +61,7 @@ export async function dispatchTelegramNotification(
         APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
         targetUserId
       );
-    } catch (e) {
+    } catch (_e) {
       // Silently fail/ignore if document doesn't exist to comply with privacy rules
       return false;
     }
@@ -87,8 +84,7 @@ export async function dispatchTelegramNotification(
       body: JSON.stringify({
         chat_id: doc.tg_chat_id,
         text: message,
-        parse_mode: 'HTML',
-      }),
+        parse_mode: 'HTML'}),
     });
 
     if (!res.ok) {

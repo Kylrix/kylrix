@@ -6,8 +6,7 @@ import { KYLRIX_AUTH_URI } from '@/lib/appwrite/config';
 const PLAN_LABELS: Record<string, string> = {
   PRO: 'Kylrix Pro',
   PRO_MONTH: 'Kylrix Pro Monthly',
-  PRO_YEAR: 'Kylrix Pro Yearly',
-};
+  PRO_YEAR: 'Kylrix Pro Yearly'};
 
 function formatPlanLabel(plan: string) {
   return PLAN_LABELS[plan] || plan;
@@ -26,8 +25,7 @@ function formatDateLabel(value?: string | null) {
   return parsed.toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',
-    day: 'numeric',
-  });
+    day: 'numeric'});
 }
 
 async function sendTemplatedEmail(
@@ -44,16 +42,14 @@ async function sendTemplatedEmail(
   const rendered = await renderEmailTemplate(templateId, {
     recipientName: recipient.name || recipient.email.split('@')[0],
     ctaUrl: KYLRIX_AUTH_URI,
-    ...vars,
-  });
+    ...vars});
 
   const info = await messaging.createEmail({
     messageId: ID.unique(),
     subject: rendered.subject,
     content: rendered.html,
     users: [userId],
-    html: true,
-  });
+    html: true});
 
   return info;
 }
@@ -96,8 +92,7 @@ export async function notifyGiftCouponIssued(input: {
     expiresAt: formatDateLabel(input.expiresAt),
     couponStatus: input.couponStatus || 'active',
     giftMessage: input.giftMessage || 'A gift subscription has been reserved for your account.',
-    claimUrl: input.claimUrl || KYLRIX_AUTH_URI,
-  });
+    claimUrl: input.claimUrl || KYLRIX_AUTH_URI});
 }
 
-export { formatDurationLabel, formatPlanLabel, formatDateLabel };
+;

@@ -12,8 +12,7 @@ import {
   Key,
   Lock,
   RefreshCw,
-  Shield,
-} from 'lucide-react';
+  Shield} from 'lucide-react';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
 import { useSudo } from '@/context/SudoContext';
@@ -26,20 +25,17 @@ const FRAMEWORKS = [
     id: 'kylrix',
     title: 'Kylrix Internal',
     description: 'Native stack for tasks, notes, and calendar automations.',
-    status: 'Active' as const,
-  },
+    status: 'Active' as const},
   {
     id: 'openclaw',
     title: 'OpenClaw Platform',
     description: 'External tool bridges and third-party agent hooks.',
-    status: 'Coming Soon' as const,
-  },
+    status: 'Coming Soon' as const},
   {
     id: 'hermes',
     title: 'Hermes Orchestrator',
     description: 'Fast dialogue routing and lightweight response flows.',
-    status: 'Coming Soon' as const,
-  },
+    status: 'Coming Soon' as const},
 ];
 
 export default function AssistantSettingsPage() {
@@ -144,7 +140,7 @@ export default function AssistantSettingsPage() {
           {/* Workspace gateway */}
           <button
             type="button"
-            onClick={() => router.push('/agents')}
+            onClick={() => router.push('/settings/agents')}
             className="w-full text-left rounded-[28px] border border-white/5 bg-[#161412] p-5 md:p-6 hover:bg-[#1C1A18] hover:border-[#6366F1]/30 transition group"
           >
             <div className="flex items-center gap-4 min-w-0">

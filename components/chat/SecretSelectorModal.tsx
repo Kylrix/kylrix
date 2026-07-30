@@ -17,7 +17,7 @@ import {
     TextField,
     Tabs,
     Tab,
-    alpha as _alpha
+    alpha as alpha
 } from '@/lib/openbricks/primitives';
 import { Search, Shield, Key } from '@/lib/openbricks/icons';
 import { EcosystemService } from '@/lib/services/ecosystem';

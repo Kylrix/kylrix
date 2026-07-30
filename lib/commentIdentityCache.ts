@@ -34,7 +34,7 @@ function saveStore(store: CommentIdentityStore) {
   }
 }
 
-export function toCommentIdentitySnapshot(user: Partial<Users> & { $id?: string | null; id?: string | null }): CommentIdentitySnapshot | null {
+function toCommentIdentitySnapshot(user: Partial<Users> & { $id?: string | null; id?: string | null }): CommentIdentitySnapshot | null {
   const userId = user.$id || user.id || null;
   if (!userId) return null;
 
@@ -50,17 +50,15 @@ export function toCommentIdentitySnapshot(user: Partial<Users> & { $id?: string 
     bio: user.bio || null,
     prefs: (user as Users).prefs || null,
     createdAt: (user as Users).createdAt || null,
-    updatedAt: (user as Users).updatedAt || null,
-  };
+    updatedAt: (user as Users).updatedAt || null};
 }
 
-export function hydrateCommentIdentity(snapshot?: CommentIdentitySnapshot | null): Users | null {
+function hydrateCommentIdentity(snapshot?: CommentIdentitySnapshot | null): Users | null {
   if (!snapshot || !snapshot.$id) return null;
   return {
     ...(snapshot as unknown as Users),
     $id: snapshot.$id,
-    id: snapshot.id || snapshot.$id,
-  } as Users;
+    id: snapshot.id || snapshot.$id} as Users;
 }
 
 export function getCachedCommentIdentity(userId?: string | null): Users | null {

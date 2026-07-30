@@ -6,15 +6,14 @@ import React, {
   useState,
   useMemo,
   useEffect,
-  useCallback,
-} from 'react';
+  useCallback} from 'react';
 import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitlements';
 import type { BillingUiTier } from '@/lib/subscription/tier-resolution';
 import type { SubscriptionTier, PaymentMethod, RegionConfig } from '@/lib/subscription/ppp';
 import { PPP_DATA, calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 import { account } from '@/lib/appwrite/client';
 import { useAuth } from '@/context/auth/AuthContext';
-import { verifyProEntitlementAction } from '@/app/(app)/(auth)/accounts/actions/billing';
+import { verifyProEntitlementAction } from '@/lib/actions/billing/billing';
 import { normalizeBillingPrefsTier } from '@/lib/subscription/tier-resolution';
 import { BillingCacheService } from '@/lib/services/billing';
 import type { WalletSummary } from '@/lib/services/wallets';
@@ -47,11 +46,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   const [currentTier, setCurrentTier] = useState<BillingUiTier>('FREE');
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
-  const [regionCode, setRegionCode] = useState<string>('DEFAULT');
+  const [_regionCode, setRegionCode] = useState<string>('DEFAULT');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CRYPTO');
   const [tierLoading, setTierLoading] = useState(true);
-  const [regionLoading, setRegionLoading] = useState(true);
-  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({ USD: 1 });
+  const [_regionLoading, _setRegionLoading] = useState(true);
+  const [exchangeRates, _setExchangeRates] = useState<Record<string, number>>({ USD: 1 });
   
   const [tokenBalance, setTokenBalance] = useState<{ amount: string; symbol: string } | null>(null);
   const [wallets, setWallets] = useState<WalletSummary[]>([]);
@@ -68,8 +67,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const prices = useMemo(
     () => ({
       PRO: calculateSubscriptionPrice('PRO', 'DEFAULT', paymentMethod),
-      TEAMS: calculateSubscriptionPrice('TEAMS', 'DEFAULT', paymentMethod),
-    }),
+      TEAMS: calculateSubscriptionPrice('TEAMS', 'DEFAULT', paymentMethod)}),
     [paymentMethod],
   );
 
@@ -133,7 +131,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     // Send expiry reminder email 2 days before actual expiry
     if (expiryTime <= twoDaysFromNow && expiryTime > nowMs) {
       try {
-        const { sendSubscriptionExpiryReminderAction } = await import('@/app/(app)/(auth)/accounts/actions/billing');
+        const { sendSubscriptionExpiryReminderAction } = await import('@/lib/actions/billing/billing');
         const jwt = await account.createJWT().then((r: { jwt?: string }) => r?.jwt || '').catch(() => '');
         const res = await sendSubscriptionExpiryReminderAction(jwt || undefined);
         if (res?.success) {

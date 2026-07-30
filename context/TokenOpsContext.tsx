@@ -14,12 +14,13 @@ import {
   TextField,
   Typography,
   useMediaQuery,
-  useTheme,
-} from "@/lib/openbricks/primitives";
+  useTheme} from "@/lib/openbricks/primitives";
 import { X } from "lucide-react";
 import { useSudo } from "@/context/SudoContext";
 import { UsersService } from "@/lib/services/users";
 import { createKylrixTokenOperationsClient } from "@/lib/sdk/token";
+
+const nowMs = () => Date.now();
 
 type TokenActionKind = "mint" | "send" | "request" | "fine";
 type TokenActionStatus = "success" | "failed" | "pending";
@@ -63,11 +64,6 @@ interface TokenOpsContextType {
 
 const TokenOpsContext = createContext<TokenOpsContextType | undefined>(undefined);
 const STORAGE_KEY = "kylrix_pending_transfers_v1";
-const MODERATION_THRESHOLD = 25000;
-
-function nowMs() {
-  return Date.now();
-}
 
 function loadPendingTransfers(): PendingTransfer[] {
   if (typeof window === "undefined") return [];
@@ -190,8 +186,7 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
             kind: "send",
             status: "failed",
             title: "Token Send Failed",
-            message: String(error?.message || "Transfer settlement failed."),
-          });
+            message: String(error?.message || "Transfer settlement failed.")});
         } finally {
           working = working.filter((row) => row.id !== item.id);
         }
@@ -225,8 +220,7 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
           .map((row: any) => ({
             id: String(row.userId || row.$id || ""),
             username: String(row.username || ""),
-            displayName: String(row.displayName || row.username || "Unknown"),
-          }))
+            displayName: String(row.displayName || row.username || "Unknown")}))
           .filter((row: TokenUser) => Boolean(row.id && row.username) && row.id !== fromUserId)
           .slice(0, 20);
         setResults(mapped);
@@ -249,8 +243,7 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
       kind: "send",
       status: "success",
       title: "Transfer Recovered",
-      message: "Pending transfer canceled before settlement.",
-    });
+      message: "Pending transfer canceled before settlement."});
   }, [notifyTokenEvent, pendingTransfers]);
 
   const submit = useCallback(async () => {
@@ -317,8 +310,7 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
         kind: searchMode,
         status: "failed",
         title: searchMode === "send" ? "Token Send Failed" : "Token Request Failed",
-        message: String(error?.message || "Operation failed."),
-      });
+        message: String(error?.message || "Operation failed.")});
     } finally {
       setBusy(false);
     }

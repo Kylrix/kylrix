@@ -24,8 +24,7 @@ import {
   Typography,
   alpha,
   useMediaQuery,
-  useTheme,
-} from '@/lib/openbricks/primitives';
+  useTheme} from '@/lib/openbricks/primitives';
 import { Query } from 'appwrite';
 import { Link as LinkIcon, MessageCircle, Phone, Search, Shield, Trash2, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -87,8 +86,7 @@ const ConversationAvatar = ({ user }: { user: any }) => {
         height: 64,
         bgcolor: '#F59E0B',
         color: '#FFFFFF',
-        border: '1px solid rgba(255,255,255,0.08)',
-      }}
+        border: '1px solid rgba(255,255,255,0.08)'}}
     >
       {!avatarUrl && (user?.displayName || user?.username || '?').charAt(0).toUpperCase()}
     </Avatar>
@@ -134,8 +132,7 @@ const MemberAvatar = ({ user }: { user: any }) => {
         height: 44,
         bgcolor: '#F59E0B',
         color: '#FFFFFF',
-        border: '1px solid rgba(255,255,255,0.06)',
-      }}
+        border: '1px solid rgba(255,255,255,0.06)'}}
     >
       {!avatarUrl && (user?.displayName || user?.username || '?').charAt(0).toUpperCase()}
     </Avatar>
@@ -153,8 +150,7 @@ export default function ConversationActionsSheet({
   open,
   onClose,
   onConversationUpdated,
-  onConversationDeleted,
-}: ConversationActionsSheetProps) {
+  onConversationDeleted}: ConversationActionsSheetProps) {
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
@@ -395,8 +391,7 @@ export default function ConversationActionsSheet({
       conversationId: currentConversation.$id,
       conversationName: currentConversation.name,
       participantIds: Array.isArray(currentConversation?.participants) ? currentConversation.participants : [],
-      title: currentConversation.name || 'Call',
-    });
+      title: currentConversation.name || 'Call'});
     onClose();
   };
 
@@ -447,8 +442,7 @@ export default function ConversationActionsSheet({
           participantCount: Array.isArray(nextParticipants) ? nextParticipants.length : current.participantCount,
           admins: Array.isArray(current.admins)
             ? current.admins.filter((id: string) => id !== targetId)
-            : current.admins,
-        };
+            : current.admins};
       });
       await refreshConversation();
       toast.success('Member removed');
@@ -490,8 +484,7 @@ export default function ConversationActionsSheet({
     try {
       await ChatService.updateConversation(currentConversation.$id, {
         name: nextName,
-        description: nextDescription,
-      });
+        description: nextDescription});
       await refreshConversation();
       toast.success('Hangout details updated');
     } catch (error: any) {
@@ -580,8 +573,7 @@ export default function ConversationActionsSheet({
               bgcolor: '#161412',
               backgroundImage: 'none',
               borderRadius: isMobile ? 0 : '24px',
-              border: '1px solid rgba(255,255,255,0.08)',
-            },
+              border: '1px solid rgba(255,255,255,0.08)'},
           }}
         >
           <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
@@ -641,8 +633,7 @@ export default function ConversationActionsSheet({
         open={open}
         onClose={onClose}
         ModalProps={{
-          keepMounted: false,
-        }}
+          keepMounted: false}}
         PaperProps={{
           sx: {
             top: '88px',
@@ -654,8 +645,7 @@ export default function ConversationActionsSheet({
             backgroundImage: 'none',
             border: '1px solid rgba(255,255,255,0.08)',
             overflow: 'hidden',
-            zIndex: 1305,
-          },
+            zIndex: 1305},
         }}
       >
           <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', pt: { xs: 'env(safe-area-inset-top)', md: 0 } }}>
@@ -668,8 +658,7 @@ export default function ConversationActionsSheet({
                   height: 56,
                   bgcolor: alpha('#6366F1', 0.12),
                   color: '#6366F1',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                }}
+                  border: '1px solid rgba(255,255,255,0.08)'}}
               >
                 {!groupAvatarSrc && <Users size={24} />}
               </Avatar>
@@ -690,8 +679,7 @@ export default function ConversationActionsSheet({
                       display: '-webkit-box',
                       WebkitBoxOrient: 'vertical',
                       WebkitLineClamp: 2,
-                      overflow: 'hidden',
-                    }}
+                      overflow: 'hidden'}}
                   >
                     {currentConversation.description}
                   </Typography>
@@ -720,8 +708,7 @@ export default function ConversationActionsSheet({
                   fontWeight: 800,
                   minWidth: 0,
                   px: isMobile ? 0.5 : 2,
-                  gap: 0.75,
-                },
+                  gap: 0.75},
               }}
             >
               {isAdmin && (
@@ -773,8 +760,7 @@ export default function ConversationActionsSheet({
                     p: 1.5,
                     borderRadius: '18px',
                     bgcolor: 'rgba(255,255,255,0.02)',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                  }}
+                    border: '1px solid rgba(255,255,255,0.05)'}}
                 >
                   <Stack spacing={1.25}>
                     <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
@@ -799,8 +785,7 @@ export default function ConversationActionsSheet({
                       size="small"
                       value={inviteEnabled ? inviteLink : 'Disabled'}
                       InputProps={{
-                        readOnly: true,
-                      }}
+                        readOnly: true}}
                     />
 
                     <Button
@@ -820,8 +805,7 @@ export default function ConversationActionsSheet({
                       p: 1.5,
                       borderRadius: '18px',
                       bgcolor: 'rgba(255,255,255,0.02)',
-                      border: '1px solid rgba(255,255,255,0.05)',
-                    }}
+                      border: '1px solid rgba(255,255,255,0.05)'}}
                   >
                     <Stack spacing={1.5}>
                       <Typography sx={{ fontWeight: 800 }}>Hangout details</Typography>
@@ -833,8 +817,7 @@ export default function ConversationActionsSheet({
                             height: 56,
                             bgcolor: alpha('#6366F1', 0.12),
                             color: '#6366F1',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                          }}
+                            border: '1px solid rgba(255,255,255,0.08)'}}
                         >
                           {!groupAvatarSrc && <Users size={22} />}
                         </Avatar>
@@ -873,8 +856,7 @@ export default function ConversationActionsSheet({
                       disabled={detailsSaving || !isDetailsDirty}
                       sx={{
                         opacity: detailsSaving || !isDetailsDirty ? 0.45 : 1,
-                        filter: detailsSaving || !isDetailsDirty ? 'blur(0.5px)' : 'none',
-                      }}
+                        filter: detailsSaving || !isDetailsDirty ? 'blur(0.5px)' : 'none'}}
                     >
                       Save details
                     </Button>
@@ -893,8 +875,7 @@ export default function ConversationActionsSheet({
                       mb: 1,
                       bgcolor: 'rgba(245,158,11,0.06)',
                       border: '1px solid rgba(245,158,11,0.18)',
-                      borderRadius: '18px',
-                    }}
+                      borderRadius: '18px'}}
                   >
                     <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
                       <Box>
@@ -930,8 +911,7 @@ export default function ConversationActionsSheet({
                                 p: 1.25,
                                 bgcolor: 'rgba(255,255,255,0.02)',
                                 border: '1px solid rgba(255,255,255,0.05)',
-                                borderRadius: '16px',
-                              }}
+                                borderRadius: '16px'}}
                             >
                               <Stack direction="row" alignItems="center" spacing={1.5}>
                                 <MemberAvatar user={requester} />
@@ -1004,8 +984,7 @@ export default function ConversationActionsSheet({
                           p: 1.25,
                           bgcolor: 'rgba(255,255,255,0.02)',
                           border: '1px solid rgba(255,255,255,0.05)',
-                          borderRadius: '18px',
-                        }}
+                          borderRadius: '18px'}}
                       >
                         <Stack direction="row" alignItems="center" spacing={1.5}>
                           <ListItemAvatar sx={{ minWidth: 0 }}>
@@ -1151,8 +1130,7 @@ export default function ConversationActionsSheet({
             bgcolor: '#161412',
             backgroundImage: 'none',
             border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: isMobile ? 0 : '20px',
-          },
+            borderRadius: isMobile ? 0 : '20px'},
         }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Delete hangout?</DialogTitle>

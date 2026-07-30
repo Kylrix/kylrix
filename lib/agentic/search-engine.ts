@@ -43,7 +43,7 @@ const TEMPORAL_PATTERNS: Array<{ re: RegExp; temporal: SearchPlan['temporal']; d
   { re: /\b(settings?|passkey|security)\b/i, temporal: 'none', domains: ['ui'] },
 ];
 
-export function planSearchQuery(query: string): SearchPlan {
+function planSearchQuery(query: string): SearchPlan {
   const q = String(query || '').trim();
   if (!q) {
     return { domains: ['all'], reasoning: 'Empty query — broad scan', temporal: 'none' };
@@ -69,8 +69,7 @@ export function planSearchQuery(query: string): SearchPlan {
   return {
     domains: Array.from(domainSet),
     reasoning: reasons.join('; ') || 'keyword routing',
-    temporal,
-  };
+    temporal};
 }
 
 function scoreMatch(hay: string, needle: string): number {
@@ -172,8 +171,7 @@ export async function executeEcosystemSearch(
             title: resolved.label,
             snippet: resolved.description,
             route: resolved.route,
-            score: 0.95,
-          });
+            score: 0.95});
         } else {
           for (const d of UI_DESTINATIONS) {
             const score = scoreMatch([d.label, ...d.aliases].join(' '), query);
@@ -184,8 +182,7 @@ export async function executeEcosystemSearch(
                 title: d.label,
                 snippet: d.description,
                 route: d.route,
-                score,
-              });
+                score});
             }
           }
         }
@@ -217,7 +214,7 @@ export async function executeEcosystemSearch(
               domain: 'project',
               id: (row as any).$id,
               title,
-              route: `/projects/${(row as any).$id}`,
+              route: `/workspaces/${(row as any).$id}`,
               score,
             });
           }
@@ -228,9 +225,8 @@ export async function executeEcosystemSearch(
     }
   }
 
-  const ranked = hits.sort((a, b) => b.score - a.score).slice(0, limit);
+  const ranked = hits.sort((a: any, b: any) => b.score - a.score).slice(0, limit);
   return {
     plan,
-    hits: redactPIIAndSensitiveFields(ranked) as SearchHit[],
-  };
+    hits: redactPIIAndSensitiveFields(ranked) as SearchHit[]};
 }

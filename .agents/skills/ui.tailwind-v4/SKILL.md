@@ -1,3 +1,8 @@
+---
+name: ui.tailwind-v4
+description: Tailwind v4 + OpenBricks migration notes for utility and theme tokens.
+---
+
 # ui.tailwind-v4
 
 ## Description

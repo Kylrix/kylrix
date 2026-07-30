@@ -15,7 +15,7 @@ export interface NostrEvent {
   sig: string;
 }
 
-export function getEventHash(event: Omit<NostrEvent, "id" | "sig">): string {
+function getEventHash(event: Omit<NostrEvent, "id" | "sig">): string {
   const serialized = JSON.stringify([
     0,
     event.pubkey,
@@ -33,11 +33,10 @@ export function signEvent(event: Omit<NostrEvent, "id" | "sig">, privateKey: Uin
   return {
     ...event,
     id,
-    sig: bytesToHex(sigBytes),
-  };
+    sig: bytesToHex(sigBytes)};
 }
 
-export function verifyEvent(event: NostrEvent): boolean {
+function verifyEvent(event: NostrEvent): boolean {
   try {
     const id = getEventHash(event);
     if (id !== event.id) return false;
@@ -119,7 +118,7 @@ export class NostrRelayPool {
   }
 
   public publish(event: NostrEvent): Promise<void> {
-    const promises = Array.from(this.sockets.values()).map((ws) => {
+    const promises = Array.from(this.sockets.values()).map((ws: any) => {
       return new Promise<void>((resolve) => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(["EVENT", event]));

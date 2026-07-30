@@ -1,16 +1,6 @@
 import { account } from '@/lib/appwrite/client';
 import type { KylrixActivityType } from './contract';
 
-export type KylrixTokenAction =
-  | 'state'
-  | 'initialize'
-  | 'mint_activity'
-  | 'transfer'
-  | 'balance'
-  | 'ledger'
-  | 'fine_to_root'
-  | 'lock_claim'
-  | 'settle_claim';
 
 export interface KylrixTokenClientOptions {
   endpoint?: string;

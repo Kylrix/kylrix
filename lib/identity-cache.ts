@@ -102,7 +102,7 @@ function storeIdentity(identity: CachedIdentity) {
   emitUpdate(identity);
 }
 
-export function normalizeIdentity(input: IdentityInput | null | undefined): CachedIdentity | null {
+function normalizeIdentity(input: IdentityInput | null | undefined): CachedIdentity | null {
   if (!input) return null;
 
   const userId = input.userId || input.$id;
@@ -137,8 +137,7 @@ export function normalizeIdentity(input: IdentityInput | null | undefined): Cach
     isContact,
     tier,
     cachedAt: input.cachedAt || Date.now(),
-    source: input.source,
-  };
+    source: input.source};
 }
 
 export function seedIdentityCache(input: IdentityInput | null | undefined) {
@@ -162,10 +161,6 @@ export function getCachedIdentityByUsername(username?: string | null) {
   return memoryCache.get(`username:${normalized}`) || null;
 }
 
-export function getCachedIdentity(key?: string | null) {
-  if (!key) return null;
-  return getCachedIdentityById(key) || getCachedIdentityByUsername(key);
-}
 
 async function refreshIdentity(
   cacheKey: string,
@@ -209,28 +204,7 @@ export async function resolveIdentityById(
   return refreshIdentity(`id:${userId}`, fetcher);
 }
 
-export async function resolveIdentityByUsername(
-  username: string,
-  fetcher: () => Promise<IdentityInput | null | undefined>,
-  staleAfterMs: number = DEFAULT_STALE_AFTER_MS
-) {
-  const normalized = normalizeUsername(username);
-  if (!normalized) return null;
 
-  const cached = getCachedIdentityByUsername(normalized);
-  if (cached) {
-    if (shouldRefresh(cached, staleAfterMs)) {
-      void refreshIdentity(`username:${normalized}`, fetcher);
-    }
-    return cached;
-  }
-
-  return refreshIdentity(`username:${normalized}`, fetcher);
-}
-
-export function primeIdentityCache(entries: Array<IdentityInput | null | undefined>) {
-  entries.forEach((entry) => seedIdentityCache(entry));
-}
 
 export function subscribeIdentityCache(listener: (identity: CachedIdentity) => void) {
   if (!canUseStorage()) return () => {};

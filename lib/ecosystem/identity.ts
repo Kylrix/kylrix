@@ -8,122 +8,6 @@ const SESSION_SYNC_KEY = 'kylrix_session_identity_ok';
  * Ensures the user has a record in the global Kylrix Connect Directory.
  * This is the 'Universal Identity Hook' that enables ecosystem discovery.
  */
-export async function ensureGlobalIdentity(user: any, force = false) {
-    if (!user?.$id || typeof window === 'undefined') return;
-
-    // Layered Caching
-    if (!force && sessionStorage.getItem(SESSION_SYNC_KEY)) return;
-    const lastSync = localStorage.getItem(PROFILE_SYNC_KEY);
-    if (!force && lastSync && (Date.now() - parseInt(lastSync)) < 24 * 60 * 60 * 1000) {
-        sessionStorage.setItem(SESSION_SYNC_KEY, '1');
-        return;
-    }
-
-    try {
-        const syncProfileEvent = async (payload: {
-            type: 'username_change' | 'profile_sync';
-            userId: string;
-            newUsername?: string | null;
-            profilePatch?: Record<string, unknown>;
-            metadata?: Record<string, unknown>;
-        }) => {
-            try {
-                const { createAccountEventSecure } = await import('@/lib/actions/secure-ops');
-                return await createAccountEventSecure(payload);
-            } catch (error) {
-                console.warn('[Identity] Failed to sync profile event:', error);
-                return null;
-            }
-        };
-
-        const { account } = await import('../appwrite');
-        const [prefs, profile] = await Promise.all([
-            account.getPrefs(),
-            databases.getRow(CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, user.$id).catch(() => null)
-        ]);
-
-        let username = user.username || prefs?.username || user.name || user.email?.split('@')[0];
-        username = String(username).toLowerCase().replace(/^@/, '').replace(/[^a-z0-9_]/g, '').slice(0, 50);
-        if (!username) username = `user_${user.$id.slice(0, 8)}`;
-
-        const picId = user.avatar || user.profilePicId || user.avatarUrl || prefs?.profilePicId || null;
-        const profileData: any = {
-            username,
-            displayName: user.name || username,
-            updatedAt: new Date().toISOString(),
-            walletAddress: user.walletAddress || null,
-            bio: profile?.bio || "",
-            avatar: picId
-        };
-
-        if (!profile) {
-            try {
-                const payload = {
-                    ...profileData,
-                    createdAt: new Date().toISOString()
-                };
-
-                await databases.createRow(CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, user.$id, payload, [
-                    Permission.read(Role.any())]);
-                await syncProfileEvent({
-                    type: 'username_change',
-                    userId: user.$id,
-                    newUsername: username,
-                    profilePatch: payload,
-                    metadata: {
-                        source: 'note.ensureGlobalIdentity.create',
-                    },
-                });
-            } catch (inner: any) {
-                console.error('[Identity] Global profile creation failed:', inner);
-                throw inner;
-            }
-        } else {
-            if (profile.username !== username || profile.avatar !== picId || profile.displayName !== profileData.displayName) {
-                try {
-                    const payload = { ...profileData };
-                    await databases.updateRow(CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, user.$id, payload);
-                    await syncProfileEvent({
-                        type: profile.username !== username ? 'username_change' : 'profile_sync',
-                        userId: user.$id,
-                        newUsername: username,
-                        profilePatch: payload,
-                        metadata: {
-                            source: 'note.ensureGlobalIdentity.update',
-                        },
-                    });
-                } catch (inner: any) {
-                    console.error('[Identity] Global profile update failed:', inner);
-                    throw inner;
-                }
-            }
-        }
-
-        if (prefs.username !== username) {
-            await account.updatePrefs({ ...prefs, username });
-            await syncProfileEvent({
-                type: 'username_change',
-                userId: user.$id,
-                newUsername: username,
-                profilePatch: {
-                    username,
-                    displayName: profileData.displayName,
-                    bio: profileData.bio,
-                    avatar: picId,
-                    walletAddress: user.walletAddress || null,
-                },
-                metadata: {
-                    source: 'note.ensureGlobalIdentity.prefs',
-                },
-            });
-        }
-
-        localStorage.setItem(PROFILE_SYNC_KEY, Date.now().toString());
-        sessionStorage.setItem(SESSION_SYNC_KEY, '1');
-    } catch (error: any) {
-        console.warn('[Identity] Background sync deferred:', error);
-    }
-}
 
 /**
  * Searches for users across the entire ecosystem via the global directory.
@@ -180,7 +64,7 @@ export async function searchGlobalUsers(query: string, limit = 10) {
                 CONNECT_TABLE_ID_USERS,
                 queries
             );
-            results = res.rows.map(doc => ({
+            results = res.rows.map((doc: any) => ({
                 id: doc.$id,
                 userId: doc.$id,
                 type: 'user' as const,
@@ -210,7 +94,7 @@ export async function searchGlobalUsers(query: string, limit = 10) {
                         Query.select(['$id', 'username', 'displayName', 'bio', 'avatar', 'walletAddress', 'publicKey'])
                     ]
                 );
-                results = res.rows.map(doc => ({
+                results = res.rows.map((doc: any) => ({
                     id: doc.$id,
                     userId: doc.$id,
                     type: 'user' as const,
@@ -243,7 +127,7 @@ export async function searchGlobalUsers(query: string, limit = 10) {
                 );
 
                 for (const doc of noteRes.rows) {
-                    if (!results.find(r => r.id === doc.$id)) {
+                    if (!results.find((r: any) => r.id === doc.$id)) {
                         results.push({
                             id: doc.$id,
                             userId: doc.$id,

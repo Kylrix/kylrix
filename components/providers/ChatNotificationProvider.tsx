@@ -110,8 +110,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
                     const conversation = await ChatService.getConversationById(message.conversationId, user.$id);
                     if (conversation?.type === 'direct') {
                         const history = await ChatService.getMessages(message.conversationId, 50, 0, user.$id, {
-                            prefetchedConversation: conversation,
-                        });
+                            prefetchedConversation: conversation});
                         hasReplied = history.rows.some((row: any) => row.senderId === user.$id);
                     } else {
                         hasReplied = true;
@@ -251,7 +250,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
                             showCallNotification(signal, activity.userId);
                         }
                     }
-                } catch (e) {}
+                } catch (_e) {}
             }
         });
 

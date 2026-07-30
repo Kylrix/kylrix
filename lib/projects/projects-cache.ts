@@ -22,7 +22,6 @@ export type ProjectDetailCache = {
   projectObjects: ProjectObjects[];
   collaborators: any[];
   ownerProfile: any | null;
-  gitIntegration: any | null;
   notes: Notes[];
   tasks: any[];
   credentials: any[];
@@ -133,5 +132,4 @@ export const EMPTY_TAGGED_RESOURCES: ProjectTaggedResources = {
   totps: [],
   events: [],
   forms: [],
-  moments: [],
-};
+  moments: []};

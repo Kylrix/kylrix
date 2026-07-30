@@ -9,7 +9,7 @@ import { usePathname } from 'next/navigation';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import toast from 'react-hot-toast';
 
-export type SetupStep = 'none' | 'masterpass' | 'username' | 'passkey' | 'identity';
+type SetupStep = 'none' | 'masterpass' | 'username' | 'passkey' | 'identity';
 
 interface SetupContextType {
   currentStep: SetupStep;
@@ -198,8 +198,7 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const pub = await ecosystemSecurity.ensureE2EIdentity(user.$id);
             if (pub) {
               await UsersService.updateProfile(user.$id, {
-                publicKey: pub,
-              });
+                publicKey: pub});
               invalidateUsersProfileRowCache(user.$id);
               const updated = await UsersService.getProfileById(user.$id);
               setProfile(updated);
@@ -251,8 +250,7 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         hasPasskey,
         triggerCheck,
         dismissStep,
-        silentPublishUsername,
-      }}
+        silentPublishUsername}}
     >
       {children}
     </SetupContext.Provider>

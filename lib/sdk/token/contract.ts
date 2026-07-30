@@ -76,8 +76,7 @@ export const DEFAULT_KYLRIX_TOKEN_POLICY: KylrixTokenPolicy = {
   spikeEventThreshold: 2_000,
   spikeTightenBps: 4000, // up to -40% rewards during detected spikes.
   reputationFloor: 20,
-  rootWalletId: 'system:root',
-};
+  rootWalletId: 'system:root'};
 
 const ACTIVITY_BASE_REWARD_MICRO: Record<KylrixActivityType, bigint> = {
   daily_login: 50_000n,          // 0.05
@@ -106,20 +105,6 @@ const applyBps = (value: bigint, bps: number) => (value * BigInt(clampBps(bps)))
 export function createKylrixTokenContract(policy: KylrixTokenPolicy = DEFAULT_KYLRIX_TOKEN_POLICY) {
   const normalizeMicro = (value: bigint) => (value < 0n ? 0n : value);
 
-  const computeThermalScore = (recentEvents: any[]): number => {
-    // recentEvents = last 5 mints for the user
-    if (!recentEvents || recentEvents.length === 0) return 0;
-    
-    let thermal = 0;
-    const now = Date.now();
-    for (const evt of recentEvents) {
-      const ageMs = now - new Date(evt.createdAt).getTime();
-      const ageSecs = Math.max(1, ageMs / 1000);
-      // Exponential decay: e^(-t/3600) means 37% remaining after 1h
-      thermal += Math.exp(-ageSecs / 3600);
-    }
-    return thermal; // 0 = cold, 5 = very hot
-  };
 
   const circulatingMicro = (snapshot: KylrixEmissionSnapshot) =>
     normalizeMicro(snapshot.mintedMicro - snapshot.burnedMicro);
@@ -240,6 +225,5 @@ export function createKylrixTokenContract(policy: KylrixTokenPolicy = DEFAULT_KY
     emissionBudgetForAge,
     remainingEmissionBudget,
     decideMintForActivity,
-    validateTransfer,
-  };
+    validateTransfer};
 }

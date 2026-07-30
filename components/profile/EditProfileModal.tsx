@@ -53,8 +53,7 @@ const compressImage = (file: File, maxWidth = 512, maxHeight = 512, quality = 0.
             }
             const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
               type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
+              lastModified: Date.now()});
             resolve(compressedFile);
           },
           'image/jpeg',
@@ -142,7 +141,7 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
                 setTags(prefsObj.tags || []);
                 setTipEnabled(prefsObj.tipEnabled ?? false);
                 setHideSensitiveInfo(prefsObj.hideSensitiveInfo ?? false);
-            } catch (e) {
+            } catch (_e) {
                 setLinks([]);
                 setTags([]);
                 setTipEnabled(false);
@@ -207,7 +206,7 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
                 setProfilePic(compressed);
                 setProfilePicUrl(URL.createObjectURL(compressed));
                 setRemovePicRequested(false);
-            } catch (err) {
+            } catch (_err) {
                 // If compression fails, verify the original file size
                 if (file.size > 1024 * 1024) {
                     setError('Maximum file size of 1MB exceeded.');

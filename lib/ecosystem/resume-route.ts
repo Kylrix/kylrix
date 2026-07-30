@@ -3,7 +3,7 @@
 const PUBLIC_PREFIXES = [
   '/send',
   '/i/',
-  '/app/shared',
+  '/app',
   '/idea',
   '/u/',
   '/p/',
@@ -11,35 +11,34 @@ const PUBLIC_PREFIXES = [
   '/connect/call/',
   '/form/',
   '/forms/',
-  '/event/',
   '/events/',
   '/goal/',
   '/goals/',
-  '/flow/form/',
-  '/flow/goal/',
-  '/flow/forms/',
-  '/flow/events/',
   '/agents/session/',
   '/agents/chat/',
+  '/',
+  '/billing/',
 ];
 
 const APP_PREFIXES = [
   '/app',
   '/vault',
-  '/flow',
+  '/flows',
   '/connect',
-  '/projects',
+  '/workspaces',
   '/goals',
   '/forms',
   '/events',
   '/settings',
-  '/agents',
-  '/accounts',
+  '/settings/agents',
+  '/billing',
+  '/',
+  '/',
 ];
 
 export const LAST_ROUTE_COOKIE = 'kylrix_last_route';
 export const DEFAULT_AUTHENTICATED_ROUTE = '/connect/chats';
-export const DEFAULT_GUEST_ROUTE = '/send';
+export const DEFAULT_GUEST_ROUTE = '/app';
 
 export function isPublicResumePath(path: string): boolean {
   if (!path || path === '/') return true;

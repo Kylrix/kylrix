@@ -29,8 +29,7 @@ const ACCENTS: Record<OgAccent, { solid: string; soft: string; border: string; g
 export function buildOgMetadata({
   title,
   description,
-  imageUrl,
-}: {
+  imageUrl}: {
   title: string;
   description: string;
   imageUrl: string;
@@ -48,8 +47,7 @@ export function buildOgMetadata({
       card: 'summary_large_image',
       title,
       description,
-      images: [imageUrl],
-    },
+      images: [imageUrl]},
   };
 }
 
@@ -108,8 +106,7 @@ export function renderKylrixShareCard({
   ownerAvatarDataUrl,
   chips = [],
   previewImageDataUrl,
-  previewImageAlt,
-}: ShareCardProps) {
+  previewImageAlt}: ShareCardProps) {
   const palette = ACCENTS[accent];
   const compactChips = chips.filter(Boolean).slice(0, 3);
   const hasPreview = Boolean(previewImageDataUrl);
@@ -129,8 +126,7 @@ export function renderKylrixShareCard({
         padding: '36px 40px',
         position: 'relative',
         overflow: 'hidden',
-        fontFamily: 'Arial, Helvetica, sans-serif',
-      }}
+        fontFamily: 'Arial, Helvetica, sans-serif'}}
     >
       <div
         style={{
@@ -148,8 +144,7 @@ export function renderKylrixShareCard({
           flex: 1,
           zIndex: 1,
           minWidth: 0,
-          paddingRight: '20px',
-        }}
+          paddingRight: '20px'}}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -174,8 +169,7 @@ export function renderKylrixShareCard({
                 letterSpacing: '0.14em',
                 textTransform: 'uppercase',
                 color: 'rgba(245,243,239,0.42)',
-                fontWeight: 700,
-              }}
+                fontWeight: 700}}
             >
               {productLabel}
             </span>
@@ -187,8 +181,7 @@ export function renderKylrixShareCard({
               lineHeight: 0.96,
               letterSpacing: '-0.06em',
               fontWeight: 900,
-              maxWidth: '720px',
-            }}
+              maxWidth: '720px'}}
           >
             {clampText(title, 52)}
           </div>
@@ -200,8 +193,7 @@ export function renderKylrixShareCard({
                 lineHeight: 1.2,
                 color: 'rgba(245,243,239,0.7)',
                 maxWidth: '640px',
-                fontWeight: 600,
-              }}
+                fontWeight: 600}}
             >
               {shortDesc}
             </div>
@@ -221,8 +213,7 @@ export function renderKylrixShareCard({
                     border: '1px solid rgba(255,255,255,0.08)',
                     color: '#F5F3EF',
                     fontSize: '15px',
-                    fontWeight: 700,
-                  }}
+                    fontWeight: 700}}
                 >
                   {chip}
                 </div>
@@ -240,8 +231,7 @@ export function renderKylrixShareCard({
                 borderRadius: '18px',
                 overflow: 'hidden',
                 border: '1px solid rgba(255,255,255,0.1)',
-                background: '#161412',
-              }}
+                background: '#161412'}}
             >
               <img
                 src={previewImageDataUrl}
@@ -264,8 +254,7 @@ export function renderKylrixShareCard({
                   borderRadius: '999px',
                   objectFit: 'cover',
                   border: '2px solid rgba(255,255,255,0.14)',
-                  flexShrink: 0,
-                }}
+                  flexShrink: 0}}
               />
             ) : (
               <div
@@ -281,8 +270,7 @@ export function renderKylrixShareCard({
                   color: palette.solid,
                   fontSize: '24px',
                   fontWeight: 900,
-                  flexShrink: 0,
-                }}
+                  flexShrink: 0}}
               >
                 {initial}
               </div>
@@ -294,8 +282,7 @@ export function renderKylrixShareCard({
                   fontWeight: 800,
                   color: 'rgba(245,243,239,0.42)',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
+                  letterSpacing: '0.08em'}}
               >
                 {ownerLabel}
               </span>
@@ -318,8 +305,7 @@ export function renderKylrixShareCard({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1,
-        }}
+          zIndex: 1}}
       >
         <div
           style={{
@@ -330,8 +316,7 @@ export function renderKylrixShareCard({
             height: '260px',
             borderRadius: '52px',
             background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.08)',
-          }}
+            border: '1px solid rgba(255,255,255,0.08)'}}
         >
           <KylrixLogo size={196} />
         </div>

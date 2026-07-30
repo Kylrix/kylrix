@@ -255,8 +255,7 @@ export function PublicCall({ id }: { id: string }) {
                 await CallService.sendSignal(activeUser.$id, linkData.userId, {
                     type: 'join_request',
                     callId: id,
-                    name: displayName || activeUser.name || 'Guest',
-                });
+                    name: displayName || activeUser.name || 'Guest'});
                 setJoining(false);
             } else {
                 setShowPreCheck(true);

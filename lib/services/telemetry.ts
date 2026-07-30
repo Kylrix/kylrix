@@ -12,7 +12,7 @@ export type TelemetryNiche =
   | 'billing'        // Subscriptions, Tokens, Ledgers
   | 'system';        // Settings, Devices, Authentication
 
-export type ThreadStatus = 'running' | 'completed' | 'failed';
+type ThreadStatus = 'running' | 'completed' | 'failed';
 export type NotificationType = 'direct' | 'suggested';
 
 const DATABASE_ID = 'passwordManagerDb';
@@ -321,8 +321,7 @@ export const TelemetryService = {
         seen,
         isMemory: false,
         isPublic: false,
-        isGuest: false,
-      };
+        isGuest: false};
 
       if (targetSessionId) {
         try {
@@ -475,8 +474,7 @@ export const TelemetryService = {
           objectType: params.objectType,
           title: params.title ? String(params.title).slice(0, 256) : null,
           toolKey: params.toolKey || null,
-          createdAt: new Date().toISOString(),
-        },
+          createdAt: new Date().toISOString()},
       });
     } catch (err) {
       console.error('[TelemetryService] Failed to record session object:', err);
@@ -502,8 +500,7 @@ export const TelemetryService = {
           Query.equal('sessionId', sessionId),
           Query.orderDesc('$createdAt'),
           Query.limit(limit),
-        ],
-      });
+        ]});
       const seen = new Set<string>();
       const out: Array<{ objectId: string; objectType: string; title: string | null; toolKey: string | null; createdAt: string | null }> = [];
       for (const row of res.rows || []) {
@@ -515,8 +512,7 @@ export const TelemetryService = {
           objectType: String(row.objectType || 'idea'),
           title: row.title != null ? String(row.title) : null,
           toolKey: row.toolKey != null ? String(row.toolKey) : null,
-          createdAt: row.createdAt != null ? String(row.createdAt) : (row.$createdAt || null),
-        });
+          createdAt: row.createdAt != null ? String(row.createdAt) : (row.$createdAt || null)});
       }
       return out;
     } catch (err) {
@@ -555,8 +551,7 @@ export const TelemetryService = {
           args: params.args ? JSON.stringify(params.args).slice(0, 7800) : null,
           status: params.status || 'success',
           resultSummary: params.resultSummary ? String(params.resultSummary).slice(0, 512) : null,
-          createdAt: new Date().toISOString(),
-        },
+          createdAt: new Date().toISOString()},
       });
       return rowId;
     } catch (err) {
@@ -590,8 +585,7 @@ export const TelemetryService = {
           Query.equal('sessionId', sessionId),
           Query.orderAsc('$createdAt'),
           Query.limit(limit),
-        ],
-      });
+        ]});
       return (res.rows || []).map((row: any) => ({
         $id: row.$id,
         conversationId: String(row.conversationId || ''),

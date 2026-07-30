@@ -8,15 +8,17 @@ disable-model-invocation: true
 
 ## Rules
 
-1. Read `AGENTS.md` and follow it as hard policy.
-2. Never edit `generated/` or `types/appwrite.d.ts` manually. Only edit `appwrite.config.json` when the user explicitly requests schema changes, and keep changes surgical.
-3. Prefer existing `lib/sdk` and `lib/services` paths over ad-hoc duplication.
-4. Preserve privacy boundaries (especially public/shared notes and ghost-note isolation).
-5. Keep same-tab navigation and drawer-first UX unless user asks otherwise.
-6. Do not run build/lint commands unless explicitly requested.
-7. Keep changes surgical and avoid unrelated refactors.
-8. For privileged operations, enforce `ADMINS` email allowlist checks server-side; do not rely only on role labels.
-9. For token/network operations, require explicit singleton state-row checks before allowing mutations.
-10. Do not create or use app-exposed API route surfaces (`/api/*`, `/accounts/api/*`) for core app operations. Implement secure in-code server functions/actions and call those directly from the codebase.
-11. **Terminology Standard**: Strictly use "Table" (not Collection) and "Row" (not Document). This applies to code (methods like `listRows`), comments, logs, and all UI copy. The terms "document" and "collection" are legacy/deprecated within this ecosystem.
-
+1. Read `AGENTS.md` and `.agents/skills/SKILLS.md` first. Then open only the specific skill you need.
+2. Canonical app tree is this repo (`kylrix/`). Prefer `lib/sdk`, `lib/services`, and Server Actions over new surfaces.
+3. **No new in-app HTTP APIs** (`app/api/*`, `route.ts`) for product flows — use Server Actions / in-process helpers.
+4. Never edit `generated/` or hand-edit generated Appwrite types. Schema changes only when the user explicitly requests them (`appwrite.config.json` + CLI).
+5. Single database: `passwordManagerDb`. Never introduce other DB IDs.
+6. Terminology: **Table** / **Row** only (never Collection/Document) in code, logs, and UI.
+7. Routing: Flow = `/flows` (workflows only). Workspaces = `/workspaces`. Goals/forms/events are separate. See `system.routing-canonical`.
+8. Keep token ledger + BlockBee billing modules — not optional “Web3 cut” targets.
+9. Privileged ops: server-side `ADMINS` allowlist; do not trust client role labels.
+10. Overlay UX: conditional mount (`{isOpen && <Drawer />}`); OpenBricks drawers use `keepMounted: false`, `disablePortal: true`.
+11. PNPM only. Opaque product chrome (no gradient/translucent chrome).
+12. Layman UI copy — no jargon in user-facing strings.
+13. Keep changes surgical. Do not expand scope into unrelated refactors.
+14. Dead code: Knip for unused files/exports (`system.dead-code-knip`); do not enable unused-vars in default `pnpm lint`.

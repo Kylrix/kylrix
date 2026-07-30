@@ -15,8 +15,7 @@ describe('topbar helpers', () => {
       description: 'Capture a note',
       terms: ['draft'],
       onSelect: vi.fn(),
-      app: 'note',
-    });
+      app: 'note'});
 
     expect(action.accent).toBe('#EC4899');
   });
@@ -27,8 +26,7 @@ describe('topbar helpers', () => {
       currentApp: 'note',
       snippets: [],
       quickActions: [],
-      searchTargets: [],
-    });
+      searchTargets: []});
 
     expect(surface.layout.height).toBe(88);
     expect(surface.layout.searchDockMaxHeight).toBe('50vh');

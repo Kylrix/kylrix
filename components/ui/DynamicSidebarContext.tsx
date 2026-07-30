@@ -15,7 +15,7 @@ export interface DynamicSidebarOptions {
   hideHeader?: boolean;
 }
 
-export interface DynamicSidebarContextType {
+interface DynamicSidebarContextType {
   isOpen: boolean;
   content: ReactNode | null;
   activeContentKey: string | null;

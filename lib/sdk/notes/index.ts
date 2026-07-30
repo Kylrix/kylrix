@@ -88,8 +88,7 @@ export function createNoteCreationService<NoteRow = any>(deps: NoteCreationConte
         attachments: null,
         metadata: JSON.stringify({
           ...baseMetadata,
-          ...originMetadata,
-        }),
+          ...originMetadata}),
       });
 
       const permissions = deps.getNotePermissions(user.$id, Boolean(data.isPublic));
@@ -146,16 +145,14 @@ export function createNoteCreationService<NoteRow = any>(deps: NoteCreationConte
         const kindMetadata = data.kind ? { kind: data.kind } : {};
         noteData.metadata = JSON.stringify({
           ...extraMetadata,
-          ...kindMetadata,
-        });
+          ...kindMetadata});
       } else if (data.kind) {
         noteData.metadata = JSON.stringify({ kind: data.kind });
       }
 
       const payload = deps.filterNoteData({
         ...noteData,
-        updatedAt: now,
-      });
+        updatedAt: now});
 
       let permissions: string[] | undefined;
       if (typeof data.isPublic === 'boolean') {

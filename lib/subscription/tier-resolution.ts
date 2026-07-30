@@ -38,8 +38,7 @@ const TIER_RANK: Record<BillingUiTier, number> = {
   PRO: 1,
   TEAMS: 2,
   ORG: 3,
-  LIFETIME: 4,
-};
+  LIFETIME: 4};
 
 /** Map subscription ledger plan labels to a normalized UI tier. */
 export function planLabelToUiTier(plan: string | null | undefined): BillingUiTier {

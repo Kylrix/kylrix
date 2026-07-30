@@ -46,7 +46,7 @@ export default async ({ req, res, log, error }) => {
                 type: 'flow_invite',
                 title: 'New Event Invitation',
                 content: `You've been invited to ${eventTitle}`,
-                actionUrl: `/flow/events/${eventId}`,
+                actionUrl: `/events/${eventId}`,
                 app: 'flow',
                 timestamp: new Date().toISOString(),
                 read: false

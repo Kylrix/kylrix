@@ -13,7 +13,7 @@ export interface HintCandidate {
   source: string;
 }
 
-export type HintProvider = (ctx: {
+type HintProvider = (ctx: {
   zone: string;
   route: string;
   input: string;
@@ -22,7 +22,7 @@ export type HintProvider = (ctx: {
 
 const providers: HintProvider[] = [];
 
-export function registerHintProvider(provider: HintProvider): () => void {
+function registerHintProvider(provider: HintProvider): () => void {
   providers.push(provider);
   return () => {
     const idx = providers.indexOf(provider);
@@ -50,7 +50,7 @@ export async function resolveHints(ctx: {
   }
 
   return merged
-    .sort((a, b) => b.score - a.score)
+    .sort((a: any, b: any) => b.score - a.score)
     .slice(0, limit);
 }
 
@@ -62,7 +62,7 @@ registerHintProvider(({ input }) => {
     UI_DESTINATIONS.filter((d) => {
       const hay = [d.label, ...d.aliases].join(' ').toLowerCase();
       return hay.includes(q);
-    }).map((d) => ({
+    }).map((d: any) => ({
       id: `ui:${d.id}`,
       label: `Go to ${d.label}`,
       route: d.route,

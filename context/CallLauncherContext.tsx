@@ -23,7 +23,7 @@ const CallInterface = dynamic(
   { ssr: false }
 );
 
-export type CallScopeSource = "chat" | "group" | "note" | "task" | "moment" | "space" | "generic";
+type CallScopeSource = "chat" | "group" | "note" | "task" | "moment" | "space" | "generic";
 
 export interface CallLaunchContext {
   source?: CallScopeSource;
@@ -111,8 +111,7 @@ export function CallLauncherProvider({ children }: { children: React.ReactNode }
     () => ({
       isOpen: open,
       openCallLauncher,
-      closeCallLauncher,
-    }),
+      closeCallLauncher}),
     [open, openCallLauncher, closeCallLauncher],
   );
 

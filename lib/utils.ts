@@ -4,14 +4,13 @@ import {
   effectiveTierHasPaidAccess,
   getOpenSuiteEntitlement,
   isSelfHostedDeployment,
-  resolveEffectiveBillingTier,
-} from '@/lib/entitlements';
+  resolveEffectiveBillingTier} from '@/lib/entitlements';
 import { maxBillingUiTier, type BillingUiTier } from '@/lib/subscription/tier-resolution';
 import { BillingCacheService } from '@/lib/services/billing';
 
 // Safely get a user field preferring top-level value, then legacy prefs
 // Example: getUserField(user, 'profilePicId') will return user.profilePicId || user.prefs?.profilePicId
-export function getUserField<T = any>(user: any, field: string): T | null {
+function getUserField<T = any>(user: any, field: string): T | null {
   if (!user) return null;
   if (user && Object.prototype.hasOwnProperty.call(user, field) && user[field] !== undefined && user[field] !== null) {
     return user[field] as T;
@@ -42,12 +41,9 @@ export function getUserProfilePicId(user: any): string | null {
 }
 
 // Convenience accessor for auth method
-export function getUserAuthMethod(user: any): string | null {
-  return getUserField<string>(user, 'authMethod');
-}
 
 // Convenience accessor for wallet address (checks both walletEth and walletAddress)
-export function getUserWalletAddress(user: any): string | null {
+function getUserWalletAddress(user: any): string | null {
   return getUserField<string>(user, 'walletEth') || getUserField<string>(user, 'walletAddress');
 }
 
@@ -146,54 +142,10 @@ export function hasEffectivePaidAccess(user: any, subscriptionTier?: string | nu
   return hasPaidKylrixPlan(user);
 }
 
-export function getUserSubscriptionExpiresAt(user: any): string | null {
-  if (!user) return null;
-  if (typeof window !== 'undefined') {
-    const cached = localStorage.getItem(`kylrix_entitlement_${user.$id}`);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        return parsed.expiresAt || null;
-      } catch {}
-    }
-  }
-  return null;
-}
 
 // Get list of OAuth identity providers connected to the account
-export function getUserIdentities(user: any): {
-  google: boolean;
-  github: boolean;
-  other: string[];
-} {
-  const result = {
-    google: false,
-    github: false,
-    other: [] as string[]
-  };
-
-  if (!user?.identities || !Array.isArray(user.identities)) {
-    return result;
-  }
-
-  for (const identity of user.identities) {
-    const provider = (identity?.provider || '').toLowerCase();
-    if (provider === 'google') {
-      result.google = true;
-    } else if (provider === 'github') {
-      result.github = true;
-    } else if (provider) {
-      result.other.push(provider);
-    }
-  }
-
-  return result;
-}
 
 // Check if user has a wallet connected
-export function hasWalletConnected(user: any): boolean {
-  return !!getUserWalletAddress(user);
-}
 
 // Format bytes into human readable size (B, KB, MB, GB)
 export function formatFileSize(bytes: number | null | undefined): string {

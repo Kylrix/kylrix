@@ -23,8 +23,7 @@ import {
   realtime,
   APPWRITE_DATABASE_ID,
   APPWRITE_TABLE_ID_NOTES,
-  isNoteEditableByAnyone,
-} from '@/lib/appwrite';
+  isNoteEditableByAnyone} from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { resolveResourceOwnerId } from '@/lib/utils/resource-ids';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -110,7 +109,7 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
   const { getCachedData, setCachedData, invalidate } = useDataNexus();
 
   const [access, setAccess] = useState<AccessResult>({ role: 'loading' });
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [_isRefreshing, _setIsRefreshing] = useState(false);
 
   const CACHE_KEY = useMemo(() => `idea_page_note_${noteId}`, [noteId]);
 
@@ -337,7 +336,7 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
                 onClick={() => {
                   if (typeof window !== 'undefined') {
                     router.push(
-                      `/accounts/login?source=${encodeURIComponent(window.location.href)}`
+                      `/?source=${encodeURIComponent(window.location.href)}`
                     );
                   }
                 }}

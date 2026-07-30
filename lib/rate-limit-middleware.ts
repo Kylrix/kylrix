@@ -39,21 +39,12 @@ export function createRateLimiter(config: RateLimitConfig) {
   };
 }
 
-export function getClientIp(req: NextRequest): string {
+function getClientIp(req: NextRequest): string {
   const forwarded = req.headers.get('x-forwarded-for');
   const ip = forwarded ? forwarded.split(',')[0].trim() : req.headers.get('x-real-ip') || 'unknown';
   return ip;
 }
 
-export function rateLimitResponse(retryAfter?: number) {
-  return NextResponse.json(
-    { error: 'Rate limit exceeded' },
-    {
-      status: 429,
-      headers: retryAfter ? { 'Retry-After': retryAfter.toString() } : {},
-    }
-  );
-}
 
 // Cleanup old entries periodically (run every hour)
 if (typeof window === 'undefined') {

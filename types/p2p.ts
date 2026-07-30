@@ -1,5 +1,5 @@
-export type AttachmentEntityType = 'vault' | 'note' | 'flow' | 'form';
-export type AttachmentSubType = 'totp' | 'password' | 'task' | 'ghost_note' | 'form_template';
+type AttachmentEntityType = 'vault' | 'note' | 'flow' | 'form';
+type AttachmentSubType = 'totp' | 'password' | 'task' | 'ghost_note' | 'form_template';
 
 export type PeerState = 'idle' | 'calling' | 'incoming' | 'connected' | 'disconnected' | 'failed' | 'new' | 'connecting';
 

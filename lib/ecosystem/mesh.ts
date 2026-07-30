@@ -3,7 +3,7 @@
  * Defines the communication and state synchronization between distributed nodes.
  */
 
-export type NodeType = 'control' | 'data' | 'secure' | 'logic' | 'message';
+type NodeType = 'control' | 'data' | 'secure' | 'logic' | 'message';
 
 export interface NodeIdentity {
   id: string;

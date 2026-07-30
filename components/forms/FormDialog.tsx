@@ -22,8 +22,7 @@ import {
   Alert,
   Chip,
   useTheme,
-  useMediaQuery,
-} from '@/lib/openbricks/primitives';
+  useMediaQuery} from '@/lib/openbricks/primitives';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -39,8 +38,7 @@ import {
   Warning as WarningIcon,
   Settings as SettingsIcon,
   UploadFile as FileUploadIcon,
-  ChevronDownIcon,
-} from '@/lib/openbricks/icons';
+  ChevronDownIcon} from '@/lib/openbricks/icons';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
 import { Forms, FormsStatus } from '@/generated/appwrite/types';
@@ -98,8 +96,6 @@ function SortableField({
   updateOption, 
   removeOption,
   isChoiceType,
-  user,
-  openProUpgrade,
   openSelectorDrawer,
   openSettingsDrawer
 }: any) {
@@ -116,8 +112,7 @@ function SortableField({
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 1000 : 1,
-    opacity: isDragging ? 0.6 : 1,
-  };
+    opacity: isDragging ? 0.6 : 1};
 
   return (
     <Paper 
@@ -318,7 +313,6 @@ function SortableField({
 
 export default function FormDialog({ open, onClose, form, initialDraft, onSaved }: FormDialogProps) {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
@@ -386,8 +380,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+      coordinateGetter: sortableKeyboardCoordinates})
   );
 
   const validateFieldsLogic = (currentFields: any[]) => {
@@ -582,27 +575,6 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
     setFields(newFields);
   };
 
-  const discardDraft = () => {
-    const formId = form?.$id || (initialDraft ? initialDraft.id : 'new');
-    DraftsService.clearDraft(formId);
-    if (form) {
-      setTitle(form.title);
-      setDescription(form.description || '');
-      setStatus(form.status as any);
-      try {
-        setFields(JSON.parse(form.schema || '[]'));
-      } catch (_e) {
-        setFields([]);
-      }
-    } else {
-      setTitle('');
-      setDescription('');
-      setStatus('draft');
-      setFields([{ id: 'field_1', label: 'Full Name', type: 'text', required: true }]);
-    }
-    setHasUnsavedChanges(false);
-    setIsRestored(false);
-  };
 
   const handleSave = async () => {
     if (!user) {

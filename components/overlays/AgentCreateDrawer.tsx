@@ -61,8 +61,7 @@ export function AgentCreateDrawer() {
       const created: any = await AgenticService.createMyAgent({
         userId: user.$id,
         name: finalName,
-        goal: goal.trim() || undefined,
-      });
+        goal: goal.trim() || undefined});
       onSelect?.({ agentId: created?.$id || '', name: finalName });
       close();
     } catch (err: any) {

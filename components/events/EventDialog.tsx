@@ -121,8 +121,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
       recurrenceRule,
       startTime: startTime ? startTime.toISOString() : null,
       endTime: endTime ? endTime.toISOString() : null,
-      guests: selectedGuests,
-    };
+      guests: selectedGuests};
     if (title.trim() || description.trim() || location.trim() || url.trim() || selectedGuests.length > 0) {
       localStorage.setItem('kylrix:draft:event', JSON.stringify(draft));
     } else {

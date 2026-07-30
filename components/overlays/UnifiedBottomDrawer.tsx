@@ -25,7 +25,6 @@ const DeleteConfirmDrawer = dynamic(() => import('./DeleteConfirmDrawer').then(m
 const SecurityConfirmDrawer = dynamic(() => import('./SecurityConfirmDrawer').then(mod => mod.SecurityConfirmDrawer), { ssr: false });
 const ProjectInviteDrawer = dynamic(() => import('./ProjectInviteDrawer').then(mod => mod.ProjectInviteDrawer), { ssr: false });
 const UnifiedFormContent = dynamic(() => import('../forms/UnifiedFormContent').then(mod => mod.UnifiedFormContent), { ssr: false });
-const GithubIntegrationDrawer = dynamic(() => import('./GithubIntegrationDrawer').then(mod => mod.GithubIntegrationDrawer), { ssr: false });
 const TaskAddToProjectDrawerHost = dynamic(() => import('./TaskAddToProjectDrawer').then(mod => mod.TaskAddToProjectDrawerHost), { ssr: false });
 const ResponseDetailDrawer = dynamic(() => import('../forms/ResponseDetailDrawer').then(mod => mod.ResponseDetailDrawer), { ssr: false });
 const AgenticPreviewDrawer = dynamic(() => import('../agentic/AgenticPreviewDrawer').then(mod => mod.AgenticPreviewDrawer), { ssr: false });
@@ -36,7 +35,6 @@ const ProjectAutoSweepDrawer = dynamic(() => import('../projects/ProjectAutoSwee
 const JoinRequestConfirmDrawer = dynamic(() => import('./JoinRequestConfirmDrawer').then(mod => mod.JoinRequestConfirmDrawer), { ssr: false });
 const AccessControlDrawer = dynamic(() => import('./AccessControlDrawer').then(mod => mod.AccessControlDrawer), { ssr: false });
 const TaskDetails = dynamic(() => import('../tasks/TaskDetails'), { ssr: false });
-const AiMilestoneSuggesterDrawer = dynamic(() => import('./AiMilestoneSuggesterDrawer').then(mod => mod.AiMilestoneSuggesterDrawer), { ssr: false });
 
 
 export function UnifiedBottomDrawer() {
@@ -124,8 +122,6 @@ export function UnifiedBottomDrawer() {
                 onCommitted={drawerData?.onCommitted as (() => void) | undefined}
               />
             );
-        case 'github-integration':
-            return <GithubIntegrationDrawer isOpen={true} onClose={close} {...drawerData} />;
         case 'project-settings':
             return <ProjectSettingsDrawer isOpen={true} onClose={close} project={drawerData?.project} onSave={drawerData?.onSave} />;
         case 'project-visibility':
@@ -158,8 +154,6 @@ export function UnifiedBottomDrawer() {
             />;
         case 'milestone-details':
             return <TaskDetails taskId={drawerData?.taskId} onBack={close} />;
-        case 'ai-milestone-suggester':
-            return <AiMilestoneSuggesterDrawer />;
         default: return null;
     }
   };
@@ -167,7 +161,7 @@ export function UnifiedBottomDrawer() {
   const content = renderContent();
   if (!content) return null;
 
-  if (activeContent === 'delete-confirm' || activeContent === 'milestone-details' || activeContent === 'ai-milestone-suggester') {
+  if (activeContent === 'delete-confirm' || activeContent === 'milestone-details') {
     return (
       <Drawer
         anchor="bottom"

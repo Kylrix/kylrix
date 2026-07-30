@@ -10,8 +10,7 @@ import {
   Divider,
   useTheme,
   useMediaQuery,
-  alpha,
-} from '@/lib/openbricks/primitives';
+  alpha} from '@/lib/openbricks/primitives';
 import { Zap, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
@@ -126,8 +125,7 @@ export function ProUpgradeDrawer() {
               color: '#fff',
               mb: 1.5,
               letterSpacing: '-0.02em',
-              fontFamily: 'monospace',
-            }}
+              fontFamily: 'monospace'}}
           >
             {upgradeLabel}
           </Typography>
@@ -136,8 +134,7 @@ export function ProUpgradeDrawer() {
               fontSize: '0.9rem',
               color: 'rgba(255, 255, 255, 0.6)',
               lineHeight: 1.5,
-              mb: 2.5,
-            }}
+              mb: 2.5}}
           >
             {spec ? (
               <>
@@ -163,8 +160,7 @@ export function ProUpgradeDrawer() {
                     height: 6,
                     borderRadius: '50%',
                     bgcolor: accent,
-                    flexShrink: 0,
-                  }}
+                    flexShrink: 0}}
                 />
                 <Typography sx={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: '0.85rem', fontWeight: 600 }}>
                   {benefit}
@@ -189,8 +185,7 @@ export function ProUpgradeDrawer() {
               letterSpacing: '0.05em',
               borderRadius: '12px',
               '&:hover': {
-                bgcolor: isTeamsUpgrade ? '#D97706' : '#818CF8',
-              },
+                bgcolor: isTeamsUpgrade ? '#D97706' : '#818CF8'},
             }}
             onClick={() => {
               closeProUpgrade();
@@ -212,8 +207,7 @@ export function ProUpgradeDrawer() {
               letterSpacing: '0.05em',
               '&:hover': {
                 bgcolor: 'rgba(99, 102, 241, 0.08)',
-                color: '#fff',
-              },
+                color: '#fff'},
             }}
             onClick={closeProUpgrade}
           >

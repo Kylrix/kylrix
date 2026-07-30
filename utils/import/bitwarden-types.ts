@@ -27,14 +27,14 @@ export interface BitwardenItem {
   type: number;
 }
 
-export interface BitwardenLogin {
+interface BitwardenLogin {
   password: string | null;
   totp: string | null;
   uris: BitwardenUri[] | null;
   username: string | null;
 }
 
-export interface BitwardenUri {
+interface BitwardenUri {
   match: null;
   uri: string;
 }

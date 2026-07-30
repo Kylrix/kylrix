@@ -21,7 +21,7 @@ interface State {
   errorInfo?: ErrorInfo;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
@@ -213,8 +213,3 @@ export const AuthErrorBoundary: React.FC<{ children: ReactNode }> = ({ children 
   </ErrorBoundary>
 );
 
-export const useErrorHandler = () => {
-  return (error: Error, errorInfo?: { componentStack?: string }) => {
-    console.error('Error caught by hook:', error, errorInfo);
-  };
-};

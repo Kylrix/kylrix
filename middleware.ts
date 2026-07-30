@@ -59,7 +59,7 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL(target, request.url));
       } else {
         // Guests redirect to /send instantly
-        return NextResponse.redirect(new URL('/send', request.url));
+        return NextResponse.redirect(new URL('/app', request.url));
       }
     }
   }
@@ -95,13 +95,6 @@ export function middleware(request: NextRequest) {
       ? pathname.replace('/note/notes', '') 
       : pathname.replace('/app/notes', '');
     return NextResponse.redirect(new URL(`/app${subPath}`, request.url));
-  }
-  
-  if (pathname.startsWith('/flow/tasks') || pathname.startsWith('/flow/goals')) {
-    const subPath = pathname.startsWith('/flow/tasks') 
-      ? pathname.replace('/flow/tasks', '') 
-      : pathname.replace('/flow/goals', '');
-    return NextResponse.redirect(new URL(`/flow${subPath}`, request.url));
   }
 
   if (pathname.startsWith('/vault/dashboard')) {

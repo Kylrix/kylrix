@@ -18,8 +18,7 @@ export function AgenticPreviewDrawer({
   kind,
   title = 'Preview',
   onClose,
-  onCommitted,
-}: AgenticPreviewDrawerProps) {
+  onCommitted}: AgenticPreviewDrawerProps) {
   const [loading, setLoading] = useState(true);
   const [payload, setPayload] = useState<Record<string, unknown> | null>(null);
   const [formTitle, setFormTitle] = useState<string | null>(null);

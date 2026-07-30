@@ -49,6 +49,3 @@ export function shortenUserId(userId?: string | null) {
   return `${userId.slice(0, 6)}…${userId.slice(-4)}`;
 }
 
-export function buildDisplayName(user: any) {
-  return user?.displayName || user?.name || user?.username || user?.email || 'Profile';
-}

@@ -17,8 +17,7 @@ export default function ProjectAutoSweepDrawer({
   onClose,
   projectId,
   projectTitle,
-  onSaved,
-}: ProjectAutoSweepDrawerProps) {
+  onSaved}: ProjectAutoSweepDrawerProps) {
   const [enabled, setEnabled] = useState(false);
   const [initialEnabled, setInitialEnabled] = useState(false);
   const [enableConfirmed, setEnableConfirmed] = useState(false);

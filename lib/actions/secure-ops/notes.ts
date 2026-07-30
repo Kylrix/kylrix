@@ -56,260 +56,10 @@ import { PermissionChangeInput, PermissionLevel, TokenAction } from './shared';
 // Bind shared helper properties and variables to local scope for convenience
 const {
   getActor,
-  getRowCached,
-  isEnvAdminUser,
-  isEnvSERVERSDKUser,
-  hasWriteAccess,
-  serializeMomentRow,
   verifyResourcePermissionSecure,
   verifyNotePermission,
-  verifyProjectPermission,
-  verifyFormPermission,
-  verifyEventPermission,
-  sanitizeEventData,
-  serializeTokenMintResult,
-  rowCache,
   CACHE_TTL_MS,
-  VIEWER_COOKIE,
-  isViewerTokenValid,
-  issueViewerToken,
-  cookies
-} = shared;
-
-export async function mintNoteShareMomentSecure(input: { momentId: string }) {
-  const momentId = String(input?.momentId || '').trim();
-  if (!momentId) throw new Error('momentId is required');
-
-  const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
-  const momentsTable = APPWRITE_CONFIG.TABLES.CHAT.MOMENTS;
-  const tables = createSystemTablesDB();
-  let moment: Record<string, unknown>;
-  try {
-    moment = (await tables.getRow({
-      databaseId: chatDb,
-      tableId: momentsTable,
-      rowId: momentId,
-    })) as Record<string, unknown>;
-  } catch {
-    return { tokenMint: { accepted: false, reason: 'MOMENT_NOT_FOUND' } };
-  }
-
-  const creatorId = String(moment?.userId || '').trim();
-  if (!creatorId) return { tokenMint: { accepted: false, reason: 'INVALID_MOMENT' } };
-
-  const noteId = getNoteAttachmentIdFromMomentFileId(moment?.fileId);
-  if (!noteId) return { tokenMint: { accepted: false, reason: 'NO_NOTE_ATTACHMENT' } };
-
-  let note: Record<string, unknown>;
-  try {
-    const tables = createSystemTablesDB();
-    note = (await tables.getRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-      tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-      rowId: noteId,
-    })) as Record<string, unknown>;
-  } catch {
-    return { tokenMint: { accepted: false, reason: 'NOTE_NOT_FOUND' } };
-  }
-
-  if (!Boolean(note?.isPublic)) return { tokenMint: { accepted: false, reason: 'NOTE_NOT_PUBLIC' } };
-  if (!hasWriteAccess(note, creatorId)) return { tokenMint: { accepted: false, reason: 'FORBIDDEN' } };
-
-  let tokenMint: Record<string, unknown> = { accepted: false, reason: 'MINT_FAILED' };
-  try {
-    const rawMint = await InternalKylrixTokenService.mintForActivity({
-      userId: creatorId,
-      idempotencyKey: `mint:share_public_note_moment:${momentId}`,
-      activityType: 'share_public_note_moment',
-      uniqueActors: 1,
-      trustScore: 85,
-      sourceType: 'moment_share_note',
-      sourceId: momentId,
-      metadata: { noteId, momentId },
-    });
-    tokenMint = serializeTokenMintResult(rawMint);
-  } catch (error: unknown) {
-    tokenMint = { accepted: false, reason: String((error as { message?: string })?.message || 'MINT_FAILED') };
-  }
-
-  return { tokenMint };
-}
-
-export async function sharePublicNoteAsMomentSecure(input: { noteId: string; text?: string; jwt?: string }) {
-  const actor = await getActor(input.jwt);
-  if (!actor) throw new Error('Unauthorized');
-
-  const noteId = String(input?.noteId || '').trim();
-  const text = String(input?.text || '').trim();
-  if (!noteId) throw new Error('noteId is required');
-
-  const tables = createSystemTablesDB();
-  const note = await tables.getRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-      tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-      rowId: noteId,
-    });
-
-  if (!Boolean(note?.isPublic)) throw new Error('Only public notes can be shared as moments');
-  if (!hasWriteAccess(note, actor.$id)) throw new Error('Forbidden');
-
-  const noteTitle = String(note?.title || 'Untitled Note').trim();
-  const metadata = { type: 'post', attachments: [{ type: 'note', id: noteId }] };
-  const now = new Date().toISOString();
-  const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
-  const momentsTable = APPWRITE_CONFIG.TABLES.CHAT.MOMENTS;
-  const perms = [
-    `read("user:${actor.$id}")`];
-
-  const moment = await tables.createRow({
-      databaseId: chatDb,
-      tableId: momentsTable,
-      rowId: ID.unique(),
-      data: {
-    userId: actor.$id,
-    caption: text,
-    type: 'image',
-    momentKind: 'post',
-    sourceId: null,
-    searchTitle: noteTitle,
-    fileId: JSON.stringify(metadata),
-    createdAt: now,
-    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-  },
-      permissions: perms,
-    });
-
-  let tokenMint: Record<string, unknown> = { accepted: false, reason: 'MINT_FAILED' };
-  try {
-    const rawMint = await InternalKylrixTokenService.mintForActivity({
-      userId: actor.$id,
-      idempotencyKey: `mint:share_public_note_moment:${moment.$id}`,
-      activityType: 'share_public_note_moment',
-      uniqueActors: 1,
-      trustScore: 85,
-      sourceType: 'moment_share_note',
-      sourceId: moment.$id,
-      metadata: { noteId, momentId: moment.$id },
-    });
-    tokenMint = serializeTokenMintResult(rawMint);
-  } catch (error: unknown) {
-    tokenMint = { accepted: false, reason: String((error as { message?: string })?.message || 'MINT_FAILED') };
-  }
-
-  return {
-    moment: serializeMomentRow(moment as Record<string, unknown>),
-    tokenMint,
-  };
-}
-
-export async function burnEphemeralNoteSecure(params: any, jwt?: string) {
-  // Rigorous runtime validation
-  const validated = EphemeralNoteSchema.parse({ noteId: params.noteId, secret: params.deletionSecret });
-  const validatedJwt = JWTSchema.parse(jwt);
-
-  const noteId = validated.noteId;
-  const deletionSecret = validated.secret;
-
-  const { databases } = createSystemClient();
-  const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
-  const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
-
-  // Parallel Fetch: Actor identity + Note document
-  const [actor, doc] = await Promise.all([
-    getActor(validatedJwt),
-    databases.getRow(dbId, tableId, noteId).catch(() => null)
-  ]);
-
-  // We don't strictly REQUIRE actor for burning as it's often done anonymously via secret link
-  // but we should log it if they ARE logged in.
-  console.log(`[burnEphemeralNoteSecure] Burn requested for note ${noteId} by actor ${actor?.$id || 'anonymous'}`);
-
-  if (!doc) {
-    throw new Error('Note not found');
-  }
-
-  let meta: Record<string, unknown> = {};
-  try {
-    meta = JSON.parse(String((doc as any).metadata || '{}'));
-  } catch {
-    meta = {};
-  }
-
-  if (!meta.isGhost) {
-    throw new Error('Not an ephemeral note');
-  }
-
-  const expectedHash = String(meta.creatorDeletionProofHash || '').trim();
-  if (!expectedHash) {
-    throw new Error('This note cannot be burned remotely');
-  }
-
-  if (!verifyCreatorDeletionProof(meta, deletionSecret)) {
-    throw new Error('Invalid deletion proof');
-  }
-
-  // Recursive cleanup for storage files, comments, reactions, etc.
-  await executeCascadeDeleteSecure(dbId, tableId, noteId);
-
-  await databases.deleteRow(dbId, tableId, noteId);
-  return { success: true };
-}
-
-export async function consumeEphemeralNoteSecure(params: any, jwt?: string) {
-  // Rigorous runtime validation
-  const validated = EphemeralNoteSchema.parse({ noteId: params.noteId, secret: params.claimSecret });
-  const validatedJwt = JWTSchema.parse(jwt);
-
-  const noteId = validated.noteId;
-  const claimSecret = validated.secret;
-
-  const { databases, storage } = createSystemClient();
-  const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
-  const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
-
-  // Parallel Fetch: Actor identity + Note document
-  const [actor, doc] = await Promise.all([
-    getActor(validatedJwt),
-    databases.getRow(dbId, tableId, noteId).catch(() => null)
-  ]);
-
-  if (!actor?.$id) {
-    throw new Error('Unauthorized');
-  }
-
-  if (!doc) {
-    throw new Error('Note not found');
-  }
-
-  let meta: Record<string, unknown> = {};
-  try {
-    meta = JSON.parse(String((doc as any).metadata || '{}'));
-  } catch {
-    meta = {};
-  }
-
-  if (!meta.isGhost) {
-    throw new Error('Not an ephemeral note');
-  }
-
-  if (!verifyCreatorDeletionProof(meta, claimSecret)) {
-    throw new Error('Invalid claim proof');
-  }
-
-  const sendObj = meta.send_object as { kind?: string; bucketId?: string; fileId?: string } | undefined;
-  if (sendObj?.kind === 'file' && !hasPaidKylrixPlan(actor)) {
-    const err = new Error('Kylrix Pro is required to claim Send files into your library.');
-    (err as any).code = 'PRO_REQUIRED';
-    throw err;
-  }
-
-  if (sendObj?.kind === 'file' && sendObj.bucketId && sendObj.fileId) {
-    await storage.deleteFile(sendObj.bucketId, sendObj.fileId).catch(() => undefined);
-  }
-
-  await databases.deleteRow(dbId, tableId, noteId);
-  return { success: true };
-}
+  VIEWER_COOKIE} = shared;
 
 const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 const NOTES_TABLE_ID = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
@@ -319,16 +69,14 @@ async function hydrateSharedNoteRow(noteId: string) {
   const doc = await tables.getRow({
     databaseId: NOTE_DB_ID,
     tableId: NOTES_TABLE_ID,
-    rowId: noteId,
-  }) as any;
+    rowId: noteId}) as any;
 
   try {
     const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
     const pivot = await tables.listRows({
       databaseId: NOTE_DB_ID,
       tableId: noteTagsTable,
-      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any,
-    });
+      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any});
     if (pivot.rows.length) {
       const tags = Array.from(new Set(pivot.rows.map((p: any) => p.tag).filter(Boolean)));
       doc.tags = tags;
@@ -406,8 +154,7 @@ export async function getNoteSecondaryObjectPreviewSecure(
       previewDataUrl: null as string | null,
       childKind,
       mimeType,
-      visualKind,
-    };
+      visualKind};
   }
 
   if (childKind === 'file' || childKind === 'image' || childKind === 'voice') {
@@ -441,8 +188,7 @@ export async function getNoteSecondaryObjectPreviewSecure(
       bucketId,
       fileId: childId,
       mimeType: blobMimeFromPreview(previewDataUrl) || mimeType,
-      visualKind,
-    };
+      visualKind};
   }
 
   const map: Record<string, { db: string; table: string }> = {
@@ -460,8 +206,7 @@ export async function getNoteSecondaryObjectPreviewSecure(
       previewDataUrl: null as string | null,
       childKind,
       mimeType,
-      visualKind,
-    };
+      visualKind};
   }
 
   try {
@@ -469,8 +214,7 @@ export async function getNoteSecondaryObjectPreviewSecure(
     const row = await tables.getRow({
       databaseId: target.db,
       tableId: target.table,
-      rowId: childId,
-    }) as any;
+      rowId: childId}) as any;
     return {
       ok: true as const,
       title: String(row?.title || row?.name || fallbackTitle).trim(),
@@ -478,8 +222,7 @@ export async function getNoteSecondaryObjectPreviewSecure(
       previewDataUrl: null as string | null,
       childKind,
       mimeType,
-      visualKind,
-    };
+      visualKind};
   } catch {
     return {
       ok: true as const,
@@ -488,8 +231,7 @@ export async function getNoteSecondaryObjectPreviewSecure(
       previewDataUrl: null as string | null,
       childKind,
       mimeType,
-      visualKind,
-    };
+      visualKind};
   }
 }
 
@@ -614,7 +356,9 @@ export async function syncNotesDeltaSecure(localManifest: { id: string; updatedA
     Query.limit(5000)
   ]);
 
-  const serverManifest = new Map(serverRows.rows.map(d => [d.$id, d.$updatedAt]));
+  const serverManifest = new Map<string, string>(
+    serverRows.rows.map((d: any) => [String(d.$id), String(d.$updatedAt)])
+  );
   const localMap = new Map(localManifest.map(m => [m.id, m.updatedAt]));
 
   const toFetch: string[] = [];
@@ -681,7 +425,7 @@ export async function pullNotesDeltaSecure(params: { lastCheckpoint: string | nu
 
   const res = await databases.listRows(dbId, tableId, queries);
 
-  const documents = res.rows.map(doc => ({
+  const documents = res.rows.map((doc: any) => ({
     id: doc.$id,
     title: doc.title,
     content: doc.content,
@@ -754,8 +498,7 @@ export async function pushNotesDeltaSecure(rows: any[], jwt?: string) {
         title: newDocumentState.title,
         content: newDocumentState.content,
         metadata: newDocumentState.metadata,
-        crdt: typeof newDocumentState.crdt === 'string' ? newDocumentState.crdt : JSON.stringify(newDocumentState.crdt),
-      });
+        crdt: typeof newDocumentState.crdt === 'string' ? newDocumentState.crdt : JSON.stringify(newDocumentState.crdt)});
     } else {
       // 5. New document: Create
       await databases.createRow(dbId, tableId, noteId || ID.unique(), {
@@ -763,8 +506,7 @@ export async function pushNotesDeltaSecure(rows: any[], jwt?: string) {
         content: newDocumentState.content,
         userId: actor.$id,
         metadata: newDocumentState.metadata,
-        crdt: typeof newDocumentState.crdt === 'string' ? newDocumentState.crdt : JSON.stringify(newDocumentState.crdt),
-      });
+        crdt: typeof newDocumentState.crdt === 'string' ? newDocumentState.crdt : JSON.stringify(newDocumentState.crdt)});
     }
   }
 
@@ -789,8 +531,7 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
       const existing = await tablesProbe.getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
         tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-        rowId: reservedRowId,
-      }) as { userId?: string | null; creatorId?: string | null };
+        rowId: reservedRowId}) as { userId?: string | null; creatorId?: string | null };
       const ownerId = String(existing.creatorId || existing.userId || '').trim();
       if (ownerId && ownerId === actor.$id) {
         return updateNoteSecure(reservedRowId, data, jwt);
@@ -811,15 +552,13 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
     ...validated,
     title: clampNoteTitle(validated.title, 'Untitled Thought'),
     userId: actor.$id,
-    creatorId: actor.$id,
-  };
+    creatorId: actor.$id};
 
   const isCreateAllowed = await verifyResourcePermissionSecure({
     actorId: actor.$id,
     action: 'create',
     ownerFields: ['userId'],
-    data: noteData,
-  });
+    data: noteData});
   if (!isCreateAllowed) {
     throw new Error('Forbidden: Create operation must be mathematically tied to the current user');
   }
@@ -843,8 +582,7 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
     cleanRowData, 
     filterNoteData, 
     getNotePermissions,
-    createNoteCreationService,
-  } = await import('@/lib/appwrite/note');
+    createNoteCreationService} = await import('@/lib/appwrite/note');
 
   const syncTags = async ({ noteId, rawTags, userId, now }: any) => {
     try {
@@ -858,8 +596,7 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
         const existingTagsRes = await tables.listRows({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: tagsTable,
-      queries: [Query.equal('userId', userId), Query.equal('nameLower', unique.map((tag: any) => tag.toLowerCase())), Query.limit(unique.length)] as any,
-    });
+      queries: [Query.equal('userId', userId), Query.equal('nameLower', unique.map((tag: any) => tag.toLowerCase())), Query.limit(unique.length)] as any});
         for (const td of existingTagsRes.rows as any[]) {
           if (td.nameLower) existingTagRows[td.nameLower] = td;
         }
@@ -878,13 +615,12 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
       data: { name: tagName, nameLower: key, userId, createdAt: now, usageCount: 0 },
     });
             existingTagRows[key] = created;
-          } catch (createTagErr: any) {
+          } catch (_createTagErr: any) {
             try {
               const retry = await tables.listRows({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: tagsTable,
-      queries: [Query.equal('userId', userId), Query.equal('nameLower', key), Query.limit(1)] as any,
-    });
+      queries: [Query.equal('userId', userId), Query.equal('nameLower', key), Query.limit(1)] as any});
               if (retry.rows.length) existingTagRows[key] = retry.rows[0];
             } catch {}
           }
@@ -894,8 +630,7 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
       const existingPivot = await tables.listRows({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: noteTagsTable,
-      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(500)] as any,
-    });
+      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(500)] as any});
       const existingPairs = new Set(existingPivot.rows.map((p: any) => `${p.tagId || ''}::${p.tag || ''}`));
       for (const tagName of unique) {
         const key = tagName.toLowerCase();
@@ -908,8 +643,7 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
           const res = await tables.listRows({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: tagsTable,
-      queries: [Query.equal('userId', userId), Query.equal('name', tagName), Query.limit(1)] as any,
-    });
+      queries: [Query.equal('userId', userId), Query.equal('name', tagName), Query.limit(1)] as any});
           if (res.rows.length) {
             const tRow: any = res.rows[0];
             const current = typeof tRow.usageCount === 'number' && !isNaN(tRow.usageCount) ? tRow.usageCount : 0;
@@ -950,22 +684,19 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
       tableId: tableId,
       rowId: rowId || ID.unique(),
       data: data as any,
-      permissions: permissions,
-    }) as any;
+      permissions: permissions}) as any;
     },
     getNote: async (noteId) => {
       const row = await tables.getRow({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: APPWRITE_TABLE_ID_NOTES,
-      rowId: noteId,
-    }) as any;
+      rowId: noteId}) as any;
       try {
         const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
         const pivot = await tables.listRows({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: noteTagsTable,
-      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any,
-    });
+      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any});
         if (pivot.rows.length) {
           const tags = Array.from(new Set(pivot.rows.map((p: any) => p.tag).filter(Boolean)));
           (row as any).tags = tags;
@@ -1015,8 +746,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
       const existing = await probeTables.getRow({
         databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
         tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-        rowId: noteId,
-      }).catch(() => null);
+        rowId: noteId}).catch(() => null);
       if (!existing) {
         // Row doesn't exist yet — delegate to create path
         return createNoteSecure({ ...data, $id: noteId }, jwt);
@@ -1052,14 +782,12 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
     filterNoteData, 
     getNotePermissions,
     createNoteCreationService,
-    sanitizeNoteUpdatePatch,
-  } = await import('@/lib/appwrite/note');
+    sanitizeNoteUpdatePatch} = await import('@/lib/appwrite/note');
 
   const noteRow = await tables.getRow({
     databaseId: APPWRITE_DATABASE_ID,
     tableId: APPWRITE_TABLE_ID_NOTES,
-    rowId: noteId,
-  }) as { creatorId?: string | null; userId?: string | null };
+    rowId: noteId}) as { creatorId?: string | null; userId?: string | null };
 
   const noteOwnerId = noteRow.creatorId || noteRow.userId || '';
   const patch = sanitizeNoteUpdatePatch({ ...data }, { actorId: actor.$id, noteOwnerId });
@@ -1068,15 +796,13 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
     const hydrated = await tables.getRow({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: APPWRITE_TABLE_ID_NOTES,
-      rowId,
-    }) as any;
+      rowId}) as any;
     try {
       const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
       const pivot = await tables.listRows({
         databaseId: APPWRITE_DATABASE_ID,
         tableId: noteTagsTable,
-        queries: [Query.equal('resourceId', rowId), Query.equal('resourceType', 'note'), Query.limit(200)] as any,
-      });
+        queries: [Query.equal('resourceId', rowId), Query.equal('resourceType', 'note'), Query.limit(200)] as any});
       if (pivot.rows.length) {
         const tags = Array.from(new Set(pivot.rows.map((p: any) => p.tag).filter(Boolean)));
         hydrated.tags = tags;
@@ -1101,8 +827,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
         tableId: APPWRITE_TABLE_ID_NOTES,
         rowId,
         data: rowData as any,
-        permissions,
-      }) as any;
+        permissions}) as any;
     },
     getNote: hydrateNoteRow,
     getNotePermissions,
@@ -1127,8 +852,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
           const existingTagsRes = await tables.listRows({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: tagsTable,
-      queries: [Query.equal('userId', actor.$id), Query.equal('nameLower', normalizedIncoming.map(t => t.toLowerCase())), Query.limit(normalizedIncoming.length)] as any,
-    });
+      queries: [Query.equal('userId', actor.$id), Query.equal('nameLower', normalizedIncoming.map(t => t.toLowerCase())), Query.limit(normalizedIncoming.length)] as any});
           for (const td of existingTagsRes.rows as any[]) {
             if (td.nameLower) tagRows[td.nameLower] = td;
           }
@@ -1146,13 +870,12 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
       data: { name: tagName, nameLower: key, userId: actor.$id, createdAt: updatedAt, usageCount: 0 },
     });
               tagRows[key] = created;
-            } catch (createErr) {
+            } catch (_createErr) {
               try {
                 const retry = await tables.listRows({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: tagsTable,
-      queries: [Query.equal('userId', actor.$id), Query.equal('nameLower', key), Query.limit(1)] as any,
-    });
+      queries: [Query.equal('userId', actor.$id), Query.equal('nameLower', key), Query.limit(1)] as any});
                 if (retry.rows.length) tagRows[key] = retry.rows[0];
               } catch {}
             }
@@ -1163,8 +886,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
       const existingPivot = await tables.listRows({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: noteTagsTable,
-      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(500)] as any,
-    });
+      queries: [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(500)] as any});
       const existingByTag: Record<string, any> = {};
       const existingPairs = new Set<string>();
       for (const p of existingPivot.rows as any[]) {
@@ -1184,8 +906,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
           const res = await tables.listRows({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: APPWRITE_TABLE_ID_TAGS,
-      queries: [Query.equal('userId', actor.$id), Query.equal('name', tagName), Query.limit(1)] as any,
-    });
+      queries: [Query.equal('userId', actor.$id), Query.equal('name', tagName), Query.limit(1)] as any});
           if (res.rows.length) {
             const tRow: any = res.rows[0];
             const current = typeof tRow.usageCount === 'number' && !isNaN(tRow.usageCount) ? tRow.usageCount : 0;
@@ -1217,8 +938,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
             const res = await tables.listRows({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: APPWRITE_TABLE_ID_TAGS,
-      queries: [Query.equal('userId', actor.$id), Query.equal('name', tagName), Query.limit(1)] as any,
-    });
+      queries: [Query.equal('userId', actor.$id), Query.equal('name', tagName), Query.limit(1)] as any});
             if (res.rows.length) {
               const tRow: any = res.rows[0];
               const current = typeof tRow.usageCount === 'number' && !isNaN(tRow.usageCount) ? tRow.usageCount : 0;
@@ -1235,8 +955,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
             await tables.deleteRow({
       databaseId: APPWRITE_DATABASE_ID,
       tableId: noteTagsTable,
-      rowId: (pivotRow as any).$id,
-    });
+      rowId: (pivotRow as any).$id});
           } catch (de) {
             console.error('note_tags stale delete failed in updateNoteSecure', de);
           }
@@ -1271,8 +990,7 @@ export async function deleteNoteSecure(noteId: string, jwt?: string) {
       await tables.getRow({
         databaseId: APPWRITE_DATABASE_ID,
         tableId: APPWRITE_TABLE_ID_NOTES,
-        rowId: noteId,
-      });
+        rowId: noteId});
     } catch {
       return JSON.parse(JSON.stringify({ $id: noteId, localOnly: true }));
     }
@@ -1322,8 +1040,7 @@ export async function createGhostNoteSecure(data: {
       updatedAt: new Date().toISOString(),
       metadata,
       isGhost: true,
-      isThread: false,
-    },
+      isThread: false},
     permissions: [`read("any")`],
   });
 
@@ -1340,8 +1057,7 @@ export async function createGhostNoteForCallSecure(callId: string, title?: strin
     linkedSource: 'call',
     linkedTaskId: callId,
     expiresAt: expiresAt,
-    version: 'v2',
-  });
+    version: 'v2'});
 
   const tables = createSystemTablesDB();
   const result = await tables.createRow({
@@ -1361,8 +1077,7 @@ export async function createGhostNoteForCallSecure(callId: string, title?: strin
       updatedAt: new Date().toISOString(),
       metadata,
       isGhost: true,
-      isThread: true,
-    },
+      isThread: true},
     permissions: [Permission.read(Role.user(actor.$id))],
   });
 
@@ -1381,8 +1096,7 @@ export async function createGhostNoteForProjectSecure(projectId: string, title?:
     linkedResourceType: 'project',
     linkedResourceId: projectId,
     expiresAt: expiresAt,
-    version: 'v2',
-  });
+    version: 'v2'});
 
   const tables = createSystemTablesDB();
   
@@ -1424,8 +1138,7 @@ export async function createGhostNoteForProjectSecure(projectId: string, title?:
       updatedAt: new Date().toISOString(),
       metadata,
       isGhost: true,
-      isThread: true,
-    },
+      isThread: true},
     permissions: threadPermissions,
   });
 
@@ -1464,8 +1177,7 @@ export async function createGhostNoteForResourceSecure(
     linkedResourceType: resourceType,
     linkedResourceId: resourceId,
     expiresAt: expiresAt,
-    version: 'v2',
-  });
+    version: 'v2'});
 
   const tables = createSystemTablesDB();
   
@@ -1495,8 +1207,7 @@ export async function createGhostNoteForResourceSecure(
       resourceType: resourceType,
       metadata,
       isGhost: true,
-      isThread: true,
-    },
+      isThread: true},
     permissions: [Permission.read(Role.user(actor.$id))],
   });
 
@@ -1521,8 +1232,7 @@ export async function createGhostNoteChatSecure(data: {
     isChat: true,
     expiresAt: expiresAt,
     linkedResourceType: 'chat',
-    participants: data.participants,
-  });
+    participants: data.participants});
 
   const tables = createSystemTablesDB();
   const result = await tables.createRow({
@@ -1543,8 +1253,7 @@ export async function createGhostNoteChatSecure(data: {
       isGhost: true,
       isThread: true,
       isChat: true,
-      collaborators: data.participants,
-    },
+      collaborators: data.participants},
     permissions: data.participants.map(id => Permission.read(Role.user(id))),
   });
 
@@ -1563,8 +1272,7 @@ export async function createGhostNoteChatSecure(data: {
           permission: 'write',
           status: 'accepted',
           invitedAt: new Date().toISOString(),
-          accepted: true,
-        },
+          accepted: true},
         permissions: data.participants.map(id => Permission.read(Role.user(id))),
       });
     } catch (e) {
@@ -1642,8 +1350,7 @@ export async function listTagsSecure(userId?: string, jwt?: string) {
     tableId: APPWRITE_CONFIG.TABLES.NOTE.TAGS || '67ff06280034908cf08a',
     queries: targetUserId
       ? [Query.equal('userId', targetUserId), Query.orderDesc('$createdAt'), Query.limit(100)]
-      : [Query.orderDesc('$createdAt'), Query.limit(100)],
-  });
+      : [Query.orderDesc('$createdAt'), Query.limit(100)]});
 
   return JSON.parse(JSON.stringify(result));
 }

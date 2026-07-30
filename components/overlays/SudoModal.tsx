@@ -56,18 +56,16 @@ const SUDO_DETECT_CACHE = new Map<string, {
 const CACHE_TTL_MS = 60 * 1000; // 1 minute Cache TTL
 
 export default function SudoModal({
-    isOpen: _isOpen,
+    isOpen: isOpenProp,
     open,
     onSuccess,
     onCancel,
     onClose,
     intent,
-    app = "note",
-}: SudoModalProps) {
-    const router = useRouter();
+    app = "note"}: SudoModalProps) {
     const { setIsDrawerOpen } = useDrawerState();
     const { usePasskeysByDefault } = useAppwriteVault();
-    const isOpen = _isOpen ?? open ?? false;
+    const isOpen = isOpenProp ?? open ?? false;
 
     useEffect(() => {
         setIsDrawerOpen(isOpen);
@@ -81,7 +79,7 @@ export default function SudoModal({
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [passkeyLoading, setPasskeyLoading] = useState(false);
-    const [hasPasskey, setHasPasskey] = useState(false);
+    const [_hasPasskey, setHasPasskey] = useState(false);
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
     const [confirmPassword, setConfirmPassword] = useState("");
     const [resetConfirmation, setResetConfirmation] = useState("");
@@ -244,7 +242,7 @@ export default function SudoModal({
                         try {
                             const parsed = typeof e.params === 'string' ? JSON.parse(e.params) : e.params;
                             rpId = parsed?.rpId || '';
-                        } catch (err) {}
+                        } catch (_err) {}
                         if (isLocalHost) {
                             return rpId === 'localhost' || rpId === '127.0.0.1';
                         } else {
@@ -504,8 +502,7 @@ export default function SudoModal({
                 style={{
                     top: isDesktop ? '88px' : 'auto',
                     height: isDesktop ? 'calc(100vh - 88px)' : 'auto',
-                    maxHeight: isDesktop ? 'calc(100vh - 88px)' : 'calc(100vh - 12px)',
-                }}
+                    maxHeight: isDesktop ? 'calc(100vh - 88px)' : 'calc(100vh - 12px)'}}
                 className={`fixed z-[9999999] bg-[#161412] border-white/5 shadow-2xl transition-all duration-300 flex flex-col overflow-hidden bottom-0 right-0 w-full sm:w-[420px] rounded-t-[32px] sm:rounded-tr-none sm:rounded-l-[32px] border ${
                     isDesktop ? 'animate-slideInRight' : 'animate-slideInUp'
                 }`}
@@ -892,4 +889,4 @@ export default function SudoModal({
 }
 
 // Migration compatibility: some pages import this overlay as a named export.
-export { SudoModal };
+;

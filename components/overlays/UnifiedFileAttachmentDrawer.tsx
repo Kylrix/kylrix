@@ -42,8 +42,7 @@ import {
   Eye,
   Mic,
   CheckSquare,
-  Square,
-} from 'lucide-react';
+  Square} from 'lucide-react';
 import { useUnifiedFileDrawer, SyncedMediaFile } from '@/context/UnifiedFileDrawerContext';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { StorageService } from '@/lib/services/storage';
@@ -176,8 +175,7 @@ export function UnifiedFileAttachmentDrawer() {
         const { loadGoalsFromLocalCopy } = await import('@/lib/goals/load-local-goals');
         items = await loadGoalsFromLocalCopy({
           userId,
-          existingTasks: localContextGoals,
-        });
+          existingTasks: localContextGoals});
         if (items.length === 0) {
           try {
             const res = await tasks.list();
@@ -321,8 +319,7 @@ export function UnifiedFileAttachmentDrawer() {
                       sizeOriginal: a.size || a.sizeOriginal || 0,
                       mimeType: a.mimeType || a.type || 'image/png',
                       createdAt: a.createdAt || note.createdAt || new Date().toISOString(),
-                      fileUrl: a.fileUrl || StorageService.getFileView(fid, bId),
-                    });
+                      fileUrl: a.fileUrl || StorageService.getFileView(fid, bId)});
                   }
                 });
               }
@@ -345,8 +342,7 @@ export function UnifiedFileAttachmentDrawer() {
                   sizeOriginal: f.sizeOriginal || f.size || 0,
                   mimeType: f.mimeType,
                   createdAt: f.$createdAt || f.createdAt,
-                  fileUrl: StorageService.getFileView(f.$id, bucketId),
-                });
+                  fileUrl: StorageService.getFileView(f.$id, bucketId)});
               }
             });
           }
@@ -416,29 +412,10 @@ export function UnifiedFileAttachmentDrawer() {
       bucketId: activeSubTab,
       sizeOriginal: 0,
       mimeType: 'application/x-kylrix-object',
-      fileUrl: objectBlock,
-    });
+      fileUrl: objectBlock});
     closeFileDrawer();
   };
 
-  const handleConfirmMediaSelection = () => {
-    if (selectedFile) {
-      const childKind = selectedFile.mimeType?.startsWith('image/') ? 'image' : 'file';
-      const objectBlock = serializeObjectBlock({
-        childId: selectedFile.$id,
-        childKind,
-        bucketId: selectedFile.bucketId,
-        label: selectedFile.name,
-        appTheme: 'idea',
-        metadata: { mimeType: selectedFile.mimeType, fileName: selectedFile.name, fileUrl: selectedFile.fileUrl },
-      });
-      options.onSelectFile({
-        ...selectedFile,
-        fileUrl: objectBlock,
-      });
-      closeFileDrawer();
-    }
-  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -467,8 +444,7 @@ export function UnifiedFileAttachmentDrawer() {
         sizeOriginal: uploaded.sizeOriginal || file.size,
         mimeType: uploaded.mimeType || file.type,
         createdAt: new Date().toISOString(),
-        fileUrl: objectBlock,
-      };
+        fileUrl: objectBlock};
 
       const updated = [newMedia, ...mediaFiles];
       setMediaFiles(updated);

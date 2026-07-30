@@ -23,8 +23,7 @@ export async function generateMetadata({
     return buildOgMetadata({
       title: 'Shared reply · Kylrix',
       description: 'This shared message is not available.',
-      imageUrl: previewImage,
-    });
+      imageUrl: previewImage});
   }
 
   const snippet = String(payload.message.content || '')
@@ -37,8 +36,7 @@ export async function generateMetadata({
   return buildOgMetadata({
     title,
     description: snippet || 'A shared message from a chat with Kylie.',
-    imageUrl: previewImage,
-  });
+    imageUrl: previewImage});
 }
 
 export default async function PublicAgentConversationPage({

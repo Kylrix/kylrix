@@ -51,8 +51,7 @@ const defaultPinSets = (): Record<PinnableResourceType, Set<string>> => ({
   conversation: new Set(),
   message: new Set(),
   call: new Set(),
-  moment: new Set(),
-});
+  moment: new Set()});
 
 const ResourcePinContext = createContext<ResourcePinContextValue | undefined>(undefined);
 
@@ -72,8 +71,7 @@ export function ResourcePinProvider({ children }: { children: ReactNode }) {
       if (resourceType) {
         setPinSets((prev) => ({
           ...prev,
-          [resourceType]: new Set(rows.map((row) => row.resourceId)),
-        }));
+          [resourceType]: new Set(rows.map((row) => row.resourceId))}));
         return;
       }
 
@@ -141,8 +139,7 @@ export function ResourcePinProvider({ children }: { children: ReactNode }) {
         resourceType: params.resourceType,
         resourceId: params.resourceId,
         currentlyPinned,
-        setOwnerRowPin: params.setOwnerRowPin,
-      });
+        setOwnerRowPin: params.setOwnerRowPin});
       const perUserOnly = params.resourceType === 'message' || params.resourceType === 'conversation';
       if (perUserOnly || user.$id !== params.ownerId) {
         setLocalPin(params.resourceType, params.resourceId, next);
@@ -159,8 +156,7 @@ export function ResourcePinProvider({ children }: { children: ReactNode }) {
       refreshPins,
       isPinned,
       togglePin,
-      setLocalPin,
-    }),
+      setLocalPin}),
     [pinSets, isLoading, refreshPins, isPinned, togglePin, setLocalPin],
   );
 

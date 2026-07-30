@@ -25,16 +25,14 @@ async function wipeCollaboratorsAndKeys(
         Query.equal('resourceType', resourceType),
         Query.equal('resourceId', resourceId),
         Query.limit(1000),
-      ] as any,
-    });
+      ] as any});
 
     await Promise.all(
       (mappingsRes.rows || []).map((m: any) =>
         tables.deleteRow({
           databaseId: VAULT_DB,
           tableId: 'key_mapping',
-          rowId: m.$id,
-        })
+          rowId: m.$id})
       )
     );
     console.log(`[Cascade Delete] Wiped ${mappingsRes.rows?.length || 0} key mappings for resource ${resourceId} (${resourceType})`);
@@ -51,16 +49,14 @@ async function wipeCollaboratorsAndKeys(
         Query.equal('resourceId', resourceId),
         Query.equal('resourceType', resourceType),
         Query.limit(1000),
-      ] as any,
-    });
+      ] as any});
 
     await Promise.all(
       (polyCollabsRes.rows || []).map((collab: any) =>
         tables.deleteRow({
           databaseId: FLOW_DB,
           tableId: POLYMORPHIC_COLLABORATORS_TABLE,
-          rowId: collab.$id,
-        })
+          rowId: collab.$id})
       )
     );
     console.log(`[Cascade Delete] Wiped ${polyCollabsRes.rows?.length || 0} polymorphic collaborators for resource ${resourceId} (${resourceType})`);
@@ -135,7 +131,6 @@ export async function executeCascadeDeleteSecure(
   }
 
   const { storage } = createSystemClient();
-  const now = Date.now();
 
   const NOTE_DB = APPWRITE_CONFIG.DATABASES.NOTE;
   const NOTE_TABLE = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
@@ -161,8 +156,7 @@ export async function executeCascadeDeleteSecure(
     const objectsRes = await tables.listRows({
       databaseId: FLOW_DB,
       tableId: objectsTable,
-      queries: [Query.equal('parentId', rowId), Query.limit(1000)] as any,
-    });
+      queries: [Query.equal('parentId', rowId), Query.limit(1000)] as any});
 
     const linkedObjects = (objectsRes.rows as any[]) || [];
     if (linkedObjects.length > 0) {
@@ -182,8 +176,7 @@ export async function executeCascadeDeleteSecure(
         await tables.deleteRow({
           databaseId: FLOW_DB,
           tableId: objectsTable,
-          rowId: obj.$id,
-        });
+          rowId: obj.$id});
       }));
     }
 
@@ -191,14 +184,12 @@ export async function executeCascadeDeleteSecure(
     const reverseLinksRes = await tables.listRows({
         databaseId: FLOW_DB,
         tableId: objectsTable,
-        queries: [Query.equal('childId', rowId), Query.limit(1000)] as any,
-    });
+        queries: [Query.equal('childId', rowId), Query.limit(1000)] as any});
     await Promise.all((reverseLinksRes.rows || []).map((obj: any) => 
         tables.deleteRow({
             databaseId: FLOW_DB,
             tableId: objectsTable,
-            rowId: obj.$id,
-        })
+            rowId: obj.$id})
     ));
   } catch (err) {
     console.error(`[Cascade Delete] Authoritative objects cleanup failed for ${rowId}:`, err);
@@ -213,11 +204,10 @@ export async function executeCascadeDeleteSecure(
       const commentsRes = await tables.listRows({
         databaseId,
         tableId: COMMENTS_TABLE,
-        queries: [Query.equal('noteId', rowId), Query.limit(1000)] as any,
-      });
+        queries: [Query.equal('noteId', rowId), Query.limit(1000)] as any});
 
       const rows = (commentsRes.rows as any[]) || [];
-      const commentIds = rows.map((c) => c.$id).filter(Boolean);
+      const commentIds = rows.map((c: any) => c.$id).filter(Boolean);
 
       if (commentIds.length > 0) {
         // --- 1.1 Handle Voice Note Cleanup ---
@@ -265,16 +255,14 @@ export async function executeCascadeDeleteSecure(
               Query.equal('targetType', 'comment'),
               Query.equal('targetId', commentIds),
               Query.limit(1000),
-            ] as any,
-          });
+            ] as any});
 
           await Promise.all(
             reactionsRes.rows.map((r: any) =>
               tables.deleteRow({
                 databaseId,
                 tableId: REACTIONS_TABLE,
-                rowId: r.$id,
-              })
+                rowId: r.$id})
             )
           );
         } catch (err) {
@@ -283,12 +271,11 @@ export async function executeCascadeDeleteSecure(
 
         // Delete the comments themselves
         await Promise.all(
-          commentIds.map((cid) =>
+          commentIds.map((cid: any) =>
             tables.deleteRow({
               databaseId,
               tableId: COMMENTS_TABLE,
-              rowId: cid,
-            })
+              rowId: cid})
           )
         );
       }
@@ -301,16 +288,14 @@ export async function executeCascadeDeleteSecure(
       const reactionsRes = await tables.listRows({
         databaseId,
         tableId: REACTIONS_TABLE,
-        queries: [Query.equal('targetId', rowId), Query.limit(1000)] as any,
-      });
+        queries: [Query.equal('targetId', rowId), Query.limit(1000)] as any});
 
       await Promise.all(
         reactionsRes.rows.map((r: any) =>
           tables.deleteRow({
             databaseId,
             tableId: REACTIONS_TABLE,
-            rowId: r.$id,
-          })
+            rowId: r.$id})
         )
       );
     } catch (err) {
@@ -322,16 +307,14 @@ export async function executeCascadeDeleteSecure(
       const collaboratorsRes = await tables.listRows({
         databaseId,
         tableId: COLLABORATORS_TABLE,
-        queries: [Query.equal('noteId', rowId), Query.limit(1000)] as any,
-      });
+        queries: [Query.equal('noteId', rowId), Query.limit(1000)] as any});
 
       await Promise.all(
         collaboratorsRes.rows.map((collab: any) =>
           tables.deleteRow({
             databaseId,
             tableId: COLLABORATORS_TABLE,
-            rowId: collab.$id,
-          })
+            rowId: collab.$id})
         )
       );
     } catch (err) {
@@ -348,15 +331,13 @@ export async function executeCascadeDeleteSecure(
           Query.equal('resourceId', rowId),
           Query.equal('resourceType', 'note'),
           Query.limit(1000),
-        ] as any,
-      });
+        ] as any});
       await Promise.all(
         polyCollabsRes.rows.map((collab: any) =>
           tables.deleteRow({
             databaseId: FLOW_DATABASE_ID,
             tableId: POLYMORPHIC_COLLABORATORS_TABLE,
-            rowId: collab.$id,
-          })
+            rowId: collab.$id})
         )
       );
     } catch (err) {
@@ -368,8 +349,7 @@ export async function executeCascadeDeleteSecure(
       const pivotsRes = await tables.listRows({
         databaseId,
         tableId: NOTE_TAGS_TABLE,
-        queries: [Query.equal('resourceId', rowId), Query.equal('resourceType', 'note'), Query.limit(1000)] as any,
-      });
+        queries: [Query.equal('resourceId', rowId), Query.equal('resourceType', 'note'), Query.limit(1000)] as any});
 
       for (const pivot of pivotsRes.rows as any[]) {
         if (pivot.tag) {
@@ -377,8 +357,7 @@ export async function executeCascadeDeleteSecure(
             const tagsRes = await tables.listRows({
               databaseId,
               tableId: TAGS_TABLE,
-              queries: [Query.equal('name', pivot.tag), Query.limit(1)] as any,
-            });
+              queries: [Query.equal('name', pivot.tag), Query.limit(1)] as any});
 
             if (tagsRes.rows.length > 0) {
               const tagDoc = tagsRes.rows[0];
@@ -397,8 +376,7 @@ export async function executeCascadeDeleteSecure(
         await tables.deleteRow({
           databaseId,
           tableId: NOTE_TAGS_TABLE,
-          rowId: pivot.$id,
-        });
+          rowId: pivot.$id});
       }
     } catch (err) {
       console.error('[Cascade Delete] Note tags cleanup failed:', err);
@@ -413,16 +391,14 @@ export async function executeCascadeDeleteSecure(
           Query.equal('resourceType', 'note'),
           Query.equal('resourceId', rowId),
           Query.limit(1000),
-        ] as any,
-      });
+        ] as any});
 
       await Promise.all(
         mappingsRes.rows.map((m: any) =>
           tables.deleteRow({
             databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
             tableId: 'key_mapping',
-            rowId: m.$id,
-          })
+            rowId: m.$id})
         )
       );
     } catch (err) {
@@ -474,8 +450,7 @@ export async function executeCascadeDeleteSecure(
         await tables.deleteRow({
           databaseId: NOTE_DB,
           tableId: NOTE_TABLE,
-          rowId: discussionNoteId,
-        });
+          rowId: discussionNoteId});
       } catch (err: any) {
         console.warn(`[Cascade Delete] Failed to delete project discussion note ${discussionNoteId}:`, err?.message);
       }
@@ -485,8 +460,7 @@ export async function executeCascadeDeleteSecure(
       const objectsRes = await tables.listRows({
         databaseId,
         tableId: 'project_objects',
-        queries: [Query.equal('projectId', rowId), Query.limit(1000)] as any,
-      });
+        queries: [Query.equal('projectId', rowId), Query.limit(1000)] as any});
 
       const linkedObjects = (objectsRes.rows as any[]) || [];
 
@@ -514,8 +488,7 @@ export async function executeCascadeDeleteSecure(
                 await tables.deleteRow({
                   databaseId: info.databaseId,
                   tableId: info.tableId,
-                  rowId: obj.entityId,
-                });
+                  rowId: obj.entityId});
               }
             } catch (err: any) {
               console.warn(`[Cascade Delete] Failed to fetch or delete linked resource ${obj.entityId} (${obj.entityKind}):`, err?.message);
@@ -526,12 +499,11 @@ export async function executeCascadeDeleteSecure(
 
       // In all cases, we delete the project object links (detaching them if they weren't deleted)
       await Promise.all(
-        linkedObjects.map((obj) =>
+        linkedObjects.map((obj: any) =>
           tables.deleteRow({
             databaseId,
             tableId: 'project_objects',
-            rowId: obj.$id,
-          })
+            rowId: obj.$id})
         )
       );
     } catch (err) {
@@ -550,16 +522,14 @@ export async function executeCascadeDeleteSecure(
       const submissionsRes = await tables.listRows({
         databaseId,
         tableId: 'formSubmissions',
-        queries: [Query.equal('formId', rowId), Query.limit(1000)] as any,
-      });
+        queries: [Query.equal('formId', rowId), Query.limit(1000)] as any});
 
       await Promise.all(
         submissionsRes.rows.map((sub: any) =>
           tables.deleteRow({
             databaseId,
             tableId: 'formSubmissions',
-            rowId: sub.$id,
-          })
+            rowId: sub.$id})
         )
       );
     } catch (err) {
@@ -603,8 +573,7 @@ export async function executeCascadeDeleteSecure(
           await tables.deleteRow({
             databaseId: CHAT_DB,
             tableId: CALL_LINKS_TABLE,
-            rowId: callId,
-          });
+            rowId: callId});
         } catch (err: any) {
           console.warn(`[Cascade Delete] Failed to delete linked call ${callId}:`, err?.message);
         }
@@ -618,9 +587,8 @@ export async function executeCascadeDeleteSecure(
       await tables.deleteRow({
         databaseId: NOTE_DB,
         tableId: NOTE_TABLE,
-        rowId: rowId,
-      });
-    } catch (err: any) {
+        rowId: rowId});
+    } catch (_err: any) {
       // It's normal for many events to not have initialized discussions
     }
 
@@ -629,16 +597,14 @@ export async function executeCascadeDeleteSecure(
       const guestsRes = await tables.listRows({
         databaseId,
         tableId: GUESTS_TABLE,
-        queries: [Query.equal('eventId', rowId), Query.limit(1000)] as any,
-      });
+        queries: [Query.equal('eventId', rowId), Query.limit(1000)] as any});
 
       await Promise.all(
         guestsRes.rows.map((guest: any) =>
           tables.deleteRow({
             databaseId,
             tableId: GUESTS_TABLE,
-            rowId: guest.$id,
-          })
+            rowId: guest.$id})
         )
       );
     } catch (err) {
@@ -654,15 +620,13 @@ export async function executeCascadeDeleteSecure(
                 Query.equal('entityId', rowId),
                 Query.equal('entityKind', 'event'),
                 Query.limit(100)
-            ] as any,
-        });
+            ] as any});
         await Promise.all(
             objectsRes.rows.map((obj: any) =>
                 tables.deleteRow({
                     databaseId: CHAT_DB,
                     tableId: 'project_objects',
-                    rowId: obj.$id,
-                })
+                    rowId: obj.$id})
             )
         );
     } catch (err) {
@@ -682,8 +646,7 @@ export async function executeCascadeDeleteSecure(
       const ghostNotesRes = await tables.listRows({
         databaseId: NOTE_DB,
         tableId: NOTE_TABLE,
-        queries: [Query.contains('metadata', rowId), Query.limit(100)] as any,
-      });
+        queries: [Query.contains('metadata', rowId), Query.limit(100)] as any});
 
       for (const ghost of ghostNotesRes.rows as any[]) {
         // Recursive deletion for the note's own child items
@@ -693,8 +656,7 @@ export async function executeCascadeDeleteSecure(
         await tables.deleteRow({
           databaseId: NOTE_DB,
           tableId: NOTE_TABLE,
-          rowId: ghost.$id,
-        });
+          rowId: ghost.$id});
       }
     } catch (err) {
       console.error('[Cascade Delete] Call ghost notes cleanup failed:', err);
@@ -723,8 +685,8 @@ export async function executeCascadeDeleteSecure(
     if (attachmentIds.length > 0) {
       console.log(`[Cascade Delete] Purging ${attachmentIds.length} task attachments`);
       await Promise.all(
-        attachmentIds.map((fileId) =>
-          storage.deleteFile(APPWRITE_CONFIG.BUCKETS.NOTES_ATTACHMENTS, fileId).catch((err) => {
+        attachmentIds.map((fileId: any) =>
+          storage.deleteFile(APPWRITE_CONFIG.BUCKETS.NOTES_ATTACHMENTS, fileId).catch((err: any) => {
             console.warn(`[Cascade Delete] Failed to delete task attachment ${fileId}:`, err?.message);
           })
         )
@@ -736,8 +698,7 @@ export async function executeCascadeDeleteSecure(
       const subtasksRes = await tables.listRows({
         databaseId: FLOW_DB,
         tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
-        queries: [Query.equal('parentId', rowId), Query.limit(1000)] as any,
-      });
+        queries: [Query.equal('parentId', rowId), Query.limit(1000)] as any});
 
       await Promise.all(
         subtasksRes.rows.map((subtask: any) =>
@@ -751,8 +712,7 @@ export async function executeCascadeDeleteSecure(
           tables.deleteRow({
             databaseId: FLOW_DB,
             tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
-            rowId: subtask.$id,
-          })
+            rowId: subtask.$id})
         )
       );
     } catch (err) {
@@ -766,9 +726,8 @@ export async function executeCascadeDeleteSecure(
       await tables.deleteRow({
         databaseId: NOTE_DB,
         tableId: NOTE_TABLE,
-        rowId: rowId,
-      }).catch(() => null);
-    } catch (err) {
+        rowId: rowId}).catch(() => null);
+    } catch (_err) {
         // Safe to ignore if not present
     }
 
@@ -781,15 +740,13 @@ export async function executeCascadeDeleteSecure(
                 Query.equal('entityId', rowId),
                 Query.equal('entityKind', 'goal'),
                 Query.limit(100)
-            ] as any,
-        });
+            ] as any});
         await Promise.all(
             objectsRes.rows.map((obj: any) =>
                 tables.deleteRow({
                     databaseId: CHAT_DB,
                     tableId: 'project_objects',
-                    rowId: obj.$id,
-                })
+                    rowId: obj.$id})
             )
         );
     } catch (err) {
@@ -814,7 +771,7 @@ export async function executeCascadeDeleteSecure(
         if (Array.isArray(attachmentsList)) {
           await Promise.all(
             attachmentsList.map((file: any) =>
-              storage.deleteFile('vault_attachments', file.id || file.fileId).catch((err) => {
+              storage.deleteFile('vault_attachments', file.id || file.fileId).catch((err: any) => {
                 console.warn(`[Cascade Delete] Failed to delete credential attachment file ${file.id}:`, err?.message);
               })
             )

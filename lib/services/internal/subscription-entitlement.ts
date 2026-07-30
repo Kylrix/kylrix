@@ -8,8 +8,7 @@ import {
   normalizeBillingPrefsTier,
   planLabelToUiTier,
   billingTierHasTeamsAccess,
-  type BillingUiTier,
-} from '@/lib/subscription/tier-resolution';
+  type BillingUiTier} from '@/lib/subscription/tier-resolution';
 
 const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 const SUBSCRIPTIONS_TABLE_ID = APPWRITE_CONFIG.TABLES.NOTE.SUBSCRIPTIONS;
@@ -41,7 +40,7 @@ function pickBestSubscriptionRow(rows: SubscriptionRow[]): SubscriptionRow | nul
     if (tier === 'PRO') return 2;
     return 0;
   };
-  return [...rows].sort((a, b) => {
+  return [...rows].sort((a: any, b: any) => {
     const byTier = rank(planLabelToUiTier(b.plan)) - rank(planLabelToUiTier(a.plan));
     if (byTier !== 0) return byTier;
 
@@ -67,8 +66,7 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
       active: open.active,
       expiresAt: open.expiresAt,
       source: 'prefs_lifetime',
-      uiTier: open.uiTier,
-    };
+      uiTier: open.uiTier};
   }
 
   const { databases, users } = createSystemClient();
@@ -100,7 +98,7 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
         ledgerExpiresAt = bestRow.currentPeriodEnd || null;
         ledgerSource = 'subscription_row';
       } else {
-        ledgerTier = maxBillingUiTier(...unexpired.map((row) => planLabelToUiTier(row.plan)));
+        ledgerTier = maxBillingUiTier(...unexpired.map((row: any) => planLabelToUiTier(row.plan)));
         const fallbackRow = unexpired[0];
         ledgerExpiresAt = fallbackRow?.currentPeriodEnd || null;
         ledgerSource = 'subscription_row';
@@ -137,8 +135,7 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
       active: false,
       expiresAt: null,
       source: 'none',
-      uiTier: 'FREE',
-    };
+      uiTier: 'FREE'};
   }
 
   const expiresAt = uiTier === prefsTier && prefsExpiresAt
@@ -153,8 +150,7 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
     active: true,
     expiresAt,
     source: source === 'none' ? 'prefs_sync' : source,
-    uiTier,
-  };
+    uiTier};
 }
 
 function tierRank(tier: BillingUiTier): number {
@@ -169,10 +165,6 @@ export async function hasPaidKylrixPlanServer(userId: string): Promise<boolean> 
   return !!(ent && ent.active && ent.uiTier !== 'FREE');
 }
 
-export async function hasTeamsKylrixPlanServer(userId: string): Promise<boolean> {
-  const tier = await getUserSubscriptionTierServer(userId);
-  return billingTierHasTeamsAccess(tier);
-}
 
 /** Server-authoritative tier for collaboration and billing gates (ledger + prefs). */
 export async function getUserSubscriptionTierServer(userId: string): Promise<BillingUiTier> {

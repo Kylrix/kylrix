@@ -76,8 +76,7 @@ export const GhostNoteClaimer = () => {
                                         description: payload.detail || '',
                                         status: payload.status || 'todo',
                                         priority: payload.priority || 'medium',
-                                        dueDate: payload.dueAt ? payload.dueAt : null,
-                                    });
+                                        dueDate: payload.dueAt ? payload.dueAt : null});
                                 }
                             } else if (kind === 'password') {
                                 const payload = (() => {
@@ -89,8 +88,7 @@ export const GhostNoteClaimer = () => {
                                         name: decryptedTitle,
                                         username: payload.username || null,
                                         password: payload.password || null,
-                                        totpId: payload.totpSecret || null,
-                                    });
+                                        totpId: payload.totpSecret || null});
                                 }
                             } else if (kind === 'totp') {
                                 const payload = (() => {
@@ -111,8 +109,7 @@ export const GhostNoteClaimer = () => {
                                 const { updateNote } = await import('@/lib/actions/client-ops');
                                 await updateNote(item.id, {
                                     title: decryptedTitle,
-                                    content: decryptedContent,
-                                });
+                                    content: decryptedContent});
                             }
                         } else if (kind === 'task') {
                             const payload = (() => {
@@ -148,8 +145,7 @@ export const GhostNoteClaimer = () => {
                                     username: payload.username || null,
                                     password: payload.password || null,
                                     totpId: payload.totpSecret || null,
-                                    isFavorite: false,
-                                });
+                                    isFavorite: false});
                             }
                         } else if (kind === 'totp') {
                             const payload = (() => {
@@ -176,10 +172,9 @@ export const GhostNoteClaimer = () => {
                                 title: decryptedTitle,
                                 summary: payload?.description || '',
                                 status: payload?.status || 'active',
-                                visibility: 'public',
+                                visibility: 'public' as any,
                                 isPublic: true,
-                                isGuest: true,
-                            });
+                                isGuest: true});
                         } else if (kind === 'tag') {
                             const { createStandaloneTag } = await import('@/lib/actions/client-ops');
                             await createStandaloneTag(decryptedTitle);
@@ -192,8 +187,7 @@ export const GhostNoteClaimer = () => {
                                 format: 'markdown',
                                 tags: [],
                                 isPublic: false,
-                                isGuest: false,
-                            });
+                                isGuest: false});
                         }
 
                         // Remove from remaining list

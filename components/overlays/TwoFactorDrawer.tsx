@@ -11,8 +11,7 @@ import {
   isMfaFullyEnabled,
   listCurrentMfaFactors,
   type MfaLoginMethod,
-  verifyTotpAuthenticator,
-} from '@/lib/mfa';
+  verifyTotpAuthenticator} from '@/lib/mfa';
 import { loadMfaRecoveryCodes, persistMfaRecoveryCodes } from '@/lib/mfa-recovery-vault';
 import toast from 'react-hot-toast';
 import { X as CloseIcon, Copy as ContentCopyIcon } from 'lucide-react';
@@ -38,8 +37,7 @@ export function TwoFactorDrawer({
   emailVerified = true,
   loginMethod,
   onEnabled,
-  mode = 'setup',
-}: Props) {
+  mode = 'setup'}: Props) {
   const [loading, setLoading] = useState(false);
   const [vaultUnlocked, setVaultUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
   const [emailEnabled, setEmailEnabled] = useState(false);
@@ -87,8 +85,7 @@ export function TwoFactorDrawer({
     }
     await persistMfaRecoveryCodes(userId, codes, {
       source: 'appwrite-mfa',
-      loginMethod,
-    });
+      loginMethod});
     setRecoveryCodes(codes);
     setStoredRecoveryCodes(codes);
     return codes;
@@ -109,7 +106,7 @@ export function TwoFactorDrawer({
     setLoading(true);
     setError(null);
     try {
-      const verifyUrl = `${window.location.origin}/accounts/settings/security#mfa`;
+      const verifyUrl = `${window.location.origin}/settings?tab=security#mfa`;
       await account.createVerification({ url: verifyUrl });
       toast.success('Verification email sent.');
     } catch (err) {

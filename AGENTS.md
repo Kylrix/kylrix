@@ -7,7 +7,7 @@
 2. Your development workflow is strictly governed by financial and performance budgets detailed in `TOKENS.md`.
 
 ## Execution Lifecycle
-*   **Phase 1 (Bootstrap):** On initialization, read `TOKENS.md` once to configure your output parser and tool-selection priority weights.
+*   **Phase 1 (Bootstrap):** On initialization, read `TOKENS.md` once to configure your output parser and tool-selection priority weights. For domain work, read `.agents/skills/SKILLS.md` first (catalog of every skill), then open only the matching skill — do not scan skills one-by-one.
 *   **Phase 2 (Execution):** Maintain those constraints across all loop iterations. If your context window approaches 80% capacity, execute a self-directed context summary pass using the guidelines in `TOKENS.md`.
 
 ## 🏗️ Architectural Mandates

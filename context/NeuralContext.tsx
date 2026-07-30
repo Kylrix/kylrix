@@ -28,7 +28,7 @@ export function NeuralProvider({ children }: { children: ReactNode }) {
   return <NeuralContext.Provider value={value}>{children}</NeuralContext.Provider>;
 }
 
-export function useNeural() {
+function useNeural() {
   const ctx = useContext(NeuralContext);
   if (!ctx) {
     throw new Error('useNeural must be used within a NeuralProvider');
@@ -56,8 +56,7 @@ export function EmptyStateAnomalyDetector({
   itemCount,
   isLoading = false,
   onHeal,
-  children,
-}: EmptyStateAnomalyDetectorProps) {
+  children}: EmptyStateAnomalyDetectorProps) {
   const pathname = usePathname();
   const { reportAnomaly } = useNeural();
 
@@ -72,8 +71,7 @@ export function EmptyStateAnomalyDetector({
           componentName,
           expectedItemKind,
           itemCount: 0,
-          timestamp: Date.now(),
-        });
+          timestamp: Date.now()});
       }
     }, 2500);
 

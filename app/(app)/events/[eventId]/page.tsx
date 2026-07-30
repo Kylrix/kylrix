@@ -17,11 +17,9 @@ import {
   CircularProgress,
   Stack,
   IconButton,
-  Chip,
-} from '@/lib/openbricks/primitives';
+  Chip} from '@/lib/openbricks/primitives';
 import {
-  ContentCopy as ContentCopyIcon,
-} from '@/lib/openbricks/icons';
+  ContentCopy as ContentCopyIcon} from '@/lib/openbricks/icons';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { getResourceCollaboratorsSecure } from '@/lib/actions/secure-ops';
@@ -43,7 +41,7 @@ import { fetchProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar, computeIdentityFlags } from '@/components/common/IdentityBadge';
 import { MultiSectionContainer } from '@/context/SectionContext';
 
-function AttendeeAvatar({ guest, theme }: { guest: any, theme: any }) {
+function AttendeeAvatar({ guest}: { guest: any, theme: any }) {
   const [url, setUrl] = useState<string | null>(null);
   const [identity, setIdentity] = useState<{ verified: boolean; pro: boolean }>({ verified: false, pro: false });
   const searchKey = guest.username || guest.displayName || guest.email || guest.userId;
@@ -63,8 +61,7 @@ function AttendeeAvatar({ guest, theme }: { guest: any, theme: any }) {
             username: user.username || null,
             bio: user.bio || null,
             tier: user.tier || null,
-            publicKey: user.publicKey || null,
-          }));
+            publicKey: user.publicKey || null}));
         }
         const fileId = users[0]?.profilePicId || users[0]?.avatar || guest.profilePicId || guest.avatar || null;
         if (users.length > 0 && fileId) {
@@ -106,8 +103,7 @@ export default function EventPage() {
     description: 'Fetching event details...',
     coverImageId: '',
     $createdAt: new Date().toISOString(),
-    $updatedAt: new Date().toISOString(),
-  } as any : null);
+    $updatedAt: new Date().toISOString()} as any : null);
   const [error, setError] = useState<string | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
   const [guestId, setGuestId] = useState<string | null>(null);
@@ -175,7 +171,7 @@ export default function EventPage() {
           };
           updateTimer();
         }
-      } catch (err) {
+      } catch (_err) {
         if (active) setIsHuddleInit(false);
       }
     };
@@ -210,8 +206,7 @@ export default function EventPage() {
               senderId: doc.userId,
               senderName,
               content: doc.content,
-              timestamp: new Date(doc.createdAt).getTime(),
-            };
+              timestamp: new Date(doc.createdAt).getTime()};
           })
         );
         msgs.sort((a: any, b: any) => a.timestamp - b.timestamp);
@@ -247,8 +242,7 @@ export default function EventPage() {
             senderId: payload.userId,
             senderName,
             content: payload.content,
-            timestamp: new Date(payload.createdAt).getTime(),
-          };
+            timestamp: new Date(payload.createdAt).getTime()};
           setHuddleMessages(prev => {
             if (prev.some(m => m.id === msg.id)) return prev;
             return [...prev, msg].sort((a, b) => a.timestamp - b.timestamp);
@@ -379,8 +373,7 @@ export default function EventPage() {
         userId: user.$id,
         email: user.email,
         status: 'accepted',
-        role: 'attendee',
-      });
+        role: 'attendee'});
       setIsRegistered(true);
       setGuestId(newGuest.$id);
     } catch { } finally { setRegistering(false); }

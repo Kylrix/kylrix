@@ -98,8 +98,7 @@ export default function NoteReactions({ targetId, targetType = TargetType.NOTE, 
         targetId: targetId,
         emoji,
         userId: user.$id,
-        createdAt: new Date().toISOString(),
-      });
+        createdAt: new Date().toISOString()});
       setReactions((prev) => [...prev, createdReaction as Reactions]);
     } catch (err: any) {
       console.error('Failed to update reaction:', err);
@@ -141,8 +140,7 @@ export default function NoteReactions({ targetId, targetType = TargetType.NOTE, 
                   height: size === 'small' ? 24 : 32,
                   fontSize: size === 'small' ? '0.75rem' : '0.875rem',
                   '&:hover': {
-                    bgcolor: isSelected ? 'rgba(245, 158, 11, 0.8)' : 'rgba(255,255,255,0.1)',
-                  }
+                    bgcolor: isSelected ? 'rgba(245, 158, 11, 0.8)' : 'rgba(255,255,255,0.1)'}
                 }}
               />
             );

@@ -13,10 +13,9 @@ export interface AgenticPreferences {
 const DEFAULT_PREFS: AgenticPreferences = {
   authorizedTools: [],
   requireDeleteConfirmation: true,
-  strictDestructiveMode: true,
-};
+  strictDestructiveMode: true};
 
-export const DESTRUCTIVE_TOOL_KEYS = new Set([
+const DESTRUCTIVE_TOOL_KEYS = new Set([
   'delete_resource',
   'objects.idea.delete',
   'objects.goal.delete',
@@ -38,8 +37,7 @@ export function parseAgenticPreferences(raw: Record<string, unknown> | null | un
     strictDestructiveMode:
       typeof raw.strictDestructiveMode === 'boolean'
         ? raw.strictDestructiveMode
-        : DEFAULT_PREFS.strictDestructiveMode,
-  };
+        : DEFAULT_PREFS.strictDestructiveMode};
 }
 
 export function toolRequiresAuthorization(

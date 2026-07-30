@@ -34,13 +34,4 @@ export function getLiveGoalForSync(goalId: string): Task | null {
   return liveGoalGetter(id) || null;
 }
 
-export function notifyPendingSyncListeners(): void {
-  pendingListeners.forEach((l) => l());
-}
 
-export function subscribePendingSync(listener: () => void): () => void {
-  pendingListeners.add(listener);
-  return () => {
-    pendingListeners.delete(listener);
-  };
-}

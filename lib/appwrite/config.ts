@@ -118,36 +118,14 @@ export const APPWRITE_CONFIG = {
             SOURCE_CONTROL: 'source_control',
             NOSTR_IDENTITIES: 'nostr_identities'
         },
-        CHAT: {
-            USERS: 'users',
-            PROFILES: 'profiles',
-            CONVERSATIONS: 'conversations',
-            CONVERSATION_MEMBERS: 'conversationMembers',
-            MESSAGES: 'messages',
-            JOIN_REQUESTS: 'joinRequests',
-            MESSAGE_REACTIONS: 'messageReactions',
-            EPOCHS: 'epochs',
-            UNORGANIC_EMAILS: 'unorganic_emails',
-            ACCOUNT_EVENTS: 'accountEvents',
-            APP_ACTIVITY: 'app_activity',
-            CALL_LINKS: 'calls',
-            FOLLOWS: 'follows',
-            MOMENTS: 'moments',
-            INTERACTIONS: 'interactions',
-            CONTACTS: 'contacts',
-            KYLRIX_TOKEN_LEDGER: 'kylrix_token_ledger',
-            ENGAGEMENT_VIEWS: 'engagement_views',
-            ENGAGEMENT_VIEW_ROLLUPS: 'engagement_view_rollups',
-            TELEGRAM_CONNECTIONS: 'telegram_connections',
-            SOURCE_CONTROL: 'source_control',
-            NOSTR_IDENTITIES: 'nostr_identities'
-        }
+        // Identical to CONNECT — assigned after object init
+        CHAT: null as any,
     },
     BUCKETS: {
         PROFILE_PICTURES: 'profile_pictures',
         GROUP_AVATARS: 'group_avatars',
         NOTES_ATTACHMENTS: 'notes_attachments',
-        GENERAL_STORAGE: 'general_storage',
+        GENERAL_STORAGE: 'generalstorage',
         BLOG_MEDIA: 'event_covers',
         EXTENSION_ASSETS: 'extension_assets',
         BACKUPS: 'backups',
@@ -188,6 +166,9 @@ export const APPWRITE_CONFIG = {
         RP_ID: 'kylrix.space'
     }
 };
+
+// CHAT is a legacy alias of CONNECT (same tables)
+(APPWRITE_CONFIG.TABLES as any).CHAT = APPWRITE_CONFIG.TABLES.CONNECT;
 
 export const KYLRIX_AUTH_URI = `https://${APPWRITE_CONFIG.SYSTEM.AUTH_SUBDOMAIN}.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
 export const KYLRIX_DOMAIN = APPWRITE_CONFIG.SYSTEM.DOMAIN;

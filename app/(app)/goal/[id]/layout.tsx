@@ -25,7 +25,7 @@ export async function generateMetadata({
     )}`;
 
     return buildOgMetadata({ title, description, imageUrl: previewImage });
-  } catch (e) {
+  } catch (_e) {
     return {
       title: 'Shared Goal | Kylrix Flow',
       description: 'Collaborate on tasks, milestones, and high-velocity goals.',

@@ -11,9 +11,8 @@ import {
 import {
   FileText as NotesIcon,
   Lock as VaultIcon,
-  Target as FlowIcon,
+  GitFork as FlowIcon,
   MessageCircle as ConnectIcon,
-  GitFork as WorkflowIcon,
 } from 'lucide-react';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -22,11 +21,11 @@ import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useCallLauncher } from '@/context/CallLauncherContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
+import { isFlowPath } from '@/lib/routing/app-paths';
 
 /**
  * Persistent unified app-specific bottom bar.
- * Shows five item icons: note, flow, vault, connect, workflow in that order.
- * Attached to bottom with full width, curved top corners.
+ * Shows four item icons: note, flow, vault, connect.
  */
 export function UnifiedBottomBar() {
   const pathname = usePathname();
@@ -40,9 +39,8 @@ export function UnifiedBottomBar() {
   const appContext = useMemo(() => {
     if (pathname?.startsWith('/app')) return 'note';
     if (pathname?.startsWith('/vault')) return 'vault';
-    if (pathname?.startsWith('/goals')) return 'flow';
+    if (isFlowPath(pathname)) return 'flow';
     if (pathname?.startsWith('/connect')) return 'connect';
-    if (pathname?.startsWith('/flow') || pathname?.startsWith('/workflows')) return 'workflows';
     return null;
   }, [pathname]);
 
@@ -54,8 +52,6 @@ export function UnifiedBottomBar() {
         return '#A855F7';
       case 'connect':
         return '#F59E0B';
-      case 'workflows':
-        return '#6366F1';
       case 'note':
       default:
         return '#EC4899';
@@ -64,15 +60,14 @@ export function UnifiedBottomBar() {
 
   const getCurrentTab = () => {
     if (pathname?.startsWith('/app')) return 'note';
-    if (pathname?.startsWith('/goals')) return 'flow';
+    if (isFlowPath(pathname)) return 'flow';
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/connect')) return 'connect';
-    if (pathname?.startsWith('/flow') || pathname?.startsWith('/workflows')) return 'workflows';
     return null;
   };
 
   React.useEffect(() => {
-    ['/app', '/goals', '/vault', '/connect', '/flow'].forEach((route) => {
+    ['/app', '/flows', '/vault', '/connect'].forEach((route) => {
       router.prefetch(route);
     });
   }, [router]);
@@ -80,12 +75,11 @@ export function UnifiedBottomBar() {
   const handleNavChange = (_: React.SyntheticEvent, newValue: string) => {
     const routes: Record<string, string> = {
       note: '/app',
-      flow: '/goals',
+      flow: '/flows',
       vault: '/vault',
       connect: '/connect',
-      workflows: '/flow',
     };
-    
+
     const target = routes[newValue];
     if (!target) return;
 
@@ -103,7 +97,6 @@ export function UnifiedBottomBar() {
       <BottomNavigationAction key="flow" value="flow" icon={<FlowIcon size={24} strokeWidth={1.5} className="lucide" />} />,
       <BottomNavigationAction key="vault" value="vault" icon={<VaultIcon size={24} strokeWidth={1.5} className="lucide" />} />,
       <BottomNavigationAction key="connect" value="connect" icon={<ConnectIcon size={24} strokeWidth={1.5} className="lucide" />} />,
-      <BottomNavigationAction key="workflows" value="workflows" icon={<WorkflowIcon size={24} strokeWidth={1.5} className="lucide" />} />,
     ];
   };
 
@@ -111,9 +104,9 @@ export function UnifiedBottomBar() {
   const isConnectCallDetail = Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/));
   const isSpecificChatPage = Boolean(pathname?.match(/^\/connect\/chat\/[^/]+$/));
   const isSpecificPostPage = Boolean(pathname?.match(/^\/connect\/post\/[^/]+$/));
-  const isSpecificProjectPage = Boolean(pathname?.match(/^\/projects\/[^/]+$/));
-  const isPublicFormPage = Boolean(pathname?.match(/^\/flow\/form\/[^/]+$/));
-  const isSharedNotePage = Boolean(pathname?.startsWith('/app/shared') || pathname?.startsWith('/idea'));
+  const isSpecificProjectPage = Boolean(pathname?.match(/^\/workspaces\/[^/]+$/));
+  const isPublicFormPage = Boolean(pathname?.match(/^\/form\/[^/]+$/));
+  const isSharedNotePage = Boolean(pathname?.startsWith('/app') || pathname?.startsWith('/idea'));
 
   const contextMenu = useContextMenu();
 

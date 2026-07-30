@@ -21,8 +21,7 @@ export function AgenticMessageActions({
   isGuest,
   syncStatus,
   accent,
-  onShareChange,
-}: AgenticMessageActionsProps) {
+  onShareChange}: AgenticMessageActionsProps) {
   const shared = isPublic === true || isGuest === true;
 
   const handleShareToggle = async (e: React.MouseEvent) => {

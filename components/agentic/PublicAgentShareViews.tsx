@@ -36,7 +36,7 @@ function AccessUnavailable({ kind }: { kind: 'session' | 'message' }) {
           </div>
           <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-0">
             <Link
-              href="/send"
+              href="/app"
               className="inline-flex items-center justify-center rounded-xl bg-[#6366F1] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#5254E8] transition-colors font-satoshi"
             >
               Open Kylrix

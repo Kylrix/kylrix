@@ -18,8 +18,7 @@ import {
     clearConversationFootprintAction,
     deleteConversationFullyAction,
     nuclearWipeConversationAction,
-    getConversationsAction,
-} from '@/lib/actions/chat';
+    getConversationsAction} from '@/lib/actions/chat';
 
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
@@ -43,7 +42,7 @@ let conversationsFetchInflight: { userId: string; promise: Promise<{ total: numb
 const conversationRosterCache = new Map<string, any>();
 const conversationRosterListeners = new Set<(rows: any[]) => void>();
 
-export function invalidateConversationsListCache(userId?: string) {
+function invalidateConversationsListCache(userId?: string) {
     if (userId) {
         conversationsListCache.delete(userId);
         return;
@@ -58,7 +57,7 @@ const canonicalizeParticipantsForMatch = (participants: string[]) =>
     Array.from(new Set((participants || []).filter(Boolean))).sort();
 
 const uniqueIds = (ids: Array<string | null | undefined>) =>
-    Array.from(new Set(ids.map((value) => String(value || '').trim()).filter(Boolean)));
+    Array.from(new Set(ids.map((value: any) => String(value || '').trim()).filter(Boolean)));
 
 const buildGroupAvatarUrl = (conversationId: string) => `${GROUP_AVATAR_ROUTE}?conversationId=${encodeURIComponent(conversationId)}`;
 
@@ -81,8 +80,7 @@ const setConversationPreviewCache = (
         lastMessageId: preview.lastMessageId,
         lastMessageText: preview.lastMessageText || '',
         lastMessageAt: preview.lastMessageAt || new Date().toISOString(),
-        lastMessageSenderId: preview.lastMessageSenderId || null,
-    });
+        lastMessageSenderId: preview.lastMessageSenderId || null});
 };
 
 const getConversationPreviewCache = (conversationId: string) => conversationPreviewCache.get(conversationId) || null;
@@ -109,15 +107,8 @@ export const rememberConversationRoster = (rows: any[]) => {
     emitConversationRosterCache();
 };
 
-export const getConversationRosterSnapshot = () => Array.from(conversationRosterCache.values());
+const getConversationRosterSnapshot = () => Array.from(conversationRosterCache.values());
 
-export const subscribeConversationRoster = (listener: (rows: any[]) => void) => {
-    conversationRosterListeners.add(listener);
-    listener(getConversationRosterSnapshot());
-    return () => {
-        conversationRosterListeners.delete(listener);
-    };
-};
 
 const getConversationMemberSnapshot = async (conversationId: string, fallbackParticipants: string[] = []) => {
     const memberRows = await tablesDB.listRows(DB_ID, CONV_MEMBERS_TABLE, [
@@ -249,8 +240,7 @@ const parseInviteMeta = (value: unknown): InviteMeta | null => {
 const buildInviteMeta = (current: any, patch: Record<string, unknown>) => {
     const existing = parseInviteMeta(current?.inviteMeta) || {};
     const next: InviteMeta = {
-        ...existing,
-    };
+        ...existing};
 
     if (Object.prototype.hasOwnProperty.call(patch, 'name')) {
         next.name = typeof patch.name === 'string' ? patch.name : '';
@@ -302,8 +292,7 @@ async function callMessageCreateApi(
         type: payload.type as string,
         attachments: payload.attachments as string[],
         replyTo: payload.replyTo as string,
-        jwt: jwt as any,
-    });
+        jwt: jwt as any});
 }
 
 async function callMessageReactionApi(
@@ -317,8 +306,7 @@ async function callMessageReactionApi(
         messageId: payload.messageId as string,
         emoji: payload.emoji as string,
         action: method,
-        jwt: jwt as any,
-    });
+        jwt: jwt as any});
 }
 
 async function callConversationRepairApi(
@@ -329,8 +317,7 @@ async function callConversationRepairApi(
     return await repairConversationAction({
         userId: payload.userId as string,
         conversationId: payload.conversationId as string,
-        jwt: jwt as any,
-    });
+        jwt: jwt as any});
 }
 
 async function callJoinRequestApi(
@@ -345,8 +332,7 @@ async function callJoinRequestApi(
         resourceId: payload?.resourceId as string,
         requesterId: payload?.requesterId as string,
         action: payload?.action as 'accept' | 'reject',
-        jwt: jwt as any,
-    });
+        jwt: jwt as any});
 }
 
 async function fetchKeyMapping(resourceType: string, resourceId: string, grantee: string) {
@@ -509,8 +495,7 @@ async function resolveConversationKey(
                     conversationId: conversation.$id,
                     conversationType: 'direct',
                     version: 't4',
-                    repaired: true,
-                }),
+                    repaired: true}),
             }]);
 
         return rebuiltKey;
@@ -520,8 +505,7 @@ async function resolveConversationKey(
         try {
           const repairResult = await callConversationRepairApi({
             userId,
-            conversationId: conversation.$id,
-          }, auth);
+            conversationId: conversation.$id}, auth);
 
           if (repairResult?.identity) {
             const repairedProfile = await UsersService.getProfileById(userId);
@@ -559,8 +543,7 @@ async function syncConversationAccess(
         targetUserIds: targets,
         permission,
         ownerId,
-        action: 'grant',
-    });
+        action: 'grant'});
 }
 
 async function syncConversationAvatarAccess(
@@ -577,8 +560,7 @@ async function syncConversationAvatarAccess(
         fileId: avatarFileId,
         targetUserIds: targets,
         permission: 'read',
-        action: 'grant',
-    }, auth);
+        action: 'grant'}, auth);
 }
 
 async function revokeConversationAvatarAccess(
@@ -595,8 +577,7 @@ async function revokeConversationAvatarAccess(
         fileId: avatarFileId,
         targetUserIds: targets,
         permission: 'read',
-        action: 'revoke',
-    }, auth);
+        action: 'revoke'}, auth);
 }
 
 export const ChatService = {
@@ -637,8 +618,7 @@ export const ChatService = {
     async rewrapConversationKeys(conversationId: string, auth?: { jwt?: string; cookie?: string }) {
         if (!conversationId) return null;
         const repairResult = await callConversationRepairApi({
-            conversationId,
-        }, auth);
+            conversationId}, auth);
 
         conversationKeyCache.delete(conversationId);
         ecosystemSecurity.clearConversationKey(conversationId);
@@ -770,7 +750,7 @@ export const ChatService = {
             }
         }
 
-        const previewConversationIds = conversationRows.map((conversation) => conversation.$id).filter(Boolean);
+        const previewConversationIds = conversationRows.map((conversation: any) => conversation.$id).filter(Boolean);
         const needsPreviewHydration = conversationRows.some((conversation) => !conversation.lastMessageAt || !conversation.lastMessageText);
         const latestMessageByConversation = new Map<string, any>();
 
@@ -806,13 +786,12 @@ export const ChatService = {
             const cachedAt = cachedPreview ? new Date(cachedPreview.lastMessageAt || 0).getTime() : -1;
             const withCache = cachedPreview && (cachedAt >= hydratedAt || !hydratedConversation.lastMessageText) ? {
                 ...hydratedConversation,
-                ...cachedPreview,
-            } : hydratedConversation;
+                ...cachedPreview} : hydratedConversation;
 
             return this._decryptConversation(withCache, userId);
         }));
 
-        rows.sort((a, b) => {
+        rows.sort((a: any, b: any) => {
             const timeA = new Date(getConversationActivityAt(a) || 0).getTime();
             const timeB = new Date(getConversationActivityAt(b) || 0).getTime();
             return timeB - timeA;
@@ -934,15 +913,14 @@ export const ChatService = {
             updatedAt: now,
         }, conversationPermissions);
 
-        const memberRows = await Promise.all(uniqueParticipants.map((participantId) =>
+        const memberRows = await Promise.all(uniqueParticipants.map((participantId: any) =>
             tablesDB.createRow(
                 DB_ID,
                 CONV_MEMBERS_TABLE,
                 ID.unique(),
                 {
                     conversationId: newConv.$id,
-                    userId: participantId,
-                },
+                    userId: participantId},
                 buildConversationMemberPermissions(uniqueParticipants, creatorId)
             ).catch(() => null)
         ));
@@ -955,8 +933,7 @@ export const ChatService = {
                 ownerId: creatorId,
                 targetUserIds: uniqueParticipants,
                 permission: 'read',
-                action: 'grant',
-            }).catch((error) => {
+                action: 'grant'}).catch((error: any) => {
                 console.error('[ChatService] Failed to grant conversation member access:', error);
                 throw error;
             })
@@ -992,8 +969,7 @@ export const ChatService = {
                                 wrappedByPublicKey: creatorPublicKey,
                                 conversationId: newConv.$id,
                                 conversationType: type,
-                                version: 't4',
-                            }),
+                                version: 't4'}),
                         };
                     })).then((rows) => rows.filter(Boolean) as LockboxEntry[]);
 
@@ -1004,11 +980,10 @@ export const ChatService = {
                             ownerId: creatorId,
                             participantUserIds: uniqueParticipants,
                             epochNumber: 1,
-                            keyMappings: directLockboxRows.map((entry) => ({
+                            keyMappings: directLockboxRows.map((entry: any) => ({
                                 ...entry,
                                 resourceType: 'epoch',
-                                resourceId: newConv.$id,
-                            })),
+                                resourceId: newConv.$id})),
                         });
                     }
                     
@@ -1073,11 +1048,10 @@ export const ChatService = {
             content: finalContent,
             type,
             attachments,
-            replyTo,
-        }, permissionSyncAuth);
+            replyTo}, permissionSyncAuth);
 
         if (type === 'text') {
-            notifyMessageStreak(conversation, senderId, conversationId).catch((error) => {
+            notifyMessageStreak(conversation, senderId, conversationId).catch((error: any) => {
                 console.error('[ChatService] Failed to queue message streak email', error);
             });
         }
@@ -1125,8 +1099,7 @@ export const ChatService = {
         return callMessageReactionApi('POST', {
             conversationId,
             messageId,
-            emoji,
-        }, permissionSyncAuth);
+            emoji}, permissionSyncAuth);
     },
 
     async removeMessageReaction(
@@ -1138,8 +1111,7 @@ export const ChatService = {
         return callMessageReactionApi('DELETE', {
             conversationId,
             messageId,
-            emoji,
-        }, permissionSyncAuth);
+            emoji}, permissionSyncAuth);
     },
 
     async getMessages(conversationId: string, limit = 50, offset = 0, userId?: string, options?: { prefetchedConversation?: any }) {
@@ -1271,8 +1243,8 @@ export const ChatService = {
         const res = await nuclearWipeConversationAction({ conversationId });
         this.clearConversationPreviewCache(conversationId);
         conversationKeyCache.delete(conversationId);
-        const { success: _ignored, ...rest } = res || {};
-        return { success: true, ...rest };
+        const { success: _ignoredSuccess, ...rest } = res || {};
+        return { ...rest, success: true };
     },
 
     async deleteConversationFully(conversationId: string) {
@@ -1280,8 +1252,8 @@ export const ChatService = {
         const res = await deleteConversationFullyAction({ conversationId });
         this.clearConversationPreviewCache(conversationId);
         conversationKeyCache.delete(conversationId);
-        const { success: _ignored, ...rest } = res || {};
-        return { success: true, conversation, ...rest };
+        const { success: _ignoredSuccess2, ...rest } = res || {};
+        return { ...rest, success: true, conversation };
     },
 
     async updateConversation(conversationId: string, data: Partial<{
@@ -1360,15 +1332,13 @@ export const ChatService = {
                         ownerId: conv.creatorId || participants[0] || userId,
                         targetUserIds: [...participants, userId],
                         permission: 'read',
-                        action: 'grant',
-                    });
+                        action: 'grant'});
                 }
             }
 
             const updatedParticipants = await getConversationMemberSnapshot(conversationId, [...participants, userId]);
             const updated = await this.updateConversation(conversationId, {
-                participants: updatedParticipants,
-            });
+                participants: updatedParticipants});
             await syncConversationAccess(
                 conversationId,
                 [userId],
@@ -1415,8 +1385,7 @@ export const ChatService = {
                             conversationId,
                             conversationType: 'group',
                             version: 't4',
-                            rotation: 'member-added',
-                        }),
+                            rotation: 'member-added'}),
                     });
                 }
 
@@ -1426,8 +1395,7 @@ export const ChatService = {
                     ownerId: conv.creatorId || participants[0] || userId,
                     participantUserIds: updatedParticipants,
                     epochNumber: nextEpochNumber,
-                    keyMappings,
-                });
+                    keyMappings});
 
                 // Also sync base 'chat' lockbox rows for the newly added participant/everyone
                 // This ensures conversation metadata (name/preview) remains decryptable
@@ -1478,8 +1446,7 @@ export const ChatService = {
             rowId: conversationId,
             targetUserIds: [userId],
             resourceType: 'chat',
-            resourceId: conversationId,
-        });
+            resourceId: conversationId});
 
         if (conv?.type === 'group' && String(conv?.encryptionVersion || '').toUpperCase() === 'T4' && participants.length > 0 && ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity) {
             const newKey = await ecosystemSecurity.generateConversationKey();
@@ -1504,8 +1471,7 @@ export const ChatService = {
                             conversationId,
                             conversationType: 'group',
                             version: 't4',
-                            rotation: 'member-removal',
-                        }),
+                            rotation: 'member-removal'}),
                     });
                 }
 
@@ -1514,8 +1480,7 @@ export const ChatService = {
                         action: 'rotate_epoch',
                         resourceId: conversationId,
                         participantUserIds: participants,
-                        keyMappings,
-                    });
+                        keyMappings});
                 }
             }
         }
@@ -1536,8 +1501,7 @@ export const ChatService = {
     async updateConversationInvite(conversationId: string, enabled: boolean) {
         return await this.updateConversation(conversationId, {
             inviteLink: enabled ? conversationId : null,
-            inviteLinkExpiry: null,
-        });
+            inviteLinkExpiry: null});
     },
 
     async updateConversationAvatar(conversationId: string, file: File, auth?: { jwt?: string; cookie?: string }) {
@@ -1556,8 +1520,7 @@ export const ChatService = {
             await syncConversationAvatarAccess(uploaded.$id, existingParticipants, auth);
             return await this.updateConversation(conversationId, {
                 avatarFileId: uploaded.$id,
-                avatarUrl: buildGroupAvatarUrl(conversationId),
-            });
+                avatarUrl: buildGroupAvatarUrl(conversationId)});
         } catch (error) {
             await storage.deleteFile(APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS, uploaded.$id).catch(() => null);
             throw error;
@@ -1574,15 +1537,13 @@ export const ChatService = {
             resourceType,
             resourceId,
             requesterId,
-            action,
-        });
+            action});
     },
 
     async cancelJoinRequest(resourceType: string, resourceId: string) {
         return callJoinRequestApi('DELETE', {
             resourceType,
-            resourceId,
-        });
+            resourceId});
     },
 
     async deleteMessage(messageId: string) {

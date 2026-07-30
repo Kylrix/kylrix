@@ -62,14 +62,3 @@ export function generateTOTP(secret: string, options: { step?: number; digits?: 
 /**
  * Validates a TOTP code with a window for clock drift.
  */
-export function verifyTOTP(token: string, secret: string, options: { window?: number; step?: number } = {}): boolean {
-    const win = options.window || 1;
-    const step = options.step || 30;
-    const now = Date.now();
-
-    for (let i = -win; i <= win; i++) {
-        const time = now + (i * step * 1000);
-        if (generateTOTP(secret, { step, timestamp: time }) === token) return true;
-    }
-    return false;
-}

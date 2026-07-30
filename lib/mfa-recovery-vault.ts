@@ -2,8 +2,7 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import {
   createCredential,
   listAllCredentials,
-  updateCredential,
-} from '@/lib/appwrite/vault';
+  updateCredential} from '@/lib/appwrite/vault';
 import { MFA_RECOVERY_KIND, MFA_RECOVERY_VAULT_NAME } from '@/lib/mfa';
 
 const RECOVERY_TAG = `system:${MFA_RECOVERY_KIND}`;
@@ -18,8 +17,7 @@ export async function persistMfaRecoveryCodes(
   await ecosystemSecurity.saveRecoveryIdentity(userId, codes, {
     source: 'appwrite-mfa',
     vaultName: MFA_RECOVERY_VAULT_NAME,
-    ...metadata,
-  });
+    ...metadata});
 
   const notes = codes.join('\n');
   const existing = await findMfaRecoveryCredential(userId);
@@ -30,8 +28,7 @@ export async function persistMfaRecoveryCodes(
     notes,
     tags: [RECOVERY_TAG],
     isFavorite: false,
-    isDeleted: false,
-  };
+    isDeleted: false};
 
   if (existing) {
     await updateCredential(existing.$id, payload);
@@ -54,7 +51,7 @@ export async function loadMfaRecoveryCodes(userId: string): Promise<string[] | n
 
   const codes = credential.notes
     .split('\n')
-    .map((line) => line.trim())
+    .map((line: any) => line.trim())
     .filter(Boolean);
 
   return codes.length ? codes : null;

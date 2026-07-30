@@ -3,8 +3,7 @@ import {
   TMP_PROTOCOL_VERSION,
   type NostrEventEnvelope,
   type PayloadKind,
-  type TendonEnvelope,
-} from "./types";
+  type TendonEnvelope} from "./types";
 
 function nonce(): string {
   return crypto.randomUUID().replaceAll("-", "");
@@ -16,11 +15,10 @@ export function buildEnvelope(payload: TendonEnvelope["payload"], capabilityToke
     dispatch_timestamp_utc: Date.now(),
     capability_token: capabilityToken,
     cryptographic_nonce: nonce(),
-    payload,
-  };
+    payload};
 }
 
-export function payloadToKind(payloadKind: PayloadKind): number {
+function payloadToKind(payloadKind: PayloadKind): number {
   if (payloadKind === "unicast_mail") {
     return 1059;
   }
@@ -35,6 +33,5 @@ export function wrapForNostr(envelope: TendonEnvelope, tags: string[][]): NostrE
     kind: payloadToKind(envelope.payload.kind),
     content_base64: encodeEnvelope(envelope),
     tags,
-    created_at_unix: Math.floor(envelope.dispatch_timestamp_utc / 1000),
-  };
+    created_at_unix: Math.floor(envelope.dispatch_timestamp_utc / 1000)};
 }

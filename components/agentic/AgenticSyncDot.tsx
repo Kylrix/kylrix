@@ -4,8 +4,7 @@ import { useSyncExternalStore } from 'react';
 import { subscribeAgenticLocalStore } from '@/lib/agentic/session-local-store';
 
 export function AgenticSyncDot({
-  syncStatus,
-}: {
+  syncStatus}: {
   syncStatus?: 'pending' | 'synced' | 'error';
 }) {
   useSyncExternalStore(subscribeAgenticLocalStore, () => syncStatus, () => syncStatus);

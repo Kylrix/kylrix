@@ -20,7 +20,7 @@ export type SupportedWalletChain =
   | 'polygon'
   | 'arbitrum';
 
-export type WalletFamily = 'evm' | 'solana' | 'bitcoin' | 'sui';
+type WalletFamily = 'evm' | 'solana' | 'bitcoin' | 'sui';
 
 export interface WalletSummary {
   id: string;
@@ -33,7 +33,7 @@ export interface WalletSummary {
   publicProfile: boolean;
 }
 
-export interface WalletNetworkDefinition {
+interface WalletNetworkDefinition {
   chain: SupportedWalletChain;
   label: string;
   symbol: string;
@@ -42,7 +42,7 @@ export interface WalletNetworkDefinition {
   aliasOf?: SupportedWalletChain;
 }
 
-export interface WalletTablesDB {
+interface WalletTablesDB {
   listRows(databaseId: string, tableId: string, queries?: string[]): Promise<{ rows: any[] }>;
   getRow(databaseId: string, tableId: string, rowId: string): Promise<any>;
   createRow(databaseId: string, tableId: string, rowId: string, data: Record<string, unknown>, permissions?: string[]): Promise<any>;
@@ -56,18 +56,18 @@ export interface WalletSecurityAdapter {
   decrypt(data: string): Promise<string>;
 }
 
-export interface WalletUserAdapter {
+interface WalletUserAdapter {
   updateProfile(userId: string, data: Record<string, unknown>): Promise<void>;
   getProfileById(userId: string): Promise<{ publicKey?: string | null } | null>;
   ensureProfileForUser?(input: { $id: string; email: string }): Promise<void>;
 }
 
-export interface WalletPermissionsAdapter {
+interface WalletPermissionsAdapter {
   walletPermissions(userId: string): string[];
   walletMapPermissions(userId: string): string[];
 }
 
-export interface WalletServiceConfig {
+interface WalletServiceConfig {
   passwordManagerDbId: string;
   walletsTableId: string;
   noteDbId: string;
@@ -100,8 +100,8 @@ const NETWORKS: Record<SupportedWalletChain, WalletNetworkDefinition> = {
   arbitrum: { chain: 'arbitrum', label: 'Arbitrum', symbol: 'ARB', family: 'evm', publicProfile: true, aliasOf: 'eth' },
 };
 
-export const DEFAULT_MAIN_CHAINS: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc'];
-export const PUBLIC_CHAIN_PRIORITY: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc', 'sui', 'base', 'polygon', 'arbitrum'];
+const DEFAULT_MAIN_CHAINS: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc'];
+const PUBLIC_CHAIN_PRIORITY: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc', 'sui', 'base', 'polygon', 'arbitrum'];
 
 const ownerIdForUser = (userId: string) => `user:${userId}`;
 
@@ -128,15 +128,13 @@ const toWalletSummary = (row: any): WalletSummary => ({
   family: NETWORKS[row.chain as SupportedWalletChain]?.family || 'evm',
   address: row.address,
   type: row.type,
-  publicProfile: NETWORKS[row.chain as SupportedWalletChain]?.publicProfile ?? false,
-});
+  publicProfile: NETWORKS[row.chain as SupportedWalletChain]?.publicProfile ?? false});
 
 const createRootEnvelope = (): WalletRootEnvelope => ({
   version: 't4.wallet.root.v1',
   walletId: crypto.randomUUID(),
   mnemonic: bip39.generateMnemonic(wordlist, 128),
-  createdAt: new Date().toISOString(),
-});
+  createdAt: new Date().toISOString()});
 
 const buildPublicWalletPayload = (wallets: any[]): string | null => {
   const byChain = new Map(wallets.map((wallet) => [wallet.chain, wallet.address]));
@@ -277,8 +275,7 @@ export function createWalletService(deps: WalletServiceDeps) {
           address,
           chain,
           encryptedSecret,
-          type: 'main',
-        },
+          type: 'main'},
         walletPermissions(deps, userId)
       );
     } catch (error: any) {
@@ -321,8 +318,7 @@ export function createWalletService(deps: WalletServiceDeps) {
           {
             walletAddressLower,
             userId,
-            updatedAt: new Date().toISOString(),
-          },
+            updatedAt: new Date().toISOString()},
           walletMapPermissions(deps, userId)
         );
       } catch (error) {
@@ -335,8 +331,7 @@ export function createWalletService(deps: WalletServiceDeps) {
     const serialized = buildPublicWalletPayload(wallets);
 
     await deps.users.updateProfile(userId, {
-      walletAddress: serialized,
-    });
+      walletAddress: serialized});
 
     await syncWalletMap(userId, wallets);
   };
@@ -382,8 +377,7 @@ export function createWalletService(deps: WalletServiceDeps) {
             address,
             chain,
             encryptedSecret,
-            type: 'burner',
-          },
+            type: 'burner'},
           walletPermissions(deps, userId)
         );
         createdRows.push(created);
@@ -509,4 +503,4 @@ export function createWalletService(deps: WalletServiceDeps) {
   return service;
 }
 
-export { NETWORKS as WALLET_NETWORKS };
+;

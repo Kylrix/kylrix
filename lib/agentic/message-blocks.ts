@@ -18,7 +18,7 @@ export type AgenticMessageBlock =
       hits: EcosystemHitRef[];
     };
 
-export const KYLIX_BLOCKS_PREFIX = '__KYLIX_BLOCKS__:';
+const KYLIX_BLOCKS_PREFIX = '__KYLIX_BLOCKS__:';
 
 export function serializeBlocksForToolSummary(blocks: AgenticMessageBlock[]): string {
   return `${KYLIX_BLOCKS_PREFIX}${JSON.stringify(blocks)}`;
@@ -35,5 +35,5 @@ export function parseBlocksFromToolSummary(summary?: string | null): AgenticMess
 }
 
 export function hitsToRefs(hits: Array<{ domain: SearchDomain; id: string }>): EcosystemHitRef[] {
-  return hits.map((h) => ({ domain: h.domain, id: h.id }));
+  return hits.map((h: any) => ({ domain: h.domain, id: h.id }));
 }

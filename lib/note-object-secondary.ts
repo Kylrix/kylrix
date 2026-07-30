@@ -1,4 +1,4 @@
-export type SecondaryObjectKind = 'file' | 'image' | 'link' | 'voice' | 'task' | 'form' | 'vault' | 'note' | 'session';
+type SecondaryObjectKind = 'file' | 'image' | 'link' | 'voice' | 'task' | 'form' | 'vault' | 'note' | 'session';
 
 export interface SecondaryObjectPayload {
   objectId?: string;
@@ -41,8 +41,7 @@ export function parseObjectBlocks(content: string): ParsedObjectBlock[] {
         start,
         end: start + raw.length,
         line: before.split('\n').length,
-        payload,
-      });
+        payload});
     } catch {
       // Skip malformed blocks to avoid breaking rendering.
     }
@@ -50,11 +49,11 @@ export function parseObjectBlocks(content: string): ParsedObjectBlock[] {
   return rows;
 }
 
-export function buildObjectRelationKey(childId: string, childKind: string): string {
+function buildObjectRelationKey(childId: string, childKind: string): string {
   return `${childKind}:${childId}`;
 }
 
-export function getObjectBlockRelationKeys(content: string): Set<string> {
+function getObjectBlockRelationKeys(content: string): Set<string> {
   const keys = new Set<string>();
   for (const block of parseObjectBlocks(content)) {
     if (!block.payload.childId || !block.payload.childKind) continue;
@@ -83,7 +82,6 @@ export function applyMarkdownWrap(
   return {
     next,
     cursorStart: start + left.length,
-    cursorEnd: start + left.length + selected.length,
-  };
+    cursorEnd: start + left.length + selected.length};
 }
 

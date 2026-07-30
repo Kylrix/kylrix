@@ -33,7 +33,7 @@ interface ResponseDetailDrawerProps {
 
 export function ResponseDetailDrawer({ isOpen, onClose, submission, schemaMap }: ResponseDetailDrawerProps) {
   const { user } = useAuth();
-  const { open: openDrawer } = useUnifiedDrawer();
+  const { open: _openDrawer } = useUnifiedDrawer();
   const { showSuccess, showError } = useToast();
   
   // Projects select & flow state
@@ -140,7 +140,7 @@ export function ResponseDetailDrawer({ isOpen, onClose, submission, schemaMap }:
 
       onClose();
       // Redirect to target huddle discussion page directly
-      window.location.href = `/projects/${project.$id}?openHuddle=true`;
+      window.location.href = `/workspaces/${project.$id}?openHuddle=true`;
     } catch (err: any) {
       showError('Failed to convert to project discussion', err.message);
     } finally {
@@ -161,7 +161,6 @@ export function ResponseDetailDrawer({ isOpen, onClose, submission, schemaMap }:
     try {
       // Inject ecosystem special formatting pattern directly to link the form response to the goal
       const specialLink = `\n\n---\n**Source Link Reference**: [Intake Form Response ${submission.$id.slice(-8)}](source:kylrixform:${submission.formId})`;
-      const finalDesc = `${goalDescription}${specialLink}`;
 
       // Call secure-ops backend helper
       await convertResponseToGoal(submission.$id);

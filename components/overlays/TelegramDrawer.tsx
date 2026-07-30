@@ -10,24 +10,21 @@ import {
   IconButton,
   Stack,
   Typography,
-  alpha,
-} from '@/lib/openbricks/primitives';
+  alpha} from '@/lib/openbricks/primitives';
 import { CheckCircle2, Copy, ExternalLink, X } from 'lucide-react';
 import { Telegram as TelegramIcon } from '@/lib/openbricks/icons';
 import {
   initializeTelegramConnection,
   checkTelegramConnection,
   getTelegramNotificationPreferences,
-  updateTelegramNotificationPreferences,
-} from '@/lib/actions/telegram';
+  updateTelegramNotificationPreferences} from '@/lib/actions/telegram';
 import {
   defaultTelegramNotificationPreferences,
   TELEGRAM_ACTION_LABELS,
   TELEGRAM_OBJECT_LABELS,
   type TelegramNotificationAction,
   type TelegramNotificationObject,
-  type TelegramNotificationPreferences,
-} from '@/lib/telegram/notification-preferences';
+  type TelegramNotificationPreferences} from '@/lib/telegram/notification-preferences';
 
 interface TelegramDrawerProps {
   open: boolean;
@@ -163,8 +160,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
           pairCode: res.pairCode,
           deepLink: res.deepLink,
           createdAt: codeCreatedAt,
-          userId: res.userId,
-        };
+          userId: res.userId};
 
         startPolling();
       } else {

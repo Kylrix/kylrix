@@ -7,7 +7,6 @@ import {
   updateNoteSecure,
   deleteNoteSecure,
   listTagsSecure,
-  sharePublicNoteAsMomentSecure,
   grantPermissionSecure,
   revokePermissionSecure,
   createProjectSecure,
@@ -62,8 +61,7 @@ import {
   detachObjectSecure,
   detachObjectByRelationSecure,
   getObjectsByParentSecure,
-  approveProjectJoinRequestSecure,
-} from './secure-ops';
+  approveProjectJoinRequestSecure} from './secure-ops';
 import { PublicResourceType } from '@/lib/share/resource-types';
 
 // Helper to fetch JWT securely from client-side SDK
@@ -74,7 +72,7 @@ async function getJwt(): Promise<string | undefined> {
   try {
     const res = await account.createJWT().catch(() => null);
     return res?.jwt;
-  } catch (e) {
+  } catch (_e) {
     return undefined;
   }
 }
@@ -98,11 +96,6 @@ export async function deleteNote(noteId: string) {
 export async function listTags(userId?: string) {
   const jwt = await getJwt();
   return listTagsSecure(userId, jwt);
-}
-
-export async function sharePublicNoteAsMoment(noteId: string, text?: string) {
-  const jwt = await getJwt();
-  return sharePublicNoteAsMomentSecure({ noteId, text, jwt });
 }
 
 export async function getSharedNoteData(noteId: string) {
@@ -140,10 +133,6 @@ export async function grantPermission(input: any) {
   return grantPermissionSecure({ ...input, jwt });
 }
 
-export async function revokePermission(input: any) {
-  const jwt = await getJwt();
-  return revokePermissionSecure({ ...input, jwt });
-}
 
 // --- Projects CRUD ---
 export async function createProject(data: any) {
@@ -265,14 +254,10 @@ export async function updateCallMetadata(callId: string, extraMetadata: any) {
 
 // --- Operations & Engagement ---
 export async function runTokenOperation(body: any) {
-  const jwt = await getJwt();
   // If JWT is needed inside body or operation, secure action can use getActor(jwt)
   return runTokenOperationSecure(body);
 }
 
-export async function trackEngagementView(input: any) {
-  return trackEngagementViewSecure(input);
-}
 
 export async function secureUploadFile(formData: FormData) {
   const { secureUploadFile: secureUploadFileServer } = await import('./secure-upload');
@@ -358,60 +343,8 @@ export async function promoteGhostResourceThreadToStory(resourceId: string, reso
   return promoteGhostResourceThreadToStorySecure(resourceId, resourceType, jwt);
 }
 
-export async function tagResource(
-  resourceId: string,
-  resourceType: string,
-  tagName: string,
-  isPublic = false,
-  isGuest = false
-) {
-  const { hasAuthSessionHint } = await import('@/lib/appwrite/client');
-  if (!hasAuthSessionHint()) {
-      const id = `ghost-tag-${crypto.randomUUID()}`;
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      const metadata = JSON.stringify({
-        isGhost: true,
-        send_object: { kind: 'tag' }
-      });
-      
-      const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
-      let history = historyRaw ? JSON.parse(historyRaw) : [];
-      if (!Array.isArray(history)) history = [];
-      
-      history.unshift({
-        id,
-        title: tagName,
-        content: '',
-        metadata,
-        createdAt: new Date().toISOString(),
-        expiresAt
-      });
-      
-      localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
-      import('react-hot-toast').then(t => t.default.success('Tag saved locally.'));
-      return { success: true, id };
-  }
 
-  const jwt = await getJwt();
-  return tagResourceSecure(resourceId, resourceType, tagName, isPublic, isGuest, jwt);
-}
 
-export async function untagResource(
-  resourceId: string,
-  resourceType: string,
-  tagName: string
-) {
-  const jwt = await getJwt();
-  return untagResourceSecure(resourceId, resourceType, tagName, jwt);
-}
-
-export async function getResourceTags(
-  resourceId: string,
-  resourceType: string
-) {
-  const jwt = await getJwt();
-  return getResourceTagsSecure(resourceId, resourceType, jwt);
-}
 
 export async function createGhostNoteChat(title: string, participants: string[], customRowId?: string) {
   const jwt = await getJwt();
@@ -432,8 +365,7 @@ export async function getResourceCollaborators(params: { resourceId: string; res
   return getResourceCollaboratorsSecure({
     resourceId: params.resourceId,
     resourceType: normalizedType,
-    jwt,
-  });
+    jwt});
 }
 
 export async function getCrossSuggestions(params: { sourceApp: string; sourceType: string; sourceId: string | null }) {
@@ -441,12 +373,6 @@ export async function getCrossSuggestions(params: { sourceApp: string; sourceTyp
   return getCrossSuggestionsSecure(params, jwt);
 }
 
-export async function claimSendObject(payload: { noteId: string; claimSecret: string; decryptedData?: any }) {
-  const jwt = await getJwt();
-  if (!jwt) throw new Error('Unauthenticated');
-  const { claimSendObjectSecure } = await import('./secure-ops');
-  return claimSendObjectSecure({ ...payload, jwt });
-}
 
 export async function deleteGhostThread(threadId: string) {
     const jwt = await getJwt();
@@ -503,17 +429,7 @@ export async function toggleResourcePublicGuest(params: {
   return res;
 }
 
-export async function getResourcePublicGuest(params: {
-  resourceType: PublicResourceType;
-  resourceId: string;
-}) {
-  const jwt = await getJwt();
-  return getResourcePublicGuestSecure({ ...params, jwt });
-}
 
-export async function getPublicGoalData(goalId: string) {
-  return getPublicGoalDataSecure(goalId);
-}
 
 export async function getGlobalProfileStatus(userId: string) {
   return getGlobalProfileStatusSecure(userId);
@@ -530,10 +446,6 @@ export async function attachObject(params: {
   return attachObjectSecure({ ...params, jwt });
 }
 
-export async function detachObject(objectId: string) {
-  const jwt = await getJwt();
-  return detachObjectSecure(objectId, jwt);
-}
 
 export async function detachObjectByRelation(params: {
   parentId: string;
@@ -554,10 +466,6 @@ export async function syncMasterpassToAccountPassword(userId: string, masterpass
   return syncMasterpassToAccountPasswordAction({ userId, masterpass, jwt });
 }
 
-export async function checkEmailAuthMethod(email: string) {
-  const { checkEmailAuthMethodAction } = await import('./secure-ops');
-  return checkEmailAuthMethodAction({ email });
-}
 
 export async function createStandaloneTag(tagName: string) {
   const jwt = await getJwt();

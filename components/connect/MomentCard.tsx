@@ -51,8 +51,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
       style={{
         // Skip offscreen raster + reserve the slot: smallest possible repaint area
         contentVisibility: 'auto',
-        containIntrinsicSize: 'auto 196px',
-      }}
+        containIntrinsicSize: 'auto 196px'}}
       className={`p-6 rounded-[32px] bg-[#161412] border border-white/5 flex flex-col gap-4 h-[196px] overflow-hidden ${
         canOpen ? 'cursor-pointer hover:border-white/10' : ''
       }`}

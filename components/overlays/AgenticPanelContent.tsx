@@ -70,8 +70,7 @@ import {
   runInstantAgenticRequest,
   type QuickWorkflowAction,
   userMayUsePaidAi,
-  AI_UPGRADE_LABEL,
-} from '@/lib/agentic';
+  AI_UPGRADE_LABEL} from '@/lib/agentic';
 import { getAgenticUserMessage } from '@/lib/agentic/errors';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
@@ -84,13 +83,11 @@ import { AgenticMessageBody } from '@/components/agentic/AgenticMessageBody';
 import { AgenticMessageActions } from '@/components/agentic/AgenticMessageActions';
 import {
   parseBlocksFromToolSummary,
-  type AgenticMessageBlock,
-} from '@/lib/agentic/message-blocks';
+  type AgenticMessageBlock} from '@/lib/agentic/message-blocks';
 import {
   AgenticSessionLocalStore,
   subscribeAgenticLocalStore,
-  type AgenticSyncStatus,
-} from '@/lib/agentic/session-local-store';
+  type AgenticSyncStatus} from '@/lib/agentic/session-local-store';
 
 interface ToolCallDisplay {
   toolKey: string;
@@ -133,8 +130,7 @@ function normalizeNextSteps(raw: unknown): NextStepSuggestion[] {
   return raw
     .map((item: any) => ({
       label: String(item?.label || '').trim(),
-      prompt: String(item?.prompt || '').trim(),
-    }))
+      prompt: String(item?.prompt || '').trim()}))
     .filter((s) => s.label && s.prompt)
     .slice(0, 4);
 }
@@ -159,8 +155,7 @@ function formatHistoryMessages(
       specifier: tc.specifier,
       status: tc.status,
       resultSummary: tc.resultSummary,
-      args: tc.args,
-    });
+      args: tc.args});
     toolsByConversation.set(tc.conversationId, list);
   }
 
@@ -182,8 +177,7 @@ function formatHistoryMessages(
       isPublic: h.isPublic === true,
       isGuest: h.isGuest === true,
       tools,
-      nextSteps: role === 'assistant' ? normalizeNextSteps(h.nextSteps) : undefined,
-    };
+      nextSteps: role === 'assistant' ? normalizeNextSteps(h.nextSteps) : undefined};
   });
 }
 
@@ -239,8 +233,7 @@ function zoneLabel(zone: string): string {
     projects: 'Projects',
     settings: 'Settings',
     agents: 'Kylie',
-    accounts: 'Accounts',
-  };
+    accounts: 'Accounts'};
   return labels[zone] || 'Workspace';
 }
 
@@ -273,8 +266,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     zone: 'agentic.composer',
     route: pathname,
     input: chatInput,
-    enabled: !executing && chatInput.trim().length >= 2,
-  });
+    enabled: !executing && chatInput.trim().length >= 2});
   const [runningWorkflowId, setRunningWorkflowId] = useState<string | null>(null);
   const [agentCount, setAgentCount] = useState(0);
 
@@ -428,8 +420,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             syncStatus: m.syncStatus || 'synced',
             isPublic: m.isPublic,
             isGuest: m.isGuest,
-            nextSteps: m.nextSteps,
-          })),
+            nextSteps: m.nextSteps})),
         );
         setShowSessionsDrawer(false);
         if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
@@ -458,8 +449,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               syncStatus: m.syncStatus || 'synced',
               isPublic: m.isPublic,
               isGuest: m.isGuest,
-              nextSteps: m.nextSteps,
-            })),
+              nextSteps: m.nextSteps})),
             isPublic: res.session.isPublic,
             isGuest: res.session.isGuest,
             isPinned: res.session.isPinned,
@@ -517,8 +507,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       const status = await getResourcePublicGuestSecure({
         resourceType: 'agent_session',
         resourceId: sessionId,
-        jwt,
-      });
+        jwt});
       setSessions((prev) =>
         prev.map((s) =>
           s.id === sessionId
@@ -529,8 +518,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       if (user?.$id) {
         await AgenticSessionLocalStore.patchSessionMeta(user.$id, sessionId, {
           isPublic: status.isPublic === true,
-          isGuest: status.isGuest === true,
-        });
+          isGuest: status.isGuest === true});
       }
       const didPublish = status.isPublic === true || status.isGuest === true;
       if (mode === 'publish' && !didPublish) {
@@ -618,8 +606,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 syncStatus: m.syncStatus || 'synced',
                 isPublic: m.isPublic,
                 isGuest: m.isGuest,
-                nextSteps: m.nextSteps,
-              })),
+                nextSteps: m.nextSteps})),
             );
           }
         }
@@ -652,8 +639,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 syncStatus: m.syncStatus || 'synced',
                 isPublic: m.isPublic,
                 isGuest: m.isGuest,
-                nextSteps: m.nextSteps,
-              })),
+                nextSteps: m.nextSteps})),
               isPinned: (session as any).isPinned === true,
             });
             await AgenticSessionLocalStore.setActiveSessionId(user.$id, session.rowId);
@@ -772,8 +758,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             title: pageContext.title,
             systemHint: pageContext.systemHint,
             resourceId: pageContext.resourceId,
-            userMessage: trimmed,
-          },
+            userMessage: trimmed},
           userMessage: trimmed,
         });
 
@@ -794,8 +779,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               specifier: call.specifier || null,
               status,
               resultSummary: resultSummary || null,
-              args: call.args ? JSON.stringify(call.args) : null,
-            };
+              args: call.args ? JSON.stringify(call.args) : null};
             const hideFromToolRail = resultSummary?.startsWith('__KYLIX_BLOCKS__:');
             if (call.toolKey !== 'suggest_next_steps' && !hideFromToolRail) {
               executedTools.push(display);
@@ -811,8 +795,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   specifier: call.specifier,
                   args: call.args || null,
                   status,
-                  resultSummary,
-                },
+                  resultSummary},
                 jwt,
               );
             } catch (recordErr) {
@@ -828,8 +811,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               content: res.response,
               syncStatus: 'pending',
               tools: [],
-              nextSteps: normalizeNextSteps(res.nextSteps),
-            },
+              nextSteps: normalizeNextSteps(res.nextSteps)},
           ]);
 
           let liveNextSteps = normalizeNextSteps(res.nextSteps);
@@ -887,8 +869,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                           objectId: payload.objectId,
                           objectType: payload.objectType,
                           title: payload.title,
-                          toolKey: payload.toolKey,
-                        },
+                          toolKey: payload.toolKey},
                         jwt,
                       );
                     } catch (recordErr) {
@@ -955,8 +936,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                     ? {
                         ...m,
                         tools: executedTools.length ? executedTools : m.tools,
-                        nextSteps: liveNextSteps.length ? liveNextSteps : m.nextSteps,
-                      }
+                        nextSteps: liveNextSteps.length ? liveNextSteps : m.nextSteps}
                     : m,
                 ),
               );
@@ -967,8 +947,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               setMessages((prev) => {
                 const synced = prev.map((m) => ({
                   ...m,
-                  syncStatus: (m.syncStatus === 'pending' ? 'synced' : m.syncStatus) as AgenticSyncStatus,
-                }));
+                  syncStatus: (m.syncStatus === 'pending' ? 'synced' : m.syncStatus) as AgenticSyncStatus}));
                 void AgenticSessionLocalStore.setActiveMessages(
                   user.$id,
                   sid,
@@ -980,8 +959,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                     syncStatus: m.syncStatus,
                     isPublic: m.isPublic,
                     isGuest: m.isGuest,
-                    nextSteps: m.nextSteps,
-                  })),
+                    nextSteps: m.nextSteps})),
                 );
                 return synced;
               });
@@ -1220,8 +1198,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             conversationId: msg.id,
             messageRole: msg.role,
             sessionId: activeSessionId || undefined,
-            reason: 'user_retry',
-          },
+            reason: 'user_retry'},
           jwt,
         );
       } catch (err) {
@@ -1247,8 +1224,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           {
             starterPrompt: starter,
             carryContext,
-            sourceSessionId: activeSessionId || undefined,
-          },
+            sourceSessionId: activeSessionId || undefined},
           jwt,
         );
         if (!res.success) {
