@@ -102,47 +102,56 @@ export class EcosystemSecurity {
     }
 
     const snapshotPromise = (async () => {
-      const [userRowsRes, keychainRowsRes] = await Promise.all([
-        tablesDB.listRows(APPWRITE_CONFIG.DATABASES.VAULT, APPWRITE_CONFIG.TABLES.VAULT.USER, [
-            Query.equal('userId', resolvedUserId), Query.limit(1)
-        ]).catch(() => ({ rows: [] as any[] })),
-        tablesDB.listRows(APPWRITE_CONFIG.DATABASES.VAULT, APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN, [
-            Query.equal('userId', resolvedUserId)
-        ]).catch(() => ({ rows: [] as any[] }))]);
+      const { SecurityEnclave } = await import('@/lib/security/enclave');
 
-      let userDoc = (userRowsRes.rows || [])[0] || null;
-      let keychainEntries = Array.isArray(keychainRowsRes.rows) ? keychainRowsRes.rows : [];
+      // 1) Instant local hydrate — never block unlock UI on network
+      let keychainEntries = await SecurityEnclave.getKeychain(resolvedUserId);
+      let userDoc = await SecurityEnclave.getUserDoc(resolvedUserId);
 
-      const { LocalEngine } = await import('@/lib/services/LocalEngine');
-      if (keychainEntries.length > 0) {
-        await LocalEngine.cacheSet(`kylrix_keychain_${resolvedUserId}`, keychainEntries);
-      } else {
-        const cachedKeychain = await LocalEngine.cacheGet<any[]>(`kylrix_keychain_${resolvedUserId}`);
-        if (cachedKeychain && Array.isArray(cachedKeychain) && cachedKeychain.length > 0) {
-          keychainEntries = cachedKeychain;
-        }
-      }
-
-      if (userDoc) {
-        await LocalEngine.cacheSet(`kylrix_userdoc_${resolvedUserId}`, userDoc);
-      } else {
-        const cachedUserDoc = await LocalEngine.cacheGet<any>(`kylrix_userdoc_${resolvedUserId}`);
-        if (cachedUserDoc) {
-          userDoc = cachedUserDoc;
-        }
-      }
-
-      this.hasMasterpassState = !!(userDoc?.masterpass === true || keychainEntries.some((entry: any) => entry?.type === 'password'));
-      this.hasPasskeyState = !!(userDoc?.isPasskey === true || keychainEntries.some((entry: any) => entry?.type === 'passkey'));
+      this.hasMasterpassState = !!(
+        userDoc?.masterpass === true ||
+        keychainEntries.some((entry: any) => entry?.type === 'password')
+      );
+      this.hasPasskeyState = !!(
+        userDoc?.isPasskey === true ||
+        keychainEntries.some((entry: any) => entry?.type === 'passkey')
+      );
       this.hasRecoveryCodesState = Array.isArray(userDoc?.backupCodes)
         ? userDoc.backupCodes.length > 0
         : Boolean(userDoc?.backupCodes);
       this.passkeyReminderAtState = userDoc?.passkey_reminder_at || null;
-      
-      const passwordEntry = keychainEntries.find((entry: any) => entry?.type === 'password');
-      this.isArgonState = passwordEntry ? !!passwordEntry.isArgon : false;
-
+      const passwordEntryLocal = keychainEntries.find((entry: any) => entry?.type === 'password');
+      this.isArgonState = passwordEntryLocal ? !!passwordEntryLocal.isArgon : false;
       this.emitStatusChange();
+
+      // 2) Background / forced remote refresh into enclave
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      if (!offline) {
+        try {
+          await SecurityEnclave.hydrateFromRemote(resolvedUserId, { force: forceRefresh });
+          keychainEntries = await SecurityEnclave.getKeychain(resolvedUserId);
+          userDoc = await SecurityEnclave.getUserDoc(resolvedUserId);
+
+          this.hasMasterpassState = !!(
+            userDoc?.masterpass === true ||
+            keychainEntries.some((entry: any) => entry?.type === 'password')
+          );
+          this.hasPasskeyState = !!(
+            userDoc?.isPasskey === true ||
+            keychainEntries.some((entry: any) => entry?.type === 'passkey')
+          );
+          this.hasRecoveryCodesState = Array.isArray(userDoc?.backupCodes)
+            ? userDoc.backupCodes.length > 0
+            : Boolean(userDoc?.backupCodes);
+          this.passkeyReminderAtState = userDoc?.passkey_reminder_at || null;
+          const passwordEntry = keychainEntries.find((entry: any) => entry?.type === 'password');
+          this.isArgonState = passwordEntry ? !!passwordEntry.isArgon : false;
+          this.emitStatusChange();
+        } catch (err) {
+          console.warn('[Security] Remote snapshot refresh failed; local enclave remains SoT:', err);
+        }
+      }
+
       return this.status;
     })().finally(() => {
       if (this.snapshotInflight === snapshotPromise) {
@@ -652,18 +661,9 @@ export class EcosystemSecurity {
   async syncIdentity(userId: string) {
     if (!this.masterKey) throw new Error('Vault locked');
 
-    const res = await tablesDB.listRows({
-      databaseId: PW_DB,
-      tableId: APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES,
-      queries: [
-        Query.equal('userId', userId),
-        Query.equal('identityType', 'e2e_connect'),
-        Query.limit(1)
-      ]
-    });
+    const { SecurityEnclave, raceNetworkOrLocal } = await import('@/lib/security/enclave');
 
-    if (res.rows[0]) {
-      const doc = res.rows[0];
+    const loadFromRow = async (doc: any) => {
       const decryptedPrivRaw = await this.decrypt(doc.passkeyBlob);
       const decryptedPriv = normalizeStoredSecretString(decryptedPrivRaw);
 
@@ -683,9 +683,46 @@ export class EcosystemSecurity {
       this.identityKeyPair = { publicKey: pubKey, privateKey: privKey };
       this.currentUserId = userId;
       this.emitStatusChange();
-      return doc.publicKey;
+      return doc.publicKey as string;
+    };
+
+    // Local-first: encrypted identity blob already in enclave
+    const localIdentity = await SecurityEnclave.getIdentity(userId);
+    if (localIdentity?.passkeyBlob && localIdentity?.publicKey) {
+      try {
+        return await loadFromRow(localIdentity);
+      } catch (e) {
+        console.warn('[Security] Local identity decrypt failed, trying remote:', e);
+      }
     }
 
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    if (offline) {
+      throw new Error('Secure chat identity is not available offline yet. Connect once to sync it.');
+    }
+
+    const { value: res } = await raceNetworkOrLocal({
+      timeoutMs: 4000,
+      network: async () =>
+        tablesDB.listRows({
+          databaseId: PW_DB,
+          tableId: APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES,
+          queries: [
+            Query.equal('userId', userId),
+            Query.equal('identityType', 'e2e_connect'),
+            Query.limit(1),
+          ],
+        }),
+      local: async () => ({ rows: localIdentity ? [localIdentity] : [] }),
+    });
+
+    if (res.rows[0]) {
+      const doc = res.rows[0];
+      await SecurityEnclave.setIdentity(userId, doc);
+      return await loadFromRow(doc);
+    }
+
+    // Create only when online and missing
     const pair = (await crypto.subtle.generateKey({ name: 'X25519' }, true, ['deriveKey', 'deriveBits'])) as CryptoKeyPair;
     const privExport = await crypto.subtle.exportKey('pkcs8', pair.privateKey);
     const pubExport = await crypto.subtle.exportKey('raw', pair.publicKey);
@@ -694,13 +731,15 @@ export class EcosystemSecurity {
     const privBase64 = this.encodeBase64(new Uint8Array(privExport));
     const encryptedPriv = await this.encrypt(privBase64);
 
-    await tablesDB.createRow(PW_DB, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES, ID.unique(), {
+    const created = await tablesDB.createRow(PW_DB, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES, ID.unique(), {
       userId,
       identityType: 'e2e_connect',
       label: 'Connect E2E Identity',
       publicKey: pubBase64,
       passkeyBlob: encryptedPriv
     });
+
+    await SecurityEnclave.setIdentity(userId, created);
 
     this.identityKeyPair = pair;
     this.currentUserId = userId;
@@ -886,42 +925,45 @@ export class EcosystemSecurity {
   }
 
   async fetchKeychain(userId: string): Promise<any | null> {
-    const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    const getLocalCache = async () => {
-      try {
-        const rows = await LocalEngine.cacheGet<any[]>(`kylrix_keychain_${userId}`);
-        if (!rows || !Array.isArray(rows) || rows.length === 0) return null;
-        const passwordEntries = rows.filter((r: any) => r.type === 'password');
-        if (passwordEntries.length === 0) return rows[0];
-        const stableEntry = passwordEntries.find((r: any) => !r.isPending);
-        return stableEntry || passwordEntries[0];
-      } catch {
-        return null;
-      }
-    };
+    const { SecurityEnclave, raceNetworkOrLocal } = await import('@/lib/security/enclave');
 
-    try {
-      const res = await tablesDB.listRows(
-        APPWRITE_CONFIG.DATABASES.VAULT,
-        APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
-        [Query.equal('userId', userId), Query.limit(10)]
-      );
-      const rows = res.rows || [];
-      if (rows.length > 0) {
-        await LocalEngine.cacheSet(`kylrix_keychain_${userId}`, rows);
-      }
-      if (rows.length === 0) {
-        return await getLocalCache();
-      }
-
+    const pickPassword = (rows: any[]) => {
+      if (!rows.length) return null;
       const passwordEntries = rows.filter((r: any) => r.type === 'password');
       if (passwordEntries.length === 0) return rows[0];
+      return passwordEntries.find((r: any) => !r.isPending) || passwordEntries[0];
+    };
 
-      const stableEntry = passwordEntries.find((r: any) => !r.isPending);
-      return stableEntry || passwordEntries[0];
-    } catch {
-      return await getLocalCache();
+    const localRows = await SecurityEnclave.getKeychain(userId);
+    const localPick = pickPassword(localRows);
+
+    // Offline or already cached: unlock from enclave immediately
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return localPick;
     }
+    if (localPick) {
+      // Refresh in background; do not block unlock
+      void SecurityEnclave.hydrateFromRemote(userId).catch(() => {});
+      return localPick;
+    }
+
+    const { value: rows } = await raceNetworkOrLocal({
+      timeoutMs: 2500,
+      network: async () => {
+        const res = await tablesDB.listRows(
+          APPWRITE_CONFIG.DATABASES.VAULT,
+          APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+          [Query.equal('userId', userId), Query.limit(50)],
+        );
+        return res.rows || [];
+      },
+      local: async () => localRows,
+    });
+
+    if (Array.isArray(rows) && rows.length > 0) {
+      await SecurityEnclave.setKeychain(userId, rows);
+    }
+    return pickPassword(rows);
   }
 
   getConversationKey(conversationId: string): CryptoKey | null {

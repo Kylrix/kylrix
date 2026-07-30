@@ -108,12 +108,18 @@ export class AppwriteService {
   }
 
   static async hasMasterpass(userId: string): Promise<boolean> {
-    try {
-      // Check Keychain first
-      const entries = await this.listKeychainEntries(userId);
-      if (entries.length > 0) return true;
+    const { SecurityEnclave } = await import('@/lib/security/enclave');
+    const probe = await SecurityEnclave.probeCapabilities(userId);
+    if (probe.hasMasterpass || probe.hasPasskey) return true;
 
-      // Fallback to Flow user table flag
+    try {
+      const entries = await this.listKeychainEntries(userId);
+      if (entries.some((e: any) => e.type === 'password' || e.type === 'passkey')) return true;
+
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        return false;
+      }
+
       const USERS_TABLE = 'users';
       const res = await tablesDB.listRows<any>({
         databaseId: FLOW_DATABASE_ID,
@@ -121,43 +127,83 @@ export class AppwriteService {
         queries: [Query.equal("userId", userId)]
       });
 
-      return res.total > 0 && res.rows[0].hasMasterpass;
+      return res.total > 0 && !!res.rows[0].hasMasterpass;
     } catch (e: any) {
       console.error('hasMasterpass error', e);
-      return false;
+      return probe.hasMasterpass || probe.hasPasskey;
     }
   }
 
   static async listKeychainEntries(userId: string): Promise<any[]> {
+    const { SecurityEnclave, raceNetworkOrLocal } = await import('@/lib/security/enclave');
+    const cached = await SecurityEnclave.getKeychain(userId);
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return cached;
+    }
+
     try {
-      const response = await databases.listRows(
-        VAULT_DATABASE_ID,
-        VAULT_TABLE_ID_KEYCHAIN,
-        [Query.equal("userId", userId)],
-      );
-      return response.rows;
+      const { value, source } = await raceNetworkOrLocal({
+        timeoutMs: 2500,
+        network: async () => {
+          const response = await databases.listRows(
+            VAULT_DATABASE_ID,
+            VAULT_TABLE_ID_KEYCHAIN,
+            [Query.equal("userId", userId)],
+          );
+          return response.rows || [];
+        },
+        local: async () => cached,
+      });
+
+      if (source === 'network' && Array.isArray(value) && value.length > 0) {
+        await SecurityEnclave.setKeychain(userId, value);
+        return value;
+      }
+      return cached.length > 0 ? cached : (Array.isArray(value) ? value : []);
     } catch (e: any) {
       console.error('listKeychainEntries error', e);
-      return [];
+      return cached;
     }
   }
 
   static async createKeychainEntry(data: any): Promise<any> {
-    return await databases.createRow(
+    const created = await databases.createRow(
       VAULT_DATABASE_ID,
       VAULT_TABLE_ID_KEYCHAIN,
       ID.unique(),
       data
     );
+    if (data?.userId) {
+      const { SecurityEnclave } = await import('@/lib/security/enclave');
+      const existing = await SecurityEnclave.getKeychain(data.userId);
+      await SecurityEnclave.setKeychain(
+        data.userId,
+        [created, ...existing.filter((e: any) => e.$id !== created.$id)],
+      );
+      await SecurityEnclave.markDirty(data.userId);
+    }
+    return created;
   }
 
   static async updateKeychainEntry(id: string, data: any): Promise<any> {
-    return await databases.updateRow(
+    const updated = await databases.updateRow(
       VAULT_DATABASE_ID,
       VAULT_TABLE_ID_KEYCHAIN,
       id,
       data
     );
+    const userId = (updated as any)?.userId || data?.userId;
+    if (userId) {
+      const { SecurityEnclave } = await import('@/lib/security/enclave');
+      const existing = await SecurityEnclave.getKeychain(userId);
+      await SecurityEnclave.setKeychain(
+        userId,
+        existing.map((e: any) => (e.$id === id ? { ...e, ...updated } : e)),
+      );
+      await SecurityEnclave.markDirty(userId);
+    }
+    return updated;
   }
 
   static async deleteKeychainEntry(id: string): Promise<void> {

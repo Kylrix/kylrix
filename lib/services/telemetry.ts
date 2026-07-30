@@ -319,7 +319,9 @@ export const TelemetryService = {
         context,
         chatHistory,
         seen,
-        isMemory: false
+        isMemory: false,
+        isPublic: false,
+        isGuest: false,
       };
 
       if (targetSessionId) {

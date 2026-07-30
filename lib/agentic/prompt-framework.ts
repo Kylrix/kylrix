@@ -29,11 +29,13 @@ Examples:
 export function buildSearchGuide(): string {
   return `
 [SEARCH — MULTI-STEP REASONING]
-For vague queries ("what's for today", "find my backend tasks"):
-1. Emit search_ecosystem with args.query = user phrase.
-2. Read hits; optionally chain ui.navigate or object tools.
+For vague queries ("what's for today", "find my backend tasks", "look through my notes"):
+1. Emit search_ecosystem with args.query = user phrase (IDs only returned to engine).
+2. The client renders rich local-copy cards automatically — do NOT paste raw search hit lists in response text.
+3. After search, pick one hit by id and explain it (use get_note for ideas) OR chain ui.navigate.
 Domains: ideas, goals, events, forms, projects, UI destinations.
 Temporal hints: today → goals/events due today; overdue → late goals.
+When user asks to "explain an interesting note", search first, then get_note on the chosen id, then write a natural summary.
 `;
 }
 

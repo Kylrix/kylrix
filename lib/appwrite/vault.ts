@@ -1043,9 +1043,10 @@ export class VaultService {
         Permission.read(Role.user(data.userId))]
     );
     const created = doc as unknown as Keychain;
-    const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    const existing = (await LocalEngine.cacheGet<Keychain[]>(`kylrix_keychain_${data.userId}`)) || [];
-    await LocalEngine.cacheSet(`kylrix_keychain_${data.userId}`, [created, ...existing.filter(e => e.$id !== created.$id)]);
+    const { SecurityEnclave } = await import("@/lib/security/enclave");
+    const existing = await SecurityEnclave.getKeychain(data.userId);
+    await SecurityEnclave.setKeychain(data.userId, [created, ...existing.filter(e => e.$id !== created.$id)]);
+    await SecurityEnclave.markDirty(data.userId);
     // Invalidate ecosystem security snapshot
     const { ecosystemSecurity } = await import("../ecosystem/security");
     ecosystemSecurity.fetchSecuritySnapshot(data.userId, true);
@@ -1056,32 +1057,53 @@ export class VaultService {
   static async listKeychainEntries(
     userId: string,
   ): Promise<Keychain[]> {
-    const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    const cached = (await LocalEngine.cacheGet<Keychain[]>(`kylrix_keychain_${userId}`)) || [];
+    const { SecurityEnclave, raceNetworkOrLocal } = await import("@/lib/security/enclave");
+    const cached = (await SecurityEnclave.getKeychain(userId)) as Keychain[];
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return cached;
+    }
+
     try {
-      const response = await appwriteDatabases.listRows(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_COLLECTION_KEYCHAIN_ID,
-        [Query.equal("userId", userId)],
-      );
-      const rows = response.rows as unknown as Keychain[];
-      if (rows && rows.length > 0) {
-        await LocalEngine.cacheSet(`kylrix_keychain_${userId}`, rows);
-        return rows;
+      const { value, source } = await raceNetworkOrLocal({
+        timeoutMs: 2500,
+        network: async () => {
+          const response = await appwriteDatabases.listRows(
+            APPWRITE_DATABASE_ID,
+            APPWRITE_COLLECTION_KEYCHAIN_ID,
+            [Query.equal("userId", userId)],
+          );
+          return response.rows as unknown as Keychain[];
+        },
+        local: async () => cached,
+      });
+
+      if (source === 'network' && Array.isArray(value) && value.length > 0) {
+        await SecurityEnclave.setKeychain(userId, value);
+        return value;
       }
-      return cached.length > 0 ? cached : rows;
+      return cached.length > 0 ? cached : (Array.isArray(value) ? value : []);
     } catch (err) {
       if (cached.length > 0) return cached;
       throw err;
     }
   }
 
-  static async deleteKeychainEntry(id: string): Promise<void> {
+  static async deleteKeychainEntry(id: string, userId?: string): Promise<void> {
     await appwriteDatabases.deleteRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_KEYCHAIN_ID,
       id,
     );
+    if (userId) {
+      const { SecurityEnclave } = await import("@/lib/security/enclave");
+      const existing = await SecurityEnclave.getKeychain(userId);
+      await SecurityEnclave.setKeychain(
+        userId,
+        existing.filter((e) => e.$id !== id),
+      );
+      await SecurityEnclave.markDirty(userId);
+    }
   }
 
   static async updateKeychainEntry(
@@ -1096,9 +1118,13 @@ export class VaultService {
     );
     const updated = doc as unknown as Keychain;
     if (updated.userId) {
-      const { LocalEngine } = await import('@/lib/services/LocalEngine');
-      const existing = (await LocalEngine.cacheGet<Keychain[]>(`kylrix_keychain_${updated.userId}`)) || [];
-      await LocalEngine.cacheSet(`kylrix_keychain_${updated.userId}`, existing.map(e => e.$id === id ? { ...e, ...updated } : e));
+      const { SecurityEnclave } = await import("@/lib/security/enclave");
+      const existing = await SecurityEnclave.getKeychain(updated.userId);
+      await SecurityEnclave.setKeychain(
+        updated.userId,
+        existing.map((e) => (e.$id === id ? { ...e, ...updated } : e)),
+      );
+      await SecurityEnclave.markDirty(updated.userId);
     }
     return updated;
   }
@@ -1116,9 +1142,12 @@ export class VaultService {
   }
 
   /**
-   * Checks if the user has set up a master password (returns true if present in DB).
+   * Checks if the user has set up a master password (local enclave first).
    */
   static async hasMasterpass(userId: string): Promise<boolean> {
+    const { SecurityEnclave } = await import("@/lib/security/enclave");
+    const probe = await SecurityEnclave.probeCapabilities(userId);
+    if (probe.hasMasterpass) return true;
     const userDoc = await this.getUserDoc(userId);
     return !!(userDoc && userDoc.masterpass === true);
   }
@@ -1128,16 +1157,19 @@ export class VaultService {
    * If the user doc exists, updates it; otherwise, creates it.
    */
   static async setMasterpassFlag(userId: string, email: string): Promise<void> {
+    const { SecurityEnclave } = await import("@/lib/security/enclave");
     const userDoc = await this.getUserDoc(userId);
     if (userDoc && userDoc.$id) {
-      await appwriteDatabases.updateRow(
+      const updated = await appwriteDatabases.updateRow(
         APPWRITE_DATABASE_ID,
         APPWRITE_COLLECTION_USER_ID,
         userDoc.$id,
         { masterpass: true },
       );
+      await SecurityEnclave.setUserDoc(userId, { ...userDoc, ...updated, masterpass: true });
+      await SecurityEnclave.markDirty(userId);
     } else {
-      await appwriteDatabases.createRow(
+      const created = await appwriteDatabases.createRow(
         APPWRITE_DATABASE_ID,
         APPWRITE_COLLECTION_USER_ID,
         ID.unique(),
@@ -1147,6 +1179,8 @@ export class VaultService {
           masterpass: true,
         },
       );
+      await SecurityEnclave.setUserDoc(userId, created);
+      await SecurityEnclave.markDirty(userId);
     }
   }
 
@@ -1154,6 +1188,9 @@ export class VaultService {
    * Checks if the user has set up a passkey.
    */
   static async hasPasskey(userId: string): Promise<boolean> {
+    const { SecurityEnclave } = await import("@/lib/security/enclave");
+    const probe = await SecurityEnclave.probeCapabilities(userId);
+    if (probe.hasPasskey) return true;
     const entries = await this.listKeychainEntries(userId);
     return entries.some(e => e.type === 'passkey');
   }
@@ -1258,17 +1295,34 @@ export class VaultService {
   }
 
   static async getUserDoc(userId: string): Promise<User | null> {
+    const { SecurityEnclave, raceNetworkOrLocal } = await import("@/lib/security/enclave");
+    const local = await SecurityEnclave.getUserDoc(userId);
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return (local as User) || null;
+    }
+
     try {
-      const response = await appwriteDatabases.listRows(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_COLLECTION_USER_ID,
-        [Query.equal("userId", userId)],
-      );
-      const doc = response.rows[0];
-      if (!doc) return null;
-      return doc as unknown as User;
+      const { value, source } = await raceNetworkOrLocal({
+        timeoutMs: 2500,
+        network: async () => {
+          const response = await appwriteDatabases.listRows(
+            APPWRITE_DATABASE_ID,
+            APPWRITE_COLLECTION_USER_ID,
+            [Query.equal("userId", userId)],
+          );
+          return (response.rows[0] as unknown as User) || null;
+        },
+        local: async () => (local as User) || null,
+      });
+
+      if (source === 'network' && value) {
+        await SecurityEnclave.setUserDoc(userId, value);
+        return value;
+      }
+      return value || (local as User) || null;
     } catch {
-      return null;
+      return (local as User) || null;
     }
   }
 

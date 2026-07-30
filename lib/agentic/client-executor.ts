@@ -7,6 +7,7 @@ import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.
 import { resolveUiDestination } from './ui-catalog';
 import { executeEcosystemSearch } from './search-engine';
 import { AgenticPreviewPartition } from './preview-partition';
+import { hitsToRefs, serializeBlocksForToolSummary, type AgenticMessageBlock } from './message-blocks';
 
 export interface AgenticToolCallInput {
   toolKey: string;
@@ -20,6 +21,7 @@ export interface AgenticExecutionContext {
   router: AppRouterInstance;
   onClose?: () => void;
   tasks?: any[];
+  notes?: any[];
   setCachedData?: (key: string, data: unknown) => void;
   pushLiveNote?: (note: any, opts?: { pending?: boolean }) => void;
   removeNote?: (id: string) => void;
@@ -29,7 +31,11 @@ export interface AgenticExecutionContext {
   addTask?: (task: any) => Promise<any>;
   updateTask?: (id: string, patch: any) => Promise<void>;
   deleteTask?: (id: string) => Promise<void>;
-  appendMessage?: (role: 'assistant' | 'user', content: string) => void;
+  appendMessage?: (
+    role: 'assistant' | 'user',
+    content: string,
+    opts?: { blocks?: AgenticMessageBlock[] },
+  ) => void;
   openDrawer?: (type: string, payload?: Record<string, unknown>) => void;
   recordSessionObject?: (payload: {
     objectId: string;
@@ -44,6 +50,7 @@ export interface AgenticExecutionResult {
   summary: string;
   error?: string;
   skipToast?: boolean;
+  messageBlocks?: AgenticMessageBlock[];
 }
 
 export async function executeAgenticToolCall(
@@ -85,15 +92,27 @@ export async function executeAgenticToolCall(
       const { plan, hits } = await executeEcosystemSearch(query, {
         userId: ctx.user?.$id,
         limit: Number(args.limit) || 15,
+        localNotes: ctx.notes,
+        localTasks: ctx.tasks,
       });
-      const lines = hits.map(
-        (h) => `- **${h.title}** (${h.domain}) — \`${h.id}\`${h.route ? ` → ${h.route}` : ''}`,
-      );
-      ctx.appendMessage?.(
-        'assistant',
-        `### Search: "${query}"\n_Plan: ${plan.reasoning}${plan.temporal ? ` · ${plan.temporal}` : ''}_\n\n${lines.join('\n') || 'No matches.'}`,
-      );
-      return { success: true, summary: `Found ${hits.length} hits`, skipToast: true };
+      const blocks: AgenticMessageBlock[] = [
+        {
+          type: 'ecosystem_hits',
+          query,
+          plan: {
+            reasoning: plan.reasoning,
+            temporal: plan.temporal,
+            domains: plan.domains,
+          },
+          hits: hitsToRefs(hits),
+        },
+      ];
+      return {
+        success: true,
+        summary: serializeBlocksForToolSummary(blocks),
+        skipToast: true,
+        messageBlocks: blocks,
+      };
     }
 
     // ── Drawers / UI chrome ─────────────────────────────────────

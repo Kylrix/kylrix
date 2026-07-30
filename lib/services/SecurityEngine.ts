@@ -1,13 +1,12 @@
 'use client';
 
 /**
- * SecurityEngine — Encryption/Decryption, Keychain Local Storage, & MasterPass/Passkey Engine.
- * Stores user keychain rows encrypted-as-is in LocalEngine for instant 0ms offline unlock.
- * Subscribes to SpineEngine over-clock ticks during masterpass drawer observation mode.
+ * SecurityEngine — in-memory MEK + Spine observation.
+ * Keychain persistence is owned by SecurityEnclave (LocalEngine).
  */
 
 import { SpineEngine } from '@/lib/services/SpineEngine';
-import { LocalEngine } from '@/lib/services/LocalEngine';
+import { SecurityEnclave } from '@/lib/security/enclave';
 
 export interface KeychainEntry {
   $id: string;
@@ -24,32 +23,24 @@ class SecurityEngineService {
   private masterKeyMemory: Uint8Array | null = null;
   private isUnlocked = false;
 
-  /** Hydrate local keychain rows from LocalEngine (0ms offline unlock) */
   public async getLocalKeychain(userId: string): Promise<KeychainEntry[]> {
     if (!userId) return [];
-    const cacheKey = `f_keychain_${userId}`;
-    const cached = await LocalEngine.cacheGet<KeychainEntry[]>(cacheKey);
-    return cached || [];
+    return SecurityEnclave.getKeychain(userId);
   }
 
-  /** Cache user keychain rows encrypted-as-is into LocalEngine */
   public async saveLocalKeychain(userId: string, entries: KeychainEntry[]): Promise<void> {
     if (!userId || !entries) return;
-    const cacheKey = `f_keychain_${userId}`;
-    await LocalEngine.cacheSet(cacheKey, entries);
+    await SecurityEnclave.setKeychain(userId, entries);
   }
 
-  /** Initialize high-frequency SpineEngine observation mode during masterpass drawer activity */
   public enterObservationMode(activeResourceId: string = 'masterpass_lock') {
-    SpineEngine.setFocusedResource(activeResourceId, 50); // Over-clock to 50ms pulse
+    SpineEngine.setFocusedResource(activeResourceId, 50);
   }
 
-  /** Exit observation mode */
   public exitObservationMode() {
     SpineEngine.setFocusedResource(null);
   }
 
-  /** In-Memory Master Encryption Key (MEK) Management */
   public setMasterKeyInMemory(key: Uint8Array) {
     this.masterKeyMemory = key;
     this.isUnlocked = true;

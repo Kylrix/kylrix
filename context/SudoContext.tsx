@@ -41,7 +41,11 @@ export function SudoProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         if (user?.$id) {
+            // Local-first snapshot + background enclave hydrate (keychain, identity, wallets)
             ecosystemSecurity.fetchSecuritySnapshot(user.$id);
+            void import('@/lib/security/enclave').then(({ SecurityEnclave }) => {
+                void SecurityEnclave.hydrateFromRemote(user.$id!).catch(() => {});
+            });
             
             // Section 1: Volatile MEK Preservation Recovery
             // Attempt to recover MEK from Service Worker on reload

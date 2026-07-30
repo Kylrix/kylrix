@@ -80,6 +80,16 @@ import { WalletService } from '@/lib/services/wallets';
 import { toast } from 'react-hot-toast';
 import { ContextMenu } from '@/components/ui/ContextMenu';
 import { useHintEngine } from '@/hooks/useHintEngine';
+import { AgenticMessageBody } from '@/components/agentic/AgenticMessageBody';
+import { AgenticMessageActions } from '@/components/agentic/AgenticMessageActions';
+import {
+  parseBlocksFromToolSummary,
+  type AgenticMessageBlock,
+} from '@/lib/agentic/message-blocks';
+import {
+  AgenticSessionLocalStore,
+  type AgenticSyncStatus,
+} from '@/lib/agentic/session-local-store';
 
 interface ToolCallDisplay {
   toolKey: string;
@@ -98,6 +108,10 @@ interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  blocks?: AgenticMessageBlock[];
+  syncStatus?: AgenticSyncStatus;
+  isPublic?: boolean;
+  isGuest?: boolean;
   tools?: ToolCallDisplay[];
   nextSteps?: NextStepSuggestion[];
 }
@@ -152,11 +166,21 @@ function formatHistoryMessages(
   return (Array.isArray(historyArr) ? historyArr : []).map((h: any, idx: number) => {
     const id = typeof h.id === 'string' && h.id ? h.id : `hist-${idx}`;
     const role = h.role === 'assistant' ? 'assistant' : 'user';
+    const tools = role === 'assistant' ? toolsByConversation.get(id) : undefined;
+    const blocksFromTools =
+      tools
+        ?.map((t) => parseBlocksFromToolSummary(t.resultSummary))
+        .filter((b): b is AgenticMessageBlock[] => Array.isArray(b) && b.length > 0)
+        .flat() || [];
     return {
       id,
       role,
       content: visibleChatContent(role, h.content),
-      tools: role === 'assistant' ? toolsByConversation.get(id) : undefined,
+      blocks: blocksFromTools.length ? blocksFromTools : undefined,
+      syncStatus: h.syncStatus === 'pending' || h.syncStatus === 'error' ? h.syncStatus : 'synced',
+      isPublic: h.isPublic === true,
+      isGuest: h.isGuest === true,
+      tools,
       nextSteps: role === 'assistant' ? normalizeNextSteps(h.nextSteps) : undefined,
     };
   });
@@ -358,6 +382,10 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
 
   const handleOpenSessions = async () => {
     setShowSessionsDrawer(true);
+    if (user?.$id) {
+      const local = await AgenticSessionLocalStore.getSessionsList(user.$id);
+      if (local.length) setSessions(local);
+    }
     setLoadingSessions(true);
     try {
       const { listAgentSessions } = await import('@/lib/actions/agentic');
@@ -365,9 +393,10 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
       const list = await listAgentSessions(jwt);
       setSessions(list);
+      if (user?.$id) await AgenticSessionLocalStore.setSessionsList(user.$id, list);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to load sessions list');
+      if (!sessions.length) toast.error('Failed to load sessions list');
     } finally {
       setLoadingSessions(false);
     }
@@ -375,15 +404,56 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
 
   const handleSelectSession = async (sessionId: string) => {
     try {
+      const local = await AgenticSessionLocalStore.getSession(sessionId);
+      if (local?.chatHistory?.length) {
+        setActiveSessionId(sessionId);
+        if (user?.$id) await AgenticSessionLocalStore.setActiveSessionId(user.$id, sessionId);
+        setMessages(
+          local.chatHistory.map((m) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            blocks: m.blocks,
+            syncStatus: m.syncStatus || 'synced',
+            isPublic: m.isPublic,
+            isGuest: m.isGuest,
+            nextSteps: m.nextSteps,
+          })),
+        );
+        setShowSessionsDrawer(false);
+      }
+
       const { selectAgentSession, listAgentToolCallsAction } = await import('@/lib/actions/agentic');
       const { account } = await import('@/lib/appwrite/client');
       const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
       const res = await selectAgentSession(sessionId, jwt);
       if (res.success) {
         setActiveSessionId(sessionId);
+        if (user?.$id) await AgenticSessionLocalStore.setActiveSessionId(user.$id, sessionId);
         const historyArr = JSON.parse(res.session.chatHistory || '[]');
         const toolCalls = await listAgentToolCallsAction(sessionId, jwt).catch(() => []);
-        setMessages(formatHistoryMessages(historyArr, toolCalls));
+        const formatted = formatHistoryMessages(historyArr, toolCalls);
+        setMessages(formatted);
+        if (user?.$id) {
+          await AgenticSessionLocalStore.upsertSession({
+            id: sessionId,
+            userId: user.$id,
+            chatHistory: formatted.map((m) => ({
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              blocks: m.blocks,
+              syncStatus: m.syncStatus || 'synced',
+              isPublic: m.isPublic,
+              isGuest: m.isGuest,
+              nextSteps: m.nextSteps,
+            })),
+            isPublic: res.session.isPublic,
+            isGuest: res.session.isGuest,
+            createdAt: res.session.createdAt,
+            updatedAt: res.session.updatedAt,
+          });
+        }
         setShowSessionsDrawer(false);
         toast.success('Switched agent session.');
       }
@@ -393,18 +463,64 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     }
   };
 
-  const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
+  const handleDeleteSession = (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation();
+    openUnified('delete-confirm', {
+      title: 'Delete this chat with Kylie?',
+      description:
+        'This permanently removes the session and every message in it, including tool history. This cannot be undone.',
+      resourceName: 'chat session',
+      confirmLabel: 'Delete session',
+      onConfirm: async () => {
+        try {
+          const { deleteAgentSession } = await import('@/lib/actions/agentic');
+          const { account } = await import('@/lib/appwrite/client');
+          const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
+          await deleteAgentSession(sessionId, jwt);
+          if (user?.$id) await AgenticSessionLocalStore.removeSession(sessionId, user.$id);
+          setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+          if (activeSessionId === sessionId) {
+            setMessages([]);
+            setActiveSessionId(null);
+          }
+          toast.success('Session deleted.');
+        } catch (err) {
+          console.error(err);
+          toast.error('Failed to delete session');
+        }
+      },
+    });
+  };
+
+  const handleShareSession = async (e: React.MouseEvent, sessionId: string, currentlyShared: boolean) => {
     e.stopPropagation();
     try {
-      const { deleteAgentSession } = await import('@/lib/actions/agentic');
+      const { toggleAgentSessionShareAction } = await import('@/lib/actions/agentic');
       const { account } = await import('@/lib/appwrite/client');
       const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
-      await deleteAgentSession(sessionId, jwt);
-      setSessions(prev => prev.filter(s => s.id !== sessionId));
-      toast.success('Session deleted successfully.');
+      const mode = currentlyShared ? 'make_private' : 'publish';
+      await toggleAgentSessionShareAction(sessionId, mode, jwt);
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId
+            ? { ...s, isPublic: mode === 'publish', isGuest: mode === 'publish' }
+            : s,
+        ),
+      );
+      if (!currentlyShared) {
+        const { buildPublicResourceUrl } = await import('@/lib/share/public-url');
+        const url = buildPublicResourceUrl('agent_session', sessionId);
+        try {
+          await navigator.clipboard.writeText(url);
+          toast.success('Session link copied');
+        } catch {
+          toast.success('Session is now public');
+        }
+      } else {
+        toast.success('Session is private again');
+      }
     } catch (err) {
-      console.error(err);
-      toast.error('Failed to delete session');
+      toast.error(err instanceof Error ? err.message : 'Could not update session sharing');
     }
   };
 
@@ -420,16 +536,31 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       .then((rows) => setAgentCount(rows.length))
       .catch(() => setAgentCount(0));
 
-    // Load session chat history on panel open (local copy first via LocalEngine/RxDB)
+    // Load session chat history on panel open (local copy first)
     const loadSessionHistory = async () => {
-      if (typeof window !== 'undefined' && user?.$id) {
-        try {
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const localHistory = await LocalEngine.cacheGet<any[]>(`kylrix_agentic_chat_history_${user.$id}`);
-          if (localHistory && Array.isArray(localHistory) && localHistory.length > 0) {
-            setMessages(localHistory);
+      if (!user?.$id) return;
+      try {
+        const activeId = await AgenticSessionLocalStore.getActiveSessionId(user.$id);
+        if (activeId) {
+          const localSession = await AgenticSessionLocalStore.getSession(activeId);
+          if (localSession?.chatHistory?.length) {
+            setActiveSessionId(activeId);
+            setMessages(
+              localSession.chatHistory.map((m) => ({
+                id: m.id,
+                role: m.role,
+                content: m.content,
+                blocks: m.blocks,
+                syncStatus: m.syncStatus || 'synced',
+                isPublic: m.isPublic,
+                isGuest: m.isGuest,
+                nextSteps: m.nextSteps,
+              })),
+            );
           }
-        } catch {}
+        }
+      } catch {
+        /* non-fatal */
       }
       try {
         const { account } = await import('@/lib/appwrite/client');
@@ -445,9 +576,22 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             : [];
           const formatted = formatHistoryMessages(historyArr, toolCalls);
           setMessages(formatted);
-          if (typeof window !== 'undefined' && user?.$id) {
-            const { LocalEngine } = await import('@/lib/services/LocalEngine');
-            void LocalEngine.cacheSet(`kylrix_agentic_chat_history_${user.$id}`, formatted);
+          if (user?.$id && session.rowId) {
+            await AgenticSessionLocalStore.upsertSession({
+              id: session.rowId,
+              userId: user.$id,
+              chatHistory: formatted.map((m) => ({
+                id: m.id,
+                role: m.role,
+                content: m.content,
+                blocks: m.blocks,
+                syncStatus: m.syncStatus || 'synced',
+                isPublic: m.isPublic,
+                isGuest: m.isGuest,
+                nextSteps: m.nextSteps,
+              })),
+            });
+            await AgenticSessionLocalStore.setActiveSessionId(user.$id, session.rowId);
           }
         }
       } catch (err) {
@@ -489,10 +633,28 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     node.scrollTop = node.scrollHeight;
   }, [messages, executing]);
 
-  const appendMessage = useCallback((role: ChatMessage['role'], content: string) => {
+  const appendMessage = useCallback((
+    role: ChatMessage['role'],
+    content: string,
+    opts?: {
+      blocks?: AgenticMessageBlock[];
+      id?: string;
+      syncStatus?: AgenticSyncStatus;
+      isPublic?: boolean;
+      isGuest?: boolean;
+    },
+  ) => {
     setMessages((prev) => [
       ...prev,
-      { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, role, content },
+      {
+        id: opts?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        role,
+        content,
+        blocks: opts?.blocks,
+        syncStatus: opts?.syncStatus,
+        isPublic: opts?.isPublic,
+        isGuest: opts?.isGuest,
+      },
     ]);
   }, []);
 
@@ -506,7 +668,16 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         return;
       }
 
-      appendMessage('user', trimmed);
+      const userMsgId = `msg_u_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      appendMessage('user', trimmed, { syncStatus: 'pending', id: userMsgId });
+      const draftSessionId = activeSessionId || `session_${Date.now()}`;
+      if (user?.$id) {
+        void AgenticSessionLocalStore.appendMessages(user.$id, draftSessionId, [
+          { id: userMsgId, role: 'user', content: trimmed, syncStatus: 'pending' },
+        ]);
+        void AgenticSessionLocalStore.setActiveSessionId(user.$id, draftSessionId);
+        if (!activeSessionId) setActiveSessionId(draftSessionId);
+      }
       setChatInput('');
       if (typeof window !== 'undefined') {
         localStorage.removeItem('kylrix_kylie_live_input');
@@ -553,7 +724,8 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               resultSummary: resultSummary || null,
               args: call.args ? JSON.stringify(call.args) : null,
             };
-            if (call.toolKey !== 'suggest_next_steps') {
+            const hideFromToolRail = resultSummary?.startsWith('__KYLIX_BLOCKS__:');
+            if (call.toolKey !== 'suggest_next_steps' && !hideFromToolRail) {
               executedTools.push(display);
             }
             if (!sessionIdForObjects || !conversationId) return;
@@ -582,6 +754,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               id: assistantId,
               role: 'assistant',
               content: res.response,
+              syncStatus: 'pending',
               tools: [],
               nextSteps: normalizeNextSteps(res.nextSteps),
             },
@@ -659,6 +832,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       router,
                       onClose,
                       tasks,
+                      notes: allNotes,
                       setCachedData,
                       pushLiveNote,
                       removeNote,
@@ -684,6 +858,15 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                     await recordToolCall(call, 'error', result.error || 'Failed');
                     continue;
                   }
+                  if (result.messageBlocks?.length) {
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === assistantId
+                          ? { ...m, blocks: [...(m.blocks || []), ...result.messageBlocks!] }
+                          : m,
+                      ),
+                    );
+                  }
                   await recordToolCall(call, 'success', result.summary);
                 } catch (err: any) {
                   console.error(`Failed to execute tool ${call.toolKey}:`, err);
@@ -706,6 +889,31 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 ),
               );
             }
+
+            const sid = (res.sessionId as string) || activeSessionId;
+            if (sid && user?.$id) {
+              setMessages((prev) => {
+                const synced = prev.map((m) => ({
+                  ...m,
+                  syncStatus: (m.syncStatus === 'pending' ? 'synced' : m.syncStatus) as AgenticSyncStatus,
+                }));
+                void AgenticSessionLocalStore.setActiveMessages(
+                  user.$id,
+                  sid,
+                  synced.map((m) => ({
+                    id: m.id,
+                    role: m.role,
+                    content: m.content,
+                    blocks: m.blocks,
+                    syncStatus: m.syncStatus,
+                    isPublic: m.isPublic,
+                    isGuest: m.isGuest,
+                    nextSteps: m.nextSteps,
+                  })),
+                );
+                return synced;
+              });
+            }
           }
         } else {
           appendMessage('assistant', res.response || 'Something went wrong. Please try again later.');
@@ -717,7 +925,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         setRunningWorkflowId(null);
       }
     },
-    [appendMessage, isPro, openProUpgrade, pageContext, addTask, updateTask, deleteTask, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote, user, onClose, router, openUnified, setCachedData, tasks],
+    [appendMessage, isPro, openProUpgrade, pageContext, addTask, updateTask, deleteTask, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote, user, onClose, router, openUnified, setCachedData, tasks, allNotes, activeSessionId],
   );
 
   useEffect(() => {
@@ -1232,12 +1440,31 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               onTouchEnd={handleMessageTouchEnd}
               onTouchCancel={handleMessageTouchEnd}
             >
-              <p className="text-[10px] font-black tracking-wider text-[#9B9691] mb-1.5 leading-none">
-                {msg.role === 'user' ? 'You' : 'Kylie'}
-              </p>
-              <p className="text-[13px] font-semibold leading-relaxed whitespace-pre-wrap break-words">
-                {msg.content}
-              </p>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <p className="text-[10px] font-black tracking-wider text-[#9B9691] leading-none">
+                  {msg.role === 'user' ? 'You' : 'Kylie'}
+                </p>
+                <AgenticMessageActions
+                  messageId={msg.id}
+                  sessionId={activeSessionId}
+                  isPublic={msg.isPublic}
+                  isGuest={msg.isGuest}
+                  syncStatus={msg.syncStatus || 'synced'}
+                  accent={accent}
+                  onShareChange={(next) => {
+                    setMessages((prev) =>
+                      prev.map((m) => (m.id === msg.id ? { ...m, ...next } : m)),
+                    );
+                  }}
+                />
+              </div>
+              <AgenticMessageBody
+                content={msg.content}
+                blocks={msg.blocks}
+                onPickHit={(hit) => {
+                  void runPrompt(`Pick this ${hit.domain} (${hit.id}) and explain the interesting parts to me in plain language.`);
+                }}
+              />
               {msg.role === 'assistant' && msg.tools && msg.tools.length > 0 && (
                 <div className="mt-2.5 flex flex-col gap-1.5">
                   {msg.tools.map((tool, toolIdx) => (
@@ -1581,14 +1808,28 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                           {previewText}
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteSession(e, sess.id)}
-                        title="Delete Session"
-                        className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-red-500 hover:bg-red-500/10 border border-transparent transition opacity-0 group-hover:opacity-100 flex-shrink-0"
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => handleShareSession(e, sess.id, sess.isPublic === true || sess.isGuest === true)}
+                          title={sess.isPublic || sess.isGuest ? 'Session is shared' : 'Share session'}
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center border border-transparent transition opacity-0 group-hover:opacity-100 ${
+                            sess.isPublic || sess.isGuest
+                              ? 'text-[#818CF8] bg-indigo-500/10'
+                              : 'text-white/30 hover:text-white hover:bg-white/[0.06]'
+                          }`}
+                        >
+                          <Share2 size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteSession(e, sess.id)}
+                          title="Delete Session"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-red-500 hover:bg-red-500/10 border border-transparent transition opacity-0 group-hover:opacity-100 flex-shrink-0"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   );
                 })

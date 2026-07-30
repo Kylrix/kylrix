@@ -19,6 +19,8 @@ const PUBLIC_PREFIXES = [
   '/flow/goal/',
   '/flow/forms/',
   '/flow/events/',
+  '/agents/session/',
+  '/agents/chat/',
 ];
 
 const APP_PREFIXES = [

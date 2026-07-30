@@ -1,4 +1,4 @@
-export type SecondaryObjectKind = 'file' | 'image' | 'link' | 'voice' | 'task' | 'form' | 'vault' | 'note';
+export type SecondaryObjectKind = 'file' | 'image' | 'link' | 'voice' | 'task' | 'form' | 'vault' | 'note' | 'session';
 
 export interface SecondaryObjectPayload {
   objectId?: string;

@@ -240,8 +240,18 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
     const pinSet = ecosystemSecurity.isPinSet();
     setHasPin(pinSet);
 
-    // Check for keychain entries to determine mode
-    AppwriteService.listKeychainEntries(user.$id)
+    // Check for keychain entries to determine mode (enclave-first; never hang offline)
+    (async () => {
+      const { SecurityEnclave } = await import('@/lib/security/enclave');
+      const probe = await SecurityEnclave.probeCapabilities(user.$id);
+      let entries = probe.keychain;
+      if (entries.length === 0) {
+        entries = await AppwriteService.listKeychainEntries(user.$id);
+      } else if (typeof navigator !== 'undefined' && navigator.onLine !== false) {
+        void SecurityEnclave.hydrateFromRemote(user.$id).catch(() => {});
+      }
+      return entries;
+    })()
       .then((entries: any[]) => {
         const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
         const isLocalHost = currentHost === 'localhost' || currentHost === '127.0.0.1';
@@ -300,8 +310,17 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
         }
 
       })
-      .catch((err: any) => {
+      .catch(async (err: any) => {
         console.warn("Failed to fetch keychain entries (likely offline):", err);
+        try {
+          const { SecurityEnclave } = await import('@/lib/security/enclave');
+          const probe = await SecurityEnclave.probeCapabilities(user.$id);
+          if (probe.hasMasterpass || probe.keychain.some((e) => e?.type === 'password')) {
+            setIsFirstTime(false);
+            setMode("password");
+            return;
+          }
+        } catch { /* fall through */ }
         const cachedHasMasterpass = typeof window !== 'undefined' && localStorage.getItem('kylrix_has_masterpass_' + user.$id) === 'true';
         if (cachedHasMasterpass) {
           setIsFirstTime(false);

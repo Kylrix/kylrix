@@ -22,6 +22,18 @@ export {
 
 export { planSearchQuery, executeEcosystemSearch, type SearchHit, type SearchPlan } from './search-engine';
 
+export {
+  type AgenticMessageBlock,
+  type EcosystemHitRef,
+  hitsToRefs,
+  parseBlocksFromToolSummary,
+  serializeBlocksForToolSummary,
+} from './message-blocks';
+
+export { hydrateEcosystemHitsSync, ecosystemDomainLabel, type HydratedEcosystemHit } from './hydrate-ecosystem-hits';
+
+export { AgenticSessionLocalStore, type AgenticLocalMessage, type AgenticLocalSession } from './session-local-store';
+
 export { registerHintProvider, resolveHints, type HintCandidate } from './hint-engine';
 
 export { AgenticPreviewPartition, type PreviewEnvelope } from './preview-partition';

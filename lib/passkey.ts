@@ -16,9 +16,14 @@ import { getPasskeyRegisterFallbackSeedAction } from '@/lib/actions/auth-actions
  */
 export async function unlockWithPasskey(userId: string): Promise<boolean> {
   try {
-    // 1. Get all keychain entries for the user
-    const entries = await AppwriteService.listKeychainEntries(userId);
-    const passkeyEntries = entries.filter((k: any) => k.type === 'passkey');
+    // 1. Get passkey rows from security enclave first (offline-safe)
+    const { SecurityEnclave } = await import('@/lib/security/enclave');
+    let passkeyEntries = await SecurityEnclave.getPasskeyEntries(userId);
+
+    if (passkeyEntries.length === 0) {
+      const entries = await AppwriteService.listKeychainEntries(userId);
+      passkeyEntries = entries.filter((k: any) => k.type === 'passkey');
+    }
 
     if (passkeyEntries.length === 0) {
       toast.error("No passkeys registered for this account.");

@@ -223,13 +223,18 @@ export default function SudoModal({
                     pending = cached.pending;
                     passkeyPresent = cached.passkeyPresent;
                 } else {
-                    const [hasPassRes, pendingRes, entriesRes] = await Promise.all([
-                        AppwriteService.hasMasterpass(userId),
-                        masterPassCrypto.isMigrationInterrupted(userId),
-                        AppwriteService.listKeychainEntries(userId)
-                    ]);
-                    hasPass = hasPassRes;
-                    pending = pendingRes;
+                    // Instant local probe — never hang unlock UI on a dead socket
+                    const { SecurityEnclave } = await import('@/lib/security/enclave');
+                    const probe = await SecurityEnclave.probeCapabilities(userId);
+                    let entriesRes = probe.keychain;
+                    if (entriesRes.length === 0) {
+                        entriesRes = await AppwriteService.listKeychainEntries(userId);
+                    }
+
+                    hasPass =
+                        probe.hasMasterpass ||
+                        entriesRes.some((e: any) => e.type === 'password' || e.type === 'passkey');
+                    pending = entriesRes.some((e: any) => e.type === 'password' && e.isPending);
 
                     const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
                     const isLocalHost = currentHost === 'localhost' || currentHost === '127.0.0.1';
@@ -245,7 +250,7 @@ export default function SudoModal({
                         } else {
                             return rpId !== 'localhost' && rpId !== '127.0.0.1';
                         }
-                    });
+                    }) || probe.hasPasskey;
 
                     SUDO_DETECT_CACHE.set(userId, {
                         hasPass,
@@ -253,6 +258,11 @@ export default function SudoModal({
                         passkeyPresent,
                         timestamp: now
                     });
+
+                    // Background soft refresh when online (does not block detect)
+                    if (typeof navigator !== 'undefined' && navigator.onLine !== false) {
+                        void SecurityEnclave.hydrateFromRemote(userId).catch(() => {});
+                    }
                 }
 
                 if (!active) return;
