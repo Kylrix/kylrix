@@ -1024,6 +1024,7 @@ export async function listAgentSessions(jwt?: string) {
   });
   return res.rows.map((row: any) => ({
     id: row.$id,
+    userId: row.userId || user.$id,
     context: row.context || '',
     chatHistory: row.chatHistory || '[]',
     isPublic: row.isPublic === true,

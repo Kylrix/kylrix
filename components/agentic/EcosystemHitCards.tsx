@@ -24,27 +24,19 @@ import {
 import type { EcosystemHitRef } from '@/lib/agentic/message-blocks';
 import type { SearchPlan } from '@/lib/agentic/search-engine';
 
-function domainIcon(domain: HydratedEcosystemHit['domain']) {
-  switch (domain) {
-    case 'idea':
-      return Sparkles;
-    case 'goal':
-      return Flag;
-    case 'event':
-      return Calendar;
-    case 'form':
-      return FileText;
-    case 'project':
-      return FolderKanban;
-    case 'ui':
-      return LayoutGrid;
-    default:
-      return FileText;
-  }
-}
+const DOMAIN_ICONS: Record<HydratedEcosystemHit['domain'], React.ComponentType<{ size?: number; style?: React.CSSProperties; className?: string }>> = {
+  all: Sparkles,
+  idea: Sparkles,
+  goal: Flag,
+  event: Calendar,
+  form: FileText,
+  project: FolderKanban,
+  tag: Paperclip,
+  ui: LayoutGrid,
+};
 
 function HitCard({ hit, onOpen }: { hit: HydratedEcosystemHit; onOpen: () => void }) {
-  const Icon = domainIcon(hit.domain);
+  const IconComponent = DOMAIN_ICONS[hit.domain] || FileText;
   const preview = hit.meta?.previewImageUrl;
 
   return (
@@ -59,7 +51,7 @@ function HitCard({ hit, onOpen }: { hit: HydratedEcosystemHit; onOpen: () => voi
             // eslint-disable-next-line @next/next/no-img-element
             <img src={preview} alt="" className="w-full h-full object-cover" />
           ) : (
-            <Icon size={16} style={{ color: hit.accent }} />
+            <IconComponent size={16} style={{ color: hit.accent }} />
           )}
           {hit.meta?.hasImage && !preview ? (
             <span className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded bg-black/70 flex items-center justify-center">
