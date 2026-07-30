@@ -12,8 +12,7 @@ import {
     useMediaQuery,
     useTheme,
     CircularProgress,
-    Paper,
-    Switch} from '@/lib/openbricks/primitives';
+    Paper} from '@/lib/openbricks/primitives';
 import {
     X,
     Wallet as WalletIcon,
@@ -54,6 +53,10 @@ import {
     shortenUserId,
 } from './wallet-sidebar-utils';
 import { PinnedNetworkIconSolana } from './PinnedNetworkIconSolana';
+import { WALLET_SURFACE as SURFACE, WALLET_HIGHLIGHT as HIGHLIGHT, WALLET_EDGE as EDGE, WALLET_MUTED as MUTED, WALLET_ACCENT as ACCENT } from './wallet-theme';
+import { WalletSignConfirmation } from './WalletSignConfirmation';
+import { WalletSettingsPanel } from './WalletSettingsPanel';
+import { getNetworkLogo, getNetworkColor } from './wallet-network';
 import Logo from '@/components/Logo';
 import { createPublicClient, http, formatEther } from 'viem';
 import { mainnet, base, arbitrum, polygon } from 'viem/chains';
@@ -278,12 +281,6 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             await account.updatePrefs({ kylrix_wallet_recurring_billing: checked ? '1' : '0' }).catch(() => {});
         }
     };
-
-    const ACCENT = '#6366F1';
-    const SURFACE = '#000000';
-    const HIGHLIGHT = '#1C1A18';
-    const EDGE = '#34322F';
-    const MUTED = '#9B9691';
 
     useEffect(() => {
         const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
@@ -959,31 +956,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
     }, [wallets]);
     const solWallet = useMemo(() => orderedWallets.find((wallet) => wallet.chain === 'sol') || null, [orderedWallets]);
 
-    const getNetworkLogo = (chain: SupportedWalletChain) => {
-        const logoMap: Record<SupportedWalletChain, string> = {
-            'sol': '◎', // Solana symbol
-            'btc': '₿', // Bitcoin symbol
-            'eth': 'Ξ', // Ethereum symbol
-            'usdc': 'USDC',
-            'base': 'B',
-            'polygon': '⬟', // Polygon symbol
-            'sui': 'S',
-            'arbitrum': 'ARB'};
-        return logoMap[chain] || '?';
-    };
 
-    const getNetworkColor = (chain: SupportedWalletChain) => {
-        const colorMap: Record<SupportedWalletChain, string> = {
-            'sol': '#14F195',
-            'btc': '#F7931A',
-            'eth': '#627EEA',
-            'usdc': '#2775CA',
-            'base': '#0052FF',
-            'polygon': '#8247E5',
-            'sui': '#6FB3D2',
-            'arbitrum': '#28A0F0'};
-        return colorMap[chain] || '#666';
-    };
 
     const getExplorerUrl = (wallet: WalletSummary) => {
         switch (wallet.chain) {
@@ -1062,373 +1035,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
         }, 1500);
     };
 
-    const renderSettingsContent = () => (
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <Stack gap={2.5} sx={{ flex: 1, overflowY: 'auto', px: 3, pt: 2, pb: 3, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
-                <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white', mb: 2 }}>
-                    Wallet Settings
-                </Typography>
-                {/* KTS Mode Toggle */}
-                <Box
-                    sx={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 2,
-                        px: 2.25,
-                        py: 1.5,
-                        borderRadius: '18px',
-                        bgcolor: HIGHLIGHT,
-                        border: `1px solid ${EDGE}`}}
-                >
-                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                        <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
-                            KTS mode (Kylrix ledger only)
-                        </Typography>
-                        <Typography component="span" sx={{ color: MUTED, fontSize: '0.76rem', lineHeight: 1.35, fontFamily: 'var(--font-satoshi)' }}>
-                            Only show Kylrix ledger balance and hide on-chain wallets.
-                        </Typography>
-                    </Box>
-                    <Box sx={{ flexShrink: 0 }}>
-                        <Switch
-                            checked={ktsMode}
-                            onChange={(e: any) => {
-                                setKtsModeState(e.target.checked);
-                                try {
-                                    localStorage.setItem(KTS_STORAGE_KEY, e.target.checked ? '1' : '0');
-                                } catch (_e: unknown) {
-                                    /* noop */
-                                }
-                            }}
-                            size="small"
-                            sx={{
-                                '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 }}}
-                        />
-                    </Box>
-                </Box>
 
-                {/* Testnet Mode Toggle */}
-                <Box
-                    sx={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 2,
-                        px: 2.25,
-                        py: 1.5,
-                        borderRadius: '18px',
-                        bgcolor: HIGHLIGHT,
-                        border: `1px solid ${EDGE}`}}
-                >
-                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                        <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
-                            Testnet Mode
-                        </Typography>
-                        <Typography component="span" sx={{ color: MUTED, fontSize: '0.76rem', lineHeight: 1.35, fontFamily: 'var(--font-satoshi)' }}>
-                            Redirect to Sepolia and devnet explorers.
-                        </Typography>
-                    </Box>
-                    <Box sx={{ flexShrink: 0 }}>
-                        <Switch
-                            checked={testnetMode}
-                            onChange={(e: any) => handleToggleTestnet(e.target.checked)}
-                            size="small"
-                            sx={{
-                                '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 }}}
-                        />
-                    </Box>
-                </Box>
-
-                {/* Agentic Delegation Toggle */}
-                <Box
-                    sx={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 2,
-                        px: 2.25,
-                        py: 1.5,
-                        borderRadius: '18px',
-                        bgcolor: HIGHLIGHT,
-                        border: `1px solid ${EDGE}`}}
-                >
-                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                        <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
-                            Agentic Delegation (ERC-4337)
-                        </Typography>
-                        <Typography component="span" sx={{ color: MUTED, fontSize: '0.76rem', lineHeight: 1.35, fontFamily: 'var(--font-satoshi)' }}>
-                            Enable smart session keys for unmanned agents.
-                        </Typography>
-                    </Box>
-                    <Box sx={{ flexShrink: 0 }}>
-                        <Switch
-                            checked={smartDelegation}
-                            onChange={(e: any) => handleToggleSmartDelegation(e.target.checked)}
-                            size="small"
-                            sx={{
-                                '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 }}}
-                        />
-                    </Box>
-                </Box>
-
-                {/* Gas Fee Sponsoring Toggle */}
-                <Box
-                    sx={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 2,
-                        px: 2.25,
-                        py: 1.5,
-                        borderRadius: '18px',
-                        bgcolor: HIGHLIGHT,
-                        border: `1px solid ${EDGE}`}}
-                >
-                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                        <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
-                            Gas Fee Sponsoring
-                        </Typography>
-                        <Typography component="span" sx={{ color: MUTED, fontSize: '0.76rem', lineHeight: 1.35, fontFamily: 'var(--font-satoshi)' }}>
-                            Sponsor agent actions using the Kylrix paymaster.
-                        </Typography>
-                    </Box>
-                    <Box sx={{ flexShrink: 0 }}>
-                        <Switch
-                            checked={gasRelay}
-                            onChange={(e: any) => handleToggleGasRelay(e.target.checked)}
-                            size="small"
-                            sx={{
-                                '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 }}}
-                        />
-                    </Box>
-                </Box>
-
-                {/* Recurring Billing Toggle */}
-                <Box
-                    sx={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: 2,
-                        px: 2.25,
-                        py: 1.5,
-                        borderRadius: '18px',
-                        bgcolor: HIGHLIGHT,
-                        border: `1px solid ${EDGE}`}}
-                >
-                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                        <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
-                            Recurring Billing Toggle
-                        </Typography>
-                        <Typography component="span" sx={{ color: MUTED, fontSize: '0.76rem', lineHeight: 1.35, fontFamily: 'var(--font-satoshi)' }}>
-                            Enable on-chain automated subscription payments.
-                        </Typography>
-                    </Box>
-                    <Box sx={{ flexShrink: 0 }}>
-                        <Switch
-                            checked={recurringBilling}
-                            onChange={(e: any) => handleToggleRecurringBilling(e.target.checked)}
-                            size="small"
-                            sx={{
-                                '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 }}}
-                        />
-                    </Box>
-                </Box>
-
-                {exportedMnemonic && (
-                    <Box sx={{ p: 2.25, borderRadius: '18px', bgcolor: '#221111', border: '1px solid #7f1d1d', mt: 1 }}>
-                        <Typography component="span" sx={{ color: '#fca5a5', fontWeight: 800, fontSize: '0.88rem', mb: 0.5, display: 'block', fontFamily: 'var(--font-satoshi)' }}>
-                            Secure Credentials Decrypted
-                        </Typography>
-                        
-                        <Typography component="span" sx={{ color: '#ef4444', fontSize: '0.76rem', fontWeight: 600, mb: 1.5, display: 'block' }}>
-                            WARNING: Never share these secrets. Anyone with these phrases can access your assets.
-                        </Typography>
-
-                        <Box sx={{ mb: 1.5 }}>
-                            <Typography component="span" sx={{ color: MUTED, fontSize: '0.72rem', display: 'block', mb: 0.5 }}>Mnemonic Seed Phrase:</Typography>
-                            <Typography component="span" sx={{ color: 'white', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', bgcolor: '#110505', p: 1.5, borderRadius: '10px', display: 'block', userSelect: 'all', wordBreak: 'break-all' }}>
-                                {exportedMnemonic}
-                            </Typography>
-                        </Box>
-
-                        {exportedPrivateKey && (
-                            <Box sx={{ mb: 1.5 }}>
-                                <Typography component="span" sx={{ color: MUTED, fontSize: '0.72rem', display: 'block', mb: 0.5 }}>EVM Private Key (ETH/Base/Arb):</Typography>
-                                <Typography component="span" sx={{ color: 'white', fontFamily: 'var(--font-mono)', fontSize: '0.8rem', bgcolor: '#110505', p: 1.5, borderRadius: '10px', display: 'block', userSelect: 'all', wordBreak: 'break-all' }}>
-                                    {exportedPrivateKey}
-                                </Typography>
-                            </Box>
-                        )}
-
-                        <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => {
-                                setExportedMnemonic(null);
-                                setExportedPrivateKey(null);
-                            }}
-                            sx={{ borderColor: '#ef4444', color: '#fca5a5', textTransform: 'none', borderRadius: '8px', mt: 0.5 }}
-                        >
-                            Hide Credentials
-                        </Button>
-                    </Box>
-                )}
-
-                <Stack gap={1.5} sx={{ mt: 1 }}>
-                    <Button
-                        variant="outlined"
-                        onClick={handleExportSecrets}
-                        sx={{
-                            borderColor: EDGE,
-                            color: 'white',
-                            borderRadius: '12px',
-                            fontWeight: 800,
-                            textTransform: 'none',
-                            py: 1.25,
-                            '&:hover': { bgcolor: HIGHLIGHT }
-                        }}
-                    >
-                        Export Seed Phrase & Private Keys
-                    </Button>
-
-                    <Button
-                        variant="outlined"
-                        onClick={triggerTestSignature}
-                        sx={{
-                            borderColor: EDGE,
-                            color: ACCENT,
-                            borderRadius: '12px',
-                            fontWeight: 800,
-                            textTransform: 'none',
-                            py: 1.25,
-                            '&:hover': { bgcolor: HIGHLIGHT }
-                        }}
-                    >
-                        Test On-Chain Signature Flow
-                    </Button>
-                </Stack>
-            </Stack>
-
-            <Divider sx={{ borderColor: EDGE, my: 2 }} />
-            <Button
-                variant="contained"
-                onClick={() => {
-                    setShowSettings(false);
-                    setExportedMnemonic(null);
-                    setExportedPrivateKey(null);
-                }}
-                sx={{
-                    bgcolor: 'white',
-                    color: 'black',
-                    borderRadius: '14px',
-                    fontWeight: 900,
-                    textTransform: 'none',
-                    fontFamily: 'var(--font-satoshi)',
-                    py: 1.5,
-                    border: `1px solid ${EDGE}`,
-                    '&:hover': { bgcolor: '#E4E4E7' }
-                }}
-            >
-                Done
-            </Button>
-        </Box>
-    );
-
-    const renderSignConfirmation = () => (
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', bgcolor: SURFACE }}>
-            <Stack gap={2.5} sx={{ flex: 1, overflowY: 'auto', px: 3, pt: 2, pb: 3, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
-                <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white', mb: 2 }}>
-                    Signature Request
-                </Typography>
-                <Paper sx={{ px: 2.25, py: 1.5, borderRadius: '18px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}`, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                    <Typography component="span" sx={{ color: MUTED, fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em', fontFamily: 'var(--font-satoshi)' }}>
-                        Origin / Invoker
-                    </Typography>
-                    <Typography component="span" sx={{ color: 'white', fontWeight: 700, fontSize: '0.88rem', fontFamily: 'var(--font-satoshi)', lineHeight: 1.25 }}>
-                        {signDestination || 'Kylrix Ecosystem Platform'}
-                    </Typography>
-                </Paper>
-
-                <Paper sx={{ px: 2.25, py: 1.5, borderRadius: '18px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}`, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                    <Typography component="span" sx={{ color: MUTED, fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em', fontFamily: 'var(--font-satoshi)' }}>
-                        Message to Sign
-                    </Typography>
-                    <Box sx={{
-                        bgcolor: '#0B0A09',
-                        p: 2.25,
-                        borderRadius: '12px',
-                        border: '1px solid rgba(255,255,255,0.03)',
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: '0.78rem',
-                        color: 'white',
-                        whiteSpace: 'pre-wrap',
-                        textAlign: 'left',
-                        lineHeight: 1.4
-                    }}>
-                        {signMessageText}
-                    </Box>
-                </Paper>
-
-                <Box sx={{ px: 2.25, py: 1.5, borderRadius: '18px', bgcolor: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)', display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                    <Typography component="span" sx={{ color: '#ef4444', fontWeight: 800, fontSize: '0.78rem', fontFamily: 'var(--font-satoshi)' }}>
-                        Security Risk Acknowledgment
-                    </Typography>
-                    <Typography component="span" sx={{ color: MUTED, fontSize: '0.72rem', lineHeight: 1.45, fontFamily: 'var(--font-satoshi)' }}>
-                        Website-based keys reside in transient RAM to prevent sandbox scraping. However, client environments carry active XSS risks. Confirm you trust this application action fully.
-                    </Typography>
-                </Box>
-            </Stack>
-
-            <Divider sx={{ borderColor: EDGE, my: 2 }} />
-
-            <Stack direction="row" gap={2} sx={{ px: 3, pb: 3 }}>
-                <Button
-                    variant="outlined"
-                    onClick={() => setShowSignConfirmation(false)}
-                    sx={{
-                        flex: 1,
-                        borderColor: EDGE,
-                        color: 'white',
-                        borderRadius: '14px',
-                        fontWeight: 800,
-                        textTransform: 'none',
-                        py: 1.5,
-                        '&:hover': { bgcolor: HIGHLIGHT }
-                    }}
-                >
-                    Cancel
-                </Button>
-                <Button
-                    variant="contained"
-                    disabled={signConfirmLoading}
-                    onClick={handleConfirmSignature}
-                    sx={{
-                        flex: 1,
-                        bgcolor: ACCENT,
-                        color: 'white',
-                        borderRadius: '14px',
-                        fontWeight: 900,
-                        textTransform: 'none',
-                        py: 1.5,
-                        '&:hover': { bgcolor: '#5145cd' }
-                    }}
-                >
-                    {signConfirmLoading ? <CircularProgress size={16} color="inherit" /> : 'Sign Message'}
-                </Button>
-            </Stack>
-        </Box>
-    );
 
     const renderWalletContent = () => {
         const pinnedWallet = pinnedToken === 'KYLRIX' || pinnedToken === 'SOL'
@@ -1436,10 +1043,38 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             : orderedWallets.find((wallet) => wallet.chain === tokenToChain(pinnedToken)) || null;
 
         if (showSignConfirmation) {
-            return renderSignConfirmation();
+            return (
+                <WalletSignConfirmation
+                    signDestination={signDestination}
+                    signMessageText={signMessageText}
+                    signConfirmLoading={signConfirmLoading}
+                    onCancel={() => setShowSignConfirmation(false)}
+                    onConfirm={handleConfirmSignature}
+                />
+            );
         }
         if (showSettings) {
-            return renderSettingsContent();
+            return (
+                <WalletSettingsPanel
+                    ktsMode={ktsMode}
+                    setKtsModeState={setKtsModeState}
+                    testnetMode={testnetMode}
+                    handleToggleTestnet={handleToggleTestnet}
+                    smartDelegation={smartDelegation}
+                    handleToggleSmartDelegation={handleToggleSmartDelegation}
+                    gasRelay={gasRelay}
+                    handleToggleGasRelay={handleToggleGasRelay}
+                    recurringBilling={recurringBilling}
+                    handleToggleRecurringBilling={handleToggleRecurringBilling}
+                    handleExportSecrets={handleExportSecrets}
+                    exportedMnemonic={exportedMnemonic}
+                    exportedPrivateKey={exportedPrivateKey}
+                    setExportedMnemonic={setExportedMnemonic}
+                    setExportedPrivateKey={setExportedPrivateKey}
+                    setShowSettings={setShowSettings}
+                    triggerTestSignature={triggerTestSignature}
+                />
+            );
         }
         if (showKylrixDetail) {
             return renderKylrixDetail();
