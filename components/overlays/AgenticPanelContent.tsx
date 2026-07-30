@@ -52,8 +52,7 @@ import {
   Wallet,
   Workflow,
   X,
-  Zap,
-} from 'lucide-react';
+  Zap} from 'lucide-react';
 
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -144,8 +143,7 @@ function formatHistoryMessages(
     status?: string | null;
     resultSummary?: string | null;
     args?: string | null;
-  }> = [],
-): ChatMessage[] {
+  }> = []): ChatMessage[] {
   const toolsByConversation = new Map<string, ToolCallDisplay[]>();
   for (const tc of toolCalls) {
     if (!tc.conversationId) continue;
@@ -221,8 +219,7 @@ const QUICK_ICON_MAP: Record<string, ComponentType<{ size?: number; strokeWidth?
   'file-plus': FilePlus,
   search: Search,
   milestone: Milestone,
-  wallet: Wallet,
-};
+  wallet: Wallet};
 
 function zoneLabel(zone: string): string {
   const labels: Record<string, string> = {
@@ -245,7 +242,7 @@ interface AgenticPanelContentProps {
 export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentProps) {
   const { consumePendingPrompt } = useAgenticDrawer();
   const { open: openUnified } = useUnifiedDrawer();
-  const { openWallet } = useWalletOverlay();
+  const { } = useWalletOverlay();
   const { user } = useAuth();
   const { notes: allNotes, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote } = useNotes();
   const { setCachedData } = useDataNexus();
@@ -420,8 +417,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             syncStatus: m.syncStatus || 'synced',
             isPublic: m.isPublic,
             isGuest: m.isGuest,
-            nextSteps: m.nextSteps})),
-        );
+            nextSteps: m.nextSteps})));
         setShowSessionsDrawer(false);
         if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
       }
@@ -454,8 +450,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             isGuest: res.session.isGuest,
             isPinned: res.session.isPinned,
             createdAt: res.session.createdAt,
-            updatedAt: res.session.updatedAt,
-          });
+            updatedAt: res.session.updatedAt});
         }
         setShowSessionsDrawer(false);
         toast.success('Switched agent session.');
@@ -491,8 +486,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           console.error(err);
           toast.error('Failed to delete session');
         }
-      },
-    });
+      }});
   };
 
   const handleShareSession = async (e: React.MouseEvent, sessionId: string, currentlyShared: boolean) => {
@@ -512,9 +506,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         prev.map((s) =>
           s.id === sessionId
             ? { ...s, isPublic: status.isPublic === true, isGuest: status.isGuest === true }
-            : s,
-        ),
-      );
+            : s));
       if (user?.$id) {
         await AgenticSessionLocalStore.patchSessionMeta(user.$id, sessionId, {
           isPublic: status.isPublic === true,
@@ -606,8 +598,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 syncStatus: m.syncStatus || 'synced',
                 isPublic: m.isPublic,
                 isGuest: m.isGuest,
-                nextSteps: m.nextSteps})),
-            );
+                nextSteps: m.nextSteps})));
           }
         }
       } catch {
@@ -640,8 +631,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 isPublic: m.isPublic,
                 isGuest: m.isGuest,
                 nextSteps: m.nextSteps})),
-              isPinned: (session as any).isPinned === true,
-            });
+              isPinned: (session as any).isPinned === true});
             await AgenticSessionLocalStore.setActiveSessionId(user.$id, session.rowId);
           }
         }
@@ -700,8 +690,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       syncStatus?: AgenticSyncStatus;
       isPublic?: boolean;
       isGuest?: boolean;
-    },
-  ) => {
+    }) => {
     setMessages((prev) => [
       ...prev,
       {
@@ -711,8 +700,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         blocks: opts?.blocks,
         syncStatus: opts?.syncStatus,
         isPublic: opts?.isPublic,
-        isGuest: opts?.isGuest,
-      },
+        isGuest: opts?.isGuest},
     ]);
   }, []);
 
@@ -759,8 +747,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             systemHint: pageContext.systemHint,
             resourceId: pageContext.resourceId,
             userMessage: trimmed},
-          userMessage: trimmed,
-        });
+          userMessage: trimmed});
 
         if (res.success) {
           if (res.sessionId) setActiveSessionId(res.sessionId);
@@ -772,8 +759,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           const recordToolCall = async (
             call: { toolKey: string; specifier?: string; args?: Record<string, unknown> },
             status: string,
-            resultSummary?: string,
-          ) => {
+            resultSummary?: string) => {
             const display: ToolCallDisplay = {
               toolKey: call.toolKey,
               specifier: call.specifier || null,
@@ -796,8 +782,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   args: call.args || null,
                   status,
                   resultSummary},
-                jwt,
-              );
+                jwt);
             } catch (recordErr) {
               console.warn('[agentic] Failed to record tool call:', recordErr);
             }
@@ -826,8 +811,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   if (steps.length) {
                     liveNextSteps = steps;
                     setMessages((prev) =>
-                      prev.map((m) => (m.id === assistantId ? { ...m, nextSteps: steps } : m)),
-                    );
+                      prev.map((m) => (m.id === assistantId ? { ...m, nextSteps: steps } : m)));
                   }
                   await recordToolCall(call, 'success', `${steps.length} next steps`);
                   continue;
@@ -870,8 +854,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                           objectType: payload.objectType,
                           title: payload.title,
                           toolKey: payload.toolKey},
-                        jwt,
-                      );
+                        jwt);
                     } catch (recordErr) {
                       console.warn('[agentic] Failed to record session object:', recordErr);
                     }
@@ -903,10 +886,8 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       openDrawer: (type: string, payload?: Record<string, unknown>) => {
                         openUnified(type as any, payload);
                       },
-                      recordSessionObject,
-                    },
-                    toolDef.name,
-                  );
+                      recordSessionObject},
+                    toolDef.name);
                   if (!result.success) {
                     await recordToolCall(call, 'error', result.error || 'Failed');
                     continue;
@@ -916,9 +897,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       prev.map((m) =>
                         m.id === assistantId
                           ? { ...m, blocks: [...(m.blocks || []), ...result.messageBlocks!] }
-                          : m,
-                      ),
-                    );
+                          : m));
                   }
                   await recordToolCall(call, 'success', result.summary);
                 } catch (err: any) {
@@ -937,9 +916,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                         ...m,
                         tools: executedTools.length ? executedTools : m.tools,
                         nextSteps: liveNextSteps.length ? liveNextSteps : m.nextSteps}
-                    : m,
-                ),
-              );
+                    : m));
             }
 
             const sid = (res.sessionId as string) || activeSessionId;
@@ -959,8 +936,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                     syncStatus: m.syncStatus,
                     isPublic: m.isPublic,
                     isGuest: m.isGuest,
-                    nextSteps: m.nextSteps})),
-                );
+                    nextSteps: m.nextSteps})));
                 return synced;
               });
             }
@@ -975,8 +951,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         setRunningWorkflowId(null);
       }
     },
-    [appendMessage, isPro, openProUpgrade, pageContext, addTask, updateTask, deleteTask, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote, user, onClose, router, openUnified, setCachedData, tasks, allNotes, activeSessionId],
-  );
+    [appendMessage, isPro, openProUpgrade, pageContext, addTask, updateTask, deleteTask, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote, user, onClose, router, openUnified, setCachedData, tasks, allNotes, activeSessionId]);
 
   useEffect(() => {
     const pending = consumePendingPrompt();
@@ -992,8 +967,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       e?.preventDefault();
       void runPrompt(chatInput);
     },
-    [chatInput, runPrompt],
-  );
+    [chatInput, runPrompt]);
 
   const handleWorkflow = useCallback(
     async (action: QuickWorkflowAction) => {
@@ -1017,8 +991,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         await runPrompt(prompt);
       }
     },
-    [onClose, router, runPrompt],
-  );
+    [onClose, router, runPrompt]);
 
   const handleComposerKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -1046,8 +1019,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = setTimeout(() => openMessageMenu(msg), 500);
     },
-    [openMessageMenu],
-  );
+    [openMessageMenu]);
 
   const handleMessageTouchMove = useCallback((e: React.TouchEvent) => {
     if (!touchStartPosRef.current) return;
@@ -1083,8 +1055,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       if (composerLongPressTimerRef.current) clearTimeout(composerLongPressTimerRef.current);
       composerLongPressTimerRef.current = setTimeout(() => openComposerMenu(), 500);
     },
-    [openComposerMenu],
-  );
+    [openComposerMenu]);
 
   const handleComposerTouchMove = useCallback((e: React.TouchEvent) => {
     if (!touchStartPosRef.current) return;
@@ -1199,8 +1170,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             messageRole: msg.role,
             sessionId: activeSessionId || undefined,
             reason: 'user_retry'},
-          jwt,
-        );
+          jwt);
       } catch (err) {
         console.warn('[agentic] Failed to flag conversation point:', err);
       }
@@ -1208,8 +1178,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       setMessages((prev) => prev.slice(0, truncateTo));
       await runPrompt(promptText);
     },
-    [activeSessionId, messages, runPrompt],
-  );
+    [activeSessionId, messages, runPrompt]);
 
   const handleStartConversationFromPrompt = useCallback(
     async (msg: ChatMessage, carryContext: boolean) => {
@@ -1225,8 +1194,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             starterPrompt: starter,
             carryContext,
             sourceSessionId: activeSessionId || undefined},
-          jwt,
-        );
+          jwt);
         if (!res.success) {
           toast.error('Could not start a new conversation.');
           return;
@@ -1242,16 +1210,14 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         toast.success(
           carryContext
             ? 'New conversation started with compressed context.'
-            : 'New conversation started.',
-        );
+            : 'New conversation started.');
         await runPrompt(starter);
       } catch (err) {
         console.error('[agentic] Failed to fork conversation:', err);
         toast.error('Could not start a new conversation.');
       }
     },
-    [activeSessionId, runPrompt, user?.$id],
-  );
+    [activeSessionId, runPrompt, user?.$id]);
 
   const messageMenuItems = useMemo(() => {
     if (!messageMenuTarget) return [];
@@ -1260,31 +1226,26 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         {
           label: 'Copy prompt',
           icon: <Copy size={16} />,
-          onClick: () => handleCopyMessage(messageMenuTarget.content),
-        },
+          onClick: () => handleCopyMessage(messageMenuTarget.content)},
         {
           label: 'Retry',
           icon: <RefreshCw size={16} />,
-          onClick: () => void handleRetryMessage(messageMenuTarget),
-        },
+          onClick: () => void handleRetryMessage(messageMenuTarget)},
         {
           label: 'Start new conversation',
           icon: <MessageSquarePlus size={16} />,
-          onClick: () => void handleStartConversationFromPrompt(messageMenuTarget, false),
-        },
+          onClick: () => void handleStartConversationFromPrompt(messageMenuTarget, false)},
         {
           label: 'Start new conversation with context',
           icon: <History size={16} />,
-          onClick: () => void handleStartConversationFromPrompt(messageMenuTarget, true),
-        },
+          onClick: () => void handleStartConversationFromPrompt(messageMenuTarget, true)},
       ];
     }
     return [
       {
         label: 'Copy response',
         icon: <Copy size={16} />,
-        onClick: () => handleCopyMessage(messageMenuTarget.content),
-      },
+        onClick: () => handleCopyMessage(messageMenuTarget.content)},
     ];
   }, [
     messageMenuTarget,
@@ -1306,8 +1267,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         icon: <ClipboardPaste size={16} />,
         onClick: () => {
           void handleComposerPaste();
-        },
-      },
+        }},
     ];
     if (hasText) {
       items.push(
@@ -1316,24 +1276,20 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           icon: <TextSelect size={16} />,
           onClick: () => {
             handleComposerSelectAll();
-          },
-        },
+          }},
         {
           label: 'Copy all',
           icon: <Copy size={16} />,
           onClick: () => {
             handleComposerCopyAll();
-          },
-        },
+          }},
         {
           label: 'Clear',
           icon: <Trash2 size={16} />,
           onClick: () => {
             handleComposerClear();
           },
-          variant: 'destructive',
-        },
-      );
+          variant: 'destructive'});
     }
     return items;
   }, [
@@ -1351,8 +1307,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         <div
           className="pointer-events-none absolute inset-0 opacity-90"
           style={{
-            background: `radial-gradient(ellipse 80% 120% at 0% 0%, ${accent}18 0%, transparent 55%)`,
-          }}
+            background: `radial-gradient(ellipse 80% 120% at 0% 0%, ${accent}18 0%, transparent 55%)`}}
         />
         <div className="relative flex items-center gap-3 min-w-0">
           <div
@@ -1501,8 +1456,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   accent={accent}
                   onShareChange={(next) => {
                     setMessages((prev) =>
-                      prev.map((m) => (m.id === msg.id ? { ...m, ...next } : m)),
-                    );
+                      prev.map((m) => (m.id === msg.id ? { ...m, ...next } : m)));
                   }}
                 />
               </div>
@@ -1909,8 +1863,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 handleShareSession(
                   e as any,
                   selectedSessionActionTarget.id,
-                  selectedSessionActionTarget.isPublic === true || selectedSessionActionTarget.isGuest === true,
-                );
+                  selectedSessionActionTarget.isPublic === true || selectedSessionActionTarget.isGuest === true);
                 setShowSessionActionsDrawer(false);
               }}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/5 text-white text-sm font-bold"
@@ -1923,8 +1876,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               onClick={() => {
                 void handleToggleSessionPinned(
                   selectedSessionActionTarget.id,
-                  !(selectedSessionActionTarget.isPinned === true),
-                );
+                  !(selectedSessionActionTarget.isPinned === true));
                 setShowSessionActionsDrawer(false);
               }}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/5 text-white text-sm font-bold"

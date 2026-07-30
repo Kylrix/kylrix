@@ -128,7 +128,7 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
 
   const [refreshNonce, setRefreshNonce] = useState(0);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const { openTokenUserSearch } = useTokenOps();
+  const { } = useTokenOps();
   const { openWalletWithIntent } = useWalletOverlay();
 
   const [moments, setMoments] = useState<any[]>([]);
@@ -188,8 +188,7 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
       moments: categorized.moments.length,
       replies: categorized.replies.length,
       pulses: categorized.pulses.length}),
-    [categorized.moments.length, categorized.pulses.length, categorized.replies.length],
-  );
+    [categorized.moments.length, categorized.pulses.length, categorized.replies.length]);
 
   useEffect(() => {
     setSelectedTab(normalizeTab(tabParam));
@@ -203,8 +202,7 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
       const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
       router.replace(nextUrl, { scroll: false });
     },
-    [pathname, router, searchParams],
-  );
+    [pathname, router, searchParams]);
 
   const currentUserId = currentUser?.$id;
   const myProfileId = myProfile?.$id;
@@ -237,8 +235,7 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
         setMomentsLoading(false);
       }
     },
-    [currentUserId],
-  );
+    [currentUserId]);
 
   const loadProfile = useCallback(async () => {
     const stagedProfile = normalizedUsername ? (preloadedProfile || cachedUsernameProfile) : null;
@@ -482,23 +479,19 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
       description: 'Original thoughts, quotes, and signals.',
       emptyTitle: 'No moments yet',
       emptyBody: isOwnProfile ? 'Your first post will show up here.' : 'Nothing shared yet.',
-      emptyIcon: <Sparkles size={20} />,
-    },
+      emptyIcon: <Sparkles size={20} />},
     replies: {
       title: 'Replies',
       description: 'Public responses and discussions.',
       emptyTitle: 'No replies yet',
       emptyBody: 'Conversations and feedback will land here.',
-      emptyIcon: <MessageCircle size={20} />,
-    },
+      emptyIcon: <MessageCircle size={20} />},
     pulses: {
       title: 'Pulses',
       description: 'Pulse bursts and boosts shared by this profile.',
       emptyTitle: 'No pulses yet',
       emptyBody: 'Republished posts will appear here.',
-      emptyIcon: <Repeat2 size={20} />,
-    },
-  };
+      emptyIcon: <Repeat2 size={20} />}};
 
   const activeTabMeta = tabMeta[selectedTab];
   const activeTabItems = categorized[selectedTab];

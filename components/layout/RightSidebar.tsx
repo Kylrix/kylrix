@@ -1,14 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Drawer, Box, useTheme } from '@/lib/openbricks/primitives';
+import { Drawer, Box } from '@/lib/openbricks/primitives';
 import { useLayout } from '@/context/LayoutContext';
 import TaskDetails from '@/components/tasks/TaskDetails';
 import EventDetails from '@/components/events/EventDetails';
 
 export default function RightSidebar() {
   const { secondarySidebar, closeSecondarySidebar } = useLayout();
-  const theme = useTheme();
 
   const getContent = () => {
     switch (secondarySidebar.type) {
@@ -30,17 +29,14 @@ export default function RightSidebar() {
       variant="temporary"
       ModalProps={{
         keepMounted: false,
-        disableScrollLock: false,
-      }}
+        disableScrollLock: false}}
       PaperProps={{
         sx: {
           width: { xs: '100%', sm: 400, md: 500 },
           bgcolor: '#161412',
           borderLeft: '1px solid #34322F',
           backgroundImage: 'none',
-          boxShadow: '-20px 0 50px rgba(0,0,0,0.5)',
-        },
-      }}
+          boxShadow: '-20px 0 50px rgba(0,0,0,0.5)'}}}
     >
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         {getContent()}

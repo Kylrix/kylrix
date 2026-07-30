@@ -36,7 +36,7 @@ export function preProcessMarkdown(md?: string): string {
       if (/^\s{0,3}#{1,6}\s+/.test(line)) continue;
 
       // Skip setext-style underlined headings (the underline is on nextLine, so we should skip adding to this line if nextLine is --- or ===)
-      if (/^\s*([=-]){3,}\s*$/.test(nextLine)) continue;
+      if (/^\s*([=-]){3}\s*$/.test(nextLine)) continue;
 
       // Skip list items (e.g., "- item", "* item", "+ item", "1. item")
       if (/^\s{0,3}(?:[*+-]|\d+\.)\s+/.test(line)) continue;
@@ -45,7 +45,7 @@ export function preProcessMarkdown(md?: string): string {
       if (/^\s{0,3}>/.test(line)) continue;
 
       // Skip indented code blocks (lines starting with 4 or more spaces)
-      if (/^\s{4,}/.test(line)) continue;
+      if (/^\s{4}/.test(line)) continue;
 
       // Skip reference-style link definitions "[id]: url"
       if (/^\s*\[[^\]]+\]:\s*/.test(line)) continue;

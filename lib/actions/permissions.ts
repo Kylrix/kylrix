@@ -16,8 +16,7 @@ export async function permissionsAction(
   // Ensure the actorId in payload matches the authenticated actor
   const securedPayload = {
     ...payload,
-    actorId: actor.$id,
-  };
+    actorId: actor.$id};
 
   return await permissionsInternal(method, securedPayload);
 }

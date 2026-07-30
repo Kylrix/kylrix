@@ -2,7 +2,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { Drawer, useTheme, useMediaQuery, Box } from '@/lib/openbricks/primitives';
+import { Drawer, Box } from '@/lib/openbricks/primitives';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 // Import all dynamic drawer components
@@ -10,7 +10,6 @@ const LoginDrawer = dynamic(() => import('./LoginDrawer').then(mod => mod.LoginD
 const AgenticDrawer = dynamic(() => import('./AgenticDrawer').then(mod => mod.AgenticDrawer), { ssr: false });
 const NoteDrawer = dynamic(() => import('./NoteDrawer').then(mod => mod.NoteDrawer), { ssr: false });
 const ShareNoteDrawer = dynamic(() => import('./ShareNoteDrawer').then(mod => mod.ShareNoteDrawer), { ssr: false });
-const AssignGoalDrawer = dynamic(() => import('./AssignGoalDrawer').then(mod => mod.AssignGoalDrawer), { ssr: false });
 const DeleteNoteDrawer = dynamic(() => import('./DeleteNoteDrawer').then(mod => mod.DeleteNoteDrawer), { ssr: false });
 
 const NewChatDrawer = dynamic(() => import('./NewChatDrawer').then(mod => mod.NewChatDrawer), { ssr: false });
@@ -39,8 +38,6 @@ const TaskDetails = dynamic(() => import('../tasks/TaskDetails'), { ssr: false }
 
 export function UnifiedBottomDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
   const renderContent = () => {
     switch (activeContent) {

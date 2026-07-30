@@ -17,8 +17,7 @@ export function noteToCard(note: Notes): UnifiedObjectCardModel {
     isPinned: Boolean(note.isPinned),
     isPublic: Boolean(note.isPublic),
     isGuest: Boolean(note.isGuest),
-    status: note.status ? String(note.status) : null,
-  };
+    status: note.status ? String(note.status) : null};
 }
 
 export function noteToDetail(note: Notes): UnifiedObjectDetailModel {
@@ -27,8 +26,7 @@ export function noteToDetail(note: Notes): UnifiedObjectDetailModel {
     body: note.content || '',
     tags: Array.isArray(note.tags) ? note.tags.filter(Boolean) as string[] : [],
     ownerId: note.userId || note.creatorId || null,
-    raw: note,
-  };
+    raw: note};
 }
 
 export function goalToCard(task: Task): UnifiedObjectCardModel {
@@ -42,8 +40,7 @@ export function goalToCard(task: Task): UnifiedObjectCardModel {
     isPublic: Boolean(task.isPublic),
     isGuest: Boolean(task.isGuest),
     status: task.status || null,
-    accent: task.priority || null,
-  };
+    accent: task.priority || null};
 }
 
 export function goalToDetail(task: Task): UnifiedObjectDetailModel {
@@ -52,8 +49,7 @@ export function goalToDetail(task: Task): UnifiedObjectDetailModel {
     body: task.description || '',
     tags: task.labels || [],
     ownerId: task.userId || task.creatorId || null,
-    raw: task,
-  };
+    raw: task};
 }
 
 
@@ -78,6 +74,5 @@ export function eventToCard(event: {
     isPinned: Boolean(event.isPinned),
     isPublic: Boolean(event.isPublic),
     isGuest: Boolean(event.isGuest),
-    status: event.status || null,
-  };
+    status: event.status || null};
 }

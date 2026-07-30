@@ -37,9 +37,7 @@ describe('topbar helpers', () => {
       identity: {
         displayName: 'Kylrix User',
         username: 'kylrix',
-        walletConnected: true,
-      },
-    });
+        walletConnected: true}});
 
     expect(surface.currentApp).toBe('connect');
     expect(surface.identity.displayName).toBe('Kylrix User');

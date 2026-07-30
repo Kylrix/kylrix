@@ -2182,7 +2182,6 @@ function GitHubExternalObjectsTab({
                           <UnverifiedGithubRepoDrawer 
                             repoPath={path}
                             projectId={projectId}
-                            projectObjects={projectObjects}
                             fetchProjectData={fetchProjectData}
                             onClose={closeSidebar}
                             tasks={tasks}
@@ -2263,7 +2262,6 @@ function GitHubExternalObjectsTab({
 interface UnverifiedGithubRepoDrawerProps {
   repoPath: string;
   projectId: string;
-  projectObjects: any[];
   fetchProjectData: () => Promise<void>;
   onClose: () => void;
   tasks: any[];
@@ -2272,7 +2270,6 @@ interface UnverifiedGithubRepoDrawerProps {
 function UnverifiedGithubRepoDrawer({
   repoPath,
   projectId,
-  projectObjects,
   fetchProjectData,
   onClose,
   tasks = []

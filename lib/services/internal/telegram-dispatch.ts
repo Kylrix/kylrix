@@ -84,8 +84,7 @@ export async function dispatchTelegramNotification(
       body: JSON.stringify({
         chat_id: doc.tg_chat_id,
         text: message,
-        parse_mode: 'HTML'}),
-    });
+        parse_mode: 'HTML'})});
 
     if (!res.ok) {
       console.error('[telegram-dispatch] Telegram Bot API returned error:', await res.text());

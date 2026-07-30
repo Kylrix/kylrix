@@ -96,8 +96,7 @@ export function PublicAgentUnavailable({ kind }: { kind: 'session' | 'message' }
 export function PublicAgentSessionView({
   title,
   messages,
-  updatedAt,
-}: {
+  updatedAt}: {
   title: string;
   messages: PublicAgentMessage[];
   updatedAt?: string;
@@ -107,8 +106,7 @@ export function PublicAgentSessionView({
       <div
         className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[900px] h-[220px]"
         style={{
-          background: 'radial-gradient(ellipse 70% 100% at 50% 0%, rgba(99,102,241,0.08) 0%, transparent 70%)',
-        }}
+          background: 'radial-gradient(ellipse 70% 100% at 50% 0%, rgba(99,102,241,0.08) 0%, transparent 70%)'}}
       />
 
       <div className="relative mx-auto max-w-3xl px-4 sm:px-6 py-8 sm:py-10">
@@ -166,8 +164,7 @@ export function PublicAgentSessionView({
 
 export function PublicAgentMessageView({
   message,
-  sessionId,
-}: {
+  sessionId}: {
   message: PublicAgentMessage;
   sessionId: string;
 }) {
@@ -176,8 +173,7 @@ export function PublicAgentMessageView({
       <div
         className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[900px] h-[220px]"
         style={{
-          background: 'radial-gradient(ellipse 70% 100% at 50% 0%, rgba(99,102,241,0.08) 0%, transparent 70%)',
-        }}
+          background: 'radial-gradient(ellipse 70% 100% at 50% 0%, rgba(99,102,241,0.08) 0%, transparent 70%)'}}
       />
 
       <div className="relative mx-auto max-w-3xl px-4 sm:px-6 py-8 sm:py-10">

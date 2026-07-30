@@ -1,5 +1,5 @@
 
-interface EcosystemApp {
+interface _EcosystemApp {
   id: string;
   label: string;
   subdomain: string;
@@ -10,8 +10,6 @@ interface EcosystemApp {
   description: string;
 }
 
-const KYLRIX_DOMAIN = 'kylrix.space';
-const KYLRIX_AUTH_SUBDOMAIN = 'accounts';
 const APP_BASE_PATHS: Record<string, string> = {
   accounts: '/accounts',
   note: '/app',

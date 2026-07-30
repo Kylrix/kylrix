@@ -52,8 +52,7 @@ export function DynamicSidebarProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('kylrixnote_dynamic_sidebar_key', key);
       }
     },
-    [],
-  );
+    []);
 
   const closeSidebar = useCallback(() => {
     setIsOpen(false);

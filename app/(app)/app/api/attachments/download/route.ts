@@ -21,8 +21,7 @@ export async function GET(req: NextRequest) {
       { error: 'Rate limit exceeded' },
       {
         status: 429,
-        headers: { 'Retry-After': retryAfter?.toString() || '60' },
-      }
+        headers: { 'Retry-After': retryAfter?.toString() || '60' }}
     );
   }
   try {

@@ -12,7 +12,7 @@ export * from './extensions';
 export * from './token';
 
 // --- Re-export crosslinks SDK ---
-export { buildSourceNoteTags,    buildNoteAttachmentMetadata } from './crosslinks';
+export {     buildNoteAttachmentMetadata } from './crosslinks';
 
 // --- Re-export orchestration SDK ---
 ;

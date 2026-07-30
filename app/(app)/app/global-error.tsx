@@ -75,8 +75,7 @@ export default function GlobalError({
                       bgcolor: 'transparent',
                       backgroundImage: 'none',
                       border: '1px solid rgba(255, 255, 255, 0.1)',
-                      '&:before': { display: 'none' },
-                    }}
+                      '&:before': { display: 'none' }}}
                   >
                     <AccordionSummary expandIcon={<ExpandMore sx={{ color: 'primary.main' }} />}>
                       <Typography variant="caption" sx={{ color: 'primary.main' }}>
@@ -130,8 +129,7 @@ export default function GlobalError({
                     color: 'text.primary',
                     '&:hover': {
                       borderColor: 'primary.main',
-                      bgcolor: 'rgba(99, 102, 241, 0.05)'},
-                  }}
+                      bgcolor: 'rgba(99, 102, 241, 0.05)'}}}
                 >
                   Go to Home
                 </Button>

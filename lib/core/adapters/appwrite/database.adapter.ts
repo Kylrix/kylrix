@@ -92,8 +92,7 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
 
     return {
       total: res.total,
-      rows: JSON.parse(JSON.stringify(res.rows)) as T[],
-    };
+      rows: JSON.parse(JSON.stringify(res.rows)) as T[]};
   }
 
   async createRow<T>(

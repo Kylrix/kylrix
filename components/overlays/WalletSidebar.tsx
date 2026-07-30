@@ -523,8 +523,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             },
             onCancel: () => {
                 toast('Wallet remains locked');
-            },
-        });
+            }});
     }, [hasMasterpass, isOpen, refreshWallets, requestSudo, unlockPromptedForSession]);
 
     useEffect(() => {
@@ -1194,8 +1193,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                         py: 1.5,
                         borderRadius: '18px',
                         bgcolor: HIGHLIGHT,
-                        border: `1px solid ${EDGE}`,
-                    }}
+                        border: `1px solid ${EDGE}`}}
                 >
                     <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
                         <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
@@ -1219,8 +1217,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                             size="small"
                             sx={{
                                 '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
-                            }}
+                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 }}}
                         />
                     </Box>
                 </Box>
@@ -1237,8 +1234,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                         py: 1.5,
                         borderRadius: '18px',
                         bgcolor: HIGHLIGHT,
-                        border: `1px solid ${EDGE}`,
-                    }}
+                        border: `1px solid ${EDGE}`}}
                 >
                     <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
                         <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
@@ -1255,8 +1251,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                             size="small"
                             sx={{
                                 '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
-                            }}
+                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 }}}
                         />
                     </Box>
                 </Box>
@@ -1273,8 +1268,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                         py: 1.5,
                         borderRadius: '18px',
                         bgcolor: HIGHLIGHT,
-                        border: `1px solid ${EDGE}`,
-                    }}
+                        border: `1px solid ${EDGE}`}}
                 >
                     <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
                         <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
@@ -1291,8 +1285,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                             size="small"
                             sx={{
                                 '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
-                            }}
+                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 }}}
                         />
                     </Box>
                 </Box>
@@ -1309,8 +1302,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                         py: 1.5,
                         borderRadius: '18px',
                         bgcolor: HIGHLIGHT,
-                        border: `1px solid ${EDGE}`,
-                    }}
+                        border: `1px solid ${EDGE}`}}
                 >
                     <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
                         <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
@@ -1327,8 +1319,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                             size="small"
                             sx={{
                                 '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
-                            }}
+                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 }}}
                         />
                     </Box>
                 </Box>
@@ -1345,8 +1336,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                         py: 1.5,
                         borderRadius: '18px',
                         bgcolor: HIGHLIGHT,
-                        border: `1px solid ${EDGE}`,
-                    }}
+                        border: `1px solid ${EDGE}`}}
                 >
                     <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
                         <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontSize: '0.88rem', lineHeight: 1.25, fontFamily: 'var(--font-satoshi)' }}>
@@ -1363,8 +1353,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                             size="small"
                             sx={{
                                 '& .ob-switch-thumb.ob-checked': { color: ACCENT },
-                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
-                            }}
+                                '& .ob-switch-thumb.ob-checked + .ob-switch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 }}}
                         />
                     </Box>
                 </Box>
@@ -1835,8 +1824,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                     bgcolor: HIGHLIGHT,
                                     border: `2px solid rgba(99,102,241,0.35)`,
                                     transition: 'all 0.2s ease',
-                                    '&:hover': { bgcolor: SURFACE, borderColor: ACCENT, transform: 'translateY(-1px)' },
-                                }}
+                                    '&:hover': { bgcolor: SURFACE, borderColor: ACCENT, transform: 'translateY(-1px)' }}}
                             >
                                 <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
                                     <Stack direction="row" alignItems="center" gap={2}>
@@ -1848,8 +1836,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            lineHeight: 0,
-                                        }}>
+                                            lineHeight: 0}}>
                                             <Logo app="root" variant="icon" size={28} />
                                         </Box>
                                         <Box sx={{ minWidth: 0, textAlign: 'left' }}>
@@ -1915,8 +1902,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                         border: `1px solid ${EDGE}`,
                                         transition: 'all 0.2s ease',
                                         cursor: 'pointer',
-                                        '&:hover': { bgcolor: SURFACE, borderColor: '#4A4743', transform: 'translateX(4px)' },
-                                    }}
+                                        '&:hover': { bgcolor: SURFACE, borderColor: '#4A4743', transform: 'translateX(4px)' }}}
                                 >
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
                                         <Box sx={{

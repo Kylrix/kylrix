@@ -163,5 +163,4 @@ export const ActivityService = {
 
     async clearLiveCallActivity(userId: string) {
         return this.updatePresence(userId, 'online', undefined);
-    },
-};
+    }};

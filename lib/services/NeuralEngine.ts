@@ -40,8 +40,7 @@ class NeuralEngineService {
     if (tick.tickCount % 20 === 0) {
       await LocalEngine.writeTelemetry('patterns', {
         patterns: Array.from(this.userPatterns.entries()),
-        anomalyCount: this.anomalyLog.length,
-      }).catch(() => {});
+        anomalyCount: this.anomalyLog.length}).catch(() => {});
     }
   }
 
@@ -80,9 +79,7 @@ class NeuralEngineService {
             detail: {
               kind: report.expectedItemKind,
               route: report.route,
-              timestamp: Date.now(),
-            },
-          })
+              timestamp: Date.now()}})
         );
       }
 

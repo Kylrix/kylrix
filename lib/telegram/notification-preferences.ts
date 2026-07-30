@@ -66,8 +66,7 @@ export function defaultTelegramNotificationPreferences(): TelegramNotificationPr
       huddle: true,
       event: true,
       form: true},
-    watchedResourceIds: [],
-  };
+    watchedResourceIds: []};
 }
 
 export function parseTelegramNotificationPreferences(raw: unknown): TelegramNotificationPreferences {
@@ -81,8 +80,7 @@ export function parseTelegramNotificationPreferences(raw: unknown): TelegramNoti
     objects: { ...defaults.objects, ...(input.objects || {}) },
     watchedResourceIds: Array.isArray(input.watchedResourceIds)
       ? input.watchedResourceIds.map((id: any) => String(id || '').trim()).filter(Boolean)
-      : [],
-  };
+      : []};
 }
 
 function normalizeTelegramObjectType(

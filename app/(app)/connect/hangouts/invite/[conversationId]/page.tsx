@@ -11,8 +11,7 @@ import {
   Paper,
   Stack,
   Typography,
-  alpha,
-} from '@/lib/openbricks/primitives';
+  alpha} from '@/lib/openbricks/primitives';
 import { Users, ShieldCheck, ArrowRight } from 'lucide-react';
 
 import { account } from '@/lib/appwrite/client';
@@ -124,13 +123,11 @@ export default function HangoutInvitePage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...authHeaders,
-        },
+          ...authHeaders},
         credentials: 'include',
         body: JSON.stringify({
           resourceType: 'chat.conversation',
-          resourceId: conversationId}),
-      });
+          resourceId: conversationId})});
 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -158,8 +155,7 @@ export default function HangoutInvitePage() {
           borderRadius: 4,
           bgcolor: '#161412',
           border: '1px solid rgba(255,255,255,0.08)',
-          backgroundImage: 'none',
-        }}
+          backgroundImage: 'none'}}
       >
         <Stack spacing={2.5} alignItems="center" textAlign="center">
           <Avatar
@@ -171,8 +167,7 @@ export default function HangoutInvitePage() {
               bgcolor: alpha('#F59E0B', 0.12),
               color: '#F59E0B',
               border: '1px solid rgba(255,255,255,0.08)',
-              '& img': { objectFit: 'cover' },
-            }}
+              '& img': { objectFit: 'cover' }}}
           >
             <Users size={30} />
           </Avatar>
@@ -250,8 +245,7 @@ function ChipLike({ children }: { children: ReactNode }) {
         bgcolor: 'rgba(255,255,255,0.04)',
         border: '1px solid rgba(255,255,255,0.06)',
         fontSize: '0.78rem',
-        fontWeight: 700,
-      }}
+        fontWeight: 700}}
     >
       {children}
     </Box>

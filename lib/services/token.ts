@@ -235,10 +235,8 @@ async function appendEvent(payload: TokenEventPayload) {
       sourceType: payload.sourceType || null,
       sourceId: payload.sourceId || null,
       metadata: payload.metadata ? JSON.stringify(payload.metadata) : null,
-      createdAt,
-    },
-    permissions: tokenPermissionsForSystemEvent(payload.userId, payload.counterpartyUserId || null),
-  });
+      createdAt},
+    permissions: tokenPermissionsForSystemEvent(payload.userId, payload.counterpartyUserId || null)});
   return row;
 }
 
@@ -337,8 +335,7 @@ export const KylrixTokenService = {
         uniqueActors: input.uniqueActors,
         trustScore: input.trustScore,
         tightenBps: decision.tightenBps,
-        ...input.metadata},
-    });
+        ...input.metadata}});
 
     const nextMinted = parseMicro(state.totalMintedMicro) + decision.amountMicro;
     const nextBurned = parseMicro(state.totalBurnedMicro);
@@ -400,8 +397,7 @@ export const KylrixTokenService = {
       balanceAfterMicro: fromBalance - amountMicro,
       sourceType: input.sourceType,
       sourceId: input.sourceId,
-      metadata: input.metadata,
-    });
+      metadata: input.metadata});
 
     const credit = await appendEvent({
       txId: `${transferTxId}:in`,
@@ -414,8 +410,7 @@ export const KylrixTokenService = {
       balanceAfterMicro: toBalance + amountMicro,
       sourceType: input.sourceType,
       sourceId: input.sourceId,
-      metadata: input.metadata,
-    });
+      metadata: input.metadata});
 
     await updateStateRow({ lastActivityAt: nowIso() });
     return {
@@ -489,8 +484,7 @@ export const KylrixTokenService = {
       balanceAfterMicro: userBalance - actualFine,
       sourceType: input.sourceType,
       sourceId: input.sourceId,
-      metadata: { reason: input.reason, ...input.metadata },
-    });
+      metadata: { reason: input.reason, ...input.metadata }});
 
     const credit = await appendEvent({
       txId: `${txBase}:root`,
@@ -503,8 +497,7 @@ export const KylrixTokenService = {
       balanceAfterMicro: rootBalance + actualFine,
       sourceType: input.sourceType,
       sourceId: input.sourceId,
-      metadata: { reason: input.reason, ...input.metadata },
-    });
+      metadata: { reason: input.reason, ...input.metadata }});
 
     await updateStateRow({
       rootBalanceMicro: (rootBalance + actualFine).toString(),
@@ -547,8 +540,7 @@ export const KylrixTokenService = {
       sourceId: input.destinationWallet,
       metadata: {
         destinationWallet: input.destinationWallet,
-        chain: input.chain},
-    });
+        chain: input.chain}});
 
     return {
       accepted: true,
@@ -587,8 +579,7 @@ export const KylrixTokenService = {
       metadata: {
         destinationWallet: input.destinationWallet,
         chain: input.chain,
-        onchainTxHash: input.onchainTxHash},
-    });
+        onchainTxHash: input.onchainTxHash}});
 
     await updateStateRow({
       totalBurnedMicro: nextBurned.toString(),
@@ -601,5 +592,4 @@ export const KylrixTokenService = {
       settledAmountMicro: amountMicro.toString(),
       settledAmount: toDisplayToken(amountMicro),
       onchainTxHash: input.onchainTxHash};
-  },
-};
+  }};

@@ -9,8 +9,7 @@ export const contentType = 'image/png';
 export const runtime = 'nodejs';
 
 export default async function UserProfileOGImage({
-  params,
-}: {
+  params}: {
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
@@ -55,8 +54,7 @@ export default async function UserProfileOGImage({
       ownerLabel: 'Profile',
       ownerName: `@${username}`,
       ownerAvatarDataUrl: avatarDataUrl,
-      chips,
-    }),
+      chips}),
     { ...size }
   );
 }

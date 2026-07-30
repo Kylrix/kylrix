@@ -1298,8 +1298,7 @@ export const CallInterface = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        gap: 0.8,
-                    }}
+                        gap: 0.8}}
                 >
                     {isMobile ? (
                         <>

@@ -3,8 +3,7 @@ export type AttachmentVisualKind = 'image' | 'pdf' | 'video' | 'audio' | 'link' 
 export function inferAttachmentMimeType(
   label?: string | null,
   metadata?: Record<string, unknown> | null,
-  childKind?: string,
-): string {
+  childKind?: string): string {
   const fromMeta = metadata?.mimeType;
   if (typeof fromMeta === 'string' && fromMeta.trim()) return fromMeta.trim();
   const name = String(label || '').trim();
@@ -25,8 +24,7 @@ export function inferAttachmentMimeType(
     ogg: 'audio/ogg',
     m4a: 'audio/mp4',
     txt: 'text/plain',
-    md: 'text/markdown',
-  };
+    md: 'text/markdown'};
   if (ext && extMap[ext]) return extMap[ext];
   if (childKind === 'image') return 'image/jpeg';
   if (childKind === 'voice') return 'audio/webm';
@@ -36,8 +34,7 @@ export function inferAttachmentMimeType(
 export function resolveAttachmentVisualKind(
   mimeType: string,
   childKind?: string,
-  label?: string | null,
-): AttachmentVisualKind {
+  label?: string | null): AttachmentVisualKind {
   const mime = (mimeType || '').toLowerCase();
   const ext = String(label || '').split('.').pop()?.toLowerCase() || '';
 

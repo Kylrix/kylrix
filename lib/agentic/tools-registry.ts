@@ -75,8 +75,7 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     description:
       'Emit 2–4 clickable next-step chips in chat. REQUIRED args.suggestions: array of { label: short UI text, prompt: FULL instruction Kylie will auto-run when clicked }. Prompts must be self-contained so one click completes the flow (create_goal, create_note, create_project, link_to_project, navigate_workspace, update_note, etc). Prefer at least one goal-oriented step on every turn when useful. Use recent idea titles + habits + live chat. Specifiers: none.',
     requiresAuthorization: false,
-    parameters: ['suggestions'],
-  },
+    parameters: ['suggestions']},
   {
     key: 'toggle_privacy',
     name: 'Toggle Visibility',

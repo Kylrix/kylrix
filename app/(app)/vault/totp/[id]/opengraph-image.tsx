@@ -22,8 +22,7 @@ export default async function Image(props: {
         : 'A TOTP authenticator secret was shared with you through Kylrix Vault.',
       accent: isTemp ? 'rose' : 'amber',
       ownerName: 'Kylrix Vault',
-      chips: isTemp ? ['Expires soon', 'Time-based code'] : ['Authenticator', 'Secure handoff'],
-    }),
+      chips: isTemp ? ['Expires soon', 'Time-based code'] : ['Authenticator', 'Secure handoff']}),
     size
   );
 }

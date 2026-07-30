@@ -39,8 +39,6 @@ import {
   deleteRowSecure,
   convertResponseToGoalSecure,
   createGhostNoteForProjectSecure,
-  promoteGhostThreadToStorySecure,
-  createEncryptedGroupForProjectSecure,
   createGhostNoteForResourceSecure,
   promoteGhostResourceThreadToStorySecure,
   getResourceCollaboratorsSecure,
@@ -113,8 +111,7 @@ export async function getNoteSecondaryObjectPreview(input: {
 export async function getNoteInheritedFileBlob(
   noteId: string,
   fileId: string,
-  bucketId: string,
-) {
+  bucketId: string) {
   const jwt = await getJwt();
   const { getNoteInheritedFileBlobSecure } = await import('./secure-ops');
   return getNoteInheritedFileBlobSecure(noteId, fileId, bucketId, jwt);
@@ -306,15 +303,7 @@ export async function deleteGhostNoteForProject(noteId: string) {
   return deleteRowSecure(APPWRITE_CONFIG.DATABASES.NOTE, APPWRITE_CONFIG.TABLES.NOTE.NOTES, noteId, jwt);
 }
 
-export async function promoteGhostThreadToStory(projectId: string, noteId: string) {
-  const jwt = await getJwt();
-  return promoteGhostThreadToStorySecure(projectId, noteId, jwt);
-}
 
-export async function createEncryptedGroupForProject(projectId: string) {
-  const jwt = await getJwt();
-  return createEncryptedGroupForProjectSecure(projectId, jwt);
-}
 
 export async function createGhostNoteForResource(
   resourceId: string,

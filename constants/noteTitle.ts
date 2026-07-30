@@ -91,12 +91,6 @@ export const buildAutoTitleFromContent = (rawContent: string): string => {
   return clampNoteTitle(titleCandidate);
 };
 
-const GENERIC_NOTE_TITLES = new Set<string>();
-
-const isGenericNoteTitle = (title?: string | null): boolean => {
-  return false;
-};
-
 export const resolveNoteCardTitle = (title?: string | null, content?: string | null): string => {
   const trimmed = clampNoteTitle(title);
   if (trimmed && trimmed.trim() !== '') return trimmed;

@@ -8,7 +8,4 @@ import { TOPBAR_LAYOUT } from '@/lib/sdk/design';
 export const TOPBAR_DRAWER_BACKDROP_SLOT = {
   backdrop: {
     sx: {
-      top: `${TOPBAR_LAYOUT.height}px`,
-    },
-  },
-} as const;
+      top: `${TOPBAR_LAYOUT.height}px`}}} as const;

@@ -31,9 +31,7 @@ import { PermissionChangeInput } from './shared';
 const {
   getActor,
   verifyProjectPermission,
-  verifyFormPermission,
-  CACHE_TTL_MS,
-  VIEWER_COOKIE} = shared;
+  verifyFormPermission} = shared;
 
 async function resolveCollaboratorBillingUserId(
   resourceType: string,
@@ -126,8 +124,7 @@ async function upsertProjectCollaboratorRow(
       resourceId: projectId,
       resourceType: 'project',
       userId: targetUserId,
-      ...payload},
-  });
+      ...payload}});
 }
 
 export async function mutatePermissionsSecure(body: any, jwt?: string) {
@@ -435,8 +432,7 @@ export async function revokePermissionSecure(input: {
       rowId: input.resourceId,
       data: {
                 metadata: JSON.stringify(meta)
-            },
-    });
+            }});
         }
     }
 
@@ -841,8 +837,7 @@ export async function removeProjectCollaboratorSecure(projectId: string, targetU
       rowId: projectId,
       data: {
       metadata: JSON.stringify(metadata)},
-      permissions: updatedPerms,
-    });
+      permissions: updatedPerms});
 
   // 2. Remove all collaborator objects from project_objects
   try {
@@ -945,7 +940,6 @@ export async function addFormCollaboratorSecure(formId: string, targetUserId: st
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
 
   const form = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -970,8 +964,7 @@ export async function addFormCollaboratorSecure(formId: string, targetUserId: st
       rowId: formId,
       data: {
       settings: JSON.stringify(settings)},
-      permissions: Array.from(permissions),
-    });
+      permissions: Array.from(permissions)});
 
   return JSON.parse(JSON.stringify(updatedForm));
 }
@@ -988,7 +981,6 @@ export async function removeFormCollaboratorSecure(formId: string, targetUserId:
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
 
   const form = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -1014,8 +1006,7 @@ export async function removeFormCollaboratorSecure(formId: string, targetUserId:
       rowId: formId,
       data: {
       settings: JSON.stringify(settings)},
-      permissions: updatedPerms,
-    });
+      permissions: updatedPerms});
 
   return JSON.parse(JSON.stringify(updatedForm));
 }

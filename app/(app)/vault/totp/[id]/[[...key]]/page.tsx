@@ -14,8 +14,7 @@ import { buildOgMetadata } from '@/lib/og/share-card';
  */
 
 export async function generateMetadata({
-  params,
-}: {
+  params}: {
   params: Promise<{ id: string; key?: string[] }>;
 }): Promise<Metadata> {
   try {
@@ -40,8 +39,7 @@ export async function generateMetadata({
 }
 
 export default async function SharedTotpPage({
-  params,
-}: {
+  params}: {
   params: Promise<{ id: string; key?: string[] }>;
 }) {
   const { id, key } = await params;

@@ -102,8 +102,7 @@ export async function executeEcosystemSearch(
     userId?: string;
     localNotes?: any[];
     localTasks?: any[];
-  },
-): Promise<{ plan: SearchPlan; hits: SearchHit[] }> {
+  }): Promise<{ plan: SearchPlan; hits: SearchHit[] }> {
   const limit = opts?.limit ?? 20;
   const plan = planSearchQuery(query);
   const hits: SearchHit[] = [];
@@ -131,8 +130,7 @@ export async function executeEcosystemSearch(
               title,
               snippet: content.slice(0, 120),
               route: `/app/${(row as any).$id}`,
-              score,
-            });
+              score});
           }
         }
       } else if (domain === 'goal') {
@@ -157,8 +155,7 @@ export async function executeEcosystemSearch(
               snippet: desc.slice(0, 120),
               route: '/goals',
               score,
-              meta: { dueDate: due, status: (row as any).status },
-            });
+              meta: { dueDate: due, status: (row as any).status }});
           }
         }
       } else if (domain === 'ui') {
@@ -199,8 +196,7 @@ export async function executeEcosystemSearch(
               id: row.$id,
               title,
               route: `/forms/${row.$id}`,
-              score,
-            });
+              score});
           }
         }
       } else if (domain === 'project') {
@@ -215,8 +211,7 @@ export async function executeEcosystemSearch(
               id: (row as any).$id,
               title,
               route: `/workspaces/${(row as any).$id}`,
-              score,
-            });
+              score});
           }
         }
       }

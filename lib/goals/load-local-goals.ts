@@ -18,8 +18,7 @@ function normalizeGoalRow(row: any): Task | null {
   const projectTag = tags.find((t: string) => String(t).startsWith('project:'));
   const projectId = projectTag ? String(projectTag).split(':')[1] : row.projectId || 'inbox';
   const userLabels = tags.filter(
-    (t: string) => !String(t).startsWith('project:') && !String(t).startsWith('source:'),
-  );
+    (t: string) => !String(t).startsWith('project:') && !String(t).startsWith('source:'));
 
   return {
     id,
@@ -49,8 +48,7 @@ function normalizeGoalRow(row: any): Task | null {
     isGuest: row.isGuest === true || String(row.isGuest) === 'true',
     discussionId: row.discussionId || null,
     scheduled: row.scheduled === true || String(row.scheduled) === 'true',
-    isAgentic: row.isAgentic === true || String(row.isAgentic) === 'true',
-  } as Task;
+    isAgentic: row.isAgentic === true || String(row.isAgentic) === 'true'} as Task;
 }
 
 export async function loadGoalsFromLocalCopy(opts: {

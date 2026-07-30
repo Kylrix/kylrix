@@ -69,17 +69,14 @@ async function createGiftCouponRow(params: {
         recipientName: params.recipientName || null,
         giftMessage: params.giftMessage || null,
         countryCode: params.countryCode,
-        expiresAt},
-    }),
-  };
+        expiresAt}})};
 
   return await databases.createRow(
     CHAT_DATABASE_ID,
     ACCOUNT_EVENTS_COLLECTION_ID,
     ID.unique(),
     payload,
-    [Permission.read(Role.user(params.recipientUserId)), Permission.read(Role.user(params.payerUserId))],
-  );
+    [Permission.read(Role.user(params.recipientUserId)), Permission.read(Role.user(params.payerUserId))]);
 }
 
 async function recordCompletedTransactionLedger(params: {
@@ -113,11 +110,9 @@ async function recordCompletedTransactionLedger(params: {
       couponId: couponId || null,
       metadata: JSON.stringify({
         completedAt: new Date().toISOString(),
-        ...(metadata || {}),
-      }),
+        ...(metadata || {})}),
       createdAt: existingTx ? undefined : new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString()};
 
     if (existingTx) {
       await databases.updateRow(
@@ -246,8 +241,7 @@ export async function POST(req: Request) {
         payload: rawBody,
         headers: { signature: sig || '' },
         status: 'signature_failed',
-        errorMessage: 'Signature verification failed',
-      });
+        errorMessage: 'Signature verification failed'});
       return new Response('Unauthorized', { status: 401 });
     }
   } else {
@@ -282,8 +276,7 @@ export async function POST(req: Request) {
   const floorPay = meta.expectedAmountUsd * 0.88;
   if (valuePaidUsd + 1e-6 < floorPay) {
     console.warn(
-      `[BlockBee IPN] Paid ${valuePaidUsd} below expected floor ${floorPay} (registered ${meta.expectedAmountUsd})`,
-    );
+      `[BlockBee IPN] Paid ${valuePaidUsd} below expected floor ${floorPay} (registered ${meta.expectedAmountUsd})`);
     return new Response('*ok*', { status: 200 });
   }
 
@@ -326,8 +319,7 @@ export async function POST(req: Request) {
       meta.payerUserId,
       meta.planId,
       meta.months,
-      effectiveRatio,
-    );
+      effectiveRatio);
     const oneHourMs = 60 * 60 * 1000;
 
     if (creditMs < oneHourMs) {
@@ -362,8 +354,7 @@ export async function POST(req: Request) {
         giftMessage:
           meta.giftMessage ||
           `A ${meta.months}-month ${meta.planId === 'PRO_YEAR' ? 'yearly' : 'monthly'} Kylrix Pro gift is waiting for you.`,
-        claimUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space'}/billing/coupon/${giftCoupon.$id}`,
-      }).catch((error: any) => {
+        claimUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space'}/billing/coupon/${giftCoupon.$id}`}).catch((error: any) => {
         console.warn('[BlockBee IPN] Gift email send deferred:', error);
       });
 
@@ -377,8 +368,7 @@ export async function POST(req: Request) {
         couponId: meta.couponId,
         metadata: {
           giftRecipientId: meta.giftRecipientId,
-          giftCouponId: giftCoupon.$id},
-      });
+          giftCouponId: giftCoupon.$id}});
 
       await completeBlockBeeIpnLock(paymentId, meta.payerUserId, {
         kind: 'gift_coupon',
@@ -393,8 +383,7 @@ export async function POST(req: Request) {
         status: 'success',
         metadata: {
           giftRecipientId: meta.giftRecipientId,
-          giftCouponId: giftCoupon.$id},
-      });
+          giftCouponId: giftCoupon.$id}});
 
       return new Response('*ok*', { status: 200 });
     }
@@ -428,9 +417,7 @@ export async function POST(req: Request) {
                 claimedBy: meta.payerUserId,
                 appliedAt: new Date().toISOString(),
                 claimState: 'applied',
-                subscriptionId: subscription.$id},
-            }),
-          });
+                subscriptionId: subscription.$id}})});
         }
       } catch (error) {
         console.error('[BlockBee IPN] Failed to seal coupon claim:', error);
@@ -443,8 +430,7 @@ export async function POST(req: Request) {
       const prefs = (await users.getPrefs(meta.payerUserId)) as Record<string, unknown>;
       await users.updatePrefs(
         meta.payerUserId,
-        applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), planTier),
-      );
+        applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), planTier));
     } catch (err) {
       console.error('[BlockBee IPN] Failed to update user prefs:', err);
     }
@@ -467,8 +453,7 @@ export async function POST(req: Request) {
       months: meta.months,
       currentPeriodEnd: currentPeriodEnd.toISOString(),
       sourceLabel: 'Crypto payment',
-      bodyCopy: `Your ${meta.months}-month access is live across Kylrix.`,
-    }).catch((error: any) => {
+      bodyCopy: `Your ${meta.months}-month access is live across Kylrix.`}).catch((error: any) => {
       console.warn('[BlockBee IPN] Subscription email send deferred:', error);
     });
 
@@ -481,8 +466,7 @@ export async function POST(req: Request) {
       amountUsd: valuePaidUsd,
       couponId: meta.couponId,
       metadata: {
-        subscriptionId: subscription.$id},
-    });
+        subscriptionId: subscription.$id}});
 
     await completeBlockBeeIpnLock(paymentId, meta.payerUserId, {
       kind: 'subscription',
@@ -498,8 +482,7 @@ export async function POST(req: Request) {
       status: 'success',
       metadata: {
         userId: meta.payerUserId,
-        planId: meta.planId},
-    });
+        planId: meta.planId}});
 
     return new Response('*ok*', { status: 200 });
   } catch (error: any) {
@@ -510,8 +493,7 @@ export async function POST(req: Request) {
       payload: rawBody,
       headers: { signature: sig || '' },
       status: 'failed',
-      errorMessage: error?.message || String(error),
-    });
+      errorMessage: error?.message || String(error)});
     await releaseBlockBeeIpnLock(paymentId);
     return new Response('Error', { status: 500 });
   }

@@ -11,16 +11,14 @@ describe('forward directory', () => {
           type: 'direct',
           participants: ['me', 'user-1'],
           lastMessageAt: '2026-04-30T20:00:00.000Z',
-          lastMessageText: 'hello',
-        },
+          lastMessageText: 'hello'},
         {
           $id: 'conv-2',
           type: 'group',
           participants: ['me', 'user-2', 'user-3'],
           name: 'Project Crew',
           lastMessageAt: '2026-04-30T21:00:00.000Z',
-          lastMessageText: 'group update',
-        }],
+          lastMessageText: 'group update'}],
       [
         { userId: 'me', contactUserId: 'user-1', nickname: 'Bestie', isFavorite: true, isBlocked: false, relationship: 'friend', tags: ['close'] },
         { userId: 'me', contactUserId: 'user-4', nickname: 'New Contact', isFavorite: false, isBlocked: false, relationship: 'colleague', tags: [] }],
@@ -41,8 +39,7 @@ describe('forward directory', () => {
   it('gates forwarding on masterpass lock state', () => {
     const gate = createForwardSecurityGate({
       status: { isUnlocked: false },
-      getMasterKey: () => null,
-    });
+      getMasterKey: () => null});
 
     expect(gate.isLocked()).toBe(true);
     expect(() => gate.assertUnlocked()).toThrow('MASTERPASS_LOCKED');
@@ -58,14 +55,11 @@ describe('forward directory', () => {
         listContacts: async () => [],
         resolveProfiles: async () => [],
         createConversation,
-        sendMessage,
-      },
+        sendMessage},
       security: {
         status: { isUnlocked: true },
-        getMasterKey: () => ({} as CryptoKey),
-      },
-      sourceApp: 'note',
-    });
+        getMasterKey: () => ({} as CryptoKey)},
+      sourceApp: 'note'});
 
     const target = {
       id: 'person:user-1',
@@ -74,16 +68,14 @@ describe('forward directory', () => {
       conversationId: null,
       displayName: 'User One',
       sourceApps: ['note' as const],
-      searchableTerms: ['user one'],
-    };
+      searchableTerms: ['user one']};
 
     const result = await directory.forwardToTarget('me', target, {
       content: 'Forwarded resource',
       type: 'attachment',
       sourceApp: 'note',
       sourceResourceId: 'note-123',
-      sourceResourceType: 'note',
-    });
+      sourceResourceType: 'note'});
 
     expect(createConversation).toHaveBeenCalledWith({
       participantIds: ['me', 'user-1'],

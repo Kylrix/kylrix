@@ -47,14 +47,12 @@ export const metadata: Metadata = {
         width: 1200,
         height: 630,
         alt: 'Kylrix Ecosystem'},
-    ],
-  },
+    ]},
   twitter: {
     card: 'summary_large_image',
     title: 'Kylrix · The agentic workspace that 10x the productivity of high agency builders',
     description: 'The agentic workspace that 10x the productivity of high agency builders.',
-    images: ['/opengraph-image']},
-};
+    images: ['/opengraph-image']}};
 
 export const viewport: Viewport = {
   themeColor: '#6366F1',

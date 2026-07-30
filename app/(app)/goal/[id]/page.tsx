@@ -9,15 +9,13 @@ const STATUS_LABELS: Record<string, string> = {
   'in-progress': 'In progress',
   done: 'Completed',
   blocked: 'Blocked',
-  cancelled: 'Cancelled',
-};
+  cancelled: 'Cancelled'};
 
 const PRIORITY_COLORS: Record<string, string> = {
   low: '#A1A1AA',
   medium: '#14B8A6',
   high: '#F59E0B',
-  urgent: '#EF4444',
-};
+  urgent: '#EF4444'};
 
 function AccessUnavailable() {
   return (
@@ -42,8 +40,7 @@ function AccessUnavailable() {
 }
 
 export default async function PublicGoalPage({
-  params,
-}: {
+  params}: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;

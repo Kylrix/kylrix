@@ -191,9 +191,7 @@ export function NewChatDrawer({
                     borderLeft: isDesktop ? '1px solid #34322F' : undefined,
                     width: isDesktop ? 'min(480px, 90vw)' : DRAWER_SX.width,
                     maxHeight: isDesktop ? 'calc(100dvh - 88px)' : DRAWER_SX.maxHeight,
-                    height: isDesktop ? 'calc(100dvh - 88px)' : 'auto',
-                },
-            }}
+                    height: isDesktop ? 'calc(100dvh - 88px)' : 'auto'}}}
         >
             <Box sx={{ p: 2.75, pb: 'calc(2.75rem + env(safe-area-inset-bottom))' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>

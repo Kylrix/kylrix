@@ -10,6 +10,5 @@ export const colorsLight = {
   primary: '#6366F1',
   secondary: '#F2F2F2',
   foreground: '#000000',
-  background: '#FFFFFF',
-};
+  background: '#FFFFFF'};
 

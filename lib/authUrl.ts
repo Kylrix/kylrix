@@ -63,8 +63,7 @@ export function openAuthPopup(navigate?: (url: string) => void): Window | null {
   const popup = window.open(
     fullUrl,
     "auth_popup",
-    "width=500,height=700,resizable=yes,scrollbars=yes",
-  );
+    "width=500,height=700,resizable=yes,scrollbars=yes");
 
   if (!popup) {
     console.warn("Popup blocked, falling back to redirect in kylrixvault");

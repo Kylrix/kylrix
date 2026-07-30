@@ -20,8 +20,7 @@ import { isFlowPath, isWorkspacesPath, isGoalsSurfacePath } from '@/lib/routing/
 
 const FAB_BOTTOM = {
   landing: 32,
-  app: { xs: 'calc(104px + env(safe-area-inset-bottom))', md: 32 },
-} as const;
+  app: { xs: 'calc(104px + env(safe-area-inset-bottom))', md: 32 }} as const;
 
 export default function UniversalFAB() {
   const { config } = useFAB();
@@ -29,7 +28,7 @@ export default function UniversalFAB() {
   const { isOpen: isAgenticDrawerOpen } = useAgenticDrawer();
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
-  const { isRecording} = useLocalContext();
+  const {} = useLocalContext();
 
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
@@ -65,8 +64,7 @@ export default function UniversalFAB() {
     flexDirection: 'column' as const,
     alignItems: 'flex-end',
     gap: 1.5,
-    pointerEvents: 'none' as const,
-  };
+    pointerEvents: 'none' as const};
 
   const childPointerEvents = { pointerEvents: 'auto' as const };
 
@@ -88,9 +86,7 @@ export default function UniversalFAB() {
               '&:hover': {
                 bgcolor: mainColor,
                 transform: 'translateY(-4px)',
-                boxShadow: `0 14px 42px ${alpha(mainColor, 0.52)}`,
-              },
-            }}
+                boxShadow: `0 14px 42px ${alpha(mainColor, 0.52)}`}}}
           >
             {mainIcon || <Plus size={32} strokeWidth={2} />}
           </Fab>
@@ -133,8 +129,7 @@ export default function UniversalFAB() {
                 visibility: isExpanded ? 'visible' : 'hidden',
                 pointerEvents: isExpanded ? 'auto' : 'none',
                 transform: isExpanded ? 'translateY(0) scale(1)' : 'translateY(16px) scale(0.9)',
-                transition: `opacity 0.32s ease ${delay}, transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) ${delay}, visibility 0.32s ${delay}`,
-              }}
+                transition: `opacity 0.32s ease ${delay}, transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) ${delay}, visibility 0.32s ${delay}`}}
             >
               <Box
                 sx={{
@@ -173,8 +168,7 @@ export default function UniversalFAB() {
                   color: 'rgba(255, 255, 255, 0.88)',
                   boxShadow: '0 10px 28px rgba(0,0,0,0.5)',
                   transition: 'transform 0.2s ease, border-color 0.2s ease',
-                  '&:active': { transform: 'scale(0.92)' },
-                }}
+                  '&:active': { transform: 'scale(0.92)' }}}
               >
                 {action.icon}
               </Box>
@@ -196,8 +190,7 @@ export default function UniversalFAB() {
             boxShadow: isExpanded ? '0 12px 40px rgba(0,0,0,0.55)' : `0 10px 34px ${alpha(mainColor, 0.45)}`,
             transform: isExpanded ? 'rotate(0deg)' : 'none',
             transition: 'all 0.38s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            '&:active': { transform: 'scale(0.94)' },
-          }}
+            '&:active': { transform: 'scale(0.94)' }}}
         >
           <Box
             sx={{

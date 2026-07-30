@@ -83,8 +83,7 @@ async function upsertRollup(input: {
     trustScore: Math.max(0, input.trustDelta),
     lastEventAt: currentTs,
     updatedAt: currentTs,
-    metadata: null,
-  };
+    metadata: null};
 
   try {
     await databases.createRow(DB_ID, ROLLUPS_TABLE, ID.unique(), createPayload);
@@ -108,8 +107,7 @@ async function upsertRollup(input: {
     weightedScore: Number(existing.weightedScore || 0) + Math.max(0, input.incrementUnique + input.incrementTotal),
     trustScore: Number(existing.trustScore || 0) + Math.max(0, input.trustDelta),
     lastEventAt: currentTs,
-    updatedAt: currentTs,
-  });
+    updatedAt: currentTs});
 }
 
 export async function trackEngagementView(input: TrackEngagementInput) {
@@ -172,8 +170,7 @@ export async function trackEngagementView(input: TrackEngagementInput) {
     bucketDay,
     bucketMonth,
     occurredAt,
-    metadata: input.metadata ? JSON.stringify(input.metadata) : null,
-  });
+    metadata: input.metadata ? JSON.stringify(input.metadata) : null});
 
   const ownerScopeId = ownerUserId || 'unknown';
   await upsertRollup({
@@ -190,8 +187,7 @@ export async function trackEngagementView(input: TrackEngagementInput) {
     incrementUnique: 1,
     incrementTotal: 1,
     incrementReceipts: isReceipt ? 1 : 0,
-    trustDelta,
-  });
+    trustDelta});
 
   await upsertRollup({
     rollupKey: `owner:${ownerScopeId}:${bucketMonth}`,
@@ -207,8 +203,7 @@ export async function trackEngagementView(input: TrackEngagementInput) {
     incrementUnique: 1,
     incrementTotal: 1,
     incrementReceipts: isReceipt ? 1 : 0,
-    trustDelta,
-  });
+    trustDelta});
 
   return { accepted: true, deduped: false, event };
 }

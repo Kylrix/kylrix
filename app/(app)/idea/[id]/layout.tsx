@@ -3,8 +3,7 @@ import { validatePublicNoteAccess } from '@/lib/appwrite';
 import { buildOgMetadata } from '@/lib/og/share-card';
 
 export async function generateMetadata({
-  params,
-}: {
+  params}: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
@@ -14,8 +13,7 @@ export async function generateMetadata({
     if (!note) {
       return {
         title: 'Shared Note · Kylrix',
-        description: 'View this shared note securely.',
-      };
+        description: 'View this shared note securely.'};
     }
 
     let meta: any = {};
@@ -41,8 +39,7 @@ export async function generateMetadata({
   } catch {
     return {
       title: 'Shared Note · Kylrix',
-      description: 'View shared notes securely.',
-    };
+      description: 'View shared notes securely.'};
   }
 }
 

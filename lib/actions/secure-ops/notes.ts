@@ -19,9 +19,7 @@ import {
 const {
   getActor,
   verifyResourcePermissionSecure,
-  verifyNotePermission,
-  CACHE_TTL_MS,
-  VIEWER_COOKIE} = shared;
+  verifyNotePermission} = shared;
 
 const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 const NOTES_TABLE_ID = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
@@ -157,8 +155,7 @@ export async function getNoteSecondaryObjectPreviewSecure(
     task: { db: APPWRITE_CONFIG.DATABASES.FLOW, table: APPWRITE_CONFIG.TABLES.FLOW.TASKS },
     form: { db: APPWRITE_CONFIG.DATABASES.FLOW, table: APPWRITE_CONFIG.TABLES.FLOW.FORMS },
     note: { db: NOTE_DB_ID, table: NOTES_TABLE_ID },
-    vault: { db: APPWRITE_CONFIG.DATABASES.VAULT, table: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS },
-  };
+    vault: { db: APPWRITE_CONFIG.DATABASES.VAULT, table: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS }};
   const target = map[childKind];
   if (!target) {
     return {
@@ -227,8 +224,7 @@ export async function getNoteInheritedFileBlobSecure(
   return {
     dataUrl: `data:${mimeType};base64,${base64}`,
     mimeType,
-    name: fileMeta?.name || fileId,
-  };
+    name: fileMeta?.name || fileId};
 }
 
 export async function getPublicNoteDataSecure(noteId: string, jwt?: string) {
@@ -535,7 +531,6 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
   const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
   const APPWRITE_TABLE_ID_NOTES = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
   const APPWRITE_TABLE_ID_TAGS = APPWRITE_CONFIG.TABLES.NOTE.TAGS;
@@ -574,8 +569,7 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
       databaseId: APPWRITE_DATABASE_ID,
       tableId: tagsTable,
       rowId: ID.unique(),
-      data: { name: tagName, nameLower: key, userId, createdAt: now, usageCount: 0 },
-    });
+      data: { name: tagName, nameLower: key, userId, createdAt: now, usageCount: 0 }});
             existingTagRows[key] = created;
           } catch (_createTagErr: any) {
             try {
@@ -613,8 +607,7 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
       databaseId: APPWRITE_DATABASE_ID,
       tableId: tagsTable,
       rowId: tRow.$id,
-      data: { usageCount: current + 1 },
-    });
+      data: { usageCount: current + 1 }});
           }
         } catch {}
 
@@ -624,8 +617,7 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
       databaseId: APPWRITE_DATABASE_ID,
       tableId: noteTagsTable,
       rowId: ID.unique(),
-      data: { resourceId: noteId, resourceType: 'note', tagId, tag: tagName, userId, createdAt: now },
-    });
+      data: { resourceId: noteId, resourceType: 'note', tagId, tag: tagName, userId, createdAt: now }});
         } catch (e: any) {
           console.error('note_tags create failed on server', e?.message || e);
         }
@@ -672,8 +664,7 @@ export async function createNoteSecure(data: any, jwt?: string): Promise<any> {
     getNotePermissions,
     cleanRowData,
     filterNoteData,
-    syncTags,
-  });
+    syncTags});
 
   try {
     const note = await noteCreationServiceServer.createNote(noteData);
@@ -794,8 +785,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
     getNote: hydrateNoteRow,
     getNotePermissions,
     cleanRowData,
-    filterNoteData,
-  });
+    filterNoteData});
 
   const updatedAt = new Date().toISOString();
   const row = await noteService.updateNote(noteId, patch, { ownerId: noteOwnerId || actor.$id });
@@ -829,8 +819,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
       databaseId: APPWRITE_DATABASE_ID,
       tableId: tagsTable,
       rowId: ID.unique(),
-      data: { name: tagName, nameLower: key, userId: actor.$id, createdAt: updatedAt, usageCount: 0 },
-    });
+      data: { name: tagName, nameLower: key, userId: actor.$id, createdAt: updatedAt, usageCount: 0 }});
               tagRows[key] = created;
             } catch (_createErr) {
               try {
@@ -876,8 +865,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
       databaseId: APPWRITE_DATABASE_ID,
       tableId: APPWRITE_TABLE_ID_TAGS,
       rowId: tRow.$id,
-      data: { usageCount: current + 1 },
-    });
+      data: { usageCount: current + 1 }});
           }
         } catch {}
 
@@ -886,8 +874,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
       databaseId: APPWRITE_DATABASE_ID,
       tableId: noteTagsTable,
       rowId: ID.unique(),
-      data: { resourceId: noteId, resourceType: 'note', tagId, tag: tagName, userId: actor.$id, createdAt: updatedAt },
-    });
+      data: { resourceId: noteId, resourceType: 'note', tagId, tag: tagName, userId: actor.$id, createdAt: updatedAt }});
           existingPairs.add(pairKey);
         } catch (ie) {
           console.error('note_tags create (updateNoteSecure) failed', ie);
@@ -908,8 +895,7 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string):
       databaseId: APPWRITE_DATABASE_ID,
       tableId: APPWRITE_TABLE_ID_TAGS,
       rowId: tRow.$id,
-      data: { usageCount: Math.max(0, current - 1) },
-    });
+      data: { usageCount: Math.max(0, current - 1) }});
             }
           } catch {}
 
@@ -984,8 +970,7 @@ export async function createGhostNoteSecure(data: {
     expiresAt: expiresAt,
     version: 'v2',
     isEncrypted: data.isEncrypted || false,
-    ...(data.creatorDeletionProofHash ? { creatorDeletionProofHash: data.creatorDeletionProofHash } : {}),
-  });
+    ...(data.creatorDeletionProofHash ? { creatorDeletionProofHash: data.creatorDeletionProofHash } : {})});
 
   const tables = createSystemTablesDB();
   const result = await tables.createRow({
@@ -1003,8 +988,7 @@ export async function createGhostNoteSecure(data: {
       metadata,
       isGhost: true,
       isThread: false},
-    permissions: [`read("any")`],
-  });
+    permissions: [`read("any")`]});
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -1040,8 +1024,7 @@ export async function createGhostNoteForCallSecure(callId: string, title?: strin
       metadata,
       isGhost: true,
       isThread: true},
-    permissions: [Permission.read(Role.user(actor.$id))],
-  });
+    permissions: [Permission.read(Role.user(actor.$id))]});
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -1101,8 +1084,7 @@ export async function createGhostNoteForProjectSecure(projectId: string, title?:
       metadata,
       isGhost: true,
       isThread: true},
-    permissions: threadPermissions,
-  });
+    permissions: threadPermissions});
 
   // Update parent project metadata with discussionNoteId
   let projMeta: any = {};
@@ -1170,8 +1152,7 @@ export async function createGhostNoteForResourceSecure(
       metadata,
       isGhost: true,
       isThread: true},
-    permissions: [Permission.read(Role.user(actor.$id))],
-  });
+    permissions: [Permission.read(Role.user(actor.$id))]});
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -1216,8 +1197,7 @@ export async function createGhostNoteChatSecure(data: {
       isThread: true,
       isChat: true,
       collaborators: data.participants},
-    permissions: data.participants.map(id => Permission.read(Role.user(id))),
-  });
+    permissions: data.participants.map(id => Permission.read(Role.user(id)))});
 
   // Create polymorphic Collaborators rows for each participant
   for (const participantId of data.participants) {
@@ -1235,8 +1215,7 @@ export async function createGhostNoteChatSecure(data: {
           status: 'accepted',
           invitedAt: new Date().toISOString(),
           accepted: true},
-        permissions: data.participants.map(id => Permission.read(Role.user(id))),
-      });
+        permissions: data.participants.map(id => Permission.read(Role.user(id)))});
     } catch (e) {
       console.error('[createGhostNoteChat] Failed to add collaborator row:', e);
     }

@@ -38,8 +38,7 @@ class MasterPassCrypto {
   // Derive key from master password using Argon2id (Primary)
   private async deriveKeyWithArgon2id(
     password: string,
-    salt: Uint8Array,
-  ): Promise<CryptoKey> {
+    salt: Uint8Array): Promise<CryptoKey> {
     const { argon2id } = await import('hash-wasm');
     const hash = await argon2id({
       password,
@@ -55,23 +54,20 @@ class MasterPassCrypto {
       hash as any,
       { name: "AES-GCM", length: MasterPassCrypto.KEY_SIZE },
       true,
-      ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
-    );
+      ["encrypt", "decrypt", "wrapKey", "unwrapKey"]);
   }
 
   // Derive key from master password using PBKDF2 (Legacy)
   private async deriveKeyPBKDF2(
     password: string,
-    salt: Uint8Array,
-  ): Promise<CryptoKey> {
+    salt: Uint8Array): Promise<CryptoKey> {
     const encoder = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey(
       "raw",
       encoder.encode(password),
       { name: "PBKDF2" },
       false,
-      ["deriveBits", "deriveKey"],
-    );
+      ["deriveBits", "deriveKey"]);
 
     return crypto.subtle.deriveKey(
       {
@@ -82,8 +78,7 @@ class MasterPassCrypto {
       keyMaterial,
       { name: "AES-GCM", length: MasterPassCrypto.KEY_SIZE },
       true, // Make extractable for passkey functionality
-      ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
-    );
+      ["encrypt", "decrypt", "wrapKey", "unwrapKey"]);
   }
 
   private async deriveKey(
@@ -115,8 +110,7 @@ class MasterPassCrypto {
       keyBytes,
       { name: "AES-GCM", length: 256 },
       true, // Make it extractable so it can be re-wrapped
-      ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
-    );
+      ["encrypt", "decrypt", "wrapKey", "unwrapKey"]);
     
     // Auto-unlock if we just imported a key (e.g. from SW recovery)
     if (this.masterKey) {
@@ -207,8 +201,7 @@ class MasterPassCrypto {
   async unlock(
     masterPassword: string,
     userId: string,
-    isFirstTime: boolean = false,
-  ): Promise<boolean> {
+    isFirstTime: boolean = false): Promise<boolean> {
     try {
       // 1. Try to unlock via Keychain (New Architecture)
       const keychainSuccess = await this.unlockWithKeychain(
@@ -657,14 +650,12 @@ class MasterPassCrypto {
 
       // Generate larger IV for enhanced security
       const iv = crypto.getRandomValues(
-        new Uint8Array(MasterPassCrypto.IV_SIZE),
-      );
+        new Uint8Array(MasterPassCrypto.IV_SIZE));
 
       const encrypted = await crypto.subtle.encrypt(
         { name: "AES-GCM", iv: iv },
         this.masterKey!,
-        plaintext,
-      );
+        plaintext);
 
       // Combine IV and encrypted data
       const combined = new Uint8Array(iv.length + encrypted.byteLength);
@@ -701,8 +692,7 @@ class MasterPassCrypto {
       const combined = new Uint8Array(
         atob(encryptedData)
           .split("")
-          .map((char: any) => char.charCodeAt(0)),
-      );
+          .map((char: any) => char.charCodeAt(0)));
 
       // Extract IV (now 16 bytes) and encrypted data
       const iv = combined.slice(0, MasterPassCrypto.IV_SIZE);
@@ -711,8 +701,7 @@ class MasterPassCrypto {
       const decrypted = await crypto.subtle.decrypt(
         { name: "AES-GCM", iv: iv },
         this.masterKey!,
-        encrypted,
-      );
+        encrypted);
 
       const decoder = new TextDecoder();
       const plaintext = decoder.decode(decrypted);

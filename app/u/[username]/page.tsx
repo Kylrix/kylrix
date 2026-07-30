@@ -4,8 +4,7 @@ import { UsersService } from '@/lib/services/users';
 import { buildOgMetadata } from '@/lib/og/share-card';
 
 export async function generateMetadata({
-  params,
-}: {
+  params}: {
   params: Promise<{ username: string }>;
 }): Promise<Metadata> {
   try {
@@ -16,8 +15,7 @@ export async function generateMetadata({
       return buildOgMetadata({
         title: `@${username} · Kylrix`,
         description: `View @${username}'s profile on Kylrix.`,
-        imageUrl: `/u/${username}/opengraph-image`,
-      });
+        imageUrl: `/u/${username}/opengraph-image`});
     }
 
     const displayName = profile.displayName || profile.username || username;
@@ -32,20 +30,17 @@ export async function generateMetadata({
     return buildOgMetadata({
       title: `${displayName} (@${handle}) · Kylrix`,
       description: bioText,
-      imageUrl: previewImage,
-    });
+      imageUrl: previewImage});
   } catch (error) {
     console.error('Error generating profile metadata:', error);
     return {
       title: 'Kylrix User Profile',
-      description: 'Connect and view profiles on Kylrix.',
-    };
+      description: 'Connect and view profiles on Kylrix.'};
   }
 }
 
 export default async function UserProfilePage({
-  params,
-}: {
+  params}: {
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;

@@ -62,8 +62,7 @@ export const UserResourcePinService = {
         resourceType,
         resourceId,
         pinnedAt: now},
-      pinPermissions(userId),
-    );
+      pinPermissions(userId));
   },
 
   async unpin(userId: string, resourceType: PinnableResourceType, resourceId: string): Promise<void> {
@@ -75,8 +74,7 @@ export const UserResourcePinService = {
   async findPin(
     userId: string,
     resourceType: PinnableResourceType,
-    resourceId: string,
-  ): Promise<UserResourcePinRow | null> {
+    resourceId: string): Promise<UserResourcePinRow | null> {
     const res = await databases.listRows(DATABASE_ID, TABLE_ID, [
       Query.equal('userId', userId),
       Query.equal('resourceType', resourceType),
@@ -89,8 +87,7 @@ export const UserResourcePinService = {
   async isPinned(userId: string, resourceType: PinnableResourceType, resourceId: string): Promise<boolean> {
     const row = await this.findPin(userId, resourceType, resourceId);
     return !!row;
-  },
-};
+  }};
 
 export function resolveEffectivePinned(
   actorId: string | null | undefined,
@@ -98,8 +95,7 @@ export function resolveEffectivePinned(
   resourceId: string,
   rowIsPinned: boolean | string[] | null | undefined,
   collaboratorPinIds: ReadonlySet<string>,
-  resourceType?: PinnableResourceType,
-): boolean {
+  resourceType?: PinnableResourceType): boolean {
   if (!actorId) return false;
 
   if (resourceType === 'message') {

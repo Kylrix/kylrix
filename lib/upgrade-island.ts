@@ -14,8 +14,7 @@ export function showUpgradeIsland(feature: string) {
       border: '1px solid rgba(255, 255, 255, 0.1)',
       borderRadius: '16px',
       fontWeight: 700,
-      fontFamily: 'var(--font-clash)',
-    }
+      fontFamily: 'var(--font-clash)'}
   });
   
   // In the future, this could trigger a message to the Dynamic Island via Mesh

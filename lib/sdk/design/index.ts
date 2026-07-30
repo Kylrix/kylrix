@@ -23,8 +23,7 @@ export const KYLRIX_APP_TONES: Record<KylrixApp, { primary: string; secondary: s
   note: { primary: KYLRIX_COLORS.ecosystemPrimary, secondary: '#EC4899', label: 'Note' },
   connect: { primary: KYLRIX_COLORS.ecosystemPrimary, secondary: '#F59E0B', label: 'Connect' },
   send: { primary: KYLRIX_COLORS.ecosystemPrimary, secondary: '#EC4899', label: 'Send' },
-  projects: { primary: KYLRIX_COLORS.ecosystemPrimary, secondary: '#6366F1', label: 'Projects' },
-};
+  projects: { primary: KYLRIX_COLORS.ecosystemPrimary, secondary: '#6366F1', label: 'Projects' }};
 
 
 export const TOPBAR_LAYOUT = {

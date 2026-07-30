@@ -109,8 +109,7 @@ export default function NewTotpDialog({
     } catch (e: unknown) {
       const err = e as { message?: string };
       toast.error(
-        err.message || `Failed to ${initialData ? "update" : "add"} Smart Code.`,
-      );
+        err.message || `Failed to ${initialData ? "update" : "add"} Smart Code.`);
       setLoading(false);
     }
   };

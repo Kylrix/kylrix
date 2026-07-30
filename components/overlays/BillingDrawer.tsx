@@ -14,8 +14,7 @@ import {
   Search,
   ChevronUp,
   ChevronDown,
-  X,
-} from 'lucide-react';
+  X} from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { AppwriteService } from '@/lib/appwrite';
@@ -201,8 +200,7 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
           zIndex: 99999,
           height: isExpanded ? '100dvh' : '60dvh',
           maxHeight: '100dvh',
-          transition: 'height 0.3s cubic-bezier(0.4,0,0.2,1)',
-        }}
+          transition: 'height 0.3s cubic-bezier(0.4,0,0.2,1)'}}
       >
         {/* Drag Handle + Header */}
         <div className="flex-shrink-0">

@@ -44,7 +44,6 @@ interface MasterPassDrawerProps {
 }
 
 const VAULT_PRIMARY = "#10B981"; // Emerald
-const BG_COLOR = "#0A0908";
 const SURFACE_COLOR = "#161412";
 
 export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterPassDrawerProps) {
@@ -461,8 +460,7 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
       p: { xs: 3, md: 4 },
       display: 'flex',
       flexDirection: 'column',
-      height: '100%',
-    }}>
+      height: '100%'}}>
       {/* Header with close button on mobile */}
       <Box sx={{ 
         display: 'flex', 
@@ -615,16 +613,12 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                       letterSpacing: '0.5em',
                       textAlign: 'center',
                       fontSize: '1.5rem',
-                      py: 1},
-                  },
-                }}
+                      py: 1}}}}
                 sx={{
                   '& .ob-input-root': {
                     borderRadius: '16px',
                     bgcolor: alpha(VAULT_PRIMARY, 0.05),
-                    border: `1px solid ${alpha(VAULT_PRIMARY, 0.2)}`,
-                  },
-                }}
+                    border: `1px solid ${alpha(VAULT_PRIMARY, 0.2)}`}}}
               />
               <Button
                 type="button"
@@ -674,15 +668,12 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                           {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
                         </IconButton>
                       </InputAdornment>
-                    ),
-                  },
-                }}
+                    )}}}
                 sx={{
                   '& .ob-input-root': {
                     borderRadius: '16px',
                     bgcolor: alpha(VAULT_PRIMARY, 0.05),
-                    border: `1px solid ${alpha(VAULT_PRIMARY, 0.2)}`,
-                  },
+                    border: `1px solid ${alpha(VAULT_PRIMARY, 0.2)}`},
                   '& input': {
                     WebkitTextSecurity: showPassword ? 'none' : 'disc'}
                 }}
@@ -707,15 +698,12 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                             {showConfirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
                           </IconButton>
                         </InputAdornment>
-                      ),
-                    },
-                  }}
+                      )}}}
                   sx={{
                     '& .ob-input-root': {
                       borderRadius: '16px',
                       bgcolor: alpha(VAULT_PRIMARY, 0.05),
-                      border: `1px solid ${alpha(VAULT_PRIMARY, 0.2)}`,
-                    },
+                      border: `1px solid ${alpha(VAULT_PRIMARY, 0.2)}`},
                     '& input': {
                       WebkitTextSecurity: showConfirmPassword ? 'none' : 'disc'}
                   }}
@@ -868,9 +856,7 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
             backgroundColor: 'rgba(0, 0, 0, 0.5)',
             backdropFilter: 'blur(4px)',
             zIndex: 9999999
-          },
-        },
-      }}
+          }}}}
       PaperProps={{
         sx: {
           borderRadius: '0',

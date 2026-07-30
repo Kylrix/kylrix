@@ -15,8 +15,7 @@ export type ObjectDraft = {
 export function buildNoteShell(
   draft: ObjectDraft,
   userId?: string | null,
-  opts?: { isPublic?: boolean; isGuest?: boolean },
-): Notes {
+  opts?: { isPublic?: boolean; isGuest?: boolean }): Notes {
   const id = ID.unique();
   const now = new Date().toISOString();
   const title =
@@ -45,15 +44,13 @@ export function buildNoteShell(
     $createdAt: now,
     $updatedAt: now,
     createdAt: now,
-    updatedAt: now,
-  } as unknown as Notes;
+    updatedAt: now} as unknown as Notes;
 }
 
 /** Minimal goal payload for TaskContext.addTask. */
 export function buildGoalInput(
   draft: ObjectDraft,
-  opts?: { projectId?: string; creatorId?: string | null },
-): Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'position'> {
+  opts?: { projectId?: string; creatorId?: string | null }): Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'position'> {
   const creatorId = opts?.creatorId || 'guest';
   return {
     title: draft.title.trim() || 'Untitled Goal',
@@ -75,6 +72,5 @@ export function buildGoalInput(
     isPinned: false,
     isArchived: false,
     isPublic: false,
-    isGuest: false,
-  };
+    isGuest: false};
 }

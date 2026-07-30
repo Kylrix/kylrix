@@ -147,8 +147,7 @@ function secretChatBubbleSx(isOutgoing: boolean) {
       boxShadow: isOutgoing 
         ? '0 6px 20px rgba(99, 102, 241, 0.1)' 
         : '0 6px 20px rgba(0, 0, 0, 0.5)',
-      borderColor: isOutgoing ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255, 255, 255, 0.15)'},
-  };
+      borderColor: isOutgoing ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255, 255, 255, 0.15)'}};
 }
 
 function groupCommentReactions(reactions: any[] = [], userId?: string) {
@@ -658,8 +657,7 @@ export function ProjectDiscussionSidebar({
                   color: '#818CF8',
                   bgcolor: 'rgba(99, 102, 241, 0.06)',
                   border: '1px solid rgba(99, 102, 241, 0.15)',
-                  '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.12)' },
-                }}
+                  '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.12)' }}}
               >
                 {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
               </Button>
@@ -841,8 +839,7 @@ export function ProjectDiscussionSidebar({
                 backgroundImage: 'none',
                 borderTop: '1px solid rgba(255, 255, 255, 0.05)',
                 boxShadow: '0 -12px 36px rgba(0, 0, 0, 0.5), 0 16px 48px rgba(0, 0, 0, 0.7)',
-                zIndex: 20,
-              }}
+                zIndex: 20}}
             >
               {mentionAnchorEl && mentionResults.length > 0 && (
                 <Box sx={{ mb: 1.5, p: 1.5, borderRadius: '16px', bgcolor: '#0B0A09', border: '1px solid rgba(255,255,255,0.05)', maxHeight: 180, overflowY: 'auto' }}>
@@ -880,8 +877,7 @@ export function ProjectDiscussionSidebar({
                       flexShrink: 0,
                       bgcolor: '#0B0A09',
                       border: '1px solid rgba(255,255,255,0.05)',
-                      '&:hover': { bgcolor: '#1C1A18', borderColor: 'rgba(99, 102, 241, 0.4)', color: '#fff' },
-                    }}
+                      '&:hover': { bgcolor: '#1C1A18', borderColor: 'rgba(99, 102, 241, 0.4)', color: '#fff' }}}
                   >
                     {isRecording ? <Square size={18} fill="#ff4d4d" /> : <Mic size={20} strokeWidth={2} />}
                   </IconButton>
@@ -933,9 +929,7 @@ export function ProjectDiscussionSidebar({
                         fontWeight: 600,
                         fontFamily: 'var(--font-satoshi)',
                         fontSize: '0.95rem',
-                        '&:focus-within': { borderColor: '#6366F1', bgcolor: '#0B0A09' },
-                      },
-                    }}
+                        '&:focus-within': { borderColor: '#6366F1', bgcolor: '#0B0A09' }}}}
                   />
                 </Box>
 
@@ -950,8 +944,7 @@ export function ProjectDiscussionSidebar({
                     bgcolor: draftText.trim() ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
                     border: '1px solid',
                     borderColor: draftText.trim() ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                    '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.2)', borderColor: '#6366F1' },
-                  }}
+                    '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.2)', borderColor: '#6366F1' }}}
                 >
                   {sending ? <RefreshCw className="animate-spin" size={20} /> : <Send size={20} strokeWidth={2.5} />}
                 </IconButton>

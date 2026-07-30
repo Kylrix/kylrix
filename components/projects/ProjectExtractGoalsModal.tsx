@@ -116,8 +116,7 @@ export default function ProjectExtractGoalsModal({
             priority: 'medium',
             userId: userId,
             createdAt: now,
-            updatedAt: now,
-          }
+            updatedAt: now}
         );
 
         // 2. Link this task as a "goal" to the parent project
@@ -147,8 +146,7 @@ export default function ProjectExtractGoalsModal({
           border: '1px solid rgba(255,255,255,0.06)',
           borderRadius: '28px',
           backgroundImage: 'none',
-          overflow: 'hidden'},
-      }}
+          overflow: 'hidden'}}}
     >
       <DialogTitle sx={{ p: 3, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -201,8 +199,7 @@ export default function ProjectExtractGoalsModal({
                     sx={{
                       color: 'rgba(255,255,255,0.2)',
                       '&.ob-checked': {
-                        color: theme.palette.primary.main},
-                    }}
+                        color: theme.palette.primary.main}}}
                   />
                 }
                 sx={{
@@ -216,8 +213,7 @@ export default function ProjectExtractGoalsModal({
                       fontWeight: 600,
                       fontSize: '0.85rem',
                       color: task.selected ? '#fff' : 'rgba(255,255,255,0.4)',
-                      transition: 'color 0.2s ease'},
-                  }}
+                      transition: 'color 0.2s ease'}}}
                 />
               </ListItem>
             ))}
@@ -235,8 +231,7 @@ export default function ProjectExtractGoalsModal({
               textTransform: 'none',
               fontWeight: 800,
               fontSize: '0.75rem',
-              '&:hover': { color: '#fff', bgcolor: 'transparent' },
-            }}
+              '&:hover': { color: '#fff', bgcolor: 'transparent' }}}
           >
             {tasks.every((t) => t.selected) ? 'Deselect All' : 'Select All'}
           </Button>
@@ -254,8 +249,7 @@ export default function ProjectExtractGoalsModal({
               fontWeight: 800,
               textTransform: 'none',
               fontSize: '0.8rem',
-              '&:hover': { bgcolor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.1)' },
-            }}
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.1)' }}}
           >
             Cancel
           </Button>
@@ -273,8 +267,7 @@ export default function ProjectExtractGoalsModal({
                 textTransform: 'none',
                 fontSize: '0.8rem',
                 boxShadow: 'none',
-                '&:hover': { bgcolor: theme.palette.primary.dark, boxShadow: 'none' },
-              }}
+                '&:hover': { bgcolor: theme.palette.primary.dark, boxShadow: 'none' }}}
             >
               {extracting ? <CircularProgress size={16} color="inherit" /> : 'Create Goals'}
             </Button>

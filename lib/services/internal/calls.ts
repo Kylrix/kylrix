@@ -2,8 +2,7 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 export async function deleteCallIfExpired(
   databases: any,
-  callId?: string | null,
-): Promise<{ deleted: boolean; reason?: string }> {
+  callId?: string | null): Promise<{ deleted: boolean; reason?: string }> {
   const normalizedId = String(callId || '').trim();
   if (!normalizedId) return { deleted: false, reason: 'missing_call_id' };
 
@@ -13,13 +12,11 @@ export async function deleteCallIfExpired(
       ? databases.getRow(
           APPWRITE_CONFIG.DATABASES.CHAT,
           APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-          normalizedId,
-        )
+          normalizedId)
       : databases.getRow(
           APPWRITE_CONFIG.DATABASES.CHAT,
           APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-          normalizedId,
-        ));
+          normalizedId));
 
     const expiresAtRaw = String((call as any)?.expiresAt || '').trim();
     const expiresAtTs = expiresAtRaw ? new Date(expiresAtRaw).getTime() : NaN;
@@ -30,14 +27,12 @@ export async function deleteCallIfExpired(
       await databases.deleteRow(
         APPWRITE_CONFIG.DATABASES.CHAT,
         APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-        normalizedId,
-      );
+        normalizedId);
     } else {
       await databases.deleteRow(
         APPWRITE_CONFIG.DATABASES.CHAT,
         APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-        normalizedId,
-      );
+        normalizedId);
     }
     return { deleted: true };
   } catch (error: any) {

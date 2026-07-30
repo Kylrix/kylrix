@@ -101,8 +101,7 @@ export default function EventList() {
           isPinned: false,
           creatorId: doc.userId || '',
           createdAt: new Date(doc.$createdAt),
-          updatedAt: new Date(doc.$updatedAt),
-        }));
+          updatedAt: new Date(doc.$updatedAt)}));
 
         setEvents((prev) => {
           const byId = new Map<string, Event>();
@@ -179,8 +178,7 @@ export default function EventList() {
           status: 'confirmed',
           coverImageId: eventData.coverImage || '',
           maxAttendees: 0,
-          recurrenceRule: eventData.recurrenceRule || '',
-        } as any,
+          recurrenceRule: eventData.recurrenceRule || ''} as any,
         eventPermissions
       );
 
@@ -198,8 +196,7 @@ export default function EventList() {
         isPinned: false,
         creatorId: currentUserId,
         createdAt: new Date(newDoc.$createdAt),
-        updatedAt: new Date(newDoc.$updatedAt),
-      };
+        updatedAt: new Date(newDoc.$updatedAt)};
 
       setEvents((prev) => [createdEvent, ...prev.filter((e) => e.id !== createdEvent.id)]);
 

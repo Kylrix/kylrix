@@ -42,5 +42,4 @@ export const AgenticPreviewPartition = {
   async clear(id: string): Promise<void> {
     const { LocalEngine } = await import('@/lib/services/LocalEngine');
     await LocalEngine.cacheSet(`${PREFIX}${id}`, null as any);
-  },
-};
+  }};

@@ -155,6 +155,5 @@ export function resolveUiDestination(query: string): UiDestination | null {
 export function buildUiCatalogPrompt(): string {
   return UI_DESTINATIONS.map(
     (d) =>
-      `- ${d.id}: "${d.label}" → ${d.route}${d.parent ? ` (under ${d.parent})` : ''}. Aliases: ${d.aliases.join(', ')}`,
-  ).join('\n');
+      `- ${d.id}: "${d.label}" → ${d.route}${d.parent ? ` (under ${d.parent})` : ''}. Aliases: ${d.aliases.join(', ')}`).join('\n');
 }

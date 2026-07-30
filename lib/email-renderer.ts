@@ -25,8 +25,7 @@ function applyVariables(template: string, vars: EmailRenderVars = {}): string {
 
 export async function renderEmailTemplate(
   templateId: string,
-  vars: EmailRenderVars = {},
-): Promise<{ subject: string; html: string }> {
+  vars: EmailRenderVars = {}): Promise<{ subject: string; html: string }> {
   const meta = getEmailTemplateMeta(templateId);
 
   if (!meta) {
@@ -38,7 +37,6 @@ export async function renderEmailTemplate(
 
   return {
     subject: meta.subject,
-    html: applyVariables(raw, vars),
-  };
+    html: applyVariables(raw, vars)};
 }
 

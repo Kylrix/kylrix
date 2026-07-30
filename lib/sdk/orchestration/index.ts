@@ -34,8 +34,7 @@ export function createCrossObjectMetadata(
     minimized?: boolean;
     maximizedRoute?: string | null;
     extra?: Record<string, unknown>;
-  },
-) {
+  }) {
   return {
     sourceApp: origin.sourceApp,
     sourceId: origin.sourceId ?? null,
@@ -47,8 +46,7 @@ export function createCrossObjectMetadata(
     createdAt: new Date().toISOString(),
     minimized: options?.minimized ?? true,
     maximizedRoute: options?.maximizedRoute ?? null,
-    ...(options?.extra || {}),
-  } as CrossObjectMetadata & Record<string, unknown>;
+    ...(options?.extra || {})} as CrossObjectMetadata & Record<string, unknown>;
 }
 
 

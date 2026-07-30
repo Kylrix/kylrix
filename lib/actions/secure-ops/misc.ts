@@ -3,7 +3,7 @@ import {
   ID, Permission, Query, Role
 } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
@@ -35,7 +35,6 @@ const {
   isEnvAdminUser,
   isEnvSERVERSDKUser,
   verifyResourcePermissionSecure,
-  CACHE_TTL_MS,
   VIEWER_COOKIE,
   isViewerTokenValid,
   issueViewerToken,
@@ -62,8 +61,7 @@ export async function mintDailyLoginSecure(input: { userId: string; dateKey: str
         uniqueActors: 1,
         trustScore: 70,
         sourceType: 'daily_login',
-        sourceId: dateKey,
-    });
+        sourceId: dateKey});
   } catch (err: any) {
     return { accepted: false, reason: err?.message || 'MINT_FAILED' };
   }
@@ -312,8 +310,7 @@ export async function applyReferralSecure(params: { referrerUsername?: string; r
       source: 'referral-link',
       referrerUsername: referrerProfile.username,
       referrerUserId: referrerId,
-      refereeUserId: actor.$id}),
-  }, [Permission.read(Role.user(actor.$id))]);
+      refereeUserId: actor.$id})}, [Permission.read(Role.user(actor.$id))]);
 
   // Reward referrer
   await databases.createRow(dbId, eventsTableId, ID.unique(), {
@@ -327,8 +324,7 @@ export async function applyReferralSecure(params: { referrerUsername?: string; r
       source: 'referral-reward',
       referrerUsername: referrerProfile.username,
       referrerUserId: referrerId,
-      refereeUserId: actor.$id}),
-  }, [Permission.read(Role.user(referrerId))]);
+      refereeUserId: actor.$id})}, [Permission.read(Role.user(referrerId))]);
 
   return { success: true, applied: true, referralEvent: event };
 }
@@ -355,8 +351,7 @@ export async function getReferralProfileSecure(username: string) {
     displayName: profile.displayName || profile.username,
     avatar: profile.avatar || null,
     userId: profile.userId || profile.$id,
-    referralLink: `https://www.kylrix.space/referral/${encodeURIComponent(profile.username)}`,
-  };
+    referralLink: `https://www.kylrix.space/referral/${encodeURIComponent(profile.username)}`};
 }
 
 export async function executeMasterPurgeSecure(jwt?: string) {
@@ -470,9 +465,7 @@ export async function createReportSecure(params: any, jwt?: string) {
           contextId: params.contextId || null,
           contextUrl: params.contextUrl || null,
           notes: params.notes || null,
-          reviewState: 'unverified'},
-      }),
-    };
+          reviewState: 'unverified'}})};
 
     const row = await databases.createRow(dbId, tableId, ID.unique(), payload, [Permission.read(Role.user(actor.$id))]);
     created.push(row);
@@ -510,8 +503,7 @@ export async function createSendGhostObjectSecure(data: {
     expiresAt,
     version: 'v3',
     isEncrypted: data.isEncrypted ?? false,
-    ...(data.creatorDeletionProofHash ? { creatorDeletionProofHash: data.creatorDeletionProofHash } : {}),
-  });
+    ...(data.creatorDeletionProofHash ? { creatorDeletionProofHash: data.creatorDeletionProofHash } : {})});
 
   const tables = createSystemTablesDB();
   const result = await tables.createRow({
@@ -536,13 +528,11 @@ export async function createSendGhostObjectSecure(data: {
       updatedAt: new Date().toISOString(),
       metadata,
       isGhost: true,
-      isThread: false,
-    },
+      isThread: false},
     permissions: [
       Permission.read(Role.any()),
       ...(actor ? [Permission.write(Role.user(actor.$id)), Permission.delete(Role.user(actor.$id))] : [])
-    ],
-  });
+    ]});
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -972,8 +962,7 @@ export async function searchGlobalUsersSecure(query: string, limit = 10) {
         email: authUser.email,
         $createdAt: profile?.$createdAt || null,
         last_username_edit: profile?.last_username_edit || null,
-        tier: profile?.tier || null,
-      }))];
+        tier: profile?.tier || null}))];
     } catch (error: any) {
       console.warn('[searchGlobalUsersSecure] Email search failed:', error?.message);
       return [];
@@ -1133,8 +1122,7 @@ export async function getFilePreviewSecure(bucketId: string, fileId: string, wid
     const res = await fetch(url.toString(), {
       headers: {
         'X-Appwrite-Project': APPWRITE_CONFIG.PROJECT_ID,
-        'X-Appwrite-Key': process.env.APPWRITE_API || ''},
-    });
+        'X-Appwrite-Key': process.env.APPWRITE_API || ''}});
     if (!res.ok) {
       console.warn('[getFilePreviewSecure] Failed to fetch url:', url.toString(), 'status:', res.status);
       return null;
@@ -1993,29 +1981,6 @@ export async function attachObjectSecure(params: {
     }
   }
 
-  const { users } = createSystemClient();
-
-  // Get parent resource (e.g. project) to check the parent's owner tier
-  let parentOwnerId = actor.$id;
-  if (params.parentKind === 'project') {
-    try {
-      const parentProject = await tables.getRow({
-        databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-        tableId: 'projects',
-        rowId: params.parentId
-      });
-      if (parentProject && parentProject.ownerId) {
-        parentOwnerId = parentProject.ownerId;
-      }
-    } catch {}
-  }
-
-  // Get parent owner's tier
-  const parentOwner = parentOwnerId === actor.$id ? actor : await users.get(parentOwnerId).catch(() => actor);
-  const parentOwnerTier = getUserSubscriptionTier(parentOwner);
-
-  // Total limit of the parent container
-
   // Count existing attachments for the container
   const containerExisting = await tables.listRows({
     databaseId,
@@ -2262,7 +2227,6 @@ export async function toggleTaskReminderSecure(taskId: string, enabled: boolean,
   if (!actor?.$id) throw new Error('Unauthorized');
 
   const { createSystemClient } = await import('@/lib/appwrite-admin');
-  const { messaging, users } = createSystemClient();
   const tables = createSystemTablesDB();
   const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
   const TASKS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.TASKS;
@@ -2325,8 +2289,7 @@ export async function toggleTaskReminderSecure(taskId: string, enabled: boolean,
       rowId: taskId,
       data: {
         scheduled: true,
-        recurrenceRule: `reminder_fn_id:${functionId}`,
-      }
+        recurrenceRule: `reminder_fn_id:${functionId}`}
     });
 
     return JSON.parse(JSON.stringify(updated));

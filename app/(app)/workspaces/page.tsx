@@ -148,7 +148,6 @@ const projectTemplates = [
   }
 ];
 
-const NAV_SURFACE = '#161412';
 
 /** Fluid card grid: wraps by available width, never forces 3 squeezed columns. */
 
@@ -309,8 +308,7 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin, onUpdate }:
           style={{
             backgroundColor: `${projColor}1A`,
             color: projColor,
-            borderColor: `${projColor}33`,
-          }}
+            borderColor: `${projColor}33`}}
         >
           <LayoutGrid size={20} strokeWidth={1.5} />
         </div>
@@ -405,8 +403,7 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin, onUpdate }:
           style={{
             backgroundColor: `${statusColor}1A`,
             color: statusColor,
-            borderColor: `${statusColor}33`,
-          }}
+            borderColor: `${statusColor}33`}}
         >
           {(project as any).isPending ? 'invite pending' : ((project as any).isRequested ? 'requested' : project.status)}
         </span>
@@ -442,7 +439,7 @@ export default function ProjectsPage() {
     setProjects(prev => prev.map(p => p.$id === updated.$id ? updated : p));
   }, [setProjects]);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [teams, _setTeams] = useState<Models.Team[]>([]);
+  const [_teams, _setTeams] = useState<Models.Team[]>([]);
   const [showAllTemplates, setShowAllTemplates] = useState(false);
 
   // Workflow Simulator States
@@ -595,8 +592,7 @@ export default function ProjectsPage() {
         rowIsPinned: project.isPinned,
         setOwnerRowPin: async (pinned) => {
           await ProjectsService.updateProject(projectId, { isPinned: pinned } as any);
-        },
-      });
+        }});
       if (isOwner) {
         setProjects((prev) => prev.map((p) => (p.$id === projectId ? { ...p, isPinned: nextPinned } : p)));
       }
@@ -928,8 +924,7 @@ export default function ProjectsPage() {
               bgcolor: '#161412',
               color: '#fff',
               border: '1px solid rgba(255,255,255,0.06)',
-              '&:hover': { bgcolor: '#1C1A18' },
-            }}
+              '&:hover': { bgcolor: '#1C1A18' }}}
           >
             <ArrowLeft size={18} />
           </IconButton>

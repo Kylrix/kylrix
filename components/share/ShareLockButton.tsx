@@ -149,11 +149,9 @@ export function ShareLockButton({
                 ? `color-mix(in srgb, ${accentColor} 70%, transparent)` 
                 : 'white',
             bgcolor: 'rgba(255, 255, 255, 0.05)',
-            transform: 'scale(1.1)',
-          },
+            transform: 'scale(1.1)'},
           '&.ob-disabled': {
-             color: 'rgba(255, 255, 255, 0.1)',
-          }
+             color: 'rgba(255, 255, 255, 0.1)'}
         }}
       >
         {loading ? (

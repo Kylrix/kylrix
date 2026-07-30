@@ -40,8 +40,7 @@ const ECOSYSTEM_APP_COLORS: Record<string, AppColorScheme> = {
     primary: '#EC4899', // Pink - Intelligence Layer
     secondary: '#F472B6', // Lighter Pink
     accent: '#DB2777', // Darker Pink
-  },
-};
+  }};
 
 /**
  * Get the color scheme for an ecosystem app

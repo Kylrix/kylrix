@@ -31,8 +31,7 @@ interface AppwriteError extends Error {
 export function AppwriteProvider({ children }: { children: ReactNode }) {
   const initialUser = getCurrentUserSnapshot();
   const [user, setUser] = useState<Models.User<Models.Preferences> | null>(
-    initialUser,
-  );
+    initialUser);
   const [loading, setLoading] = useState(!initialUser);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [needsMasterPassword, setNeedsMasterPassword] = useState(false);

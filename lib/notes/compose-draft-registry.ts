@@ -10,7 +10,6 @@ const persistedRemoteIds: Set<string> = globalAny.__persistedRemoteIds;
 
 const PERSISTED_SESSION_KEY = 'kylrix:compose:persisted';
 
-const persistLocks = new Map<string, Promise<unknown>>();
 
 function readPersistedSessionIds(): string[] {
   if (typeof window === 'undefined') return [];
@@ -72,7 +71,7 @@ export function markNotePersistedRemote(noteId: string): void {
   writePersistedSessionId(id);
 }
 
-export function isNotePersistedRemote(noteId?: string | null): boolean {
+function isNotePersistedRemote(noteId?: string | null): boolean {
   const id = String(noteId || '').trim();
   if (!id) return false;
   if (persistedRemoteIds.has(id)) return true;

@@ -2,15 +2,13 @@ import type { Metadata } from 'next';
 import { getPublicAgentSessionSecure } from '@/lib/actions/agentic';
 import {
   PublicAgentSessionView,
-  PublicAgentUnavailable,
-} from '@/components/agentic/PublicAgentShareViews';
+  PublicAgentUnavailable} from '@/components/agentic/PublicAgentShareViews';
 import { buildOgMetadata } from '@/lib/og/share-card';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
-  params,
-}: {
+  params}: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
@@ -31,13 +29,11 @@ export async function generateMetadata({
   return buildOgMetadata({
     title: `${session.title} · Shared chat`,
     description: 'A shared conversation with Kylie on Kylrix.',
-    imageUrl: previewImage,
-  });
+    imageUrl: previewImage});
 }
 
 export default async function PublicAgentSessionPage({
-  params,
-}: {
+  params}: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;

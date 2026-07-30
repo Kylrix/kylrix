@@ -7,8 +7,7 @@ function useEnginePending(resourceId?: string | null) {
   return useSyncExternalStore(
     (onStoreChange) => autonomicSyncEngine.subscribe(onStoreChange),
     () => autonomicSyncEngine.isPending(resourceId),
-    () => false,
-  );
+    () => false);
 }
 
 /**

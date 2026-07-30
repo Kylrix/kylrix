@@ -23,8 +23,7 @@ export const KeychainService = {
           queries: [Query.equal('userId', userId)]});
         return response.rows || [];
       },
-      local: async () => local,
-    });
+      local: async () => local});
 
     if (source === 'network' && Array.isArray(value) && value.length > 0) {
       await SecurityEnclave.setKeychain(userId, value);
@@ -64,5 +63,4 @@ export const KeychainService = {
 
   async deleteKeychainEntry(id: string) {
     return tablesDB.deleteRow(DB_ID, KEYCHAIN_TABLE, id);
-  },
-};
+  }};

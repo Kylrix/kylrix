@@ -156,8 +156,7 @@ function DashboardPageContent() {
       mainColor: '#10B981',
       mainIcon: <Plus size={32} strokeWidth={3} />,
       onMainClick: () => handleAdd(),
-      actions: [],
-    });
+      actions: []});
     return () => resetConfiguration();
   }, [activeTab, setConfiguration, resetConfiguration, handleAdd]);
 
@@ -214,8 +213,7 @@ function DashboardPageContent() {
     try {
       await deleteCredential(credentialToDelete.$id);
       setAllCredentials((prev) =>
-        prev.filter((c) => c.$id !== credentialToDelete.$id),
-      );
+        prev.filter((c) => c.$id !== credentialToDelete.$id));
       toast.success("Secret deleted successfully.");
     } catch (error: unknown) {
       toast.error("Failed to delete secret. Please try again.");
@@ -242,8 +240,7 @@ function DashboardPageContent() {
         setOwnerRowPin: async (pinned) => {
           const { setCredentialPinned } = await import('@/lib/appwrite');
           await setCredentialPinned(id, pinned);
-        },
-      });
+        }});
       if (isOwner) {
         setAllCredentials((prev) => prev.map((c) => (c.$id === id ? { ...c, isPinned: nextPinned } : c)));
       }

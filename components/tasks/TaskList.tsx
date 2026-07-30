@@ -28,7 +28,7 @@ export default function TaskList() {
     labels,
     isLoading,
     refreshTasks} = useTask();
-  const { setConfiguration} = useFAB();
+  const {} = useFAB();
   const { open } = useUnifiedDrawer();
 
   const [isSortOpen, setIsSortOpen] = useState(false);

@@ -72,8 +72,7 @@ export async function createChatCallAction(input: any, jwt?: string) {
       title: validated.title || undefined,
       metadata,
       conversationId: validated.conversationId},
-    permissions,
-  });
+    permissions});
 
   return { $id: result.$id, callId: result.$id };
 }

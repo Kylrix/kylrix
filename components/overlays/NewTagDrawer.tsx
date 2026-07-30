@@ -250,8 +250,7 @@ export function NewTagDrawer() {
                 borderTop: BORDER,
                 borderBottom: 0,
                 borderRight: 0,
-                zIndex: 2000,
-              }
+                zIndex: 2000}
             : {
                 height: isExpanded ? '100dvh' : '60dvh',
                 minHeight: '60dvh',
@@ -267,9 +266,7 @@ export function NewTagDrawer() {
           backgroundImage: 'none',
           overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column',
-        },
-      }}
+          flexDirection: 'column'}}}
     >
       <Box
         sx={{
@@ -279,8 +276,7 @@ export function NewTagDrawer() {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          minHeight: 0,
-        }}
+          minHeight: 0}}
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
           <Stack direction="row" alignItems="center" spacing={1.5}>
@@ -347,8 +343,7 @@ export function NewTagDrawer() {
                 bgcolor: VOID,
                 border: BORDER,
                 borderRadius: RADIUS_SMALL,
-                '&:hover': { bgcolor: HOVER },
-              }}
+                '&:hover': { bgcolor: HOVER }}}
             >
               <CloseIcon size={18} />
             </IconButton>

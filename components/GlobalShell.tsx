@@ -89,15 +89,14 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const { isCollapsed } = useSidebarContext();
   const { isWalletOpen, closeWallet } = useWalletOverlay();
   const { isOpen: isAgenticDrawerOpen, closeAgenticDrawer } = useAgenticDrawer();
-  const { mode } = useAppChrome();
+  const { } = useAppChrome();
   const { isDrawerOpen, setIsDrawerOpen } = useDrawerState();
-  const { isOpen: isCallLauncherOpen } = useCallLauncher();
+  const { } = useCallLauncher();
 
   // Smart responsive Left Sidebar visibility
   const isNoteFullPageDetail = useMemo(
     () => Boolean(pathname?.match(/^\/idea\/[^/]+$/)),
-    [pathname],
-  );
+    [pathname]);
 
 const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/post/')), [pathname]);
   const isProjectDetailPage = useMemo(() => Boolean(pathname?.match(/^\/workspaces\/[^/]+$/)), [pathname]);
@@ -204,8 +203,7 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
           width: '100%',
           minHeight: '100vh',
           pt: isSpecificPostPage ? 0 : { xs: '84px', sm: '88px', md: '96px' },
-          position: 'relative',
-        }}
+          position: 'relative'}}
       >
         {showLeftSidebar && <UnifiedLeftSidebar />}
 
@@ -222,8 +220,7 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
             pb: isSpecificPostPage ? 0 : (isLandingPage ? 0 : { xs: 12, md: 4 }),
             px: isProjectDetailPage ? { xs: 1, sm: 1, md: 2 } : isNoteFullPageDetail ? { xs: 0, sm: 0, md: 0 } : { xs: 1.5, sm: 2, md: 2.5 },
             pointerEvents: 'auto',
-            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'}}
         >
           {children}
         </Box>

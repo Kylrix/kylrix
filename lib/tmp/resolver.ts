@@ -62,8 +62,7 @@ export async function resolveIdentifier(identifier: string, defaultDomain?: stri
       return {
         npub: targetNpub,
         hex: bytesToHex(bytes),
-        source: `${username}@${domain}`,
-      };
+        source: `${username}@${domain}`};
     } catch (e) {
       throw new Error(`Failed to resolve username from ${url}: ${(e as Error).message}`);
     }

@@ -23,8 +23,7 @@ export function LinkPreviewCard({ url }: LinkPreviewCardProps) {
       const formattedTitle = pathTitle.replace(/[-_]/g, ' ');
       return {
         title: formattedTitle.charAt(0).toUpperCase() + formattedTitle.slice(1),
-        domain,
-      };
+        domain};
     } catch {
       return null;
     }

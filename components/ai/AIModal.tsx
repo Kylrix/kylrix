@@ -88,8 +88,7 @@ export function AIModal({ onClose }: { onClose: () => void }) {
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
           backgroundImage: 'none',
           display: 'flex',
-          flexDirection: 'column',
-        }
+          flexDirection: 'column'}
       }}
     >
       <Box sx={{ p: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>

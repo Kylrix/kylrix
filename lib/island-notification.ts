@@ -19,8 +19,7 @@ export function showIslandNotification(payload: IslandNotificationPayload) {
         message: payload.message,
         app: payload.app || 'connect',
         majestic: payload.majestic ?? false,
-        duration: payload.duration || 4000,
-      }
+        duration: payload.duration || 4000}
     }));
   }
 }

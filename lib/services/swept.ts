@@ -16,6 +16,5 @@ export const SweptService = {
     const { jwt } = await account.createJWT();
     const { upsertSweptConfigSecure } = await import('@/lib/actions/secure-ops');
     return upsertSweptConfigSecure(projectId, { enabled }, jwt);
-  },
-};
+  }};
 

@@ -302,8 +302,7 @@ export function IdentityAvatar({
               boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 0 18px rgba(99,102,241,0.18)'}
           : {
               padding: '0px'}),
-        ...(sx || {}),
-      }}
+        ...(sx || {})}}
     >
       {resolvedSrc && !imageError ? (
         <Box
@@ -316,8 +315,7 @@ export function IdentityAvatar({
             height: '100%',
             borderRadius: `calc(${typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius} - 2px)`,
             objectFit: 'cover',
-            display: 'block',
-          }}
+            display: 'block'}}
         />
       ) : (
         <Box
@@ -331,8 +329,7 @@ export function IdentityAvatar({
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: 900,
-            fontSize: `${Math.max(11, size / 3)}px`,
-          }}
+            fontSize: `${Math.max(11, size / 3)}px`}}
         >
           {initial}
         </Box>

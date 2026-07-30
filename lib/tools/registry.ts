@@ -116,14 +116,12 @@ function registerCoreTools() {
     parameters: {
       title: { type: 'string', description: 'Workspace title', required: true },
       summary: { type: 'string', description: 'Workspace summary' },
-      visibility: { type: 'string', description: 'private | shared | public' },
-    },
+      visibility: { type: 'string', description: 'private | shared | public' }},
     execute: async (params) => {
       const { ProjectsService } = await import('@/lib/appwrite/projects');
       const doc = await ProjectsService.createProject(params as any);
       return { success: true, data: doc };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'workspace.read',
@@ -132,8 +130,7 @@ function registerCoreTools() {
     name: 'Read Workspace',
     description: 'Get workspace details or list all workspaces.',
     parameters: {
-      id: { type: 'string', description: 'Workspace ID' },
-    },
+      id: { type: 'string', description: 'Workspace ID' }},
     execute: async (params) => {
       const { ProjectsService } = await import('@/lib/appwrite/projects');
       if (params.id) {
@@ -142,8 +139,7 @@ function registerCoreTools() {
       }
       const list = await ProjectsService.listProjects(true);
       return { success: true, data: list.rows };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'workspace.update',
@@ -155,14 +151,12 @@ function registerCoreTools() {
       id: { type: 'string', description: 'Workspace ID', required: true },
       title: { type: 'string', description: 'New title' },
       summary: { type: 'string', description: 'New summary' },
-      visibility: { type: 'string', description: 'private | shared | public' },
-    },
+      visibility: { type: 'string', description: 'private | shared | public' }},
     execute: async (params) => {
       const { ProjectsService } = await import('@/lib/appwrite/projects');
       const doc = await ProjectsService.updateProject(params.id, params as any);
       return { success: true, data: doc };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'workspace.delete',
@@ -171,14 +165,12 @@ function registerCoreTools() {
     name: 'Delete Workspace',
     description: 'Delete a workspace by ID.',
     parameters: {
-      id: { type: 'string', description: 'Workspace ID', required: true },
-    },
+      id: { type: 'string', description: 'Workspace ID', required: true }},
     execute: async (params) => {
       const { ProjectsService } = await import('@/lib/appwrite/projects');
       await ProjectsService.deleteProject(params.id);
       return { success: true, data: { deletedId: params.id } };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'workspace.search',
@@ -188,16 +180,14 @@ function registerCoreTools() {
     description: 'Search sub-objects attached to a workspace.',
     parameters: {
       query: { type: 'string', description: 'Search term', required: true },
-      workspaceId: { type: 'string', description: 'Workspace ID' },
-    },
+      workspaceId: { type: 'string', description: 'Workspace ID' }},
     execute: async (params) => {
       const { getSessionProjectsList } = await import('@/lib/projects/projects-cache');
       const list = getSessionProjectsList() || [];
       const term = String(params.query || '').toLowerCase();
       const filtered = list.filter((w) => w.title?.toLowerCase().includes(term) || w.summary?.toLowerCase().includes(term));
       return { success: true, data: filtered };
-    },
-  });
+    }});
 
   // 2. Ideas (Notes)
   toolRegistry.register({
@@ -210,14 +200,12 @@ function registerCoreTools() {
       title: { type: 'string', description: 'Idea title', required: true },
       content: { type: 'string', description: 'Markdown content body', required: true },
       tags: { type: 'array', description: 'Tag names array' },
-      isPublic: { type: 'boolean', description: 'Public access toggle' },
-    },
+      isPublic: { type: 'boolean', description: 'Public access toggle' }},
     execute: async (params) => {
       const { createNote } = await import('@/lib/appwrite/note');
       const note = await createNote(params as any);
       return { success: true, data: note };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'objects.idea.read',
@@ -226,8 +214,7 @@ function registerCoreTools() {
     name: 'Read Idea (Note)',
     description: 'Read an idea by ID or list user ideas.',
     parameters: {
-      id: { type: 'string', description: 'Note ID' },
-    },
+      id: { type: 'string', description: 'Note ID' }},
     execute: async (params) => {
       const { getNote, listNotes } = await import('@/lib/appwrite/note');
       if (params.id) {
@@ -236,8 +223,7 @@ function registerCoreTools() {
       }
       const res = await listNotes();
       return { success: true, data: res.rows };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'objects.idea.update',
@@ -249,14 +235,12 @@ function registerCoreTools() {
       id: { type: 'string', description: 'Note ID', required: true },
       title: { type: 'string', description: 'New title' },
       content: { type: 'string', description: 'New content body' },
-      tags: { type: 'array', description: 'Updated tag array' },
-    },
+      tags: { type: 'array', description: 'Updated tag array' }},
     execute: async (params) => {
       const { updateNote } = await import('@/lib/appwrite/note');
       const note = await updateNote(params.id, params as any);
       return { success: true, data: note };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'objects.idea.delete',
@@ -265,14 +249,12 @@ function registerCoreTools() {
     name: 'Delete Idea (Note)',
     description: 'Delete an idea note by ID.',
     parameters: {
-      id: { type: 'string', description: 'Note ID', required: true },
-    },
+      id: { type: 'string', description: 'Note ID', required: true }},
     execute: async (params) => {
       const { deleteNote } = await import('@/lib/appwrite/note');
       await deleteNote(params.id);
       return { success: true, data: { deletedId: params.id } };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'objects.idea.search',
@@ -281,8 +263,7 @@ function registerCoreTools() {
     name: 'Search Ideas',
     description: 'Search ideas by keyword or tag.',
     parameters: {
-      query: { type: 'string', description: 'Search term', required: true },
-    },
+      query: { type: 'string', description: 'Search term', required: true }},
     execute: async (params) => {
       const { listNotes } = await import('@/lib/appwrite/note');
       const res = await listNotes();
@@ -291,8 +272,7 @@ function registerCoreTools() {
         (n: any) => n.title?.toLowerCase().includes(term) || n.content?.toLowerCase().includes(term)
       );
       return { success: true, data: matched };
-    },
-  });
+    }});
 
   // 3. Goals (Tasks)
   toolRegistry.register({
@@ -306,14 +286,12 @@ function registerCoreTools() {
       status: { type: 'string', description: 'todo | in_progress | done' },
       priority: { type: 'string', description: 'low | medium | high' },
       dueDate: { type: 'string', description: 'ISO due date' },
-      description: { type: 'string', description: 'Detailed description' },
-    },
+      description: { type: 'string', description: 'Detailed description' }},
     execute: async (params) => {
       const { tasks } = await import('@/lib/kylrixflow');
       const task = await tasks.create(params as any);
       return { success: true, data: task };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'objects.goal.read',
@@ -322,8 +300,7 @@ function registerCoreTools() {
     name: 'Read Goal/Task',
     description: 'Fetch goal details or list tasks.',
     parameters: {
-      id: { type: 'string', description: 'Goal ID' },
-    },
+      id: { type: 'string', description: 'Goal ID' }},
     execute: async (params) => {
       const { tasks } = await import('@/lib/kylrixflow');
       if (params.id) {
@@ -332,8 +309,7 @@ function registerCoreTools() {
       }
       const list = await tasks.list();
       return { success: true, data: list.rows };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'objects.goal.update',
@@ -345,15 +321,13 @@ function registerCoreTools() {
       id: { type: 'string', description: 'Goal ID', required: true },
       status: { type: 'string', description: 'New status' },
       priority: { type: 'string', description: 'New priority' },
-      title: { type: 'string', description: 'New title' },
-    },
+      title: { type: 'string', description: 'New title' }},
     execute: async (params) => {
       const { tasks } = await import('@/lib/kylrixflow');
       const { id, ...updates } = params;
       const updated = await tasks.update(id, updates as any);
       return { success: true, data: updated };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'objects.goal.delete',
@@ -362,14 +336,12 @@ function registerCoreTools() {
     name: 'Delete Goal/Task',
     description: 'Remove a task permanently.',
     parameters: {
-      id: { type: 'string', description: 'Goal ID', required: true },
-    },
+      id: { type: 'string', description: 'Goal ID', required: true }},
     execute: async (params) => {
       const { tasks } = await import('@/lib/kylrixflow');
       await tasks.delete(params.id);
       return { success: true, data: { deletedId: params.id } };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'objects.goal.search',
@@ -378,8 +350,7 @@ function registerCoreTools() {
     name: 'Search Goals',
     description: 'Search goals by title or description.',
     parameters: {
-      query: { type: 'string', description: 'Search query', required: true },
-    },
+      query: { type: 'string', description: 'Search query', required: true }},
     execute: async (params) => {
       const { listFlowTasks } = await import('@/lib/appwrite/note');
       const res = await listFlowTasks();
@@ -388,8 +359,7 @@ function registerCoreTools() {
         (t: any) => t.title?.toLowerCase().includes(term) || t.description?.toLowerCase().includes(term)
       );
       return { success: true, data: matched };
-    },
-  });
+    }});
 
   // 4. Vault Credentials / Secrets
   toolRegistry.register({
@@ -401,14 +371,12 @@ function registerCoreTools() {
     isSecure: true,
     parameters: {
       name: { type: 'string', description: 'Credential title / service name', required: true },
-      username: { type: 'string', description: 'Username or login ID' },
-    },
+      username: { type: 'string', description: 'Username or login ID' }},
     execute: async (params) => {
       const { VaultService } = await import('@/lib/appwrite/vault');
       const created = await VaultService.createCredential(params as any);
       return { success: true, data: redactPIIAndSensitiveFields(created) };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'objects.vault.secret.read',
@@ -422,8 +390,7 @@ function registerCoreTools() {
       const { listKeepCredentials } = await import('@/lib/appwrite/note');
       const res = await listKeepCredentials();
       return { success: true, data: redactPIIAndSensitiveFields(res.rows) };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'objects.vault.secret.delete',
@@ -432,14 +399,12 @@ function registerCoreTools() {
     name: 'Delete Vault Secret',
     description: 'Delete a credential secret by ID.',
     parameters: {
-      id: { type: 'string', description: 'Secret ID', required: true },
-    },
+      id: { type: 'string', description: 'Secret ID', required: true }},
     execute: async (params) => {
       const { VaultService } = await import('@/lib/appwrite/vault');
       await VaultService.deleteCredential(params.id);
       return { success: true, data: { deletedId: params.id } };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'objects.vault.secret.search',
@@ -449,16 +414,14 @@ function registerCoreTools() {
     description: 'Search stored secrets by title/service name.',
     isSecure: true,
     parameters: {
-      query: { type: 'string', description: 'Search term', required: true },
-    },
+      query: { type: 'string', description: 'Search term', required: true }},
     execute: async (params) => {
       const { listKeepCredentials } = await import('@/lib/appwrite/note');
       const res = await listKeepCredentials();
       const term = String(params.query || '').toLowerCase();
       const matched = res.rows.filter((c: any) => c.name?.toLowerCase().includes(term));
       return { success: true, data: redactPIIAndSensitiveFields(matched) };
-    },
-  });
+    }});
 
   // 5. Tags & Crosslinks
   toolRegistry.register({
@@ -469,14 +432,12 @@ function registerCoreTools() {
     description: 'Create a crosslink tag.',
     parameters: {
       name: { type: 'string', description: 'Tag name', required: true },
-      color: { type: 'string', description: 'HEX color string' },
-    },
+      color: { type: 'string', description: 'HEX color string' }},
     execute: async (params) => {
       const { createTag } = await import('@/lib/appwrite/note');
       const tag = await createTag(params as any);
       return { success: true, data: tag };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'objects.tag.search',
@@ -485,16 +446,14 @@ function registerCoreTools() {
     name: 'Search Tags',
     description: 'Find tags by name.',
     parameters: {
-      query: { type: 'string', description: 'Search term', required: true },
-    },
+      query: { type: 'string', description: 'Search term', required: true }},
     execute: async (params) => {
       const { listTags } = await import('@/lib/appwrite/note');
       const res = await listTags();
       const term = String(params.query || '').toLowerCase();
       const matched = res.rows.filter((t: any) => t.name?.toLowerCase().includes(term));
       return { success: true, data: matched };
-    },
-  });
+    }});
 
   // 6. User Profile & Settings
   toolRegistry.register({
@@ -508,8 +467,7 @@ function registerCoreTools() {
       const { getCurrentUser } = await import('@/lib/appwrite/client');
       const user = await getCurrentUser();
       return { success: true, data: user };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'user.settings.update',
@@ -519,15 +477,13 @@ function registerCoreTools() {
     description: 'Update user account preferences.',
     parameters: {
       key: { type: 'string', description: 'Preference key', required: true },
-      value: { type: 'string', description: 'Preference value', required: true },
-    },
+      value: { type: 'string', description: 'Preference value', required: true }},
     execute: async (params) => {
       const { account } = await import('@/lib/appwrite/client');
       const current = await account.getPrefs();
       const updated = await account.updatePrefs({ ...current, [params.key]: params.value });
       return { success: true, data: updated };
-    },
-  });
+    }});
 
   // 7. UI Navigation (semantic — route resolved client-side)
   toolRegistry.register({
@@ -538,8 +494,7 @@ function registerCoreTools() {
     description: 'Navigate to a semantic UI destination by target id or route.',
     parameters: {
       target: { type: 'string', description: 'Semantic destination id e.g. settings.passkeys' },
-      route: { type: 'string', description: 'Direct route fallback' },
-    },
+      route: { type: 'string', description: 'Direct route fallback' }},
     execute: async (params) => {
       const { resolveUiDestination } = await import('@/lib/agentic/ui-catalog');
       const target = String(params.target || '');
@@ -549,8 +504,7 @@ function registerCoreTools() {
         '';
       if (!route) return { success: false, error: 'Could not resolve navigation target.' };
       return { success: true, data: { route, target: target || null } };
-    },
-  });
+    }});
 
   // 8. Forms
   toolRegistry.register({
@@ -564,8 +518,7 @@ function registerCoreTools() {
       const { FormsService } = await import('@/lib/services/forms');
       const form = await FormsService.getForm(params.id);
       return { success: true, data: form };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'objects.form.submit',
@@ -575,17 +528,14 @@ function registerCoreTools() {
     description: 'Submit structured answers to a published form.',
     parameters: {
       formId: { type: 'string', description: 'Form ID', required: true },
-      payload: { type: 'object', description: 'Field answers JSON', required: true },
-    },
+      payload: { type: 'object', description: 'Field answers JSON', required: true }},
     execute: async (params) => {
       const { FormsService } = await import('@/lib/services/forms');
       const submission = await FormsService.submitForm(
         params.formId,
-        JSON.stringify(params.payload),
-      );
+        JSON.stringify(params.payload));
       return { success: true, data: submission };
-    },
-  });
+    }});
 
   toolRegistry.register({
     id: 'search.ecosystem',
@@ -594,15 +544,13 @@ function registerCoreTools() {
     name: 'Search Ecosystem',
     description: 'Cross-domain intelligent search.',
     parameters: {
-      query: { type: 'string', description: 'Search query', required: true },
-    },
+      query: { type: 'string', description: 'Search query', required: true }},
     execute: async (params, context) => {
       const { executeEcosystemSearch } = await import('@/lib/agentic/search-engine');
       const result = await executeEcosystemSearch(String(params.query || ''), {
         userId: context?.userId});
       return { success: true, data: result };
-    },
-  });
+    }});
 }
 
 // Self-register core tools on module evaluation

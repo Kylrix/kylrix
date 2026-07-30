@@ -5,8 +5,7 @@ import type {
   SecurityLogs,
   User,
   Keychain,
-  KeyMapping,
-} from '@/types/appwrite';
+  KeyMapping} from '@/types/appwrite';
 
 export type {
   Credentials,
@@ -15,8 +14,7 @@ export type {
   SecurityLogs,
   User,
   Keychain,
-  KeyMapping,
-};
+  KeyMapping};
 
 export type SecurityLogsCreate = {
   userId: string;

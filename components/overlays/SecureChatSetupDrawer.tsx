@@ -17,8 +17,7 @@ import {
   X,
   ArrowRight,
   ChevronRight,
-  MessageSquare,
-} from 'lucide-react';
+  MessageSquare} from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useSudo } from '@/context/SudoContext';

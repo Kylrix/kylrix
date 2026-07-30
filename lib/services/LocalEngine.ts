@@ -63,7 +63,5 @@ export const LocalEngine = {
     await this.cacheSet(telemetryId, {
       kind,
       payload,
-      createdAt: new Date().toISOString(),
-    });
-  },
-};
+      createdAt: new Date().toISOString()});
+  }};

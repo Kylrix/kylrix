@@ -12,8 +12,7 @@ export async function calculateStackedSubscriptionCredit(
   userId: string,
   planId: string,
   months: number,
-  effectiveRatio: number,
-) {
+  effectiveRatio: number) {
   const now = new Date();
   let currentPeriodStart = now;
 
@@ -24,8 +23,7 @@ export async function calculateStackedSubscriptionCredit(
       Query.select(['$id', 'currentPeriodStart', 'currentPeriodEnd', 'createdAt', 'updatedAt', 'status', 'plan'])]);
 
     const activeSubscriptions = (existingSubs.rows as SubscriptionRow[]).filter(
-      (row) => String(row.status || '').toLowerCase() === 'active',
-    );
+      (row) => String(row.status || '').toLowerCase() === 'active');
     const latestSubscription = pickLatestSubscription(activeSubscriptions);
     if (latestSubscription?.currentPeriodEnd) {
       const latestExpiry = new Date(latestSubscription.currentPeriodEnd);

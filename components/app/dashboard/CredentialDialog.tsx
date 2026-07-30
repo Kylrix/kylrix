@@ -35,8 +35,7 @@ export default function CredentialDialog({
   initial,
   onSaved,
   prefill,
-  defaultType = "login",
-}: {
+  defaultType = "login"}: {
   open: boolean;
   onClose: () => void;
   initial?: Credentials | null;
@@ -141,14 +140,11 @@ export default function CredentialDialog({
         cardExpiry: initial.cardExpiry || "" ,
         cardCVV: initial.cardCVV || "",
         cardPIN: initial.cardPIN || "",
-        cardType: initial.cardType || "",
-      });
+        cardType: initial.cardType || ""});
       setCustomFields(
-        initial.customFields ? JSON.parse(initial.customFields) : [],
-      );
+        initial.customFields ? JSON.parse(initial.customFields) : []);
       setAttachments(
-        initial.attachments ? JSON.parse(initial.attachments) : [],
-      );
+        initial.attachments ? JSON.parse(initial.attachments) : []);
     } else {
       setForm({
         name: prefill?.name || "",
@@ -180,11 +176,9 @@ export default function CredentialDialog({
   const updateCustomField = (
     id: string,
     field: "label" | "value",
-    value: string,
-  ) => {
+    value: string) => {
     setCustomFields(
-      customFields.map((cf) => (cf.id === id ? { ...cf, [field]: value } : cf)),
-    );
+      customFields.map((cf) => (cf.id === id ? { ...cf, [field]: value } : cf)));
   };
 
   const removeCustomField = (id: string) => {
@@ -258,8 +252,7 @@ export default function CredentialDialog({
           initial && initial.createdAt
             ? initial.createdAt
             : new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+        updatedAt: new Date().toISOString()};
 
       if (type === 'login') {
         credentialData.username = form.username.trim();
@@ -340,8 +333,7 @@ export default function CredentialDialog({
           initial && initial.createdAt
             ? initial.createdAt
             : new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+        updatedAt: new Date().toISOString()};
 
       if (type === 'login') {
         credentialData.username = form.username.trim();

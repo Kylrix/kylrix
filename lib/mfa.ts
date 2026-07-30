@@ -37,8 +37,7 @@ function normalizeMfaFactors(value: unknown): MfaFactorsLike | null {
   return {
     email: Boolean(factors.email),
     totp: Boolean(factors.totp),
-    phone: Boolean(factors.phone),
-  };
+    phone: Boolean(factors.phone)};
 }
 
 export function isMfaFullyEnabled(factors?: MfaFactorsLike | null): boolean {
@@ -56,8 +55,7 @@ export function isMfaRequiredError(error: unknown): boolean {
 
 export function getLoginChallengeFactors(
   loginMethod: MfaLoginMethod,
-  factors?: MfaFactorsLike | null,
-): MfaChallengeFactor[] {
+  factors?: MfaFactorsLike | null): MfaChallengeFactor[] {
   const available: MfaChallengeFactor[] = [];
   const canUseEmail = loginMethod !== 'email-otp' && Boolean(factors?.email);
   if (canUseEmail) {
@@ -72,8 +70,7 @@ export function getLoginChallengeFactors(
 
 export function getPreferredLoginChallengeFactor(
   loginMethod: MfaLoginMethod,
-  factors?: MfaFactorsLike | null,
-): MfaChallengeFactor {
+  factors?: MfaFactorsLike | null): MfaChallengeFactor {
   const options = getLoginChallengeFactors(loginMethod, factors);
   if (options.includes('totp')) return 'totp';
   if (options.includes('email')) return 'email';
@@ -86,16 +83,14 @@ export async function listCurrentMfaFactors(): Promise<MfaFactorsLike> {
 }
 
 export async function assertAuthenticatedAccount(
-  target: Account = account,
-): Promise<Models.User<Models.Preferences>> {
+  target: Account = account): Promise<Models.User<Models.Preferences>> {
   return target.get();
 }
 
 
 export async function beginMfaChallenge(
   factor: MfaChallengeFactor,
-  target: Account = account,
-): Promise<string> {
+  target: Account = account): Promise<string> {
   const response = await target.createMfaChallenge({
     factor: factor as AuthenticationFactor});
   return (response as { $id: string }).$id;
@@ -104,8 +99,7 @@ export async function beginMfaChallenge(
 export async function completeMfaChallenge(
   challengeId: string,
   otp: string,
-  target: Account = account,
-): Promise<void> {
+  target: Account = account): Promise<void> {
   await target.updateMfaChallenge({
     challengeId,
     otp: otp.trim()});
@@ -113,8 +107,7 @@ export async function completeMfaChallenge(
 }
 
 export async function generateMfaRecoveryCodes(
-  target: Account = account,
-): Promise<string[]> {
+  target: Account = account): Promise<string[]> {
   const response = await target.createMfaRecoveryCodes();
   return response.recoveryCodes || [];
 }
@@ -133,8 +126,7 @@ export async function createTotpAuthenticator(target: Account = account): Promis
 
 export async function verifyTotpAuthenticator(
   otp: string,
-  target: Account = account,
-): Promise<void> {
+  target: Account = account): Promise<void> {
   await target.updateMfaAuthenticator({
     type: AuthenticatorType.Totp,
     otp: otp.trim()});
@@ -162,8 +154,7 @@ export async function disableAllMfaFactors(target: Account = account): Promise<v
 }
 
 export async function getCurrentLoginMethod(
-  target: Account = account,
-): Promise<MfaLoginMethod> {
+  target: Account = account): Promise<MfaLoginMethod> {
   const session = await target.getSession('current').catch(() => null);
   return resolveLoginMethod((session as SessionLike | null)?.provider);
 }

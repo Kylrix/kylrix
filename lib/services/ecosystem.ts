@@ -53,8 +53,7 @@ export const EcosystemService = {
                     trustScore: 75,
                     sourceType: 'note_create',
                     sourceId: res.$id,
-                    metadata: { noteTitle: title },
-                });
+                    metadata: { noteTitle: title }});
             } else {
                 const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
                 await runTokenOperationSecure({
@@ -66,8 +65,7 @@ export const EcosystemService = {
                     trustScore: 75,
                     sourceType: 'note_create',
                     sourceId: res.$id,
-                    metadata: { noteTitle: title },
-                });
+                    metadata: { noteTitle: title }});
             }
         } catch (err) {
             console.warn('[EcosystemService] Failed to trigger note_create mint:', err);

@@ -47,8 +47,7 @@ export async function generateMetadata({
   return buildOgMetadata({
     title: `${form.title} | Kylrix Flow`,
     description,
-    imageUrl: previewImage,
-  });
+    imageUrl: previewImage});
 }
 
 export default function FormPreviewLayout({

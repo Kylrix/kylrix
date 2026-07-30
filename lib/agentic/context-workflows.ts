@@ -91,8 +91,7 @@ const ZONE_META: Record<
     subtitle: 'Your full Kylrix environment at a glance.',
     placeholder: 'Ask Kylie to help you with anything…',
     accentApp: 'root',
-    systemHint: 'User is in the general workspace. Help across notes, tasks, vault, and projects.'},
-};
+    systemHint: 'User is in the general workspace. Help across notes, tasks, vault, and projects.'}};
 
 function resolveZone(pathname: string): AgenticZone {
   if (pathname.startsWith('/app')) return 'note';
@@ -184,8 +183,7 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           kind: 'prompt',
           prompt: resourceId
             ? `Rewrite note ${resourceId} for clarity. Keep the meaning, improve flow, and suggest a stronger title.`
-            : 'Rewrite my latest note for clarity. Keep the meaning and suggest a stronger title.',
-        },
+            : 'Rewrite my latest note for clarity. Keep the meaning and suggest a stronger title.'},
         {
           id: 'note-summarize',
           label: 'Summarize',
@@ -195,8 +193,7 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           prompt: resourceId
             ? `Summarize note ${resourceId} into 5 bullets with next actions.`
             : 'Summarize my pinned notes into 5 bullets with next actions.',
-          autoRun: true,
-        },
+          autoRun: true},
         {
           id: 'note-tasks',
           label: 'Extract tasks',
@@ -206,8 +203,7 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           prompt: resourceId
             ? `From note ${resourceId}, extract a prioritized task list with due hints.`
             : 'From my latest notes, extract a prioritized task list with due hints.',
-          autoRun: true,
-        },
+          autoRun: true},
         {
           id: 'note-tags',
           label: 'Suggest tags',
@@ -340,8 +336,7 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           kind: 'prompt',
           prompt: resourceId
             ? `Draft a concise reply for chat ${resourceId}. Ask what tone I want, then write the message.`
-            : 'Draft a concise, friendly message. Ask what context I need, then write the reply.',
-        },
+            : 'Draft a concise, friendly message. Ask what context I need, then write the reply.'},
         {
           id: 'connect-followup',
           label: 'Follow-up plan',
@@ -359,8 +354,7 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           prompt: resourceId
             ? `Summarize chat ${resourceId}: decisions, blockers, and open questions.`
             : 'Summarize the latest chat activity into decisions, blockers, and open questions.',
-          autoRun: true,
-        },
+          autoRun: true},
         {
           id: 'connect-meeting',
           label: 'Meeting notes',
@@ -394,8 +388,7 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           kind: 'prompt',
           prompt: resourceId
             ? `Research and outline the scope for project ${resourceId}: goals, deliverables, risks, and open questions.`
-            : 'Research and outline scope for my most active project: goals, deliverables, risks, and open questions.',
-        },
+            : 'Research and outline scope for my most active project: goals, deliverables, risks, and open questions.'},
         {
           id: 'project-milestones',
           label: 'Plan milestones',
@@ -405,8 +398,7 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           prompt: resourceId
             ? `Propose 4–6 milestones for project ${resourceId} with owners and target dates.`
             : 'Propose milestones for my top active project with owners and target dates.',
-          autoRun: true,
-        },
+          autoRun: true},
         {
           id: 'project-status',
           label: 'Status snapshot',
@@ -416,8 +408,7 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           prompt: resourceId
             ? `Summarize project ${resourceId}: progress, risks, blockers, and next 3 actions.`
             : 'Summarize my active projects with progress, risks, and next actions.',
-          autoRun: true,
-        },
+          autoRun: true},
         {
           id: 'project-update',
           label: 'Draft update',
@@ -427,16 +418,14 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           prompt: resourceId
             ? `Write a short project update for ${resourceId} suitable for collaborators.`
             : 'Write a short project update suitable for collaborators.',
-          autoRun: true,
-        },
+          autoRun: true},
         {
           id: 'project-link',
           label: 'Link work',
           description: 'Notes, tasks, secrets',
           icon: 'link-2',
           kind: 'navigate',
-          href: resourceId ? `/workspaces/${resourceId}` : '/workspaces',
-        },
+          href: resourceId ? `/workspaces/${resourceId}` : '/workspaces'},
         {
           id: 'project-new',
           label: 'New project',

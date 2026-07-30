@@ -405,8 +405,7 @@ export default function ConnectTopbar({
       displayName: profileName,
       avatar: profileAvatarUrl || profilePicId || null,
       userId: (user as any)?.$id || null}),
-    [profileAvatarUrl, profileName, profilePicId, profileUsername, user],
-  );
+    [profileAvatarUrl, profileName, profilePicId, profileUsername, user]);
 
   const previewManager = useMemo(
     () =>
@@ -415,8 +414,7 @@ export default function ConnectTopbar({
         const preview = await fetchProfilePreview(fileId, width, height);
         return typeof preview === 'string' ? preview : null;
       }),
-    [],
-  );
+    []);
 
   useEffect(() => {
     let mounted = true;
@@ -541,10 +539,8 @@ export default function ConnectTopbar({
         snippets: [],
         resolveUrl: (app, path = '') => {
           return (APP_BASE_PATHS[app as keyof typeof APP_BASE_PATHS] || '/') + path;
-        },
-      }),
-    [searchQuery, activeApp],
-  );
+        }}),
+    [searchQuery, activeApp]);
 
   const dynamicQuickActions = useMemo(() => {
     // 1. Dynamic recommendations based on current app route
@@ -646,8 +642,7 @@ export default function ConnectTopbar({
         ...item,
         href: getEcosystemUrl(item.app)}));
     },
-    [activeApp],
-  );
+    [activeApp]);
 
   const appPanelMotion = useMemo(() => createTopbarPanelMotion(), []);
 
@@ -661,9 +656,7 @@ export default function ConnectTopbar({
       if (headerRef.current?.contains(target)) return true;
       return Boolean(
         target.closest(
-          '[data-kylrix-topbar-panel], .ob-drawer-root, .ob-drawer-panel, .kylrix-sidebar',
-        ),
-      );
+          '[data-kylrix-topbar-panel], .ob-drawer-root, .ob-drawer-panel, .kylrix-sidebar'));
     };
 
     const handlePointerDown = (event: PointerEvent) => {
@@ -971,8 +964,7 @@ export default function ConnectTopbar({
           px: isDesktop ? 0 : { xs: 2.25, md: 4 },
           py: isDesktop ? 0 : 1.25,
           maxHeight: isDesktop ? 'none' : '45vh',
-          overflowY: isDesktop ? 'visible' : 'auto',
-        }}
+          overflowY: isDesktop ? 'visible' : 'auto'}}
       >
         {/* For Mobile Search Input */}
         {!isDesktop && (
@@ -1021,8 +1013,7 @@ export default function ConnectTopbar({
                   fontFamily: 'var(--font-satoshi)',
                   fontWeight: 600,
                   fontSize: '0.9rem',
-                  '& input::placeholder': { color: 'rgba(255,255,255,0.25)', opacity: 1 },
-                }}
+                  '& input::placeholder': { color: 'rgba(255,255,255,0.25)', opacity: 1 }}}
                 onKeyDown={(event: React.KeyboardEvent) => {
                   if (event.key === 'Escape') {
                     handleCloseAll();
@@ -1067,8 +1058,7 @@ export default function ConnectTopbar({
                     fontSize: '0.75rem',
                     fontWeight: 800,
                     textTransform: 'none',
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.06)', color: 'white' },
-                  }}
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.06)', color: 'white' }}}
                 >
                   Back to search
                 </Button>
@@ -1190,8 +1180,7 @@ export default function ConnectTopbar({
                       '&:hover': {
                         bgcolor: 'rgba(255,255,255,0.035)',
                         borderColor: 'rgba(99, 102, 241, 0.3)',
-                        transform: 'translateX(2px)'},
-                    }}
+                        transform: 'translateX(2px)'}}}
                   >
                     <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.12)', color: '#6366F1', flexShrink: 0 }}>
                       <Keyboard size={15} />
@@ -1610,8 +1599,7 @@ export default function ConnectTopbar({
                 fontFamily: 'var(--font-satoshi)',
                 fontWeight: 600,
                 fontSize: '0.92rem',
-                '& input::placeholder': { color: 'rgba(255,255,255,0.25)', opacity: 1 },
-              }}
+                '& input::placeholder': { color: 'rgba(255,255,255,0.25)', opacity: 1 }}}
               onKeyDown={(event: React.KeyboardEvent) => {
                 if (event.key === 'Escape') {
                   handleCloseAll();
@@ -1664,8 +1652,7 @@ export default function ConnectTopbar({
               borderRadius: '26px',
               bgcolor: '#161412',
               border: `1px solid ${alpha(appAccent, 0.22)}`,
-              overflow: 'hidden',
-            }}
+              overflow: 'hidden'}}
           >
             <Box sx={{ p: 1.25 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, px: 0.5, mb: 1 }}>
@@ -1801,8 +1788,7 @@ export default function ConnectTopbar({
                       py: 1,
                       fontSize: '0.84rem',
                       textTransform: 'none',
-                      '&:hover': { bgcolor: alpha(appAccent, 0.12) },
-                    }}
+                      '&:hover': { bgcolor: alpha(appAccent, 0.12) }}}
                     startIcon={<Wallet size={14} />}
                   >
                     Wallet
@@ -1822,8 +1808,7 @@ export default function ConnectTopbar({
                       py: 1,
                       fontSize: '0.84rem',
                       textTransform: 'none',
-                      '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' },
-                    }}
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' }}}
                   >
                     Settings
                   </Button>
@@ -1842,8 +1827,7 @@ export default function ConnectTopbar({
                       py: 1,
                       fontSize: '0.84rem',
                       textTransform: 'none',
-                      '&:hover': { bgcolor: 'rgba(255, 77, 77, 0.12)' },
-                    }}
+                      '&:hover': { bgcolor: 'rgba(255, 77, 77, 0.12)' }}}
                   >
                     Sign out
                   </Button>
@@ -2101,8 +2085,7 @@ export default function ConnectTopbar({
                         borderColor: isActive ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255, 255, 255, 0.04)',
                         color: 'white',
                         textAlign: 'left',
-                        cursor: 'pointer',
-                      }}
+                        cursor: 'pointer'}}
                     >
                       <Box sx={{ minWidth: 0 }}>
                         <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff' }} noWrap>
@@ -2154,8 +2137,7 @@ export default function ConnectTopbar({
                       transition: 'all 0.2s',
                       '&:hover': {
                         bgcolor: alpha(appTone.secondary, 0.1),
-                        borderColor: alpha(appTone.secondary, 0.2)},
-                    }}
+                        borderColor: alpha(appTone.secondary, 0.2)}}}
                   >
                     <Stack direction="row" spacing={1.25} alignItems="center" sx={{ width: '100%' }}>
                       <Box sx={{ width: 34, height: 34, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: alpha(appTone.secondary, 0.08), color: appTone.secondary, flexShrink: 0 }}>
@@ -2266,8 +2248,7 @@ export default function ConnectTopbar({
                                   color: searchShortcutsView ? '#6366F1' : 'white/35',
                                   p: 1,
                                   bgcolor: searchShortcutsView ? 'white/5' : 'transparent',
-                                  '&:hover': { bgcolor: 'white/8', color: 'white' },
-                                }}
+                                  '&:hover': { bgcolor: 'white/8', color: 'white' }}}
                               >
                                 <Keyboard size={17} strokeWidth={2.25} />
                               </IconButton>

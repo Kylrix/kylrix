@@ -197,8 +197,7 @@ class EcosystemSecurity {
    */
   private async deriveKeyWithArgon2id(
     password: string,
-    salt: Uint8Array,
-  ): Promise<CryptoKey> {
+    salt: Uint8Array): Promise<CryptoKey> {
     const { argon2id } = await import('hash-wasm');
     const hash = await argon2id({
       password,
@@ -214,8 +213,7 @@ class EcosystemSecurity {
       hash as any,
       { name: "AES-GCM", length: EcosystemSecurity.KEY_SIZE },
       true,
-      ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
-    );
+      ["encrypt", "decrypt", "wrapKey", "unwrapKey"]);
   }
 
   /**
@@ -228,8 +226,7 @@ class EcosystemSecurity {
       encoder.encode(password),
       { name: "PBKDF2" },
       false,
-      ["deriveBits", "deriveKey"],
-    );
+      ["deriveBits", "deriveKey"]);
 
     return crypto.subtle.deriveKey(
       {
@@ -240,8 +237,7 @@ class EcosystemSecurity {
       keyMaterial,
       { name: "AES-GCM", length: EcosystemSecurity.KEY_SIZE },
       true,
-      ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
-    );
+      ["encrypt", "decrypt", "wrapKey", "unwrapKey"]);
   }
 
   private async deriveKey(password: string, salt: Uint8Array, useArgon = true): Promise<CryptoKey> {
@@ -259,8 +255,7 @@ class EcosystemSecurity {
         keyBytes,
         { name: "AES-GCM", length: 256 },
         true, // Make it extractable
-        ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
-      );
+        ["encrypt", "decrypt", "wrapKey", "unwrapKey"]);
       this.isUnlocked = true;
       if (typeof sessionStorage !== "undefined") {
         sessionStorage.setItem("kylrix_vault_unlocked", "true");
@@ -389,8 +384,7 @@ class EcosystemSecurity {
     const encrypted = await crypto.subtle.encrypt(
       { name: "AES-GCM", iv: iv },
       this.masterKey,
-      plaintext,
-    );
+      plaintext);
 
     const combined = new Uint8Array(iv.length + encrypted.byteLength);
     combined.set(iv);
@@ -404,8 +398,7 @@ class EcosystemSecurity {
     if (this.decryptionCache.has(encryptedData)) return this.decryptionCache.get(encryptedData)!;
 
     const combined = new Uint8Array(
-      atob(encryptedData).split("").map((char: any) => char.charCodeAt(0)),
-    );
+      atob(encryptedData).split("").map((char: any) => char.charCodeAt(0)));
 
     const iv = combined.slice(0, EcosystemSecurity.IV_SIZE);
     const encrypted = combined.slice(EcosystemSecurity.IV_SIZE);
@@ -413,8 +406,7 @@ class EcosystemSecurity {
     const decrypted = await crypto.subtle.decrypt(
       { name: "AES-GCM", iv: iv },
       this.masterKey,
-      encrypted,
-    );
+      encrypted);
 
     const decoder = new TextDecoder();
     const plaintext = decoder.decode(decrypted);
@@ -425,8 +417,7 @@ class EcosystemSecurity {
   async saveRecoveryIdentity(
     userId: string,
     codes: string[],
-    metadata: Record<string, unknown> = {},
-  ): Promise<boolean> {
+    metadata: Record<string, unknown> = {}): Promise<boolean> {
     if (!this.masterKey) throw new Error("VAULT_LOCKED");
     if (!userId || !codes.length) return false;
 
@@ -701,8 +692,7 @@ class EcosystemSecurity {
             Query.equal('identityType', 'e2e_connect'),
             Query.limit(1),
           ]}),
-      local: async () => ({ rows: localIdentity ? [localIdentity] : [] }),
-    });
+      local: async () => ({ rows: localIdentity ? [localIdentity] : [] })});
 
     if (res.rows[0]) {
       const doc = res.rows[0];
@@ -941,12 +931,10 @@ class EcosystemSecurity {
         const res = await tablesDB.listRows(
           APPWRITE_CONFIG.DATABASES.VAULT,
           APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
-          [Query.equal('userId', userId), Query.limit(50)],
-        );
+          [Query.equal('userId', userId), Query.limit(50)]);
         return res.rows || [];
       },
-      local: async () => localRows,
-    });
+      local: async () => localRows});
 
     if (Array.isArray(rows) && rows.length > 0) {
       await SecurityEnclave.setKeychain(userId, rows);

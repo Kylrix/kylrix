@@ -12,8 +12,7 @@ describe('KylrixVault', () => {
         rows: mockRows,
         rows: mockRows,
         total: 2}),
-      createRow: vi.fn(),
-    };
+      createRow: vi.fn()};
 
     const vault = new KylrixVault(mockSdk);
     const queries = ['equal("userId", "user-123")'];
@@ -31,8 +30,7 @@ describe('KylrixVault', () => {
       listRows: vi.fn().mockResolvedValue({
         rows: [],
         rows: []}),
-      createRow: vi.fn(),
-    };
+      createRow: vi.fn()};
 
     const vault = new KylrixVault(mockSdk);
     await vault.getCredentials('db-id', 'table-id');
@@ -44,15 +42,13 @@ describe('KylrixVault', () => {
     const encryptedData = {
       label: 'My Secret',
       cipherText: 'encrypted-base64-payload',
-      iv: 'random-iv-base64',
-    };
+      iv: 'random-iv-base64'};
 
     const mockSdk = {
       listRows: vi.fn(),
       createRow: vi.fn().mockImplementation(async (db, table, data) => ({
         $id: 'cred-123',
-        ...data})),
-    };
+        ...data}))};
 
     const vault = new KylrixVault(mockSdk);
     const result = await vault.saveCredential('db-id', 'table-id', encryptedData);
@@ -67,15 +63,13 @@ describe('KylrixVault', () => {
     const mockSettings = {
       $id: 'settings-123',
       userId: 'user-789',
-      twoFactorEnabled: true,
-    };
+      twoFactorEnabled: true};
 
     const mockSdk = {
       listRows: vi.fn().mockResolvedValue({
         rows: [mockSettings],
         rows: [mockSettings]}),
-      createRow: vi.fn(),
-    };
+      createRow: vi.fn()};
 
     const vault = new KylrixVault(mockSdk);
     const result = await vault.getVaultSettings('db-id', 'table-id', 'user-789');
@@ -91,8 +85,7 @@ describe('KylrixVault', () => {
       listRows: vi.fn().mockResolvedValue({
         rows: [],
         rows: []}),
-      createRow: vi.fn(),
-    };
+      createRow: vi.fn()};
 
     const vault = new KylrixVault(mockSdk);
     const result = await vault.getVaultSettings('db-id', 'table-id', 'user-789');

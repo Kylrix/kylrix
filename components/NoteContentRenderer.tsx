@@ -47,12 +47,11 @@ function isEphemeralNoteId(noteId?: string) {
   return !noteId || noteId.startsWith('ghost-') || isEphemeralComposeNoteId(noteId);
 }
 
-export function NoteContentRenderer({
+function NoteContentRenderer({
   content,
   format = 'text',
   emptyFallback = <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'rgba(255, 255, 255, 0.3)' }}>This note is empty.</Typography>,
-  primaryNoteId,
-}: NoteContentRendererProps) {
+  primaryNoteId}: NoteContentRendererProps) {
   const objectBlocks = useMemo(() => {
     const blocks = parseObjectBlocks(content || '');
     if (!blocks.length) return [{ type: 'text' as const, content: (content || '').trim() }];
@@ -159,8 +158,7 @@ export function NoteContentRenderer({
           overflowX: 'auto',
           border: '1px solid rgba(255, 255, 255, 0.05)',
           my: 4,
-          '& code': { bgcolor: 'transparent', p: 0, color: 'inherit' },
-        },
+          '& code': { bgcolor: 'transparent', p: 0, color: 'inherit' }},
         '& img': { maxWidth: '100%', borderRadius: '16px', my: 4 },
         '& hr': { border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.1)', my: 6 },
         '& a': {
@@ -169,9 +167,7 @@ export function NoteContentRenderer({
           fontWeight: 600,
           borderBottom: '1px solid transparent',
           transition: 'all 0.2s ease',
-          '&:hover': { borderBottomColor: '#6366F1' },
-        },
-      }}
+          '&:hover': { borderBottomColor: '#6366F1' }}}}
     >
       {objectBlocks.map((node, index) => {
         if (node.type === 'text') {
@@ -445,8 +441,7 @@ function AttachmentVisual({
           p: 2,
           textDecoration: 'none',
           color: 'inherit',
-          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' },
-        }}
+          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' }}}
       >
         <Box sx={{ width: 44, height: 44, borderRadius: '12px', bgcolor: 'rgba(99,102,241,0.12)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
           {host ? (
@@ -489,8 +484,7 @@ function AttachmentVisual({
             fontSize: '0.8rem',
             fontWeight: 800,
             bgcolor: 'transparent',
-            cursor: opening ? 'wait' : 'pointer',
-          }}
+            cursor: opening ? 'wait' : 'pointer'}}
         >
           {opening ? 'Opening…' : 'Open file'}
         </Box>

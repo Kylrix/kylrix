@@ -370,9 +370,7 @@ function runPollerLoop(botToken: string) {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
                         chat_id: message.chat.id,
-                        text: `🎉 Success! Your Telegram account has been paired with Kylrix as @${tgUsername}. Ephemeral secure notifications will be delivered here instantly!`,
-                      }),
-                    });
+                        text: `🎉 Success! Your Telegram account has been paired with Kylrix as @${tgUsername}. Ephemeral secure notifications will be delivered here instantly!`})});
                   }
                 }
               } catch (_docErr) {

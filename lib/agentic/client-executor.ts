@@ -34,8 +34,7 @@ export interface AgenticExecutionContext {
   appendMessage?: (
     role: 'assistant' | 'user',
     content: string,
-    opts?: { blocks?: AgenticMessageBlock[] },
-  ) => void;
+    opts?: { blocks?: AgenticMessageBlock[] }) => void;
   openDrawer?: (type: string, payload?: Record<string, unknown>) => void;
   recordSessionObject?: (payload: {
     objectId: string;
@@ -55,8 +54,7 @@ export interface AgenticExecutionResult {
 
 async function executeAgenticToolCall(
   call: AgenticToolCallInput,
-  ctx: AgenticExecutionContext,
-): Promise<AgenticExecutionResult> {
+  ctx: AgenticExecutionContext): Promise<AgenticExecutionResult> {
   const key = call.toolKey;
   const args = call.args || {};
 
@@ -102,8 +100,7 @@ async function executeAgenticToolCall(
             reasoning: plan.reasoning,
             temporal: plan.temporal,
             domains: plan.domains},
-          hits: hitsToRefs(hits),
-        },
+          hits: hitsToRefs(hits)},
       ];
       return {
         success: true,
@@ -217,8 +214,7 @@ async function executeAgenticToolCall(
         isGuest:
           args.isPublic !== undefined
             ? args.isPublic === true || args.isPublic === 'true'
-            : undefined,
-      });
+            : undefined});
       ctx.pushLiveNote?.(saved, { pending: false });
       const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
       autonomicSyncEngine.ack(saved.$id || call.specifier);
@@ -229,8 +225,7 @@ async function executeAgenticToolCall(
         toolKey: key});
       return {
         success: true,
-        summary: `Updated idea: ${(saved as any).title || args.title || call.specifier}`,
-      };
+        summary: `Updated idea: ${(saved as any).title || args.title || call.specifier}`};
     }
 
     if ((key === 'get_note' || key === 'objects.idea.read') && call.specifier) {
@@ -266,8 +261,7 @@ async function executeAgenticToolCall(
         creatorId: ctx.user?.$id || 'guest',
         isArchived: false,
         isPinned: false,
-        isAgentic: args.isAgentic !== false,
-      });
+        isAgentic: args.isAgentic !== false});
       const goalId = (created as any)?.id || (created as any)?.$id;
       if (goalId) {
         await ctx.recordSessionObject?.({
@@ -289,19 +283,16 @@ async function executeAgenticToolCall(
               (t) =>
                 !t.isArchived &&
                 (t.title?.toLowerCase().includes(query.toLowerCase()) ||
-                  t.description?.toLowerCase().includes(query.toLowerCase())),
-            );
+                  t.description?.toLowerCase().includes(query.toLowerCase())));
       const summaryList = filtered
         .slice(0, 15)
         .map(
           (t) =>
-            `- **${t.title}** (${t.status || 'todo'}${t.priority ? `, ${t.priority}` : ''}) — ID: \`${t.id}\``,
-        )
+            `- **${t.title}** (${t.status || 'todo'}${t.priority ? `, ${t.priority}` : ''}) — ID: \`${t.id}\``)
         .join('\n');
       ctx.appendMessage?.(
         'assistant',
-        `### Active Goals (${filtered.length})\n${summaryList || 'No matching goals found.'}`,
-      );
+        `### Active Goals (${filtered.length})\n${summaryList || 'No matching goals found.'}`);
       return { success: true, summary: `Listed ${filtered.length} goals`, skipToast: true };
     }
 
@@ -330,8 +321,7 @@ async function executeAgenticToolCall(
       }
       return {
         success: true,
-        summary: `Created project: ${args.title || project?.title || 'Untitled Project'}`,
-      };
+        summary: `Created project: ${args.title || project?.title || 'Untitled Project'}`};
     }
 
     if (key === 'link_to_project' && call.specifier) {
@@ -345,8 +335,7 @@ async function executeAgenticToolCall(
         objectId,
         objectType: entityKind === 'task' ? 'goal' : 'idea',
         title: `Linked to project ${call.specifier}`,
-        toolKey: key,
-      });
+        toolKey: key});
       return { success: true, summary: `Connected ${entityKind} to project` };
     }
 
@@ -357,8 +346,7 @@ async function executeAgenticToolCall(
       const form = await FormsService.getForm(formId);
       ctx.appendMessage?.(
         'assistant',
-        `### Form: ${form.title}\nSchema fields: ${JSON.parse(form.schema || '[]').length}`,
-      );
+        `### Form: ${form.title}\nSchema fields: ${JSON.parse(form.schema || '[]').length}`);
       return { success: true, summary: `Loaded form ${form.title}`, skipToast: true };
     }
 
@@ -459,8 +447,7 @@ async function executeAgenticToolCall(
 export async function executeAgenticToolCallWithToast(
   call: AgenticToolCallInput,
   ctx: AgenticExecutionContext,
-  toolName?: string,
-): Promise<AgenticExecutionResult> {
+  toolName?: string): Promise<AgenticExecutionResult> {
   const result = await executeAgenticToolCall(call, ctx);
   if (result.success && !result.skipToast) {
     toast.success(`Kylie ran ${toolName || call.toolKey}.`);

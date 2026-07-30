@@ -3,7 +3,7 @@ import {
   ID, Permission, Query, Role
 } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+import { createSystemTablesDB } from '@/lib/appwrite-admin';
 import { executeCascadeDeleteSecure } from '../cascade-delete';
 
 // Import interfaces / types from shared
@@ -11,9 +11,7 @@ import { executeCascadeDeleteSecure } from '../cascade-delete';
 // Bind shared helper properties and variables to local scope for convenience
 const {
   getActor,
-  verifyResourcePermissionSecure,
-  CACHE_TTL_MS,
-  VIEWER_COOKIE} = shared;
+  verifyResourcePermissionSecure} = shared;
 
 export async function addCallCohostSecureAction(callId: string, cohostId: string, allowEndCall: boolean = false, jwt?: string) {
   const actor = await getActor(jwt);
@@ -22,7 +20,6 @@ export async function addCallCohostSecureAction(callId: string, cohostId: string
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
   const call = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
@@ -59,8 +56,7 @@ export async function addCallCohostSecureAction(callId: string, cohostId: string
       rowId: callId,
       data: {
       metadata: JSON.stringify(meta)},
-      permissions: Array.from(permissions),
-    });
+      permissions: Array.from(permissions)});
 
   // Polyfill to polymorphic whisperrflow.Collaborators table
   const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
@@ -88,8 +84,7 @@ export async function addCallCohostSecureAction(callId: string, cohostId: string
           invitedAt: existing.rows[0].invitedAt || new Date().toISOString(),
           accepted: true,
           status: 'accepted',
-          role: 'cohost'},
-      });
+          role: 'cohost'}});
     } else {
       await tables.createRow({
         databaseId: FLOW_DATABASE_ID,
@@ -103,8 +98,7 @@ export async function addCallCohostSecureAction(callId: string, cohostId: string
           invitedAt: new Date().toISOString(),
           accepted: true,
           status: 'accepted',
-          role: 'cohost'},
-      });
+          role: 'cohost'}});
     }
   } catch (err) {
     console.error('[Cohost secure action] Polymorphic write failed:', err);
@@ -120,7 +114,6 @@ export async function endCallSecureAction(callId: string, jwt?: string) {
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
   const call = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
@@ -196,7 +189,6 @@ export async function updateCallMetadataSecureAction(callId: string, extraMetada
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
   const call = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
@@ -257,8 +249,7 @@ export async function updateCallMetadataSecureAction(callId: string, extraMetada
       tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
       rowId: callId,
       data: {
-      metadata: JSON.stringify(mergedMeta)},
-    });
+      metadata: JSON.stringify(mergedMeta)}});
 
   return JSON.parse(JSON.stringify(updatedCall));
 }

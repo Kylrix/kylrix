@@ -88,8 +88,7 @@ export default function ProjectLinker({ open, onClose, entityId, entityKind, onL
           width: { xs: '100%', sm: 400 },
           bgcolor: '#161412',
           borderLeft: '1px solid rgba(255,255,255,0.06)',
-          backgroundImage: 'none',
-        }
+          backgroundImage: 'none'}
       }}
     >
       <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>

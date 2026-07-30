@@ -3,8 +3,7 @@ import { getPublicGoalDataSecure } from '@/lib/actions/secure-ops';
 import { buildOgMetadata } from '@/lib/og/share-card';
 
 export async function generateMetadata({
-  params,
-}: {
+  params}: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
@@ -14,8 +13,7 @@ export async function generateMetadata({
     if (!goal) {
       return {
         title: 'Goal Not Found | Kylrix Flow',
-        description: 'This goal is private or does not exist.',
-      };
+        description: 'This goal is private or does not exist.'};
     }
 
     const title = `${goal.title} | Shared Goal`;
@@ -28,14 +26,12 @@ export async function generateMetadata({
   } catch (_e) {
     return {
       title: 'Shared Goal | Kylrix Flow',
-      description: 'Collaborate on tasks, milestones, and high-velocity goals.',
-    };
+      description: 'Collaborate on tasks, milestones, and high-velocity goals.'};
   }
 }
 
 export default function GoalPreviewLayout({
-  children,
-}: {
+  children}: {
   children: React.ReactNode;
 }) {
   return <>{children}</>;

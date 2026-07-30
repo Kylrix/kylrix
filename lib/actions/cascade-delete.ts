@@ -366,8 +366,7 @@ export async function executeCascadeDeleteSecure(
                 databaseId,
                 tableId: TAGS_TABLE,
                 rowId: tagDoc.$id,
-                data: { usageCount: Math.max(0, current - 1) },
-              });
+                data: { usageCount: Math.max(0, current - 1) }});
             }
           } catch (_) {}
         }

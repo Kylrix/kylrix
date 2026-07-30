@@ -47,8 +47,7 @@ export default function ProjectAddSubProjectModal({
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(() => !getSessionProjectsList()?.length);
   const [projects, setProjects] = useState<any[]>(() =>
-    (getSessionProjectsList() ?? []).filter((p: any) => p.$id !== projectId),
-  );
+    (getSessionProjectsList() ?? []).filter((p: any) => p.$id !== projectId));
   const [linking, setLinking] = useState<string | null>(null);
 
   const fetchProjects = useCallback(async () => {
@@ -99,8 +98,7 @@ export default function ProjectAddSubProjectModal({
         } catch (err: any) {
           showError('Failed to automatically link new sub-project', err.message);
         }
-      },
-    });
+      }});
   };
 
   const filteredProjects = projects.filter((p) =>
@@ -122,9 +120,7 @@ export default function ProjectAddSubProjectModal({
           border: '1px solid rgba(255,255,255,0.06)',
           borderRadius: '28px',
           backgroundImage: 'none',
-          overflow: 'hidden',
-        },
-      }}
+          overflow: 'hidden'}}}
     >
       <DialogTitle sx={{ p: 3, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h6" sx={{ fontWeight: 900 }}>
@@ -144,8 +140,7 @@ export default function ProjectAddSubProjectModal({
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
           InputProps={{
             startAdornment: <Search size={16} style={{ marginRight: '8px', opacity: 0.5 }} />,
-            sx: { bgcolor: 'rgba(255,255,255,0.02)', borderRadius: '12px' },
-          }}
+            sx: { bgcolor: 'rgba(255,255,255,0.02)', borderRadius: '12px' }}}
         />
         <Button
           variant="contained"
@@ -161,8 +156,7 @@ export default function ProjectAddSubProjectModal({
             textTransform: 'none',
             fontSize: '0.8rem',
             boxShadow: 'none',
-            '&:hover': { bgcolor: theme.palette.primary.dark, boxShadow: 'none' },
-          }}
+            '&:hover': { bgcolor: theme.palette.primary.dark, boxShadow: 'none' }}}
         >
           New Project
         </Button>
@@ -181,8 +175,7 @@ export default function ProjectAddSubProjectModal({
               textAlign: 'center',
               py: 8,
               color: 'rgba(255,255,255,0.3)',
-              fontStyle: 'italic',
-            }}
+              fontStyle: 'italic'}}
           >
             {projects.length === 0 ? 'No other active projects found.' : 'No matching projects found.'}
           </Typography>

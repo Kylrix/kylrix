@@ -229,8 +229,7 @@ export default function ProjectAddObjectModal({
     return new Set(
       linkedObjects
         .filter((o) => normalizeEntityKind(o.entityKind) === normalizeEntityKind(kind))
-        .map((o) => o.entityId),
-    );
+        .map((o) => o.entityId));
   }, [linkedObjects, tab]);
 
   useEffect(() => {
@@ -484,8 +483,7 @@ export default function ProjectAddObjectModal({
                   calendarId: calendarId,
                   userId: user.$id,
                   isPublic: visibility === 'public',
-                  isGuest: visibility === 'public',
-                } as any, eventPermissions);
+                  isGuest: visibility === 'public'} as any, eventPermissions);
 
                 showSuccess('Event created');
                 await ProjectsService.addObjectToProject(projectId, 'event', newDoc.$id);
@@ -574,8 +572,7 @@ export default function ProjectAddObjectModal({
           display: 'flex',
           flexDirection: 'column',
           maxWidth: '600px',
-          mx: 'auto',
-        }
+          mx: 'auto'}
       }}
     >
       <Box sx={{ p: 3, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

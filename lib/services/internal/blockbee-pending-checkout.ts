@@ -59,8 +59,7 @@ export async function registerBlockBeePendingCheckout(meta: Omit<BlockBeePending
         expiresAt: null,
         delta: null,
         metadata: JSON.stringify(payload)},
-      [Permission.read(Role.user(meta.payerUserId))],
-    );
+      [Permission.read(Role.user(meta.payerUserId))]);
   } catch (e) {
     if (isDuplicateDocumentError(e)) return;
     throw e;
@@ -93,8 +92,7 @@ export async function markBlockBeePendingCheckoutConsumed(paymentId: string) {
       status: 'applied',
       metadata: JSON.stringify({
         ...meta,
-        consumedAt: new Date().toISOString()}),
-    });
+        consumedAt: new Date().toISOString()})});
   } catch {
     /* non-fatal */
   }
@@ -113,8 +111,7 @@ export async function acquireBlockBeeIpnLock(paymentId: string, payerUserId: str
       status: 'processing',
       expiresAt: null,
       delta: null,
-      metadata: JSON.stringify({ paymentId, startedAt: new Date().toISOString() }),
-    });
+      metadata: JSON.stringify({ paymentId, startedAt: new Date().toISOString() })});
     return 'owner';
   } catch (e) {
     if (!isDuplicateDocumentError(e)) throw e;
@@ -149,6 +146,5 @@ export async function completeBlockBeeIpnLock(paymentId: string, payerUserId: st
     metadata: JSON.stringify({
       paymentId,
       completedAt: new Date().toISOString(),
-      snapshot}),
-  });
+      snapshot})});
 }

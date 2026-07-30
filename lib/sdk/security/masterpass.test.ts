@@ -10,8 +10,7 @@ const createStorage = () => {
     },
     removeItem: (key: string) => {
       store.delete(key);
-    },
-  };
+    }};
 };
 
 describe('masterpass helpers', () => {

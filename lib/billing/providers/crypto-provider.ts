@@ -15,8 +15,7 @@ export class CryptoPaymentProvider implements PaymentProvider {
     months: number = 1,
     email?: string,
     giftDetails?: { recipientUserId: string; recipientName?: string; giftMessage?: string },
-    options?: { couponId?: string | null; discountPercent?: number | null; adjustedAmountUsd?: number | null; baseUrl?: string | null },
-  ): Promise<CheckoutSession> {
+    options?: { couponId?: string | null; discountPercent?: number | null; adjustedAmountUsd?: number | null; baseUrl?: string | null }): Promise<CheckoutSession> {
     const blockbeeApiKey = process.env.BLOCKBEE_API;
 
     if (!blockbeeApiKey) {

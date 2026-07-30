@@ -47,15 +47,13 @@ export default function FormSettingsDialog({ open, onClose, form, onSaved }: For
       const settings = {
         allowAnonymousView,
         allowAnonymousFill,
-        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
-      };
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null};
 
       await FormsService.updateForm(form.$id, {
         status: status as FormsStatus,
         settings: JSON.stringify(settings),
         isPublic: status === 'published',
-        isGuest: allowAnonymousFill,
-      } as any);
+        isGuest: allowAnonymousFill} as any);
       
       onSaved();
       onClose();

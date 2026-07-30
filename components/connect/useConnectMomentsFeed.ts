@@ -28,8 +28,7 @@ const PAGE_SIZE = 12;
 function buildItems(
   ecosystemMoments: any[],
   nostrFeed: { id: string; pubkey: string; content: string; created_at: number }[],
-  resolvedProfiles: Record<string, { username: string; avatarUrl?: string }>,
-): UnifiedFeedItem[] {
+  resolvedProfiles: Record<string, { username: string; avatarUrl?: string }>): UnifiedFeedItem[] {
   const rows: UnifiedFeedItem[] = [];
 
   for (const m of ecosystemMoments) {
@@ -47,8 +46,7 @@ function buildItems(
       likesCount: m.likeCount || 0,
       pulsesCount: m.pulseCount || 0,
       repliesCount: m.replyCount || 0,
-      rawEvent: m,
-    });
+      rawEvent: m});
   }
 
   for (const event of nostrFeed) {
@@ -71,8 +69,7 @@ function buildItems(
       isEcosystemUser: isEco,
       content: event.content,
       createdAt: event.created_at * 1000,
-      rawEvent: event,
-    });
+      rawEvent: event});
   }
 
   return rows.sort((a: any, b: any) => b.createdAt - a.createdAt);
@@ -98,8 +95,7 @@ export function useConnectMomentsFeed() {
 
   const snapshot = useCallback(
     () => buildItems(ecosystemRef.current, nostrFeedRef.current, resolvedProfilesRef.current),
-    [],
-  );
+    []);
 
   // Snapshot only on first load or explicit refresh — never from live relay traffic.
   const syncDisplay = useCallback(() => {
@@ -212,8 +208,7 @@ export function useConnectMomentsFeed() {
     (page: number) => {
       setCurrentPage(Math.min(Math.max(1, page), totalPages));
     },
-    [totalPages],
-  );
+    [totalPages]);
 
   const nextPage = useCallback(() => {
     if (hasNextPage) setCurrentPage((p) => p + 1);

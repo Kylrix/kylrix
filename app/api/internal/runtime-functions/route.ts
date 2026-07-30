@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   internalJobsConfigured,
   readJobsBearer,
-  timingSafeBearerMatchesConfiguredSecret,
-} from '@/lib/runtime-functions/job-auth';
+  timingSafeBearerMatchesConfiguredSecret} from '@/lib/runtime-functions/job-auth';
 import { executeSystemRuntimeJob, isSystemRuntimeJobId } from '@/lib/runtime-functions/system-jobs';
 
 /**

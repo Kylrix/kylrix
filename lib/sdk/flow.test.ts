@@ -6,14 +6,12 @@ describe('KylrixFlow', () => {
     const mockSdk = {
       createRow: vi.fn().mockImplementation(async (db, table, data) => ({
         $id: 'task-123',
-        ...data})),
-    };
+        ...data}))};
 
     const flow = new KylrixFlow(mockSdk);
     const taskData = {
       title: 'Finish Unit Tests',
-      userId: 'user-789',
-    };
+      userId: 'user-789'};
 
     const result = await flow.createTask('db-id', 'table-id', taskData);
 
@@ -31,16 +29,14 @@ describe('KylrixFlow', () => {
     const mockSdk = {
       createRow: vi.fn().mockImplementation(async (db, table, data) => ({
         $id: 'task-123',
-        ...data})),
-    };
+        ...data}))};
 
     const flow = new KylrixFlow(mockSdk);
     const taskData = {
       title: 'High Priority Goal',
       userId: 'user-789',
       status: 'completed',
-      priority: 'high',
-    };
+      priority: 'high'};
 
     const result = await flow.createTask('db-id', 'table-id', taskData);
 
@@ -57,8 +53,7 @@ describe('KylrixFlow', () => {
     const mockSdk = {
       createRow: vi.fn().mockImplementation(async (db, table, data) => ({
         $id: 'session-123',
-        ...data})),
-    };
+        ...data}))};
 
     const flow = new KylrixFlow(mockSdk);
     

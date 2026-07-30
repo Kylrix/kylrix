@@ -230,4 +230,4 @@ export {
   registerNostrIdentityAction,
   resolveNostrPubkeysAction};
 
-export type { PermissionLevel,  } from './secure-ops/shared';
+export type { PermissionLevel} from './secure-ops/shared';

@@ -39,8 +39,7 @@ export function parseCallMetadata(raw: unknown): KylrixCallMetadata & { createdA
     return {
       scope: 'link',
       hostId: '',
-      participantIds: [],
-    };
+      participantIds: []};
   }
 
   if (typeof raw === 'object') {
@@ -51,8 +50,7 @@ export function parseCallMetadata(raw: unknown): KylrixCallMetadata & { createdA
     return {
       scope: 'link',
       hostId: '',
-      participantIds: [],
-    };
+      participantIds: []};
   }
 
   try {
@@ -64,8 +62,7 @@ export function parseCallMetadata(raw: unknown): KylrixCallMetadata & { createdA
     return {
       scope: 'link',
       hostId: '',
-      participantIds: [],
-    };
+      participantIds: []};
   }
 }
 

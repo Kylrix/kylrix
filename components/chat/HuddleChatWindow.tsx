@@ -1358,8 +1358,7 @@ function HuddleMainInput({
             '&:hover': {
               bgcolor: '#1C1A18',
               borderColor: isRecording ? '#ff4d4d' : '#F59E0B',
-              color: '#fff'},
-          }}
+              color: '#fff'}}}
         >
           {isRecording ? <Square size={18} fill="#ff4d4d" /> : <Mic size={20} />}
         </IconButton>

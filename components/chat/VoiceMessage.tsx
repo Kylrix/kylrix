@@ -109,20 +109,15 @@ export const VoiceMessage: React.FC<VoiceMessageProps> = ({ url }) => {
               height: 10,
               transition: '0.3s cubic-bezier(.47,1.64,.41,.8)',
               '&:before': {
-                boxShadow: '0 2px 12px 0 rgba(0,0,0,0.4)',
-              },
+                boxShadow: '0 2px 12px 0 rgba(0,0,0,0.4)'},
               '&:hover, &.ob-focus-visible': {
-                boxShadow: '0px 0px 0px 6px rgba(99, 102, 241, 0.16)',
-              },
-            },
+                boxShadow: '0px 0px 0px 6px rgba(99, 102, 241, 0.16)'}},
             '& .ob-slider-rail': {
               opacity: 0.15,
               bgcolor: '#9B9691'
             },
             '& .ob-slider-track': {
-              border: 'none',
-            },
-          }}
+              border: 'none'}}}
         />
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: -1.25 }}>
           <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: '#6366F1', fontFamily: 'var(--font-mono)' }}>

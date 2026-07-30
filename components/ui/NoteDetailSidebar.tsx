@@ -626,8 +626,7 @@ export function NoteDetailSidebar({
       source: 'note',
       noteId: liveNote.$id,
       participantIds,
-      title: liveNote.title ? `Huddle: ${liveNote.title}` : 'Note Huddle',
-    });
+      title: liveNote.title ? `Huddle: ${liveNote.title}` : 'Note Huddle'});
   }, [liveNote, openCallLauncher]);
 
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -799,8 +798,7 @@ export function NoteDetailSidebar({
       parentKind: 'note',
       childId: payload.entityId,
       childKind,
-      metadata: { insertLine: getCursorLineNumber(), sourceKind: payload.kind },
-    });
+      metadata: { insertLine: getCursorLineNumber(), sourceKind: payload.kind }});
     await insertObjectBlockAtCursor(serializeObjectBlock({
       childId: payload.entityId,
       childKind: childKind as any,
@@ -829,8 +827,7 @@ export function NoteDetailSidebar({
         parentKind: 'note',
         childId: uploaded.$id,
         childKind,
-        metadata: { bucketId, fileName: file.name, mimeType: file.type, size: file.size, insertLine: getCursorLineNumber() },
-      });
+        metadata: { bucketId, fileName: file.name, mimeType: file.type, size: file.size, insertLine: getCursorLineNumber() }});
       await insertObjectBlockAtCursor(serializeObjectBlock({
         objectId: relation?.$id,
         childId: uploaded.$id,
@@ -839,8 +836,7 @@ export function NoteDetailSidebar({
         label: file.name,
         line: getCursorLineNumber(),
         appTheme: 'idea',
-        metadata: { mimeType: file.type, fileName: file.name },
-      }));
+        metadata: { mimeType: file.type, fileName: file.name }}));
       const { getObjectsByParent } = await import('@/lib/actions/client-ops');
       setAttachedObjects(await getObjectsByParent(liveNote.$id, 'note'));
       showSuccess('Attachment added');
@@ -1534,8 +1530,7 @@ export function NoteDetailSidebar({
             pt: 2,
             px: { xs: 2.25, sm: 2.75 },
             maxWidth: '600px',
-            mx: 'auto',
-          }
+            mx: 'auto'}
         }}
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
@@ -1551,8 +1546,7 @@ export function NoteDetailSidebar({
               color: '#E8E6E3',
               bgcolor: '#0A0908',
               border: '1px solid #34322F',
-              '&:hover': { bgcolor: '#1C1A18' },
-            }}
+              '&:hover': { bgcolor: '#1C1A18' }}}
           >
             <CloseIcon size={18} />
           </IconButton>
@@ -1674,8 +1668,7 @@ export function NoteDetailSidebar({
               mx: 'auto',
               p: 2,
               pb: 4,
-              pointerEvents: 'auto',
-            }
+              pointerEvents: 'auto'}
           }}
           ModalProps={{
             keepMounted: false,
@@ -1766,11 +1759,9 @@ export function NoteDetailSidebar({
                             bucketId: file.bucketId,
                             label: file.name,
                             appTheme: 'idea',
-                            metadata: { mimeType: file.mimeType, fileName: file.name, fileUrl: file.fileUrl },
-                          });
+                            metadata: { mimeType: file.mimeType, fileName: file.name, fileUrl: file.fileUrl }});
                       insertObjectBlockAtCursor(block);
-                    },
-                  });
+                    }});
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-pink-500/40 text-sm font-bold text-pink-300 hover:bg-pink-500/10 transition-all text-left cursor-pointer"
               >
@@ -1818,8 +1809,7 @@ export function NoteDetailSidebar({
               mx: 'auto',
               p: 2,
               pb: 4,
-              pointerEvents: 'auto',
-            }
+              pointerEvents: 'auto'}
           }}
           ModalProps={{
             keepMounted: false,

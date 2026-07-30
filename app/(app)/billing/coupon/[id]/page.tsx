@@ -111,8 +111,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
             borderRadius: 5,
             bgcolor: '#161412',
             border: '1px solid rgba(255,255,255,0.06)',
-            boxShadow: '0 28px 60px rgba(0,0,0,0.42)',
-          }}
+            boxShadow: '0 28px 60px rgba(0,0,0,0.42)'}}
         >
           <Stack spacing={3} alignItems="center" textAlign="center">
             <Box sx={{ p: 2, borderRadius: 4, bgcolor: alpha('#6366F1', 0.08), color: '#6366F1' }}>
@@ -169,8 +168,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
                   fontWeight: 900,
                   fontSize: '0.95rem',
                   '&:hover': { bgcolor: '#4F46E5' },
-                  '&:disabled': { opacity: 0.5 },
-                }}
+                  '&:disabled': { opacity: 0.5 }}}
                 startIcon={isClaiming ? <Loader2 size={16} className="animate-spin" /> : <Ticket size={16} />}
               >
                 {isClaiming ? 'Claiming...' : 'Redeem Coupon'}
@@ -200,8 +198,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
                   textTransform: 'none',
                   fontWeight: 900,
                   fontSize: '0.95rem',
-                  '&:hover': { bgcolor: '#059669' },
-                }}
+                  '&:hover': { bgcolor: '#059669' }}}
                 startIcon={<CheckCircle2 size={16} />}
               >
                 {coupon?.requiresPayment ? 'Proceed to Checkout' : 'Go to Settings'}

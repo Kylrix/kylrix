@@ -96,8 +96,7 @@ async function updateStateRow(patch: Partial<TokenStateRow>) {
     data: {
       ...current,
       ...patch,
-      updatedAt: nowIso()},
-  });
+      updatedAt: nowIso()}});
 }
 
 async function listUserEventsDescending(userId: string, limit: number) {
@@ -274,10 +273,8 @@ async function appendEvent(input: {
       sourceType: input.sourceType || null,
       sourceId: input.sourceId || null,
       metadata: input.metadata ? JSON.stringify(input.metadata) : null,
-      createdAt,
-    },
-    permissions: tokenReadPermissions(input.userId, input.counterpartyUserId),
-  });
+      createdAt},
+    permissions: tokenReadPermissions(input.userId, input.counterpartyUserId)});
 }
 
 async function notifyTokenTransferReceived(input: {
@@ -310,8 +307,7 @@ async function notifyTokenTransferReceived(input: {
       toUserId: input.toUserId,
       amountMicro: toMicro(input.amountMicro),
       sourceType: input.sourceType,
-      sourceId: input.sourceId},
-  }).catch((error: any) => {
+      sourceId: input.sourceId}}).catch((error: any) => {
     console.error('[KYLRIX Token] Failed to dispatch transfer email', error);
   });
 }
@@ -348,10 +344,8 @@ export const InternalKylrixTokenService = {
         createdAt: timestamp,
         lastActivityAt: null,
         lastSpikeAt: null,
-        updatedAt: timestamp,
-      },
-      permissions: [Permission.read(Role.users())],
-    });
+        updatedAt: timestamp},
+      permissions: [Permission.read(Role.users())]});
   },
 
   async mintForActivity(input: {
@@ -389,8 +383,7 @@ export const InternalKylrixTokenService = {
         genesisAt: state.genesisAt || null,
         nowIso: nowIso()},
       signal,
-      userDailyMinted,
-    );
+      userDailyMinted);
     if (!decision.allowed) return { accepted: false, reason: decision.reason };
 
     const currentBalance = await getLatestBalanceMicro(input.userId);
@@ -412,9 +405,7 @@ export const InternalKylrixTokenService = {
         recentActivityCount,
         userBaseCount,
         tightenBps: decision.tightenBps,
-        ...(input.metadata || {}),
-      },
-    });
+        ...(input.metadata || {})}});
 
     const minted = asMicro(state.totalMintedMicro) + decision.amountMicro;
     const burned = asMicro(state.totalBurnedMicro);
@@ -466,8 +457,7 @@ export const InternalKylrixTokenService = {
       balanceAfterMicro: fromBalance - amount,
       sourceType: input.sourceType,
       sourceId: input.sourceId,
-      metadata: input.metadata,
-    });
+      metadata: input.metadata});
     const credit = await appendEvent({
       txId: `${tx}:in`,
       idempotencyKey: `${input.idempotencyKey}:in`,
@@ -479,8 +469,7 @@ export const InternalKylrixTokenService = {
       balanceAfterMicro: toBalance + amount,
       sourceType: input.sourceType,
       sourceId: input.sourceId,
-      metadata: input.metadata,
-    });
+      metadata: input.metadata});
 
     await updateStateRow({ lastActivityAt: nowIso() });
     await notifyTokenTransferReceived({
@@ -525,8 +514,7 @@ export const InternalKylrixTokenService = {
       balanceAfterMicro: userBalance - fineAmount,
       sourceType: input.sourceType,
       sourceId: input.sourceId,
-      metadata: { reason: input.reason, ...(input.metadata || {}) },
-    });
+      metadata: { reason: input.reason, ...(input.metadata || {}) }});
 
     const credit = await appendEvent({
       txId: `${tx}:root`,
@@ -539,8 +527,7 @@ export const InternalKylrixTokenService = {
       balanceAfterMicro: rootBalance + fineAmount,
       sourceType: input.sourceType,
       sourceId: input.sourceId,
-      metadata: { reason: input.reason, ...(input.metadata || {}) },
-    });
+      metadata: { reason: input.reason, ...(input.metadata || {}) }});
 
     await updateStateRow({
       rootBalanceMicro: toMicro(rootBalance + fineAmount),
@@ -581,8 +568,7 @@ export const InternalKylrixTokenService = {
       status: 'pending',
       sourceType: 'claim',
       sourceId: input.destinationWallet,
-      metadata: { destinationWallet: input.destinationWallet, chain: input.chain },
-    });
+      metadata: { destinationWallet: input.destinationWallet, chain: input.chain }});
 
     await updateStateRow({ lastActivityAt: nowIso() });
     return {
@@ -618,8 +604,7 @@ export const InternalKylrixTokenService = {
       metadata: {
         destinationWallet: input.destinationWallet,
         chain: input.chain,
-        onchainTxHash: input.onchainTxHash},
-    });
+        onchainTxHash: input.onchainTxHash}});
 
     const nextBurned = asMicro(state.totalBurnedMicro) + amount;
     const nextMinted = asMicro(state.totalMintedMicro);
@@ -670,5 +655,4 @@ export const InternalKylrixTokenService = {
       amountMicro: toMicro(balanceMicro),
       amount: toToken(balanceMicro),
       symbol: contract.policy.symbol};
-  },
-};
+  }};

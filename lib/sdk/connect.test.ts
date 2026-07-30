@@ -8,16 +8,14 @@ describe('KylrixConnect', () => {
         $id: 'msg-123',
         ...data})),
       getRow: vi.fn(),
-      updateRow: vi.fn(),
-    };
+      updateRow: vi.fn()};
 
     const connect = new KylrixConnect(mockSdk);
     const messageData = {
       conversationId: 'conv-456',
       senderId: 'user-789',
       type: 'text' as const,
-      content: 'Hello, World!',
-    };
+      content: 'Hello, World!'};
 
     const result = await connect.sendMessage('db-id', 'table-id', messageData);
 
@@ -35,16 +33,14 @@ describe('KylrixConnect', () => {
   it('should mark a message as read by adding the user ID to the readBy list uniquely', async () => {
     const existingMessage = {
       $id: 'msg-123',
-      readBy: ['user-abc'],
-    };
+      readBy: ['user-abc']};
 
     const mockSdk = {
       createRow: vi.fn(),
       getRow: vi.fn().mockResolvedValue(existingMessage),
       updateRow: vi.fn().mockImplementation(async (db, table, rowId, data) => ({
         ...existingMessage,
-        ...data})),
-    };
+        ...data}))};
 
     const connect = new KylrixConnect(mockSdk);
 
@@ -52,8 +48,7 @@ describe('KylrixConnect', () => {
     const result1 = await connect.markAsRead('db-id', 'table-id', 'msg-123', 'user-xyz');
     expect(mockSdk.getRow).toHaveBeenCalledWith('db-id', 'table-id', 'msg-123');
     expect(mockSdk.updateRow).toHaveBeenCalledWith('db-id', 'table-id', 'msg-123', {
-      readBy: ['user-abc', 'user-xyz'],
-    });
+      readBy: ['user-abc', 'user-xyz']});
     expect(result1.readBy).toEqual(['user-abc', 'user-xyz']);
 
     // Test adding an already existing user (should remain unique)
@@ -62,7 +57,6 @@ describe('KylrixConnect', () => {
       readBy: ['user-abc', 'user-xyz']});
     await connect.markAsRead('db-id', 'table-id', 'msg-123', 'user-xyz');
     expect(mockSdk.updateRow).toHaveBeenLastCalledWith('db-id', 'table-id', 'msg-123', {
-      readBy: ['user-abc', 'user-xyz'],
-    });
+      readBy: ['user-abc', 'user-xyz']});
   });
 });

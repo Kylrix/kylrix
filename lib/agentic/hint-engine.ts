@@ -68,7 +68,5 @@ registerHintProvider(({ input }) => {
       route: d.route,
       target: d.id,
       score: 0.7,
-      source: 'ui-catalog',
-    })),
-  );
+      source: 'ui-catalog'})));
 });

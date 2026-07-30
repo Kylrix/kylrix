@@ -12,8 +12,7 @@ export function normalizeProjectVisibility<T extends Record<string, any>>(projec
       ...project,
       visibility: 'public',
       isPublic: true,
-      isGuest: isGuest || visibility === 'public',
-    };
+      isGuest: isGuest || visibility === 'public'};
   }
 
   if (visibility === 'private' || (!isPublic && !isGuest)) {
@@ -21,8 +20,7 @@ export function normalizeProjectVisibility<T extends Record<string, any>>(projec
       ...project,
       visibility: 'private',
       isPublic: false,
-      isGuest: false,
-    };
+      isGuest: false};
   }
 
   return project;

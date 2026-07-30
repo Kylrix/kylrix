@@ -145,8 +145,7 @@ export function createForwardSecurityGate(security?: ForwardSecurityGate | null)
       if (isMasterpassRequired(security)) {
         throw new Error('MASTERPASS_LOCKED');
       }
-    },
-  };
+    }};
 }
 
 export function mergeForwardTargets(
@@ -195,8 +194,7 @@ export function mergeForwardTargets(
           conversation.name,
           conversation.title,
           ...participants.map((id) => profileMap.get(id)?.username || profileMap.get(id)?.displayName || id)
-        ),
-      };
+        )};
 
       targetsByKey.set(key, target);
       continue;
@@ -233,9 +231,7 @@ export function mergeForwardTargets(
           contact?.nickname,
           contact?.notes,
           lastMessageText,
-          ...(contact?.tags || []),
-        ),
-      };
+          ...(contact?.tags || []))};
 
       if (contact?.isBlocked) {
         target.searchableTerms.push('blocked');
@@ -288,8 +284,7 @@ export function mergeForwardTargets(
         lastMessageAt: null,
         lastMessageText: null,
         sourceApps: [sourceApp],
-        searchableTerms: buildSearchableTerms(displayName, profile?.username, contact.nickname, contact.notes, ...(contact.tags || [])),
-      });
+        searchableTerms: buildSearchableTerms(displayName, profile?.username, contact.nickname, contact.notes, ...(contact.tags || []))});
     }
   }
 
@@ -339,8 +334,7 @@ export function createForwardDirectory(deps: ForwardDirectoryDeps) {
         lastMessageAt: null,
         lastMessageText: null,
         sourceApps: [deps.sourceApp || 'connect'],
-        searchableTerms: buildSearchableTerms(profile.displayName, profile.username, profile.email),
-      }));
+        searchableTerms: buildSearchableTerms(profile.displayName, profile.username, profile.email)}));
     },
 
     async ensureConversationForTarget(currentUserId: string, target: ForwardTarget) {
@@ -389,8 +383,7 @@ export function createForwardDirectory(deps: ForwardDirectoryDeps) {
         forwardedFromResourceType: payload.sourceResourceType || null,
         forwardedTargetId: target.id,
         forwardedTargetKind: target.kind,
-        ...(payload.metadata || {}),
-      };
+        ...(payload.metadata || {})};
 
       return {
         conversationId: target.conversationId || '',
@@ -429,8 +422,7 @@ export function createForwardDirectory(deps: ForwardDirectoryDeps) {
       return await deps.source.sendMessage({
         ...request,
         conversationId});
-    },
-  };
+    }};
 
   return service;
 }

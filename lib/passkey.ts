@@ -5,8 +5,7 @@ import { AppwriteService } from '@/lib/appwrite';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import {
   resolvePasskeyRpId,
-  transportsForPasskeyEntry,
-} from '@/lib/passkey-webauthn-options';
+  transportsForPasskeyEntry} from '@/lib/passkey-webauthn-options';
 import { bufferToBase64Url } from '@/lib/webauthn-utils';
 import toast from 'react-hot-toast';
 import { getPasskeyRegisterFallbackSeedAction } from '@/lib/actions/auth-actions';
@@ -44,8 +43,7 @@ export async function unlockWithPasskey(userId: string): Promise<boolean> {
         type: 'public-key' as const,
         transports: transportsForPasskeyEntry(entry)})),
       userVerification: 'preferred' as UserVerificationRequirement,
-      timeout: 60000,
-    };
+      timeout: 60000};
 
     const hasAnyAuthPasskey = passkeyEntries.some((entry: any) => entry.authPasskey);
     if (hasAnyAuthPasskey) {
@@ -114,8 +112,7 @@ export async function unlockWithPasskey(userId: string): Promise<boolean> {
       kwrapSeed,
       { name: "AES-GCM" },
       false,
-      ["decrypt"],
-    );
+      ["decrypt"]);
 
     // 6. Unwrap the Master Encryption Key (MEK)
     const wrappedKeyBytes = new Uint8Array(

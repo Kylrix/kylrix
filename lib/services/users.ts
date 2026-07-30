@@ -12,8 +12,7 @@ const profileRowCache = new Map<string, { row: any; at: number }>();
 const batchState = {
     queue: new Set<string>(),
     timer: null as any,
-    promises: new Map<string, Array<{ resolve: (v: any) => void; reject: (e: any) => void }>>(),
-};
+    promises: new Map<string, Array<{ resolve: (v: any) => void; reject: (e: any) => void }>>()};
 
 function normalizeUsernameSuggestion(input: string | null | undefined): string | null {
     if (!input) return null;
@@ -192,11 +191,9 @@ export const UsersService = {
                     isPublic: data.isPublic ?? profile.isPublic,
                     isGuest: data.isGuest ?? profile.isGuest,
                     isAvatar: data.isAvatar ?? profile.isAvatar,
-                    isContact: data.isContact ?? profile.isContact,
-                },
+                    isContact: data.isContact ?? profile.isContact},
                 metadata: {
-                    source: 'vault.users-service.updateProfile'},
-            });
+                    source: 'vault.users-service.updateProfile'}});
             return result;
         }
         return null;
@@ -230,8 +227,7 @@ export const UsersService = {
                     bio: data.bio || '',
                     publicKey: data.publicKey || null},
                 metadata: {
-                    source: 'chat.profiles-service.createProfile'},
-            });
+                    source: 'chat.profiles-service.createProfile'}});
             return row;
         });
     },

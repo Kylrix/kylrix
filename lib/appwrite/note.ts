@@ -26,7 +26,7 @@ const activeNoteKeys = new Map<string, CryptoKey>();
 const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 
 // Appwrite config IDs from constants
-export const APPWRITE_TABLE_ID_NOTES = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+const APPWRITE_TABLE_ID_NOTES = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
 const APPWRITE_TABLE_ID_TAGS = APPWRITE_CONFIG.TABLES.NOTE.TAGS;
 const APPWRITE_TABLE_ID_COMMENTS = APPWRITE_CONFIG.TABLES.NOTE.COMMENTS;
 const APPWRITE_TABLE_ID_REACTIONS = APPWRITE_CONFIG.TABLES.NOTE.REACTIONS;
@@ -46,7 +46,7 @@ const KEEP_TABLE_ID_CREDENTIALS = APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS;
 export const APPWRITE_BUCKET_NOTES_ATTACHMENTS = APPWRITE_CONFIG.BUCKETS.NOTES_ATTACHMENTS;
 
 // Removed redundant exports to prevent ES6 module naming collisions with client.ts
-export {  Query, Permission, Role};
+export {  Query};
 
 import { fetchOptimized, invalidateCache } from '@/lib/ecosystem/nexus-fetcher';
 
@@ -416,8 +416,7 @@ export async function getNote(noteId: string): Promise<Notes> {
           userId: 'ghost',
           isPublic: false,
           isGuest: false,
-          metadata: match.metadata || '{}',
-        } as any;
+          metadata: match.metadata || '{}'} as any;
       }
     }
   }
@@ -508,8 +507,7 @@ export async function updateNote(noteId: string, data: Partial<Notes>, jwt?: str
           userId: 'ghost',
           isPublic: false,
           isGuest: false,
-          metadata: updatedRef.metadata || '{}',
-        } as any;
+          metadata: updatedRef.metadata || '{}'} as any;
       }
     }
   }
@@ -603,8 +601,7 @@ export async function deleteNote(noteId: string, jwt?: string) {
             createdAt: new Date().toISOString(),
             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             decryptionKey: '',
-            deletionSecret: '',
-          };
+            deletionSecret: ''};
           filtered.unshift(newRef);
 
           localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(filtered));
@@ -644,8 +641,7 @@ export async function deleteNote(noteId: string, jwt?: string) {
               createdAt: new Date().toISOString(),
               expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
               decryptionKey: '',
-              deletionSecret: '',
-            };
+              deletionSecret: ''};
             filtered.unshift(newRef);
 
             localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(filtered));
@@ -819,8 +815,7 @@ export async function updateTag(tagId: string, data: Partial<Tags & { isPublic?:
       nameLower: name?.toLowerCase(),
       metadata: JSON.stringify(metadata),
       isPublic: data.isPublic !== undefined ? !!data.isPublic : !!(existing as Tags & { isPublic?: boolean }).isPublic,
-      isGuest: data.isGuest !== undefined ? !!data.isGuest : !!(existing as Tags & { isGuest?: boolean }).isGuest,
-    };
+      isGuest: data.isGuest !== undefined ? !!data.isGuest : !!(existing as Tags & { isGuest?: boolean }).isGuest};
 
     const doc = await updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId, payload);
     invalidateCache('list:tags');
@@ -846,8 +841,7 @@ export async function updateTag(tagId: string, data: Partial<Tags & { isPublic?:
     nameLower: name?.toLowerCase(),
     metadata: JSON.stringify(metadata),
     isPublic: data.isPublic !== undefined ? !!data.isPublic : !!(existing as Tags & { isPublic?: boolean }).isPublic,
-    isGuest: data.isGuest !== undefined ? !!data.isGuest : !!(existing as Tags & { isGuest?: boolean }).isGuest,
-  };
+    isGuest: data.isGuest !== undefined ? !!data.isGuest : !!(existing as Tags & { isGuest?: boolean }).isGuest};
 
   const doc = await updateRowSecure(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId, payload, undefined, jwt);
   return hydrateTagMetadata(doc as unknown as Tags);
@@ -1573,8 +1567,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
             userId: doc.userId,
             isPublic: false,
             isGuest: false,
-            metadata: doc.metadata || '{}',
-          })).filter((doc: any) => includeGhosts || !isGhostNote(doc)) as any[];
+            metadata: doc.metadata || '{}'})).filter((doc: any) => includeGhosts || !isGhostNote(doc)) as any[];
           
           return {
             rows,
@@ -1801,14 +1794,12 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
           ...note,
           metadata: JSON.stringify({ ...meta, clientDecrypted: true }),
           title: decryptedTitle,
-          content: decryptedContent,
-        };
+          content: decryptedContent};
       } catch (err: any) {
         console.error('T5 decryption failed, attempting self-healing fallback:', err);
         return {
           ...note,
-          metadata: JSON.stringify({ ...meta, clientDecrypted: true }),
-        };
+          metadata: JSON.stringify({ ...meta, clientDecrypted: true })};
       }
     }
 
@@ -1861,8 +1852,7 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
           ...note,
           metadata: JSON.stringify({ ...meta, clientDecrypted: true }),
           title: decryptedTitle,
-          content: decryptedContent,
-        };
+          content: decryptedContent};
     } catch (err: any) {
         console.error('T4 decryption failed, attempting self-healing fallback:', err);
         cachePublicNoteDecryptionKey(note.$id, keyBase64);
@@ -1870,8 +1860,7 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
         return {
           ...note,
           metadata: JSON.stringify({ ...meta, clientDecrypted: true }),
-          title: decryptedTitle,
-        };
+          title: decryptedTitle};
     }
   } catch (_error) {
     return null;

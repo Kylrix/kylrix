@@ -837,7 +837,6 @@ export async function verifyFormPermission(formId: string, actorId: string, minL
 
 export async function verifyEventPermission(eventId: string, actorId: string, minLevel: 'viewer' | 'editor' | 'admin') {
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
   const event = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,

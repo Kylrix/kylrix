@@ -156,7 +156,6 @@ export function ResponseDetailDrawer({ isOpen, onClose, submission, schemaMap }:
     setConvertingGoal(true);
     try {
       // Inject ecosystem special formatting pattern directly to link the form response to the goal
-      const specialLink = `\n\n---\n**Source Link Reference**: [Intake Form Response ${submission.$id.slice(-8)}](source:kylrixform:${submission.formId})`;
 
       // Call secure-ops backend helper
       await convertResponseToGoal(submission.$id);

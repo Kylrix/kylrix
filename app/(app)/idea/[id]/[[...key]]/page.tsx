@@ -8,8 +8,7 @@ import SharedNoteClient from '../SharedNoteClient';
  * by this catch-all and break link previews (goals work because they have no catch-all).
  */
 export default async function SharedNotePage({
-  params,
-}: {
+  params}: {
   params: Promise<{ id: string; key?: string[] }>;
 }) {
   const { id, key } = await params;

@@ -17,8 +17,7 @@ interface ProfileContextType {
 const ProfileContext = createContext<ProfileContextType>({
     profile: null,
     isLoading: true,
-    refreshProfile: async () => {},
-});
+    refreshProfile: async () => {}});
 
 const PROFILE_SETUP_KEY = 'kylrix_profile_initialized';
 
@@ -103,8 +102,7 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
                         if (error || !data) return;
                         if (activeUserIdRef.current !== profileUserId) return;
                         setProfile(data);
-                    },
-                );
+                    });
                 return;
             }
 

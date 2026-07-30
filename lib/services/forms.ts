@@ -338,8 +338,7 @@ export const FormsService = {
                     ctaUrl: `${getEcosystemUrl('flow')}/forms/${formId}`,
                     ctaText: 'Review submission',
                     metadata: {
-                        submissionId: submission.$id},
-                });
+                        submissionId: submission.$id}});
             } catch (e) {
                 console.error('[Forms] Failed to queue submission email', e);
             }

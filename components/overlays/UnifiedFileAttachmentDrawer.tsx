@@ -389,8 +389,7 @@ export function UnifiedFileAttachmentDrawer() {
     else if (activeSubTab === 'forms') childKind = 'form';
     else if (activeSubTab === 'sessions') {
       const ok = window.confirm(
-        'Attaching a Kylie session makes the entire conversation visible to anyone who can see this note. Continue?',
-      );
+        'Attaching a Kylie session makes the entire conversation visible to anyone who can see this note. Continue?');
       if (!ok) return;
       childKind = 'session';
     }
@@ -401,8 +400,7 @@ export function UnifiedFileAttachmentDrawer() {
       bucketId: activeSubTab,
       label: itemTitle,
       appTheme: 'idea',
-      metadata: { title: itemTitle, subTab: activeSubTab },
-    });
+      metadata: { title: itemTitle, subTab: activeSubTab }});
 
     options.onSelectFile({
       $id: childId,
@@ -432,8 +430,7 @@ export function UnifiedFileAttachmentDrawer() {
         bucketId: bucket,
         label: uploaded.name,
         appTheme: 'idea',
-        metadata: { mimeType: uploaded.mimeType || file.type, fileName: uploaded.name, fileUrl },
-      });
+        metadata: { mimeType: uploaded.mimeType || file.type, fileName: uploaded.name, fileUrl }});
 
       const newMedia: SyncedMediaFile = {
         $id: uploaded.$id,

@@ -352,8 +352,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
         ...current,
         ...patch,
         actions: { ...current.actions, ...(patch.actions || {}) },
-        objects: { ...current.objects, ...(patch.objects || {}) },
-      };
+        objects: { ...current.objects, ...(patch.objects || {}) }};
       void persistPreferences(next);
       return next;
     });
@@ -363,8 +362,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
     setPreferences((current) => {
       const next = {
         ...current,
-        actions: { ...current.actions, [action]: !current.actions[action] },
-      };
+        actions: { ...current.actions, [action]: !current.actions[action] }};
       void persistPreferences(next);
       return next;
     });
@@ -374,8 +372,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
     setPreferences((current) => {
       const next = {
         ...current,
-        objects: { ...current.objects, [object]: !current.objects[object] },
-      };
+        objects: { ...current.objects, [object]: !current.objects[object] }};
       void persistPreferences(next);
       return next;
     });
@@ -516,9 +513,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
           mx: 'auto',
           left: '50%',
           transform: 'translateX(-50%)',
-          backgroundImage: 'radial-gradient(circle at 50% -20%, rgba(245, 158, 11, 0.08) 0%, transparent 60%)',
-        },
-      }}
+          backgroundImage: 'radial-gradient(circle at 50% -20%, rgba(245, 158, 11, 0.08) 0%, transparent 60%)'}}}
     >
       {/* Header */}
       <div className="px-5 py-4 flex justify-between items-center border-b border-white/5 shrink-0">

@@ -180,8 +180,7 @@ export default function UserSearch({
                   username: (user as any).username || null,
                   bio: (user as any).bio || null,
                   tier: (user as any).tier || null,
-                  publicKey: (user as any).publicKey || null,
-                }).verified}
+                  publicKey: (user as any).publicKey || null}).verified}
                 pro={computeIdentityFlags({
                   createdAt: (user as any).$createdAt || (user as any).createdAt || null,
                   lastUsernameEdit: (user as any).last_username_edit || null,
@@ -189,8 +188,7 @@ export default function UserSearch({
                   username: (user as any).username || null,
                   bio: (user as any).bio || null,
                   tier: (user as any).tier || null,
-                  publicKey: (user as any).publicKey || null,
-                }).pro}
+                  publicKey: (user as any).publicKey || null}).pro}
                 size={20}
                 userId={user.id}
                 isAvatar={(user as any).isAvatar}
@@ -268,8 +266,7 @@ export default function UserSearch({
                         username: (user as any).username || null,
                         bio: (user as any).bio || null,
                         tier: (user as any).tier || null,
-                        publicKey: (user as any).publicKey || null,
-                      }).verified}
+                        publicKey: (user as any).publicKey || null}).verified}
                       pro={computeIdentityFlags({
                         createdAt: (user as any).$createdAt || (user as any).createdAt || null,
                         lastUsernameEdit: (user as any).last_username_edit || null,
@@ -277,8 +274,7 @@ export default function UserSearch({
                         username: (user as any).username || null,
                         bio: (user as any).bio || null,
                         tier: (user as any).tier || null,
-                        publicKey: (user as any).publicKey || null,
-                      }).pro}
+                        publicKey: (user as any).publicKey || null}).pro}
                       size={32}
                       userId={user.id}
                       isAvatar={(user as any).isAvatar}

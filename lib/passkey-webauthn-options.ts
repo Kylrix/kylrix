@@ -30,8 +30,7 @@ export function transportsForPasskeyEntry(entry: {
     if (!Array.isArray(raw)) return ["internal"];
     const filtered = raw.filter(
       (x): x is AuthenticatorTransport =>
-        typeof x === "string" && KNOWN_TRANSPORTS.has(x),
-    );
+        typeof x === "string" && KNOWN_TRANSPORTS.has(x));
     return filtered.length > 0 ? filtered : ["internal"];
   } catch {
     return ["internal"];

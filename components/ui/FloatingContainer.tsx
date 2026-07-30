@@ -19,8 +19,7 @@ export function FloatingContainer({
   children,
   title,
   onClose,
-  defaultPosition = { x: 20, y: 20 },
-}: FloatingContainerProps) {
+  defaultPosition = { x: 20, y: 20 }}: FloatingContainerProps) {
   const [position, setPosition] = useState(defaultPosition);
   const [isDragging, setIsDragging] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -73,8 +72,7 @@ export function FloatingContainer({
         left: position.x,
         top: position.y,
         zIndex: 1300,
-        touchAction: "none",
-      }}
+        touchAction: "none"}}
     >
       <Paper
         elevation={0}

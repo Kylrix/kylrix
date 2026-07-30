@@ -37,8 +37,7 @@ export function AgenticMessageActions({
       const mode = shared ? 'make_private' : 'publish';
       const res = await toggleAgentConversationShareAction(
         { sessionId, messageId, mode },
-        jwt,
-      );
+        jwt);
       const nextPublic = res.isPublic === true;
       const nextGuest = res.isGuest === true;
       onShareChange?.({ isPublic: nextPublic, isGuest: nextGuest });
@@ -57,8 +56,7 @@ export function AgenticMessageActions({
       const { AgenticSessionLocalStore } = await import('@/lib/agentic/session-local-store');
       await AgenticSessionLocalStore.patchMessage(sessionId, messageId, {
         isPublic: nextPublic,
-        isGuest: nextGuest,
-      });
+        isGuest: nextGuest});
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not update sharing');
     }

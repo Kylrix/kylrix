@@ -3,8 +3,7 @@ import { redirect } from 'next/navigation';
 /** Legacy /app/[id] → canonical /idea/[id] */
 export default async function LegacyAppNoteRedirect({
   params,
-  searchParams,
-}: {
+  searchParams}: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ key?: string }>;
 }) {

@@ -54,13 +54,11 @@ export function PinnedNotesSidebar() {
 
   const contextPinned = useMemo(
     () => resolvePinnedNoteRows(safePinnedIds, allNotes ?? []),
-    [safePinnedIds, allNotes],
-  );
+    [safePinnedIds, allNotes]);
 
   const [pinnedNotes, setPinnedNotes] = useState<Notes[]>(contextPinned);
   const [loading, setLoading] = useState(
-    () => safePinnedIds.length > 0 && contextPinned.length < safePinnedIds.length,
-  );
+    () => safePinnedIds.length > 0 && contextPinned.length < safePinnedIds.length);
 
   useEffect(() => {
     setPinnedNotes(contextPinned);
@@ -114,16 +112,14 @@ export function PinnedNotesSidebar() {
           pt: { xs: 'max(16px, env(safe-area-inset-top))', md: 2.5 },
           flexShrink: 0,
           bgcolor: '#161412',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-        }}
+          borderBottom: '1px solid rgba(255, 255, 255, 0.05)'}}
       >
         <Stack direction="row" spacing={1.5} alignItems="center">
           <IconButton
             onClick={closeSidebar}
             sx={{
               color: 'rgba(255,255,255,0.55)',
-              '&:hover': { color: '#fff', bgcolor: '#1C1A18' },
-            }}
+              '&:hover': { color: '#fff', bgcolor: '#1C1A18' }}}
             size="small"
             aria-label="Close pinned notes"
           >
@@ -136,8 +132,7 @@ export function PinnedNotesSidebar() {
               borderRadius: '10px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-            }}
+              justifyContent: 'center'}}
           >
             <PinIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
           </Box>
@@ -149,8 +144,7 @@ export function PinnedNotesSidebar() {
               color: 'white',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
-              fontSize: '1.1rem',
-            }}
+              fontSize: '1.1rem'}}
           >
             Pinned Notes ({safePinnedIds.length || pinnedNotes.length})
           </Typography>

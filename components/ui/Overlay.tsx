@@ -91,15 +91,13 @@ const Overlay: React.FC = () => {
           boxShadow: '0 24px 48px rgba(0,0,0,0.45)',
           display: 'flex',
           flexDirection: 'column',
-          transition: 'height 0.3s ease-out',
-        }
+          transition: 'height 0.3s ease-out'}
       }}
       slotProps={{
         backdrop: {
           sx: {
             bgcolor: 'rgba(0, 0, 0, 0.72)',
-            backdropFilter: 'blur(10px)',
-          }
+            backdropFilter: 'blur(10px)'}
         }
       }}
     >
@@ -113,8 +111,7 @@ const Overlay: React.FC = () => {
             minHeight: 0,
             flex: 1,
             maxHeight: '100vh',
-            userSelect: 'none',
-          }}
+            userSelect: 'none'}}
           onMouseDown={isMobile ? handleMouseDown : undefined}
           onMouseMove={isMobile ? handleMouseMove : undefined}
           onMouseUp={isMobile ? handleMouseUp : undefined}

@@ -97,8 +97,7 @@ const NETWORKS: Record<SupportedWalletChain, WalletNetworkDefinition> = {
   sui: { chain: 'sui', label: 'Sui', symbol: 'SUI', family: 'sui', publicProfile: true },
   base: { chain: 'base', label: 'Base', symbol: 'BASE', family: 'evm', publicProfile: true, aliasOf: 'eth' },
   polygon: { chain: 'polygon', label: 'Polygon', symbol: 'POL', family: 'evm', publicProfile: true, aliasOf: 'eth' },
-  arbitrum: { chain: 'arbitrum', label: 'Arbitrum', symbol: 'ARB', family: 'evm', publicProfile: true, aliasOf: 'eth' },
-};
+  arbitrum: { chain: 'arbitrum', label: 'Arbitrum', symbol: 'ARB', family: 'evm', publicProfile: true, aliasOf: 'eth' }};
 
 const DEFAULT_MAIN_CHAINS: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc'];
 const PUBLIC_CHAIN_PRIORITY: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc', 'sui', 'base', 'polygon', 'arbitrum'];
@@ -497,8 +496,7 @@ export function createWalletService(deps: WalletServiceDeps) {
 
     async syncWalletMap(userId: string, wallets: any[]) {
       return syncWalletMap(userId, wallets);
-    },
-  };
+    }};
 
   return service;
 }

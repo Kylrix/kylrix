@@ -31,8 +31,7 @@ export function NoteObjectDetail({
   const { notes } = useNotes();
   const live = useMemo(
     () => notes.find((n) => n.$id === note.$id) || note,
-    [note, notes],
-  );
+    [note, notes]);
   const item = useMemo(() => noteToDetail(live), [live]);
   const handleClose = useCallback(() => onClose?.(), [onClose]);
 

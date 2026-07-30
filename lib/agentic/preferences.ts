@@ -43,8 +43,7 @@ export function parseAgenticPreferences(raw: Record<string, unknown> | null | un
 export function toolRequiresAuthorization(
   toolKey: string,
   prefs: AgenticPreferences,
-  registryRequiresAuth?: boolean,
-): boolean {
+  registryRequiresAuth?: boolean): boolean {
   if (prefs.authorizedTools.includes('allow_all')) return false;
   if (prefs.authorizedTools.includes(toolKey)) return false;
   if (DESTRUCTIVE_TOOL_KEYS.has(toolKey) && prefs.requireDeleteConfirmation) return true;

@@ -277,8 +277,7 @@ export const SecurityEnclave = {
               Query.equal('ownerId', `user:${userId}`),
               Query.equal('type', 'main'),
               Query.limit(100),
-            ],
-          })
+            ]})
           .catch(() => ({ rows: [] as any[] })),
       ]);
 
@@ -317,5 +316,4 @@ export const SecurityEnclave = {
   async markDirty(userId: string): Promise<void> {
     if (!userId) return;
     await this.touchMeta(userId, { hydratedAt: '' });
-  },
-};
+  }};

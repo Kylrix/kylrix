@@ -20,8 +20,7 @@ export class SubscriptionService {
     targetUserId: string,
     planId: string,
     months: number,
-    ratio = 1,
-  ) {
+    ratio = 1) {
     const { databases, users } = createSystemClient();
 
     const { currentPeriodStart, currentPeriodEnd } = await calculateStackedSubscriptionCredit(
@@ -29,8 +28,7 @@ export class SubscriptionService {
       targetUserId,
       planId,
       months,
-      ratio,
-    );
+      ratio);
 
     const planTier = String(planId).toUpperCase().startsWith('TEAMS') ? 'TEAMS' : 'PRO';
 
@@ -77,8 +75,7 @@ export class SubscriptionService {
     actorEmail: string,
     actorUserId: string,
     reason: string,
-    durationMonths = 12,
-  ) {
+    durationMonths = 12) {
     assertEmailIsBillingAdmin(actorEmail);
 
     const trimmedReason = String(reason || '').trim();
@@ -112,8 +109,7 @@ export class SubscriptionService {
           reason: trimmedReason,
           actorEmail,
           durationMonths: months}),
-        timestamp: new Date().toISOString(),
-      });
+        timestamp: new Date().toISOString()});
     } catch (err) {
       console.warn('[SubscriptionService] Activity log row skipped:', err);
     }
@@ -141,8 +137,7 @@ export class SubscriptionService {
         months: 1,
         currentPeriodEnd: currentPeriodEnd.toISOString(),
         sourceLabel: `Category access: ${cat}`,
-        bodyCopy: `Your account has been granted Pro access through the ${cat} program.`,
-      }).catch((error) => {
+        bodyCopy: `Your account has been granted Pro access through the ${cat} program.`}).catch((error) => {
         console.warn('[SubscriptionService] Failed to send category access email:', error);
       });
     }
@@ -155,8 +150,7 @@ export class SubscriptionService {
         targetType: 'subscription_batch',
         targetId: 'BATCH',
         details: JSON.stringify({ category: cat, count: uniqueIds.length, actorEmail }),
-        timestamp: new Date().toISOString(),
-      });
+        timestamp: new Date().toISOString()});
     } catch (err) {
       console.warn('[SubscriptionService] Batch activity log skipped:', err);
     }

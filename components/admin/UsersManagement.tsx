@@ -42,8 +42,7 @@ export default function UsersManagement() {
       const data = await getAdminUsersAction({
         search: searchTerm,
         verifiedOnly: false,
-        limit: 100,
-      }, jwt || undefined);
+        limit: 100}, jwt || undefined);
       setUsers(data.users);
     } catch (err: any) {
       setError(err.message);

@@ -25,8 +25,7 @@ export function resolveIdentity(identity?: IdentityLike | null, fallbackId?: str
   const resolved = {
     ...(cachedById || {}),
     ...(cachedByUsername || {}),
-    ...(identity || {}),
-  };
+    ...(identity || {})};
 
   const username = normalizeUsername(resolved.username) || normalizeUsername(cachedByUsername?.username) || normalizeUsername(cachedById?.username) || null;
   const fallbackHandle = formatFallbackHandle(fallbackId);
@@ -41,7 +40,6 @@ export function resolveIdentity(identity?: IdentityLike | null, fallbackId?: str
   return {
     username,
     displayName,
-    handle: username ? `@${username}` : fallbackHandle || '@user',
-  };
+    handle: username ? `@${username}` : fallbackHandle || '@user'};
 }
 

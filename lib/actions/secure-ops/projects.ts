@@ -25,9 +25,7 @@ const {
   verifyFormPermission,
   verifyEventPermission,
   sanitizeEventData,
-  rowCache,
-  CACHE_TTL_MS,
-  VIEWER_COOKIE} = shared;
+  rowCache} = shared;
 
 export async function getPublicGoalDataSecure(goalId: string) {
   const tables = createSystemTablesDB();
@@ -79,8 +77,7 @@ export async function createAccountEventSecure(params: any, jwt?: string) {
       delta: params.delta ?? null,
       discountPercent: params.discountPercent ?? null,
       expiresAt: params.expiresAt || null,
-      metadata: typeof params.metadata === 'string' ? params.metadata : JSON.stringify(params.metadata || {}),
-    };
+      metadata: typeof params.metadata === 'string' ? params.metadata : JSON.stringify(params.metadata || {})};
 
     const row = await databases.createRow(dbId, tableId, ID.unique(), payload, [Permission.read(Role.user(targetUserId))]);
     created.push(row);
@@ -204,7 +201,6 @@ export async function createProjectSecure(data: any, jwt?: string) {
     throw new Error('Forbidden: Create operation must be mathematically tied to the current user');
   }
 
-  const { databases, teams } = createSystemClient();
   const now = new Date().toISOString();
   const projectId = ID.unique();
 
@@ -222,8 +218,7 @@ export async function createProjectSecure(data: any, jwt?: string) {
       ...projectData,
       createdAt: now,
       updatedAt: now},
-      permissions: permissions,
-    });
+      permissions: permissions});
   return JSON.parse(JSON.stringify(project));
 }
 
@@ -250,7 +245,6 @@ export async function updateProjectSecure(projectId: string, data: any, permissi
   }
 
   const validated = ProjectSchema.partial().parse(patch);
-  const { databases } = createSystemClient();
   const now = new Date().toISOString();
 
   const updateData: Record<string, unknown> = { updatedAt: now };
@@ -708,7 +702,6 @@ export async function addObjectToProjectSecure(
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
   const now = new Date().toISOString();
 
   const duplicateRes = await tables.listRows({
@@ -747,8 +740,7 @@ export async function addObjectToProjectSecure(
       metadata: metadata ? (typeof metadata === 'string' ? metadata : JSON.stringify(metadata)) : null,
       createdAt: now,
       updatedAt: now},
-      permissions: permissions,
-    });
+      permissions: permissions});
 
   // Authoritative sync to polymorphic objects table
   try {
@@ -1028,8 +1020,7 @@ export async function upsertSweptConfigSecure(
       data: {
         ...patch,
         enabled: true,
-        updatedAt: now},
-    });
+        updatedAt: now}});
     return JSON.parse(JSON.stringify(row));
   }
 
@@ -1051,8 +1042,7 @@ export async function upsertSweptConfigSecure(
       Permission.read(Role.user(actor.$id)),
       Permission.update(Role.user(actor.$id)),
       Permission.delete(Role.user(actor.$id)),
-    ],
-  });
+    ]});
   return JSON.parse(JSON.stringify(row));
 }
 
@@ -1063,7 +1053,6 @@ export async function removeObjectFromProjectSecure(objectId: string, jwt?: stri
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
 
   const obj = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
@@ -1108,7 +1097,6 @@ export async function createFormSecure(data: any, jwt?: string) {
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
   const permissions = [
     Permission.read(Role.user(actor.$id)),
     Permission.read(Role.any()), // Allow public discovery via listRows filter
@@ -1124,8 +1112,7 @@ export async function createFormSecure(data: any, jwt?: string) {
       status: data.status || 'published',
       isPublic: data.isPublic !== undefined ? data.isPublic : true,
       isGuest: data.isGuest !== undefined ? data.isGuest : true},
-      permissions: permissions,
-    });
+      permissions: permissions});
 
   return JSON.parse(JSON.stringify(form));
 }
@@ -1168,7 +1155,6 @@ export async function updateFormSecure(formId: string, data: any, jwt?: string) 
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
 
   const form = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -1237,7 +1223,6 @@ export async function deleteFormSecure(formId: string, jwt?: string) {
     throw new Error('Forbidden: Insufficient permissions to delete this form');
   }
 
-  const { databases } = createSystemClient();
   try {
     await executeCascadeDeleteSecure(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, formId);
   } catch (err: any) {
@@ -1279,7 +1264,6 @@ export async function createEventSecure(data: any, jwt?: string) {
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
   const permissions = [
     Permission.read(Role.user(actor.$id))];
 
@@ -1309,7 +1293,6 @@ export async function updateEventSecure(eventId: string, data: any, jwt?: string
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
 
   const event = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -1359,7 +1342,6 @@ export async function deleteEventSecure(eventId: string, jwt?: string) {
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
 
   // Cascade delete guests
   try {
@@ -1390,7 +1372,6 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
 
   // 1. Fetch current event to update permissions
   const event = await tables.getRow({
@@ -1407,8 +1388,7 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
       tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
       rowId: eventId,
       data: {},
-      permissions: Array.from(permissions),
-    });
+      permissions: Array.from(permissions)});
 
   // 2. Add or update Guest entry
   const guestsRes = await tables.listRows({
@@ -1427,8 +1407,7 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
       tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
       rowId: guestsRes.rows[0].$id,
       data: {
-        role: virtualRole},
-    });
+        role: virtualRole}});
   } else {
     // Create new
     guestRow = await tables.createRow({
@@ -1439,8 +1418,7 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
         eventId,
         userId: targetUserId,
         role: virtualRole,
-        status: 'attending'},
-    });
+        status: 'attending'}});
   }
 
   // 3. Polyfill/Primary write to polymorphic whisperrflow.Collaborators table
@@ -1469,8 +1447,7 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
           invitedAt: existingCollab.rows[0].invitedAt || new Date().toISOString(),
           accepted: true,
           status: 'accepted',
-          role: 'manager'},
-      });
+          role: 'manager'}});
     } else {
       await tables.createRow({
         databaseId: FLOW_DATABASE_ID,
@@ -1484,8 +1461,7 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
           invitedAt: new Date().toISOString(),
           accepted: true,
           status: 'accepted',
-          role: 'manager'},
-      });
+          role: 'manager'}});
     }
   } catch (err) {
     console.error('[Event secure action] Polymorphic write failed:', err);
@@ -1506,7 +1482,6 @@ export async function removeEventManagerSecure(eventId: string, targetUserId: st
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
 
   // 1. Fetch current event to update permissions
   const event = await tables.getRow({
@@ -1525,8 +1500,7 @@ export async function removeEventManagerSecure(eventId: string, targetUserId: st
       tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
       rowId: eventId,
       data: {},
-      permissions: updatedPerms,
-    });
+      permissions: updatedPerms});
 
   // 2. Remove Guest entry if it was a manager
   try {
@@ -1701,7 +1675,6 @@ export async function createEncryptedGroupForProjectSecure(projectId: string, jw
   const uniqueParticipants = Array.from(new Set(memberIds));
 
   // 2. Create standard Connect conversation group
-  const now = new Date().toISOString();
   const convId = ID.unique();
   const permissions = uniqueParticipants.map(id => Permission.read(Role.user(id)));
 
@@ -1779,8 +1752,7 @@ export async function initGoalDiscussionSecure(taskId: string, jwt?: string) {
     permissions: [
       Permission.read(Role.user(actor.$id)),
       Permission.update(Role.user(actor.$id)),
-    ],
-  });
+    ]});
 
   // 3. Update the goal with the discussion link
   await tables.updateRow({
@@ -1789,8 +1761,7 @@ export async function initGoalDiscussionSecure(taskId: string, jwt?: string) {
     rowId: taskId,
     data: {
       discussionId: discussionNoteId,
-      updatedAt: now},
-  });
+      updatedAt: now}});
 
   return { discussionId: discussionNoteId };
 }

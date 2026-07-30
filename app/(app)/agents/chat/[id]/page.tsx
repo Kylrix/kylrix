@@ -2,15 +2,13 @@ import type { Metadata } from 'next';
 import { getPublicAgentConversationSecure } from '@/lib/actions/agentic';
 import {
   PublicAgentMessageView,
-  PublicAgentUnavailable,
-} from '@/components/agentic/PublicAgentShareViews';
+  PublicAgentUnavailable} from '@/components/agentic/PublicAgentShareViews';
 import { buildOgMetadata } from '@/lib/og/share-card';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
-  params,
-}: {
+  params}: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
@@ -40,8 +38,7 @@ export async function generateMetadata({
 }
 
 export default async function PublicAgentConversationPage({
-  params,
-}: {
+  params}: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;

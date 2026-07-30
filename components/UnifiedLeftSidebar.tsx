@@ -27,7 +27,6 @@ const NAV_COLORS: Record<NavId, string> = {
   connect: '#F59E0B',
   tags: '#6366F1'};
 
-const NOTE_DETAIL_EXCLUDED = 'shared|landing|admin|pitch|popout|notes|extensions';
 
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { ChevronDown as WorkspaceChevronIcon, Plus as PlusIcon, Check as CheckIcon } from 'lucide-react';
@@ -36,9 +35,9 @@ import { isFlowPath } from '@/lib/routing/app-paths';
 export function UnifiedLeftSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { activeContent } = useUnifiedDrawer();
-  const { mode } = useAppChrome();
-  const { isDrawerOpen } = useDrawerState();
+  const { } = useUnifiedDrawer();
+  const { } = useAppChrome();
+  const { } = useDrawerState();
   const { isOpen: _isCallLauncherOpen } = useCallLauncher();
   const { isOpen: _isOverlayOpen } = useOverlay();
   const { isCollapsed } = useSidebar();
@@ -98,8 +97,7 @@ export function UnifiedLeftSidebar() {
         left: 0,
         zIndex: 10,
         display: { xs: 'none', md: 'block' },
-        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-      }}
+        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)'}}
     >
       <Paper
         elevation={0}
@@ -117,8 +115,7 @@ export function UnifiedLeftSidebar() {
           px: isCollapsed ? 0 : 2,
           boxSizing: 'border-box',
           overflow: 'hidden',
-          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-        }}
+          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'}}
       >
         {/* Workspace Switcher Header */}
         <Box sx={{ mb: 2, px: isCollapsed ? 0 : 0.5, width: '100%' }}>
@@ -138,8 +135,7 @@ export function UnifiedLeftSidebar() {
                 transition: 'all 0.2s',
                 '&:hover': {
                   bgcolor: 'rgba(255, 255, 255, 0.06)',
-                  borderColor: 'rgba(255, 255, 255, 0.12)'},
-              }}
+                  borderColor: 'rgba(255, 255, 255, 0.12)'}}}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
                 <Box
@@ -212,8 +208,7 @@ export function UnifiedLeftSidebar() {
                     fontSize: '0.7rem',
                     fontWeight: 800,
                     cursor: 'pointer',
-                    '&:hover': { textDecoration: 'underline' },
-                  }}
+                    '&:hover': { textDecoration: 'underline' }}}
                 >
                   <PlusIcon size={12} /> New
                 </Box>
@@ -244,8 +239,7 @@ export function UnifiedLeftSidebar() {
                       color: isActive ? '#F59E0B' : 'rgba(255, 255, 255, 0.7)',
                       '&:hover': {
                         bgcolor: isActive ? 'rgba(245, 158, 11, 0.18)' : 'rgba(255, 255, 255, 0.04)',
-                        color: '#fff'},
-                    }}
+                        color: '#fff'}}}
                   >
                     <span style={{ fontSize: '0.78rem', fontWeight: isActive ? 800 : 600, fontFamily: 'var(--font-satoshi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {w.title}
@@ -287,11 +281,9 @@ export function UnifiedLeftSidebar() {
                     color: isSelected ? itemColor : '#fff',
                     bgcolor: 'rgba(255, 255, 255, 0.04)',
                     transform: 'translateY(-1px)',
-                    ...(isSelected ? {} : { borderColor: 'rgba(255,255,255,0.08)' }),
-                  },
+                    ...(isSelected ? {} : { borderColor: 'rgba(255,255,255,0.08)' })},
                   '&:active': {
-                    transform: 'translateY(0px)'},
-                }}
+                    transform: 'translateY(0px)'}}}
               >
                 {isSelected && (
                   <Box
@@ -302,8 +294,7 @@ export function UnifiedLeftSidebar() {
                       height: 22,
                       borderRadius: '0 4px 4px 0',
                       bgcolor: itemColor,
-                      boxShadow: `0 0 12px ${itemColor}`,
-                    }}
+                      boxShadow: `0 0 12px ${itemColor}`}}
                   />
                 )}
 
@@ -314,9 +305,7 @@ export function UnifiedLeftSidebar() {
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     ...(isSelected && {
                       transform: 'scale(1.1)',
-                      filter: `drop-shadow(0 0 6px ${itemColor}60)`,
-                    }),
-                  }}
+                      filter: `drop-shadow(0 0 6px ${itemColor}60)`})}}
                 />
 
                 {!isCollapsed && (
@@ -372,8 +361,7 @@ export function UnifiedLeftSidebar() {
                   textDecoration: 'none',
                   boxSizing: 'border-box',
                   paddingLeft: isCollapsed ? '0px' : '16px',
-                  paddingRight: isCollapsed ? '0px' : '16px',
-                }}
+                  paddingRight: isCollapsed ? '0px' : '16px'}}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = '#5865F2';
                   e.currentTarget.style.backgroundColor = 'rgba(88, 101, 242, 0.08)';
@@ -417,8 +405,7 @@ function Stack({ children, spacing, sx }: { children: React.ReactNode; spacing: 
         display: 'flex',
         flexDirection: 'column',
         gap: `${spacing * 8}px`,
-        ...sx,
-      }}
+        ...sx}}
     >
       {children}
     </Box>

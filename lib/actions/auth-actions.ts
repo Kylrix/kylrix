@@ -133,8 +133,7 @@ export async function verifyPasskeyLoginAction(authResp: any, challengeToken: st
       credential: {
         id: row.credentialId,
         publicKey: Uint8Array.from(Buffer.from(row.publicKey, 'base64')),
-        counter: row.params ? (JSON.parse(row.params).counter || 0) : 0},
-    });
+        counter: row.params ? (JSON.parse(row.params).counter || 0) : 0}});
 
     if (verification.verified) {
 

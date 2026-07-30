@@ -1,4 +1,4 @@
-export type PasswordStrength = "alphanumeric" | "strong";
+type PasswordStrength = "alphanumeric" | "strong";
 
 const CHARSETS: Record<PasswordStrength, string> = {
   alphanumeric:

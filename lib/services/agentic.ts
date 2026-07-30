@@ -53,10 +53,8 @@ export const AgenticService = {
         config: JSON.stringify({
           name: input.name.trim(),
           goal: input.goal?.trim() || null,
-          framework}),
-      },
-      agentPermissions(input.userId),
-    );
+          framework})},
+      agentPermissions(input.userId));
     agentsCache.invalidate();
     return res;
   },
@@ -65,8 +63,7 @@ export const AgenticService = {
     const agent = await tablesDB.getRow<AgentRecord>(
       APPWRITE_CONFIG.DATABASES.FLOW,
       APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-      agentId,
-    );
+      agentId);
     if (!agent || agent.ownerId !== userId) {
       throw new Error('Forbidden');
     }
@@ -75,9 +72,7 @@ export const AgenticService = {
       APPWRITE_CONFIG.DATABASES.FLOW,
       APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
       agentId,
-      { status },
-    );
+      { status });
     agentsCache.invalidate();
     return res;
-  },
-};
+  }};

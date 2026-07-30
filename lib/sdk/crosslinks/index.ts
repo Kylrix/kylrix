@@ -28,6 +28,5 @@ export function buildNoteAttachmentMetadata(note: {
     referenceId: note.$id || null,
     payload: {
       label: note.title || 'Attached Note',
-      preview: String(note.content || '').slice(0, 100)},
-  };
+      preview: String(note.content || '').slice(0, 100)}};
 }

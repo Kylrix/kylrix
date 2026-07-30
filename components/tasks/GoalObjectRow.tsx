@@ -28,12 +28,10 @@ export default function GoalObjectRow({ task, compact }: Props) {
       openSidebar(
         <GoalObjectDetail taskId={task.id} embedded />,
         task.id,
-        { hideHeader: true },
-      );
+        { hideHeader: true });
     } else {
       openOverlay(
-        <GoalObjectDetail taskId={task.id} onClose={closeOverlay} />,
-      );
+        <GoalObjectDetail taskId={task.id} onClose={closeOverlay} />);
     }
   }, [closeOverlay, openOverlay, openSidebar, selectTask, task.id]);
 
@@ -42,8 +40,7 @@ export default function GoalObjectRow({ task, compact }: Props) {
       e.stopPropagation();
       await completeTask(task.id);
     },
-    [completeTask, task.id],
-  );
+    [completeTask, task.id]);
 
   const item = goalToCard(task);
 

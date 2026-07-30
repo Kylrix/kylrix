@@ -2,7 +2,7 @@
 // Version: 1.0.2
 
 // 1. Install Phase: Skip waiting to activate immediately
-self.addEventListener('install', (event) => {
+self.addEventListener('install', (_event) => {
   self.skipWaiting();
 });
 
@@ -39,7 +39,7 @@ self.addEventListener('message', (event) => {
 });
 
 // 4. Fetch: No interception. Let the app render its own page structure.
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', (_event) => {
   // Pass-through
 });
 

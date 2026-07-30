@@ -18,8 +18,7 @@ const inflight = new Map<string, Promise<NoteObjectPreviewResult>>();
 
 export function noteObjectPreviewCacheKey(
   noteId: string,
-  payload: Pick<SecondaryObjectPayload, 'childKind' | 'childId'>,
-) {
+  payload: Pick<SecondaryObjectPayload, 'childKind' | 'childId'>) {
   return `${noteId}:${payload.childKind}:${payload.childId}`;
 }
 
@@ -39,8 +38,7 @@ export function writeCachedNoteObjectPreview(key: string, value: NoteObjectPrevi
 
 export async function fetchNoteObjectPreviewCached(
   key: string,
-  loader: () => Promise<NoteObjectPreviewResult>,
-): Promise<NoteObjectPreviewResult> {
+  loader: () => Promise<NoteObjectPreviewResult>): Promise<NoteObjectPreviewResult> {
   const cached = readCachedNoteObjectPreview(key);
   if (cached) return cached;
 

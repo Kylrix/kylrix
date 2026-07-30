@@ -1,7 +1,7 @@
 import { Permission, Role } from 'appwrite';
 import { APPWRITE_CONFIG } from './appwrite/config';
 
-const { DATABASE_ID} = APPWRITE_CONFIG;
+const {} = APPWRITE_CONFIG;
 
 /**
  * Permission levels for events
@@ -46,8 +46,7 @@ export const permissions = {
       default:
         return permissions.privateOnly(userId);
     }
-  },
-};
+  }};
 
 /**
  * Event permission management

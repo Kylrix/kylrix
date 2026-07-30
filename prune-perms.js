@@ -6,7 +6,7 @@ function walk(dir) {
     let list;
     try {
         list = fs.readdirSync(dir);
-    } catch(e) {
+    } catch(_e) {
         return results;
     }
     list.forEach(function(file) {
@@ -15,7 +15,7 @@ function walk(dir) {
         let stat;
         try {
             stat = fs.statSync(file);
-        } catch(e) {
+        } catch(_e) {
             return;
         }
         if (stat && stat.isDirectory()) {

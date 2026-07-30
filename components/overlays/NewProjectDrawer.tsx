@@ -44,7 +44,6 @@ const SYSTEM_HOVER = '#575CF0';
 const BORDER = `1px solid ${BORDER_HAIRLINE}`;
 const BRAND_TRANSITION = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
 const RADIUS_LARGE = '24px';
-const RADIUS_MEDIUM = '16px';
 const RADIUS_SMALL = '12px';
 
 export function NewProjectDrawer() {
@@ -249,8 +248,7 @@ export function NewProjectDrawer() {
                 borderLeft: BORDER,
                 borderTop: BORDER,
                 borderBottom: 0,
-                borderRight: 0,
-              }
+                borderRight: 0}
             : {
                 height: isExpanded ? '92dvh' : '60dvh',
                 minHeight: '60dvh',
@@ -265,9 +263,7 @@ export function NewProjectDrawer() {
           backgroundImage: 'none',
           overflow: 'hidden',
           display: 'flex',
-          flexDirection: 'column',
-        },
-      }}
+          flexDirection: 'column'}}}
     >
       {!isDesktop && (
         <Box 
@@ -286,8 +282,7 @@ export function NewProjectDrawer() {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          minHeight: 0,
-        }}
+          minHeight: 0}}
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
           <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
@@ -322,8 +317,7 @@ export function NewProjectDrawer() {
               border: BORDER,
               '&:hover': { bgcolor: HOVER },
               flexShrink: 0,
-              ml: 2,
-            }}
+              ml: 2}}
           >
             <CloseIcon size={18} />
           </IconButton>
@@ -468,8 +462,7 @@ export function NewProjectDrawer() {
                         textAlign: 'left',
                         cursor: 'pointer',
                         transition: BRAND_TRANSITION,
-                        '&:hover': { borderColor: '#4F4C49', bgcolor: HOVER },
-                      }}
+                        '&:hover': { borderColor: '#4F4C49', bgcolor: HOVER }}}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0, flex: 1 }}>
                         <Box
@@ -556,8 +549,7 @@ export function NewProjectDrawer() {
             borderBottom: 0,
             pb: 'max(24px, env(safe-area-inset-bottom))',
             pt: 2,
-            px: { xs: 2.25, sm: 2.75 },
-          }
+            px: { xs: 2.25, sm: 2.75 }}
         }}
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
@@ -571,8 +563,7 @@ export function NewProjectDrawer() {
               bgcolor: VOID,
               border: BORDER,
               '&:hover': { bgcolor: HOVER },
-              flexShrink: 0,
-            }}
+              flexShrink: 0}}
           >
             <CloseIcon size={18} />
           </IconButton>
@@ -611,8 +602,7 @@ export function NewProjectDrawer() {
                   textAlign: 'left',
                   cursor: 'pointer',
                   transition: BRAND_TRANSITION,
-                  '&:hover': { borderColor: isSelected ? SYSTEM_PRIMARY : '#4F4C49', bgcolor: isSelected ? 'rgba(99, 102, 241, 0.08)' : HOVER },
-                }}
+                  '&:hover': { borderColor: isSelected ? SYSTEM_PRIMARY : '#4F4C49', bgcolor: isSelected ? 'rgba(99, 102, 241, 0.08)' : HOVER }}}
               >
                 <Box
                   sx={{

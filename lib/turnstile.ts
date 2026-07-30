@@ -22,8 +22,7 @@ export async function verifyTurnstileToken(token: string): Promise<TurnstileVeri
         'Content-Type': 'application/json'},
       body: JSON.stringify({
         secret: TURNSTILE_SECRET_KEY,
-        response: token}),
-    });
+        response: token})});
 
     if (!response.ok) {
       return { success: false, error_codes: ['VERIFY_FAILED'] };

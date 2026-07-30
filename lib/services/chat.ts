@@ -107,8 +107,6 @@ export const rememberConversationRoster = (rows: any[]) => {
     emitConversationRosterCache();
 };
 
-const getConversationRosterSnapshot = () => Array.from(conversationRosterCache.values());
-
 
 const getConversationMemberSnapshot = async (conversationId: string, fallbackParticipants: string[] = []) => {
     const memberRows = await tablesDB.listRows(DB_ID, CONV_MEMBERS_TABLE, [
@@ -725,14 +723,12 @@ export const ChatService = {
         console.log('[ChatService] getConversations for:', userId);
 
         let conversationRows: any[] = [];
-        let total = 0;
 
         try {
             const tokenRes = await account.createJWT().catch(() => null);
             const jwt = tokenRes?.jwt || undefined;
             const response = await getConversationsAction({ userId, jwt });
             conversationRows = response.rows || [];
-            total = response.total || 0;
         } catch (err) {
             console.error('[ChatService] getConversationsAction failed:', err);
             const legacy = await tablesDB.listRows(DB_ID, CONV_TABLE, [
@@ -740,7 +736,6 @@ export const ChatService = {
                 Query.limit(100)
             ]).catch(() => ({ rows: [] as any[] }));
             conversationRows = legacy.rows || [];
-            total = legacy.rows.length;
         }
 
         const memberRowsByConversation = new Map<string, string[]>();

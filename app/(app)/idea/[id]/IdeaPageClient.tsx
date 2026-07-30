@@ -74,16 +74,14 @@ async function decryptNoteIfNeeded(note: Notes, key?: string): Promise<Notes> {
       ...note,
       title: await ecosystemSecurity.decryptWithKey(meta.encryptedTitle || note.title || '', cryptoKey),
       content: await ecosystemSecurity.decryptWithKey(note.content || '', cryptoKey),
-      metadata: JSON.stringify({ ...meta, clientDecrypted: true }),
-    };
+      metadata: JSON.stringify({ ...meta, clientDecrypted: true })};
   }
 
   return {
     ...note,
     title: await decryptGhostData(note.title || '', key),
     content: await decryptGhostData(note.content || '', key),
-    metadata: JSON.stringify({ ...meta, clientDecrypted: true }),
-  };
+    metadata: JSON.stringify({ ...meta, clientDecrypted: true })};
 }
 
 function resolveCollaboratorRole(note: Notes, userId: string): 'write-collab' | 'read-collab' | null {

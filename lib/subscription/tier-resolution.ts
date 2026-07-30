@@ -54,11 +54,6 @@ export function planLabelToUiTier(plan: string | null | undefined): BillingUiTie
 export function maxBillingUiTier(...tiers: BillingUiTier[]): BillingUiTier {
   return tiers.reduce(
     (best, tier) => ((TIER_RANK[tier] ?? 0) > (TIER_RANK[best] ?? 0) ? tier : best),
-    'FREE',
-  );
+    'FREE');
 }
 
-export function billingTierHasTeamsAccess(tier: BillingUiTier | string): boolean {
-  const t = String(tier || 'FREE').toUpperCase();
-  return t === 'TEAMS' || t === 'ORG' || t === 'LIFETIME';
-}

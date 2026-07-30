@@ -123,8 +123,7 @@ function createProxiedDatabases(client: Client) {
           tableId: string,
           rowId: string,
           data: any,
-          permissions?: string[],
-        ) => {
+          permissions?: string[]) => {
           return tablesDB.createRow({ databaseId, tableId, rowId, data, permissions });
         };
       }
@@ -134,8 +133,7 @@ function createProxiedDatabases(client: Client) {
           tableId: string,
           rowId: string,
           data: any,
-          permissions?: string[],
-        ) => {
+          permissions?: string[]) => {
           return tablesDB.updateRow({ databaseId, tableId, rowId, data, permissions });
         };
       }
@@ -146,8 +144,7 @@ function createProxiedDatabases(client: Client) {
       }
       const val = Reflect.get(target, prop, receiver);
       return typeof val === 'function' ? val.bind(target) : val;
-    },
-  }) as unknown as Databases;
+    }}) as unknown as Databases;
 }
 
 let cachedSystemTablesDB: TablesDB | null = null;

@@ -42,8 +42,7 @@ export default function ChatIslandPresence({ notification, onDismiss }: ChatIsla
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 9999,
-            pointerEvents: 'none',
-          }}
+            pointerEvents: 'none'}}
         >
           <motion.div
             initial={{ opacity: 0, y: -100, scale: 0.8 }}
@@ -66,8 +65,7 @@ export default function ChatIslandPresence({ notification, onDismiss }: ChatIsla
                 alignItems: 'center',
                 gap: 1.5,
                 pointerEvents: 'auto',
-                cursor: 'pointer',
-              }}
+                cursor: 'pointer'}}
               onClick={() => {
                 if (notification.type === 'call' && notification.callId) {
                   router.push(`/connect/call/${notification.callId}`);
@@ -88,8 +86,7 @@ export default function ChatIslandPresence({ notification, onDismiss }: ChatIsla
                         borderRadius: '50%',
                         p: 0.2,
                         display: 'flex',
-                        border: '1px solid #000',
-                      }}
+                        border: '1px solid #000'}}
                     >
                       <Lock size={8} color="white" />
                     </Box>
@@ -104,8 +101,7 @@ export default function ChatIslandPresence({ notification, onDismiss }: ChatIsla
                     bgcolor: alpha('#6366F1', 0.2),
                     color: '#6366F1',
                     fontWeight: 800,
-                    fontSize: '0.8rem',
-                  }}
+                    fontSize: '0.8rem'}}
                 >
                   {notification.senderName[0]}
                 </Avatar>
@@ -120,8 +116,7 @@ export default function ChatIslandPresence({ notification, onDismiss }: ChatIsla
                     lineHeight: 1,
                     mb: 0.5,
                     textTransform: 'uppercase',
-                    letterSpacing: 0.5,
-                  }}
+                    letterSpacing: 0.5}}
                 >
                   {notification.senderName}
                 </Typography>
@@ -132,8 +127,7 @@ export default function ChatIslandPresence({ notification, onDismiss }: ChatIsla
                     color: 'white',
                     fontWeight: 600,
                     fontSize: '0.85rem',
-                    opacity: 0.9,
-                  }}
+                    opacity: 0.9}}
                 >
                   {notification.content}
                 </Typography>
@@ -143,8 +137,7 @@ export default function ChatIslandPresence({ notification, onDismiss }: ChatIsla
                   bgcolor: alpha('#6366F1', 0.1),
                   p: 0.8,
                   borderRadius: '50%',
-                  display: 'flex',
-                }}
+                  display: 'flex'}}
               >
                 {notification.type === 'call' ? (
                   <Video size={16} color="#6366F1" />

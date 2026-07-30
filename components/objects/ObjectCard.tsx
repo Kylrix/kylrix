@@ -6,8 +6,7 @@ import { goalPendingKey } from '@/lib/sync/goal-keys';
 import {
   objectKindLabel,
   type ObjectKind,
-  type UnifiedObjectCardModel,
-} from '@/lib/objects/types';
+  type UnifiedObjectCardModel} from '@/lib/objects/types';
 
 function pendingResourceId(kind: ObjectKind, id: string): string {
   if (kind === 'goal') return goalPendingKey(id);

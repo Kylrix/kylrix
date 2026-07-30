@@ -5,10 +5,8 @@ type CachedThread = {
   cachedAt: number;
 };
 
-const THREAD_CACHE_STALE_AFTER_MS = 1000 * 60 * 5;
 
 const STORAGE_KEY = 'kylrix_connect_thread_cache_v1';
-const MAX_ENTRIES = 20;
 
 const memoryCache = new Map<string, CachedThread>();
 let hydrated = false;
@@ -40,16 +38,6 @@ function hydrate() {
   }
 }
 
-function persist() {
-  if (!canUseStorage()) return;
-
-  try {
-    const entries = Array.from(memoryCache.entries()).slice(-MAX_ENTRIES);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(entries)));
-  } catch {
-    // Best effort only.
-  }
-}
 
 
 export function getCachedMomentThread(rootId?: string | null) {

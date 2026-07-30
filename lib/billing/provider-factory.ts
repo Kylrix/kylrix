@@ -24,8 +24,7 @@ export interface PaymentProvider {
       discountPercent?: number | null;
       adjustedAmountUsd?: number | null;
       baseUrl?: string | null;
-    },
-  ): Promise<CheckoutSession>;
+    }): Promise<CheckoutSession>;
   verifyTransaction(transactionId: string): Promise<boolean>;
   handleWebhook(payload: any, signature?: string): Promise<void>;
 }

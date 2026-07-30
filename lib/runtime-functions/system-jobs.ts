@@ -108,8 +108,7 @@ async function sweepStaleActionThreads(payload?: { batchSize?: number }) {
 
 export async function executeSystemRuntimeJob(
   job: SystemRuntimeJobId,
-  payload?: { batchSize?: number; sweepLimit?: number },
-) {
+  payload?: { batchSize?: number; sweepLimit?: number }) {
   switch (job) {
     case 'cleanup_expired_public_ghost_notes':
       return cleanupExpiredPublicGhostNotes({ batchSize: payload?.batchSize });

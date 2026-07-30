@@ -28,12 +28,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           '&:hover': {
             bgcolor: '#00D1DA',
             boxShadow: '0 0 30px rgba(99, 102, 241, 0.5)',
-            transform: 'translateY(-1px)',
-          },
+            transform: 'translateY(-1px)'},
           '&:active': {
-            transform: 'translateY(0)',
-          },
-        };
+            transform: 'translateY(0)'}};
       }
       if (variant === 'outlined') {
         return {
@@ -44,16 +41,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           fontWeight: 600,
           '&:hover': {
             border: '1px solid #6366F1',
-            bgcolor: 'rgba(99, 102, 241, 0.1)',
-          },
-        };
+            bgcolor: 'rgba(99, 102, 241, 0.1)'}};
       }
       return {
         color: '#6366F1',
         '&:hover': {
-          bgcolor: 'rgba(99, 102, 241, 0.05)',
-        },
-      };
+          bgcolor: 'rgba(99, 102, 241, 0.05)'}};
     };
 
     return (
@@ -67,8 +60,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           borderRadius: '12px',
           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           ...getVariantStyles(),
-          ...sx,
-        }}
+          ...sx}}
         {...props}
       >
         {children}

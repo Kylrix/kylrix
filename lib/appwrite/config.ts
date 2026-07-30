@@ -119,8 +119,7 @@ export const APPWRITE_CONFIG = {
             NOSTR_IDENTITIES: 'nostr_identities'
         },
         // Identical to CONNECT — assigned after object init
-        CHAT: null as any,
-    },
+        CHAT: null as any},
     BUCKETS: {
         PROFILE_PICTURES: 'profile_pictures',
         GROUP_AVATARS: 'group_avatars',

@@ -12,8 +12,7 @@ import {
   Typography,
   alpha,
   useTheme,
-  useMediaQuery,
-} from '@/lib/openbricks/primitives';
+  useMediaQuery} from '@/lib/openbricks/primitives';
 import { Flag, ShieldAlert } from 'lucide-react';
 
 interface ReportUserDialogProps {
@@ -94,8 +93,7 @@ export default function ReportUserDialog({
           maxHeight: isMobile ? '92dvh' : '100%',
           borderRadius: isMobile ? '24px 24px 0 0' : '0',
           display: 'flex',
-          flexDirection: 'column',
-        }
+          flexDirection: 'column'}
       }}
     >
       <Box sx={{ fontWeight: 900, display: 'flex', alignItems: 'center', gap: 1, px: 3, pt: 3, pb: 2, borderBottom: '1px solid rgba(255, 255, 255, 0.05)', flexShrink: 0 }}>
@@ -152,8 +150,7 @@ export default function ReportUserDialog({
               border: '1px solid rgba(99,102,241,0.12)',
               display: 'flex',
               gap: 1.5,
-              alignItems: 'flex-start',
-            }}
+              alignItems: 'flex-start'}}
           >
             <ShieldAlert size={18} color="#6366F1" />
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>

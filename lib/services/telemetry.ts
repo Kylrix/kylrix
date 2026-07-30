@@ -473,8 +473,7 @@ export const TelemetryService = {
           objectType: params.objectType,
           title: params.title ? String(params.title).slice(0, 256) : null,
           toolKey: params.toolKey || null,
-          createdAt: new Date().toISOString()},
-      });
+          createdAt: new Date().toISOString()}});
     } catch (err) {
       console.error('[TelemetryService] Failed to record session object:', err);
     }
@@ -486,8 +485,7 @@ export const TelemetryService = {
   async listSessionObjects(
     userId: string,
     sessionId: string,
-    limit = 40,
-  ): Promise<Array<{ objectId: string; objectType: string; title: string | null; toolKey: string | null; createdAt: string | null }>> {
+    limit = 40): Promise<Array<{ objectId: string; objectType: string; title: string | null; toolKey: string | null; createdAt: string | null }>> {
     try {
       if (!userId || !sessionId) return [];
       const tables = createSystemTablesDB();
@@ -550,8 +548,7 @@ export const TelemetryService = {
           args: params.args ? JSON.stringify(params.args).slice(0, 7800) : null,
           status: params.status || 'success',
           resultSummary: params.resultSummary ? String(params.resultSummary).slice(0, 512) : null,
-          createdAt: new Date().toISOString()},
-      });
+          createdAt: new Date().toISOString()}});
       return rowId;
     } catch (err) {
       console.error('[TelemetryService] Failed to record tool call:', err);
@@ -562,8 +559,7 @@ export const TelemetryService = {
   async listToolCalls(
     userId: string,
     sessionId: string,
-    limit = 100,
-  ): Promise<Array<{
+    limit = 100): Promise<Array<{
     $id: string;
     conversationId: string;
     toolKey: string;
@@ -593,11 +589,9 @@ export const TelemetryService = {
         args: row.args != null ? String(row.args) : null,
         status: row.status != null ? String(row.status) : null,
         resultSummary: row.resultSummary != null ? String(row.resultSummary) : null,
-        createdAt: row.createdAt != null ? String(row.createdAt) : (row.$createdAt || null),
-      }));
+        createdAt: row.createdAt != null ? String(row.createdAt) : (row.$createdAt || null)}));
     } catch (err) {
       console.error('[TelemetryService] Failed to list tool calls:', err);
       return [];
     }
-  },
-};
+  }};

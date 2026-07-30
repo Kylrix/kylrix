@@ -15,8 +15,7 @@ export function emitAgenticSpineEvent(event: AgenticSpineEvent): void {
 }
 
 export function subscribeAgenticSpine(
-  handler: (event: AgenticSpineEvent) => void,
-): () => void {
+  handler: (event: AgenticSpineEvent) => void): () => void {
   if (typeof window === 'undefined') return () => {};
   const listener = (e: Event) => {
     const detail = (e as CustomEvent<AgenticSpineEvent>).detail;
@@ -32,9 +31,7 @@ export function initAgenticSpineListeners(): () => void {
     if (event.type === 'agentic.run') {
       window.dispatchEvent(
         new CustomEvent('kylrix:agentic-pending-prompt', {
-          detail: { prompt: event.prompt, autoRun: event.autoRun ?? true, source: event.source },
-        }),
-      );
+          detail: { prompt: event.prompt, autoRun: event.autoRun ?? true, source: event.source }}));
       window.dispatchEvent(new CustomEvent('kylrix:open-agentic-drawer'));
     }
   });

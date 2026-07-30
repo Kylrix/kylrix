@@ -63,8 +63,7 @@ export function projectTaggedCacheKey(projectId: string, tagIds: string[]): stri
 export function projectEntityCacheKey(
   projectId: string,
   kind: string,
-  ids: string[],
-): string {
+  ids: string[]): string {
   const sorted = [...ids].sort().join(',');
   if (sorted.length <= 120) {
     return `project_entities_${projectId}_${kind}_${sorted}`;

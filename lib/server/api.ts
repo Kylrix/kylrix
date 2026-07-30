@@ -15,9 +15,7 @@ export async function createCloudflareSession() {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-    });
+        'Content-Type': 'application/json'}});
 
     if (!response.ok) {
       return { success: false, error: await response.text() };
@@ -43,10 +41,8 @@ export async function createCloudflareTracks(data: { sessionId: string; tracks: 
       method: 'POST',
       headers: {
         Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ tracks: data.tracks }),
-    });
+        'Content-Type': 'application/json'},
+      body: JSON.stringify({ tracks: data.tracks })});
 
     if (!response.ok) {
       return { success: false, error: await response.text() };
@@ -73,10 +69,8 @@ export async function fetchTurnCredentials() {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ ttl: 86400 }),
-    });
+        'Content-Type': 'application/json'},
+      body: JSON.stringify({ ttl: 86400 })});
 
     if (!response.ok) {
       return { success: false, error: await response.text(), iceServers: [] };
@@ -102,10 +96,8 @@ export async function subscribeToCloudflareTracks(data: { sessionId: string; tra
       method: 'POST',
       headers: {
         Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ tracks: data.tracks }),
-    });
+        'Content-Type': 'application/json'},
+      body: JSON.stringify({ tracks: data.tracks })});
 
     if (!response.ok) {
       return { success: false, error: await response.text() };

@@ -30,8 +30,7 @@ export function TaskAddToProjectDrawer({
   onClose,
   taskId,
   taskTitle,
-  preselectedProjectId,
-}: {
+  preselectedProjectId}: {
   isOpen: boolean;
   onClose: () => void;
   taskId: string;
@@ -125,10 +124,8 @@ export function TaskAddToProjectDrawer({
         open('task-add-to-project', {
           taskId,
           taskTitle,
-          preselectedProjectId: project.$id,
-        });
-      },
-    });
+          preselectedProjectId: project.$id});
+      }});
   };
 
   if (!isOpen) return null;

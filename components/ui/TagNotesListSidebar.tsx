@@ -148,8 +148,7 @@ export function TagNotesListSidebar({
         alignItems: 'center', 
         gap: 1, 
         pb: 2, 
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)', 
-      }}>
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)'}}>
         <IconButton 
           onClick={handleHeaderBack} 
           size="small"

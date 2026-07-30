@@ -288,9 +288,7 @@ export const SocialService = {
                             tablesDB.getRow(
                                 APPWRITE_CONFIG.DATABASES.NOTE,
                                 APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-                                att.id,
-                            ),
-                    );
+                                att.id));
                     enriched.attachedNote = note;
                 } else if (att.type === 'event') {
                     const event = await getTablesDbRowCached(
@@ -302,9 +300,7 @@ export const SocialService = {
                             tablesDB.getRow(
                                 APPWRITE_CONFIG.DATABASES.KYLRIXFLOW,
                                 APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-                                att.id,
-                            ),
-                    );
+                                att.id));
                     enriched.attachedEvent = event;
                 } else if (att.type === 'call') {
                     const call = await getTablesDbRowCached(
@@ -316,9 +312,7 @@ export const SocialService = {
                             tablesDB.getRow(
                                 APPWRITE_CONFIG.DATABASES.CHAT,
                                 APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-                                att.id,
-                            ),
-                    );
+                                att.id));
                     enriched.attachedCall = call;
                 } else if (att.type === 'image' || att.type === 'video') {
                     // For now, we just keep the IDs in enriched.attachments
@@ -448,8 +442,7 @@ export const SocialService = {
                     replies: counts.replies,
                     pulses: counts.pulses},
                 isLiked: Boolean(userId && likedMomentIds.has(moment.$id)),
-                isPulsed: Boolean(userId && pulsedMomentIds.has(moment.$id)),
-            };
+                isPulsed: Boolean(userId && pulsedMomentIds.has(moment.$id))};
         });
 
         const rankedRows = baseRows.map((m: any) => {
@@ -672,8 +665,7 @@ export const SocialService = {
                                     trustScore: 70,
                                     sourceType: 'comment_add',
                                     sourceId: moment.$id,
-                                    metadata: { sourceId },
-                                });
+                                    metadata: { sourceId }});
                             } else {
                                 const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
                                 await runTokenOperationSecure({
@@ -685,8 +677,7 @@ export const SocialService = {
                                     trustScore: 70,
                                     sourceType: 'comment_add',
                                     sourceId: moment.$id,
-                                    metadata: { sourceId },
-                                });
+                                    metadata: { sourceId }});
                             }
                         } catch (err) {
                             console.warn('[SocialService] Failed to trigger comment_add mint:', err);

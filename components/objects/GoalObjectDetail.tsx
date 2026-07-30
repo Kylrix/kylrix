@@ -21,8 +21,7 @@ export function GoalObjectDetail({ taskId, onClose, embedded = false }: Props) {
       task
         ? goalToDetail(task)
         : { kind: 'goal' as const, id: taskId, title: 'Goal' },
-    [task, taskId],
-  );
+    [task, taskId]);
 
   const body = (
     <TaskDetails taskId={taskId} onBack={embedded ? undefined : onClose} />

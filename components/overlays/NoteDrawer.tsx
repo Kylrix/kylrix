@@ -42,8 +42,7 @@ export function NoteDrawer() {
       const shell = buildNoteShell(
         { kind: 'note', title: draft.title, body: draft.body },
         user?.$id,
-        { isPublic, isGuest },
-      );
+        { isPublic, isGuest });
       pushLiveNote(shell);
       setCachedData(`note_${shell.$id}`, shell);
       setActiveDetail({ type: 'note', id: shell.$id });
@@ -58,8 +57,7 @@ export function NoteDrawer() {
         }
       }
     },
-    [copyShareLink, isGuest, isPublic, pushLiveNote, setActiveDetail, setCachedData, user?.$id],
-  );
+    [copyShareLink, isGuest, isPublic, pushLiveNote, setActiveDetail, setCachedData, user?.$id]);
 
   return (
     <ObjectCreateDrawer

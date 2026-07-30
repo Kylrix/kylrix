@@ -30,8 +30,7 @@ export class AppwriteMessagingAdapter implements MessagingPort {
         ctaText: payload.ctaText || null,
         verificationMode: payload.verificationMode === 'error' ? 'error' : 'silent',
         metadata: payload.metadata || null,
-        dryRun: Boolean(payload.dryRun),
-      });
+        dryRun: Boolean(payload.dryRun)});
       return { success: true };
     } catch (err) {
       console.error('[AppwriteMessagingAdapter] Failed to dispatch unorganic email:', err);

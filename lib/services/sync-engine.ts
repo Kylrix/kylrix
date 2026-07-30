@@ -21,7 +21,6 @@ import { pickGoalAutosavePayload } from '@/lib/goals/pick-goal-autosave-payload'
 import type { Notes } from '@/types/appwrite';
 import type { Task } from '@/types';
 
-let lastSuccessfulSyncTime = 0;
 
 const PENDING_QUEUE_KEY = 'kylrix:sync:pending-queue';
 const PENDING_PAYLOADS_KEY = 'kylrix:sync:pending-payloads';
@@ -451,7 +450,6 @@ async function flushGoalPending(
       new CustomEvent('kylrix:sync-pending', { detail: { noteId: pendingKey, goalId, kind: 'goal' } }),
     );
   } else {
-    lastSuccessfulSyncTime = Date.now();
     failedSyncAttempts.delete(pendingKey);
     failedSyncAttempts.delete(goalId);
     autonomicSyncEngine.ack(pendingKey, flushRevision);
@@ -558,7 +556,6 @@ async function flushNotePending(
     console.log(`[SyncEngine] Re-queued note after concurrent edit: ${noteId}`);
     window.dispatchEvent(new CustomEvent('kylrix:sync-pending', { detail: { noteId } }));
   } else {
-    lastSuccessfulSyncTime = Date.now();
     failedSyncAttempts.delete(noteId);
     autonomicSyncEngine.ack(noteId, flushRevision);
     window.dispatchEvent(

@@ -573,8 +573,7 @@ export default function ConversationActionsSheet({
               bgcolor: '#161412',
               backgroundImage: 'none',
               borderRadius: isMobile ? 0 : '24px',
-              border: '1px solid rgba(255,255,255,0.08)'},
-          }}
+              border: '1px solid rgba(255,255,255,0.08)'}}}
         >
           <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
             <Typography sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>Profile Preview</Typography>
@@ -645,8 +644,7 @@ export default function ConversationActionsSheet({
             backgroundImage: 'none',
             border: '1px solid rgba(255,255,255,0.08)',
             overflow: 'hidden',
-            zIndex: 1305},
-        }}
+            zIndex: 1305}}}
       >
           <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', pt: { xs: 'env(safe-area-inset-top)', md: 0 } }}>
           <Box sx={{ px: 2.5, pt: 2.5, pb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -708,8 +706,7 @@ export default function ConversationActionsSheet({
                   fontWeight: 800,
                   minWidth: 0,
                   px: isMobile ? 0.5 : 2,
-                  gap: 0.75},
-              }}
+                  gap: 0.75}}}
             >
               {isAdmin && (
                 <Tab
@@ -1023,8 +1020,7 @@ export default function ConversationActionsSheet({
                       <InputAdornment position="start">
                         <Search size={16} style={{ opacity: 0.5 }} />
                       </InputAdornment>
-                    ),
-                  }}
+                    )}}
                 />
 
                 {memberSearching && (
@@ -1130,8 +1126,7 @@ export default function ConversationActionsSheet({
             bgcolor: '#161412',
             backgroundImage: 'none',
             border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: isMobile ? 0 : '20px'},
-        }}
+            borderRadius: isMobile ? 0 : '20px'}}}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Delete hangout?</DialogTitle>
         <DialogContent>

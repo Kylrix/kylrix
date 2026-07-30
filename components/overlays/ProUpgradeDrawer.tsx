@@ -85,9 +85,7 @@ export function ProUpgradeDrawer() {
           borderTop: isMobile ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(255, 255, 255, 0.1)',
           borderLeft: !isMobile ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
           maxHeight: isMobile ? '60vh' : '100vh',
-          width: isMobile ? '100%' : 420,
-        },
-      }}
+          width: isMobile ? '100%' : 420}}}
     >
       <Box
         sx={{
@@ -97,8 +95,7 @@ export function ProUpgradeDrawer() {
           height: '100%',
           maxWidth: 420,
           mx: 'auto',
-          justifyContent: 'space-between',
-        }}
+          justifyContent: 'space-between'}}
       >
         {/* Header */}
         <Box>
@@ -112,8 +109,7 @@ export function ProUpgradeDrawer() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              mb: 2,
-            }}
+              mb: 2}}
           >
             <Zap size={22} color={accent} />
           </Box>
@@ -184,8 +180,7 @@ export function ProUpgradeDrawer() {
               letterSpacing: '0.05em',
               borderRadius: '12px',
               '&:hover': {
-                bgcolor: isTeamsUpgrade ? '#D97706' : '#818CF8'},
-            }}
+                bgcolor: isTeamsUpgrade ? '#D97706' : '#818CF8'}}}
             onClick={() => {
               closeProUpgrade();
               router.push(isTeamsUpgrade ? '/pricing?tier=teams' : '/pricing');
@@ -206,8 +201,7 @@ export function ProUpgradeDrawer() {
               letterSpacing: '0.05em',
               '&:hover': {
                 bgcolor: 'rgba(99, 102, 241, 0.08)',
-                color: '#fff'},
-            }}
+                color: '#fff'}}}
             onClick={closeProUpgrade}
           >
             Maybe Later

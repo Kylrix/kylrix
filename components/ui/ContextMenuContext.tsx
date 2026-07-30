@@ -12,8 +12,7 @@ import {
   Lock as LockIcon,
   Folder as FolderIcon,
   Chat as ChatIcon,
-  Refresh as RefreshIcon,
-} from '@/lib/openbricks/icons';
+  Refresh as RefreshIcon} from '@/lib/openbricks/icons';
 
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { isFlowPath } from '@/lib/routing/app-paths';

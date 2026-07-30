@@ -28,8 +28,7 @@ export function getOpenSuiteEntitlement(): OpenEntitlement {
 }
 
 export function resolveEffectiveBillingTier(
-  prefs: Record<string, unknown> | null | undefined,
-): BillingUiTier {
+  prefs: Record<string, unknown> | null | undefined): BillingUiTier {
   if (isSelfHostedDeployment()) {
     return OPEN_SUITE_TIER;
   }
@@ -78,9 +77,6 @@ export function getProjectCap(_tier: BillingUiTier | string): number {
   return Number.POSITIVE_INFINITY;
 }
 
-export function getContainerObjectCap(_tier: BillingUiTier | string): number {
-  return Number.POSITIVE_INFINITY;
-}
 
 export function allowsGroupHangouts(_tier: BillingUiTier | string): boolean {
   return true;

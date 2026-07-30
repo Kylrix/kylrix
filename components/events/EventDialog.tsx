@@ -48,7 +48,7 @@ const fromLocalISO = (str: string) => {
 };
 
 export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmit }) => {
-  const { setActiveDetail } = useSection();
+  const { } = useSection();
   const { setIsDrawerOpen } = useDrawerState();
   const [isMobile, setIsMobile] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);

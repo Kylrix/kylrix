@@ -48,8 +48,7 @@ export class SqliteDatabaseAdapter implements DatabasePort {
 
     return {
       total: rows.length,
-      rows: rows as T[],
-    };
+      rows: rows as T[]};
   }
 
   async createRow<T>(databaseId: string, tableId: string, rowId: string | null, data: Partial<T>): Promise<T> {

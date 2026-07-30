@@ -8,8 +8,7 @@ function resolveBlockBeeBillingBaseUrl(): string {
   const raw = String(
     process.env.BLOCKBEE_BILLING_BASE_URL ||
       process.env.NEXT_PUBLIC_APP_URL ||
-      CANONICAL_ORIGIN,
-  )
+      CANONICAL_ORIGIN)
     .trim()
     .replace(/\/+$/, '');
 

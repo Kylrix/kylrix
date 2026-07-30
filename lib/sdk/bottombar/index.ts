@@ -32,8 +32,7 @@ export function createBottomBarSurface(input: BottomBarSurfaceInput): BottomBarS
       active: item.active ?? bottomBarMatches(input.activeHref, item.href)})),
     mobileDockHeight: input.mobileDockHeight ?? 72,
     mobileInset: input.mobileInset ?? 20,
-    desktopRailWidth: input.desktopRailWidth ?? 280,
-  };
+    desktopRailWidth: input.desktopRailWidth ?? 280};
 }
 
 export function getBottomBarViewportOffset(viewport: VisualViewport | null | undefined = typeof window !== 'undefined' ? window.visualViewport : null) {

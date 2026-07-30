@@ -8,8 +8,7 @@ import {
   Button,
   CircularProgress,
   IconButton,
-  alpha,
-} from '@/lib/openbricks/primitives';
+  alpha} from '@/lib/openbricks/primitives';
 import { Check, X, Users } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { acceptProjectInviteSecure } from '@/lib/actions/secure-ops';

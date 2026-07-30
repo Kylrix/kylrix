@@ -149,12 +149,10 @@ export class AppwriteService {
           const response = await databases.listRows(
             VAULT_DATABASE_ID,
             VAULT_TABLE_ID_KEYCHAIN,
-            [Query.equal("userId", userId)],
-          );
+            [Query.equal("userId", userId)]);
           return response.rows || [];
         },
-        local: async () => cached,
-      });
+        local: async () => cached});
 
       if (source === 'network' && Array.isArray(value) && value.length > 0) {
         await SecurityEnclave.setKeychain(userId, value);
@@ -179,8 +177,7 @@ export class AppwriteService {
       const existing = await SecurityEnclave.getKeychain(data.userId);
       await SecurityEnclave.setKeychain(
         data.userId,
-        [created, ...existing.filter((e: any) => e.$id !== created.$id)],
-      );
+        [created, ...existing.filter((e: any) => e.$id !== created.$id)]);
       await SecurityEnclave.markDirty(data.userId);
     }
     return created;
@@ -199,8 +196,7 @@ export class AppwriteService {
       const existing = await SecurityEnclave.getKeychain(userId);
       await SecurityEnclave.setKeychain(
         userId,
-        existing.map((e: any) => (e.$id === id ? { ...e, ...updated } : e)),
-      );
+        existing.map((e: any) => (e.$id === id ? { ...e, ...updated } : e)));
       await SecurityEnclave.markDirty(userId);
     }
     return updated;
@@ -345,8 +341,7 @@ export class AppwriteService {
         userId: referrer.userId || referrerUserId || null,
         displayName: referrer.displayName || null,
         avatar: referrer.avatar || null,
-        linkedAt: new Date().toISOString()},
-    };
+        linkedAt: new Date().toISOString()}};
 
     await tablesDB.updateRow(CONNECT_DATABASE_ID, APPWRITE_CONFIG.TABLES.CONNECT.PROFILES, profile.$id, {
       preferences: JSON.stringify(nextPrefs)});
@@ -361,8 +356,7 @@ export class AppwriteService {
         displayName: referrer.displayName || null,
         avatar: referrer.avatar || null},
       referralEvent: nextPrefs.referral,
-      currentUsername: profile.username || currentUser?.prefs?.username || currentUser?.username || null,
-    };
+      currentUsername: profile.username || currentUser?.prefs?.username || currentUser?.username || null};
   }
 
   static async createGhostNote(data: {
@@ -437,8 +431,7 @@ export class AppwriteService {
               patch: data.profilePatch,
               metadata: data.metadata,
               newUsername: data.newUsername
-            }).slice(0, 990),
-          }
+            }).slice(0, 990)}
         ).catch((dbErr: any) => {
           console.warn('[recordProfileEvent] Gracefully skipped database logging:', dbErr?.message || dbErr);
         });

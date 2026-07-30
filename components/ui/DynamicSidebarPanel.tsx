@@ -81,8 +81,7 @@ export function DynamicSidebar() {
           WebkitBackdropFilter: 'blur(10px) saturate(120%)',
           opacity: isOpen ? 1 : 0,
           pointerEvents: isOpen ? 'auto' : 'none',
-          transition: 'opacity 0.3s ease',
-        }}
+          transition: 'opacity 0.3s ease'}}
       />
 
       {/* Side sheet — portaled above global topbar (z 1200) */}
@@ -111,9 +110,7 @@ export function DynamicSidebar() {
             bottom: 0,
             width: '1px',
             bgcolor: 'rgba(255, 255, 255, 0.04)',
-            pointerEvents: 'none',
-          },
-        }}
+            pointerEvents: 'none'}}}
       >
         {!shouldHideHeader && (
           <Box
@@ -125,8 +122,7 @@ export function DynamicSidebar() {
               py: 1.5,
               flexShrink: 0,
               bgcolor: '#161412',
-              borderBottom: '1px solid #1C1A18',
-            }}
+              borderBottom: '1px solid #1C1A18'}}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <IconButton
@@ -134,8 +130,7 @@ export function DynamicSidebar() {
                 sx={{
                   display: { xs: 'inline-flex', md: 'none' },
                   color: 'rgba(255,255,255,0.55)',
-                  '&:hover': { color: '#fff', bgcolor: '#1C1A18' },
-                }}
+                  '&:hover': { color: '#fff', bgcolor: '#1C1A18' }}}
                 size="small"
               >
                 <BackIcon size={20} />
@@ -147,8 +142,7 @@ export function DynamicSidebar() {
                   color: '#6366F1',
                   textTransform: 'uppercase',
                   letterSpacing: '0.06em',
-                  fontSize: '0.8rem',
-                }}
+                  fontSize: '0.8rem'}}
               >
                 Details
               </Typography>
@@ -158,8 +152,7 @@ export function DynamicSidebar() {
               sx={{
                 display: { xs: 'none', md: 'inline-flex' },
                 color: 'rgba(255,255,255,0.55)',
-                '&:hover': { color: '#fff', bgcolor: '#1C1A18' },
-              }}
+                '&:hover': { color: '#fff', bgcolor: '#1C1A18' }}}
               size="small"
             >
               <CloseIcon size={18} />
@@ -174,8 +167,7 @@ export function DynamicSidebar() {
             display: 'flex',
             flexDirection: 'column',
             bgcolor: '#0A0908',
-            overflow: isSelfContained ? 'hidden' : 'auto',
-          }}
+            overflow: isSelfContained ? 'hidden' : 'auto'}}
           className={isSelfContained ? undefined : 'scrollbar-thin'}
         >
           {content}

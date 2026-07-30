@@ -52,7 +52,7 @@ export interface ConnectTopbarSurface extends TopbarSurface {
   showConnectCta: boolean;
 }
 
-interface TopbarPanelSurface extends TopbarSurface {
+interface _TopbarPanelSurface extends TopbarSurface {
   panel: TopbarPanel | null;
   panelItems: TopbarPanelItem[];
   searchPlaceholder: string;
@@ -88,7 +88,7 @@ export interface TopbarSearchSurface extends Omit<TopbarSurface, 'quickActions' 
   searchTargets: TopbarSearchCard[];
 }
 
-interface TopbarProfileSurface {
+interface _TopbarProfileSurface {
   displayName: string;
   username?: string | null;
   bio?: string | null;
@@ -148,8 +148,7 @@ export function createTopbarPanelMotion(): TopbarPanelMotion {
     initial: { opacity: 0, y: -14, scaleY: 0.985 },
     animate: { opacity: 1, y: 0, scaleY: 1 },
     exit: { opacity: 0, y: -10, scaleY: 0.98 },
-    transition: { duration: 0.18, ease: 'easeOut' },
-  };
+    transition: { duration: 0.18, ease: 'easeOut' }};
 }
 
 function normalizeTopbarQuery(query: string) {
@@ -222,8 +221,7 @@ export function createTopbarSearchSurface(params: {
       description: 'Find drafts, archives, and research.',
       href: resolveUrl('note', `?search=${encodeURIComponent(query)}`),
       accent: '#EC4899',
-      terms: ['note', 'notes', 'writing', 'draft'],
-    },
+      terms: ['note', 'notes', 'writing', 'draft']},
     {
       id: 'search-goals',
       kind: 'goal',
@@ -231,8 +229,7 @@ export function createTopbarSearchSurface(params: {
       description: 'Find tasks and follow-through in Flow.',
       href: resolveUrl('flow', `?search=${encodeURIComponent(query)}`),
       accent: '#A855F7',
-      terms: ['goal', 'goals', 'task', 'tasks', 'flow'],
-    },
+      terms: ['goal', 'goals', 'task', 'tasks', 'flow']},
     {
       id: 'search-moments',
       kind: 'moment',
@@ -240,8 +237,7 @@ export function createTopbarSearchSurface(params: {
       description: 'Search feed posts and public replies.',
       href: resolveUrl('kylrix', `/?search=${encodeURIComponent(query)}`),
       accent: '#F59E0B',
-      terms: ['moment', 'moments', 'post', 'feed'],
-    },
+      terms: ['moment', 'moments', 'post', 'feed']},
     {
       id: 'search-calls',
       kind: 'call',
@@ -249,8 +245,7 @@ export function createTopbarSearchSurface(params: {
       description: 'Review call history and live sessions.',
       href: resolveUrl('connect', `/calls?search=${encodeURIComponent(query)}`),
       accent: '#10B981',
-      terms: ['call', 'calls', 'voice', 'video'],
-    },
+      terms: ['call', 'calls', 'voice', 'video']},
     {
       id: 'search-people',
       kind: 'person',
@@ -300,10 +295,6 @@ export function isTopbarScrollAtTop(node: HTMLElement | null) {
   return node.scrollTop <= 0;
 }
 
-export function isTopbarScrollAtBottom(node: HTMLElement | null) {
-  if (!node) return false;
-  return Math.ceil(node.scrollTop + node.clientHeight) >= node.scrollHeight;
-}
 
 export function topbarMatches(query: string, terms: string[]) {
   const normalized = query.trim().toLowerCase();

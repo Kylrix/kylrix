@@ -52,8 +52,7 @@ export async function getAdminStats(actorEmail: string) {
       { name: 'Thu', users: Math.floor(totalUsers * 0.11) },
       { name: 'Fri', users: Math.floor(totalUsers * 0.14) },
       { name: 'Sat', users: Math.floor(totalUsers * 0.08) },
-      { name: 'Sun', users: Math.floor(totalUsers * 0.18) }],
-  };
+      { name: 'Sun', users: Math.floor(totalUsers * 0.18) }]};
 }
 
 export async function listAdminUsers(
@@ -94,11 +93,9 @@ export async function listAdminUsers(
         day: '2-digit',
         year: 'numeric'}),
       emailVerification: user.emailVerification,
-      labels: user.labels,
-    })),
+      labels: user.labels})),
     total: visibleUsers.length,
     rawTotal: response.total,
     nextCursor,
-    hasMore,
-  };
+    hasMore};
 }

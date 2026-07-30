@@ -9,8 +9,7 @@ export const contentType = 'image/png';
 export const alt = 'Shared Kylie chat';
 
 export default async function Image({
-  params,
-}: {
+  params}: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
@@ -29,8 +28,7 @@ export default async function Image({
       chips: [
         'Agent',
         session?.messages?.length ? `${session.messages.length} msgs` : 'Public',
-      ],
-    }),
+      ]}),
     size
   );
 }

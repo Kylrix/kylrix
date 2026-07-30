@@ -11,8 +11,7 @@ const EDGE = '#34322F';
 
 export default function Error({
   error,
-  reset,
-}: {
+  reset}: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {

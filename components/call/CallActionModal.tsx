@@ -100,8 +100,7 @@ export const CallActionModal = ({
             const baseDescription = String(task?.description || '').trim();
             const stamp = `\n\n[Kylrix Huddle]\ncallId=${callId}\nstartedAt=${startedAtIso}\ndurationMinutes=${durationMinutes}`;
             await taskApi.update(taskId, {
-                description: `${baseDescription}${stamp}`.trim(),
-            });
+                description: `${baseDescription}${stamp}`.trim()});
         } catch (error) {
             console.warn('[CallActionModal] Failed to annotate task huddle metadata', error);
         }
@@ -233,8 +232,7 @@ export const CallActionModal = ({
                     participantIds: participants,
                     isPrivate: true,
                     allowGuests,
-                    approveParticipants,
-                });
+                    approveParticipants});
                 const startedAtIso = new Date().toISOString();
                 await updateNote(launchContext.noteId, {
                     huddleStartedAt: startedAtIso,
@@ -267,8 +265,7 @@ export const CallActionModal = ({
             await ActivityService.setLiveCallActivity(
                 user.$id,
                 _link.$id,
-                isNoteLaunch ? 'note' : isTaskLaunch ? 'flow' : 'connect',
-            ).catch(() => undefined);
+                isNoteLaunch ? 'note' : isTaskLaunch ? 'flow' : 'connect').catch(() => undefined);
             const participants = Array.from(new Set([
                 user.$id,
                 ...(launchContext?.participantIds || [])]));

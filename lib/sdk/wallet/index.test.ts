@@ -6,25 +6,20 @@ const service = createWalletService({
     listRows: async () => ({ rows: [] }),
     getRow: async () => ({}),
     createRow: async (_db, _table, _rowId, data) => ({ $id: 'row', ...data }),
-    deleteRow: async () => ({}),
-  },
+    deleteRow: async () => ({})},
   security: {
     status: { isUnlocked: false },
     getMasterKey: () => null,
     encrypt: async (data) => data,
-    decrypt: async (data) => data,
-  },
+    decrypt: async (data) => data},
   users: {
     updateProfile: async () => undefined,
-    getProfileById: async () => null,
-  },
+    getProfileById: async () => null},
   config: {
     passwordManagerDbId: 'password-manager',
     walletsTableId: 'wallets',
     noteDbId: 'note',
-    walletMapTableId: 'wallet-map',
-  },
-});
+    walletMapTableId: 'wallet-map'}});
 
 describe('wallet service helpers', () => {
   it('builds a stable public wallet payload', () => {

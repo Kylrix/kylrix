@@ -87,7 +87,7 @@ export default function SettingsPage() {
 function SettingsPageInner() {
     const { user, refreshUser, getJWT } = useAuth();
     const { currentTier, expiresAt} = useSubscription();
-    const { masterpassForLoginEnabled} = useAppwriteVault();
+    const {} = useAppwriteVault();
     const router = useRouter();
     const searchParams = useSearchParams();
     const { requestSudo} = useSudo();
@@ -450,8 +450,7 @@ function SettingsPageInner() {
                     name: user?.name},
                 preferences: appPrefs,
                 sessions: (sessions as any).sessions || (sessions as any).rows || [],
-                exportDate: new Date().toISOString(),
-            };
+                exportDate: new Date().toISOString()};
             
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
             const downloadAnchor = document.createElement('a');

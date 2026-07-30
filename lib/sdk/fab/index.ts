@@ -10,7 +10,7 @@ interface FabAction {
   disabled?: boolean;
 }
 
-interface FabModel {
+interface _FabModel {
   size: typeof FAB_LAYOUT.size;
   bottomOffset: typeof FAB_LAYOUT.bottomOffset;
   actions: FabAction[];

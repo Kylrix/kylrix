@@ -9,8 +9,7 @@ import {
   listCurrentMfaFactors,
   type MfaChallengeFactor,
   type MfaFactorsLike,
-  type MfaLoginMethod,
-} from '@/lib/mfa';
+  type MfaLoginMethod} from '@/lib/mfa';
 import toast from 'react-hot-toast';
 import { Close as CloseIcon } from '@/lib/openbricks/icons';
 import {
@@ -25,8 +24,7 @@ import {
   TextField,
   Typography,
   useMediaQuery,
-  useTheme,
-} from '@/lib/openbricks/primitives';
+  useTheme} from '@/lib/openbricks/primitives';
 
 type Props = {
   open: boolean;
@@ -134,9 +132,7 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
           borderTop: isDesktop ? 0 : '1px solid rgba(255, 255, 255, 0.08)',
           borderLeft: isDesktop ? '1px solid rgba(255, 255, 255, 0.08)' : 0,
           backgroundImage: 'none',
-          p: 0,
-        },
-      }}
+          p: 0}}}
     >
       <Box sx={{ width: '100%', maxWidth: 620, mx: 'auto', px: { xs: 2, md: 4 }, py: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
@@ -220,9 +216,7 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
                     color: 'white',
                     borderRadius: '16px',
                     bgcolor: '#161514',
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' },
-                  },
-                }}
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' }}}}
               />
               <Button
                 variant="contained"

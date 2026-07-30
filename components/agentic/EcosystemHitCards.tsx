@@ -130,8 +130,7 @@ export function EcosystemHitCards({
         notes,
         tasks,
         getCachedData}),
-    [hits, notes, tasks, getCachedData],
-  );
+    [hits, notes, tasks, getCachedData]);
 
   if (!hydrated.length) {
     return (

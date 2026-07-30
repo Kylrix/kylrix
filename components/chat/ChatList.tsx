@@ -834,8 +834,7 @@ export const ChatList = ({
                         lastMessageText: previewText,
                         lastMessageAt: previewAt,
                         lastMessageId: previewId,
-                        lastMessageSenderId: previewSenderId,
-                    };
+                        lastMessageSenderId: previewSenderId};
                 }
 
                 const otherId = conv.participants?.find((p: string) => p !== user!.$id);
@@ -848,8 +847,7 @@ export const ChatList = ({
                     lastMessageText: previewText,
                     lastMessageAt: previewAt,
                     lastMessageId: previewId,
-                    lastMessageSenderId: previewSenderId,
-                };
+                    lastMessageSenderId: previewSenderId};
             });
 
             const sorted = baseRows.sort((a, b) => {
@@ -1072,8 +1070,7 @@ export const ChatList = ({
                     [relatedConversationId]: {
                         lastMessageId: payload.$id,
                         lastMessageText: livePreviewText,
-                        lastMessageAt: livePreviewAt},
-                }));
+                        lastMessageAt: livePreviewAt}}));
                 setActivePreviewConversationId(relatedConversationId);
                 window.setTimeout(() => {
                     setActivePreviewConversationId((current) => current === relatedConversationId ? null : current);
@@ -1241,8 +1238,7 @@ export const ChatList = ({
                                         onSuccess: () => {
                                             setIsUnlocked(true);
                                             void loadConversations({ forceRefresh: true });
-                                        },
-                                    })}
+                                        }})}
                                     className="px-8 py-3.5 rounded-2xl font-black bg-[#F59E0B] text-black text-sm shadow-[0_12px_24px_rgba(245,158,11,0.15)] hover:bg-[#eab308] hover:-translate-y-0.5 transition-all duration-300 ease-out"
                                 >
                                     Unlock Node
@@ -1511,8 +1507,7 @@ export const ChatList = ({
                                                                     conv.linkedResourceType === 'task' ? '#34D399' :
                                                                     conv.linkedResourceType === 'event' ? '#F472B6' :
                                                                     conv.linkedResourceType === 'form' ? '#A78BFA' :
-                                                                    conv.linkedResourceType === 'tag' ? '#F87171' : '#FBBF24',
-                                                            }}
+                                                                    conv.linkedResourceType === 'tag' ? '#F87171' : '#FBBF24'}}
                                                         >
                                                             {conv.linkedResourceType}
                                                         </span>

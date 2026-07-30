@@ -50,8 +50,7 @@ async function resolveConversationParticipants(databases: any, conversation: any
   return Array.from(new Set<string>(
     (memberRows.rows || [])
       .map((row: any) => row.userId)
-      .filter((userId: unknown): userId is string => typeof userId === 'string' && userId.trim().length > 0),
-  ));
+      .filter((userId: unknown): userId is string => typeof userId === 'string' && userId.trim().length > 0)));
 }
 
 const PAGE_SIZE = 100;
@@ -60,8 +59,7 @@ async function listAllDocuments(
   databases: any,
   databaseId: string,
   tableId: string,
-  queries: any[] = [],
-) {
+  queries: any[] = []) {
   const rows: any[] = [];
   let offset = 0;
 
@@ -84,8 +82,7 @@ async function deleteRowsInBatches(
   databases: any,
   databaseId: string,
   tableId: string,
-  rowIds: string[],
-) {
+  rowIds: string[]) {
   const uniqueIds = Array.from(new Set(rowIds.filter(Boolean)));
   if (!uniqueIds.length) return 0;
 
@@ -172,8 +169,7 @@ export async function createMessageInternal(payload: {
   const conversation = await databases.getRow(
     CHAT_DB_ID,
     CONVERSATIONS_TABLE_ID,
-    payload.conversationId,
-  );
+    payload.conversationId);
 
   const participants = await resolveConversationParticipants(databases, conversation);
 
@@ -199,8 +195,7 @@ export async function createMessageInternal(payload: {
       isVoice: payload.type === 'voice' || payload.content?.startsWith('__voice_note__:'),
       createdAt: now,
       updatedAt: now},
-    buildMessagePermissions(payload.senderId, recipientIds),
-  );
+    buildMessagePermissions(payload.senderId, recipientIds));
 
   return JSON.parse(JSON.stringify(message));
 }
@@ -289,8 +284,7 @@ export async function deleteConversationFullyInternal(payload: {
     databases,
     APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
     APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING,
-    [Query.equal('resourceId', payload.conversationId)],
-  );
+    [Query.equal('resourceId', payload.conversationId)]);
   const joinRequests = await listAllDocuments(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, [
     Query.equal('resourceId', payload.conversationId)]);
 
@@ -401,8 +395,7 @@ export async function toggleReactionInternal(payload: {
         MESSAGE_REACTIONS_TABLE_ID,
         docId,
         reactionPayload,
-        permissions,
-      );
+        permissions);
       return JSON.parse(JSON.stringify(reaction));
     } catch (error: any) {
       if (error?.code === 409) {
@@ -411,8 +404,7 @@ export async function toggleReactionInternal(payload: {
           MESSAGE_REACTIONS_TABLE_ID,
           docId,
           reactionPayload,
-          permissions,
-        );
+          permissions);
         return JSON.parse(JSON.stringify(reaction));
       }
       throw error;
@@ -450,8 +442,7 @@ export async function repairConversationInternal(payload: {
     userId: targetUserId,
     conversationId: payload.conversationId || null,
     identity: { repaired: false, deleted: 0 },
-    mappings: { repaired: 0, deleted: 0 },
-  };
+    mappings: { repaired: 0, deleted: 0 }};
 
   // 1. Repair Identity
   const profiles = await databases.listRows(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
@@ -465,8 +456,7 @@ export async function repairConversationInternal(payload: {
     [
       Query.equal('userId', targetUserId),
       Query.equal('identityType', 'e2e_connect'),
-      Query.limit(100)],
-  );
+      Query.limit(100)]);
 
   const identityRows = identities.rows;
   const canonicalIdentity =
@@ -481,8 +471,7 @@ export async function repairConversationInternal(payload: {
       await databases.deleteRow(
         APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
         APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES,
-        duplicate.$id,
-      );
+        duplicate.$id);
     }
     report.identity = {
       repaired: true,
@@ -495,8 +484,7 @@ export async function repairConversationInternal(payload: {
         APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
         profile.$id,
         {
-          publicKey: canonicalIdentity.publicKey || null},
-      );
+          publicKey: canonicalIdentity.publicKey || null});
       report.identity.profilePublicKeyUpdated = true;
     }
   }
@@ -515,8 +503,7 @@ export async function repairConversationInternal(payload: {
       APPWRITE_CONFIG.TABLES.CHAT.EPOCHS,
       [
         Query.equal('resourceId', payload.conversationId),
-        Query.limit(100)],
-    );
+        Query.limit(100)]);
     const epochIds = epochRows.rows.map((row: any) => row.$id);
 
     const mappings = await databases.listRows(
@@ -524,8 +511,7 @@ export async function repairConversationInternal(payload: {
       APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING,
       [
         Query.equal('grantee', targetUserId),
-        Query.limit(1000)],
-    );
+        Query.limit(1000)]);
 
     const relevantMappings = mappings.rows.filter((row: any) => {
       if (row.resourceType === 'chat' && row.resourceId === payload.conversationId) return true;
@@ -575,8 +561,7 @@ export async function repairConversationInternal(payload: {
           APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
           APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING,
           canonical.$id,
-          { metadata: JSON.stringify(metadata) },
-        );
+          { metadata: JSON.stringify(metadata) });
         repairedRows += 1;
       }
 
@@ -584,8 +569,7 @@ export async function repairConversationInternal(payload: {
         await databases.deleteRow(
           APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
           APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING,
-          duplicate.$id,
-        );
+          duplicate.$id);
         deletedRows += 1;
       }
     }
@@ -676,8 +660,7 @@ export async function joinRequestInternal(payload: {
         createdAt: new Date().toISOString()},
       [
         Permission.read(Role.user(verifiedActorId!)),
-        ...managers.map((id: any) => Permission.read(Role.user(id)))],
-    );
+        ...managers.map((id: any) => Permission.read(Role.user(id)))]);
 
     return JSON.parse(JSON.stringify(request));
   }

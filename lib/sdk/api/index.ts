@@ -29,16 +29,12 @@ export function createApiModulePaths(basePath = '/api'): ApiModulePaths {
       messages: buildApiPath(basePath, 'connect', 'messages'),
       reactions: buildApiPath(basePath, 'connect', 'message-reactions'),
       joinRequests: buildApiPath(basePath, 'connect', 'join-requests'),
-      repair: buildApiPath(basePath, 'connect', 'repair'),
-    },
+      repair: buildApiPath(basePath, 'connect', 'repair')},
     token: {
-      operations: 'in-code-secure-op',
-    },
+      operations: 'in-code-secure-op'},
     forward: {
       conversations: buildApiPath(basePath, 'forward', 'conversations'),
       send: buildApiPath(basePath, 'forward', 'send'),
-      targets: buildApiPath(basePath, 'forward', 'targets'),
-    },
-  };
+      targets: buildApiPath(basePath, 'forward', 'targets')}};
 }
 

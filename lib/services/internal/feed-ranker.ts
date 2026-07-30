@@ -11,8 +11,7 @@ export class FeedRanker {
       [
         Query.limit(limit * 3),
         Query.orderDesc('$createdAt'),
-      ],
-    );
+      ]);
 
     const rankedMoments = await Promise.all(
       moments.rows.map(async (m: any) => {
@@ -32,8 +31,7 @@ export class FeedRanker {
         const score = log_likes * signals.nerfCoefficient;
 
         return { momentId: m.$id, score, signals };
-      }),
-    );
+      }));
 
     return rankedMoments
       .sort((a: any, b: any) => b.score - a.score)

@@ -54,8 +54,7 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
           rowIsPinned: call.isPinned,
           setOwnerRowPin: async (_pinned) => {
               // Update logic if needed
-          },
-        });
+          }});
       } catch (err: any) {
         console.error('Failed to toggle pin:', err);
       }

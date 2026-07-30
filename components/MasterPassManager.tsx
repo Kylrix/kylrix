@@ -77,8 +77,7 @@ export default function MasterPassManager({ userId }: { userId: string }) {
           gap: 2,
           transition: 'all 0.2s ease-out',
           '&:hover': {
-            backgroundColor: '#1F1D1B'},
-        }}
+            backgroundColor: '#1F1D1B'}}}
       >
         <Box sx={{ 
           p: 1.5, 
@@ -89,8 +88,7 @@ export default function MasterPassManager({ userId }: { userId: string }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          flexShrink: 0,
-        }}>
+          flexShrink: 0}}>
           <Shield fontSize="medium" />
         </Box>
         <Box sx={{ flex: 1 }}>
@@ -137,12 +135,10 @@ export default function MasterPassManager({ userId }: { userId: string }) {
                     '&:hover fieldset': {
                       borderColor: 'rgba(255, 255, 255, 0.2)'},
                     '&.ob-focused fieldset': {
-                      borderColor: '#6366F1'},
-                  },
+                      borderColor: '#6366F1'}},
                   '& .ob-outlined-input::placeholder': {
                     color: 'rgba(255, 255, 255, 0.4)',
-                    opacity: 1},
-                }}
+                    opacity: 1}}}
               />
               {error && <Typography sx={{ color: '#ef4444', fontSize: '0.875rem' }}>{error}</Typography>}
               <Button
@@ -159,8 +155,7 @@ export default function MasterPassManager({ userId }: { userId: string }) {
                   textTransform: 'none',
                   fontSize: '0.95rem',
                   '&:hover': { bgcolor: '#4F46E5' },
-                  '&:disabled': { opacity: 0.5 },
-                }}
+                  '&:disabled': { opacity: 0.5 }}}
               >
                 {loading ? 'Unlocking...' : 'Unlock Ecosystem Vault'}
               </Button>

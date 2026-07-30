@@ -20,8 +20,7 @@ export class AppwriteAuthAdapter implements AuthPort {
         emailVerification: !!user.emailVerification,
         isAdmin,
         labels: user.labels || [],
-        prefs: user.prefs || {},
-      };
+        prefs: user.prefs || {}};
     } catch (err) {
       console.error('[AppwriteAuthAdapter] Failed to get actor:', err);
       return null;

@@ -7,8 +7,7 @@ import {
   CircularProgress,
   Box,
   useTheme,
-  useMediaQuery,
-} from '@/lib/openbricks/primitives';
+  useMediaQuery} from '@/lib/openbricks/primitives';
 
 interface ConfirmationDialogProps {
   open: boolean;
@@ -54,8 +53,7 @@ export function ConfirmationDialog({
           border: '1px solid rgba(255, 255, 255, 0.1)',
           borderLeft: isMobile ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
           display: 'flex',
-          flexDirection: 'column',
-        }
+          flexDirection: 'column'}
       }}
     >
       <Box sx={{ 
@@ -67,8 +65,7 @@ export function ConfirmationDialog({
         fontSize: '1.25rem',
         fontFamily: '"Space Grotesk", sans-serif',
         borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-        flexShrink: 0,
-      }}>
+        flexShrink: 0}}>
         {title}
       </Box>
       <Box sx={{ px: 3, py: 2, flex: 1, overflowY: 'auto' }}>
@@ -93,8 +90,7 @@ export function ConfirmationDialog({
             px: 3,
             py: 1,
             '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            }
+              backgroundColor: 'rgba(255, 255, 255, 0.05)'}
           }}
         >
           {cancelLabel}
@@ -116,10 +112,8 @@ export function ConfirmationDialog({
               : '0 10px 15px -3px rgba(99, 102, 241, 0.3)',
             '&:hover:not(:disabled)': { 
               backgroundColor: isDestructive ? '#dc2626' : '#00D1DA',
-              transform: 'translateY(-1px)',
-            },
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
+              transform: 'translateY(-1px)'},
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'}}
         >
           {isLoading ? <CircularProgress size={20} color="inherit" /> : confirmLabel}
         </Button>

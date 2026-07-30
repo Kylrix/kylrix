@@ -144,8 +144,7 @@ function toMentionResult(user: any): MentionResult | null {
     subtitle: user?.username ? `@${toDisplayUsername(user.username)}` : user?.email || null,
     username,
     avatar: user?.avatar || user?.profilePicId || user?.prefs?.profilePicId || null,
-    profilePicId: user?.profilePicId || user?.prefs?.profilePicId || null,
-  };
+    profilePicId: user?.profilePicId || user?.prefs?.profilePicId || null};
 }
 
 function MentionComposer({
@@ -197,8 +196,7 @@ function MentionComposer({
         inputRef.current?.setSelectionRange(caret, caret);
       });
     },
-    [activeRange, closeSuggestions, onChange, value],
-  );
+    [activeRange, closeSuggestions, onChange, value]);
 
   useEffect(() => {
     if (!query.trim() || query.trim().length < 1) {
@@ -235,8 +233,7 @@ function MentionComposer({
             return {
               ...item,
               avatar};
-          }),
-        );
+          }));
         const filtered = mapped.filter((item): item is MentionResult => Boolean(item));
         setResults(filtered);
         upsertCommentIdentities(
@@ -247,8 +244,7 @@ function MentionComposer({
             displayName: item.title,
             name: item.title,
             avatar: item.avatar,
-            profilePicId: item.profilePicId})),
-        );
+            profilePicId: item.profilePicId})));
       } catch {
         if (alive) setResults([]);
       } finally {
@@ -323,10 +319,8 @@ function MentionComposer({
             border: '1px solid rgba(255,255,255,0.08)',
             boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
             borderRadius: 4,
-            overflow: 'hidden',
-          },
-          onMouseDown: (event: ReactMouseEvent) => event.preventDefault(),
-        }}
+            overflow: 'hidden'},
+          onMouseDown: (event: ReactMouseEvent) => event.preventDefault()}}
       >
         <Box sx={{ p: 1.25, display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', letterSpacing: '0.14em', fontWeight: 800 }}>
@@ -350,8 +344,7 @@ function MentionComposer({
                 sx={{
                   py: 1,
                   px: 1.25,
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' },
-                }}
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' }}}
               >
                 <ListItemAvatar sx={{ minWidth: 42 }}>
                   <Avatar
@@ -899,9 +892,7 @@ export default function CommentsSection({ noteId, decryptionKey }: CommentsProps
           ...prev,
           [user.$id]: {
             ...(prev[user.$id] || {}),
-            ...(user as unknown as Users),
-          },
-        }));
+            ...(user as unknown as Users)}}));
       }
       if (!userMap[newCommentDoc.userId]) {
         fetchComments();

@@ -45,7 +45,7 @@ import ProjectLinker from '@/components/projects/ProjectLinker';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
-import { MILESTONES_UPGRADE_LABEL, AI_UPGRADE_LABEL } from '@/lib/agentic/access';
+import { MILESTONES_UPGRADE_LABEL } from '@/lib/agentic/access';
 import {
   Drawer,
   Box,
@@ -114,9 +114,6 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
     addSubtask,
     toggleSubtask,
     deleteSubtask,
-    addTaskCollaborator,
-    updateTaskCollaborator,
-    deleteTaskCollaborator,
     projects,
     labels} = useTask();
 
@@ -148,12 +145,6 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
     return false;
   }, [isPaid, openProUpgrade]);
 
-  const requirePaidAi = useCallback(() => {
-    if (isPaid) return true;
-    openProUpgrade(AI_UPGRADE_LABEL);
-    return false;
-  }, [isPaid, openProUpgrade]);
-
   const [newSubtask, setNewSubtask] = useState('');
   const [newComment, setNewComment] = useState('');
   const [noteQuery, _setNoteQuery] = useState('');
@@ -169,9 +160,9 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const [_taskParticipantProfiles, setTaskParticipantProfiles] = useState<any[]>([]);
   const [_isLoadingAssignees, setIsLoadingAssignees] = useState(false);
   const [_taskCollaboratorRows, _setTaskCollaboratorRows] = useState<TaskCollaborator[]>([]);
-  const [pendingCollaborators, setPendingCollaborators] = useState<any[]>([]);
+  const [,] = useState<any[]>([]);
   const [showProjectLinker, setShowProjectLinker] = useState(false);
-  const [pendingCollaboratorPermission, _setPendingCollaboratorPermission] = useState<CollaboratorPermission>('write');
+  const [, _setPendingCollaboratorPermission] = useState<CollaboratorPermission>('write');
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isTagSelectorOpen, setIsTagSelectorOpen] = useState(false);
   const { ecosystemTags, refreshEcosystemTags } = useTask();
@@ -311,8 +302,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   };
 
   // AI Integration
-  const { generate } = useAI();
-  const [_isGeneratingSubtasks, setIsGeneratingSubtasks] = useState(false);
+  const { } = useAI();
+  const [_isGeneratingSubtasks,] = useState(false);
 
 
   const handleStartEditTitle = () => {
@@ -1079,8 +1070,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               borderTop: '1px solid rgba(255, 255, 255, 0.1)',
               maxHeight: '60vh',
               width: '100%',
-              p: 3},
-          }}
+              p: 3}}}
         >
           <Stack direction="row" alignItems="center" justifyContent="between" sx={{ mb: 3 }}>
             <Stack direction="row" alignItems="center" spacing={1.5}>
@@ -1095,8 +1085,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                 color: '#E8E6E3',
                 bgcolor: '#0A0908',
                 border: '1px solid #34322F',
-                '&:hover': { bgcolor: '#1C1A18' },
-              }}
+                '&:hover': { bgcolor: '#1C1A18' }}}
             >
               <X size={18} />
             </IconButton>

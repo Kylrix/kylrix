@@ -120,8 +120,7 @@ const NETWORKS: Record<SupportedWalletChain, WalletNetworkDefinition> = {
         symbol: 'ARB',
         family: 'evm',
         publicProfile: true,
-        aliasOf: 'eth'},
-};
+        aliasOf: 'eth'}};
 
 const DEFAULT_MAIN_CHAINS: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc'];
 const PUBLIC_CHAIN_PRIORITY: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc', 'sui', 'base', 'polygon', 'arbitrum'];
@@ -280,8 +279,7 @@ const listWalletRows = async (userId: string) => {
             ]);
             return response.rows || [];
         },
-        local: async () => local,
-    });
+        local: async () => local});
 
     if (source === 'network' && Array.isArray(value) && value.length > 0) {
         await SecurityEnclave.setWallets(userId, value);
@@ -480,5 +478,4 @@ export const WalletService = {
         }
         const root = await parseRootEnvelope(existingRows[0].encryptedSecret);
         return root.mnemonic;
-    },
-};
+    }};

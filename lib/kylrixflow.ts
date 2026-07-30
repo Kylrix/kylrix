@@ -332,8 +332,7 @@ export const taskCollaborators = {
         createTaskCollaborator(taskId, userId, permission, creatorId, permissions),
     update: (rowId: string, data: Partial<{ permission: CollaboratorPermission }>, creatorId: string | null, taskId: string, permissions?: string[]) =>
         updateTaskCollaborator(rowId, data, creatorId, taskId, permissions),
-    delete: (rowId: string) => deleteTaskCollaborator(rowId),
-};
+    delete: (rowId: string) => deleteTaskCollaborator(rowId)};
 
 // --- Events ---
 
@@ -404,8 +403,7 @@ export const eventGuests = {
                     ctaUrl: `${getEcosystemUrl('flow')}/events/${String((data as any).eventId || '')}`,
                     ctaText: 'Open event',
                     metadata: {
-                        guestId: row.$id},
-                });
+                        guestId: row.$id}});
             }
         } catch (error) {
             console.error('[Flow] Failed to queue event registration email', error);

@@ -4,8 +4,7 @@ import { NextRequest } from 'next/server';
 export const runtime = "edge";
 export const size = {
   width: 1200,
-  height: 630,
-};
+  height: 630};
 export const contentType = "image/png";
 
 const sectionMetadata: Record<string, { title: string; description: string }> = {
@@ -68,16 +67,14 @@ export async function GET(req: NextRequest) {
           background: "linear-gradient(135deg, #0A0908 0%, #161412 55%, #1C1A18 100%)",
           color: "#F5F3EF",
           fontFamily: "Arial, Helvetica, sans-serif",
-          position: "relative",
-        }}
+          position: "relative"}}
       >
         <div
           style={{
             position: "absolute",
             inset: "24px",
             border: "1px solid rgba(255,255,255,0.06)",
-            borderRadius: "36px",
-          }}
+            borderRadius: "36px"}}
         />
 
         <div
@@ -85,8 +82,7 @@ export async function GET(req: NextRequest) {
             display: "flex",
             alignItems: "center",
             gap: "14px",
-            zIndex: 1,
-          }}
+            zIndex: 1}}
         >
           <div
             style={{
@@ -95,8 +91,7 @@ export async function GET(req: NextRequest) {
               justifyContent: "center",
               width: "48px",
               height: "48px",
-              position: "relative",
-            }}
+              position: "relative"}}
           >
             <svg width="48" height="48" viewBox="0 0 100 100" fill="none">
               <line x1="15" y1="30" x2="50" y2="10" stroke="#6366F1" strokeWidth="6" strokeLinecap="round" />
@@ -110,8 +105,7 @@ export async function GET(req: NextRequest) {
               fontSize: "20px",
               fontWeight: 800,
               color: "#fff",
-              letterSpacing: "0.15em",
-            }}
+              letterSpacing: "0.15em"}}
           >
             KYLRIX LEGAL
           </span>
@@ -123,8 +117,7 @@ export async function GET(req: NextRequest) {
             flexDirection: "column",
             gap: "18px",
             zIndex: 1,
-            marginBottom: "20px",
-          }}
+            marginBottom: "20px"}}
         >
           <span
             style={{
@@ -132,8 +125,7 @@ export async function GET(req: NextRequest) {
               fontWeight: 900,
               color: "#6366F1",
               textTransform: "uppercase",
-              letterSpacing: "0.2em",
-            }}
+              letterSpacing: "0.2em"}}
           >
             Terms of Service Clause
           </span>
@@ -143,8 +135,7 @@ export async function GET(req: NextRequest) {
               fontWeight: 900,
               color: "#fff",
               letterSpacing: "-0.02em",
-              lineHeight: 1.1,
-            }}
+              lineHeight: 1.1}}
           >
             {meta.title}
           </span>
@@ -153,8 +144,7 @@ export async function GET(req: NextRequest) {
               fontSize: "18px",
               color: "rgba(255,255,255,0.6)",
               lineHeight: 1.5,
-              maxWidth: "800px",
-            }}
+              maxWidth: "800px"}}
           >
             {meta.description}
           </span>
@@ -165,16 +155,14 @@ export async function GET(req: NextRequest) {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            zIndex: 1,
-          }}
+            zIndex: 1}}
         >
           <span
             style={{
               fontSize: "12px",
               color: "rgba(255,255,255,0.3)",
               fontWeight: 600,
-              letterSpacing: "0.05em",
-            }}
+              letterSpacing: "0.05em"}}
           >
             By using Kylrix (cloud or self-hosted) you agree to these terms.
           </span>
@@ -182,8 +170,7 @@ export async function GET(req: NextRequest) {
             style={{
               fontSize: "12px",
               color: "#6366F1",
-              fontWeight: 700,
-            }}
+              fontWeight: 700}}
           >
             kylrix.space
           </span>
@@ -192,7 +179,6 @@ export async function GET(req: NextRequest) {
     ),
     {
       width: 1200,
-      height: 630,
-    }
+      height: 630}
   );
 }

@@ -10,11 +10,9 @@ export function useTheme() {
       secondary: { main: '#EC4899', light: '#F472B6', dark: '#DB2777', contrastText: '#FFFFFF' },
       background: { default: '#000000', paper: '#141211' },
       text: { primary: '#F8FAFC', secondary: '#9B9691' },
-      divider: '#23211F',
-    },
+      divider: '#23211F'},
     shape: { borderRadius: 16 },
-    spacing: (val: number) => `${val * 4}px`,
-  };
+    spacing: (val: number) => `${val * 4}px`};
 }
 
 

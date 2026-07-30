@@ -174,8 +174,7 @@ export function PasskeySetupPanel({
           residentKey: "required" as const,
           userVerification: "preferred" as const},
         timeout: 60000,
-        attestation: "none" as const,
-      };
+        attestation: "none" as const};
 
       if (alsoUseForLogin) {
         registrationOptions.extensions = {
@@ -223,20 +222,17 @@ export function PasskeySetupPanel({
         kwrapSeed,
         { name: "AES-GCM" },
         false,
-        ["encrypt", "decrypt"],
-      );
+        ["encrypt", "decrypt"]);
 
       const rawMasterKey = await crypto.subtle.exportKey("raw", masterKey);
       const iv = crypto.getRandomValues(new Uint8Array(12));
       const encryptedMasterKey = await crypto.subtle.encrypt(
         { name: "AES-GCM", iv },
         kwrap,
-        rawMasterKey,
-      );
+        rawMasterKey);
 
       const combined = new Uint8Array(
-        iv.length + encryptedMasterKey.byteLength,
-      );
+        iv.length + encryptedMasterKey.byteLength);
       combined.set(iv);
       combined.set(new Uint8Array(encryptedMasterKey), iv.length);
       const passkeyBlob = arrayBufferToBase64(combined.buffer);
@@ -272,8 +268,7 @@ export function PasskeySetupPanel({
         isBackup: false,
         authPass: false,
         publicKey: cosePublicKey,
-        authPasskey: isAuthPasskey,
-      });
+        authPasskey: isAuthPasskey});
 
       try {
         const { logPasskeyAdded } = await import('@/lib/audit');
@@ -631,9 +626,7 @@ export function PasskeySetup({
           borderLeft: isDesktop ? '1px solid rgba(255, 255, 255, 0.06)' : 0,
           backgroundImage: 'none',
           color: 'white',
-          p: 0,
-        },
-      }}
+          p: 0}}}
     >
       <PasskeySetupPanel
         onClose={onClose}

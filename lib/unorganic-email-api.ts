@@ -24,7 +24,7 @@ export type UnorganicEmailEventType =
   | 'masterpass_login_enabled'
   | 'masterpass_login_disabled';
 
-type UnorganicEmailRecipientInput =
+type _UnorganicEmailRecipientInput =
   | { userId: string; email?: never }
   | { email: string; userId?: never };
 
@@ -66,8 +66,7 @@ const SOURCE_THEMES: Record<UnorganicEmailSource, SourceTheme> = {
   flow: { color: '#A855F7', shape: 'Slanted Square', label: 'Flow' },
   connect: { color: '#F59E0B', shape: 'Slanted Square', label: 'Connect' },
   note: { color: '#EC4899', shape: 'Slanted Square', label: 'Note' },
-  vault: { color: '#10B981', shape: 'Slanted Square', label: 'Vault' },
-};
+  vault: { color: '#10B981', shape: 'Slanted Square', label: 'Vault' }};
 
 const SOURCE_PRIORITY: Record<UnorganicEmailSource, number> = {
   flow: 50,
@@ -94,7 +93,6 @@ const EVENT_PRIORITY: Record<UnorganicEmailEventType, number> = {
   masterpass_login_enabled: 34,
   masterpass_login_disabled: 34};
 
-const MAX_UNORGANIC_EMAILS = 5;
 const UNORGANIC_EMAIL_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 const CHAT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const UNORGANIC_EMAILS_TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.UNORGANIC_EMAILS;
@@ -102,7 +100,7 @@ const UNORGANIC_EMAILS_TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.UNORGANIC_EMAILS;
 type PriorityLabel = 'low' | 'medium' | 'high' | 'critical';
 type QueueStatus = 'queued' | 'sending' | 'sent' | 'suppressed' | 'failed';
 
-const PRIORITY_RANK: Record<PriorityLabel, number> = {
+const _PRIORITY_RANK: Record<PriorityLabel, number> = {
   low: 1,
   medium: 2,
   high: 3,
@@ -161,16 +159,8 @@ function hashQueueKey(input: string) {
   return createHash('sha256').update(input).digest('base64url').slice(0, 32);
 }
 
-function minimumPriorityForRemaining(remaining: number): PriorityLabel {
-  if (remaining >= 3) return 'low';
-  if (remaining === 2) return 'medium';
-  if (remaining === 1) return 'high';
-  return 'critical';
-}
 
-function isPriorityAllowed(priority: PriorityLabel, remaining: number) {
-  return PRIORITY_RANK[priority] >= PRIORITY_RANK[minimumPriorityForRemaining(remaining)];
-}
+
 
 function buildTemplateKey(input: UnorganicEmailDispatchInput) {
   return pickText(input.templateKey, `${normalizeSourceApp(input.sourceApp)}:${normalizeEventType(input.eventType)}`);
@@ -179,8 +169,7 @@ function buildTemplateKey(input: UnorganicEmailDispatchInput) {
 function buildDeduplicationSeed(
   input: UnorganicEmailDispatchInput,
   recipient: { userId: string; email: string },
-  templateKey: string,
-) {
+  templateKey: string) {
   return [
     normalizeEventType(input.eventType),
     normalizeSourceApp(input.sourceApp),
@@ -252,112 +241,98 @@ function resolveEventCopy(input: Required<Pick<UnorganicEmailDispatchInput, 'eve
         title: 'Project Invitation',
         body: `${actorName} has invited you to collaborate on the project "${resourceTitle}"${rightsLabel ? ` with ${rightsLabel} permissions` : ''}.`.trim(),
         ctaText,
-        ctaUrl,
-      };
+        ctaUrl};
     case 'task_assigned':
       return {
         subject: `New task assignment: ${resourceTitle}`,
         title: 'Task assignment',
         body: `${actorName} assigned you to ${resourceTitle}.${rightsLabel ? ` You have ${rightsLabel}.` : ''}`.trim(),
         ctaText,
-        ctaUrl,
-      };
+        ctaUrl};
     case 'note_collaborator_added':
       return {
         subject: `Added to ${resourceTitle}`,
         title: 'Note collaboration',
         body: `${actorName} added you as a collaborator to ${resourceTitle}${rightsLabel ? ` with ${rightsLabel}` : ''}.`.trim(),
         ctaText,
-        ctaUrl,
-      };
+        ctaUrl};
     case 'group_member_added':
       return {
         subject: `Added to ${resourceTitle}`,
         title: 'Group access',
         body: `${actorName} added you to ${resourceTitle}.`.trim(),
         ctaText,
-        ctaUrl,
-      };
+        ctaUrl};
     case 'form_response_submitted':
       return {
         subject: `New response on ${resourceTitle}`,
         title: 'Form response',
         body: `${actorName} submitted a new response to ${resourceTitle}.`.trim(),
         ctaText,
-        ctaUrl,
-      };
+        ctaUrl};
     case 'event_registered':
       return {
         subject: `${actorName} registered for ${resourceTitle}`,
         title: 'Event registration',
         body: `${actorName} registered for ${resourceTitle}.`.trim(),
         ctaText,
-        ctaUrl,
-      };
+        ctaUrl};
     case 'password_shared':
       return {
         subject: `A secret was shared with you`,
         title: 'Vault share',
         body: `${actorName} shared a password or TOTP with you${resourceTitle ? `: ${resourceTitle}` : ''}.`.trim(),
         ctaText,
-        ctaUrl,
-      };
+        ctaUrl};
     case 'token_transfer_received':
       return {
         subject: `You received ${resourceTitle || 'a KYLRIX transfer'}`,
         title: 'KYLRIX transfer received',
         body: `${actorName} sent ${resourceTitle || 'KYLRIX tokens'} to your wallet.`.trim(),
         ctaText,
-        ctaUrl,
-      };
+        ctaUrl};
     case 'message_streak':
       return {
         subject: `You have unread messages from ${actorName}`,
         title: 'Message reminder',
         body: `${actorName} has sent you multiple messages without a reply. It may be time to respond.`.trim(),
         ctaText,
-        ctaUrl,
-      };
+        ctaUrl};
     case 'call_started':
       return {
         subject: `${actorName} started a call`,
         title: 'Incoming call',
         body: `${actorName} started a call and is waiting for you to join.`.trim(),
         ctaText,
-        ctaUrl,
-      };
+        ctaUrl};
     case 'subscription_expiry_reminder':
       return {
         subject: `Your Kylrix Pro subscription expires in 2 days`,
         title: 'Subscription Expiry Reminder',
         body: `Your paid Kylrix Pro subscription is expiring in 2 days. To avoid being downgraded back to the free plan, please fund your in-app wallet or renew your subscription ahead of expiry.`.trim(),
         ctaText: 'Renew Subscription',
-        ctaUrl: `${KYLRIX_AUTH_URI}/accounts/settings/profile`,
-      };
+        ctaUrl: `${KYLRIX_AUTH_URI}/accounts/settings/profile`};
     case 'passkey_added':
       return {
         subject: `Passkey added: ${resourceTitle}`,
         title: 'New passkey',
         body: `Passkey "${resourceTitle}" was added to your account. If you did not do this, review your security settings right away.`.trim(),
         ctaText: pickText(input.ctaText, 'Review security settings'),
-        ctaUrl: pickText(input.ctaUrl, `${KYLRIX_AUTH_URI}/settings`),
-      };
+        ctaUrl: pickText(input.ctaUrl, `${KYLRIX_AUTH_URI}/settings`)};
     case 'masterpass_login_enabled':
       return {
         subject: 'MasterPass sign-in enabled',
         title: 'Sign-in method updated',
         body: 'MasterPass for account login has been enabled on your account.',
         ctaText: pickText(input.ctaText, 'Review security settings'),
-        ctaUrl: pickText(input.ctaUrl, `${KYLRIX_AUTH_URI}/settings`),
-      };
+        ctaUrl: pickText(input.ctaUrl, `${KYLRIX_AUTH_URI}/settings`)};
     case 'masterpass_login_disabled':
       return {
         subject: 'MasterPass sign-in disabled',
         title: 'Sign-in method updated',
         body: 'MasterPass for account login has been disabled on your account.',
         ctaText: pickText(input.ctaText, 'Review security settings'),
-        ctaUrl: pickText(input.ctaUrl, `${KYLRIX_AUTH_URI}/settings`),
-      };
+        ctaUrl: pickText(input.ctaUrl, `${KYLRIX_AUTH_URI}/settings`)};
     case 'feature_announcement':
     case 'coupon_issued': {
       const isCoupon = input.eventType === 'coupon_issued' || Boolean(input.metadata?.couponId);
@@ -368,16 +343,14 @@ function resolveEventCopy(input: Required<Pick<UnorganicEmailDispatchInput, 'eve
           title: 'Special Offer',
           body: `You received a coupon for ${discount}% off Kylrix Pro. Claim it now to upgrade your workspace.`.trim(),
           ctaText: 'Claim Coupon',
-          ctaUrl: pickText(input.metadata?.couponUrl as string, ctaUrl),
-        };
+          ctaUrl: pickText(input.metadata?.couponUrl as string, ctaUrl)};
       }
       return {
         subject: pickText(input.metadata?.subject as string, `New feature: ${resourceTitle}`),
         title: 'Feature Update',
         body: `${actorName} announced a new feature: ${resourceTitle}.`.trim(),
         ctaText,
-        ctaUrl,
-      };
+        ctaUrl};
     }
     default:
       return {
@@ -385,8 +358,7 @@ function resolveEventCopy(input: Required<Pick<UnorganicEmailDispatchInput, 'eve
         title: 'Kylrix update',
         body: `${actorName} triggered a notification for ${resourceTitle}.`.trim(),
         ctaText,
-        ctaUrl,
-      };
+        ctaUrl};
   }
 }
 
@@ -537,8 +509,7 @@ async function resolveRecipient(
   users: Users,
   tablesDB: TablesDB,
   target: RecipientResolution,
-  verificationMode: 'error' | 'silent',
-): Promise<ResolvedRecipient | null> {
+  verificationMode: 'error' | 'silent'): Promise<ResolvedRecipient | null> {
   if (target.kind === 'userId') {
     const user = await users.get(target.value);
     const profile = await getRecipientProfile(tablesDB, user.$id).catch(() => null);
@@ -577,17 +548,6 @@ async function resolveRecipient(
     email: target.value};
 }
 
-async function getRecentSentCount(tablesDB: TablesDB, recipientId: string, now = new Date()) {
-  const windowStart = new Date(now.getTime() - UNORGANIC_EMAIL_WINDOW_MS);
-  const response = await tablesDB.listRows(CHAT_DATABASE_ID, UNORGANIC_EMAILS_TABLE_ID, [
-    TablesQuery.equal('recipientId', recipientId),
-    TablesQuery.equal('status', 'sent'),
-    TablesQuery.greaterThanEqual('sentAt', windowStart.toISOString()),
-    TablesQuery.orderDesc('sentAt'),
-    TablesQuery.limit(MAX_UNORGANIC_EMAILS + 1)]);
-
-  return response.rows.length;
-}
 
 async function getQueueRowById(tablesDB: TablesDB, rowId: string) {
   try {
@@ -636,8 +596,7 @@ function buildQueueMetadata(params: {
     ctaText: params.copy.ctaText,
     customMetadata: params.input.metadata || null,
     blockedReason: params.blockedReason || null,
-    status: params.status,
-  });
+    status: params.status});
 }
 
 async function createOrLoadQueueRow(tablesDB: TablesDB, rowId: string, data: Record<string, unknown>) {
@@ -731,8 +690,7 @@ function evaluateAntiSpamAndQuota(
   if (sameEvent24hCount >= 2) {
     return {
       allowed: false,
-      blockedReason: `Anti-spam trigger: Repeated activity threshold exceeded. Suppressing incessant ${eventType} events.`,
-    };
+      blockedReason: `Anti-spam trigger: Repeated activity threshold exceeded. Suppressing incessant ${eventType} events.`};
   }
 
 
@@ -752,8 +710,7 @@ function evaluateAntiSpamAndQuota(
     if (weekCount >= 3) {
       return {
         allowed: false,
-        blockedReason: `Quota limit: Overridden high-priority limit of 3 ${eventType} emails per week reached.`,
-      };
+        blockedReason: `Quota limit: Overridden high-priority limit of 3 ${eventType} emails per week reached.`};
     }
   } else {
     // Ordinary emails: Max 5 per month (30 days), and Max 2 per week (7 days)
@@ -843,8 +800,7 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
         title: copy.title,
         body: copy.body,
         ctaText: copy.ctaText,
-        ctaUrl: copy.ctaUrl}),
-    };
+        ctaUrl: copy.ctaUrl})};
   }
 
   for (const target of recipientTargets) {
@@ -878,8 +834,7 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
           priority,
           priorityScore,
           quotaRemaining: 5, // Default safe fallback
-          blockedReason: `Deduplicated by in-app memory cache (cached status: ${cachedStatus}).`,
-        });
+          blockedReason: `Deduplicated by in-app memory cache (cached status: ${cachedStatus}).`});
         continue;
       }
 
@@ -923,8 +878,7 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
         quotaRemaining,
         queueRowId,
         status: allowed ? 'queued' : 'suppressed',
-        blockedReason: allowed ? null : (blockedReason || 'Suppressed by quota.'),
-      });
+        blockedReason: allowed ? null : (blockedReason || 'Suppressed by quota.')});
 
       const baseRow = {
         eventType,
@@ -943,8 +897,7 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
         expiresAt,
         processedAt: now.toISOString(),
         blockedReason: allowed ? null : (blockedReason || 'Suppressed by quota.'),
-        metadata,
-      };
+        metadata};
 
       const queueRow = await createOrLoadQueueRow(tablesDB, queueRowId, baseRow);
 
@@ -978,8 +931,7 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
           templateKey,
           priority,
           priorityScore,
-          quotaRemaining,
-        });
+          quotaRemaining});
         continue;
       }
 
@@ -1016,9 +968,7 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
           quotaRemaining,
           queueRowId,
           status: 'sent',
-          messageId: info.$id,
-        }),
-      });
+          messageId: info.$id})});
 
       // Update in-app memory cache to 'sent' state
       emailQueueCache.set(queueRowId, 'sent');

@@ -9,8 +9,7 @@ export const contentType = 'image/png';
 export const alt = 'Shared Kylie message';
 
 export default async function Image({
-  params,
-}: {
+  params}: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
@@ -30,8 +29,7 @@ export default async function Image({
       accent: 'violet',
       ownerName: owner.ownerName,
       ownerAvatarDataUrl: owner.ownerAvatarDataUrl,
-      chips: ['Agent', isAssistant ? 'Reply' : 'Prompt'],
-    }),
+      chips: ['Agent', isAssistant ? 'Reply' : 'Prompt']}),
     size
   );
 }

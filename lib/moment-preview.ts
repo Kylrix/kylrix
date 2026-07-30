@@ -99,8 +99,7 @@ function slimSourceMomentForStorage(sm: any): any {
     creator: slimCreatorForStorage(sm.creator),
     attachedNote: sm.attachedNote ? slimNoteForStorage(sm.attachedNote) : undefined,
     attachedEvent: sm.attachedEvent ? slimEventForStorage(sm.attachedEvent) : undefined,
-    attachedCall: sm.attachedCall ? slimCallForStorage(sm.attachedCall) : undefined,
-  };
+    attachedCall: sm.attachedCall ? slimCallForStorage(sm.attachedCall) : undefined};
 }
 
 function forSessionStorage(p: MomentPreview): MomentPreview {
@@ -164,8 +163,7 @@ export function seedMomentPreview(moment: MomentPreview | null | undefined) {
     sourceMoment: moment.sourceMoment ?? null,
     attachedNote: moment.attachedNote ?? undefined,
     attachedEvent: moment.attachedEvent ?? undefined,
-    attachedCall: moment.attachedCall ?? undefined,
-  };
+    attachedCall: moment.attachedCall ?? undefined};
 
   memoryCache.set(preview.$id, preview);
   persist();

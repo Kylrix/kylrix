@@ -252,8 +252,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                             bgcolor: '#1C1A18',
                             borderColor: attachmentDisabled ? '#1C1A18' : '#F59E0B',
                             color: attachmentDisabled ? '#9B9691' : '#fff',
-                            cursor: attachmentDisabled ? 'not-allowed' : 'pointer'},
-                    }}
+                            cursor: attachmentDisabled ? 'not-allowed' : 'pointer'}}}
                 >
                     <PlusCircle size={20} strokeWidth={2} />
                 </IconButton>
@@ -270,8 +269,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                         '&:hover': {
                             bgcolor: '#1C1A18',
                             borderColor: '#F59E0B',
-                            color: '#fff'},
-                    }}
+                            color: '#fff'}}}
                 >
                     {isRecording ? <Square size={18} fill="#ff4d4d" /> : <Mic size={20} strokeWidth={2} />}
                 </IconButton>
@@ -490,8 +488,7 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
             toUser: {
                 id: partnerId,
                 username: conversation?.name?.replace(/^@/, '') || 'User',
-                displayName: conversation?.name || 'User'},
-        });
+                displayName: conversation?.name || 'User'}});
     };
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -522,8 +519,7 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
                 return {
                     id: participantId,
                     label: cached?.displayName || username || `@${participantId.slice(0, 7)}`,
-                    token: username ? `@${username}` : `@${participantId.slice(0, 7)}`,
-                };
+                    token: username ? `@${username}` : `@${participantId.slice(0, 7)}`};
             });
     }, [conversation?.participants, conversation?.type, senderProfiles, user?.$id]);
     const reactionsByMessageId = React.useMemo(() => messageReactions, [messageReactions]);
@@ -781,8 +777,7 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
                             username: normalized.username,
                             avatar: normalized.avatar,
                             avatarUrl,
-                            preferences: normalized.preferences} as SenderProfile,
-                    };
+                            preferences: normalized.preferences} as SenderProfile};
                 } catch (_e) {
                     return null;
                 }
@@ -824,8 +819,7 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
                         username: identity.username,
                         avatar: identity.avatar,
                         avatarUrl: identity.avatar && identity.avatar.startsWith('http') ? identity.avatar : prev[identity.userId]?.avatarUrl || null,
-                        preferences: identity.preferences},
-                }));
+                        preferences: identity.preferences}}));
             });
         });
 
@@ -868,8 +862,7 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
                             username: normalized.username,
                             avatar: normalized.avatar,
                             avatarUrl,
-                            preferences: normalized.preferences} as SenderProfile,
-                    };
+                            preferences: normalized.preferences} as SenderProfile};
                 } catch (_e) {
                     return null;
                 }
@@ -2267,8 +2260,7 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
                                                             alignSelf: isOutgoing ? 'flex-end' : 'flex-start',
                                                             maxWidth: '100%',
                                                             mt: 0.5,
-                                                            px: 0.5,
-                                                        }}
+                                                            px: 0.5}}
                                                     >
                                                         {reactionGroups.map((reaction) => (
                                                             <Box
@@ -2288,8 +2280,7 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
                                                                     opacity: reaction.reactedBySelf ? 1 : 0.95,
                                                                     '&:hover': {
                                                                         opacity: 1,
-                                                                        transform: 'translateY(-1px)'},
-                                                                }}
+                                                                        transform: 'translateY(-1px)'}}}
                                                             >
                                                                 {reaction.emoji}
                                                             </Box>

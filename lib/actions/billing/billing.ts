@@ -162,8 +162,7 @@ export async function createBillingCheckoutSessionAction(input: {
           seats: 1,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()},
-        [Permission.read(Role.user(user.$id))],
-      );
+        [Permission.read(Role.user(user.$id))]);
 
       const newRedemptionCount = redemptionCount + 1;
       const isLastRedemption = newRedemptionCount >= redemptionLimit;
@@ -177,14 +176,12 @@ export async function createBillingCheckoutSessionAction(input: {
           appliedAt: new Date().toISOString(), 
           subscriptionId: subscription.$id, 
           claimState: 'applied'
-        }),
-      });
+        })});
       try {
         const prefs = (await users.getPrefs(user.$id)) as Record<string, unknown>;
         await users.updatePrefs(
           user.$id,
-          applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), String(planId).toUpperCase().startsWith('TEAMS') ? 'TEAMS' : 'PRO'),
-        );
+          applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), String(planId).toUpperCase().startsWith('TEAMS') ? 'TEAMS' : 'PRO'));
       } catch {}
 
       await notifySubscriptionActivated({
@@ -212,8 +209,7 @@ export async function createBillingCheckoutSessionAction(input: {
           metadata: JSON.stringify({
             couponCode: couponRow.$id,
             completedAt: new Date().toISOString(),
-            subscriptionId: subscription.$id}),
-        },
+            subscriptionId: subscription.$id})},
         [Permission.read(Role.user(user.$id))]
       ).catch((err: any) => {
         console.error('[Billing] Failed to log completed coupon transaction ledger entry:', err);
@@ -223,8 +219,7 @@ export async function createBillingCheckoutSessionAction(input: {
         id: subscription.$id,
         url: `${resolveBlockBeeRedirectBaseUrl()}?success=true`,
         provider: PaymentMethod.COUPON,
-        couponApplied: true,
-      };
+        couponApplied: true};
     }
   }
 
@@ -239,8 +234,7 @@ export async function createBillingCheckoutSessionAction(input: {
       couponId: couponRow?.$id || null,
       discountPercent: couponDiscountPercent,
       adjustedAmountUsd,
-      baseUrl: baseUrl || null},
-  );
+      baseUrl: baseUrl || null});
 
   if (session?.id) {
     const expectedAmountUsd =
@@ -268,8 +262,7 @@ export async function createBillingCheckoutSessionAction(input: {
           giftRecipientName: giftRecipientName || null,
           giftMessage: giftMessage || null,
           countryCode: resolvedCountryCode,
-          createdAt: new Date().toISOString()}),
-      },
+          createdAt: new Date().toISOString()})},
       [Permission.read(Role.user(user.$id))]
     ).catch((err: any) => {
       console.error('[Billing] Failed to create pending billing_transaction record:', err);
@@ -334,8 +327,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
           redemptionCount: eventCoupon.status === 'applied' ? 1 : 0,
           metadata: eventCoupon.metadata,
           note: meta.gift?.giftMessage || '',
-          isEventCoupon: true,
-        };
+          isEventCoupon: true};
       }
     }
     if (!coupon) throw new Error('Coupon not found');
@@ -375,8 +367,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
           redemptionCount: eventCoupon.status === 'applied' ? 1 : 0,
           metadata: eventCoupon.metadata,
           note: meta.gift?.giftMessage || '',
-          isEventCoupon: true,
-        };
+          isEventCoupon: true};
       }
     }
 
@@ -435,8 +426,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
       months,
       currentPeriodEnd: currentPeriodEnd.toISOString(),
       payerUserId: payerUserId || null,
-      message: `Valid coupon for ${discountPercent}% discount over ${months} month(s).`,
-    };
+      message: `Valid coupon for ${discountPercent}% discount over ${months} month(s).`};
   }
 
   if (discountPercent < 100) {
@@ -465,8 +455,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
       seats: 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()},
-    [Permission.read(Role.user(user.$id))],
-  );
+    [Permission.read(Role.user(user.$id))]);
 
   if (coupon.isEventCoupon) {
     await databases.updateRow(
@@ -481,8 +470,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
           appliedAt: new Date().toISOString(),
           subscriptionId: subscription.$id,
           claimState: 'applied'
-        }),
-      }
+        })}
     );
   } else {
     await databases.updateRow(NOTE_DB_ID, COUPONS_TABLE_ID, coupon.$id, {
@@ -493,8 +481,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
         appliedAt: new Date().toISOString(), 
         subscriptionId: subscription.$id, 
         claimState: 'applied'
-      }),
-    });
+      })});
   }
 
   try {
@@ -519,8 +506,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
       metadata: JSON.stringify({
         couponCode: coupon.$id,
         completedAt: new Date().toISOString(),
-        subscriptionId: subscription.$id}),
-    },
+        subscriptionId: subscription.$id})},
     [Permission.read(Role.user(user.$id))]
   ).catch((err: any) => {
     console.error('[Billing] Failed to log completed coupon claim transaction:', err);
@@ -543,8 +529,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     months,
     currentPeriodEnd: currentPeriodEnd.toISOString(),
     sourceLabel: payerName ? `Gift from ${payerName}` : 'Coupon claim',
-    bodyCopy: giftMessage || 'Your coupon has been applied and your subscription is live.',
-  }).catch(() => {});
+    bodyCopy: giftMessage || 'Your coupon has been applied and your subscription is live.'}).catch(() => {});
 
   return {
     ok: true,
@@ -627,10 +612,8 @@ export async function hydrateSessionAction(jwt?: string | null) {
           label: w.chain,
           symbol: w.chain.toUpperCase(),
           family: (w.chain === 'sol' ? 'solana' : 'evm') as 'evm' | 'solana' | 'bitcoin' | 'sui',
-          publicProfile: true})),
-      },
-      presence: activityRes.rows[0] || null,
-    };
+          publicProfile: true}))},
+      presence: activityRes.rows[0] || null};
   } catch (error) {
     console.error('[hydrateSessionAction] Error:', error);
     return {

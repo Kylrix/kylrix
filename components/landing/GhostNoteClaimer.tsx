@@ -102,8 +102,7 @@ export const GhostNoteClaimer = () => {
                                         secretKey: payload.secret || payload.secretKey || '',
                                         algorithm: payload.algorithm || 'SHA1',
                                         digits: payload.digits || 6,
-                                        period: payload.period || 30,
-                                    });
+                                        period: payload.period || 30});
                                 }
                             } else {
                                 const { updateNote } = await import('@/lib/actions/client-ops');
@@ -129,8 +128,7 @@ export const GhostNoteClaimer = () => {
                                     attachmentIds: [],
                                     eventId: '',
                                     parentId: '',
-                                    recurrenceRule: '',
-                                }, buildTaskPermissions(user.$id, [user.$id]));
+                                    recurrenceRule: ''}, buildTaskPermissions(user.$id, [user.$id]));
                             }
                         } else if (kind === 'password') {
                             const payload = (() => {
@@ -160,8 +158,7 @@ export const GhostNoteClaimer = () => {
                                     secretKey: payload.secret || payload.secretKey || '',
                                     algorithm: payload.algorithm || 'SHA1',
                                     digits: payload.digits || 6,
-                                    period: payload.period || 30,
-                                });
+                                    period: payload.period || 30});
                             }
                         } else if (kind === 'project') {
                             const payload = (() => {

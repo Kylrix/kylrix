@@ -27,8 +27,7 @@ export function invalidateTablesDbRowCache(parts: TablesDbRowCacheKey) {
 export async function getTablesDbRowCached(
   parts: TablesDbRowCacheKey,
   fetcher: () => Promise<any>,
-  ttlMs: number = DEFAULT_TTL_MS,
-): Promise<any> {
+  ttlMs: number = DEFAULT_TTL_MS): Promise<any> {
   if (typeof window === 'undefined') {
     return fetcher();
   }

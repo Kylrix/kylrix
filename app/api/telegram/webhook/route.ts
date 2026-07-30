@@ -16,8 +16,7 @@ async function sendTelegramMessage(chatId: string | number, text: string) {
       body: JSON.stringify({
         chat_id: chatId,
         text,
-        parse_mode: 'HTML'}),
-    });
+        parse_mode: 'HTML'})});
     if (!res.ok) {
       console.error('[telegram-webhook] Telegram Bot API error:', await res.text());
     }

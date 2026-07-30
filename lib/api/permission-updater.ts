@@ -238,8 +238,7 @@ async function upsertKeyMapping(databases: Databases, actorId: string, mapping: 
       KEY_MAPPING_TABLE,
       rowId,
       payload,
-      permissions,
-    );
+      permissions);
   } catch (error: any) {
     if (error?.code !== 409) {
       throw error;
@@ -250,8 +249,7 @@ async function upsertKeyMapping(databases: Databases, actorId: string, mapping: 
       KEY_MAPPING_TABLE,
       rowId,
       payload,
-      permissions,
-    );
+      permissions);
   }
 }
 
@@ -259,8 +257,7 @@ async function deleteKeyMappings(
   databases: Databases,
   resourceType: string,
   resourceId: string,
-  grantees?: string[],
-) {
+  grantees?: string[]) {
   const queries = [
     Query.equal('resourceType', resourceType),
     Query.equal('resourceId', resourceId)];
@@ -274,8 +271,7 @@ async function deleteKeyMappings(
   if (existing.rows.length === 0) return [];
 
   await Promise.all(
-    existing.rows.map((row: any) => databases.deleteRow(PASSWORD_MANAGER_DB, KEY_MAPPING_TABLE, row.$id)),
-  );
+    existing.rows.map((row: any) => databases.deleteRow(PASSWORD_MANAGER_DB, KEY_MAPPING_TABLE, row.$id)));
 
   return existing.rows;
 }
@@ -285,8 +281,7 @@ async function createEpoch(
   actorId: string,
   resourceId: string,
   epochNumber: number,
-  participantIds: string[] = [],
-) {
+  participantIds: string[] = []) {
   const uniqueParticipants = Array.from(new Set(participantIds.map((value: any) => String(value).trim()).filter(Boolean)));
   const permissions = [
     Permission.read(Role.user(actorId)),
@@ -300,8 +295,7 @@ async function createEpoch(
       resourceId,
       epochNumber,
       createdBy: actorId},
-    permissions,
-  );
+    permissions);
 }
 
 export async function resolveNextEpochNumber(databases: Databases, resourceId: string) {
@@ -318,8 +312,7 @@ export async function resolveNextEpochNumber(databases: Databases, resourceId: s
 export async function mutateStorageFilePermissions(
   storage: Storage,
   actorId: string,
-  input: StorageFilePermissionInput,
-) {
+  input: StorageFilePermissionInput) {
   const bucketId = String(input.bucketId || '').trim();
   const fileId = String(input.fileId || '').trim();
   const targetUserIds = normalizeTargetUserIds(input.targetUserIds).filter((userId) => userId !== actorId);
@@ -343,8 +336,7 @@ export async function mutateStorageFilePermissions(
 export async function revokeStorageFilePermissions(
   storage: Storage,
   actorId: string,
-  input: StorageFilePermissionInput,
-) {
+  input: StorageFilePermissionInput) {
   const bucketId = String(input.bucketId || '').trim();
   const fileId = String(input.fileId || '').trim();
   const targetUserIds = normalizeTargetUserIds(input.targetUserIds).filter((userId) => userId !== actorId);
@@ -368,8 +360,7 @@ export async function revokeStorageFilePermissions(
 export async function mutateRowPermissions(
   databases: Databases,
   actorId: string,
-  input: PermissionMutationInput,
-) {
+  input: PermissionMutationInput) {
   const action = input.action || 'grant';
   const permission = input.permission || 'read';
   const targetUserIds = normalizeTargetUserIds(input.targetUserIds).filter((userId) => userId !== actorId);
@@ -427,8 +418,7 @@ export async function mutateRowPermissions(
     input.tableId,
     input.rowId,
     {},
-    dedupedPermissions,
-  );
+    dedupedPermissions);
 
   return {
     row: updated,
@@ -438,8 +428,7 @@ export async function mutateRowPermissions(
 export async function upsertLockboxRows(
   databases: Databases,
   actorId: string,
-  keyMappings?: KeyMappingInput[] | KeyMappingInput | null,
-) {
+  keyMappings?: KeyMappingInput[] | KeyMappingInput | null) {
   const mappings = normalizeKeyMappings(keyMappings);
   if (mappings.length === 0) return [];
   return Promise.all(mappings.map((mapping: any) => upsertKeyMapping(databases, actorId, mapping)));
@@ -449,8 +438,7 @@ export async function removeLockboxRows(
   databases: Databases,
   resourceType: string,
   resourceId: string,
-  grantees?: string[],
-) {
+  grantees?: string[]) {
   return deleteKeyMappings(databases, resourceType, resourceId, grantees);
 }
 
@@ -460,8 +448,7 @@ export async function createEpochRows(
   resourceId: string,
   epochNumber: number,
   participantIds: string[] = [],
-  keyMappings?: KeyMappingInput[] | KeyMappingInput | null,
-) {
+  keyMappings?: KeyMappingInput[] | KeyMappingInput | null) {
   const epoch = await createEpoch(databases, actorId, resourceId, epochNumber, participantIds);
   const mappings = normalizeKeyMappings(keyMappings).map((mapping: any) => ({
     ...mapping,

@@ -161,8 +161,7 @@ export class DeduplicationEngine {
           notes: newNotes,
           url: newUrl,
           _status: 'merged',
-          _mergeDetails: [...(target._mergeDetails || []), `Aggressively merged with "${item.name || 'Untitled'}"`],
-        };
+          _mergeDetails: [...(target._mergeDetails || []), `Aggressively merged with "${item.name || 'Untitled'}"`]};
 
         isMerged = true;
         break;

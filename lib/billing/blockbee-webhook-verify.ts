@@ -14,8 +14,7 @@ ox7pp208zTvown577wIDAQAB
  */
 export function verifyBlockBeeWebhookPostSignature(
   rawBody: string,
-  signatureHeader: string | null | undefined,
-): boolean {
+  signatureHeader: string | null | undefined): boolean {
   const sig = String(signatureHeader || '').trim();
   if (!sig || !rawBody) return false;
 

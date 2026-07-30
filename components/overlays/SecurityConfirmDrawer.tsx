@@ -6,8 +6,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import {
   getSecurityConfirmSteps,
   type SecurityConfirmFlow,
-  type SecurityConfirmStep,
-} from '@/lib/settings/security-confirm-steps';
+  type SecurityConfirmStep} from '@/lib/settings/security-confirm-steps';
 
 export interface SecurityConfirmDrawerData {
   flow: SecurityConfirmFlow;
@@ -21,19 +20,15 @@ const TONE_STYLES: Record<
   warning: {
     accent: '#F59E0B',
     border: 'rgba(245, 158, 11, 0.28)',
-    bg: 'rgba(245, 158, 11, 0.08)',
-  },
+    bg: 'rgba(245, 158, 11, 0.08)'},
   danger: {
     accent: '#EF4444',
     border: 'rgba(239, 68, 68, 0.28)',
-    bg: 'rgba(239, 68, 68, 0.08)',
-  },
+    bg: 'rgba(239, 68, 68, 0.08)'},
   neutral: {
     accent: '#6366F1',
     border: 'rgba(99, 102, 241, 0.28)',
-    bg: 'rgba(99, 102, 241, 0.08)',
-  },
-};
+    bg: 'rgba(99, 102, 241, 0.08)'}};
 
 export function SecurityConfirmDrawer() {
   const { drawerData, close } = useUnifiedDrawer();
@@ -41,8 +36,7 @@ export function SecurityConfirmDrawer() {
 
   const steps = useMemo(
     () => (data?.flow ? getSecurityConfirmSteps(data.flow) : []),
-    [data?.flow],
-  );
+    [data?.flow]);
 
   const [stepIndex, setStepIndex] = useState(0);
   const [checked, setChecked] = useState(false);
@@ -87,8 +81,7 @@ export function SecurityConfirmDrawer() {
       <div
         className="absolute top-0 left-0 right-0 h-32 pointer-events-none opacity-25"
         style={{
-          backgroundImage: `radial-gradient(circle at top, ${tone.accent}33 0%, transparent 70%)`,
-        }}
+          backgroundImage: `radial-gradient(circle at top, ${tone.accent}33 0%, transparent 70%)`}}
       />
 
       <div className="flex justify-between items-start gap-3 relative z-10 flex-shrink-0">
@@ -159,8 +152,7 @@ export function SecurityConfirmDrawer() {
             className="h-1.5 rounded-full transition-all duration-300"
             style={{
               width: index === stepIndex ? 24 : 8,
-              backgroundColor: index <= stepIndex ? tone.accent : 'rgba(255,255,255,0.12)',
-            }}
+              backgroundColor: index <= stepIndex ? tone.accent : 'rgba(255,255,255,0.12)'}}
           />
         ))}
       </div>
@@ -172,8 +164,7 @@ export function SecurityConfirmDrawer() {
           disabled={!canContinue || loading}
           className="w-full py-3.5 rounded-2xl font-extrabold text-sm text-white disabled:opacity-45 transition flex items-center justify-center gap-2"
           style={{
-            backgroundColor: step.tone === 'danger' ? '#EF4444' : step.tone === 'warning' ? '#D97706' : '#6366F1',
-          }}
+            backgroundColor: step.tone === 'danger' ? '#EF4444' : step.tone === 'warning' ? '#D97706' : '#6366F1'}}
         >
           {loading ? (
             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

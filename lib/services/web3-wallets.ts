@@ -69,14 +69,12 @@ export const Web3WalletService = {
         address: '0xcA11bde05977b3631167028862bE2a173976CA11' as `0x${string}`,
         abi: multicall3Abi,
         functionName: 'getEthBalance',
-        args: [userAddress],
-      },
+        args: [userAddress]},
       ...tokenAddresses.map(token => ({
         address: token.address as `0x${string}`,
         abi: erc20Abi,
         functionName: 'balanceOf',
-        args: [userAddress],
-      }))
+        args: [userAddress]}))
     ];
 
     const results = await client.multicall({

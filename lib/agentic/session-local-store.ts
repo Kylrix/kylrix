@@ -166,8 +166,7 @@ export const AgenticSessionLocalStore = {
   async appendMessages(
     userId: string,
     sessionId: string,
-    messages: AgenticLocalMessage[],
-  ): Promise<void> {
+    messages: AgenticLocalMessage[]): Promise<void> {
     const existing = (await this.getSession(sessionId)) || {
       id: sessionId,
       userId,
@@ -180,8 +179,7 @@ export const AgenticSessionLocalStore = {
   async patchMessage(
     sessionId: string,
     messageId: string,
-    patch: Partial<AgenticLocalMessage>,
-  ): Promise<void> {
+    patch: Partial<AgenticLocalMessage>): Promise<void> {
     const session = await this.getSession(sessionId);
     if (!session) return;
     const next = session.chatHistory.map((m: any) => (m.id === messageId ? { ...m, ...patch } : m));
@@ -193,8 +191,7 @@ export const AgenticSessionLocalStore = {
     if (!session) return;
     const idSet = new Set(messageIds);
     const next = session.chatHistory.map((m: any) =>
-      idSet.has(m.id) ? { ...m, syncStatus: 'synced' as const } : m,
-    );
+      idSet.has(m.id) ? { ...m, syncStatus: 'synced' as const } : m);
     await this.upsertSession({ ...session, chatHistory: next });
   },
 
@@ -204,8 +201,7 @@ export const AgenticSessionLocalStore = {
     const list = await this.getSessionsList(userId);
     await this.setSessionsList(
       userId,
-      list.filter((s) => s.id !== sessionId),
-    );
+      list.filter((s) => s.id !== sessionId));
     const active = await this.getActiveSessionId(userId);
     if (active === sessionId) await this.setActiveSessionId(userId, null);
     emit();
@@ -214,8 +210,7 @@ export const AgenticSessionLocalStore = {
   async patchSessionMeta(
     userId: string,
     sessionId: string,
-    patch: Partial<Pick<AgenticLocalSession, 'isPublic' | 'isGuest' | 'isPinned' | 'context' | 'createdAt' | 'updatedAt'>>,
-  ): Promise<void> {
+    patch: Partial<Pick<AgenticLocalSession, 'isPublic' | 'isGuest' | 'isPinned' | 'context' | 'createdAt' | 'updatedAt'>>): Promise<void> {
     const session = await this.getSession(sessionId);
     if (session) {
       await this.upsertSession({ ...session, ...patch, id: sessionId, userId });
@@ -230,6 +225,5 @@ export const AgenticSessionLocalStore = {
   isMessagePending(message?: AgenticLocalMessage | null): boolean {
     if (!message) return false;
     return message.syncStatus === 'pending' || message.syncStatus === 'error';
-  },
-};
+  }};
 

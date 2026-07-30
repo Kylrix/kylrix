@@ -34,8 +34,7 @@ function isWebAuthnGetAvailable(): boolean {
 
 /** Native WebAuthn assertion (login only — vault unlock uses separate flows). */
 export async function performNativePasskeyAuthentication(
-  options: Record<string, unknown>,
-): Promise<Record<string, unknown>> {
+  options: Record<string, unknown>): Promise<Record<string, unknown>> {
   if (!isWebAuthnGetAvailable()) {
     throw new Error('WebAuthn is not supported in this browser');
   }
@@ -69,11 +68,9 @@ export async function performNativePasskeyAuthentication(
       authenticatorData: bufferToBase64Url(response.authenticatorData),
       clientDataJSON: bufferToBase64Url(response.clientDataJSON),
       signature: bufferToBase64Url(response.signature),
-      userHandle: response.userHandle ? bufferToBase64Url(response.userHandle) : null,
-    },
+      userHandle: response.userHandle ? bufferToBase64Url(response.userHandle) : null},
     authenticatorAttachment: credential.authenticatorAttachment || null,
-    clientExtensionResults: credential.getClientExtensionResults ? credential.getClientExtensionResults() : {},
-  };
+    clientExtensionResults: credential.getClientExtensionResults ? credential.getClientExtensionResults() : {}};
 
   return cleanPayload as unknown as Record<string, unknown>;
 }

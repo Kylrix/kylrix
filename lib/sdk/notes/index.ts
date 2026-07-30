@@ -88,8 +88,7 @@ export function createNoteCreationService<NoteRow = any>(deps: NoteCreationConte
         attachments: null,
         metadata: JSON.stringify({
           ...baseMetadata,
-          ...originMetadata}),
-      });
+          ...originMetadata})});
 
       const permissions = deps.getNotePermissions(user.$id, Boolean(data.isPublic));
       await deps.createRow(deps.databaseId, deps.tableId, payload, docId, permissions);
@@ -168,6 +167,5 @@ export function createNoteCreationService<NoteRow = any>(deps: NoteCreationConte
       }
 
       return await deps.getNote(noteId);
-    },
-  };
+    }};
 }

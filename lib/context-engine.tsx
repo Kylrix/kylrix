@@ -65,7 +65,6 @@ interface LocalContextType {
 
 const LocalContext = createContext<LocalContextType | undefined>(undefined);
 
-const MAX_EVENTS = 30;
 
 export function LocalContextProvider({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = useState<LocalEvent[]>([]);

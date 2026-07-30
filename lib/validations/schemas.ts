@@ -61,20 +61,7 @@ export const ProjectSchema = z.object({
   isPinned: z.boolean().optional().nullable(),
   metadata: z.string().nullable().optional()});
 
-export const EventSchema = z.object({
-  title: z.string().min(1).max(255),
-  description: z.string().optional(),
-  startTime: z.string().optional(),
-  endTime: z.string().optional(),
-  location: z.string().optional(),
-  isPublic: z.boolean().optional()});
 
-export const FormSchema = z.object({
-  title: z.string().min(1).max(255),
-  description: z.string().optional(),
-  schema: z.string().optional(),
-  settings: z.string().optional(),
-  isPublic: z.boolean().optional()});
 
 
 
@@ -107,22 +94,8 @@ export const JoinRequestSchema = z.object({
   requesterId: IDSchema.optional(),
   action: z.enum(['accept', 'reject']).optional()});
 
-export const TokenOperationSchema = z.object({
-  operation: z.enum(['mint', 'transfer', 'fine', 'claim']),
-  userId: IDSchema,
-  amount: z.number().positive(),
-  metadata: z.record(z.string(), z.any()).optional(),
-  jwt: JWTSchema});
 
-export const TelemetrySchema = z.object({
-  action: z.string(),
-  app: z.string(),
-  niche: z.string(),
-  metadata: z.record(z.string(), z.any()).optional()});
 
-export const EphemeralNoteSchema = z.object({
-  noteId: IDSchema,
-  secret: z.string().min(1)});
 
 export const SuggestionParamsSchema = z.object({
   sourceApp: z.string(),

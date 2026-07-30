@@ -10,8 +10,7 @@ const RECOVERY_TAG = `system:${MFA_RECOVERY_KIND}`;
 export async function persistMfaRecoveryCodes(
   userId: string,
   codes: string[],
-  metadata: Record<string, unknown> = {},
-): Promise<void> {
+  metadata: Record<string, unknown> = {}): Promise<void> {
   if (!codes.length) return;
 
   await ecosystemSecurity.saveRecoveryIdentity(userId, codes, {

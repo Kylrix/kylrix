@@ -12,13 +12,11 @@ import {
   List,
   ListItem,
   ListItemButton,
-  ListItemText,
-} from '@/lib/openbricks/primitives';
+  ListItemText} from '@/lib/openbricks/primitives';
 import { 
   X as CloseIcon,
   Tag as TagIcon,
-  Plus,
-} from 'lucide-react';
+  Plus} from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useTask } from '@/context/TaskContext';
 
@@ -30,7 +28,6 @@ const TEXT_MUTED = '#9B9691';
 const SYSTEM_PRIMARY = '#6366F1';
 
 const BORDER = `1px solid ${BORDER_HAIRLINE}`;
-const BRAND_TRANSITION = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
 const RADIUS_LARGE = '24px';
 const RADIUS_SMALL = '12px';
 
@@ -84,9 +81,7 @@ export function TagSelectorDrawer() {
           flexDirection: 'column',
           maxWidth: isDesktop ? '600px' : '100%',
           margin: isDesktop ? '0 auto' : '0',
-          zIndex: 2000,
-        },
-      }}
+          zIndex: 2000}}}
     >
       <Box sx={{ p: 3, pb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Stack direction="row" spacing={1.5} alignItems="center">

@@ -380,8 +380,7 @@ export class AppwriteService {
                     });
                     return res.rows || [];
                 },
-                local: async () => cached,
-            });
+                local: async () => cached});
 
             if (source === 'network' && Array.isArray(value) && value.length > 0) {
                 await SecurityEnclave.setKeychain(userId, value);

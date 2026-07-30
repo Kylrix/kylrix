@@ -199,8 +199,7 @@ export default function AdminCouponsPage() {
         months: Number.parseInt(form.months, 10) || 1,
         planId: form.planId || 'PRO_MONTH',
         metadata: {
-          scope: targetUserIds.length > 0 ? 'targeted' : 'open'},
-      }, jwt || undefined);
+          scope: targetUserIds.length > 0 ? 'targeted' : 'open'}}, jwt || undefined);
       if (data) {
         setSuccess(`Created ${data.count || 1} coupon(s).`);
       }

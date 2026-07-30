@@ -67,8 +67,7 @@ export const ThreadsRegistry = {
           isGhost: true,
           isThread: true,
           isPublic: false,
-          isGuest: false,
-        });
+          isGuest: false});
         createdThreadId = res.$id;
       }
 
@@ -96,5 +95,4 @@ export const ThreadsRegistry = {
   async getLocalDiscussionMessages(threadId: string): Promise<any[] | null> {
     if (!threadId) return null;
     return await LocalEngine.cacheGet<any[]>(`f_discussions_${threadId}`);
-  },
-};
+  }};

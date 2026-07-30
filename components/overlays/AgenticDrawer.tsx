@@ -53,8 +53,7 @@ export function AgenticDrawer() {
             : 'z-[1301] bottom-0 left-0 right-0 h-[60dvh] max-h-[60dvh] border-t rounded-t-[24px] md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-[min(100%,540px)] md:rounded-[28px] md:bottom-4 md:border'
         }`}
         style={{
-          boxShadow: '0 -12px 36px rgba(0,0,0,0.5), 0 16px 48px rgba(0,0,0,0.7)',
-        }}
+          boxShadow: '0 -12px 36px rgba(0,0,0,0.5), 0 16px 48px rgba(0,0,0,0.7)'}}
       >
         {!isDesktop && !isFullscreen && (
           <div className="flex justify-center items-center gap-3 py-2.5 flex-shrink-0 select-none border-b border-white/5">

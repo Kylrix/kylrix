@@ -8,8 +8,7 @@ import { buildUiCatalogPrompt } from './ui-catalog';
 function buildToolsPromptSnippet(): string {
   return AGENTIC_TOOLS_REGISTRY.map(
     (t) =>
-      `- Key: "${t.key}" (${t.name}): ${t.description}. Params: ${t.parameters.join(', ')}. Auth: ${t.requiresAuthorization ? 'yes' : 'no'}`,
-  ).join('\n');
+      `- Key: "${t.key}" (${t.name}): ${t.description}. Params: ${t.parameters.join(', ')}. Auth: ${t.requiresAuthorization ? 'yes' : 'no'}`).join('\n');
 }
 
 function buildNavigationGuide(): string {

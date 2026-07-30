@@ -13,9 +13,7 @@ export default function ClientToaster() {
         style: {
           background: '#161412',
           color: '#f2f2f2',
-          border: '1px solid rgba(255,255,255,0.08)',
-        },
-      }}
+          border: '1px solid rgba(255,255,255,0.08)'}}}
     />
   );
 }

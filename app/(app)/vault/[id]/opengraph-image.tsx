@@ -7,8 +7,7 @@ export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
 export default async function Image({
-  params,
-}: {
+  params}: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
@@ -24,8 +23,7 @@ export default async function Image({
         : 'View this shared credential securely.',
       accent: 'amber',
       ownerName: 'Kylrix Vault',
-      chips: ['Zero-knowledge', 'Secure handoff'],
-    }),
+      chips: ['Zero-knowledge', 'Secure handoff']}),
     size
   );
 }

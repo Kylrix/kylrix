@@ -34,9 +34,7 @@ export default function TaskDialog() {
       const newTask = await addTask(
         buildGoalInput(
           { kind: 'goal', title: draft.title, body: draft.body },
-          { projectId: selectedProjectId || 'inbox', creatorId },
-        ),
-      );
+          { projectId: selectedProjectId || 'inbox', creatorId }));
 
       if (newTask?.id) {
         const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
@@ -44,16 +42,14 @@ export default function TaskDialog() {
           openSidebar(
             <GoalObjectDetail taskId={newTask.id} embedded />,
             newTask.id,
-            { hideHeader: true },
-          );
+            { hideHeader: true });
         } else {
           openOverlay(<GoalObjectDetail taskId={newTask.id} onClose={closeOverlay} />);
         }
       }
       handleClose();
     },
-    [addTask, closeOverlay, creatorId, handleClose, openOverlay, openSidebar, selectedProjectId],
-  );
+    [addTask, closeOverlay, creatorId, handleClose, openOverlay, openSidebar, selectedProjectId]);
 
   return (
     <ObjectCreateDrawer

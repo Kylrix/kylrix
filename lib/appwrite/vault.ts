@@ -1,11 +1,9 @@
 import {
   ID,
   Query,
-  AuthenticationFactor,
   Models,
   Permission,
-  Role,
-  AuthenticatorType} from "appwrite";
+  Role,} from "appwrite";
 import { 
   databases, 
   client, 
@@ -14,7 +12,6 @@ import {
   appwriteAccount,
   appwriteDatabases as originalAppwriteDatabases,
   appwriteStorage,
-  appwriteAvatars,
   APPWRITE_DATABASE_ID,
   APPWRITE_BUCKET_BACKUPS_ID,
   APPWRITE_COLLECTION_KEYCHAIN_ID
@@ -83,8 +80,7 @@ const secureDatabases = {
             finalQueries.push(Query.notEqual('isTrash', true));
         }
         return originalAppwriteDatabases.listRows(dbId, collId, finalQueries);
-    },
-};
+    }};
 
 const appwriteDatabases = secureDatabases;
 
@@ -137,8 +133,7 @@ function getCredentialOwnerIndexQueries(userId: string): string[] {
 
 function buildCredentialOwnerFilterQueries(
   userId: string,
-  resourceIds: string[] = [],
-): string[] {
+  resourceIds: string[] = []): string[] {
   const queries = getCredentialOwnerIndexQueries(userId);
   if (resourceIds.length > 0) {
     queries.push(Query.equal("$id", resourceIds));
@@ -149,8 +144,7 @@ function buildCredentialOwnerFilterQueries(
 async function listRowsMergedAcrossFilters(
   tableId: string,
   filterQueries: string[],
-  extraQueries: string[] = [],
-): Promise<Models.Row[]> {
+  extraQueries: string[] = []): Promise<Models.Row[]> {
   const byId = new Map<string, Models.Row>();
   const pageSize = 100;
 
@@ -170,8 +164,7 @@ async function listRowsMergedAcrossFilters(
         }
         offset += pageSize;
       } while (response.rows.length > 0 && offset < response.total);
-    }),
-  );
+    }));
 
   return Array.from(byId.values());
 }
@@ -210,71 +203,14 @@ function sortMergedRows(rows: Models.Row[], queries: string[]): Models.Row[] {
   return sorted;
 }
 
-async function importX25519PublicKey(publicKeyBase64: string): Promise<CryptoKey> {
-  return await crypto.subtle.importKey(
-    "raw",
-    base64ToBytes(publicKeyBase64) as unknown as BufferSource,
-    { name: "X25519" },
-    false,
-    [],
-  );
-}
-
-async function exportX25519PublicKey(publicKey: CryptoKey): Promise<string> {
-  const exported = await crypto.subtle.exportKey("raw", publicKey);
-  return bytesToBase64(new Uint8Array(exported));
-}
-
-async function encryptShareEnvelope<T extends Record<string, unknown>>(
-  payload: T,
-  recipientPublicKeyBase64: string,
-): Promise<{ wrappedKey: string; senderPublicKey: string }> {
-  const recipientPublicKey = await importX25519PublicKey(recipientPublicKeyBase64);
-  const ephemeralKeyPair = (await crypto.subtle.generateKey(
-    { name: "X25519" },
-    true,
-    ["deriveKey", "deriveBits"],
-  )) as CryptoKeyPair;
-
-  const sharedKey = await crypto.subtle.deriveKey(
-    { name: "X25519", public: recipientPublicKey },
-    ephemeralKeyPair.privateKey,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"],
-  );
-
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encoded = new TextEncoder().encode(JSON.stringify(payload));
-  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, sharedKey, encoded);
-  const combined = new Uint8Array(iv.length + encrypted.byteLength);
-  combined.set(iv, 0);
-  combined.set(new Uint8Array(encrypted), iv.length);
-
-  return {
-    wrappedKey: bytesToBase64(combined),
-    senderPublicKey: await exportX25519PublicKey(ephemeralKeyPair.publicKey)};
-}
-
-async function decryptShareEnvelope<T extends Record<string, unknown>>(
-  wrappedKeyBase64: string,
-  senderPublicKeyBase64: string,
-): Promise<T> {
-  const { ecosystemSecurity } = await import("../ecosystem/security");
-  const plaintext = await ecosystemSecurity.decryptWithECDH(wrappedKeyBase64, senderPublicKeyBase64);
-  return JSON.parse(plaintext) as T;
-}
-
 async function listRowsWithRetry(
   tableId: string,
-  queries: string[] = [],
-): Promise<Models.RowList<Models.Row>> {
+  queries: string[] = []): Promise<Models.RowList<Models.Row>> {
   try {
     return await databases.listRows(
       APPWRITE_DATABASE_ID,
       tableId,
-      queries,
-    );
+      queries);
   } catch (err: unknown) {
     if (!isFetchNetworkError(err)) throw err as Error;
 
@@ -290,8 +226,7 @@ async function listRowsWithRetry(
       return await databases.listRows(
         APPWRITE_DATABASE_ID,
         tableId,
-        queries,
-      );
+        queries);
     } catch (err2: unknown) {
       // Surface a clearer error with guidance
       const note =
@@ -371,8 +306,7 @@ const ENCRYPTED_FIELDS = {
 
 function getPlaintextFields<T>(
   allFields: (keyof T)[],
-  encrypted: readonly string[],
-): string[] {
+  encrypted: readonly string[]): string[] {
   return allFields
     .filter((f) => !encrypted.includes(f as string))
     .map((f) => f as string);
@@ -411,9 +345,7 @@ export const COLLECTION_SCHEMAS = {
         "$id",
         "$createdAt",
         "$updatedAt"],
-      ENCRYPTED_FIELDS.credentials,
-    ),
-  },
+      ENCRYPTED_FIELDS.credentials)},
   totpSecrets: {
     encrypted: ENCRYPTED_FIELDS.totpSecrets,
     plaintext: getPlaintextFields<TotpSecrets>(
@@ -437,9 +369,7 @@ export const COLLECTION_SCHEMAS = {
         "$id",
         "$createdAt",
         "$updatedAt"],
-      ENCRYPTED_FIELDS.totpSecrets,
-    ),
-  },
+      ENCRYPTED_FIELDS.totpSecrets)},
   folders: {
     encrypted: ENCRYPTED_FIELDS.folders,
     plaintext: getPlaintextFields<Folders>(
@@ -457,8 +387,7 @@ export const COLLECTION_SCHEMAS = {
         "$id",
         "$createdAt",
         "$updatedAt"],
-      ENCRYPTED_FIELDS.folders,
-    )},
+      ENCRYPTED_FIELDS.folders)},
   securityLogs: {
     encrypted: ENCRYPTED_FIELDS.securityLogs,
     plaintext: getPlaintextFields<SecurityLogs>(
@@ -475,8 +404,7 @@ export const COLLECTION_SCHEMAS = {
         "$id",
         "$createdAt",
         "$updatedAt"],
-      ENCRYPTED_FIELDS.securityLogs,
-    )},
+      ENCRYPTED_FIELDS.securityLogs)},
   user: {
     encrypted: ENCRYPTED_FIELDS.user,
     plaintext: getPlaintextFields<User>(
@@ -496,8 +424,7 @@ export const COLLECTION_SCHEMAS = {
         "$id",
         "$createdAt",
         "$updatedAt"],
-      ENCRYPTED_FIELDS.user,
-    )},
+      ENCRYPTED_FIELDS.user)},
   keychain: {
     encrypted: ENCRYPTED_FIELDS.keychain,
     plaintext: getPlaintextFields<Keychain>(
@@ -514,12 +441,7 @@ export const COLLECTION_SCHEMAS = {
         "$id",
         "$createdAt",
         "$updatedAt"],
-      ENCRYPTED_FIELDS.keychain,
-    )},
-};
-
-
-const VAULT_TTL = 1000 * 60 * 60; // 1 hour
+      ENCRYPTED_FIELDS.keychain)}}; // 1 hour
 
 // --- Secure CRUD Operations ---
 export class VaultService {
@@ -574,8 +496,7 @@ export class VaultService {
     response:
       | Models.RowList<Models.Row>
       | { rows?: unknown[]; items?: unknown[]; total?: number }
-      | unknown[],
-  ): { total: number; rows: T[] } {
+      | unknown[]): { total: number; rows: T[] } {
     if (Array.isArray(response)) {
       return {
         total: response.length,
@@ -594,8 +515,7 @@ export class VaultService {
   // Create with automatic encryption
   static async createCredential(
     data: CredentialsCreate,
-    options?: { linkedNoteIds?: string[] },
-  ): Promise<Credentials> {
+    options?: { linkedNoteIds?: string[] }): Promise<Credentials> {
     const sanitizedData = this.sanitizeCredentialData(data);
     const linkedTags = buildVaultNoteTags(options?.linkedNoteIds || []);
     if (linkedTags.length) {
@@ -639,8 +559,7 @@ export class VaultService {
 
       return (await this.decryptRowFields(
         doc,
-        "credentials",
-      )) as Credentials;
+        "credentials")) as Credentials;
     } catch (createError) {
       console.error("[AppwriteService] Create Credential FAILED:", createError);
       throw createError;
@@ -649,8 +568,7 @@ export class VaultService {
 
   static async createTOTPSecret(
     data: TotpSecretsCreate,
-    options?: { linkedNoteIds?: string[] },
-  ): Promise<TotpSecrets> {
+    options?: { linkedNoteIds?: string[] }): Promise<TotpSecrets> {
     const sanitizedData = this.sanitizeTotpData(data);
     const linkedTags = buildVaultNoteTags(options?.linkedNoteIds || []);
     if (linkedTags.length) {
@@ -668,14 +586,12 @@ export class VaultService {
     this.clearCredentialCache(data.userId);
     return (await this.decryptRowFields(
       doc,
-      "totpSecrets",
-    )) as unknown as TotpSecrets;
+      "totpSecrets")) as unknown as TotpSecrets;
   }
 
   static async createKeyMapping(
     data: KeyMappingCreate,
-    permissions: string[],
-  ): Promise<KeyMapping> {
+    permissions: string[]): Promise<KeyMapping> {
     const doc = await appwriteDatabases.createRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_KEY_MAPPING_ID,
@@ -683,8 +599,7 @@ export class VaultService {
       {
         ...data,
         metadata: data.metadata ?? null},
-      permissions,
-    );
+      permissions);
     return doc as unknown as KeyMapping;
   }
 
@@ -700,14 +615,12 @@ export class VaultService {
     await appwriteDatabases.deleteRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_KEY_MAPPING_ID,
-      id,
-    );
+      id);
   }
 
   private static async getCollaboratedResourceIds(
     userId: string,
-    resourceType: 'secret' | 'totp',
-  ): Promise<string[]> {
+    resourceType: 'secret' | 'totp'): Promise<string[]> {
     try {
       const response = await originalAppwriteDatabases.listRows(
         APPWRITE_DATABASE_ID,
@@ -765,8 +678,7 @@ export class VaultService {
 
   static async shareCredential(
     credentialId: string,
-    recipient: { userId: string; publicKey: string },
-  ): Promise<KeyMapping> {
+    recipient: { userId: string; publicKey: string }): Promise<KeyMapping> {
     let credential = await this.getCredential(credentialId);
     if (!credential.dek) {
       credential = await this.migrateCredentialToDEK(credentialId);
@@ -800,8 +712,7 @@ export class VaultService {
           senderId: credential.userId,
           senderPublicKey: senderPublicKey,
           sourceName: credential.name,
-          createdAt: new Date().toISOString()}),
-      },
+          createdAt: new Date().toISOString()})},
       [
         Permission.read(Role.user(recipient.userId)),
         Permission.read(Role.user(credential.userId))]
@@ -846,8 +757,7 @@ export class VaultService {
         resourceType: 'credential',
         templateKey: 'vault:credential-shared',
         ctaUrl: `${getEcosystemUrl('vault')}/sharing`,
-        ctaText: 'Open sharing',
-      });
+        ctaText: 'Open sharing'});
     } catch (error: any) {
       if (String(error?.message || '').toLowerCase().includes('not verified')) {
         throw error;
@@ -860,8 +770,7 @@ export class VaultService {
 
   static async shareTotpSecret(
     totpSecretId: string,
-    recipient: { userId: string; publicKey: string },
-  ): Promise<KeyMapping> {
+    recipient: { userId: string; publicKey: string }): Promise<KeyMapping> {
     let totpSecret = await this.getTOTPSecret(totpSecretId);
     if (!totpSecret.dek) {
       totpSecret = await this.migrateTotpSecretToDEK(totpSecretId);
@@ -895,13 +804,10 @@ export class VaultService {
           senderId: totpSecret.userId,
           senderPublicKey: senderPublicKey,
           sourceName: `${totpSecret.issuer} / ${totpSecret.accountName}`,
-          createdAt: new Date().toISOString(),
-        }),
-      },
+          createdAt: new Date().toISOString()})},
       [
         Permission.read(Role.user(recipient.userId)),
-        Permission.read(Role.user(totpSecret.userId))],
-    );
+        Permission.read(Role.user(totpSecret.userId))]);
 
     try {
       if (typeof window !== 'undefined') {
@@ -914,8 +820,7 @@ export class VaultService {
           targetUserId: recipient.userId,
           permission: 'viewer',
           actorName: currentUser?.name || currentUser?.email || totpSecret.userId,
-          skipEmail: true,
-        });
+          skipEmail: true});
       } else {
         const { grantPermissionSecure } = await import('@/lib/actions/secure-ops');
         await grantPermissionSecure({
@@ -926,8 +831,7 @@ export class VaultService {
           targetUserId: recipient.userId,
           permission: 'viewer',
           actorName: currentUser?.name || currentUser?.email || totpSecret.userId,
-          skipEmail: true,
-        });
+          skipEmail: true});
       }
     } catch (permError) {
       console.error("[Vault] Failed to grant read permission for shared totp:", permError);
@@ -945,8 +849,7 @@ export class VaultService {
         resourceType: 'totp',
         templateKey: 'vault:totp-shared',
         ctaUrl: `${getEcosystemUrl('vault')}/sharing`,
-        ctaText: 'Open sharing',
-      });
+        ctaText: 'Open sharing'});
     } catch (error: any) {
       if (String(error?.message || '').toLowerCase().includes('not verified')) {
         throw error;
@@ -978,8 +881,7 @@ export class VaultService {
   }
 
   static async createFolder(
-    data: FoldersCreate,
-  ): Promise<Folders> {
+    data: FoldersCreate): Promise<Folders> {
     const sanitizedData = {
       ...data,
       name: sanitizeString(data.name, 100)};
@@ -995,8 +897,7 @@ export class VaultService {
   }
 
   static async createSecurityLog(
-    data: SecurityLogsCreate,
-  ): Promise<SecurityLogs> {
+    data: SecurityLogsCreate): Promise<SecurityLogs> {
     const doc = await appwriteDatabases.createRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_SECURITYLOGS_ID,
@@ -1011,8 +912,7 @@ export class VaultService {
   }
 
   static async createKeychainEntry(
-    data: KeychainCreate,
-  ): Promise<Keychain> {
+    data: KeychainCreate): Promise<Keychain> {
     const doc = await appwriteDatabases.createRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_KEYCHAIN_ID,
@@ -1034,8 +934,7 @@ export class VaultService {
   }
 
   static async listKeychainEntries(
-    userId: string,
-  ): Promise<Keychain[]> {
+    userId: string): Promise<Keychain[]> {
     const { SecurityEnclave, raceNetworkOrLocal } = await import("@/lib/security/enclave");
     const cached = (await SecurityEnclave.getKeychain(userId)) as Keychain[];
 
@@ -1050,12 +949,10 @@ export class VaultService {
           const response = await appwriteDatabases.listRows(
             APPWRITE_DATABASE_ID,
             APPWRITE_COLLECTION_KEYCHAIN_ID,
-            [Query.equal("userId", userId)],
-          );
+            [Query.equal("userId", userId)]);
           return response.rows as unknown as Keychain[];
         },
-        local: async () => cached,
-      });
+        local: async () => cached});
 
       if (source === 'network' && Array.isArray(value) && value.length > 0) {
         await SecurityEnclave.setKeychain(userId, value);
@@ -1072,37 +969,32 @@ export class VaultService {
     await appwriteDatabases.deleteRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_KEYCHAIN_ID,
-      id,
-    );
+      id);
     if (userId) {
       const { SecurityEnclave } = await import("@/lib/security/enclave");
       const existing = await SecurityEnclave.getKeychain(userId);
       await SecurityEnclave.setKeychain(
         userId,
-        existing.filter((e) => e.$id !== id),
-      );
+        existing.filter((e) => e.$id !== id));
       await SecurityEnclave.markDirty(userId);
     }
   }
 
   static async updateKeychainEntry(
     id: string,
-    data: Partial<Keychain>,
-  ): Promise<Keychain> {
+    data: Partial<Keychain>): Promise<Keychain> {
     const doc = await appwriteDatabases.updateRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_KEYCHAIN_ID,
       id,
-      data,
-    );
+      data);
     const updated = doc as unknown as Keychain;
     if (updated.userId) {
       const { SecurityEnclave } = await import("@/lib/security/enclave");
       const existing = await SecurityEnclave.getKeychain(updated.userId);
       await SecurityEnclave.setKeychain(
         updated.userId,
-        existing.map((e) => (e.$id === id ? { ...e, ...updated } : e)),
-      );
+        existing.map((e) => (e.$id === id ? { ...e, ...updated } : e)));
       await SecurityEnclave.markDirty(updated.userId);
     }
     return updated;
@@ -1143,8 +1035,7 @@ export class VaultService {
         APPWRITE_DATABASE_ID,
         APPWRITE_COLLECTION_USER_ID,
         userDoc.$id,
-        { masterpass: true },
-      );
+        { masterpass: true });
       await SecurityEnclave.setUserDoc(userId, { ...userDoc, ...updated, masterpass: true });
       await SecurityEnclave.markDirty(userId);
     } else {
@@ -1155,8 +1046,7 @@ export class VaultService {
         {
           userId,
           email,
-          masterpass: true},
-      );
+          masterpass: true});
       await SecurityEnclave.setUserDoc(userId, created);
       await SecurityEnclave.markDirty(userId);
     }
@@ -1184,8 +1074,7 @@ export class VaultService {
       publicKey: string;
       counter: number;
       transports: string[];
-    },
-  ): Promise<void> {
+    }): Promise<void> {
     const userDoc = await this.getUserDoc(userId);
     if (userDoc && userDoc.$id) {
       await appwriteDatabases.updateRow(
@@ -1197,8 +1086,7 @@ export class VaultService {
           passkeyBlob,
           credentialId: newCredential.credentialID,
           publicKey: newCredential.publicKey,
-          counter: newCredential.counter},
-      );
+          counter: newCredential.counter});
     }
   }
 
@@ -1242,32 +1130,27 @@ export class VaultService {
     const doc = await appwriteDatabases.getRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_CREDENTIALS_ID,
-      id,
-    );
+      id);
     return (await this.decryptRowFields(
       doc,
-      "credentials",
-    )) as Credentials;
+      "credentials")) as Credentials;
   }
 
   static async getTOTPSecret(id: string): Promise<TotpSecrets> {
     const doc = await appwriteDatabases.getRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_TOTPSECRETS_ID,
-      id,
-    );
+      id);
     return (await this.decryptRowFields(
       doc,
-      "totpSecrets",
-    )) as unknown as TotpSecrets;
+      "totpSecrets")) as unknown as TotpSecrets;
   }
 
   static async getFolder(id: string): Promise<Folders> {
     const doc = await appwriteDatabases.getRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_FOLDERS_ID,
-      id,
-    );
+      id);
     return doc as unknown as Folders;
   }
 
@@ -1286,12 +1169,10 @@ export class VaultService {
           const response = await appwriteDatabases.listRows(
             APPWRITE_DATABASE_ID,
             APPWRITE_COLLECTION_USER_ID,
-            [Query.equal("userId", userId)],
-          );
+            [Query.equal("userId", userId)]);
           return (response.rows[0] as unknown as User) || null;
         },
-        local: async () => (local as User) || null,
-      });
+        local: async () => (local as User) || null});
 
       if (source === 'network' && value) {
         await SecurityEnclave.setUserDoc(userId, value);
@@ -1307,16 +1188,14 @@ export class VaultService {
     const doc = await appwriteDatabases.getRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_SECURITYLOGS_ID,
-      id,
-    );
+      id);
     return doc as unknown as SecurityLogs;
   }
 
   // List with automatic decryption and pagination
   static async listRows<T extends Models.Row>(
     tableId: string,
-    queries: string[] = [],
-  ): Promise<{ total: number; rows: T[] }> {
+    queries: string[] = []): Promise<{ total: number; rows: T[] }> {
     const response = await listRowsWithRetry(tableId, queries);
     return {
       total: response.total,
@@ -1327,18 +1206,15 @@ export class VaultService {
     userId: string,
     limit: number = 25,
     offset: number = 0,
-    queries: string[] = [],
-  ): Promise<{ total: number; rows: Credentials[] }> {
+    queries: string[] = []): Promise<{ total: number; rows: Credentials[] }> {
     const resourceIds = await this.getCollaboratedResourceIds(userId, 'secret');
     
     const filterQueries = buildCredentialOwnerFilterQueries(userId, resourceIds);
     const mergedRows = sortMergedRows(
       await listRowsMergedAcrossFilters(
         APPWRITE_COLLECTION_CREDENTIALS_ID,
-        filterQueries,
-      ),
-      [Query.orderAsc("name"), ...queries],
-    );
+        filterQueries),
+      [Query.orderAsc("name"), ...queries]);
     const pageRows = mergedRows.slice(offset, offset + limit);
 
     const decryptedRows = await Promise.all(
@@ -1346,10 +1222,7 @@ export class VaultService {
         (doc: Models.Row) =>
           this.decryptRowFields(
             doc,
-            "credentials",
-          ) as Promise<Credentials>,
-      ),
-    );
+            "credentials") as Promise<Credentials>));
 
     return {
       total: mergedRows.length,
@@ -1361,17 +1234,14 @@ export class VaultService {
     userId: string,
     searchTerm: string,
     limit: number = 50,
-    offset: number = 0,
-  ): Promise<{ total: number; rows: Credentials[] }> {
+    offset: number = 0): Promise<{ total: number; rows: Credentials[] }> {
     const filterQueries = buildCredentialOwnerFilterQueries(userId);
     const mergedRows = sortMergedRows(
       await listRowsMergedAcrossFilters(
         APPWRITE_COLLECTION_CREDENTIALS_ID,
         filterQueries,
-        [Query.search("name", searchTerm)],
-      ),
-      [Query.orderAsc("name")],
-    );
+        [Query.search("name", searchTerm)]),
+      [Query.orderAsc("name")]);
     const pageRows = mergedRows.slice(offset, offset + limit);
 
     const decryptedRows = await Promise.all(
@@ -1379,10 +1249,7 @@ export class VaultService {
         (doc: Models.Row) =>
           this.decryptRowFields(
             doc,
-            "credentials",
-          ) as Promise<Credentials>,
-      ),
-    );
+            "credentials") as Promise<Credentials>));
 
     return {
       total: mergedRows.length,
@@ -1395,8 +1262,7 @@ export class VaultService {
    */
   static async listAllCredentials(
     userId: string,
-    queries: string[] = [],
-  ): Promise<Credentials[]> {
+    queries: string[] = []): Promise<Credentials[]> {
     this.ensureRuntimeSecurityHooks();
     const cacheKey = `${userId}:${JSON.stringify(queries)}`;
     const cached = this.credentialsListCache.get(cacheKey);
@@ -1416,20 +1282,15 @@ export class VaultService {
         await listRowsMergedAcrossFilters(
           APPWRITE_COLLECTION_CREDENTIALS_ID,
           filterQueries,
-          queries,
-        ),
-        queries,
-      );
+          queries),
+        queries);
 
       const rows = await Promise.all(
         mergedRows.map(
           (doc: Models.Row) =>
             this.decryptRowFields(
               doc,
-              "credentials",
-            ) as unknown as Credentials,
-        ),
-      );
+              "credentials") as unknown as Credentials));
 
       this.credentialsListCache.set(cacheKey, rows);
       return rows;
@@ -1443,8 +1304,7 @@ export class VaultService {
 
   static async listRecentCredentials(
     userId: string,
-    limit: number = 5,
-  ): Promise<Credentials[]> {
+    limit: number = 5): Promise<Credentials[]> {
     const filterQueries = getCredentialOwnerIndexQueries(userId);
     const byId = new Map<string, Models.Row>();
 
@@ -1456,19 +1316,16 @@ export class VaultService {
             filterQuery,
             Query.orderDesc("$updatedAt"),
             Query.limit(limit),
-          ],
-        );
+          ]);
         for (const row of response.rows) {
           byId.set(row.$id, row);
         }
-      }),
-    );
+      }));
 
     const recentRows = Array.from(byId.values())
       .sort(
         (a, b) =>
-          new Date(b.$updatedAt).getTime() - new Date(a.$updatedAt).getTime(),
-      )
+          new Date(b.$updatedAt).getTime() - new Date(a.$updatedAt).getTime())
       .slice(0, limit);
 
     return await Promise.all(
@@ -1476,16 +1333,12 @@ export class VaultService {
         (doc: Models.Row) =>
           this.decryptRowFields(
             doc,
-            "credentials",
-          ) as Promise<Credentials>,
-      ),
-    );
+            "credentials") as Promise<Credentials>));
   }
 
   static async listTOTPSecrets(
     userId: string,
-    queries: string[] = [],
-  ): Promise<TotpSecrets[]> {
+    queries: string[] = []): Promise<TotpSecrets[]> {
     this.ensureRuntimeSecurityHooks();
     const cacheKey = `${userId}:${JSON.stringify(queries)}`;
     const cached = this.totpSecretsCache.get(cacheKey);
@@ -1513,17 +1366,13 @@ export class VaultService {
       const response = await appwriteDatabases.listRows(
         APPWRITE_DATABASE_ID,
         APPWRITE_COLLECTION_TOTPSECRETS_ID,
-        [filterQuery, ...queries],
-      );
+        [filterQuery, ...queries]);
       const decryptedSecrets = await Promise.all(
         response.rows.map(
           (doc: Models.Row) =>
             this.decryptRowFields(
               doc,
-              "totpSecrets",
-            ) as Promise<TotpSecrets>,
-        ),
-      );
+              "totpSecrets") as Promise<TotpSecrets>));
       this.totpSecretsCache.set(cacheKey, decryptedSecrets);
       return decryptedSecrets;
     })().finally(() => {
@@ -1536,25 +1385,21 @@ export class VaultService {
 
   static async listFolders(
     userId: string,
-    queries: string[] = [],
-  ): Promise<Folders[]> {
+    queries: string[] = []): Promise<Folders[]> {
     const response = await appwriteDatabases.listRows(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_FOLDERS_ID,
-      [Query.equal("userId", userId), ...queries],
-    );
+      [Query.equal("userId", userId), ...queries]);
     return response.rows as unknown as Folders[];
   }
 
   static async listSecurityLogs(
     userId: string,
-    queries: string[] = [],
-  ): Promise<SecurityLogs[]> {
+    queries: string[] = []): Promise<SecurityLogs[]> {
     const response = await appwriteDatabases.listRows(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_SECURITYLOGS_ID,
-      [Query.equal("userId", userId), Query.orderDesc("timestamp"), ...queries],
-    );
+      [Query.equal("userId", userId), Query.orderDesc("timestamp"), ...queries]);
     return response.rows as unknown as SecurityLogs[];
   }
 
@@ -1562,8 +1407,7 @@ export class VaultService {
   static async updateCredential(
     id: string,
     data: Partial<Credentials>,
-    options?: { linkedNoteIds?: string[] },
-  ): Promise<Credentials> {
+    options?: { linkedNoteIds?: string[] }): Promise<Credentials> {
     const existing = await this.getCredential(id);
     const sanitizedData = this.sanitizeCredentialData(data);
     const linkedTags = buildVaultNoteTags(options?.linkedNoteIds || []);
@@ -1578,20 +1422,17 @@ export class VaultService {
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_CREDENTIALS_ID,
       id,
-      encryptedData,
-    );
+      encryptedData);
     this.clearCredentialCache(existing.userId);
     return (await this.decryptRowFields(
       doc,
-      "credentials",
-    )) as Credentials;
+      "credentials")) as Credentials;
   }
 
   static async updateTOTPSecret(
     id: string,
     data: Partial<TotpSecrets>,
-    options?: { linkedNoteIds?: string[] },
-  ): Promise<TotpSecrets> {
+    options?: { linkedNoteIds?: string[] }): Promise<TotpSecrets> {
     const existing = await this.getTOTPSecret(id);
     const sanitizedData = this.sanitizeTotpData(data);
     const linkedTags = buildVaultNoteTags(options?.linkedNoteIds || []);
@@ -1606,19 +1447,16 @@ export class VaultService {
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_TOTPSECRETS_ID,
       id,
-      encryptedData,
-    );
+      encryptedData);
     this.clearCredentialCache(existing.userId);
     return (await this.decryptRowFields(
       doc,
-      "totpSecrets",
-    )) as unknown as TotpSecrets;
+      "totpSecrets")) as unknown as TotpSecrets;
   }
 
   static async updateFolder(
     id: string,
-    data: Partial<Folders>,
-  ): Promise<Folders> {
+    data: Partial<Folders>): Promise<Folders> {
     const sanitizedData = { ...data };
     if (sanitizedData.name) {
       sanitizedData.name = sanitizeString(sanitizedData.name, 100);
@@ -1627,8 +1465,7 @@ export class VaultService {
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_FOLDERS_ID,
       id,
-      sanitizedData as unknown as Record<string, unknown>,
-    );
+      sanitizedData as unknown as Record<string, unknown>);
     return doc as unknown as Folders;
   }
 
@@ -1637,21 +1474,18 @@ export class VaultService {
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_USER_ID,
       id,
-      data as unknown as Record<string, unknown>,
-    );
+      data as unknown as Record<string, unknown>);
     return doc as unknown as User;
   }
 
   static async updateSecurityLog(
     id: string,
-    data: Partial<SecurityLogs>,
-  ): Promise<SecurityLogs> {
+    data: Partial<SecurityLogs>): Promise<SecurityLogs> {
     const doc = await appwriteDatabases.updateRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_SECURITYLOGS_ID,
       id,
-      data as unknown as Record<string, unknown>,
-    );
+      data as unknown as Record<string, unknown>);
     return doc as unknown as SecurityLogs;
   }
 
@@ -1661,8 +1495,7 @@ export class VaultService {
     await appwriteDatabases.deleteRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_CREDENTIALS_ID,
-      id,
-    );
+      id);
     this.clearCredentialCache(existing.userId);
   }
 
@@ -1671,8 +1504,7 @@ export class VaultService {
     await appwriteDatabases.deleteRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_TOTPSECRETS_ID,
-      id,
-    );
+      id);
     this.clearCredentialCache(existing.userId);
   }
 
@@ -1680,24 +1512,21 @@ export class VaultService {
     await appwriteDatabases.deleteRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_FOLDERS_ID,
-      id,
-    );
+      id);
   }
 
   static async deleteSecurityLog(id: string): Promise<void> {
     await appwriteDatabases.deleteRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_SECURITYLOGS_ID,
-      id,
-    );
+      id);
   }
 
   static async deleteUserDoc(id: string): Promise<void> {
     await appwriteDatabases.deleteRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_USER_ID,
-      id,
-    );
+      id);
   }
 
   // --- Ecosystem: Flow ---
@@ -1734,8 +1563,7 @@ export class VaultService {
     eventType: string,
     details?: Record<string, unknown>,
     ipAddress?: string,
-    userAgent?: string,
-  ): Promise<void> {
+    userAgent?: string): Promise<void> {
     const extendedDetails = {
       ...details,
       ecosystemApp: APPWRITE_CONFIG.DATABASES.VAULT
@@ -1754,8 +1582,7 @@ export class VaultService {
     const doc = await appwriteDatabases.getRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_CREDENTIALS_ID,
-      id,
-    ) as Record<string, unknown>;
+      id) as Record<string, unknown>;
     const permissions = Array.isArray(doc.$permissions)
       ? (doc.$permissions as string[])
       : undefined;
@@ -1764,8 +1591,7 @@ export class VaultService {
       APPWRITE_COLLECTION_CREDENTIALS_ID,
       id,
       { isPinned: pinned },
-      permissions,
-    );
+      permissions);
     if (typeof doc.userId === 'string') {
       this.clearCredentialCache(doc.userId);
     }
@@ -1775,8 +1601,7 @@ export class VaultService {
     const doc = await appwriteDatabases.getRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_TOTPSECRETS_ID,
-      id,
-    ) as Record<string, unknown>;
+      id) as Record<string, unknown>;
     const permissions = Array.isArray(doc.$permissions)
       ? (doc.$permissions as string[])
       : undefined;
@@ -1785,8 +1610,7 @@ export class VaultService {
       APPWRITE_COLLECTION_TOTPSECRETS_ID,
       id,
       { isPinned: pinned },
-      permissions,
-    );
+      permissions);
     if (typeof doc.userId === 'string') {
       this.clearCredentialCache(doc.userId);
     }
@@ -1796,8 +1620,7 @@ export class VaultService {
     const doc = await appwriteDatabases.getRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_CREDENTIALS_ID,
-      id,
-    ) as { isPinned?: boolean };
+      id) as { isPinned?: boolean };
     const newPinned = !doc.isPinned;
     await this.setCredentialPinned(id, newPinned);
     return newPinned;
@@ -1840,8 +1663,7 @@ export class VaultService {
   // --- Encryption/Decryption Helpers ---
   private static async encryptRowFields(
     data: unknown,
-    tableType: keyof typeof COLLECTION_SCHEMAS,
-  ): Promise<Record<string, unknown>> {
+    tableType: keyof typeof COLLECTION_SCHEMAS): Promise<Record<string, unknown>> {
     const schema = COLLECTION_SCHEMAS[tableType];
     const result: Record<string, unknown> = {
       ...(data as Record<string, unknown>)};
@@ -1912,8 +1734,7 @@ export class VaultService {
 
   private static async decryptRowFields(
     doc: unknown,
-    tableType: keyof typeof COLLECTION_SCHEMAS,
-  ): Promise<Record<string, unknown>> {
+    tableType: keyof typeof COLLECTION_SCHEMAS): Promise<Record<string, unknown>> {
     const schema = COLLECTION_SCHEMAS[tableType];
     const result: Record<string, unknown> = {
       ...(doc as Record<string, unknown>)};
@@ -2064,8 +1885,7 @@ export class VaultService {
   // --- Search Operations ---
   static async searchCredentials(
     userId: string,
-    searchTerm: string,
-  ): Promise<Credentials[]> {
+    searchTerm: string): Promise<Credentials[]> {
     // Search must operate on all credentials since name is encrypted
     const allCredentials = await this.listAllCredentials(userId);
     const term = searchTerm.toLowerCase();
@@ -2074,17 +1894,14 @@ export class VaultService {
       (cred) =>
         cred.name?.toLowerCase().includes(term) ||
         cred.username?.toLowerCase().includes(term) ||
-        (cred.url && cred.url.toLowerCase().includes(term)),
-    );
+        (cred.url && cred.url.toLowerCase().includes(term)));
   }
 
   // --- Bulk Operations ---
   static async bulkCreateCredentials(
-    credentials: Omit<Credentials, "$id" | "$createdAt" | "$updatedAt">[],
-  ): Promise<Credentials[]> {
+    credentials: Omit<Credentials, "$id" | "$createdAt" | "$updatedAt">[]): Promise<Credentials[]> {
     return await Promise.all(
-      credentials.map((cred) => this.createCredential(cred)),
-    );
+      credentials.map((cred) => this.createCredential(cred)));
   }
 
   static async exportUserData(
@@ -2093,8 +1910,7 @@ export class VaultService {
       credentials?: boolean;
       totpSecrets?: boolean;
       folders?: boolean;
-    } = { credentials: true, totpSecrets: true, folders: true },
-  ): Promise<{
+    } = { credentials: true, totpSecrets: true, folders: true }): Promise<{
     credentials?: Credentials[];
     totpSecrets?: TotpSecrets[];
     folders?: Folders[];
@@ -2147,183 +1963,14 @@ export class VaultService {
   }
 }
 
-// --- 2FA / MFA Helpers (Following Official Appwrite Rowation) ---
-
-/**
- * Generate recovery codes - MUST be done before enabling MFA
- * These are single-use passwords for account recovery
- */
-async function generateRecoveryCodes(): Promise<{
-  recoveryCodes: string[];
-}> {
-  return await appwriteAccount.createMfaRecoveryCodes();
-}
-
 /**
  * Update a TOTP secret by row ID (encrypted).
  */
 export async function updateTotpSecret(
   id: string,
   data: Partial<TotpSecrets>,
-  options?: { linkedNoteIds?: string[] },
-) {
+  options?: { linkedNoteIds?: string[] }) {
   return await VaultService.updateTOTPSecret(id, data, options);
-}
-
-async function shareCredential(
-  credentialId: string,
-  recipient: { userId: string; publicKey: string },
-) {
-  return await VaultService.shareCredential(credentialId, recipient);
-}
-
-async function shareTotpSecret(
-  totpSecretId: string,
-  recipient: { userId: string; publicKey: string },
-) {
-  return await VaultService.shareTotpSecret(totpSecretId, recipient);
-}
-
-async function listIncomingKeyMappings(userId: string) {
-  return await VaultService.listIncomingKeyMappings(userId);
-}
-
-async function acceptSharedCredential(mapping: KeyMapping) {
-  return await VaultService.acceptSharedCredential(mapping);
-}
-
-async function acceptSharedTotp(mapping: KeyMapping) {
-  return await VaultService.acceptSharedTotp(mapping);
-}
-
-async function deleteKeyMapping(id: string) {
-  return await VaultService.deleteKeyMapping(id);
-}
-
-/**
- * List the most recently updated credentials for a user.
- */
-async function listRecentCredentials(userId: string, limit: number = 5) {
-  return await VaultService.listRecentCredentials(userId, limit);
-}
-
-/**
- * List enabled MFA factors for current user
- * Returns: { totp: boolean, email: boolean, phone: boolean }
- */
-async function listMfaFactors(): Promise<{
-  totp: boolean;
-  email: boolean;
-  phone: boolean;
-}> {
-  return await appwriteAccount.listMfaFactors();
-}
-
-/**
- * Enable/disable MFA enforcement on the account
- * Note: User must have at least 2 factors before MFA is enforced
- */
-async function updateMfaStatus(
-  enabled: boolean,
-): Promise<Models.Preferences> {
-  return await appwriteAccount.updateMFA(enabled);
-}
-
-/**
- * Add TOTP authenticator factor (does NOT enable MFA yet)
- * Returns QR code URL and secret for authenticator app
- */
-async function addTotpFactor(): Promise<{
-  qrUrl: string;
-  secret: string;
-}> {
-  const result = await appwriteAccount.createMfaAuthenticator(
-    AuthenticatorType.Totp,
-  );
-  // Generate QR code using Avatars API with smaller size (200px instead of 400px)
-  const qrUrl = appwriteAvatars.getQR(result.uri, 200);
-  return {
-    qrUrl,
-    secret: result.secret};
-}
-
-/**
- * Remove TOTP authenticator factor
- */
-async function removeTotpFactor(): Promise<void> {
-  await appwriteAccount.deleteMfaAuthenticator(AuthenticatorType.Totp);
-}
-
-/**
- * Verify TOTP factor using the proper MFA authenticator verification
- * This step confirms the authenticator app is working
- */
-async function verifyTotpFactor(otp: string): Promise<boolean> {
-  try {
-    // Use the proper MFA authenticator verification method
-    await appwriteAccount.updateMfaAuthenticator(AuthenticatorType.Totp, otp);
-    return true;
-  } catch (error: unknown) {
-    console.error("TOTP verification failed:", error);
-    return false;
-  }
-}
-
-/**
- * Create MFA challenge for login flow
- * factor: "totp" | "email" | "phone" | "recoverycode"
- */
-async function createMfaChallenge(
-  factor: "totp" | "email" | "phone" | "recoverycode",
-): Promise<{ $id: string }> {
-  let authFactor: AuthenticationFactor;
-
-  switch (factor) {
-    case "totp":
-      authFactor = AuthenticationFactor.Totp;
-      break;
-    case "email":
-      authFactor = AuthenticationFactor.Email;
-      break;
-    case "phone":
-      authFactor = AuthenticationFactor.Phone;
-      break;
-    case "recoverycode":
-      authFactor = AuthenticationFactor.Recoverycode;
-      break;
-    default:
-      throw new Error(`Unsupported MFA factor: ${factor}`);
-  }
-
-  return await appwriteAccount.createMfaChallenge(authFactor);
-}
-
-/**
- * Complete MFA challenge with code
- */
-async function completeMfaChallenge(
-  challengeId: string,
-  code: string,
-): Promise<Models.Session> {
-  return await appwriteAccount.updateMfaChallenge(challengeId, code);
-}
-
-/**
- * Check if user needs MFA after login
- * Returns true if MFA is required, false if not required, throws for other errors
- */
-async function checkMfaRequired(): Promise<boolean> {
-  try {
-    await appwriteAccount.get();
-    return false; // If account.get() succeeds, no MFA required
-  } catch (error: unknown) {
-    const err = error as { type?: string };
-    if (err.type === "user_more_factors_required") {
-      return true; // MFA is required
-    }
-    // Re-throw other errors (like network issues, invalid session, etc.)
-    throw error;
-  }
 }
 
 /**
@@ -2340,8 +1987,7 @@ export async function getMfaAuthenticationStatus(): Promise<{
     const account = await appwriteAccount.get();
     console.log(
       "getMfaAuthenticationStatus: Account retrieved successfully",
-      account,
-    );
+      account);
 
     // If successful, user is fully authenticated
     return {
@@ -2378,134 +2024,22 @@ export async function getMfaAuthenticationStatus(): Promise<{
   }
 }
 
-/**
- * Add Email as an MFA factor (must be verified first).
- * Note: If email is already verified for login, it should automatically be available as MFA factor
- */
-async function addEmailFactor(
-  email: string,
-  password?: string,
-): Promise<{ email: string }> {
-  try {
-    // Check if email is already verified by trying to use it as MFA factor
-    const factors = await listMfaFactors();
-    if (factors.email) {
-      return { email };
-    }
-
-    // If not verified, try to verify it
-    // Note: This might not be needed if user's email is already verified for their account
-    if (password) {
-      await appwriteAccount.updateEmail(email, password);
-    }
-
-    // Send verification email
-    await appwriteAccount.createVerification(
-      window.location.origin + "/"
-    );
-    return { email };
-  } catch (error: unknown) {
-    // Email might already be usable as MFA factor even if this fails
-    console.log("Email factor setup note:", error);
-    return { email };
-  }
-}
-
-/**
- * Complete email verification for MFA (after user clicks link in email).
- * Call this with the userId and secret from the verification link.
- */
-
-/**
- * Initiate password recovery (send reset email).
- * @param email User's email
- * @param redirectUrl URL to redirect after clicking email link (must be allowed in Appwrite console)
- */
-async function createPasswordRecovery(
-  email: string,
-  redirectUrl: string,
-) {
-  return await appwriteAccount.createRecovery(email, redirectUrl);
-}
-
-/**
- * Complete password recovery (reset password).
- * @param userId User ID from query param
- * @param secret Secret from query param
- * @param password New password
- */
-async function updatePasswordRecovery(
-  userId: string,
-  secret: string,
-  password: string,
-) {
-  return await appwriteAccount.updateRecovery(userId, secret, password);
-}
-
-// --- Email/password login/register ---
-
-/**
- * Email/password login
- */
-async function loginWithEmailPassword(email: string, password: string) {
-  return await appwriteAccount.createEmailPasswordSession(email, password);
-}
-
-/**
- * Register with email/password
- */
-async function registerWithEmailPassword(
-  email: string,
-  password: string,
-  name?: string,
-) {
-  return await appwriteAccount.create(ID.unique(), email, password, name);
-}
-
-/**
- * Email OTP: Send OTP to email (returns { userId, phrase? })
- */
-async function sendEmailOtp(email: string, enablePhrase = false) {
-  return await appwriteAccount.createEmailToken(
-    ID.unique(),
-    email,
-    enablePhrase,
-  );
-}
-
-/**
- * Email OTP: Complete OTP login (returns session)
- */
-async function completeEmailOtp(userId: string, otp: string) {
-  return await appwriteAccount.createSession(userId, otp);
-}
-
 // --- Standalone Service Functions ---
 
 export async function listFolders(userId: string, queries: string[] = []) {
   const response = await appwriteDatabases.listRows(
     APPWRITE_DATABASE_ID,
     APPWRITE_COLLECTION_FOLDERS_ID,
-    [Query.equal("userId", userId), ...queries],
-  );
+    [Query.equal("userId", userId), ...queries]);
   // Cast via unknown to avoid strict TS overlap errors from Appwrite DefaultRow
   return (response.rows ?? response) as unknown as Folders[];
-}
-
-async function updateFolder(id: string, data: Partial<Folders>) {
-  return await VaultService.updateFolder(id, data);
-}
-
-async function deleteFolder(id: string) {
-  return await VaultService.deleteFolder(id);
 }
 
 /**
  * Create a new folder.
  */
 export async function createFolder(
-  data: FoldersCreate,
-) {
+  data: FoldersCreate) {
   return await VaultService.createFolder(data);
 }
 
@@ -2514,8 +2048,7 @@ export async function createFolder(
  */
 export async function createTotpSecret(
   data: TotpSecretsCreate,
-  options?: { linkedNoteIds?: string[] },
-) {
+  options?: { linkedNoteIds?: string[] }) {
   return await VaultService.createTOTPSecret(data, options);
 }
 
@@ -2534,102 +2067,11 @@ export async function deleteTotpSecret(id: string) {
 }
 
 /**
- * Update user profile (name/email).
- * A password must be provided if the user wants to change their email.
- */
-async function updateUserProfile(
-  userId: string,
-  data: { name?: string; email?: string },
-  password?: string,
-) {
-  // Update Appwrite account name/email if changed
-  if (data.name) {
-    await appwriteAccount.updateName(data.name);
-  }
-  if (data.email) {
-    // Appwrite requires a password to change the email address.
-    await appwriteAccount.updateEmail(data.email, password || "");
-  }
-
-  // Update user doc in DB if email was changed
-  if (data.email) {
-    const userDoc = await VaultService.getUserDoc(userId);
-    if (userDoc?.$id) {
-      await VaultService.updateUserDoc(userDoc.$id, { email: data.email });
-    }
-  }
-}
-
-/**
- * Export all user data (credentials, totp, folders).
- */
-async function exportAllUserData(userId: string, options?: {
-  credentials?: boolean;
-  totpSecrets?: boolean;
-  folders?: boolean;
-}) {
-  return await VaultService.exportUserData(userId, options);
-}
-
-/**
- * Backup user data to cloud storage.
- */
-async function cloudBackup(userId: string) {
-  return await VaultService.cloudBackup(userId);
-}
-
-/**
- * List user's cloud backups.
- */
-async function listCloudBackups(userId: string) {
-  return await VaultService.listCloudBackups(userId);
-}
-
-
-/**
- * Delete user account and all associated data.
- * This is a hard delete and is irreversible.
- */
-async function deleteUserAccount(_userId: string) {
-  // Delete all user data from the database first
-  const [creds, totps, folders, logs, userDoc] = await Promise.all([
-    VaultService.listAllCredentials(_userId), // Use listAllCredentials to ensure all are deleted
-    VaultService.listTOTPSecrets(_userId),
-    VaultService.listFolders(_userId),
-    VaultService.listSecurityLogs(_userId),
-    VaultService.getUserDoc(_userId)]);
-
-  await Promise.all([
-    ...creds.map((c: Credentials) => VaultService.deleteCredential(c.$id)),
-    ...totps.map((t: TotpSecrets) => VaultService.deleteTOTPSecret(t.$id)),
-    ...folders.map((f: Folders) => VaultService.deleteFolder(f.$id)),
-    ...logs.map((l: SecurityLogs) => VaultService.deleteSecurityLog(l.$id)),
-    userDoc?.$id
-      ? VaultService.deleteUserDoc(userDoc.$id)
-      : Promise.resolve()]);
-
-  // Log the user out
-  await appwriteAccount.deleteSession("current");
-
-  // Finally, delete the Appwrite account itself
-  // Note: Account deletion may not be available in all Appwrite versions
-  // await appwriteAccount.delete();
-}
-
-/**
- * Check if user has set master password (returns boolean).
- */
-async function hasMasterpass(userId: string): Promise<boolean> {
-  return await VaultService.hasMasterpass(userId);
-}
-
-/**
  * Set master password flag for user (after first setup).
  */
 export async function setMasterpassFlag(
   userId: string,
-  email: string,
-): Promise<void> {
+  email: string): Promise<void> {
   return await VaultService.setMasterpassFlag(userId, email);
 }
 
@@ -2648,8 +2090,7 @@ export async function resetMasterpassAndWipe(userId: string): Promise<void> {
         const response = await appwriteDatabases.listRows(
           databaseId,
           tableId,
-          [...baseQueries, Query.limit(50)],
-        );
+          [...baseQueries, Query.limit(50)]);
 
         if (response.rows.length === 0) {
           hasMore = false;
@@ -2735,36 +2176,12 @@ export async function resetMasterpassAndWipe(userId: string): Promise<void> {
 }
 
 /**
- * Search credentials for a user (Client-side only for encrypted data)
- */
-async function searchCredentials(
-  userId: string,
-  searchTerm: string,
-): Promise<Credentials[]> {
-  // Since 'name' and other fields are encrypted, server-side search won't work effectively.
-  // We strictly use client-side search on decrypted data.
-  return await VaultService.searchCredentials(userId, searchTerm);
-}
-
-/**
- * List all credentials for a user (decrypted and paginated).
- */
-async function listCredentials(
-  userId: string,
-  limit: number = 25,
-  offset: number = 0,
-) {
-  return await VaultService.listCredentials(userId, limit, offset);
-}
-
-/**
  * Fetches ALL credentials for a user, handling pagination automatically.
  * Use this for operations that require the full dataset, like search or export.
  */
 export async function listAllCredentials(
   userId: string,
-  queries: string[] = [],
-): Promise<Credentials[]> {
+  queries: string[] = []): Promise<Credentials[]> {
   return await VaultService.listAllCredentials(userId, queries);
 }
 
@@ -2773,8 +2190,7 @@ export async function listAllCredentials(
  */
 export async function createCredential(
   data: CredentialsCreate,
-  options?: { linkedNoteIds?: string[] },
-) {
+  options?: { linkedNoteIds?: string[] }) {
   return await VaultService.createCredential(data, options);
 }
 
@@ -2784,8 +2200,7 @@ export async function createCredential(
 export async function updateCredential(
   id: string,
   data: Partial<Credentials>,
-  options?: { linkedNoteIds?: string[] },
-) {
+  options?: { linkedNoteIds?: string[] }) {
   return await VaultService.updateCredential(id, data, options);
 }
 
@@ -2794,81 +2209,6 @@ export async function updateCredential(
  */
 export async function deleteCredential(id: string) {
   return await VaultService.deleteCredential(id);
-}
-
-/**
- * Unified authentication state handler
- * Determines the correct next route after login/registration
- */
-async function getAuthenticationNextRoute(
-  userId: string,
-): Promise<string> {
-  try {
-    // First check if MFA is required
-    const mfaStatus = await getMfaAuthenticationStatus();
-
-    if (mfaStatus.needsMfa) {
-      return "/twofa/access";
-    }
-
-    if (!mfaStatus.isFullyAuthenticated) {
-      throw new Error(mfaStatus.error || "Authentication failed");
-    }
-
-    // User is fully authenticated, check master password
-    const hasMp = await hasMasterpass(userId);
-    if (!hasMp) {
-      return "/vault";
-    }
-
-    // Check if vault is unlocked
-    try {
-      const { masterPassCrypto } = await import(
-        "../masterpass-crypto"
-      );
-      if (!masterPassCrypto.isVaultUnlocked()) {
-        return "/vault";
-      }
-    } catch {
-      // If can't import crypto module, assume needs master password
-      return "/vault";
-    }
-
-    // Everything is ready, go to dashboard
-    return "/vault";
-  } catch (error: unknown) {
-    console.error("Error determining authentication route:", error);
-    throw error;
-  }
-}
-
-/**
- * Redirects authenticated users to /vault (after master password unlock in drawer) as appropriate.
- * Updated to use the new MFA-aware authentication flow
- */
-async function redirectIfAuthenticated(
-  user: { $id: string },
-  isVaultUnlocked: () => boolean,
-  router: { replace: (path: string) => void },
-) {
-  if (user) {
-    try {
-      const nextRoute = await getAuthenticationNextRoute(user.$id);
-      router.replace(nextRoute);
-      return true;
-    } catch {
-      // Fallback to original logic if there's an error
-      const hasMp = await hasMasterpass(user.$id);
-      if (!hasMp || !isVaultUnlocked()) {
-        router.replace("/vault");
-        return true;
-      } else {
-        router.replace("/vault");
-        return true;
-      }
-    }
-  }
-  return false;
 }
 
 /**
@@ -2886,193 +2226,6 @@ export async function logoutAppwrite() {
     sessionStorage.removeItem("kylrix_vault_unlocked");
     localStorage.removeItem("vault_timeout_minutes");
     // Optionally clear other app-specific keys here
-  }
-}
-
-/**
- * Remove individual MFA factors and update user doc accordingly
- */
-async function removeMfaFactor(
-  factorType: "totp" | "email" | "phone",
-): Promise<void> {
-  if (factorType === "totp") {
-    await removeTotpFactor();
-  }
-  // Add handling for other factor types as Appwrite supports them
-  // Note: Email factor removal is not straightforward in Appwrite
-  // as verified emails are tied to the account itself
-}
-
-/**
- * Unified MFA status check that returns comprehensive MFA information
- * This should be used everywhere for consistent MFA status detection
- */
-async function getUnifiedMfaStatus(userId?: string): Promise<{
-  isEnforced: boolean;
-  factors: { totp: boolean; email: boolean; phone: boolean };
-  requiresSetup: boolean;
-  needsAuthentication: boolean;
-  error?: string;
-}> {
-  try {
-    // First check what factors are available
-    const factors = await listMfaFactors();
-    const hasAnyFactor = factors.totp || factors.email || factors.phone;
-
-    // For logged-in users, we need to check MFA status differently
-    // The account.get() method won't throw "user_more_factors_required" for already authenticated users
-    // We need to determine MFA enforcement from the user row and factors
-    let isEnforced = false;
-    const needsAuthentication = false;
-
-    // If user has factors, check if MFA is actually enforced by looking at user doc
-    if (hasAnyFactor && userId) {
-      try {
-        const userDoc = await VaultService.getUserDoc(userId);
-        isEnforced = userDoc?.twofa === true;
-      } catch (error: unknown) {
-        console.warn("Could not check user MFA status from database:", error);
-        // Fallback: if user has factors, assume MFA should be enforced
-        isEnforced = hasAnyFactor;
-      }
-    }
-
-    const requiresSetup = !hasAnyFactor || !isEnforced;
-
-    // Sync database status if userId is provided
-    if (userId) {
-      try {
-        const userDoc = await VaultService.getUserDoc(userId);
-        const dbMfaStatus = userDoc?.twofa === true;
-
-        // If database status doesn't match actual enforcement, update it
-        if (dbMfaStatus !== isEnforced && userDoc?.$id) {
-          await VaultService.updateUserDoc(userDoc.$id, {
-            twofa: isEnforced});
-        }
-      } catch (error: unknown) {
-        console.warn("Failed to sync MFA status with database:", error);
-      }
-    }
-
-    return {
-      isEnforced,
-      factors,
-      requiresSetup,
-      needsAuthentication};
-  } catch (error: unknown) {
-    const err = error as { message?: string };
-    return {
-      isEnforced: false,
-      factors: { totp: false, email: false, phone: false },
-      requiresSetup: false,
-      needsAuthentication: false,
-      error: err.message || "Failed to check MFA status",
-    };
-  }
-}
-
-/**
- * Get MFA status directly from Appwrite account (native method)
- */
-async function getAppwriteMfaStatus(): Promise<{
-  isEnforced: boolean;
-  factors: { totp: boolean; email: boolean; phone: boolean };
-}> {
-  try {
-    // Get factors available for MFA
-    const factors = await listMfaFactors();
-
-    // Get current user account info
-    const account = await appwriteAccount.get();
-
-    // Check if MFA is enforced by looking at account.mfa property
-    // This is the most reliable way to check actual MFA enforcement
-    const isEnforced = account.mfa || false;
-
-    return {
-      isEnforced,
-      factors};
-  } catch (error: unknown) {
-    console.error("Failed to get Appwrite MFA status:", error);
-    return {
-      isEnforced: false,
-      factors: { totp: false, email: false, phone: false },
-    };
-  }
-}
-
-/**
- * Sync and validate MFA status between Appwrite and database
- * This function ensures the database user.twofa field matches Appwrite's actual MFA status
- */
-async function syncAndValidateMfaStatus(userId: string): Promise<{
-  wasOutOfSync: boolean;
-  currentStatus: boolean;
-  error?: string;
-}> {
-  try {
-    // Get MFA status from Appwrite (source of truth)
-    const appwriteStatus = await getAppwriteMfaStatus();
-
-    // Get current database status
-    let databaseStatus = false;
-    let userDocId: string | null = null;
-
-    try {
-      const userDocResponse = await appwriteDatabases.listRows(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_COLLECTION_USER_ID,
-        [Query.equal("userId", userId)],
-      );
-
-      if (userDocResponse.rows.length > 0) {
-        const userDoc = userDocResponse.rows[0];
-        databaseStatus = userDoc.twofa === true;
-        userDocId = userDoc.$id;
-      }
-    } catch (dbError) {
-      console.warn("Could not read user row for MFA sync:", dbError);
-      return {
-        wasOutOfSync: false,
-        currentStatus: appwriteStatus.isEnforced,
-        error: "Could not access database"};
-    }
-
-    // Check if they're out of sync
-    const wasOutOfSync = databaseStatus !== appwriteStatus.isEnforced;
-
-    // If out of sync, update database to match Appwrite
-    if (wasOutOfSync && userDocId) {
-      try {
-        await appwriteDatabases.updateRow(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_COLLECTION_USER_ID,
-          userDocId,
-          { twofa: appwriteStatus.isEnforced },
-        );
-        console.log(
-          `MFA status synced: database updated from ${databaseStatus} to ${appwriteStatus.isEnforced}`,
-        );
-      } catch (updateError) {
-        console.error("Failed to sync MFA status to database:", updateError);
-        return {
-          wasOutOfSync,
-          currentStatus: appwriteStatus.isEnforced,
-          error: "Could not update database"};
-      }
-    }
-
-    return {
-      wasOutOfSync,
-      currentStatus: appwriteStatus.isEnforced};
-  } catch (error: unknown) {
-    console.error("Failed to sync MFA status:", error);
-    const err = error as { message?: string };
-    return {
-      wasOutOfSync: false,
-      currentStatus: false,
-      error: err.message || "Sync failed"};
   }
 }
 
@@ -3174,26 +2327,12 @@ export async function deleteCredentialAttachment(credentialId: string, fileId: s
   return updated;
 }
 
-async function listCredentialAttachments(credentialId: string): Promise<EmbeddedCredentialAttachmentMeta[]> {
-  const credential = await VaultService.getCredential(credentialId);
-  if (!credential) return [];
-  return normalizeCredentialAttachmentsField(credential);
-}
-
 export async function setCredentialPinned(id: string, pinned: boolean) {
   return await VaultService.setCredentialPinned(id, pinned);
 }
 
 export async function setTotpPinned(id: string, pinned: boolean) {
   return await VaultService.setTotpPinned(id, pinned);
-}
-
-async function toggleCredentialPin(id: string) {
-    return await VaultService.toggleCredentialPin(id);
-}
-
-async function toggleTOTPPin(id: string) {
-    return await VaultService.toggleTOTPPin(id);
 }
 
 /**

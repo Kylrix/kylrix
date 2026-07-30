@@ -21,8 +21,7 @@ export async function warmProjectsList(deps: NexusDeps): Promise<Projects[]> {
 
   const cached = await deps.getCachedDataAsync<Projects[]>(
     projectsListCacheKey(deps.userId),
-    PROJECTS_LIST_TTL,
-  );
+    PROJECTS_LIST_TTL);
   if (cached?.length) {
     setSessionProjectsList(cached);
     return cached;
@@ -31,8 +30,7 @@ export async function warmProjectsList(deps: NexusDeps): Promise<Projects[]> {
   const rows = await deps.fetchOptimized(
     projectsListCacheKey(deps.userId),
     async () => (await ProjectsService.listProjects(true)).rows,
-    PROJECTS_LIST_TTL,
-  );
+    PROJECTS_LIST_TTL);
   setSessionProjectsList(rows);
   return rows;
 }

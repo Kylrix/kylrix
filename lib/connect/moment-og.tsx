@@ -82,8 +82,7 @@ function fallbackOg() {
                     justifyContent: 'center',
                     background: 'linear-gradient(155deg,#0d0c0b 0%,#1f1c18 52%,#0a0908 100%)',
                     color: 'rgba(255,255,255,0.75)',
-                    fontFamily: 'ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-                }}
+                    fontFamily: 'ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'}}
             >
                 <svg width="80" height="80" viewBox="0 0 100 100" fill="none" style={{ marginBottom: 24 }}>
                     <line x1="15" y1="30" x2="50" y2="10" stroke="#EC4899" strokeWidth="6" strokeLinecap="round" />
@@ -116,8 +115,7 @@ function fallbackOg() {
                 <div style={{ fontSize: 26 }}>Moment unavailable</div>
             </div>
         ),
-        { ...MOMENT_OG_SIZE },
-    );
+        { ...MOMENT_OG_SIZE });
 }
 
 export async function createMomentOpenGraphImage(momentId: string) {
@@ -167,8 +165,7 @@ export async function createMomentOpenGraphImage(momentId: string) {
                         boxSizing: 'border-box',
                         fontFamily: 'ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
                         position: 'relative',
-                        overflow: 'hidden',
-                    }}
+                        overflow: 'hidden'}}
                 >
                     <div
                         style={{
@@ -231,8 +228,7 @@ export async function createMomentOpenGraphImage(momentId: string) {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 boxShadow:
-                                    '0 18px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08)',
-                            }}
+                                    '0 18px 40px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08)'}}
                         >
                             {avatarDataUri ? (
                                 // OG Image Response markup — plain img + data URI; next/image not applicable here.
@@ -261,8 +257,7 @@ export async function createMomentOpenGraphImage(momentId: string) {
                                         color: '#ffffff',
                                         fontSize: 58,
                                         fontWeight: 800,
-                                        fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-                                    }}
+                                        fontFamily: '"JetBrains Mono", ui-monospace, monospace'}}
                                 >
                                     {initial}
                                 </div>
@@ -311,8 +306,7 @@ export async function createMomentOpenGraphImage(momentId: string) {
                                     fontFamily: '"JetBrains Mono", ui-monospace, monospace',
                                     marginBottom: 18,
                                     borderLeft: '4px solid rgba(245,158,11,0.85)',
-                                    paddingLeft: 22,
-                                }}
+                                    paddingLeft: 22}}
                             >
                                 {excerpt}
                             </div>
@@ -326,8 +320,7 @@ export async function createMomentOpenGraphImage(momentId: string) {
                                     alignItems: 'center',
                                     justifyContent: 'space-between',
                                     flexWrap: 'wrap',
-                                    gap: 16,
-                                }}
+                                    gap: 16}}
                             >
                                 <div
                                     style={{
@@ -349,8 +342,7 @@ export async function createMomentOpenGraphImage(momentId: string) {
                     </div>
                 </div>
             ),
-            { ...MOMENT_OG_SIZE },
-        );
+            { ...MOMENT_OG_SIZE });
     } catch (_e: unknown) {
         return fallbackOg();
     }

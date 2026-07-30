@@ -25,8 +25,7 @@ export class KylrixFlow {
       ...data,
       status: data.status || 'pending',
       priority: data.priority || 'medium',
-      createdAt: new Date().toISOString(),
-    });
+      createdAt: new Date().toISOString()});
   }
 
   /**
@@ -37,8 +36,7 @@ export class KylrixFlow {
       userId,
       taskId,
       startTime: new Date().toISOString(),
-      status: 'active',
-    });
+      status: 'active'});
   }
 
   /**

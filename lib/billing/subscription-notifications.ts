@@ -31,8 +31,7 @@ function formatDateLabel(value?: string | null) {
 async function sendTemplatedEmail(
   userId: string,
   templateId: 'subscription-update' | 'gift-coupon',
-  vars: Record<string, string>,
-) {
+  vars: Record<string, string>) {
   const { users, messaging } = createSystemClient();
   const recipient = await users.get(userId);
   if (!recipient?.email) {
@@ -71,8 +70,7 @@ export async function notifySubscriptionActivated(input: {
     bodyCopy:
       input.bodyCopy ||
       `Your ${formatDurationLabel(input.months)} access is live. You can now use Pro across the ecosystem immediately.`,
-    ctaUrl: input.ctaUrl || KYLRIX_AUTH_URI,
-  });
+    ctaUrl: input.ctaUrl || KYLRIX_AUTH_URI});
 }
 
 export async function notifyGiftCouponIssued(input: {

@@ -38,8 +38,7 @@ export const CallService = {
         startsAt?: string,
         durationMinutes: number = 120,
         metadata?: string,
-        allowGuests: boolean = true,
-    ) {
+        allowGuests: boolean = true) {
         try {
             const startTime = startsAt ? new Date(startsAt) : new Date();
             const expiresAt = new Date(startTime.getTime() + durationMinutes * 60 * 1000).toISOString();
@@ -106,8 +105,7 @@ export const CallService = {
             approveParticipants: input.approveParticipants ?? false,
             startsAt: input.startsAt || null,
             expiresAt: null,
-            title: input.title,
-        } as any);
+            title: input.title} as any);
 
         return this.createCallLink(
             input.userId,

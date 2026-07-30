@@ -80,11 +80,8 @@ export async function createCouponAction(input: {
           scope,
           source: 'admin.coupons.action',
           months: input.months ? Number(input.months) : 1,
-          planId: input.planId || 'PRO_MONTH',
-        }),
-      },
-      targetUserId ? [Permission.read(Role.user(targetUserId))] : [Permission.read(Role.user(user.$id))],
-    );
+          planId: input.planId || 'PRO_MONTH'})},
+      targetUserId ? [Permission.read(Role.user(targetUserId))] : [Permission.read(Role.user(user.$id))]);
     created.push(row);
 
     // Dispatch email if targeted

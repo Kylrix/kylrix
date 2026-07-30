@@ -12,7 +12,6 @@ type LiveGoalGetter = (goalId: string) => Task | null | undefined;
 let liveNoteGetter: LiveNoteGetter | null = null;
 let liveGoalGetter: LiveGoalGetter | null = null;
 
-const pendingListeners = new Set<() => void>();
 
 export function registerLiveNoteGetter(getter: LiveNoteGetter | null): void {
   liveNoteGetter = getter;

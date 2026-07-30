@@ -17,8 +17,7 @@ import {
   Paper,
   alpha,
   Tooltip,
-  Chip,
-  useTheme} from '@/lib/openbricks/primitives';
+  Chip} from '@/lib/openbricks/primitives';
 import {
   Add as AddIcon,
   Close as CloseIcon,
@@ -307,7 +306,6 @@ function SortableField({
 }
 
 export default function FormDialog({ open, onClose, form, initialDraft, onSaved }: FormDialogProps) {
-  const theme = useTheme();
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
@@ -584,8 +582,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         description,
         status: status as FormsStatus,
         schema: JSON.stringify(fields),
-        settings: form?.settings || '{}',
-      };
+        settings: form?.settings || '{}'};
 
       if (form) {
         await FormsService.updateForm(form.$id, formData);

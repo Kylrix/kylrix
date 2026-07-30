@@ -313,8 +313,7 @@ const paperclipMotif = (variant: number) => [
         ? 'M9 8 C9 5, 12 4, 14 6 L18 10 C20 12, 20 16, 18 18 C16 20, 12 20, 10 18 L7 15 C5 13, 5 10, 7 8 C9 6, 12 6, 14 8'
         : 'M7 9 C7 6, 10 5, 13 7 L17 11 C19 13, 19 17, 17 19 C15 21, 11 21, 9 19 L6 16 C4 14, 4 10, 6 8 C8 6, 11 6, 13 8',
     1,
-    0.72,
-  ),
+    0.72),
   line(8, 11, 15, 18, 0.9, 0.28)];
 
 const micMotif = (variant: number) => [
@@ -489,8 +488,7 @@ export default function MuralPattern() {
         backgroundRepeat: 'repeat',
         backgroundSize: `${TILE_WIDTH}px ${TILE_HEIGHT}px`,
         zIndex: 0,
-        filter: 'opacity(0.35)',
-      }}
+        filter: 'opacity(0.35)'}}
     />
   );
 }

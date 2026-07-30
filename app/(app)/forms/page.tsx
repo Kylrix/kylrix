@@ -140,8 +140,7 @@ export default function FormsDashboard() {
             // Load offline drafts (doesn't block initial forms render because loading has been released).
             const manifest = await DraftsService.getManifest();
             setFormDraftStatus(
-                Object.keys(manifest).reduce((acc, id) => ({ ...acc, [id]: true }), {}),
-            );
+                Object.keys(manifest).reduce((acc, id) => ({ ...acc, [id]: true }), {}));
 
             const draftList: FormDraft[] = [];
             const draftPromises = Object.keys(manifest).map(async (id) => {
@@ -151,9 +150,7 @@ export default function FormsDashboard() {
             await Promise.all(draftPromises);
             setOfflineDrafts(
                 draftList.sort(
-                    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-                ),
-            );
+                    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
         } catch (err) {
             console.error('Failed to fetch forms', err);
         } finally {
@@ -249,11 +246,9 @@ export default function FormsDashboard() {
                 rowIsPinned: form.isPinned,
                 setOwnerRowPin: async (pinned) => {
                     await FormsService.updateForm(form.$id, { isPinned: pinned } as any);
-                },
-            });
+                }});
             setForms((prev) =>
-                prev.map((f) => (f.$id === form.$id && isOwner ? { ...f, isPinned: nextPinned } : f)),
-            );
+                prev.map((f) => (f.$id === form.$id && isOwner ? { ...f, isPinned: nextPinned } : f)));
             toast.success(nextPinned ? 'Pinned to top' : 'Unpinned');
         } catch (_err) {
             if (!isOwner) {

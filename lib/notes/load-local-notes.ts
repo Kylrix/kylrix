@@ -30,8 +30,7 @@ function normalizeNoteRow(row: any): Notes | null {
   if (!id) return null;
   return {
     ...row,
-    $id: id,
-  } as Notes;
+    $id: id} as Notes;
 }
 
 export async function loadNotesFromLocalCopy(opts: {
@@ -45,8 +44,7 @@ export async function loadNotesFromLocalCopy(opts: {
       notes: opts.existingNotes,
       totalNotes: opts.existingNotes.length,
       cursor: null,
-      hasMore: true,
-    };
+      hasMore: true};
   }
 
   const userId = String(opts.userId || '').trim() || 'guest';
@@ -68,8 +66,7 @@ export async function loadNotesFromLocalCopy(opts: {
         notes,
         totalNotes: payload?.totalNotes || notes.length,
         cursor: payload?.cursor ?? null,
-        hasMore: payload?.hasMore ?? true,
-      };
+        hasMore: payload?.hasMore ?? true};
     }
   }
 
@@ -85,8 +82,7 @@ export async function loadNotesFromLocalCopy(opts: {
           notes,
           totalNotes: notes.length,
           cursor: null,
-          hasMore: true,
-        };
+          hasMore: true};
       }
     }
   } catch {
@@ -105,8 +101,7 @@ export async function loadNotesFromLocalCopy(opts: {
         notes,
         totalNotes: notes.length,
         cursor: null,
-        hasMore: true,
-      };
+        hasMore: true};
     }
   } catch {
     /* non-fatal */
@@ -126,8 +121,7 @@ export async function loadNotesFromLocalCopy(opts: {
             notes,
             totalNotes: payload?.totalNotes || notes.length,
             cursor: payload?.cursor ?? null,
-            hasMore: payload?.hasMore ?? true,
-          };
+            hasMore: payload?.hasMore ?? true};
         }
       } catch {
         /* try next key */

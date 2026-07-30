@@ -143,8 +143,7 @@ class SpineEngineService {
       isOnline,
       activeRoute: this.activeRoute,
       focusedResourceId: this.focusedResourceId,
-      timestamp: Date.now(),
-    };
+      timestamp: Date.now()};
 
     // Dispatch to subscribers per channel
     this.subscribers.forEach((subscribers) => {
@@ -170,8 +169,7 @@ class SpineEngineService {
       intervalMs: this.currentIntervalMs,
       intensity: this.activityIntensity,
       focusedResourceId: this.focusedResourceId,
-      subscribersCount: Array.from(this.subscribers.values()).reduce((acc, s) => acc + s.size, 0),
-    };
+      subscribersCount: Array.from(this.subscribers.values()).reduce((acc, s) => acc + s.size, 0)};
   }
 }
 

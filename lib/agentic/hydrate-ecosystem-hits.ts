@@ -105,8 +105,7 @@ export function hydrateEcosystemHitsSync(
     notes?: any[];
     tasks?: any[];
     getCachedData?: (key: string) => unknown;
-  },
-): HydratedEcosystemHit[] {
+  }): HydratedEcosystemHit[] {
   const notesById = new Map((sources.notes || []).map((n: any) => [n.$id || n.id, n]));
   const tasksById = new Map((sources.tasks || []).map((t: any) => [t.id || t.$id, t]));
 
@@ -136,8 +135,7 @@ export function hydrateEcosystemHitsSync(
           attachmentCount: Array.isArray(note?.attachments) ? note.attachments.length : 0,
           hasImage: !!previewImageUrl,
           previewImageUrl,
-          updatedAt: note?.$updatedAt || note?.updatedAt},
-      };
+          updatedAt: note?.$updatedAt || note?.updatedAt}};
     }
 
     if (ref.domain === 'goal') {
@@ -153,8 +151,7 @@ export function hydrateEcosystemHitsSync(
         meta: {
           dueDate: task?.dueDate ? String(task.dueDate) : undefined,
           status: task?.status,
-          updatedAt: task?.updatedAt ? String(task.updatedAt) : undefined},
-      };
+          updatedAt: task?.updatedAt ? String(task.updatedAt) : undefined}};
     }
 
     if (ref.domain === 'ui') {
@@ -178,8 +175,7 @@ export function hydrateEcosystemHitsSync(
         title: form?.title || 'Form',
         route: `/forms/${ref.id}`,
         accent,
-        meta: { status: form?.status },
-      };
+        meta: { status: form?.status }};
     }
 
     if (ref.domain === 'project') {
@@ -192,8 +188,7 @@ export function hydrateEcosystemHitsSync(
         title: project?.title || 'Project',
         snippet: project?.summary ? plainSnippet(String(project.summary)) : undefined,
         route: `/workspaces/${ref.id}`,
-        accent,
-      };
+        accent};
     }
 
     return {

@@ -35,8 +35,7 @@ export async function searchGlobalUsers(query: string, limit = 10) {
                 bio: doc.bio || null,
                 tier: doc.tier || null,
                 publicKey: doc.publicKey || null,
-                apps: doc.appsActive || [],
-            }));
+                apps: doc.appsActive || []}));
         } catch (error: any) {
             console.warn('[Identity] Email search failed:', error?.message);
             return [];

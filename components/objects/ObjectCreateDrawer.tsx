@@ -53,8 +53,7 @@ export function ObjectCreateDrawer({ open, kind, onClose, onSubmit, submitLabel 
     kind,
     id: 'draft',
     title: title.trim() || `New ${objectKindLabel(kind).toLowerCase()}`,
-    subtitle: body,
-  };
+    subtitle: body};
 
   return (
     <ObjectDetailShell

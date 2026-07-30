@@ -54,8 +54,7 @@ export function getBundledFreeMonths(months: number): number {
 export function calculateTotalSubscriptionPrice(
   tier: SubscriptionTier | string,
   months: number,
-  method: PaymentMethod = 'CRYPTO',
-): number {
+  method: PaymentMethod = 'CRYPTO'): number {
   const monthly = getTierMonthlyPrice(tier);
   const paymentMultiplier =
     method === 'CARD' ? GLOBAL_SUBSCRIPTION_CONFIG.card_surcharge_multiplier : 1.0;
@@ -75,6 +74,5 @@ export const calculateSubscriptionPrice = (
   tier: SubscriptionTier | string,
   _countryCode: string,
   method: PaymentMethod,
-  months = 1,
-): number => calculateTotalSubscriptionPrice(tier, months, method);
+  months = 1): number => calculateTotalSubscriptionPrice(tier, months, method);
 

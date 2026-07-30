@@ -5,8 +5,7 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 
 const DynamicSidebar = dynamic(
   () => import('@/components/ui/DynamicSidebarPanel').then((m) => m.DynamicSidebar),
-  { ssr: false },
-);
+  { ssr: false });
 
 /** Mounted inside EcosystemProviders so panels (e.g. pinned notes) see NotesContext. */
 export function AppDynamicSidebarPortal() {

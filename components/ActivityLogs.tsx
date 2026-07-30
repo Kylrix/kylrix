@@ -174,12 +174,10 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
                   '&:hover fieldset': {
                     borderColor: 'rgba(255, 255, 255, 0.3)'},
                   '&.ob-focused fieldset': {
-                    borderColor: '#6366F1'},
-                },
+                    borderColor: '#6366F1'}},
                 '& .ob-outlined-input::placeholder': {
                   color: 'rgba(255, 255, 255, 0.4)',
-                  opacity: 1},
-              }}
+                  opacity: 1}}}
             />
             <Button
               onClick={loadLogs}
@@ -193,8 +191,7 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
                 textTransform: 'none',
                 borderRadius: '8px',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
-                '&:hover': { borderColor: 'rgba(255, 255, 255, 0.3)' },
-              }}
+                '&:hover': { borderColor: 'rgba(255, 255, 255, 0.3)' }}}
             >
               Refresh
             </Button>
@@ -222,8 +219,7 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
                     key={`${log.time}-${index}`}
                     sx={{
                       borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-                      '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.02)' },
-                    }}
+                      '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.02)' }}}
                   >
                     <TableCell sx={{ py: 1.5 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -242,8 +238,7 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
                               color: getEventColor(log.event || ''),
                               fontSize: '0.65rem',
                               height: 18,
-                              mt: 0.5,
-                            }}
+                              mt: 0.5}}
                           />
                         </Box>
                       </Box>
@@ -281,8 +276,7 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
               '& .ob-icon-button': {
                 color: 'rgba(255, 255, 255, 0.7)'},
               '& .ob-icon-button:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)'},
-            }}
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'}}}
           />
         </Box>
       )}

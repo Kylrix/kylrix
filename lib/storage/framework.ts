@@ -39,8 +39,7 @@ const BUCKET_LIMITS: Record<string, StorageGatingConfig> = {
   // Default fallback limit for any other discrete upload in the ecosystem
   default: {
     maxSizeBytes: 10 * 1024 * 1024, // 10 MB Guideline Upper Limit
-    compress: false},
-};
+    compress: false}};
 
 
 

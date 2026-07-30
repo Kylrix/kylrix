@@ -103,8 +103,7 @@ export async function executeInstantRequestAction(
   },
   options?: {
     userMessage?: string;
-  },
-): Promise<{
+  }): Promise<{
   success: boolean;
   response: string;
   errorCode?: AgenticErrorCode;
@@ -139,8 +138,7 @@ async function executeInstantRequestActionInner(
   },
   options?: {
     userMessage?: string;
-  },
-): Promise<{
+  }): Promise<{
   success: boolean;
   response: string;
   errorCode?: AgenticErrorCode;
@@ -211,8 +209,7 @@ async function executeInstantRequestActionInner(
         sessionObjectsSnippet = sessionObjects
           .map(
             (o) =>
-              `- type=${o.objectType} id=${o.objectId} title="${(o.title || '').replace(/"/g, "'")}" tool=${o.toolKey || 'n/a'}`,
-          )
+              `- type=${o.objectType} id=${o.objectId} title="${(o.title || '').replace(/"/g, "'")}" tool=${o.toolKey || 'n/a'}`)
           .join('\n');
       }
     }
@@ -509,8 +506,7 @@ ${lifetimeMemoryContext}
   };
   const userVisibleMessage = extractVisibleUserMessage(
     prompt,
-    options?.userMessage || pageContext?.userMessage,
-  );
+    options?.userMessage || pageContext?.userMessage);
   const userMessageId = `msg_u_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const conversationId = `msg_a_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -528,8 +524,7 @@ ${lifetimeMemoryContext}
         id: conversationId,
         role: 'assistant',
         content: visibleResponse,
-        ...(nextStepsForHistory.length ? { nextSteps: nextStepsForHistory } : {}),
-      });
+        ...(nextStepsForHistory.length ? { nextSteps: nextStepsForHistory } : {})});
 
       let nextContext = sessionContext;
       if (sessionUpdate) {
@@ -553,8 +548,7 @@ ${lifetimeMemoryContext}
         nextContext,
         JSON.stringify(historyArr),
         false,
-        sessionData?.rowId || activeSessionId,
-      );
+        sessionData?.rowId || activeSessionId);
 
       // Save high-quality lifetime memory updates if specified
       if (memoryUpdate) {
@@ -687,8 +681,7 @@ export async function startNewAgentSessionFromPromptAction(
     carryContext?: boolean;
     sourceSessionId?: string;
   },
-  jwt?: string,
-) {
+  jwt?: string) {
   const user = await requireUser(jwt);
   const starter = String(params.starterPrompt || '').trim();
   if (!starter) return { success: false as const, error: 'Empty prompt' };
@@ -729,8 +722,7 @@ export async function startNewAgentSessionFromPromptAction(
     user.$id,
     starterContext,
     '[]',
-    false,
-  );
+    false);
   await account.updatePrefs({ ...prefs, activeAgentSessionId: newSessionId }).catch(() => {});
 
   return {
@@ -825,8 +817,7 @@ export async function listAgentSessions(jwt?: string) {
 export async function toggleAgentSessionShareAction(
   sessionId: string,
   mode: 'publish' | 'make_private',
-  jwt?: string,
-) {
+  jwt?: string) {
   const { toggleResourcePublicGuestSecure } = await import('@/lib/actions/secure-ops/misc');
   return toggleResourcePublicGuestSecure({
     resourceType: 'agent_session',
@@ -838,8 +829,7 @@ export async function toggleAgentSessionShareAction(
 export async function setAgentSessionPinnedAction(
   sessionId: string,
   pinned: boolean,
-  jwt?: string,
-) {
+  jwt?: string) {
   const user = await requireUser(jwt);
   const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
   const tables = createSystemTablesDB();
@@ -854,8 +844,7 @@ export async function setAgentSessionPinnedAction(
     databaseId: 'passwordManagerDb',
     tableId: 'agentic_sessions',
     rowId: sessionId,
-    data: { isPinned: pinned },
-  });
+    data: { isPinned: pinned }});
 
   return { success: true, isPinned: pinned };
 }
@@ -866,8 +855,7 @@ export async function toggleAgentConversationShareAction(
     messageId: string;
     mode: 'publish' | 'make_private';
   },
-  jwt?: string,
-) {
+  jwt?: string) {
   const user = await requireUser(jwt);
   const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
   const tables = createSystemTablesDB();
@@ -904,8 +892,7 @@ export async function toggleAgentConversationShareAction(
     data: {
       chatHistory: JSON.stringify(next),
       isPublic: row.isPublic,
-      isGuest: row.isGuest},
-  });
+      isGuest: row.isGuest}});
 
   const { buildPublicResourceUrl } = await import('@/lib/share/public-url');
   return {
@@ -914,9 +901,7 @@ export async function toggleAgentConversationShareAction(
     isGuest: enable,
     publicUrl: buildPublicResourceUrl(
       'agent_conversation',
-      `${params.sessionId}__${params.messageId}`,
-    ),
-  };
+      `${params.sessionId}__${params.messageId}`)};
 }
 
 function sanitizePublicChatMessage(m: any) {
@@ -968,8 +953,7 @@ export async function getPublicAgentSessionSecure(sessionId: string) {
       isPublic,
       isGuest,
       updatedAt: row.$updatedAt,
-      createdAt: row.$createdAt}),
-  );
+      createdAt: row.$createdAt}));
 }
 
 /**
@@ -1008,8 +992,7 @@ export async function getPublicAgentConversationSecure(compositeId: string) {
       message: sanitizePublicChatMessage(message),
       userId: row.userId || null,
       sessionIsPublic: sessionPublic,
-      updatedAt: row.$updatedAt}),
-  );
+      updatedAt: row.$updatedAt}));
 }
 
 export async function deleteAgentSession(sessionId: string, jwt?: string) {
@@ -1108,8 +1091,7 @@ export async function flagAgentConversationPointAction(
     sessionId?: string;
     reason?: string;
   },
-  jwt?: string,
-) {
+  jwt?: string) {
   const user = await requireUser(jwt);
   if (!params.conversationId) return { success: false };
 
@@ -1130,8 +1112,7 @@ export async function flagAgentConversationPointAction(
       conversationId: params.conversationId,
       messageRole: params.messageRole,
       reason: params.reason || 'user_retry',
-      flaggedAt: new Date().toISOString()},
-  });
+      flaggedAt: new Date().toISOString()}});
 
   return { success: true };
 }

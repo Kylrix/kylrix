@@ -5,13 +5,11 @@
 export function applyProSubscriptionWindowToPrefs<T extends Record<string, unknown>>(
   prefs: T,
   expiresAtIso: string,
-  tier: 'PRO' | 'TEAMS' | string = 'PRO',
-) {
+  tier: 'PRO' | 'TEAMS' | string = 'PRO') {
   const normTier = String(tier).toUpperCase() === 'TEAMS' ? 'TEAMS' : 'PRO';
   return {
     ...prefs,
     tier: normTier,
     subscriptionTier: normTier,
-    subscriptionExpiresAt: expiresAtIso,
-  };
+    subscriptionExpiresAt: expiresAtIso};
 }

@@ -12,16 +12,14 @@ type LiveEnvelope = { t?: string; id?: string; src?: string; s?: string };
 async function patchPresenceSafe(
   databases: Databases,
   rowId: string,
-  patch: Partial<{ status: string; customStatus: string }>,
-) {
+  patch: Partial<{ status: string; customStatus: string }>) {
   await databases.updateRow(CHAT_DB, APP_ACTIVITY, rowId, patch as Record<string, unknown>);
 }
 
 /** Clear malformed / legacy live payloads from presence.customStatus */
 export async function reconcileStaleLiveCallPresenceForUser(
   targetUserId: string,
-  databases?: Databases,
-): Promise<{ changed: boolean; reason?: string }> {
+  databases?: Databases): Promise<{ changed: boolean; reason?: string }> {
   const db = databases ?? createSystemClient().databases;
   const trimmed = String(targetUserId || '').trim();
   if (!trimmed) return { changed: false, reason: 'no_user' };
@@ -59,8 +57,7 @@ export async function reconcileStaleLiveCallPresenceForUser(
     const call = await db.getRow(
       APPWRITE_CONFIG.DATABASES.CHAT,
       APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-      callId,
-    );
+      callId);
     const expRaw = String((call as { expiresAt?: string }).expiresAt || '').trim();
     const exp = expRaw ? new Date(expRaw).getTime() : NaN;
 

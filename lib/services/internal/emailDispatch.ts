@@ -37,6 +37,5 @@ export async function dispatchEmail(payload: EmailDispatchPayload) {
     ctaText: payload.ctaText || null,
     verificationMode: payload.verificationMode === 'error' ? 'error' : 'silent',
     metadata: payload.metadata || null,
-    dryRun: Boolean(payload.dryRun),
-  });
+    dryRun: Boolean(payload.dryRun)});
 }

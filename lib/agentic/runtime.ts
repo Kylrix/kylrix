@@ -26,6 +26,5 @@ export async function runInstantAgenticRequest(params: {
     assertClientPaidAiAccess(params.user);
   }
   return executeInstantRequestAction(params.prompt, params.jwt, params.pageContext, {
-    userMessage: params.userMessage,
-  });
+    userMessage: params.userMessage});
 }

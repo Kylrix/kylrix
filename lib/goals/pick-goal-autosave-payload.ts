@@ -26,8 +26,7 @@ export function pickGoalAutosavePayload(task: Task): Record<string, unknown> {
   const title = clampNoteTitle(rawTitle || 'Untitled Goal', 'Untitled Goal');
 
   const assigneeIds = (task.assigneeIds || []).filter(
-    (id) => !!id && id !== 'guest' && id !== 'ghost',
-  );
+    (id) => !!id && id !== 'guest' && id !== 'ghost');
 
   return {
     title,
@@ -54,6 +53,5 @@ export function pickGoalAutosavePayload(task: Task): Record<string, unknown> {
     isArchived: !!task.isArchived,
     isDeleted: false,
     isTrash: false,
-    tags,
-  };
+    tags};
 }

@@ -101,8 +101,7 @@ export default function PreferencesManager({ onSave }: PreferencesManagerProps) 
         dataCollection: appPrefs?.dataCollection === true,
         marketingEmails: appPrefs?.marketingEmails === true,
         publicProfile: appPrefs?.publicProfile !== false,
-        smartSystemHistory: appPrefs?.smartSystemHistory !== false,
-      });
+        smartSystemHistory: appPrefs?.smartSystemHistory !== false});
     } catch (err: unknown) {
       setError((err as Error).message);
     } finally {

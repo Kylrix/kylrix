@@ -135,15 +135,13 @@ export function AccountHealthDrawers() {
                 await UsersService.updateProfile(user.$id, {
                     username: normalizedHandle,
                     displayName: displayTrim,
-                    ...(publicKey ? { publicKey } : {}),
-                });
+                    ...(publicKey ? { publicKey } : {})});
             } else {
                 await UsersService.createProfile(user.$id, normalizedHandle, {
                     displayName:
                         displayTrim ||
                         (normalizedHandle.charAt(0).toUpperCase() + normalizedHandle.slice(1)),
-                    ...(publicKey ? { publicKey } : {}),
-                });
+                    ...(publicKey ? { publicKey } : {})});
             }
 
             try {
@@ -203,8 +201,7 @@ export function AccountHealthDrawers() {
         backgroundImage: 'none',
         maxHeight: 'min(520px, 92dvh)',
         boxShadow: '0 -12px 42px rgba(0, 0, 0, 0.52)',
-        pb: 'calc(1rem + env(safe-area-inset-bottom))',
-    };
+        pb: 'calc(1rem + env(safe-area-inset-bottom))'};
 
     const normalizedTyping = normalizeHandleInput(newHandle);
     const canSaveUsername =
@@ -237,8 +234,7 @@ export function AccountHealthDrawers() {
                                 borderRadius: '16px',
                                 bgcolor: SURFACE_HOVER,
                                 border: `1px solid ${EDGE}`,
-                                flex: 1,
-                            }}
+                                flex: 1}}
                         >
                             <Box sx={{ display: 'flex', gap: 1.35, alignItems: 'flex-start' }}>
                                 <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: SURFACE, border: `1px solid ${EDGE}`, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
@@ -273,8 +269,7 @@ export function AccountHealthDrawers() {
                                 textTransform: 'none',
                                 bgcolor: AMBER,
                                 color: '#000',
-                                '&:hover': { bgcolor: '#fbbf24' },
-                            }}
+                                '&:hover': { bgcolor: '#fbbf24' }}}
                         >
                             Open Vault setup
                         </Button>
@@ -301,8 +296,7 @@ export function AccountHealthDrawers() {
                                 borderRadius: '16px',
                                 bgcolor: SURFACE_HOVER,
                                 border: `1px solid ${EDGE}`,
-                                flex: 1,
-                            }}
+                                flex: 1}}
                         >
                             <Typography sx={{ fontWeight: 900, color: '#fff', fontSize: '1.05rem' }}>
                                 Set your ecosystem handle
@@ -337,8 +331,7 @@ export function AccountHealthDrawers() {
                                             fontFamily: 'var(--font-mono)',
                                             bgcolor: SURFACE_HOVER,
                                             border: `1px solid ${EDGE}`,
-                                            color: '#fff',
-                                        }}
+                                            color: '#fff'}}
                                     />
                                 ))}
                             </Box>
@@ -379,8 +372,7 @@ export function AccountHealthDrawers() {
                                         ) : null}
                                     </InputAdornment>
                                 ),
-                                sx: { fontFamily: 'var(--font-mono)', fontWeight: 700 },
-                            }}
+                                sx: { fontFamily: 'var(--font-mono)', fontWeight: 700 }}}
                         />
 
                         <TextField
@@ -407,8 +399,7 @@ export function AccountHealthDrawers() {
                                 textTransform: 'none',
                                 bgcolor: ACCENT_CYAN,
                                 color: '#000',
-                                '&:hover': { bgcolor: '#33f3ff' },
-                            }}
+                                '&:hover': { bgcolor: '#33f3ff' }}}
                         >
                             {savingProfile ? <CircularProgress size={22} sx={{ color: '#000' }} /> : 'Save & verify'}
                         </Button>
@@ -493,9 +484,7 @@ export function AccountHealthDrawers() {
                         bgcolor: SURFACE,
                         border: `1px solid ${EDGE}`,
                         maxWidth: 420,
-                        width: '100%',
-                    },
-                }}
+                        width: '100%'}}}
             >
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.25, fontWeight: 800, color: '#fff' }}>
                     <ShieldAlert color={ACCENT_CYAN} size={22} strokeWidth={2.2} />
@@ -511,8 +500,7 @@ export function AccountHealthDrawers() {
                             p: 2,
                             borderRadius: '14px',
                             bgcolor: SURFACE_HOVER,
-                            border: `1px dashed ${EDGE}`,
-                        }}
+                            border: `1px dashed ${EDGE}`}}
                     >
                         <Typography variant="caption" sx={{ opacity: 0.5, color: '#fff' }}>
                             NEW HANDLE
@@ -542,8 +530,7 @@ export function AccountHealthDrawers() {
                             bgcolor: ACCENT_CYAN,
                             color: '#000',
                             fontWeight: 800,
-                            '&:hover': { bgcolor: '#33f3ff' },
-                        }}
+                            '&:hover': { bgcolor: '#33f3ff' }}}
                     >
                         {savingProfile ? <CircularProgress size={20} sx={{ color: '#000' }} /> : 'Update identity'}
                     </Button>

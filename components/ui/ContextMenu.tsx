@@ -36,8 +36,7 @@ export function ContextMenu({ onCloseAction, items }: ContextMenuProps) {
         (item) =>
           item.submenu &&
           item.submenu.length === prevSubmenu.length &&
-          item.submenu.every((entry, index) => entry.label === prevSubmenu[index]?.label),
-      );
+          item.submenu.every((entry, index) => entry.label === prevSubmenu[index]?.label));
       if (parentItem?.submenu) return [items, parentItem.submenu];
       return [items];
     });

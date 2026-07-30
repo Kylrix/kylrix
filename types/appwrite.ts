@@ -192,7 +192,7 @@ export type Notes = Models.Row & {
     nameLower: string | null;
 };
 
-type ApiKeys = Models.Row & {
+export type ApiKeys = Models.Row & {
     id: string | null;
     key: string | null;
     name: string | null;
@@ -213,7 +213,7 @@ export type Comments = Models.Row & {
     parentCommentId: string | null;
 }
 
-type Extensions = Models.Row & {
+export type Extensions = Models.Row & {
     name: string;
     description: string | null;
     version: string | null;
@@ -233,7 +233,7 @@ export type Reactions = Models.Row & {
     userId: string;
 }
 
-type Collaborators = Models.Row & {
+export type Collaborators = Models.Row & {
     noteId?: string;
     resourceId: string;
     resourceType: string;
@@ -265,13 +265,13 @@ export type Settings = Models.Row & {
     mode: string | null;
 }
 
-type WalletMap = Models.Row & {
+export type WalletMap = Models.Row & {
     walletAddressLower: string;
     userId: string;
     updatedAt: string | null;
 }
 
-type NoteTags = Models.Row & {
+export type NoteTags = Models.Row & {
     noteId: string;
     tagId: string;
     userId: string;
@@ -279,7 +279,7 @@ type NoteTags = Models.Row & {
     tag: string | null;
 }
 
-type NoteRevisions = Models.Row & {
+export type NoteRevisions = Models.Row & {
     noteId: string;
     revision: number;
     userId: string | null;
@@ -292,7 +292,7 @@ type NoteRevisions = Models.Row & {
     cause: Cause | null;
 }
 
-type AiGenerations = Models.Row & {
+export type AiGenerations = Models.Row & {
     userId: string;
     promptHash: string | null;
     prompt: string | null;
@@ -300,13 +300,13 @@ type AiGenerations = Models.Row & {
     providerId: string | null; model: string | null; durationMs: number | null; tokensUsed: number | null; success: boolean | null; error: string | null; createdAt: string | null;
 }
 
-type Subscriptions = Models.Row & { userId: string; plan: Plan; status: Status | null; currentPeriodStart: string | null; currentPeriodEnd: string | null; seats: number | null; createdAt: string | null; updatedAt: string | null; }
+export type Subscriptions = Models.Row & { userId: string; plan: Plan; status: Status | null; currentPeriodStart: string | null; currentPeriodEnd: string | null; seats: number | null; createdAt: string | null; updatedAt: string | null; }
 
 export type SecurityLogs = Models.Row & { userId: string; eventType: string; ipAddress: string | null; userAgent: string | null; deviceFingerprint: string | null; details: string | null; success: boolean; severity: string; timestamp: string; }
 
 export type Credentials = Models.Row & { userId: string; itemType: string; name: string; url: string | null; notes: string | null; totpId: string | null; username: string | null; password: string | null; cardNumber: string | null; cardholderName: string | null; cardExpiry: string | null; cardCVV: string | null; cardPIN: string | null; cardType: string | null; folderId: string | null; tags: string[] | null; customFields: string | null; faviconUrl: string | null; isFavorite: boolean; isDeleted: boolean; deletedAt: string | null; lastAccessedAt: string | null; passwordChangedAt: string | null; createdAt: string | null; updatedAt: string | null; attachments: string | null; isPinned?: boolean | null; isPublic?: boolean | null; isGuest?: boolean | null; sharedFrom?: string | null; dek?: string | null; keepPermission?: boolean | null; source?: string | null; }
 
-type Identities = Models.Row & { userId: string; identityType: string; label: string; credentialId: string | null; publicKey: string | null; counter: number; passkeyBlob: string | null; transports: string[] | null; aaguid: string | null; deviceInfo: string | null; isPrimary: boolean; isBackup: boolean; lastUsedAt: string | null; createdAt: string | null; updatedAt: string | null; }
+export type Identities = Models.Row & { userId: string; identityType: string; label: string; credentialId: string | null; publicKey: string | null; counter: number; passkeyBlob: string | null; transports: string[] | null; aaguid: string | null; deviceInfo: string | null; isPrimary: boolean; isBackup: boolean; lastUsedAt: string | null; createdAt: string | null; updatedAt: string | null; }
 
 export type User = Models.Row & { userId: string; email: string | null; masterpass: boolean | null; twofa: boolean | null; salt: string | null; twofaSecret: string | null; backupCodes: string | null; isPasskey: boolean | null; check: string | null; passkeyBlob: string | null; credentialId: string | null; publicKey: string | null; counter: number | null; authVersion: number; v2Migrated: boolean; mustCreatePasskey: boolean; sessionFingerprint: string | null; lastLoginAt: string | null; lastPasswordChangeAt: string | null; createdAt: string | null; updatedAt: string | null; }
 
@@ -314,41 +314,41 @@ export type Folders = Models.Row & { userId: string; name: string; parentFolderI
 
 export type TotpSecrets = Models.Row & { userId: string; issuer: string; accountName: string; secretKey: string; algorithm: string; digits: number; period: number; url: string | null; folderId: string | null; tags: string[] | null; isFavorite: boolean; isDeleted: boolean; deletedAt: string | null; lastUsedAt: string | null; createdAt: string | null; updatedAt: string | null; isPinned?: boolean | null; isPublic?: boolean | null; isGuest?: boolean | null; sharedFrom?: string | null; dek?: string | null; keepPermission?: boolean | null; source?: string | null; }
 
-type Messages = Models.Row & { conversationId: string; senderId: string; content: string; contentType: ContentType; plainText: string | null; mediaUrls: string[]; mediaFileIds: string[]; thumbnailUrl: string | null; thumbnailFileId: string | null; metadata: string | null; replyToMessageId: string | null; forwardedFromMessageId: string | null; forwardedFromConversationId: string | null; editedAt: string | null; deletedAt: string | null; deletedFor: string[]; isSystemMessage: boolean; isPinned: boolean; pinnedAt: string | null; reactions: string | null; mentions: string[]; links: string[]; readBy: string[]; deliveredTo: string[]; status: Status; expiresAt: string | null; createdAt: string | null; updatedAt: string | null; }
+export type Messages = Models.Row & { conversationId: string; senderId: string; content: string; contentType: ContentType; plainText: string | null; mediaUrls: string[]; mediaFileIds: string[]; thumbnailUrl: string | null; thumbnailFileId: string | null; metadata: string | null; replyToMessageId: string | null; forwardedFromMessageId: string | null; forwardedFromConversationId: string | null; editedAt: string | null; deletedAt: string | null; deletedFor: string[]; isSystemMessage: boolean; isPinned: boolean; pinnedAt: string | null; reactions: string | null; mentions: string[]; links: string[]; readBy: string[]; deliveredTo: string[]; status: Status; expiresAt: string | null; createdAt: string | null; updatedAt: string | null; }
 
-type Stories = Models.Row & { userId: string; contentType: ContentType; mediaUrl: string | null; mediaFileId: string | null; thumbnailUrl: string | null; text: string | null; backgroundColor: string | null; duration: number; filters: string | null; stickers: string | null; music: string | null; location: string | null; mentions: string[]; viewerIds: string[]; viewCount: number; reactionCount: number; replyCount: number; shareCount: number; privacy: Privacy; allowReplies: boolean; expiresAt: string; createdAt: string | null; }
+export type Stories = Models.Row & { userId: string; contentType: ContentType; mediaUrl: string | null; mediaFileId: string | null; thumbnailUrl: string | null; text: string | null; backgroundColor: string | null; duration: number; filters: string | null; stickers: string | null; music: string | null; location: string | null; mentions: string[]; viewerIds: string[]; viewCount: number; reactionCount: number; replyCount: number; shareCount: number; privacy: Privacy; allowReplies: boolean; expiresAt: string; createdAt: string | null; }
 
-type Polls = Models.Row & { creatorId: string; conversationId: string | null; messageId: string | null; question: string; options: string; votes: string | null; totalVotes: number; allowMultiple: boolean; isAnonymous: boolean; expiresAt: string | null; createdAt: string | null; }
+export type Polls = Models.Row & { creatorId: string; conversationId: string | null; messageId: string | null; question: string; options: string; votes: string | null; totalVotes: number; allowMultiple: boolean; isAnonymous: boolean; expiresAt: string | null; createdAt: string | null; }
 
-type ArFilters = Models.Row & { name: string; description: string | null; creatorId: string | null; thumbnailUrl: string; thumbnailFileId: string | null; filterDataUrl: string; filterDataFileId: string | null; category: Category; tags: string[]; isPremium: boolean; usageCount: number; isPublic: boolean; createdAt: string | null; }
+export type ArFilters = Models.Row & { name: string; description: string | null; creatorId: string | null; thumbnailUrl: string; thumbnailFileId: string | null; filterDataUrl: string; filterDataFileId: string | null; category: Category; tags: string[]; isPremium: boolean; usageCount: number; isPublic: boolean; createdAt: string | null; }
 
-type TypingIndicators = Models.Row & { conversationId: string; userId: string; isTyping: boolean; expiresAt: string; }
+export type TypingIndicators = Models.Row & { conversationId: string; userId: string; isTyping: boolean; expiresAt: string; }
 
-type UserStickers = Models.Row & { userId: string; stickerPackId: string; isPurchased: boolean; isFavorite: boolean; addedAt: string | null; }
+export type UserStickers = Models.Row & { userId: string; stickerPackId: string; isPurchased: boolean; isFavorite: boolean; addedAt: string | null; }
 
-type StoryViews = Models.Row & { storyId: string; viewerId: string; watchDuration: number; completedView: boolean; viewedAt: string | null; }
+export type StoryViews = Models.Row & { storyId: string; viewerId: string; watchDuration: number; completedView: boolean; viewedAt: string | null; }
 
-type Presence = Models.Row & { userId: string; status: Status; device: string | null; lastSeen: string; expiresAt: string; }
+export type Presence = Models.Row & { userId: string; status: Status; device: string | null; lastSeen: string; expiresAt: string; }
 
-type MessageQueue = Models.Row & { messageId: string; conversationId: string; recipientIds: string[]; pendingFor: string[]; priority: number; retryCount: number; maxRetries: number; status: Status; error: string | null; scheduledFor: string | null; createdAt: string | null; processedAt: string | null; }
+export type MessageQueue = Models.Row & { messageId: string; conversationId: string; recipientIds: string[]; pendingFor: string[]; priority: number; retryCount: number; maxRetries: number; status: Status; error: string | null; scheduledFor: string | null; createdAt: string | null; processedAt: string | null; }
 
-type Conversations = Models.Row & { type: Type; name: string | null; description: string | null; avatar: string | null; creatorId: string; participantIds: string[]; adminIds: string[]; moderatorIds: string[]; participantCount: number; maxParticipants: number; isEncrypted: boolean; encryptionVersion: string | null; isPinned: string[]; isMuted: string[]; isArchived: string[]; lastMessageId: string | null; lastMessageText: string | null; lastMessageAt: string | null; lastMessageSenderId: string | null; unreadCount: string | null; settings: string | null; isPublic: boolean; inviteLink: string | null; inviteLinkExpiry: string | null; category: string | null; tags: string[]; createdAt: string | null; updatedAt: string | null; }
+export type Conversations = Models.Row & { type: Type; name: string | null; description: string | null; avatar: string | null; creatorId: string; participantIds: string[]; adminIds: string[]; moderatorIds: string[]; participantCount: number; maxParticipants: number; isEncrypted: boolean; encryptionVersion: string | null; isPinned: string[]; isMuted: string[]; isArchived: string[]; lastMessageId: string | null; lastMessageText: string | null; lastMessageAt: string | null; lastMessageSenderId: string | null; unreadCount: string | null; settings: string | null; isPublic: boolean; inviteLink: string | null; inviteLinkExpiry: string | null; category: string | null; tags: string[]; createdAt: string | null; updatedAt: string | null; }
 
-type Contacts = Models.Row & { userId: string; contactUserId: string; nickname: string | null; relationship: Relationship; isBlocked: boolean; isFavorite: boolean; notes: string | null; tags: string[]; lastInteraction: string | null; addedAt: string | null; updatedAt: string | null; }
+export type Contacts = Models.Row & { userId: string; contactUserId: string; nickname: string | null; relationship: Relationship; isBlocked: boolean; isFavorite: boolean; notes: string | null; tags: string[]; lastInteraction: string | null; addedAt: string | null; updatedAt: string | null; }
 
-type Posts = Models.Row & { userId: string; content: string | null; contentType: ContentType; mediaUrls: string[]; mediaFileIds: string[]; thumbnails: string | null; mentions: string[]; hashtags: string[]; location: string | null; privacy: Privacy; allowComments: boolean; allowShares: boolean; likeCount: number; commentCount: number; shareCount: number; viewCount: number; isPinned: boolean; isSponsored: boolean; createdAt: string | null; updatedAt: string | null; }
+export type Posts = Models.Row & { userId: string; content: string | null; contentType: ContentType; mediaUrls: string[]; mediaFileIds: string[]; thumbnails: string | null; mentions: string[]; hashtags: string[]; location: string | null; privacy: Privacy; allowComments: boolean; allowShares: boolean; likeCount: number; commentCount: number; shareCount: number; viewCount: number; isPinned: boolean; isSponsored: boolean; createdAt: string | null; updatedAt: string | null; }
 
-type GiFs = Models.Row & { title: string; url: string; fileId: string | null; thumbnailUrl: string | null; source: string | null; externalId: string | null; tags: string[]; category: string | null; width: number | null; height: number | null; usageCount: number; createdAt: string | null; }
+export type GiFs = Models.Row & { title: string; url: string; fileId: string | null; thumbnailUrl: string | null; source: string | null; externalId: string | null; tags: string[]; category: string | null; width: number | null; height: number | null; usageCount: number; createdAt: string | null; }
 
-type MediaLibrary = Models.Row & { userId: string; fileId: string; fileName: string; fileType: string; mimeType: string | null; fileSize: number | null; width: number | null; height: number | null; duration: number | null; thumbnailFileId: string | null; url: string | null; metadata: string | null; tags: string[]; album: string | null; isPublic: boolean; uploadedAt: string | null; }
+export type MediaLibrary = Models.Row & { userId: string; fileId: string; fileName: string; fileType: string; mimeType: string | null; fileSize: number | null; width: number | null; height: number | null; duration: number | null; thumbnailFileId: string | null; url: string | null; metadata: string | null; tags: string[]; album: string | null; isPublic: boolean; uploadedAt: string | null; }
 
-type Follows = Models.Row & { followerId: string; followingId: string; status: Status; isCloseFriend: boolean; notificationsEnabled: boolean; createdAt: string | null; }
+export type Follows = Models.Row & { followerId: string; followingId: string; status: Status; isCloseFriend: boolean; notificationsEnabled: boolean; createdAt: string | null; }
 
-type TokenHoldings = Models.Row & { userId: string; walletAddress: string; chain: string; tokenAddress: string; tokenSymbol: string | null; tokenName: string | null; balance: string | null; decimals: number; usdValue: number | null; pricePerToken: number | null; lastSynced: string | null; }
+export type TokenHoldings = Models.Row & { userId: string; walletAddress: string; chain: string; tokenAddress: string; tokenSymbol: string | null; tokenName: string | null; balance: string | null; decimals: number; usdValue: number | null; pricePerToken: number | null; lastSynced: string | null; }
 
-type StickerPacks = Models.Row & { name: string; description: string | null; creatorId: string | null; coverImageUrl: string | null; coverImageFileId: string | null; stickerCount: number; isPremium: boolean; price: number; currency: string | null; downloadCount: number; isPublic: boolean; tags: string[]; createdAt: string | null; updatedAt: string | null; }
+export type StickerPacks = Models.Row & { name: string; description: string | null; creatorId: string | null; coverImageUrl: string | null; coverImageFileId: string | null; stickerCount: number; isPremium: boolean; price: number; currency: string | null; downloadCount: number; isPublic: boolean; tags: string[]; createdAt: string | null; updatedAt: string | null; }
 
-type Wallets = Models.Row & { userId: string; address: string; chain: Chain; walletType: WalletType; isPrimary: boolean; nickname: string | null; balance: string | null; nftsCount: number; lastSynced: string | null; isVerified: boolean; verifiedAt: string | null; addedAt: string | null; }
+export type Wallets = Models.Row & { userId: string; address: string; chain: Chain; walletType: WalletType; isPrimary: boolean; nickname: string | null; balance: string | null; nftsCount: number; lastSynced: string | null; isVerified: boolean; verifiedAt: string | null; addedAt: string | null; }
 
 export type FocusSessions = Models.Row & {
     userId: string;
@@ -421,7 +421,7 @@ export type Tasks = Models.Row & {
     isAgentic?: boolean | null;
 }
 
-type Stickers = Models.Row & { name: string; description: string | null; creatorId: string | null; packId: string | null; imageUrl: string; imageFileId: string | null; animatedUrl: string | null; animatedFileId: string | null; tags: string[]; category: string | null; isPremium: boolean; isAnimated: boolean; usageCount: number; isPublic: boolean; createdAt: string | null; }
+export type Stickers = Models.Row & { name: string; description: string | null; creatorId: string | null; packId: string | null; imageUrl: string; imageFileId: string | null; animatedUrl: string | null; animatedFileId: string | null; tags: string[]; category: string | null; isPremium: boolean; isAnimated: boolean; usageCount: number; isPublic: boolean; createdAt: string | null; }
 
 export type Projects = Models.Row & {
     title: string;

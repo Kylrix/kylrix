@@ -6,14 +6,12 @@ import {
   Box,
   BottomNavigation,
   BottomNavigationAction,
-  Paper,
-} from '@/lib/openbricks/primitives';
+  Paper} from '@/lib/openbricks/primitives';
 import {
   FileText as NotesIcon,
   Lock as VaultIcon,
   GitFork as FlowIcon,
-  MessageCircle as ConnectIcon,
-} from 'lucide-react';
+  MessageCircle as ConnectIcon} from 'lucide-react';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
@@ -77,8 +75,7 @@ export function UnifiedBottomBar() {
       note: '/app',
       flow: '/flows',
       vault: '/vault',
-      connect: '/connect',
-    };
+      connect: '/connect'};
 
     const target = routes[newValue];
     if (!target) return;
@@ -140,8 +137,7 @@ export function UnifiedBottomBar() {
         right: 0,
         bottom: 0,
         zIndex: 1300,
-        display: { xs: 'block', md: 'none' },
-      }}
+        display: { xs: 'block', md: 'none' }}}
     >
       <Paper
         elevation={0}
@@ -154,8 +150,7 @@ export function UnifiedBottomBar() {
           borderRadius: '24px 24px 0 0',
           px: 2,
           pt: 0.5,
-          pb: 'max(0.5rem, env(safe-area-inset-bottom))',
-        }}
+          pb: 'max(0.5rem, env(safe-area-inset-bottom))'}}
       >
         <BottomNavigation
           value={getCurrentTab()}
@@ -165,8 +160,7 @@ export function UnifiedBottomBar() {
           sx={{
             backgroundColor: 'transparent',
             height: 72,
-            width: '100%',
-          }}
+            width: '100%'}}
         >
           {renderNavItems()}
         </BottomNavigation>

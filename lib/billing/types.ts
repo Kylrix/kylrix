@@ -1,4 +1,4 @@
-enum SubscriptionTier {
+enum _SubscriptionTier {
   FREE = 'FREE',
   PRO = 'PRO',
   LIFETIME = 'LIFETIME',

@@ -69,8 +69,7 @@ function ConnectHomeContent() {
             : [
                 { id: 'chat', label: 'SECURE CHAT', icon: <MessageSquare size={18} />, onClick: openSecureChat },
                 { id: 'huddle', label: 'START HUDDLE', icon: <Phone size={18} />, onClick: () => router.push('/connect/calls?start=1') },
-              ],
-      });
+              ]});
       return () => resetConfiguration();
     }
 
@@ -82,8 +81,7 @@ function ConnectHomeContent() {
       actions: [
         { id: 'moment', label: 'CREATE MOMENT', icon: <PlusCircle size={18} />, onClick: openMomentComposer },
         { id: 'chat', label: 'SECURE CHAT', icon: <MessageSquare size={18} />, onClick: openSecureChat },
-      ],
-    });
+      ]});
     return () => resetConfiguration();
   }, [
     activeTab,

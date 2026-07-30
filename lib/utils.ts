@@ -88,8 +88,7 @@ export function hasPaidKylrixPlan(user: any): boolean {
 const TEAMS_TIERS = new Set(['TEAMS', 'ORG', 'LIFETIME']);
 
 function cachedEntitlementGrantsTeams(
-  ent: { uiTier?: string; active?: boolean; expiresAt?: string | null },
-): boolean {
+  ent: { uiTier?: string; active?: boolean; expiresAt?: string | null }): boolean {
   const tier = String(ent.uiTier || 'FREE').trim().toUpperCase();
   if (!TEAMS_TIERS.has(tier)) return false;
   if (ent.expiresAt) {
@@ -102,8 +101,7 @@ function cachedEntitlementGrantsTeams(
 /** Project collaboration, group channels, and team workspaces require Teams (or higher). */
 export function hasTeamsKylrixPlan(
   user: any,
-  subscriptionTier?: string | null,
-): boolean {
+  subscriptionTier?: string | null): boolean {
   if (isSelfHostedDeployment()) {
     return true;
   }
@@ -145,16 +143,6 @@ export function hasEffectivePaidAccess(user: any, subscriptionTier?: string | nu
 // Check if user has a wallet connected
 
 // Format bytes into human readable size (B, KB, MB, GB)
-export function formatFileSize(bytes: number | null | undefined): string {
-  const b = typeof bytes === 'number' && bytes >= 0 ? bytes : 0;
-  if (b < 1024) return b + 'B';
-  const kb = b / 1024;
-  if (kb < 1024) return kb.toFixed(kb < 10 ? 2 : 1) + 'KB';
-  const mb = kb / 1024;
-  if (mb < 1024) return mb.toFixed(mb < 10 ? 2 : 1) + 'MB';
-  const gb = mb / 1024;
-  return gb.toFixed(gb < 10 ? 2 : 1) + 'GB';
-}
 
 /**
  * Identity helpers for "on-the-fly" username canonization.

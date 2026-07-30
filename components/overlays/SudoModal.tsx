@@ -539,8 +539,7 @@ export default function SudoModal({
                             <div 
                                 style={{
                                     backgroundColor: accentColor,
-                                    boxShadow: `0 4px 12px ${accentColor}66`,
-                                }}
+                                    boxShadow: `0 4px 12px ${accentColor}66`}}
                                 className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-lg text-white flex items-center justify-center border-3 border-[#0a0a0a] z-10"
                             >
                                 <Lock className="w-3 h-3 stroke-[3]" />
@@ -716,8 +715,7 @@ export default function SudoModal({
                                 disabled={loading}
                                 style={{
                                     background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}CC 100%)`,
-                                    boxShadow: loading ? 'none' : `0 8px 25px ${accentColor}40`,
-                                }}
+                                    boxShadow: loading ? 'none' : `0 8px 25px ${accentColor}40`}}
                                 className="w-full py-3.5 rounded-xl text-white font-extrabold text-sm hover:scale-[1.01] hover:shadow-lg active:scale-100 transition-all cursor-pointer flex justify-center items-center disabled:opacity-50"
                             >
                                 {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> : "Initialize Vault"}
@@ -768,8 +766,7 @@ export default function SudoModal({
                                 disabled={loading}
                                 style={{
                                     background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}CC 100%)`,
-                                    boxShadow: loading ? 'none' : `0 8px 25px ${accentColor}40`,
-                                }}
+                                    boxShadow: loading ? 'none' : `0 8px 25px ${accentColor}40`}}
                                 className="w-full py-3.5 rounded-xl text-white font-extrabold text-sm hover:scale-[1.01] hover:shadow-lg active:scale-100 transition-all cursor-pointer flex justify-center items-center disabled:opacity-50"
                             >
                                 {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> : "Change MasterPass"}
@@ -855,8 +852,7 @@ export default function SudoModal({
                                 disabled={loading}
                                 style={{
                                     background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}CC 100%)`,
-                                    boxShadow: loading ? 'none' : `0 8px 25px ${accentColor}40`,
-                                }}
+                                    boxShadow: loading ? 'none' : `0 8px 25px ${accentColor}40`}}
                                 className="w-full py-3.5 rounded-xl text-white font-extrabold text-sm hover:scale-[1.01] hover:shadow-lg active:scale-100 transition-all cursor-pointer flex justify-center items-center disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {loading ? (

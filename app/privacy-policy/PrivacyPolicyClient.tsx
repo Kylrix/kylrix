@@ -231,8 +231,7 @@ export default function PrivacyPolicyClient() {
               bgcolor: '#161412',
               color: '#fff',
               border: '1px solid rgba(255,255,255,0.06)',
-              '&:hover': { bgcolor: '#1C1A18' },
-            }}
+              '&:hover': { bgcolor: '#1C1A18' }}}
           >
             <ArrowLeft size={18} />
           </IconButton>

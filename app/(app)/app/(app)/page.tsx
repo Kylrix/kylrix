@@ -76,8 +76,7 @@ export default function NotesPage() {
   const { 
     notes: allNotes, 
     totalNotes, 
-    isLoading: isNotesLoading, 
-    registerComposeSession,
+    isLoading: isNotesLoading,
     pushLiveNote,
     removeNote,
     refetchNotes,

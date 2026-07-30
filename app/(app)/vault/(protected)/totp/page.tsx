@@ -256,12 +256,10 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
           setOwnerRowPin: async (pinned) => {
             const { setTotpPinned } = await import('@/lib/appwrite');
             await setTotpPinned(totp.$id, pinned);
-          },
-        });
+          }});
         if (isOwner) {
           setTotpCodes((prev) =>
-            prev.map((t) => (t.$id === totp.$id ? { ...t, isPinned: nextPinned } : t)),
-          );
+            prev.map((t) => (t.$id === totp.$id ? { ...t, isPinned: nextPinned } : t)));
         }
         toast.success(nextPinned ? 'Pinned to top' : 'Unpinned');
       } catch (err: unknown) {

@@ -29,8 +29,7 @@ function toVerificationState(input: any): VerificationState {
       verifiedOn: null,
       checkedAt: null,
       method: null,
-      source: null,
-    };
+      source: null};
   }
 
   return {
@@ -38,8 +37,7 @@ function toVerificationState(input: any): VerificationState {
     verifiedOn: typeof input.verifiedOn === 'string' && input.verifiedOn ? input.verifiedOn : null,
     checkedAt: typeof input.checkedAt === 'string' && input.checkedAt ? input.checkedAt : null,
     method: typeof input.method === 'string' && input.method ? input.method : null,
-    source: typeof input.source === 'string' && input.source ? input.source : null,
-  };
+    source: typeof input.source === 'string' && input.source ? input.source : null};
 }
 
 export function getVerificationState(preferences: PreferencesLike): VerificationState {
@@ -50,8 +48,7 @@ export function getVerificationState(preferences: PreferencesLike): Verification
 
 function mergeVerificationPreferences(
   preferences: PreferencesLike,
-  verification: Partial<VerificationState>,
-) {
+  verification: Partial<VerificationState>) {
   const parsed = parsePreferences(preferences);
   const existing = toVerificationState(parsed.verification);
   const checkedAt = verification.checkedAt || new Date().toISOString();
@@ -64,8 +61,7 @@ function mergeVerificationPreferences(
     checkedAt,
     verifiedOn: verified ? (verification.verifiedOn || existing.verifiedOn || checkedAt) : (existing.verifiedOn || null),
     method: verification.method || existing.method || 'masterpass',
-    source: verification.source || existing.source || 'connect',
-  };
+    source: verification.source || existing.source || 'connect'};
 
   return parsed;
 }
@@ -86,12 +82,10 @@ export async function syncCurrentUserVerification(userId: string) {
       verified: hasMasterpass,
       checkedAt: new Date().toISOString(),
       method: 'masterpass',
-      source: 'connect',
-    });
+      source: 'connect'});
 
     const updated = await UsersService.updateProfile(userId, {
-      preferences: JSON.stringify(nextPrefs),
-    });
+      preferences: JSON.stringify(nextPrefs)});
 
     if (updated) {
       seedIdentityCache(updated);

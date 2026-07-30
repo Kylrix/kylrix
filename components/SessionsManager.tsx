@@ -188,8 +188,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                   boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.2)',
                   '&:hover': {
                     borderColor: 'rgba(255, 255, 255, 0.3)',
-                    boxShadow: '0 2px 4px 0 rgb(0 0 0 / 0.3)'},
-                }}
+                    boxShadow: '0 2px 4px 0 rgb(0 0 0 / 0.3)'}}}
               >
                 Refresh
               </Button>
@@ -209,8 +208,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                     '&:hover': {
                       backgroundColor: 'rgba(239, 68, 68, 0.2)',
                       borderColor: 'rgba(239, 68, 68, 0.5)',
-                      boxShadow: '0 2px 4px 0 rgb(0 0 0 / 0.3)'},
-                  }}
+                      boxShadow: '0 2px 4px 0 rgb(0 0 0 / 0.3)'}}}
                 >
                   Logout All
                 </Button>
@@ -310,8 +308,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
                     transition: 'all 0.2s ease-out',
                     '&:hover': {
                       backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                      borderColor: 'rgba(239, 68, 68, 0.4)'},
-                  }}
+                      borderColor: 'rgba(239, 68, 68, 0.4)'}}}
                 >
                   <DeleteIcon sx={{ fontSize: 20 }} />
                 </IconButton>
@@ -329,8 +326,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
           sx: {
             backgroundColor: '#161514',
             border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '12px'},
-        }}
+            borderRadius: '12px'}}}
       >
         <DialogTitle sx={{ color: 'white', pb: 1, fontWeight: 600 }}>Logout Session</DialogTitle>
         <DialogContent>
@@ -360,8 +356,7 @@ export default function SessionsManager({ onSessionsLoaded }: SessionsManagerPro
               textTransform: 'none',
               fontWeight: 600,
               '&:hover': {
-                backgroundColor: '#dc2626'},
-            }}
+                backgroundColor: '#dc2626'}}}
           >
             {deleting ? 'Logging out...' : 'Logout'}
           </Button>

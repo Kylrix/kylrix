@@ -23,8 +23,7 @@ const ACCENTS: Record<OgAccent, { solid: string; soft: string; border: string; g
   violet: { solid: '#C084FC', soft: '#E9D5FF', border: 'rgba(192,132,252,0.28)', glow: 'rgba(168,85,247,0.22)' },
   amber: { solid: '#FBBF24', soft: '#FDE68A', border: 'rgba(251,191,36,0.28)', glow: 'rgba(245,158,11,0.22)' },
   emerald: { solid: '#34D399', soft: '#A7F3D0', border: 'rgba(52,211,153,0.28)', glow: 'rgba(16,185,129,0.22)' },
-  rose: { solid: '#FB7185', soft: '#FECDD3', border: 'rgba(251,113,133,0.28)', glow: 'rgba(244,63,94,0.22)' },
-};
+  rose: { solid: '#FB7185', soft: '#FECDD3', border: 'rgba(251,113,133,0.28)', glow: 'rgba(244,63,94,0.22)' }};
 
 export function buildOgMetadata({
   title,
@@ -41,14 +40,12 @@ export function buildOgMetadata({
       title,
       description,
       type: 'website',
-      images: [{ url: imageUrl, width: 1200, height: 630, alt: title }],
-    },
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: title }]},
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [imageUrl]},
-  };
+      images: [imageUrl]}};
 }
 
 function KylrixLogo({ size = 220 }: { size?: number }) {
@@ -132,8 +129,7 @@ export function renderKylrixShareCard({
         style={{
           position: 'absolute',
           inset: 0,
-          background: `radial-gradient(circle at 92% 48%, ${palette.glow} 0%, rgba(10,9,8,0) 40%)`,
-        }}
+          background: `radial-gradient(circle at 92% 48%, ${palette.glow} 0%, rgba(10,9,8,0) 40%)`}}
       />
 
       <div
@@ -158,8 +154,7 @@ export function renderKylrixShareCard({
                 border: `1px solid ${palette.border}`,
                 color: palette.solid,
                 fontSize: '17px',
-                fontWeight: 800,
-              }}
+                fontWeight: 800}}
             >
               {eyebrow}
             </div>

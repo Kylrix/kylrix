@@ -102,8 +102,7 @@ export function mergeServerPageWithLocalCopy<T extends SyncableRow>(params: {
  */
 export function sortPinnedThenCreatedAt<T extends SyncableRow>(
   rows: T[],
-  isPinned: (row: T) => boolean,
-): T[] {
+  isPinned: (row: T) => boolean): T[] {
   return [...rows].sort((a: any, b: any) => {
     const aPinned = isPinned(a);
     const bPinned = isPinned(b);
