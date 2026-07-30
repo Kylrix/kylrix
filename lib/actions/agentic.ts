@@ -380,8 +380,7 @@ async function executeInstantRequestActionInner(
       activeSessionId = sessionData.rowId;
     }
     if (!activeSessionId) {
-      activeSessionId = `session_${Date.now()}`;
-      await TelemetryService.saveSession(user.$id, '', '[]', false, activeSessionId);
+      activeSessionId = await TelemetryService.saveSession(user.$id, '', '[]', false);
       try {
         const { account } = await createServerClient(jwt);
         const prefs = await account.getPrefs().catch(() => ({}));
@@ -811,8 +810,7 @@ export async function getAgentSession(jwt?: string) {
       activeSessionId = session.rowId;
       await account.updatePrefs({ ...prefs, activeAgentSessionId: activeSessionId }).catch(() => {});
     } else {
-      const newSessionId = `session_${Date.now()}`;
-      await TelemetryService.saveSession(user.$id, '', '[]', false, newSessionId);
+      const newSessionId = await TelemetryService.saveSession(user.$id, '', '[]', false);
       activeSessionId = newSessionId;
       await account.updatePrefs({ ...prefs, activeAgentSessionId: activeSessionId }).catch(() => {});
       session = { context: '', chatHistory: '[]', seen: false, rowId: newSessionId };
@@ -872,9 +870,8 @@ export async function startNewAgentSession(jwt?: string) {
   const { account } = await createServerClient(jwt);
   const prefs = await account.getPrefs().catch(() => ({}));
   
-  const newSessionId = `session_${Date.now()}`;
   const { TelemetryService } = await import('@/lib/services/telemetry');
-  await TelemetryService.saveSession(user.$id, '', '[]', false, newSessionId);
+  const newSessionId = await TelemetryService.saveSession(user.$id, '', '[]', false);
   
   await account.updatePrefs({ ...prefs, activeAgentSessionId: newSessionId }).catch(() => {});
   return { success: true, sessionId: newSessionId };
@@ -926,13 +923,11 @@ export async function startNewAgentSessionFromPromptAction(
     }
   }
 
-  const newSessionId = `session_${Date.now()}`;
-  await TelemetryService.saveSession(
+  const newSessionId = await TelemetryService.saveSession(
     user.$id,
     starterContext,
     '[]',
     false,
-    newSessionId,
   );
   await account.updatePrefs({ ...prefs, activeAgentSessionId: newSessionId }).catch(() => {});
 

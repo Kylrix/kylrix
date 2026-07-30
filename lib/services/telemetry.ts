@@ -309,7 +309,7 @@ export const TelemetryService = {
   /**
    * Persists or updates the context and chat history session.
    */
-  async saveSession(userId: string, context: string, chatHistory: string, seen = true, sessionId?: string): Promise<void> {
+  async saveSession(userId: string, context: string, chatHistory: string, seen = true, sessionId?: string): Promise<string | undefined> {
     try {
       const tables = createSystemTablesDB();
       const targetSessionId = sessionId || (await this.loadSession(userId)).rowId;
@@ -326,24 +326,26 @@ export const TelemetryService = {
 
       if (targetSessionId) {
         try {
-          await tables.updateRow({
+          const updated = await tables.updateRow({
             databaseId: DATABASE_ID,
             tableId: 'agentic_sessions',
             rowId: targetSessionId,
             data: payload
           });
-          return;
+          return updated?.$id || targetSessionId;
         } catch {}
       }
 
-      await tables.createRow({
+      const created = await tables.createRow({
         databaseId: DATABASE_ID,
         tableId: 'agentic_sessions',
         rowId: targetSessionId || ID.unique(),
         data: payload
       });
+      return created?.$id || targetSessionId;
     } catch (err) {
       console.error('[TelemetryService] Failed to save session:', err);
+      return sessionId;
     }
   },
 

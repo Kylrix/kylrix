@@ -4,13 +4,9 @@ const CANONICAL_SHARE_BASE_URL = 'https://www.kylrix.space';
 
 /**
  * Share-link base URL.
- * - Browser: always the current page origin (localhost, staging, prod — no env vars).
- * - Server-only (email, notifications): canonical www host.
+ * Always use the canonical public host for copied share links.
  */
 export function resolveShareBaseUrl(): string {
-  if (typeof window !== 'undefined' && window.location?.origin) {
-    return window.location.origin.replace(/\/$/, '');
-  }
   return CANONICAL_SHARE_BASE_URL;
 }
 

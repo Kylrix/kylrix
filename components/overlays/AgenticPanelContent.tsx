@@ -512,7 +512,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       const { account } = await import('@/lib/appwrite/client');
       const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
       const mode = currentlyShared ? 'make_private' : 'publish';
-      await toggleAgentSessionShareAction(sessionId, mode, jwt);
+      const shareRes = await toggleAgentSessionShareAction(sessionId, mode, jwt);
       setSessions((prev) =>
         prev.map((s) =>
           s.id === sessionId
@@ -527,8 +527,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         });
       }
       if (!currentlyShared) {
-        const { buildPublicResourceUrl } = await import('@/lib/share/public-url');
-        const url = buildPublicResourceUrl('agent_session', sessionId);
+        const url = (shareRes as any)?.publicUrl || `https://www.kylrix.space/agents/session/${sessionId}`;
         try {
           await navigator.clipboard.writeText(url);
           toast.success('Session link copied');
@@ -1247,7 +1246,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           return;
         }
 
-        setActiveSessionId(res.sessionId);
+        setActiveSessionId(res.sessionId || null);
         setMessages([]);
         if (typeof window !== 'undefined' && user?.$id) {
           const { LocalEngine } = await import('@/lib/services/LocalEngine');
