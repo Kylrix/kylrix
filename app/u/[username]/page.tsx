@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Profile } from '@/components/profile/ProfileRedesign';
 import { UsersService } from '@/lib/services/users';
+import { buildOgMetadata } from '@/lib/og/share-card';
 
 export async function generateMetadata({
   params,
@@ -10,60 +11,34 @@ export async function generateMetadata({
   try {
     const { username } = await params;
     const profile = await UsersService.getProfile(username);
-    const fallbackImage = 'https://kylrix.space/logo_social.png';
 
     if (!profile) {
-      return {
-        title: `@${username} · Kylrix User`,
+      return buildOgMetadata({
+        title: `@${username} · Kylrix`,
         description: `View @${username}'s profile on Kylrix.`,
-        openGraph: {
-          title: `@${username} · Kylrix User`,
-          description: `View @${username}'s profile on Kylrix.`,
-          images: [{ url: fallbackImage, width: 320, height: 320 }],
-        },
-        twitter: {
-          card: 'summary',
-          title: `@${username} · Kylrix User`,
-          description: `View @${username}'s profile on Kylrix.`,
-          images: [fallbackImage],
-        },
-      };
+        imageUrl: `/u/${username}/opengraph-image`,
+      });
     }
 
     const displayName = profile.displayName || profile.username || username;
-    const bioText = profile.bio ? profile.bio.substring(0, 160).trim() + '…' : `View @${username}'s profile on Kylrix.`;
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URI || 'https://kylrix.space';
-    const ogImage = `${baseUrl}/u/${profile.username || username}/opengraph-image`;
+    const bioText = profile.bio
+      ? profile.bio.substring(0, 120).trim() + (profile.bio.length > 120 ? '…' : '')
+      : `View @${username}'s profile on Kylrix.`;
+    const handle = profile.username || username;
+    const previewImage = `/u/${handle}/opengraph-image?v=${encodeURIComponent(
+      profile.$updatedAt || profile.avatar || handle
+    )}`;
 
-    return {
-      title: `${displayName} (@${profile.username || username}) · Kylrix`,
+    return buildOgMetadata({
+      title: `${displayName} (@${handle}) · Kylrix`,
       description: bioText,
-      openGraph: {
-        title: `${displayName} (@${profile.username || username}) · Kylrix`,
-        description: bioText,
-        type: 'profile',
-        username: profile.username || username,
-        images: [
-          {
-            url: ogImage,
-            width: 1200,
-            height: 630,
-            alt: `${displayName}'s profile preview`,
-          },
-        ],
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: `${displayName} (@${profile.username || username}) · Kylrix`,
-        description: bioText,
-        images: [ogImage],
-      },
-    };
+      imageUrl: previewImage,
+    });
   } catch (error) {
     console.error('Error generating profile metadata:', error);
     return {
       title: 'Kylrix User Profile',
-      description: 'Connect and view user profile on the sovereign agentic OS.',
+      description: 'Connect and view profiles on Kylrix.',
     };
   }
 }
@@ -74,16 +49,13 @@ export default async function UserProfilePage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  
-  // Parallel Fetch: Profile data + Server-side session check (if needed)
-  // For now, we fetch the profile to pre-hydrate the client component
   const profile = await UsersService.getProfile(username);
-  
+
   return (
     <div className="w-full pointer-events-auto">
-      <Profile 
-        username={username} 
-        initialProfile={profile ? JSON.parse(JSON.stringify(profile)) : null} 
+      <Profile
+        username={username}
+        initialProfile={profile ? JSON.parse(JSON.stringify(profile)) : null}
       />
     </div>
   );

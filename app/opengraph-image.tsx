@@ -16,7 +16,6 @@ export default async function Image() {
       ownerLabel: 'Built for',
       ownerName: 'High agency builders',
       chips: ['Notes', 'Vault', 'Flow', 'Projects', 'Agents'],
-      footerNote: 'A pitch-black workspace where your tools, secrets, projects, and autonomous agents move as one.',
     }),
     size
   );

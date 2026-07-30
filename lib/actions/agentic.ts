@@ -1185,6 +1185,7 @@ export async function getPublicAgentSessionSecure(sessionId: string) {
       id: row.$id,
       title,
       messages: history,
+      userId: row.userId || null,
       isPublic,
       isGuest,
       updatedAt: row.$updatedAt,
@@ -1228,6 +1229,7 @@ export async function getPublicAgentConversationSecure(compositeId: string) {
     JSON.stringify({
       sessionId,
       message: sanitizePublicChatMessage(message),
+      userId: row.userId || null,
       sessionIsPublic: sessionPublic,
       updatedAt: row.$updatedAt,
     }),

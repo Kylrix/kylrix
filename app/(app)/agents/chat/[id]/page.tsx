@@ -14,8 +14,10 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const payload = await getPublicAgentConversationSecure(id);
-  const previewImage = `https://kylrix.space/agents/chat/${id}/opengraph-image`;
+  const payload = await getPublicAgentConversationSecure(id).catch(() => null);
+  const previewImage = `/agents/chat/${id}/opengraph-image?v=${encodeURIComponent(
+    payload?.updatedAt || id
+  )}`;
 
   if (!payload) {
     return buildOgMetadata({
@@ -28,12 +30,15 @@ export async function generateMetadata({
   const snippet = String(payload.message.content || '')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 120);
+    .slice(0, 100);
   const title =
     payload.message.role === 'assistant' ? 'Shared Kylie reply · Kylrix' : 'Shared prompt · Kylrix';
-  const description = snippet || 'A shared message from a chat with Kylie.';
 
-  return buildOgMetadata({ title, description, imageUrl: previewImage });
+  return buildOgMetadata({
+    title,
+    description: snippet || 'A shared message from a chat with Kylie.',
+    imageUrl: previewImage,
+  });
 }
 
 export default async function PublicAgentConversationPage({

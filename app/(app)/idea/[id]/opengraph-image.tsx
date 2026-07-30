@@ -2,6 +2,7 @@ import { ImageResponse } from 'next/og';
 import { validatePublicNoteAccess } from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { renderKylrixShareCard } from '@/lib/og/share-card';
+import { resolveOwnerForOg } from '@/lib/og/resolve-avatar';
 
 export const alt = 'Kylrix Shared Note';
 export const size = { width: 1200, height: 630 };
@@ -113,6 +114,8 @@ export default async function SharedNoteOGImage({
   let dateText = '';
   let tags: string[] = [];
   let previewImageDataUrl: string | null = null;
+  let ownerName = 'Kylrix';
+  let ownerAvatarDataUrl: string | null = null;
 
   try {
     const note = await validatePublicNoteAccess(id);
@@ -125,21 +128,25 @@ export default async function SharedNoteOGImage({
       noteTitle = note.title || 'Untitled Note';
 
       if (isEncrypted) {
-        noteDesc = 'This note is protected. Unlock it to view the full content.';
+        noteDesc = 'Protected note — unlock to read.';
       } else if (note.content) {
         const clean = stripPreview(note.content);
-        noteDesc = clean.slice(0, 180) + (clean.length > 180 ? '...' : '');
+        noteDesc = clean.slice(0, 110) + (clean.length > 110 ? '...' : '');
         previewImageDataUrl = await resolveOptionalPreviewImage(note, false);
       }
 
       tags = ((note as any).tags || []) as string[];
       if (note.$createdAt) {
         dateText = new Date(note.$createdAt).toLocaleDateString('en-US', {
-          month: 'long',
+          month: 'short',
           day: 'numeric',
           year: 'numeric',
         });
       }
+
+      const owner = await resolveOwnerForOg(note.userId);
+      ownerName = owner.ownerName;
+      ownerAvatarDataUrl = owner.ownerAvatarDataUrl;
     }
   } catch (err) {
     console.error('[SharedNoteOGImage] Failed to fetch note:', err);
@@ -152,8 +159,9 @@ export default async function SharedNoteOGImage({
       title: noteTitle,
       description: noteDesc,
       accent: 'indigo',
-      ownerName: 'Kylrix',
-      chips: [dateText, ...tags].filter(Boolean),
+      ownerName,
+      ownerAvatarDataUrl,
+      chips: [dateText, ...tags].filter(Boolean).slice(0, 3),
       previewImageDataUrl,
       previewImageAlt: noteTitle,
     }),

@@ -96,6 +96,7 @@ export async function getPublicGoalDataSecure(goalId: string) {
     status: row.status || 'todo',
     priority: row.priority || 'medium',
     dueDate: row.dueDate || null,
+    userId: row.userId || null,
     isPublic,
     isGuest,
     updatedAt: row.$updatedAt,

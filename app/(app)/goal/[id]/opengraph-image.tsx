@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { getPublicGoalDataSecure } from '@/lib/actions/secure-ops';
 import { renderKylrixShareCard } from '@/lib/og/share-card';
+import { resolveOwnerForOg } from '@/lib/og/resolve-avatar';
 
 export const runtime = 'nodejs';
 export const size = {
@@ -8,6 +9,7 @@ export const size = {
   height: 630,
 };
 export const contentType = 'image/png';
+export const alt = 'Shared Goal';
 
 export default async function Image({
   params,
@@ -16,9 +18,10 @@ export default async function Image({
 }) {
   const { id } = await params;
   const goal = await getPublicGoalDataSecure(id);
+  const owner = await resolveOwnerForOg(goal?.userId);
 
   const title = goal?.title || 'Shared Goal';
-  const description = goal?.description || 'Track deliverables, milestones, and automations.';
+  const description = goal?.description || 'Track deliverables and milestones.';
   const status = goal?.status || 'todo';
   const priority = goal?.priority || 'medium';
 
@@ -29,8 +32,9 @@ export default async function Image({
       title,
       description,
       accent: 'violet',
-      chips: [status, `${priority} priority`, `Goal ID ${id.substring(0, 8)}`],
-      ownerName: 'Kylrix Flow',
+      ownerName: owner.ownerName,
+      ownerAvatarDataUrl: owner.ownerAvatarDataUrl,
+      chips: [status, priority],
     }),
     {
       ...size,

@@ -1,10 +1,12 @@
 import { ImageResponse } from 'next/og';
 import { getPublicAgentConversationSecure } from '@/lib/actions/agentic';
 import { renderKylrixShareCard } from '@/lib/og/share-card';
+import { resolveOwnerForOg } from '@/lib/og/resolve-avatar';
 
 export const runtime = 'nodejs';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
+export const alt = 'Shared Kylie message';
 
 export default async function Image({
   params,
@@ -13,19 +15,22 @@ export default async function Image({
 }) {
   const { id } = await params;
   const payload = await getPublicAgentConversationSecure(id).catch(() => null);
+  const owner = await resolveOwnerForOg(payload?.userId);
+  const isAssistant = payload?.message?.role === 'assistant';
+  const snippet = String(payload?.message?.content || '')
+    .replace(/\s+/g, ' ')
+    .trim();
 
   return new ImageResponse(
     renderKylrixShareCard({
       productLabel: 'Kylrix Agents',
-      eyebrow: payload?.message?.role === 'assistant' ? 'Shared Kylie reply' : 'Shared prompt',
-      title: payload?.message?.role === 'assistant' ? 'Kylie response' : 'Builder prompt',
-      description:
-        String(payload?.message?.content || 'A shared message from a chat with Kylie.')
-          .replace(/\s+/g, ' ')
-          .trim() || 'A shared message from a chat with Kylie.',
+      eyebrow: isAssistant ? 'Kylie reply' : 'Prompt',
+      title: isAssistant ? 'Kylie response' : 'Builder prompt',
+      description: snippet || 'A shared message from a chat with Kylie.',
       accent: 'violet',
-      ownerName: 'Kylie',
-      chips: ['Agent share', payload?.message?.role === 'assistant' ? 'Assistant reply' : 'User prompt'],
+      ownerName: owner.ownerName,
+      ownerAvatarDataUrl: owner.ownerAvatarDataUrl,
+      chips: ['Agent', isAssistant ? 'Reply' : 'Prompt'],
     }),
     size
   );

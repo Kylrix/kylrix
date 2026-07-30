@@ -14,8 +14,12 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const session = await getPublicAgentSessionSecure(id);
-  const previewImage = `https://kylrix.space/agents/session/${id}/opengraph-image`;
+  const session = await getPublicAgentSessionSecure(id).catch(() => null);
+  // Relative — lets Next inject the hashed opengraph-image-* URL (absolute
+  // `/opengraph-image` is stolen by app/[alias]/[[...slug]] on this host).
+  const previewImage = `/agents/session/${id}/opengraph-image?v=${encodeURIComponent(
+    session?.updatedAt || id
+  )}`;
 
   if (!session) {
     return buildOgMetadata({
@@ -25,10 +29,11 @@ export async function generateMetadata({
     });
   }
 
-  const title = `${session.title} · Shared chat`;
-  const description = 'A shared conversation with Kylie on Kylrix.';
-
-  return buildOgMetadata({ title, description, imageUrl: previewImage });
+  return buildOgMetadata({
+    title: `${session.title} · Shared chat`,
+    description: 'A shared conversation with Kylie on Kylrix.',
+    imageUrl: previewImage,
+  });
 }
 
 export default async function PublicAgentSessionPage({
