@@ -3,7 +3,7 @@ name: Ota governance
 on:
   push:
     branches:
-      - bobai/kylrix-ota-pressure
+      - master
   pull_request:
   workflow_dispatch:
 
@@ -11,85 +11,161 @@ permissions:
   contents: read
 
 jobs:
-  sqlite-verification:
-    name: ${{ matrix.os }} SQLite verification
+  verify-native-linux:
+    uses: ./.github/workflows/ota-verify-native-linux.yml
+    with:
+      ota_projection_identity: sha256:90a79930b370ff46b5db7035e0087d45938c78a80c0cde7fad8e35325e2f1784
+      ota_target_os: linux
+      ota_runner: ubuntu-latest
+
+  verify-native-macos:
+    uses: ./.github/workflows/ota-verify-native-macos.yml
+    with:
+      ota_projection_identity: sha256:b154aa6d4330908e29470ec4e79ee8222efe796d7cbea290b19f6e22ac4f3944
+      ota_target_os: macos
+      ota_runner: macos-latest
+
+  verify-native-windows:
+    uses: ./.github/workflows/ota-verify-native-windows.yml
+    with:
+      ota_projection_identity: sha256:b3f5da2f77c0148800fda5410ef84c23924ac22385ed82ba34537cb80a86f8c5
+      ota_target_os: windows
+      ota_runner: windows-latest
+
+  verify-container-linux:
+    uses: ./.github/workflows/ota-verify-container-linux.yml
+    with:
+      ota_projection_identity: sha256:41ab99843ceb929d2724859edaf3235f8913bc5455ee0fa37acebd03736bdbef
+      ota_target_os: linux
+      ota_runner: ubuntu-latest
+
+  strict-replay-policy-refusal:
+    name: Strict replay-input policy refusal
+    runs-on: ubuntu-latest
+    env:
+      OTA_POLICY: .ota/pressure-replay-policy.yaml
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - uses: ota-run/setup@85bf49c11a5aa3ddedfa56c47682cfd40b238f1f # v1.0.9
+        with:
+          source: contract
+
+      - name: Prove strict refusal before setup or execution
+        shell: bash
+        run: |
+          test ! -e node_modules
+          test ! -e .env
+          test ! -e .next
+
+          set +e
+          ota doctor --workflow verify --json . > "$RUNNER_TEMP/ota-policy-doctor.json"
+          doctor_status=$?
+          ota up --workflow verify --mode native --agent --dry-run --json . > "$RUNNER_TEMP/ota-policy-preview.json"
+          preview_status=$?
+          ota up --workflow verify --mode native --agent --json --receipt . > "$RUNNER_TEMP/ota-policy-refusal.json"
+          refusal_status=$?
+          ota doctor --workflow verify --fix --json . > "$RUNNER_TEMP/ota-policy-doctor-fix.json"
+          doctor_fix_status=$?
+          set -e
+
+          test "$doctor_status" -ne 0
+          test "$preview_status" -ne 0
+          test "$refusal_status" -ne 0
+          test "$doctor_fix_status" -ne 0
+
+          jq -e '
+            .replay_input_policy.decision == "deny"
+            and .replay_input_policy.coverage == "insufficient"
+            and (.replay_input_policy.inputs | any(
+              .task == "verify"
+              and .id == "pnpm_lockfile"
+              and .status == "unpinned"
+            ))
+          ' "$RUNNER_TEMP/ota-policy-doctor.json"
+          jq -e '
+            .receipt.status == "blocked"
+            and .receipt.failure_origin == "replay_input_policy_deny"
+            and .receipt.replay_input_policy.decision == "deny"
+          ' "$RUNNER_TEMP/ota-policy-preview.json"
+          jq -e '
+            .receipt.status == "blocked"
+            and .receipt.failure_origin == "replay_input_policy_deny"
+            and .receipt.replay_input_policy.decision == "deny"
+          ' "$RUNNER_TEMP/ota-policy-refusal.json"
+          jq -e '
+            .replay_input_policy.decision == "deny"
+          ' "$RUNNER_TEMP/ota-policy-doctor-fix.json"
+
+          test ! -e node_modules
+          test ! -e .env
+          test ! -e .next
+          git diff --exit-code
+
+      - name: Upload strict replay-input refusal evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ota-strict-replay-input-refusal
+          path: ${{ runner.temp }}/ota-policy-*.json
+          if-no-files-found: error
+
+  runtime-native:
+    name: ${{ matrix.os }} bounded runtime proof
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Enable pinned pnpm
-        shell: bash
-        run: corepack enable
-
-      - uses: ota-run/setup@v1.0.8
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: ota-run/setup@85bf49c11a5aa3ddedfa56c47682cfd40b238f1f # v1.0.9
         with:
           source: contract
+      # `dev` is intentionally outside agent admission. This is an explicit
+      # human-owned proof lane, not a generated agent-execution projection.
+      - name: Prove and archive bounded native runtime
+        run: ota proof runtime --workflow sqlite-dev --mode native --archive --json
+      - name: Upload bounded native runtime proof
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ota-runtime-native-${{ matrix.os }}
+          path: .ota/proof
+          if-no-files-found: warn
 
-      - name: Validate contract
-        run: ota validate .
-
-      - name: Diagnose readiness
-        run: ota doctor --json
-
-      - name: Discover safe execution surface
-        run: ota tasks --safe --use --json
-
-      - name: Preview agent verification task
-        run: ota run verify --agent --dry-run --json
-
-      - name: Preview agent verification workflow
-        run: ota up --workflow verify --agent --dry-run --json
-
-      - name: Run agent verification workflow
-        run: ota up --workflow verify --agent --json
-
-      - name: Archive verification receipt
-        run: ota receipt --workflow verify --archive --json
-
-      - name: Prove isolated native runtime
-        run: ota proof runtime --workflow sqlite-dev --json
-
-      - name: Archive runtime receipt
-        run: ota receipt --workflow sqlite-dev --archive --json
-
-  container-verification:
-    name: Ubuntu container verification
+  runtime-container:
+    name: Ubuntu bounded container runtime proof
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: ota-run/setup@v1.0.8
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: ota-run/setup@85bf49c11a5aa3ddedfa56c47682cfd40b238f1f # v1.0.9
         with:
           source: contract
+      # The same explicit, non-agent proof boundary applies in container mode.
+      - name: Prove and archive bounded container runtime
+        run: ota proof runtime --workflow sqlite-dev --mode container --archive --json
+      - name: Upload bounded container runtime proof
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ota-runtime-container-linux
+          path: .ota/proof
+          if-no-files-found: warn
 
-      - name: Validate container contract surface
-        run: ota validate .
+  contract-ci-drift:
+    name: Contract-to-CI drift gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Diagnose container readiness
-        run: ota doctor --container --json
-
-      - name: Discover safe execution surface
-        run: ota tasks --safe --use --json
-
-      - name: Preview agent container verification workflow
-        run: ota up --workflow verify --container --agent --dry-run --json
-
-      - name: Run agent container verification workflow
-        run: ota up --workflow verify --container --agent --json
-
-      - name: Archive container verification receipt
-        run: ota receipt --workflow verify --archive --json
-
-      - name: Prove isolated container runtime
-        run: ota proof runtime --workflow sqlite-dev --container --json
-
-      - name: Archive container runtime receipt
-        run: ota receipt --workflow sqlite-dev --archive --json
+      - name: Fail on contract-to-CI workflow drift
+        uses: ota-run/action@4fba25c6c0063af009d38e215d97ab1a925277c8
+        with:
+          command: doctor
+          source: contract
+          contract-path: ota.yaml
+          workflow: verify
+          fail-on-ci-drift: true
+          comment-pr: false
+          artifact-name: ota-contract-ci-drift

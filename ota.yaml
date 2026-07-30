@@ -195,6 +195,10 @@ tasks:
 
   verify:
     description: Run the complete finite SQLite-backed verification surface
+    replay_inputs:
+      - id: pnpm_lockfile
+        kind: static_file
+        path: pnpm-lock.yaml
     aggregate:
       tasks: [test, lint, build]
     safe_for_agent: true
@@ -372,6 +376,10 @@ workflows:
   sqlite-dev:
     intent: local_development
     description: Prepare the deterministic offline SQLite profile and start the local Next.js runtime
+    proof:
+      claim: bounded
+    readiness:
+      surfaces: [contributor:web]
     setup:
       task: setup
     run:
@@ -397,10 +405,13 @@ agent:
       note: Only install Ota if it is missing and installation is approved.
       source:
         kind: version
-        version: v1.6.24
+        version: v1.6.25
   entrypoint: setup
   default_task: verify
   safe_tasks: [setup, test, lint, build, verify]
+  refusal_canaries:
+    - task: selfhost:up
+    - workflow: selfhost
   verify_after_changes: [verify]
   writable_paths:
     - .env
@@ -423,6 +434,7 @@ agent:
   exceptions:
     sensitive_writes: [.env]
   protected_paths:
+    - .ota/pressure-replay-policy.yaml
     - .github/workflows
     - AGENTS.md
     - docker-compose.app-only.yml
@@ -438,3 +450,6 @@ agent:
     Appwrite schema provisioning are intentionally outside this contract because they require
     operator credentials. Use `ota up --workflow selfhost` for the documented full Compose
     topology; it is intentionally not agent-callable and does not claim schema provisioning.
+    `selfhost:up` and the `selfhost` workflow are refusal canaries: run
+    `ota run --agent --expect-refusal selfhost:up` or
+    `ota up --agent --expect-refusal --workflow selfhost` to prove that boundary remains live.
