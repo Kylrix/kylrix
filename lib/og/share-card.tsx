@@ -177,9 +177,9 @@ export function renderKylrixShareCard({
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '18px', flex: hasPreview ? 1.15 : 1 }}>
           <div
             style={{
-              display: 'inline-flex',
+              display: 'flex',
               alignItems: 'center',
-              width: 'fit-content',
+              alignSelf: 'flex-start',
               padding: '10px 18px',
               borderRadius: '999px',
               background: 'rgba(255,255,255,0.03)',

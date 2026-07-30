@@ -509,24 +509,34 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     e.stopPropagation();
     try {
       const { toggleAgentSessionShareAction } = await import('@/lib/actions/agentic');
+      const { getResourcePublicGuestSecure } = await import('@/lib/actions/secure-ops/misc');
       const { account } = await import('@/lib/appwrite/client');
       const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
       const mode = currentlyShared ? 'make_private' : 'publish';
       const shareRes = await toggleAgentSessionShareAction(sessionId, mode, jwt);
+      const status = await getResourcePublicGuestSecure({
+        resourceType: 'agent_session',
+        resourceId: sessionId,
+        jwt,
+      });
       setSessions((prev) =>
         prev.map((s) =>
           s.id === sessionId
-            ? { ...s, isPublic: mode === 'publish', isGuest: mode === 'publish' }
+            ? { ...s, isPublic: status.isPublic === true, isGuest: status.isGuest === true }
             : s,
         ),
       );
       if (user?.$id) {
         await AgenticSessionLocalStore.patchSessionMeta(user.$id, sessionId, {
-          isPublic: mode === 'publish',
-          isGuest: mode === 'publish',
+          isPublic: status.isPublic === true,
+          isGuest: status.isGuest === true,
         });
       }
-      if (!currentlyShared) {
+      const didPublish = status.isPublic === true || status.isGuest === true;
+      if (mode === 'publish' && !didPublish) {
+        throw new Error('Session share did not persist on the server yet.');
+      }
+      if (!currentlyShared && didPublish) {
         const url = (shareRes as any)?.publicUrl || `https://www.kylrix.space/agents/session/${sessionId}`;
         try {
           await navigator.clipboard.writeText(url);
@@ -534,7 +544,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         } catch {
           toast.success('Session is now public');
         }
-      } else {
+      } else if (mode === 'make_private' && !didPublish) {
         toast.success('Session is private again');
       }
     } catch (err) {
