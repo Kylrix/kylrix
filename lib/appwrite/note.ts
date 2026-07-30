@@ -2298,7 +2298,137 @@ export async function listKeepCredentials(queries: any[] = []) {
   return databases.listRows(KEEP_DATABASE_ID, KEEP_TABLE_ID_CREDENTIALS, queries);
 }
 
+export async function lockNote(noteId: string): Promise<Notes | null> {
+  const note = await getNote(noteId);
+  if (!(await isNoteOwner(note))) throw new Error('Permission denied');
+
+  if (!ecosystemSecurity.status.isUnlocked) {
+    throw new Error('VAULT_LOCKED');
+  }
+
+  const currentUser = await getCurrentUser();
+  if (!currentUser) throw new Error('Not authenticated');
+  const ownerId = note.userId || currentUser.$id;
+
+  const { encryptField } = await import("../masterpass-crypto");
+
+  const meta = (() => {
+    try { return JSON.parse(note.metadata || '{}'); } catch { return {}; }
+  })();
+
+  if ((note.isEncrypted || meta.isEncrypted) && (note.dek || meta.dek)) {
+    return note;
+  }
+
+  const dek = await ecosystemSecurity.generateRandomMEK();
+  const rawKey = await crypto.subtle.exportKey("raw", dek);
+  const dekBase64 = bytesToBase64(new Uint8Array(rawKey));
+  const wrappedDek = await encryptField(dekBase64);
+
+  const encryptedTitle = await ecosystemSecurity.encryptWithKey(note.title || '', dek);
+  const encryptedContent = await ecosystemSecurity.encryptWithKey(note.content || '', dek);
+
+  const updatedMeta = {
+    ...meta,
+    isEncrypted: true,
+    encryptionVersion: 'T5',
+    encryptedTitle
+  };
+
+  const updatePayload: any = {
+    id: note.$id,
+    userId: ownerId,
+    title: '🔒 Locked Note',
+    content: encryptedContent,
+    isEncrypted: true,
+    dek: wrappedDek,
+    metadata: JSON.stringify(updatedMeta)
+  };
+
+  const permissions = [Permission.read(Role.user(ownerId))];
+
+  const updated = await databases.updateRow(
+    APPWRITE_DATABASE_ID,
+    APPWRITE_TABLE_ID_NOTES,
+    noteId,
+    filterNoteData(updatePayload),
+    permissions
+  );
+
+  return updated as unknown as Notes;
+}
+
+export async function unlockNote(noteId: string): Promise<Notes | null> {
+  const note = await getNote(noteId);
+  if (!(await isNoteOwner(note))) throw new Error('Permission denied');
+
+  if (!ecosystemSecurity.status.isUnlocked) {
+    throw new Error('VAULT_LOCKED');
+  }
+
+  const currentUser = await getCurrentUser();
+  if (!currentUser) throw new Error('Not authenticated');
+  const ownerId = note.userId || currentUser.$id;
+
+  const meta = (() => {
+    try { return JSON.parse(note.metadata || '{}'); } catch { return {}; }
+  })();
+
+  const rawDek = note.dek || meta.dek;
+  if (!rawDek) {
+    return note;
+  }
+
+  const decryptedDekRaw = await ecosystemSecurity.decrypt(rawDek);
+  const dekBase64 = (() => {
+    try { return JSON.parse(decryptedDekRaw); } catch { return decryptedDekRaw; }
+  })();
+  const rawKey = base64ToBytes(dekBase64);
+  const dek = await crypto.subtle.importKey(
+    "raw",
+    rawKey as any,
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "decrypt"]
+  );
+
+  const plaintextTitle = await ecosystemSecurity.decryptWithKey(meta.encryptedTitle || '', dek);
+  const plaintextContent = await ecosystemSecurity.decryptWithKey(note.content || '', dek);
+
+  const updatedMeta = { ...meta };
+  delete updatedMeta.isEncrypted;
+  delete updatedMeta.encryptionVersion;
+  delete updatedMeta.dek;
+  delete updatedMeta.encryptedTitle;
+
+  const updatePayload: any = {
+    id: note.$id,
+    userId: ownerId,
+    title: plaintextTitle,
+    content: plaintextContent,
+    isEncrypted: false,
+    dek: null,
+    metadata: JSON.stringify(updatedMeta)
+  };
+
+  const permissions = [Permission.read(Role.user(ownerId))];
+
+  const updated = await databases.updateRow(
+    APPWRITE_DATABASE_ID,
+    APPWRITE_TABLE_ID_NOTES,
+    noteId,
+    filterNoteData(updatePayload),
+    permissions
+  );
+
+  return updated as unknown as Notes;
+}
+
 function base64ToBytes(value: string): Uint8Array {
-  return new Uint8Array(atob(value).split("").map((char: any) => char.charCodeAt(0)));
+  return new Uint8Array(atob(value).split('').map((char) => char.charCodeAt(0)));
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes));
 }
 

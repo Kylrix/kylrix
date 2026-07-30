@@ -133,6 +133,8 @@ export function TagNotesListSidebar({
                 key={note.$id}
                 note={note}
                 onSelect={setSelectedNote}
+                onUpdate={handleNoteUpdate}
+                onDelete={handleNoteDelete}
               />
             ))}
           </Stack>

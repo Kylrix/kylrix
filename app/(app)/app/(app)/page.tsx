@@ -852,6 +852,8 @@ export default function NotesPage() {
                     key={note.$id}
                     note={note}
                     onSelect={openNoteDetailSurface}
+                    onUpdate={handleNoteUpdated}
+                    onDelete={handleNoteDeleted}
                   />
                 ))}
               </div>
@@ -886,6 +888,8 @@ export default function NotesPage() {
                     key={note.$id}
                     note={note}
                     onSelect={openNoteDetailSurface}
+                    onUpdate={handleNoteUpdated}
+                    onDelete={handleNoteDeleted}
                   />
                 ))}
               </div>
