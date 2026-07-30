@@ -136,15 +136,57 @@ async function hydratePendingQueue() {
         if (id && payload) pendingPayloads.set(id, payload);
       }
 
+      // Migrate bare goal ids → goal: prefix (older builds treated them as notes and never flushed).
+      let migrated = false;
+      for (const [id, rev] of Array.from(pendingById.entries())) {
+        if (parseGoalPendingKey(id)) continue;
+        const payload = pendingPayloads.get(id);
+        const looksLikeGoal =
+          !!payload &&
+          typeof payload === 'object' &&
+          !!(payload as any).status &&
+          !!(payload as any).priority &&
+          !(payload as any).content &&
+          (!(payload as any).$id || (payload as any).id);
+        const cacheHit = await db.cache.findOne(`goal_${id}`).exec().catch(() => null);
+        if (!looksLikeGoal && !cacheHit) continue;
+
+        const namespaced = goalPendingKey(id);
+        pendingById.set(namespaced, rev);
+        pendingById.delete(id);
+        if (payload) {
+          pendingPayloads.set(namespaced, payload);
+          pendingPayloads.delete(id);
+        }
+        failedSyncAttempts.delete(id);
+        failedSyncAttempts.delete(namespaced);
+        migrated = true;
+      }
+
       await db.cache.upsert({
         id: PENDING_QUEUE_KEY,
         data: queueSnapshot(),
         timestamp: Date.now(),
       });
+      if (migrated) {
+        await db.cache.upsert({
+          id: PENDING_PAYLOADS_KEY,
+          data: payloadsSnapshot(),
+          timestamp: Date.now(),
+        });
+      }
+
+      // Unblock goals that spent days in exponential backoff under the old re-queue bug.
+      for (const id of pendingById.keys()) {
+        if (parseGoalPendingKey(id)) failedSyncAttempts.delete(id);
+      }
     } catch {
       // RxDB unavailable — memory (+ absorbed session) still works this session
     }
     notifyStatusListeners();
+    if (pendingById.size > 0) {
+      scheduleDemandFlush({ immediate: true });
+    }
   });
   await persistWriteChain;
 }
@@ -343,17 +385,26 @@ async function flushGoalPending(
   const flushRevision = goalRevisionOf(payload) || queuedRevision;
   const { tasks: taskApi, buildTaskPermissions } = await import('@/lib/kylrixflow');
 
-  const creatorId = payload.creatorId || activeUserId || 'guest';
-  const assignees = (payload.assigneeIds || []).filter(Boolean);
-  const permissions = buildTaskPermissions(creatorId, assignees, []);
+  const creatorId = payload.creatorId || (payload as any).userId || activeUserId || 'guest';
+  const assignees = (payload.assigneeIds || []).filter(
+    (id) => !!id && id !== 'guest' && id !== 'ghost' && id !== creatorId,
+  );
+  const permissions = buildTaskPermissions(creatorId, [creatorId, ...assignees], []);
 
   let synced: Awaited<ReturnType<typeof taskApi.update>>;
   try {
     synced = await taskApi.update(goalId, dataPayload as any, permissions);
   } catch (err: any) {
     const msg = String(err?.message || '').toLowerCase();
-    const isNotFound = msg.includes('not found') || err?.code === 404 || err?.status === 404;
-    const isForbiddenOrMissing = msg.includes('forbidden') || msg.includes('insufficient permissions') || msg.includes('unauthorized');
+    const isNotFound =
+      msg.includes('not found') ||
+      msg.includes('could not be found') ||
+      err?.code === 404 ||
+      err?.status === 404;
+    const isForbiddenOrMissing =
+      msg.includes('forbidden') ||
+      msg.includes('insufficient permissions') ||
+      msg.includes('unauthorized');
     if (isNotFound || isForbiddenOrMissing) {
       synced = await taskApi.create(
         {
@@ -366,7 +417,7 @@ async function flushGoalPending(
       try {
         const { taskCollaborators } = await import('@/lib/kylrixflow');
         for (const assigneeId of assignees) {
-          if (!assigneeId || assigneeId === creatorId || assigneeId === 'guest') continue;
+          if (!assigneeId || assigneeId === creatorId) continue;
           await taskCollaborators
             .create(goalId, assigneeId, 'read', creatorId, permissions)
             .catch(() => null);
@@ -381,16 +432,23 @@ async function flushGoalPending(
     await db.cache
       .upsert({
         id: `goal_${goalId}`,
-        data: { ...payload, id: synced.$id, updatedAt: new Date(synced.$updatedAt || Date.now()) },
+        data: {
+          ...payload,
+          id: synced.$id || goalId,
+          userId: creatorId,
+          creatorId,
+          updatedAt: new Date(synced.$updatedAt || Date.now()),
+        },
         timestamp: Date.now(),
       })
       .catch(() => {});
   }
 
-  const liveAfter = pendingPayloads.get(pendingKey) || pendingPayloads.get(goalId) || getLiveGoalForSync(goalId);
-  const liveRev = goalRevisionOf(liveAfter);
-  if (liveRev && flushRevision && liveRev !== flushRevision) {
-    pendingById.set(pendingKey, liveRev);
+  // Ack against the *queue* revision, not live updatedAt.
+  // Goal realtime / UPDATE_TASK used to stamp `new Date()` and permanently
+  // re-queue successful flushes (ideas guard live edits; goals did not).
+  const queuedAfter = pendingById.get(pendingKey) || '';
+  if (queuedAfter && flushRevision && queuedAfter !== flushRevision) {
     writePersistedQueue();
     notifyStatusListeners();
     console.log(`[SyncEngine] Re-queued goal after concurrent edit: ${goalId}`);
@@ -400,6 +458,7 @@ async function flushGoalPending(
   } else {
     lastSuccessfulSyncTime = Date.now();
     failedSyncAttempts.delete(pendingKey);
+    failedSyncAttempts.delete(goalId);
     autonomicSyncEngine.ack(pendingKey, flushRevision);
     window.dispatchEvent(
       new CustomEvent('kylrix:sync-complete', {
@@ -669,7 +728,30 @@ export const autonomicSyncEngine = {
           tasksToFlush.map(async (pendingId) => {
             const queuedRevision = pendingById.get(pendingId) || '';
             try {
-              const goalId = parseGoalPendingKey(pendingId);
+              let goalId = parseGoalPendingKey(pendingId);
+              if (!goalId) {
+                // Runtime rescue: payload/cache shaped like a goal → flush as goal, not note.
+                const payload = pendingPayloads.get(pendingId);
+                const looksLikeGoal =
+                  !!payload &&
+                  typeof payload === 'object' &&
+                  !!(payload as any).status &&
+                  !!(payload as any).priority &&
+                  !(payload as any).content;
+                if (looksLikeGoal || getLiveGoalForSync(pendingId)) {
+                  goalId = pendingId;
+                  const namespaced = goalPendingKey(pendingId);
+                  if (namespaced !== pendingId) {
+                    pendingById.set(namespaced, queuedRevision);
+                    pendingById.delete(pendingId);
+                    if (payload) {
+                      pendingPayloads.set(namespaced, payload);
+                    }
+                    await flushGoalPending(namespaced, goalId, queuedRevision, db, activeUserId);
+                    return;
+                  }
+                }
+              }
               if (goalId) {
                 await flushGoalPending(pendingId, goalId, queuedRevision, db, activeUserId);
               } else {

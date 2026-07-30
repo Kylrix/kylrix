@@ -5,6 +5,12 @@
 import type { Task } from '@/types';
 import { clampNoteTitle } from '@/constants/noteTitle';
 
+function emptyToNull(value: unknown): string | null {
+  if (value == null) return null;
+  const s = String(value).trim();
+  return s ? s : null;
+}
+
 export function pickGoalAutosavePayload(task: Task): Record<string, unknown> {
   const tags = [...(task.labels || [])];
   (task.linkedNotes || []).forEach((noteId) => {
@@ -19,6 +25,10 @@ export function pickGoalAutosavePayload(task: Task): Record<string, unknown> {
   const rawTitle = typeof task.title === 'string' ? task.title.trim() : '';
   const title = clampNoteTitle(rawTitle || 'Untitled Goal', 'Untitled Goal');
 
+  const assigneeIds = (task.assigneeIds || []).filter(
+    (id) => !!id && id !== 'guest' && id !== 'ghost',
+  );
+
   return {
     title,
     description: task.description || '',
@@ -29,18 +39,21 @@ export function pickGoalAutosavePayload(task: Task): Record<string, unknown> {
         ? task.dueDate.toISOString()
         : task.dueDate
       : null,
-    parentId: task.parentTaskId || '',
-    assigneeIds: task.assigneeIds || [],
+    parentId: emptyToNull(task.parentTaskId),
+    assigneeIds,
     attachmentIds: Array.isArray(task.attachments)
       ? task.attachments.map((a: any) => (typeof a === 'string' ? a : a?.id)).filter(Boolean)
       : [],
-    eventId: '',
-    recurrenceRule: '',
+    eventId: null,
+    recurrenceRule: emptyToNull((task as any).recurrenceRule),
     isPinned: !!task.isPinned,
     isPublic: !!task.isPublic,
     isGuest: !!task.isGuest,
     scheduled: !!task.scheduled,
     isAgentic: !!task.isAgentic,
+    isArchived: !!task.isArchived,
+    isDeleted: false,
+    isTrash: false,
     tags,
   };
 }

@@ -428,7 +428,13 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         ...state,
         tasks: state.tasks.map(task =>
           task.id === action.payload.id
-            ? { ...task, ...action.payload.updates, updatedAt: new Date() }
+            ? {
+                ...task,
+                ...action.payload.updates,
+                // Prefer caller-provided updatedAt (pushLiveGoal / server). Forcing `new Date()`
+                // here poisoned goal sync: realtime echoes re-queued forever after a successful flush.
+                updatedAt: action.payload.updates.updatedAt || task.updatedAt || new Date(),
+              }
             : task
         ),
       };
@@ -778,6 +784,10 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     registerLiveGoalGetter((goalId) => tasksRef.current.find((t) => t.id === goalId) || null);
+    // Live getter just came online — flush any stranded goal queue entries immediately.
+    if (autonomicSyncEngine.listPendingIds().length > 0) {
+      autonomicSyncEngine.flushImmediately();
+    }
     return () => registerLiveGoalGetter(null);
   }, []);
 
@@ -1167,6 +1177,12 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       unsubTasks = await subscribeToTable<AppwriteTask>(APPWRITE_CONFIG.TABLES.TASKS, ({ type, payload }) => {
         const isBelonging = Boolean(state.userId && (payload.userId === state.userId || (Array.isArray(payload.assigneeIds) && payload.assigneeIds.includes(state.userId))));
         if (!isBelonging) return;
+
+        // Mirror notes live-edit guards: never clobber a goal the engine still owes a flush for.
+        if (autonomicSyncEngine.isPending(goalPendingKey(payload.$id))) {
+          return;
+        }
+
         if (type === 'create') {
           dispatch({ type: 'ADD_TASK', payload: mapAppwriteTaskToTask(payload) });
         } else if (type === 'update') {
@@ -1207,8 +1223,11 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const pushLiveGoal = useCallback(
     (task: Task, options?: { pending?: boolean }) => {
       if (!task?.id) return;
+      const ownerId = task.userId || task.creatorId || state.userId || 'guest';
       const stamped: Task = {
         ...task,
+        userId: ownerId,
+        creatorId: task.creatorId || ownerId,
         updatedAt: new Date(),
       };
       dispatch({ type: 'UPSERT_TASK', payload: stamped });
@@ -1247,8 +1266,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           attachments: [],
           reminders: [],
           timeEntries: [],
-          assigneeIds: task.assigneeIds || (userId !== 'guest' ? [userId] : ['guest']),
+          assigneeIds: task.assigneeIds || (userId !== 'guest' ? [userId] : []),
           creatorId: userId,
+          userId,
           parentTaskId: task.parentTaskId || null,
           dueDate: task.dueDate,
           createdAt: new Date(),

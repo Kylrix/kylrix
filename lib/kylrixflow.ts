@@ -318,7 +318,15 @@ export const calendars = {
 
 export const tasks = {
     list: (queries?: string[]) => listRows<Task>(TABLES.TASKS, queries),
-    create: (data: TableCreateData<Task>, permissions?: string[]) => createRow<Task>(TABLES.TASKS, data, permissions),
+    create: (data: TableCreateData<Task> & { $id?: string }, permissions?: string[]) => {
+        const reservedId =
+            typeof (data as any)?.$id === 'string' && (data as any).$id.trim()
+                ? String((data as any).$id).trim()
+                : typeof (data as any)?.id === 'string' && (data as any).id.trim()
+                  ? String((data as any).id).trim()
+                  : ID.unique();
+        return createRow<Task>(TABLES.TASKS, { ...(data as any), $id: reservedId }, permissions, reservedId);
+    },
     get: (id: string) => getRow<Task>(TABLES.TASKS, id),
     update: (id: string, data: TableUpdateData<Task>, permissions?: string[]) =>
         updateRow<Task>(TABLES.TASKS, id, data, permissions, FLOW_DATABASE_ID),
