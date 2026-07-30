@@ -376,8 +376,6 @@ workflows:
   sqlite-dev:
     intent: local_development
     description: Prepare the deterministic offline SQLite profile and start the local Next.js runtime
-    proof:
-      claim: bounded
     readiness:
       surfaces: [contributor:web]
     setup:
@@ -409,9 +407,6 @@ agent:
   entrypoint: setup
   default_task: verify
   safe_tasks: [setup, test, lint, build, verify]
-  refusal_canaries:
-    - task: selfhost:up
-    - workflow: selfhost
   verify_after_changes: [verify]
   writable_paths:
     - .env
