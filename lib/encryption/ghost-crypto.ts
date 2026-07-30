@@ -2,8 +2,7 @@ import { Buffer } from 'buffer';
 import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
-const IV_LENGTH = 12; // GCM recommended IV length
-const GCM_TAG_LENGTH = 16;
+const IV_LENGTH = 12;
 
 function restoreStandardBase64(str: string): string {
     let res = str.replace(/-/g, '+').replace(/_/g, '/');
@@ -63,26 +62,4 @@ export async function decryptGhostData(encryptedData: string, keyBase64: string)
         console.error('[GhostCrypto] Decryption failed:', e);
         throw new Error('Failed to decrypt ghost note. The key may be invalid.');
     }
-}
-
-/** AES-256-GCM encrypt arbitrary bytes with the same 32-byte key material as ghost notes / Send URLs (URL-safe base64 key). */
-
-export function decryptGhostBinaryFromBytes(data: ArrayBuffer, keyBase64Url: string): ArrayBuffer {
-    const buf = Buffer.from(data);
-    if (buf.length < IV_LENGTH + GCM_TAG_LENGTH) {
-        throw new Error('Invalid encrypted blob');
-    }
-    const iv = buf.subarray(0, IV_LENGTH);
-    const tag = buf.subarray(buf.length - GCM_TAG_LENGTH);
-    const ciphertext = buf.subarray(IV_LENGTH, buf.length - GCM_TAG_LENGTH);
-    const key = Buffer.from(restoreStandardBase64(keyBase64Url), 'base64');
-    if (key.length !== 32) {
-        throw new Error('Invalid decryption key length');
-    }
-    const decipher = createDecipheriv(ALGORITHM, key, iv);
-    decipher.setAuthTag(tag);
-    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-    const out = new ArrayBuffer(decrypted.length);
-    new Uint8Array(out).set(decrypted);
-    return out;
 }

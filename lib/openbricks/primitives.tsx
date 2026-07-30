@@ -293,49 +293,6 @@ export const IconButton = React.forwardRef(({ children, className, sx, disabled,
 });
 IconButton.displayName = 'IconButton';
 
-// 4. Card Component
-export const Card = React.forwardRef(({ children, className, sx, ...props }: any, ref) => {
-  const hasCustomHover = sx && (sx['&:hover'] || sx.transform || sx.transition);
-  const hasPaddingInSx = sx && typeof sx === 'object' && (
-    'p' in sx || 'padding' in sx || 'px' in sx || 'py' in sx || 'pt' in sx || 'pb' in sx || 'pl' in sx || 'pr' in sx
-  );
-  const childrenArray = React.Children.toArray(children);
-  const hasLayoutComponents = childrenArray.some((child: any) =>
-    child && child.type && (
-      child.type.displayName === 'CardHeader' ||
-      child.type.displayName === 'CardContent' ||
-      child.type.displayName === 'CardActions' ||
-      child.type.name === 'CardHeader' ||
-      child.type.name === 'CardContent' ||
-      child.type.name === 'CardActions'
-    )
-  );
-  const hoverClasses = !hasCustomHover
-    ? "hover:border-pink-500/40 hover:-translate-y-1 hover:scale-[1.01] transition-all duration-500"
-    : "transition-all duration-300";
-  return (
-    <div
-      ref={ref}
-      className={`rounded-3xl bg-[#141211] border border-[#23211F] shadow-[1px_1px_0px_#23211F,2px_2px_0px_#1E1B19,3px_3px_0px_#161412,4px_4px_0px_#0A0908,5px_5px_0px_#000000] ${(hasPaddingInSx || hasLayoutComponents) ? '' : 'p-6'} ${hoverClasses} ${className || ''}`}
-      style={cleanSx(sx)}
-      {...props}
-    >
-      {children}
-    </div>
-  );
-});
-Card.displayName = 'Card';
-
-// 5. CardContent & CardActions
-export const CardContent = ({ children, className, sx, ...props }: any) => {
-  const hasPaddingInSx = sx && typeof sx === 'object' && (
-    'p' in sx || 'padding' in sx || 'px' in sx || 'py' in sx || 'pt' in sx || 'pb' in sx || 'pl' in sx || 'pr' in sx
-  );
-  return (
-    <div className={`${hasPaddingInSx ? '' : 'p-1'} ${className || ''}`} style={cleanSx(sx)} {...props}>{children}</div>
-  );
-};
-
 export const LinearProgress = ({ value = 0, className, ...props }: any) => (
   <div className={`h-2 w-full rounded-full bg-[#23211F] ${className || ''}`} {...props}>
     <div className="h-full rounded-full bg-[#6366F1]" style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
@@ -1352,30 +1309,6 @@ export const Select = React.forwardRef(({ value, onChange, children, className, 
 });
 Select.displayName = 'Select';
 
-export const FormControl = React.forwardRef(({ children, className, fullWidth, sx, ...props }: any, ref) => (
-  <div
-    ref={ref}
-    className={`flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${className || ''}`}
-    style={cleanSx(sx)}
-    {...props}
-  >
-    {children}
-  </div>
-));
-FormControl.displayName = 'FormControl';
-
-export const InputLabel = React.forwardRef(({ children, className, sx, ...props }: any, ref) => (
-  <label
-    ref={ref}
-    className={`text-xs font-bold text-stone-400 tracking-wide uppercase font-clash ${className || ''}`}
-    style={cleanSx(sx)}
-    {...props}
-  >
-    {children}
-  </label>
-));
-InputLabel.displayName = 'InputLabel';
-
 const Radio = React.forwardRef(({ checked, onChange, disabled, className, sx, ...props }: any, ref) => (
   <button
     ref={ref}
@@ -1570,27 +1503,6 @@ export const ButtonBase = React.forwardRef(({ children, className, sx, component
   );
 });
 ButtonBase.displayName = 'ButtonBase';
-export const CardHeader = React.forwardRef(({ avatar, action, title, subheader, children, className, sx, ...props }: any, ref) => (
-  <div
-    ref={ref}
-    className={`flex items-start gap-3 ${className || ''}`}
-    style={cleanSx(sx)}
-    {...props}
-  >
-    {avatar ? <div className="shrink-0">{avatar}</div> : null}
-    <div className="min-w-0 flex-1">
-      {title != null && title !== false
-        ? (React.isValidElement(title) ? title : <div className="text-sm font-semibold text-stone-100">{title}</div>)
-        : null}
-      {subheader != null && subheader !== false
-        ? (React.isValidElement(subheader) ? subheader : <div className="text-xs text-stone-400">{subheader}</div>)
-        : null}
-      {children}
-    </div>
-    {action ? <div className="shrink-0">{action}</div> : null}
-  </div>
-));
-CardHeader.displayName = 'CardHeader';
 const CardMedia = React.forwardRef(({ component, image, src, alt, className, sx, children, ...props }: any, ref) => {
   const Component = component || 'img';
   if (Component === 'img' || image || src) {

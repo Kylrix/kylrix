@@ -1973,57 +1973,6 @@ export async function updateTotpSecret(
   return await VaultService.updateTOTPSecret(id, data, options);
 }
 
-/**
- * Robust MFA status check that determines authentication state
- * Returns: { needsMfa: boolean, isFullyAuthenticated: boolean, error?: string }
- */
-export async function getMfaAuthenticationStatus(): Promise<{
-  needsMfa: boolean;
-  isFullyAuthenticated: boolean;
-  error?: string;
-}> {
-  try {
-    // Try to get account info
-    const account = await appwriteAccount.get();
-    console.log(
-      "getMfaAuthenticationStatus: Account retrieved successfully",
-      account);
-
-    // If successful, user is fully authenticated
-    return {
-      needsMfa: false,
-      isFullyAuthenticated: true};
-  } catch (error: unknown) {
-    const err = error as { type?: string; code?: number; message?: string };
-    console.log("getMfaAuthenticationStatus: Error caught", {
-      error,
-      type: err.type,
-      code: err.code,
-      message: err.message});
-
-    // Check for MFA requirement using multiple possible error indicators
-    if (
-      err.type === "user_more_factors_required" ||
-      (err.code === 401 && err.message?.includes("more factors")) ||
-      err.message?.includes("More factors are required") ||
-      err.message?.includes("user_more_factors_required")
-    ) {
-      console.log("getMfaAuthenticationStatus: MFA required detected");
-      // User is partially authenticated but needs MFA
-      return {
-        needsMfa: true,
-        isFullyAuthenticated: false};
-    }
-
-    console.log("getMfaAuthenticationStatus: Not authenticated");
-    // For other errors (network, invalid session, etc.)
-    return {
-      needsMfa: false,
-      isFullyAuthenticated: false,
-      error: err.message || "Authentication check failed"};
-  }
-}
-
 // --- Standalone Service Functions ---
 
 export async function listFolders(userId: string, queries: string[] = []) {

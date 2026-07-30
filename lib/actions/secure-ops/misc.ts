@@ -3,15 +3,11 @@ import {
   ID, Permission, Query, Role
 } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { hasPaidKylrixPlan } from '@/lib/utils';
 
 
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { Registry } from '@/lib/core/di/registry';
-import { createServerClient } from '@/lib/appwrite/server';
 import { InternalKylrixTokenService } from '@/lib/services/internal/kylrix-token';
-import { trackEngagementView, type TrackEngagementInput } from '@/lib/services/internal/engagement-views';
-import { isMfaRequiredError } from '@/lib/mfa';
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
 import { executeCascadeDeleteSecure } from '../cascade-delete';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
@@ -34,12 +30,25 @@ const {
   getRowCached,
   isEnvAdminUser,
   isEnvSERVERSDKUser,
-  verifyResourcePermissionSecure,
-  VIEWER_COOKIE,
-  isViewerTokenValid,
-  issueViewerToken,
-  cookies
+  verifyResourcePermissionSecure
 } = shared;
+
+
+
+async function getIsSpecializedTable(tableId: string): Promise<boolean> {
+  return (
+    tableId === APPWRITE_CONFIG.TABLES.FLOW.GUESTS || 
+    tableId === 'Collaborators' || 
+    tableId === 'collaborators' ||
+    tableId === 'formSubmissions' ||
+    tableId === 'wallets' ||
+    tableId === 'walletMap' ||
+    tableId === 'follows' ||
+    tableId === 'activityLog' ||
+    tableId === 'conversations' ||
+    tableId === 'conversationMembers'
+  );
+}
 
 export async function mintDailyLoginSecure(input: { userId: string; dateKey: string; jwt?: string }) {
   const actor = await getActor(input.jwt);
@@ -148,26 +157,6 @@ export async function runTokenOperationSecure(body: any) {
   throw new Error('Unknown token action');
 }
 
-export async function trackEngagementViewSecure(input: Omit<TrackEngagementInput, 'viewerKind' | 'viewerUserId' | 'viewerTokenHash'> & { ip?: string | null; userAgent?: string | null }) {
-  const actor = await getActor();
-  const store = await cookies();
-  const existing = store.get(VIEWER_COOKIE)?.value || '';
-  const token = isViewerTokenValid(existing) ? existing : issueViewerToken();
-  if (token !== existing) {
-    store.set(VIEWER_COOKIE, token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: true,
-      path: '/',
-      maxAge: 60 * 60 * 24 * 365});
-  }
-  return trackEngagementView({
-    ...input,
-    viewerKind: actor?.$id ? 'user' : 'anon',
-    viewerUserId: actor?.$id || null,
-    viewerTokenHash: token});
-}
-
 export async function recordAnonymizedTelemetrySecure(params: {
   niche: any;
   app: string;
@@ -198,35 +187,6 @@ export async function dispatchEmailSecure(payload: any, jwt?: string) {
     ...payload,
     actorId: actor.$id,
     actorName: actor.name || actor.email || payload.actorName});
-}
-
-export async function createHandoffSessionSecure(jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor?.$id) {
-    throw new Error('Unauthorized');
-  }
-
-  // Session context verification (MFA check)
-  const { account: userAccount } = await createServerClient(jwt);
-
-  try {
-    await userAccount.get();
-  } catch (error) {
-    if (isMfaRequiredError(error)) {
-      const err = new Error('user_more_factors_required');
-      (err as any).code = 'MFA_REQUIRED';
-      throw err;
-    }
-    throw error;
-  }
-
-  const { users } = createSystemClient();
-  const sessionToken = await users.createToken(actor.$id);
-
-  return {
-    userId: actor.$id,
-    secret: sessionToken.secret,
-    expire: sessionToken.expire};
 }
 
 export async function getSharedProfilesSecure(userIds: string[], jwt?: string) {
@@ -265,93 +225,6 @@ export async function getSharedProfilesSecure(userIds: string[], jwt?: string) {
     publicKey: doc.publicKey || null}));
 
   return { rows: publicProfiles };
-}
-
-export async function applyReferralSecure(params: { referrerUsername?: string; referrerUserId?: string }, jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor?.$id) throw new Error('Unauthorized');
-
-  const { databases } = createSystemClient();
-  const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
-  const eventsTableId = APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS;
-
-  // Check existing
-  const existing = await databases.listRows(dbId, eventsTableId, [
-    Query.equal('userId', actor.$id),
-    Query.equal('type', 'referral'),
-    Query.limit(1)
-  ]);
-  if (existing.total > 0) return { success: true, alreadyReferred: true };
-
-  let referrerProfile = null;
-  if (params.referrerUserId) {
-    referrerProfile = await databases.getRow(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, params.referrerUserId).catch(() => null);
-  } else if (params.referrerUsername) {
-    const res = await databases.listRows(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
-      Query.equal('username', params.referrerUsername),
-      Query.limit(1)
-    ]);
-    referrerProfile = res.rows[0] || null;
-  }
-
-  if (!referrerProfile) throw new Error('Referrer not found');
-  if (referrerProfile.userId === actor.$id || referrerProfile.$id === actor.$id) throw new Error('Self referral not allowed');
-
-  const referrerId = referrerProfile.userId || referrerProfile.$id;
-
-  const event = await databases.createRow(dbId, eventsTableId, ID.unique(), {
-    userId: actor.$id,
-    type: 'referral',
-    actorId: referrerId,
-    relatedUserId: referrerId,
-    delta: 10,
-    status: 'active',
-    metadata: JSON.stringify({
-      source: 'referral-link',
-      referrerUsername: referrerProfile.username,
-      referrerUserId: referrerId,
-      refereeUserId: actor.$id})}, [Permission.read(Role.user(actor.$id))]);
-
-  // Reward referrer
-  await databases.createRow(dbId, eventsTableId, ID.unique(), {
-    userId: referrerId,
-    type: 'reputation',
-    actorId: actor.$id,
-    relatedUserId: actor.$id,
-    delta: 10,
-    status: 'active',
-    metadata: JSON.stringify({
-      source: 'referral-reward',
-      referrerUsername: referrerProfile.username,
-      referrerUserId: referrerId,
-      refereeUserId: actor.$id})}, [Permission.read(Role.user(referrerId))]);
-
-  return { success: true, applied: true, referralEvent: event };
-}
-
-export async function getReferralProfileSecure(username: string) {
-  const cleaned = String(username || '').trim().replace(/^@+/, '').toLowerCase();
-  if (!cleaned) throw new Error('Invalid username');
-
-  const { databases } = createSystemClient();
-  const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
-  const tableId = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
-
-  const res = await databases.listRows(dbId, tableId, [
-    Query.equal('username', cleaned),
-    Query.limit(1)
-  ]);
-
-  const profile = res.rows[0] || null;
-  if (!profile || !profile.username) throw new Error('Profile not found');
-
-  return {
-    success: true,
-    username: profile.username,
-    displayName: profile.displayName || profile.username,
-    avatar: profile.avatar || null,
-    userId: profile.userId || profile.$id,
-    referralLink: `https://www.kylrix.space/referral/${encodeURIComponent(profile.username)}`};
 }
 
 export async function executeMasterPurgeSecure(jwt?: string) {
@@ -535,21 +408,6 @@ export async function createSendGhostObjectSecure(data: {
     ]});
 
   return JSON.parse(JSON.stringify(result));
-}
-
-export async function getIsSpecializedTable(tableId: string): Promise<boolean> {
-  return (
-    tableId === APPWRITE_CONFIG.TABLES.FLOW.GUESTS || 
-    tableId === 'Collaborators' || 
-    tableId === 'collaborators' ||
-    tableId === 'formSubmissions' ||
-    tableId === 'wallets' ||
-    tableId === 'walletMap' ||
-    tableId === 'follows' ||
-    tableId === 'activityLog' ||
-    tableId === 'conversations' ||
-    tableId === 'conversationMembers'
-  );
 }
 
 export async function createRowSecure(
@@ -1138,96 +996,6 @@ export async function getFilePreviewSecure(bucketId: string, fileId: string, wid
   }
 }
 
-export async function promoteGhostThreadToStorySecure(projectId: string, noteId: string, jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor || !actor.$id) {
-    throw new Error('Unauthorized');
-  }
-
-  const tables = createSystemTablesDB();
-  const noteRow = await tables.getRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-    rowId: noteId
-  });
-
-  if (!noteRow) {
-    throw new Error('Note thread not found');
-  }
-
-  // Update note properties to be a permanent Story note
-  let meta: any = {};
-  try {
-    meta = JSON.parse(noteRow.metadata || '{}');
-  } catch {}
-
-  meta.isGhost = false;
-  meta.isStory = true;
-  delete meta.expiresAt;
-
-  const updatedNote = await tables.updateRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-    rowId: noteId,
-    data: {
-      userId: actor.$id, // Note now owned by user
-      metadata: JSON.stringify(meta),
-      updatedAt: new Date().toISOString()
-    },
-    permissions: [
-      Permission.read(Role.user(actor.$id)),
-      Permission.write(Role.user(actor.$id)),
-      Permission.update(Role.user(actor.$id)),
-      Permission.delete(Role.user(actor.$id))
-    ]
-  });
-
-  // Link note as permanent integrated note inside the project
-  const now = new Date().toISOString();
-  await tables.createRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-    tableId: 'project_objects',
-    rowId: ID.unique(),
-    data: {
-      projectId,
-      entityKind: 'note',
-      entityId: noteId,
-      role: 'member',
-      createdAt: now,
-      updatedAt: now,
-      isGeneral: true
-    },
-    permissions: [
-      Permission.read(Role.user(actor.$id))
-    ]
-  });
-
-  // Clear discussionNoteId from project metadata so a new huddle thread can be started
-  const project = await tables.getRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-    tableId: 'projects',
-    rowId: projectId
-  }).catch(() => null);
-
-  if (project) {
-    let projMeta: any = {};
-    try {
-      projMeta = JSON.parse(project.metadata || '{}');
-    } catch {}
-    delete projMeta.discussionNoteId;
-    await tables.updateRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-      tableId: 'projects',
-      rowId: projectId,
-      data: {
-        metadata: JSON.stringify(projMeta)
-      }
-    });
-  }
-
-  return JSON.parse(JSON.stringify(updatedNote));
-}
-
 export async function promoteGhostResourceThreadToStorySecure(
   resourceId: string,
   resourceType: string,
@@ -1328,226 +1096,6 @@ export async function promoteGhostResourceThreadToStorySecure(
   return JSON.parse(JSON.stringify(storyNote));
 }
 
-export async function tagResourceSecure(
-  resourceId: string,
-  resourceType: string,
-  tagName: string,
-  isPublic = false,
-  isGuest = false,
-  jwt?: string
-) {
-  const actor = await getActor(jwt);
-  if (!actor || !actor.$id) {
-    throw new Error('Unauthorized');
-  }
-
-  const tables = createSystemTablesDB();
-  const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
-  const tagsTable = APPWRITE_CONFIG.TABLES.NOTE.TAGS;
-  const pivotTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'resource_tags';
-
-  const key = tagName.trim();
-  const nameLower = key.toLowerCase();
-  if (!key) throw new Error('Tag name cannot be empty');
-
-  // 1. Preload or create tag row
-  let tagRow: any = null;
-  try {
-    const existingTags = await tables.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: tagsTable,
-      queries: [
-        Query.equal('userId', actor.$id),
-        Query.equal('nameLower', nameLower),
-        Query.limit(1)
-      ] as any
-    });
-    if (existingTags.rows.length) {
-      tagRow = existingTags.rows[0];
-    }
-  } catch {}
-
-  if (!tagRow) {
-    try {
-      tagRow = await tables.createRow({
-        databaseId: APPWRITE_DATABASE_ID,
-        tableId: tagsTable,
-        rowId: ID.unique(),
-        data: {
-          name: key,
-          nameLower,
-          userId: actor.$id,
-          isPublic,
-          isGuest,
-          usageCount: 0,
-          metadata: JSON.stringify({ version: 'v2' })
-        }
-      });
-    } catch {
-      // Race condition lookup
-      const retry = await tables.listRows({
-        databaseId: APPWRITE_DATABASE_ID,
-        tableId: tagsTable,
-        queries: [
-          Query.equal('userId', actor.$id),
-          Query.equal('nameLower', nameLower),
-          Query.limit(1)
-        ] as any
-      });
-      if (retry.rows.length) tagRow = retry.rows[0];
-    }
-  }
-
-  if (!tagRow) throw new Error('Failed to resolve or create tag');
-
-  // 2. Check if polymorphic pivot already exists
-  const tagId = tagRow.$id || tagRow.id;
-  const existingPivot = await tables.listRows({
-    databaseId: APPWRITE_DATABASE_ID,
-    tableId: pivotTable,
-    queries: [
-      Query.equal('resourceId', resourceId),
-      Query.equal('resourceType', resourceType),
-      Query.equal('tagId', tagId),
-      Query.limit(1)
-    ] as any
-  });
-
-  if (existingPivot.rows.length) {
-    return JSON.parse(JSON.stringify(existingPivot.rows[0]));
-  }
-
-  // 3. Create polymorphic pivot record
-  const result = await tables.createRow({
-    databaseId: APPWRITE_DATABASE_ID,
-    tableId: pivotTable,
-    rowId: ID.unique(),
-    data: {
-      tagId,
-      tag: key,
-      resourceId,
-      resourceType,
-      userId: actor.$id,
-      isPublic,
-      isGuest,
-      metadata: JSON.stringify({ version: 'v2' })
-    }
-  });
-
-  // 4. Increment tag usageCount
-  try {
-    const current = typeof tagRow.usageCount === 'number' ? tagRow.usageCount : 0;
-    await tables.updateRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: tagsTable,
-      rowId: tagId,
-      data: { usageCount: current + 1 }
-    });
-  } catch {}
-
-  return JSON.parse(JSON.stringify(result));
-}
-
-export async function untagResourceSecure(
-  resourceId: string,
-  resourceType: string,
-  tagName: string,
-  jwt?: string
-) {
-  const actor = await getActor(jwt);
-  if (!actor || !actor.$id) {
-    throw new Error('Unauthorized');
-  }
-
-  const tables = createSystemTablesDB();
-  const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
-  const tagsTable = APPWRITE_CONFIG.TABLES.NOTE.TAGS;
-  const pivotTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'resource_tags';
-
-  const nameLower = tagName.trim().toLowerCase();
-  if (!nameLower) throw new Error('Tag name cannot be empty');
-
-  // 1. Lookup tagRow
-  const existingTags = await tables.listRows({
-    databaseId: APPWRITE_DATABASE_ID,
-    tableId: tagsTable,
-    queries: [
-      Query.equal('userId', actor.$id),
-      Query.equal('nameLower', nameLower),
-      Query.limit(1)
-    ] as any
-  });
-  if (!existingTags.rows.length) return { success: true };
-
-  const tagRow = existingTags.rows[0];
-  const tagId = tagRow.$id || tagRow.id;
-
-  // 2. Find polymorphic pivot records
-  const existingPivot = await tables.listRows({
-    databaseId: APPWRITE_DATABASE_ID,
-    tableId: pivotTable,
-    queries: [
-      Query.equal('resourceId', resourceId),
-      Query.equal('resourceType', resourceType),
-      Query.equal('tagId', tagId),
-      Query.limit(100)
-    ] as any
-  });
-
-  if (!existingPivot.rows.length) return { success: true };
-
-  // 3. Delete pivot records
-  for (const pivot of existingPivot.rows as any[]) {
-    try {
-      await tables.deleteRow({
-        databaseId: APPWRITE_DATABASE_ID,
-        tableId: pivotTable,
-        rowId: pivot.$id
-      });
-    } catch {}
-  }
-
-  // 4. Decrement tag usageCount
-  try {
-    const current = typeof tagRow.usageCount === 'number' ? tagRow.usageCount : 0;
-    await tables.updateRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: tagsTable,
-      rowId: tagId,
-      data: { usageCount: Math.max(0, current - existingPivot.rows.length) }
-    });
-  } catch {}
-
-  return { success: true };
-}
-
-export async function getResourceTagsSecure(
-  resourceId: string,
-  resourceType: string,
-  jwt?: string
-) {
-  const actor = await getActor(jwt);
-  if (!actor || !actor.$id) {
-    throw new Error('Unauthorized');
-  }
-
-  const tables = createSystemTablesDB();
-  const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
-  const pivotTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'resource_tags';
-
-  const pivotRes = await tables.listRows({
-    databaseId: APPWRITE_DATABASE_ID,
-    tableId: pivotTable,
-    queries: [
-      Query.equal('resourceId', resourceId),
-      Query.equal('resourceType', resourceType),
-      Query.limit(100)
-    ] as any
-  });
-
-  return JSON.parse(JSON.stringify(pivotRes.rows));
-}
-
 export async function deleteGhostThreadSecure(threadId: string, jwt?: string) {
     const actor = await getActor(jwt);
     if (!actor || !actor.$id) throw new Error('Unauthorized');
@@ -1600,180 +1148,6 @@ export async function deleteGhostThreadSecure(threadId: string, jwt?: string) {
         rowId: threadId});
 
     return { success: true, result: JSON.parse(JSON.stringify(result)) };
-}
-
-export async function claimSendObjectSecure(payload: {
-  noteId: string;
-  claimSecret: string;
-  decryptedData?: any;
-  jwt: string;
-}) {
-  const actor = await getActor(payload.jwt);
-  if (!actor?.$id) throw new Error('Unauthorized');
-
-  const tables = createSystemTablesDB();
-  const note = await tables.getRow<any>(
-    APPWRITE_CONFIG.DATABASES.NOTE,
-    APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-    payload.noteId
-  );
-
-  const meta = (() => {
-    try { return JSON.parse(note.metadata || '{}'); } catch { return {}; }
-  })();
-
-  if (meta.ghostSecret !== payload.claimSecret) {
-    throw new Error('Invalid claim secret');
-  }
-
-  const kind = meta.send_object?.kind || 'note';
-  const isPaid = hasPaidKylrixPlan(actor as any);
-
-  // 1. Handle Type-Specific Conversions
-  if (kind === 'note') {
-    await tables.updateRow(
-      APPWRITE_CONFIG.DATABASES.NOTE,
-      APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-      note.$id,
-      { 
-        userId: actor.$id,
-        creatorId: actor.$id,
-        isGuest: false,
-        isPublic: true // Default claimed notes to public for now
-      },
-      [
-        Permission.read(Role.user(actor.$id)),
-        Permission.write(Role.user(actor.$id)),
-        Permission.delete(Role.user(actor.$id)),
-        Permission.read(Role.any())
-      ]
-    );
-  } else if (kind === 'task') {
-    const data = payload.decryptedData;
-    if (!data) throw new Error('Decrypted task data required for claim');
-    
-    await tables.createRow(
-      APPWRITE_CONFIG.DATABASES.FLOW,
-      APPWRITE_CONFIG.TABLES.FLOW.TASKS,
-      ID.unique(),
-      {
-        title: data.title,
-        description: data.detail || '',
-        status: 'todo',
-        priority: 'medium',
-        dueDate: data.dueAt || null,
-        userId: actor.$id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()},
-      [
-        Permission.read(Role.user(actor.$id)),
-        Permission.write(Role.user(actor.$id)),
-        Permission.delete(Role.user(actor.$id))
-      ]
-    );
-  } else if (kind === 'discussion') {
-    await tables.updateRow(
-      APPWRITE_CONFIG.DATABASES.NOTE,
-      APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-      note.$id,
-      { 
-        isThread: true, 
-        isGuest: false,
-        userId: actor.$id,
-        creatorId: actor.$id 
-      },
-      [
-        Permission.read(Role.user(actor.$id)),
-        Permission.write(Role.user(actor.$id)),
-        Permission.delete(Role.user(actor.$id)),
-        Permission.read(Role.any())
-      ]
-    );
-  } else if (kind === 'file') {
-    if (!isPaid) {
-      throw new Error('PRO_REQUIRED: Kylrix Pro is required to claim files.');
-    }
-    
-    const manifest = payload.decryptedData;
-    if (!manifest?.fileId) throw new Error('File manifest required for claim');
-
-    // Move file to general_storage
-    const sourceBucket = manifest.bucketId || APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL;
-    
-    // Create new private note for the claimed file
-    await tables.createRow(
-      APPWRITE_CONFIG.DATABASES.NOTE,
-      APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-      ID.unique(),
-      {
-        title: note.title,
-        content: '_Imported from Send — see attachments._',
-        userId: actor.$id,
-        creatorId: actor.$id,
-        isGhost: false,
-        isFile: true,
-        metadata: JSON.stringify({
-          send_object: { ...meta.send_object, bucketId: sourceBucket },
-          isEncrypted: note.isEncrypted
-        })
-      },
-      [
-        Permission.read(Role.user(actor.$id)),
-        Permission.write(Role.user(actor.$id)),
-        Permission.delete(Role.user(actor.$id))
-      ]
-    );
-  } else if (kind === 'project') {
-    const data = payload.decryptedData;
-    await tables.createRow(
-      APPWRITE_CONFIG.DATABASES.CHAT,
-      'projects',
-      ID.unique(),
-      {
-        title: note.title,
-        summary: data?.description || '',
-        status: data?.status || 'active',
-        ownerId: actor.$id,
-        visibility: 'private',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()},
-      [
-        Permission.read(Role.user(actor.$id)),
-        Permission.write(Role.user(actor.$id)),
-        Permission.delete(Role.user(actor.$id))
-      ]
-    );
-  } else if (kind === 'tag') {
-    const nameLower = note.title.toLowerCase();
-    await tables.createRow(
-      APPWRITE_CONFIG.DATABASES.NOTE,
-      APPWRITE_CONFIG.TABLES.NOTE.TAGS,
-      ID.unique(),
-      {
-        name: note.title,
-        nameLower,
-        userId: actor.$id,
-        isPublic: false,
-        isGuest: false,
-        usageCount: 0,
-        metadata: JSON.stringify({ version: 'v2' })
-      },
-      [
-        Permission.read(Role.user(actor.$id)),
-        Permission.write(Role.user(actor.$id)),
-        Permission.delete(Role.user(actor.$id))
-      ]
-    );
-  }
-
-  // 2. Cleanup the Ghost Link (Delete original row)
-  await tables.deleteRow(
-    APPWRITE_CONFIG.DATABASES.NOTE,
-    APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-    payload.noteId
-  );
-
-  return { success: true, kind };
 }
 
 export async function getGlobalProfileStatusSecure(userId: string) {
@@ -2028,23 +1402,6 @@ export async function attachObjectSecure(params: {
   return JSON.parse(JSON.stringify(obj));
 }
 
-export async function detachObjectSecure(objectId: string, jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor?.$id) throw new Error('Unauthorized');
-
-  const tables = createSystemTablesDB();
-  const databaseId = APPWRITE_CONFIG.DATABASES.FLOW;
-  const tableId = APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects';
-
-  await tables.deleteRow({
-    databaseId,
-    tableId,
-    rowId: objectId
-  });
-
-  return { success: true };
-}
-
 export async function detachObjectByRelationSecure(params: {
   parentId: string;
   childId: string;
@@ -2168,28 +1525,6 @@ export async function syncMasterpassToAccountPasswordAction(payload: {
   }
 
   return { success: true };
-}
-
-export async function checkEmailAuthMethodAction(payload: { email: string }) {
-  const { z } = await import('zod');
-  const validatedEmail = z.string().email().parse(payload.email);
-
-  const { createSystemClient } = await import('@/lib/appwrite-admin');
-  const { users } = createSystemClient();
-
-  const userList = await users.list([
-    Query.equal('email', validatedEmail),
-    Query.limit(1)
-  ]).catch(() => ({ total: 0, users: [] as any[] }));
-
-  if (userList.total === 0) {
-    return { exists: false, hasPass: false };
-  }
-
-  const user = userList.users[0];
-  const hasPass = !!user.prefs?.hasPass;
-
-  return { exists: true, hasPass };
 }
 
 export async function createStandaloneTagSecure(tagName: string, jwt?: string) {

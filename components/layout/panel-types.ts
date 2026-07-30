@@ -1,0 +1,17 @@
+export type PanelType =
+  | 'note'
+  | 'huddles'
+  | 'projects'
+  | 'threads'
+  | 'tags'
+  | 'forms'
+  | 'goals'
+  | 'totp'
+  | 'secrets'
+  | 'secret_chat'
+  | 'settings_discoverability'
+  | 'settings_integrations'
+  | 'settings_accounts'
+  | 'projects_templates'
+  | 'projects_stats'
+  | 'stash';

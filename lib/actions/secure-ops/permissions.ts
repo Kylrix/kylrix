@@ -9,16 +9,12 @@ import {
   getCollaboratorCap
 } from '@/lib/entitlements';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
-import { applyPermissionMutation, revokePermissionMutation } from '@/lib/services/internal/permissions';
-import { normalizeTargetUserIds, upsertLockboxRows } from '@/lib/api/permission-updater';
 import { permissionsInternal } from '@/lib/services/internal/permissions';
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
 import { dispatchSecureNotification } from '@/lib/services/internal/notification-dispatcher';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
-import {
-  MutatePermissionsSchema,
-  IDSchema
-} from '@/lib/validations/schemas';
+
+
 import {
   isValidAppwriteRowId,
   normalizeCollaboratorResourceType,
@@ -125,51 +121,6 @@ async function upsertProjectCollaboratorRow(
       resourceType: 'project',
       userId: targetUserId,
       ...payload}});
-}
-
-export async function mutatePermissionsSecure(body: any, jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor?.$id) throw new Error('Unauthorized');
-
-  // Rigorous runtime validation
-  const validated = MutatePermissionsSchema.parse(body);
-  const action = validated.action;
-
-  if (action === 'pin_ghost_note') {
-    const noteIds = normalizeTargetUserIds(validated.noteIds || validated.resourceIds || validated.resourceId);
-    const wrappedKey = validated.wrappedKey || validated.ghostSecret;
-    if (noteIds.length === 0) throw new Error('At least one noteId is required');
-    if (!wrappedKey) throw new Error('wrappedKey is required');
-
-    const keyMappings = noteIds.map((noteId: any) => ({
-      resourceId: noteId,
-      resourceType: validated.resourceType || 'ghost_note',
-      grantee: actor.$id,
-      wrappedKey,
-      metadata: validated.metadata || null}));
-    const { databases } = createSystemClient();
-    const rows = await upsertLockboxRows(databases, actor.$id, keyMappings);
-    return { success: true, action, rows };
-  }
-
-  const result = await applyPermissionMutation(actor.$id, validated);
-  return {
-    success: true,
-    action,
-    rowId: validated.rowId || null,
-    permissions: (result as any)?.permissions || null};
-}
-
-export async function revokePermissionsSecure(body: any, targetUserId?: string, jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor?.$id) throw new Error('Unauthorized');
-
-  // Rigorous runtime validation
-  const validated = MutatePermissionsSchema.parse(body);
-  const validatedTargetUserId = IDSchema.optional().parse(targetUserId);
-
-  await revokePermissionMutation(actor.$id, validated, validatedTargetUserId);
-  return { success: true, action: 'revoke', rowId: validated.rowId || null };
 }
 
 export async function grantPermissionSecure(input: PermissionChangeInput) {

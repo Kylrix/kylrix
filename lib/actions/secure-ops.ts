@@ -13,7 +13,6 @@ import {
   removeFormCollaboratorSecure} from './secure-ops/permissions';
 
 import {
-  getPublicNoteDataSecure,
   getSharedNoteDataSecure,
   getNoteSecondaryObjectPreviewSecure,
   getNoteInheritedFileBlobSecure,
@@ -58,7 +57,6 @@ import {
   addEventManagerSecure,
   removeEventManagerSecure,
   convertResponseToGoalSecure,
-  createEncryptedGroupForProjectSecure,
   initGoalDiscussionSecure,
   approveProjectJoinRequestSecure} from './secure-ops/projects';
 
@@ -71,7 +69,6 @@ import {
 import {
   mintDailyLoginSecure,
   runTokenOperationSecure,
-  trackEngagementViewSecure,
   recordAnonymizedTelemetrySecure,
   dispatchEmailSecure,
   getSharedProfilesSecure,
@@ -86,17 +83,11 @@ import {
   getProfileByUsernameSecure,
   listRowsSecure,
   getRowSecure,
-  promoteGhostThreadToStorySecure,
   promoteGhostResourceThreadToStorySecure,
-  tagResourceSecure,
-  untagResourceSecure,
-  getResourceTagsSecure,
   deleteGhostThreadSecure,
   getGlobalProfileStatusSecure,
   toggleResourcePublicGuestSecure,
-  getResourcePublicGuestSecure,
   attachObjectSecure,
-  detachObjectSecure,
   detachObjectByRelationSecure,
   getProfilePicturePreviewSecure,
   getObjectsByParentSecure,
@@ -133,7 +124,6 @@ export {
   removeProjectCollaboratorSecure,
   addFormCollaboratorSecure,
   removeFormCollaboratorSecure,
-  getPublicNoteDataSecure,
   getSharedNoteDataSecure,
   getNoteSecondaryObjectPreviewSecure,
   getNoteInheritedFileBlobSecure,
@@ -178,7 +168,6 @@ export {
   addEventManagerSecure,
   removeEventManagerSecure,
   convertResponseToGoalSecure,
-  createEncryptedGroupForProjectSecure,
   initGoalDiscussionSecure,
   approveProjectJoinRequestSecure,
   addCallCohostSecureAction,
@@ -187,7 +176,6 @@ export {
   createCallSecure,
   mintDailyLoginSecure,
   runTokenOperationSecure,
-  trackEngagementViewSecure,
   recordAnonymizedTelemetrySecure,
   dispatchEmailSecure,
   
@@ -206,19 +194,12 @@ export {
   getProfileByUsernameSecure,
   listRowsSecure,
   getRowSecure,
-  
-  promoteGhostThreadToStorySecure,
   promoteGhostResourceThreadToStorySecure,
-  tagResourceSecure,
-  untagResourceSecure,
-  getResourceTagsSecure,
   deleteGhostThreadSecure,
   
   getGlobalProfileStatusSecure,
   toggleResourcePublicGuestSecure,
-  getResourcePublicGuestSecure,
   attachObjectSecure,
-  detachObjectSecure,
   detachObjectByRelationSecure,
   getProfilePicturePreviewSecure,
   getObjectsByParentSecure,

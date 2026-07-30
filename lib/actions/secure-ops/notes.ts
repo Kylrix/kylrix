@@ -50,7 +50,7 @@ async function hydrateSharedNoteRow(noteId: string) {
   return doc;
 }
 
-export async function canReadSharedNoteSecure(noteId: string, actorId?: string | null) {
+async function canReadSharedNoteSecure(noteId: string, actorId?: string | null) {
   if (actorId) {
     const allowed = await verifyNotePermission(noteId, actorId, 'viewer');
     if (allowed) return true;
@@ -225,10 +225,6 @@ export async function getNoteInheritedFileBlobSecure(
     dataUrl: `data:${mimeType};base64,${base64}`,
     mimeType,
     name: fileMeta?.name || fileId};
-}
-
-export async function getPublicNoteDataSecure(noteId: string, jwt?: string) {
-  return getSharedNoteDataSecure(noteId, jwt);
 }
 
 export async function getPublicNoteCommentsSecure(noteId: string) {

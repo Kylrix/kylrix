@@ -19,7 +19,7 @@ import { Registry } from '@/lib/core/di/registry';
 // Short-lived in-memory cache for row reads during permission checks.
 // Prevents duplicate database fetches within a short timeframe (e.g. 5 seconds).
 export const rowCache = new Map<string, { row: any; timestamp: number }>();
-export const CACHE_TTL_MS = 5000; // 5 seconds
+const CACHE_TTL_MS = 5000; // 5 seconds
 
 
 /** 
@@ -421,53 +421,6 @@ export function isEnvSERVERSDKUser(user: any) {
 export function isEnvAdminUser(user: any) {
   // Currently sharing same definition as SERVERSDK but kept separate for architectural growth
   return isEnvSERVERSDKUser(user);
-}
-
-export function hasWriteAccess(note: any, actorId: string) {
-  const ownerId = String(note?.userId || note?.creatorId || note?.ownerId || '').trim();
-  if (ownerId && ownerId === actorId) return true;
-  const collaborators = Array.isArray(note?.collaborators) ? note.collaborators : [];
-  const collaboratorIds = collaborators
-    .map((entry: any) => (typeof entry === 'string' ? entry : entry?.userId || entry?.id || ''))
-    .filter(Boolean);
-  try {
-    const metadata = JSON.parse(note?.metadata || '{}');
-    const writeCollaborators = Array.isArray(metadata?.writeCollaborators) ? metadata.writeCollaborators : [];
-    collaboratorIds.push(...writeCollaborators.filter(Boolean));
-  } catch {}
-  return Array.from(new Set(collaboratorIds)).includes(actorId);
-}
-
-export function serializeMomentRow(row: Record<string, unknown>) {
-  return {
-    $id: String(row?.$id || ''),
-    $createdAt: row?.$createdAt,
-    $updatedAt: row?.$updatedAt,
-    userId: String(row?.userId || ''),
-    caption: row?.caption ?? '',
-    type: row?.type ?? '',
-    momentKind: row?.momentKind ?? '',
-    sourceId: row?.sourceId ?? null,
-    searchTitle: row?.searchTitle ?? null,
-    fileId: row?.fileId ?? '',
-    createdAt: row?.createdAt ?? '',
-    expiresAt: row?.expiresAt ?? ''};
-}
-
-export function serializeTokenMintResult(raw: unknown): Record<string, unknown> {
-  const r = raw as Record<string, unknown> | null;
-  if (!r || typeof r !== 'object') return { accepted: false, reason: 'MINT_FAILED' };
-  if (r.accepted) {
-    return {
-      accepted: true,
-      ...(r.amount != null ? { amount: String(r.amount) } : {}),
-      ...(r.amountMicro != null ? { amountMicro: String(r.amountMicro) } : {}),
-      ...(r.symbol != null ? { symbol: String(r.symbol) } : {}),
-    };
-  }
-  return {
-    accepted: false,
-    reason: String(r.reason || 'MINT_FAILED')};
 }
 
 export async function verifyResourcePermissionSecure(params: {

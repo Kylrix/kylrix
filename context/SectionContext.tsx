@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import { Box, CircularProgress, Typography, Drawer, alpha } from '@/lib/openbricks/primitives';
 import { usePathname } from 'next/navigation';
 import { recordAnonymizedTelemetry } from '@/lib/actions/client-ops';
-import { PanelType } from '@/components/layout/DesktopRightSection';
+import { PanelType } from '@/components/layout/panel-types';
 
 // Object detail components imports
 import { PostViewClient } from '@/app/(app)/connect/post/[id]/PostViewClient';
