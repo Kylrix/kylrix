@@ -1,6 +1,5 @@
 import { ID, Query } from 'node-appwrite';
 import { createSystemTablesDB } from '@/lib/appwrite-admin';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 // 1. Core Future-Proof Niches
 export type TelemetryNiche = 

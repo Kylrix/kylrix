@@ -25,7 +25,7 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
   CheckCircle as CheckCircleIcon} from '@/lib/openbricks/icons';
-import { Fingerprint, X, Key, ChevronDown, ChevronUp } from 'lucide-react';
+import { Fingerprint, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 

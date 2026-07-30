@@ -1,4 +1,4 @@
-import { ID, Permission, Query, Role } from 'appwrite';
+import { ID, Query } from 'appwrite';
 import { tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { createCallMetadata, parseCallMetadata, type KylrixCallScope } from '@/lib/sdk/calls';

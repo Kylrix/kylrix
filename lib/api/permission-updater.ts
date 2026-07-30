@@ -1,5 +1,4 @@
-import { NextRequest } from 'next/server';
-import { Account, Client, Databases, ID, Permission, Query, Role, Storage } from 'node-appwrite';
+import { Databases, ID, Permission, Query, Role, Storage } from 'node-appwrite';
 import { createHash } from 'node:crypto';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { hasPaidKylrixPlanServer } from '@/lib/services/internal/subscription-entitlement';

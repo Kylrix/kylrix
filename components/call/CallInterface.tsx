@@ -19,7 +19,6 @@ import {
     CircularProgress,
     Button,
     Paper,
-    alpha,
     Stack, Menu, MenuItem, ListItemIcon, ListItemText, Divider,
     useMediaQuery
 } from '@/lib/openbricks/primitives';
@@ -45,7 +44,6 @@ import {
     Minimize2,
     Maximize2,
     X,
-    ShieldAlert,
     MoreHorizontal
 } from 'lucide-react';
 import toast from 'react-hot-toast';

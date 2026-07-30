@@ -3,22 +3,12 @@
  * Implements various security best practices and protections
  */
 
-import { logWarn } from './logger';
 
 /**
  * Generate a cryptographically secure random string
  * @param length Length of the string
  * @returns Base64 encoded random string
  */
-function generateSecureRandom(length: number = 32): string {
-  if (typeof window === 'undefined' || !window.crypto) {
-    throw new Error('Web Crypto API not available');
-  }
-
-  const array = new Uint8Array(length);
-  window.crypto.getRandomValues(array);
-  return btoa(String.fromCharCode(...array));
-}
 
 /**
  * Generate a truly random salt for key derivation
@@ -30,21 +20,6 @@ function generateSecureRandom(length: number = 32): string {
  * Securely compare two strings in constant time
  * Prevents timing attacks (CVE-KYL-2026-003)
  */
-function constantTimeCompare(a: string, b: string): boolean {
-  let result = a.length ^ b.length;
-  
-  // Iterate through a fixed length to prevent timing leaks about secret length
-  // 512 characters is sufficient for all Kylrix ecosystem keys and tokens
-  const maxCompareLen = 512;
-  
-  for (let i = 0; i < maxCompareLen; i++) {
-    const charA = i < a.length ? a.charCodeAt(i) : 0;
-    const charB = i < b.length ? b.charCodeAt(i) : 0;
-    result |= charA ^ charB;
-  }
-
-  return result === 0;
-}
 
 /**
  * Clear sensitive data from memory

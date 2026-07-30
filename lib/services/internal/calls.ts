@@ -1,4 +1,3 @@
-import type { Databases } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 export async function deleteCallIfExpired(

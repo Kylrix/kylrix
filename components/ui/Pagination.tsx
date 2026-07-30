@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
-import { Box, Typography, Button, alpha } from '@/lib/openbricks/primitives';
+import { Box, Typography, Button } from '@/lib/openbricks/primitives';
 import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from '@/lib/openbricks/icons';
 
 interface PaginationProps {

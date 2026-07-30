@@ -3,7 +3,7 @@ import { WalletService, type WalletSummary } from './wallets';
 import { verifyProEntitlementAction, hydrateSessionAction } from '@/lib/actions/billing/billing';
 import { account } from '../appwrite/client';
 import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitlements';
-import { normalizeBillingPrefsTier, type BillingUiTier } from '../subscription/tier-resolution';
+import { type BillingUiTier } from '../subscription/tier-resolution';
 
 interface BalanceData {
     amount: string;

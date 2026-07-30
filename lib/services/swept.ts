@@ -1,4 +1,3 @@
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 /** Per-user project autosweep preferences backed by the `swept` table. */
 export const SweptService = {

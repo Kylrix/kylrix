@@ -4,7 +4,6 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { ID } from 'appwrite';
 import { useRouter, useParams } from 'next/navigation';
 
-import { useTheme } from '@/lib/openbricks/theme';
 import {
   Plus,
   Calendar,
@@ -12,17 +11,11 @@ import {
   FileText,
   CheckSquare,
   Lock,
-  MessageCircle,
-  Sparkles,
   ArrowLeft,
-  LayoutGrid,
-  List as ListIcon,
   Trash2,
   ExternalLink,
-  Search,
   Users,
   Settings as SettingsIcon,
-  MoreHorizontal,
   PlusCircle,
   MessageSquare,
   Workflow,
@@ -35,11 +28,10 @@ import { useToast } from '@/components/ui/Toast';
 import toast from 'react-hot-toast';
 import { usePresence } from '@/components/providers/PresenceProvider';
 import { IdentityAvatar } from '@/components/IdentityBadge';
-import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { ResourceItem, TaggedResourcesTabs } from '@/components/share/TaggedResourcesTabs';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { Projects, ProjectObjects, Notes, Tasks, Credentials, Users as UserType } from '@/types/appwrite';
-import { listNotes, listFlowTasks, listKeepCredentials, Query, AppwriteService, listTags } from '@/lib/appwrite';
+import { Projects, ProjectObjects, Notes, Credentials } from '@/types/appwrite';
+import { listNotes, listFlowTasks, listKeepCredentials, Query, listTags } from '@/lib/appwrite';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
@@ -51,8 +43,6 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import {
   createGhostNoteForProject,
-  promoteGhostThreadToStory,
-  createEncryptedGroupForProject,
   deleteGhostNoteForProject,
   updateRow
 } from '@/lib/actions/client-ops';
@@ -60,15 +50,9 @@ import {
 import { account } from '@/lib/appwrite/client';
 import { getResourceCollaboratorsSecure, getUsersByIdsSecure } from '@/lib/actions/secure-ops';
 
-import { createComment, listComments, createReaction, deleteReaction, listReactions, deleteReactionsForTarget } from '@/lib/appwrite/note';
+import { deleteReactionsForTarget } from '@/lib/appwrite/note';
 import { TargetType } from '@/types/appwrite';
-import { client } from '@/lib/appwrite/client';
-import { ChatService } from '@/lib/services/chat';
-import { createMessageAction } from '@/lib/actions/chat';
-import { Send, Clock, Mic, Square, Tag, ShieldCheck, Camera, PhoneCall, FileSpreadsheet, X, Copy, ChevronLeft, Info, ChevronDown } from 'lucide-react';
-import MuralPattern from '@/components/chat/MuralPattern';
-import { VoiceMessage } from '@/components/chat/VoiceMessage';
-import { StorageService } from '@/lib/services/storage';
+import { Tag, ShieldCheck, X, Copy, Info, ChevronDown } from 'lucide-react';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { NoteDetailSidebar } from '@/components/ui/NoteDetailSidebar';
 import { ProjectDiscussionSidebar } from '@/components/projects/ProjectDiscussionSidebar';
@@ -97,7 +81,6 @@ import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
 import FormDialog from '@/components/forms/FormDialog';
 import { CallActionModal } from '@/components/call/CallActionModal';
 import NewTotpDialog from '@/components/app/totp/new';
-import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
 
 const TABS_CONFIG = [

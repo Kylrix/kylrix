@@ -1,13 +1,12 @@
-import { ID, Query, Permission, Role } from 'appwrite';
+import { Query } from 'appwrite';
 import { databases, getCurrentUser } from './client';
 import { APPWRITE_CONFIG } from './config';
-import type { Projects, ProjectObjects } from '@/types/appwrite';
+import type { Projects } from '@/types/appwrite';
 
 import { getNamedListCache } from '@/lib/services/list-cache';
 import {
   clearSessionProjectsList,
-  clearSessionProjectDetail,
-  setSessionProjectsList} from '@/lib/projects/projects-cache';
+  clearSessionProjectDetail} from '@/lib/projects/projects-cache';
 import { invalidateCache } from '@/lib/ecosystem/nexus-fetcher';
 
 const DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;

@@ -16,8 +16,7 @@ import {
     CircularProgress,
     TextField,
     Tabs,
-    Tab,
-    alpha as alpha
+    Tab
 } from '@/lib/openbricks/primitives';
 import { Search, Shield, Key } from '@/lib/openbricks/icons';
 import { EcosystemService } from '@/lib/services/ecosystem';

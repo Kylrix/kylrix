@@ -1,4 +1,4 @@
-import { generateRandomPassword, PasswordStrength } from "./password";
+import { generateRandomPassword } from "./password";
 
 describe("generateRandomPassword", () => {
   it("should generate a password of the specified length", () => {

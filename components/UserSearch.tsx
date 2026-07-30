@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
-import { fetchProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar, computeIdentityFlags } from './common/IdentityBadge';
 import { seedIdentityCache } from '@/lib/identity-cache';
 

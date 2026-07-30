@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -13,13 +13,11 @@ import {
   Drawer,
   useTheme,
   useMediaQuery,
-  alpha,
   Tooltip,
   Paper
 } from '@/lib/openbricks/primitives';
 import { 
   X as CloseIcon,
-  Plus as PlusIcon,
   Tag as TagIcon,
   ArrowUpRight,
   ChevronUp,

@@ -6,16 +6,9 @@ import { sha256 } from "@noble/hashes/sha2.js";
 secp256k1.hashes.sha256 = (message) => sha256(message);
 
 import { bech32 } from "@scure/base";
-import { generateMnemonic, mnemonicToSeedSync } from "@scure/bip39";
-import { wordlist } from "@scure/bip39/wordlists/english.js";
 
 
 // Encrypted Vault model
-interface EncryptedVault {
-  ciphertext: string; // hex
-  iv: string; // hex
-  salt: string; // hex
-}
 
 // Convert a byte array to hex
 export function bytesToHex(bytes: Uint8Array): string {

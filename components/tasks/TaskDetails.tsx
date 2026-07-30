@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Priority, TaskStatus, TaskCollaborator, CollaboratorPermission } from '@/types';
 import { Query } from 'appwrite';
 import { notes as noteApi } from '@/lib/kylrixflow';
@@ -13,27 +13,20 @@ import {
   Trash2, 
   Edit3, 
   FileText, 
-  Video, 
   Send, 
   ArrowLeft, 
   Globe,
   Tag as TagIcon,
   MessageSquare,
   Activity,
-  Mic,
-  Square,
   RefreshCw,
-  MoreVertical,
-  ChevronRight,
   Copy
 } from 'lucide-react';
-import { 
-  createGhostNoteForResource, 
-  promoteGhostResourceThreadToStory,
+import {
   initGoalDiscussion,
   getResourceCollaborators} from '@/lib/actions/client-ops';
 import { toLocalDateInputString } from '@/lib/utils';
-import { createComment, listComments, getNote } from '@/lib/appwrite/note';
+import { createComment, listComments } from '@/lib/appwrite/note';
 import { formatNoteCreatedDate } from '@/lib/date-utils';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';

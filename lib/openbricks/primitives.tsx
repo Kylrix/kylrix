@@ -229,7 +229,7 @@ export const Box = React.forwardRef(({ children, sx, className, component: Compo
 Box.displayName = 'Box';
 
 // 2. Button Component
-export const Button = React.forwardRef(({ children, className, sx, variant = 'text', color = 'primary', size = 'medium', disabled, startIcon, endIcon, fullWidth, disableElevation, disableRipple, disableFocusRipple, disableTouchRipple, component, ...props }: any, ref) => {
+export const Button = React.forwardRef(({ children, className, sx, variant = 'text', color = 'primary', disabled, startIcon, endIcon, fullWidth, disableElevation, disableRipple, disableFocusRipple, disableTouchRipple, component, ...props }: any, ref) => {
   let baseClass = "inline-flex items-center justify-center font-bold font-clash rounded-xl px-5 py-2.5 transition-all duration-300 border border-[#23211F] text-sm active:scale-95";
   if (disabled) {
     baseClass += " ob-disabled opacity-50 cursor-not-allowed bg-stone-900 text-stone-500 border-stone-800";
@@ -1171,7 +1171,7 @@ export const Badge = ({
   overlap,
   max,
   showZero,
-  ...props
+  ..._props
 }: any) => (
   <div className="relative inline-block">
     {children}

@@ -17,7 +17,6 @@ import { useSudo } from '@/context/SudoContext';
 import { useFAB } from '@/context/FABContext';
 import { MultiSectionContainer, useSection } from '@/context/SectionContext';
 import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, RefreshCw } from 'lucide-react';
-import { Box, Typography, Paper, Button, IconButton, Avatar, CircularProgress, Tooltip, alpha } from '@/lib/openbricks/primitives';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { TOTPPageContent } from './totp/page';
 
@@ -53,7 +52,7 @@ function DashboardPageContent() {
   // Multi-select state
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isMultiDeleting, setIsMultiDeleting] = useState(false);
+  const [isMultiDeleting, _setIsMultiDeleting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleToggleSelectMode = () => {

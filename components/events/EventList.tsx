@@ -23,7 +23,7 @@ export default function EventList() {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { projects, userId } = useTask();
+  const { userId } = useTask();
   const { openSidebar} = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
   const { isAuthenticated, openIDMWindow } = useAuth();

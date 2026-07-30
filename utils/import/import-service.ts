@@ -6,8 +6,6 @@ import {
   validateBitwardenExport,
   type MappedImportData,
 } from "./bitwarden-mapper";
-import { extractTotpFromBitwardenLogin } from "./totp-parser";
-import { processCustomFields } from "./custom-fields";
 import { DeduplicationEngine } from "@/lib/import/deduplication";
 
 export interface ImportProgress {
@@ -544,7 +542,7 @@ export class ImportService {
 
           await createTotpSecret(cleanTotp as any);
           result.summary.totpSecretsCreated++;
-        } catch (e: unknown) {
+        } catch (_e: unknown) {
           result.summary.errors++;
           result.errors.push(`Failed to restore TOTP ${totp.issuer}`);
         }
@@ -787,26 +785,3 @@ export class ImportService {
 }
 
 // Security logging for imports
-async function logImportEvent(
-  userId: string,
-  importType: string,
-  summary: ImportResult["summary"],
-  ipAddress?: string,
-  userAgent?: string,
-) {
-  try {
-    await AppwriteService.logSecurityEvent(
-      userId,
-      "DATA_IMPORT",
-      {
-        importType,
-        summary,
-        timestamp: new Date().toISOString(),
-      },
-      ipAddress,
-      userAgent,
-    );
-  } catch (error: unknown) {
-    console.error("Failed to log import event:", error);
-  }
-}

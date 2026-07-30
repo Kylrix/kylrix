@@ -6,13 +6,11 @@ import {
   Box,
   Typography,
   Button,
-  Avatar,
   AvatarGroup,
   Paper,
   Container,
   
   useTheme,
-  alpha,
   TextField,
   CircularProgress,
   Stack,
@@ -35,7 +33,7 @@ import { client } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { useToast } from '@/components/ui/Toast';
 import { AppwriteService } from '@/lib/appwrite';
-import { MessageSquare, Clock, FileText, Globe, Send } from 'lucide-react';
+import { Clock, FileText, Globe, Send } from 'lucide-react';
 import { generateEventPattern } from '@/utils/patternGenerator';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar, computeIdentityFlags } from '@/components/common/IdentityBadge';

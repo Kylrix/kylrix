@@ -5,7 +5,6 @@ import { Box, Typography, alpha } from '@/lib/openbricks/primitives';
 import { CheckCircle as CheckCircleIcon } from '@/lib/openbricks/icons';
 import { useAuth } from '@/lib/auth';
 import { UserPresenceState } from '@/lib/services/presence';
-import { storage } from '@/lib/appwrite/client';
 
 import { getCachedIdentityById, resolveIdentityById, subscribeIdentityCache } from '@/lib/identity-cache';
 

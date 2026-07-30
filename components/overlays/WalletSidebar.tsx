@@ -2,7 +2,6 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import {
     Box,
     Typography,
@@ -15,15 +14,13 @@ import {
     useTheme,
     CircularProgress,
     Paper,
-    Switch,
-    FormControlLabel} from '@/lib/openbricks/primitives';
+    Switch} from '@/lib/openbricks/primitives';
 import {
     X,
     Wallet as WalletIcon,
     ChevronLeft,
     ChevronDown,
     Lock,
-    Unlock,
     Copy,
     ExternalLink,
     PanelRight,

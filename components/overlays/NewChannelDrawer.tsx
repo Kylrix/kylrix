@@ -1,28 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Drawer,
     Box,
     Typography,
     IconButton,
     TextField,
-    List,
-    ListItem,
-    ListItemText,
-    ListItemAvatar,
-    Avatar,
-    Paper,
     CircularProgress,
     Stack,
     Button,
     alpha,
     useTheme,
-    useMediaQuery,
-    Checkbox,
-    Chip
+    useMediaQuery
 } from '@/lib/openbricks/primitives';
-import { X, Search, ShieldCheck, Users, ArrowRight, Check } from 'lucide-react';
+import { X, Users } from 'lucide-react';
 import { UsersService } from '@/lib/services/users';
 import { ChatService } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';

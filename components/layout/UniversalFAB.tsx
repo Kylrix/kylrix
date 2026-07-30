@@ -29,7 +29,7 @@ export default function UniversalFAB() {
   const { isOpen: isAgenticDrawerOpen } = useAgenticDrawer();
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
-  const { isRecording, startRecording, stopRecording, currentWorkflow } = useLocalContext();
+  const { isRecording} = useLocalContext();
 
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));

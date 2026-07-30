@@ -119,13 +119,4 @@ function extractIssuerFromName(name: string): string {
   return cleanName || name;
 }
 
-function generateTotpCode(secret: string, timestamp?: number): string {
-  // This would need a TOTP library implementation
-  // For now, return a placeholder - you'd implement actual TOTP generation here
-  // using libraries like 'otplib' or similar
-  return "000000";
-}
 
-function validateTotpSecret(secret: string): boolean {
-  return isBase32Secret(secret);
-}

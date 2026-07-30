@@ -7,16 +7,13 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   alpha,
   AppBar,
-  Avatar,
   Box,
   Button,
   ButtonBase,
   IconButton,
-  InputAdornment,
   InputBase,
   Paper,
   Stack,
-  TextField,
   Tooltip,
   Typography,
   CircularProgress,
@@ -26,7 +23,6 @@ import {
 import { isFlowPath } from '@/lib/routing/app-paths';
 import {
   Bot,
-  ChevronDown,
   Wallet,
   Copy as CopyIcon,
   User as UserIcon,
@@ -41,12 +37,11 @@ import {
 
 import Logo from '@/components/common/Logo';
 import { useAuth } from '@/context/auth/AuthContext';
-import { getProfilePicturePreview } from '@/lib/appwrite';
 import { getUserProfilePicId, hasEffectivePaidAccess } from '@/lib/utils';
 import { getEcosystemUrl, APP_BASE_PATHS } from '@/lib/constants';
-import { TOPBAR_LAYOUT, getAppTone, type KylrixApp } from '@/lib/sdk/design';
+import { getAppTone, type KylrixApp } from '@/lib/sdk/design';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
-import { createEcosystemPanelItems, createTopbarPanelMotion, createTopbarSearchSurface, isTopbarScrollAtBottom, isTopbarScrollAtTop } from '@/lib/sdk/topbar';
+import { createEcosystemPanelItems, createTopbarPanelMotion, createTopbarSearchSurface, isTopbarScrollAtTop } from '@/lib/sdk/topbar';
 import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePicId } from '@/lib/sdk/appwrite';
 import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';

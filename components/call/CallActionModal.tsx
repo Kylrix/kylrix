@@ -2,23 +2,18 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-    Video,
-    Phone,
     Plus,
     Calendar,
     X,
-    User,
     Users,
     Clock,
     Type,
     Timer,
     ArrowLeft,
-    Hash,
     Copy,
     ExternalLink,
     Mic,
     Video as VideoIcon,
-    Settings,
     ShieldCheck
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -71,14 +66,14 @@ export const CallActionModal = ({
         return () => media.removeEventListener('change', listener);
     }, []);
 
-    const [conversations, setConversations] = useState<any[]>([]);
+    const [_conversations, setConversations] = useState<any[]>([]);
     const [_loading, setLoading] = useState(false);
     const [showScheduleForm, setShowScheduleForm] = useState(false);
     const [showJoinWithId, setShowJoinWithId] = useState(false);
     const [scheduleTitle, setScheduleTitle] = useState('');
     const [instantTitle, setInstantTitle] = useState('');
     const [scheduleTime, setScheduleTime] = useState('');
-    const [joinId, setJoinId] = useState('');
+    const [_joinId, setJoinId] = useState('');
     const [duration, setDuration] = useState(120); // Default 2 hours
     const [creating, setCreating] = useState(false);
     const [allowGuests, setAllowGuests] = useState(true);

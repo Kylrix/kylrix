@@ -8,10 +8,7 @@ import {
   Button,
   CircularProgress,
   IconButton,
-  alpha,
-  useTheme,
-  Divider,
-} from '@/lib/openbricks/primitives';
+  alpha} from '@/lib/openbricks/primitives';
 import {
   ShieldCheck,
   Key,

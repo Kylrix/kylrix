@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useCallback, useTransition } from 'react';
 import { ChatService, rememberConversationRoster } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { UsersService } from '@/lib/services/users';
 import { tablesDB, realtime  } from '@/lib/appwrite/client';
@@ -17,12 +16,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { 
     Trash2, 
     ShieldCheck, 
-    Users, 
-    User, 
-    Bookmark, 
-    Search, 
     Lock, 
-    ArrowLeft, 
     Folder, 
     CheckSquare, 
     Calendar, 

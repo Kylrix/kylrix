@@ -6,7 +6,6 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { hasPaidKylrixPlanServer } from '@/lib/services/internal/subscription-entitlement';
 import { ID, Permission, Role } from 'node-appwrite';
 import { Registry } from '@/lib/core/di/registry';
-import { InputFile } from 'node-appwrite/file';
 import { IDSchema, JWTSchema } from '@/lib/validations/schemas';
 
 /**

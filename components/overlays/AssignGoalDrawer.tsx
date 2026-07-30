@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, IconButton, Button, Stack, Select, MenuItem, FormControl, alpha, CircularProgress } from '@/lib/openbricks/primitives';
-import { X, ArrowLeft, Trash2, Users } from 'lucide-react';
+import { X, ArrowLeft, Trash2 } from 'lucide-react';
 import { Drawer } from '@/lib/openbricks/primitives';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';

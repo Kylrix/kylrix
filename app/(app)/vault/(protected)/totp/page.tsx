@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Shield, Copy, Pencil, Trash2, Search, Pin, Lock, Link as LinkIcon } from 'lucide-react';
+import { ArrowLeft, Plus, Shield, Copy, Pencil, Trash2, Search, Pin, Link as LinkIcon } from 'lucide-react';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { listTotpSecrets, deleteTotpSecret, listFolders } from '@/lib/appwrite';
 import { generateTOTP } from '@/lib/totp-util';
@@ -14,7 +14,6 @@ import { MultiSectionContainer } from '@/context/SectionContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
-import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuItems';
 import { useMemo, useCallback } from 'react';
 import SudoModal from '@/components/overlays/SudoModal';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';

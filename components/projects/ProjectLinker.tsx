@@ -13,15 +13,11 @@ import {
   ListItemText,
   CircularProgress,
   alpha,
-  useTheme,
-  Button,
-} from '@/lib/openbricks/primitives';
+  Button} from '@/lib/openbricks/primitives';
 import { 
   X, 
   FolderKanban, 
-  Plus,
-  Check,
-} from 'lucide-react';
+  Plus} from 'lucide-react';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';
 import { Projects } from '@/types/appwrite';

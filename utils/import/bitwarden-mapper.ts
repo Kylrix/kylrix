@@ -201,12 +201,6 @@ export function analyzeBitwardenExport(
   };
 }
 
-function extractIssuerFromName(name: string): string {
-  // Try to extract a reasonable issuer name from the item name
-  // Common patterns: "Google", "GitHub - Personal", "Amazon AWS", etc.
-  const cleanName = name.replace(/\s*-\s*.*/g, "").trim(); // Remove everything after " - "
-  return cleanName || name;
-}
 
 export function validateBitwardenExport(data: any): data is BitwardenExport {
   return (

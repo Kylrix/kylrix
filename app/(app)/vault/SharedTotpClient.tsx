@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Shield, Copy, Clock, AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Shield, Copy, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 interface SharedTotpClientProps {
   totpId: string;

@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import type { Credentials } from '@/lib/appwrite/types';
-import { Shield, ExternalLink, Copy, Edit2, Trash2, MoreVertical, User, Lock, Pin, CheckSquare, Sparkles, ChevronRight, Share2, ShieldCheck, Key, Link as LinkIcon } from 'lucide-react';
+import { ExternalLink, Edit2, Trash2, User, Lock, Pin, CheckSquare, Sparkles, Share2, ShieldCheck } from 'lucide-react';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { ShareLockButton } from '@/components/share/ShareLockButton';

@@ -1,11 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Drawer, Box, IconButton, useTheme, useMediaQuery, alpha } from '@/lib/openbricks/primitives';
-import { Close as CloseIcon } from '@/lib/openbricks/icons';
+import { Drawer, Box, useTheme } from '@/lib/openbricks/primitives';
 import { useLayout } from '@/context/LayoutContext';
 import TaskDetails from '@/components/tasks/TaskDetails';
-import { GoalObjectDetail } from '@/components/objects/GoalObjectDetail';
 import EventDetails from '@/components/events/EventDetails';
 
 export default function RightSidebar() {

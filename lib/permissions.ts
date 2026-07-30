@@ -1,8 +1,7 @@
 import { Permission, Role } from 'appwrite';
-import { tablesDB } from './appwrite/client';
 import { APPWRITE_CONFIG } from './appwrite/config';
 
-const { DATABASE_ID, TABLES } = APPWRITE_CONFIG;
+const { DATABASE_ID} = APPWRITE_CONFIG;
 
 /**
  * Permission levels for events

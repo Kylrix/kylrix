@@ -2,10 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import {
   DEFAULT_AUTHENTICATED_ROUTE,
-  DEFAULT_GUEST_ROUTE,
   isValidAppResumePath,
   LAST_ROUTE_COOKIE,
-  resolveAuthenticatedEntryPath,
 } from '@/lib/ecosystem/resume-route';
 
 /**

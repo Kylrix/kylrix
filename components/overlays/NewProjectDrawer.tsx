@@ -7,28 +7,15 @@ import {
   Stack,
   Button,
   TextField,
-  Grid,
   CircularProgress,
   IconButton,
   Drawer,
   useTheme,
-  useMediaQuery,
-  alpha,
-  Paper,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem} from '@/lib/openbricks/primitives';
+  useMediaQuery} from '@/lib/openbricks/primitives';
 import { 
   X as CloseIcon,
-  Plus as PlusIcon,
   FolderKanban as ProjectIcon,
-  Rocket, 
-  ShieldAlert, 
-  Briefcase, 
-  Zap,
   Lock,
-  Users,
   Globe,
   Check,
   ChevronRight,
@@ -44,7 +31,6 @@ import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { listNotesByUser } from '@/lib/appwrite/note';
 import { tasks } from '@/lib/kylrixflow';
-import { ID } from 'appwrite';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
 
 const SURFACE_ASH = '#161412';

@@ -9,7 +9,6 @@ import {
   Square,
   MessageSquare,
   Globe,
-  Loader2,
   RefreshCw} from 'lucide-react';
 import {
   Box,
@@ -36,7 +35,6 @@ import {
   listReactions} from '@/lib/appwrite/note';
 import { TargetType } from '@/types/appwrite';
 import { client } from '@/lib/appwrite/client';
-import { createGhostNoteForProject } from '@/lib/actions/client-ops';
 import { VoiceMessage } from '@/components/chat/VoiceMessage';
 import { StorageService } from '@/lib/services/storage';
 import MuralPattern from '@/components/chat/MuralPattern';

@@ -1,7 +1,6 @@
 import { Permission, Role, Query } from 'appwrite';
 import { tablesDB, storage } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
-import { getEcosystemUrl } from '@/constants/ecosystem';
 import { seedIdentityCache } from '../identity-cache';
 
 /** Ecosystem profiles / directory (same as standalone Connect): CHAT » profiles */

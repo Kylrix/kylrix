@@ -7,26 +7,16 @@ import {
   Box,
   IconButton,
   Button,
-  Chip,
   Paper,
   Grid,
-  Card,
-  CardHeader,
-  CardContent,
   Stack,
   Typography,
-  CircularProgress,
-  alpha,
-  useTheme} from '@/lib/openbricks/primitives';
+  alpha} from '@/lib/openbricks/primitives';
 import {
   Plus,
   FolderKanban,
-  Rocket,
-  ShieldAlert,
-  Briefcase,
   Zap,
   ArrowLeft,
-  ArrowUpRight,
   Workflow,
   Sparkles,
   ClipboardList,
@@ -50,8 +40,7 @@ import {
   Play,
   RotateCcw,
   RefreshCw,
-  UserCheck,
-  FileText
+  UserCheck
   } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import { ProjectsService } from '@/lib/appwrite/projects';

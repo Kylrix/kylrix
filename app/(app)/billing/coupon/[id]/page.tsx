@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography, alpha } from '@/lib/openbricks/primitives';
-import { CheckCircle2, Loader2, ShieldCheck, Ticket } from 'lucide-react';
+import { CheckCircle2, Loader2, Ticket } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { claimCouponAction } from '@/lib/actions/billing/billing';
 import { account } from '@/lib/appwrite/client';

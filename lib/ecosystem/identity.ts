@@ -1,8 +1,5 @@
-import { databases, CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, Query, Permission, Role } from '../appwrite';
-import { getEcosystemUrl } from '@/constants/ecosystem';
+import { databases, CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, Query } from '../appwrite';
 
-const PROFILE_SYNC_KEY = 'kylrix_identity_synced_v2';
-const SESSION_SYNC_KEY = 'kylrix_session_identity_ok';
 
 /**
  * Ensures the user has a record in the global Kylrix Connect Directory.

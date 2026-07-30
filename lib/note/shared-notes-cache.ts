@@ -1,5 +1,4 @@
 import type { Notes } from '@/types/appwrite';
-import { getNotePublicState } from '@/lib/appwrite/note';
 
 export type SharedNoteRow = Notes & {
   sharedPermission?: string;
@@ -7,10 +6,6 @@ export type SharedNoteRow = Notes & {
   sharedBy?: { name: string; email: string } | null;
 };
 
-interface SharedNotesPartition {
-  privateNotes: SharedNoteRow[];
-  sharedPublicNotes: SharedNoteRow[];
-}
 
 /** In-memory session cache — survives client navigations within the same tab. */
 let sessionSharedRows: SharedNoteRow[] | null = null;

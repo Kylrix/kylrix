@@ -2,9 +2,7 @@
 
 import {
   PinnableResourceType,
-  UserResourcePinService,
-  resolveEffectivePinned,
-} from '@/lib/services/user-resource-pins';
+  UserResourcePinService} from '@/lib/services/user-resource-pins';
 
 ;
 

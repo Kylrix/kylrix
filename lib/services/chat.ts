@@ -2,7 +2,7 @@ import { ID, Permission, Query, Role } from 'appwrite';
 import { account, storage, tablesDB, getCurrentUser } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { KYLRIX_AUTH_URI, getEcosystemUrl } from '../constants';
-import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
+import { getUserSubscriptionTier } from '@/lib/utils';
 import { allowsGroupHangouts } from '@/lib/entitlements';
 import { ecosystemSecurity } from '../ecosystem/security';
 import { isValidX25519PublicKey } from '@/lib/crypto/public-key';

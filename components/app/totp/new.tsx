@@ -4,7 +4,7 @@ import { createTotpSecret, updateTotpSecret } from '@/lib/appwrite';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { Drawer, Box, Typography, IconButton } from '@/lib/openbricks/primitives';
+import { Drawer, Box, IconButton } from '@/lib/openbricks/primitives';
 import { X, Shield } from 'lucide-react';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 

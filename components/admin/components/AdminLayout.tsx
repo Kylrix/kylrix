@@ -4,8 +4,7 @@ import React, { Suspense } from 'react';
 import { 
   LayoutDashboard, 
   Users, 
-  Mail, 
-  Settings,
+  Mail,
   ShieldCheck,
   ChevronRight,
   Ticket

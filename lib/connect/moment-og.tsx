@@ -4,7 +4,6 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { storage } from '@/lib/appwrite/client';
 import { resolveIdentity } from '@/lib/identity-format';
 import { SocialService } from '@/lib/services/social';
-import { UsersService } from '@/lib/services/users';
 import { createSystemTablesDB } from '@/lib/appwrite-admin';
 
 export const MOMENT_OG_SIZE = { width: 1200, height: 630 } as const;

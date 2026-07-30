@@ -12,17 +12,15 @@
  *   none            → Beautiful no-access screen
  */
 
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { NoteDetailSidebar, NoteAccessRole } from '@/components/ui/NoteDetailSidebar';
-import { NoteContentRenderer } from '@/components/NoteContentRenderer';
 import type { Notes } from '@/types/appwrite';
 import {
   realtime,
   APPWRITE_DATABASE_ID,
-  APPWRITE_TABLE_ID_NOTES,
   isNoteEditableByAnyone} from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { resolveResourceOwnerId } from '@/lib/utils/resource-ids';

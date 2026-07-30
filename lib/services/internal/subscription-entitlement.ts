@@ -7,7 +7,6 @@ import {
   maxBillingUiTier,
   normalizeBillingPrefsTier,
   planLabelToUiTier,
-  billingTierHasTeamsAccess,
   type BillingUiTier} from '@/lib/subscription/tier-resolution';
 
 const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;

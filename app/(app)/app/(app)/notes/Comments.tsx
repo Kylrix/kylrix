@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, type ChangeEvent, type ReactNode, type MouseEvent as ReactMouseEvent } from 'react';
 import { Box, Typography, TextField, Button, List, ListItem, ListItemText, Divider, IconButton, Collapse, Avatar, Link, Popover, Tooltip, ListItemAvatar, ListItemButton, CircularProgress, alpha } from '@/lib/openbricks/primitives';
 import { Reply as ReplyIcon, ExpandMore, ExpandLess, Edit as EditIcon, Delete as DeleteIcon, MoreVert as MoreIcon, Block as BlockIcon, EmojiEmotionsOutlined } from '@/lib/openbricks/icons';
-import { listComments, createComment, getUsersByIds, updateComment, deleteComment, deleteReactionsForTarget, getNote } from '@/lib/appwrite';
+import { listComments, createComment, getUsersByIds, updateComment, deleteComment, deleteReactionsForTarget } from '@/lib/appwrite';
 import type { Comments, Users } from '@/types/appwrite';
 import { getEffectiveDisplayName, getEffectiveUsername, getUserProfilePicId } from '@/lib/utils';
 import { useAuth } from '@/context/auth/AuthContext';

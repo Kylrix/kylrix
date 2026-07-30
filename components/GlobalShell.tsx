@@ -1,9 +1,9 @@
 'use client';
 
-import React, { ReactNode, Suspense, useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import React, { ReactNode, useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
-import { Box, alpha } from '@/lib/openbricks/primitives';
+import { Box } from '@/lib/openbricks/primitives';
 
 // Core UI Components (Direct Imports for Stability)
 import ConnectTopbar from '@/components/layout/ConnectTopbar';
@@ -98,7 +98,6 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     () => Boolean(pathname?.match(/^\/idea\/[^/]+$/)),
     [pathname],
   );
-  const isConnectCallDetail = useMemo(() => Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/)), [pathname]);
 
 const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/post/')), [pathname]);
   const isProjectDetailPage = useMemo(() => Boolean(pathname?.match(/^\/workspaces\/[^/]+$/)), [pathname]);

@@ -35,7 +35,7 @@ import {
   KeyRound,
   Sparkles,
   PhoneCall} from 'lucide-react';
-import { listNotes, listFlowTasks, listKeepCredentials, Query, listTags, listTagsByUser } from '@/lib/appwrite';
+import { listFlowTasks, listKeepCredentials, Query, listTagsByUser } from '@/lib/appwrite';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';
 import { useDataNexus } from '@/context/DataNexusContext';

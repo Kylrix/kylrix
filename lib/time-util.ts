@@ -34,11 +34,6 @@ export function formatTime(date: Date | string | number, options: Intl.DateTimeF
 
 
 
-function addMonths(date: Date, amount: number): Date {
-    const d = new Date(date);
-    d.setMonth(d.getMonth() + amount);
-    return d;
-}
 
 
 export function addHours(date: Date, amount: number): Date {

@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const nextConfigs = require("eslint-config-next/core-web-vitals");
+const unusedImports = require("eslint-plugin-unused-imports");
 
 const eslintConfig = [
   {
@@ -18,12 +19,17 @@ const eslintConfig = [
   },
   ...nextConfigs,
   {
+    plugins: {
+      "unused-imports": unusedImports,
+    },
     linterOptions: {
       reportUnusedDisableDirectives: "off",
     },
     rules: {
-      // Intra-file unused locals: use knip for cross-file dead code (`pnpm exec knip`).
-      // Do not enable @typescript-eslint/no-unused-vars here — it floods past --max-warnings 50.
+      // Remove dead imports in CI (autofixable). Broader unused-vars still via knip + cleanup campaigns.
+      "unused-imports/no-unused-imports": "error",
+      "@typescript-eslint/no-unused-vars": "off",
+      "no-unused-vars": "off",
       // Matches common intentional patterns (mounted effects, hydrate-from-async, compose URL cleanup).
       "react-hooks/set-state-in-effect": "off",
       "react-hooks/exhaustive-deps": "off",

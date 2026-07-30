@@ -5,30 +5,12 @@ import { ID, Query } from 'node-appwrite';
 
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { createServerClient } from '@/lib/appwrite/server';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { userHasPaidAiAccess } from '@/lib/server/ai-subscription-gate';
 import { AI_REQUIRES_PRO_MESSAGE } from '@/lib/agentic/access';
 import { resolveAgenticError, type AgenticErrorCode } from '@/lib/agentic/errors';
 
 
-interface AgentRecord {
-  $id: string;
-  ownerId: string;
-  parentId?: string | null;
-  publicKey?: string | null;
-  config?: string;
-  status?: string;
-  $updatedAt?: string;
-}
 
-interface AgentConfig {
-  name?: string;
-  goal?: string | null;
-  framework?: string;
-  lastRunAt?: string;
-  lastSummary?: string | null;
-  lastError?: string | null;
-}
 
 
 import { getActor } from './secure-ops';

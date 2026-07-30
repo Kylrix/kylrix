@@ -1,12 +1,10 @@
-import { ID, Query, Permission, Role, OAuthProvider } from 'appwrite';
-import { account, databases, storage, functions, realtime, client, getCurrentUser, invalidateCurrentUserCache } from './client';
-import { AppwriteService } from './auth';
+import { ID, Query, Permission, Role } from 'appwrite';
+import { account, databases, getCurrentUser } from './client';
 import type {
   Notes,
   Tags,
   Comments,
   Reactions,
-  ActivityLog,
   Settings} from '@/types/appwrite';
 import { TargetType } from '@/types/appwrite';
 // Removed static import of secure-ops to prevent Next.js isomorphic bundling errors.
@@ -374,36 +372,6 @@ export async function getPinnedNoteIds(userId?: string): Promise<string[]> {
   }
 }
 
-async function setNotePinned(noteId: string, pinned: boolean): Promise<string[]> {
-  const user = await account.get();
-  const note = await databases.getRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId);
-  const ownerId = (note as any).creatorId || (note as any).userId || user.$id;
-  const { toggleResourcePin } = await import('@/lib/services/resource-pin-coordinator');
-  const { UserResourcePinService, resolveEffectivePinned } = await import('@/lib/services/user-resource-pins');
-  const pinRows = await UserResourcePinService.listForUser(user.$id, 'note');
-  const pinSet = new Set(pinRows.map((row: any) => row.resourceId));
-  const currentlyPinned = resolveEffectivePinned(
-    user.$id,
-    ownerId,
-    noteId,
-    (note as any).isPinned,
-    pinSet,
-    'note',
-  );
-  if (currentlyPinned !== pinned) {
-    await toggleResourcePin({
-      actorId: user.$id,
-      ownerId,
-      resourceType: 'note',
-      resourceId: noteId,
-      currentlyPinned,
-      setOwnerRowPin: async (nextPinned) => {
-        await updateNote(noteId, { isPinned: nextPinned } as any);
-      },
-    });
-  }
-  return getPinnedNoteIds(user.$id);
-}
 
 
 export { createNoteCreationService };
@@ -1189,34 +1157,6 @@ export async function updateSettings(settingsId: string, data: any) {
   return databases.updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_SETTINGS, settingsId, data);
 }
 
-async function uploadFile(bucketId: string, file: File, userId?: string) {
-  try {
-    const user = userId ? { $id: userId } : await getCurrentUser();
-    if (!user?.$id) {
-      throw new Error('User not authenticated for file upload');
-    }
-
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('bucketId', bucketId);
-    const { secureUploadFile } = await import('@/lib/actions/client-ops');
-    const result = await secureUploadFile(formData);
-    return result;
-  } catch (e: any) {
-    console.error('[uploadFile] error', {
-      bucketId,
-      fileName: (file as any)?.name,
-      fileSize: (file as any)?.size,
-      fileType: (file as any)?.type,
-      message: e?.message,
-      code: e?.code,
-      statusCode: e?.statusCode,
-      type: e?.type
-    });
-    throw e;
-  }
-}
 
 // --- CROSS-ECOSYSTEM ACTIONS ---
 

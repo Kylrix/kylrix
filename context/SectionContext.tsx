@@ -1,10 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Box, Divider, useTheme, useMediaQuery, CircularProgress, Typography, Drawer, alpha } from '@/lib/openbricks/primitives';
+import { Box, CircularProgress, Typography, Drawer, alpha } from '@/lib/openbricks/primitives';
 import { usePathname } from 'next/navigation';
 import { recordAnonymizedTelemetry } from '@/lib/actions/client-ops';
-import DesktopRightSection, { PanelType } from '@/components/layout/DesktopRightSection';
+import { PanelType } from '@/components/layout/DesktopRightSection';
 
 // Object detail components imports
 import { PostViewClient } from '@/app/(app)/connect/post/[id]/PostViewClient';

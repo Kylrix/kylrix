@@ -7,7 +7,6 @@ import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
-import { ProjectsService } from '@/lib/appwrite/projects';
 import type { Projects } from '@/types/appwrite';
 import toast from 'react-hot-toast';
 import { warmProjectsList } from '@/lib/projects/warm-projects-list';

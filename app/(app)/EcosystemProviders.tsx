@@ -1,24 +1,18 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { AuthProvider } from '@/context/auth/AuthContext';
-import { SudoProvider } from '@/context/SudoContext';
-import { AppwriteProvider } from '@/app/(app)/vault/appwrite-provider';
 import { DocsProvider } from '@/context/DocsContext';
 import { NotesProvider } from '@/context/NotesContext';
 import { BackgroundTaskProvider } from '@/context/BackgroundTaskContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { SourceProvider } from '@/lib/source-context';
 import { ProfileProvider } from '@/components/providers/ProfileProvider';
-import { UnifiedDrawerProvider } from '@/context/UnifiedDrawerContext';
 import { NoteDrawerProvider } from '@/context/NoteDrawerContext';
 import { LoginDrawerProvider } from '@/context/LoginDrawerContext';
 import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
 import { GlobalContextMenu } from '@/components/ui/GlobalContextMenu';
 import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
 import { TokenOpsProvider } from '@/context/TokenOpsContext';
-import dynamic from 'next/dynamic';
-import { SectionProvider } from '@/context/SectionContext';
 import { EcosystemStateTracker } from '@/components/providers/EcosystemStateTracker';
 
 function ContextMenuWrapper({ children }: { children: ReactNode }) {

@@ -13,10 +13,6 @@ export const KYLRIX_COLORS = {
   text: '#FFFFFF',
   mutedText: 'rgba(255,255,255,0.56)'} as const;
 
-const KYLRIX_TYPOGRAPHY = {
-  headings: 'Clash Display',
-  ui: 'Satoshi',
-  technical: 'JetBrains Mono'} as const;
 
 export const KYLRIX_APP_TONES: Record<KylrixApp, { primary: string; secondary: string; label: string }> = {
   root: { primary: KYLRIX_COLORS.ecosystemPrimary, secondary: KYLRIX_COLORS.ecosystemPrimary, label: 'Kylrix' },

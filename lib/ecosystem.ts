@@ -1,4 +1,3 @@
-import { LayoutDashboard, Lock, MessageSquare, Terminal, StickyNote, ShieldCheck, Zap, Fingerprint, FileText, Shield, Waypoints } from 'lucide-react';
 
 interface EcosystemApp {
   id: string;

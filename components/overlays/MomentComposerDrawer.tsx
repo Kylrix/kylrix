@@ -6,7 +6,7 @@ import { useNostrFeed } from '@/hooks/useNostrFeed';
 import { SocialService } from '@/lib/services/social';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/context/auth/AuthContext';
-import { Lock, Sparkles, Send, Globe, Shield } from 'lucide-react';
+import { Lock, Sparkles, Send, Globe } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface MomentComposerDrawerProps {

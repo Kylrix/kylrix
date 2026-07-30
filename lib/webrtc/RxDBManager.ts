@@ -1,4 +1,4 @@
-import { addRxPlugin, createRxDatabase, type RxDatabase, type RxCollection } from 'rxdb';
+import { addRxPlugin, createRxDatabase, type RxDatabase } from 'rxdb';
 import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { RxDBcrdtPlugin, getCRDTSchemaPart } from 'rxdb/plugins/crdt';
 import { RxDBCleanupPlugin } from 'rxdb/plugins/cleanup';

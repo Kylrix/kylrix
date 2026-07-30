@@ -7,7 +7,6 @@ import {
   Typography,
   Button,
   Stack,
-  Divider,
   useTheme,
   useMediaQuery,
   alpha} from '@/lib/openbricks/primitives';

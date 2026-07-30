@@ -10,7 +10,6 @@ import {
   updateNote,
   realtime,
   APPWRITE_DATABASE_ID,
-  APPWRITE_TABLE_ID_NOTES,
   getNotePublicState,
   decryptPublicEncryptedNote
 } from '@/lib/appwrite';
@@ -19,16 +18,13 @@ import type { Notes } from '@/types/appwrite';
 import { useAuth } from '@/context/auth/AuthContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { isGhostNote } from '@/lib/appwrite/note';
-import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useDataNexus } from './DataNexusContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
-import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
+import { resolveNoteCardTitle } from '@/constants/noteTitle';
 import {
-  isEphemeralComposeNoteId,
   markComposeDraft,
   markComposePersisted,
   isUnpersistedComposeDraft,
-  isNotePersistedRemote,
   markNotePersistedRemote} from '@/lib/notes/compose-draft-registry';
 import {
   mergeServerPageWithLocalCopy,

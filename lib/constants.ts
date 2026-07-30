@@ -1,14 +1,5 @@
 import { APPWRITE_CONFIG } from './appwrite/config';
 
-interface EcosystemApp {
-  id: string;
-  label: string;
-  subdomain: string;
-  type: 'app' | 'accounts' | 'support';
-  icon: string;
-  color: string;
-  description: string;
-}
 
 export const APP_BASE_PATHS: Record<string, string> = {
   accounts: '/accounts',

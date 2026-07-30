@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { NeuralEngine, RenderAnomalyReport } from '@/lib/services/NeuralEngine';
 

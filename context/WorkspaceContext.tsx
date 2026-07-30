@@ -5,7 +5,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
-import { getSessionProjectsList, setSessionProjectsList } from '@/lib/projects/projects-cache';
+import { getSessionProjectsList } from '@/lib/projects/projects-cache';
 import { warmProjectsList } from '@/lib/projects/warm-projects-list';
 
 export interface WorkspaceItem {

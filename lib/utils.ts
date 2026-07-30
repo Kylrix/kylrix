@@ -43,9 +43,6 @@ export function getUserProfilePicId(user: any): string | null {
 // Convenience accessor for auth method
 
 // Convenience accessor for wallet address (checks both walletEth and walletAddress)
-function getUserWalletAddress(user: any): string | null {
-  return getUserField<string>(user, 'walletEth') || getUserField<string>(user, 'walletAddress');
-}
 
 /**
  * Client-side tier for paywalls (`subscriptionExpiresAt`-aware; never trusts `tier`/`subscriptionTier`

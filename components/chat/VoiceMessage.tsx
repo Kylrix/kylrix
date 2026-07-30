@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Box, Typography, IconButton, Slider } from '@/lib/openbricks/primitives';
 import { Play, Pause } from 'lucide-react';
 

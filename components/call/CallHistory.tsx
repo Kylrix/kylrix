@@ -14,9 +14,7 @@ import {
     Trash2, 
     RefreshCw, 
     History,
-    Pin,
-    Lock,
-    Link as LinkIcon
+    Pin
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { seedIdentityCache } from '@/lib/identity-cache';

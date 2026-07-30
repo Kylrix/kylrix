@@ -1,14 +1,6 @@
 'use server';
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { resolveCurrentUser } from '@/lib/appwrite/client';
-import { userHasPaidAiAccess } from '@/lib/server/ai-subscription-gate';
-import { headers } from 'next/headers';
 
-type AIChatMessage = {
-  role: 'user' | 'assistant';
-  content: string;
-};
 
 export async function createCloudflareSession() {
   const CLOUDFLARE_API_KEY = process.env.CLOUDFLARE_API;

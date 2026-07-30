@@ -2,15 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Box,
-  Button,
   CircularProgress,
-  Divider,
-  Drawer,
-  IconButton,
-  Stack,
-  Typography,
-  alpha} from '@/lib/openbricks/primitives';
+  Drawer} from '@/lib/openbricks/primitives';
 import { CheckCircle2, Copy, ExternalLink, X } from 'lucide-react';
 import { Telegram as TelegramIcon } from '@/lib/openbricks/icons';
 import {

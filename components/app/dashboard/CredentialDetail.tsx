@@ -13,17 +13,14 @@ import {
   Eye, 
   EyeOff, 
   Globe, 
-  Calendar, 
   ShieldCheck, 
   ShieldAlert, 
   ExternalLink, 
   Folder,
   Share2,
   Lock,
-  Key,
   Tag as TagIcon,
   Trash2,
-  Sparkles,
   Info
 } from 'lucide-react';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';

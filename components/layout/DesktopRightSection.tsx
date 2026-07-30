@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { Box, Typography, Stack, Button, IconButton,  alpha, useTheme, Chip } from '@/lib/openbricks/primitives';
+import React, { useEffect, useState } from 'react';
+import { Box, Typography, Button, IconButton,  alpha, Chip } from '@/lib/openbricks/primitives';
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -9,14 +9,10 @@ import {
   FolderKanban, 
   Phone, 
   FileText, 
-  Tag as TagIcon, 
-  Activity,
+  Tag as Activity,
   Bot,
   Plus,
   Key,
-  Shield,
-  Clock,
-  Send,
   MessageSquare
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';

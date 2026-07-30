@@ -26,7 +26,6 @@ import { UsersService, buildUsernameHandleSuggestions, invalidateUsersProfileRow
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { account } from '@/lib/appwrite/client';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
-import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { PasskeySetup } from '@/components/overlays/PasskeySetup';
 import { useSudo } from '@/context/SudoContext';

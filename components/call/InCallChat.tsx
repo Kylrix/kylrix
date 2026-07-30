@@ -7,8 +7,7 @@ import {
     Typography, 
     TextField, 
     IconButton, 
-    Stack, 
-    alpha,
+    Stack,
     InputAdornment,
     Tooltip
 } from '@/lib/openbricks/primitives';

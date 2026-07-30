@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, Clock, MapPin, Link2, Globe, Lock, Video, ChevronUp, ChevronDown, ArrowUpRight } from 'lucide-react';
+import { X, MapPin, Link2, Globe, Lock, Video, ChevronUp, ChevronDown, ArrowUpRight } from 'lucide-react';
 import { addHours } from '@/lib/time-util';
 import { EventVisibility } from '@/lib/permissions';
 import UserSearch from '@/components/UserSearch';

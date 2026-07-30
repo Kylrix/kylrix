@@ -42,17 +42,6 @@ export async function listWorkflowsAction(jwt?: string) {
 /**
  * Server action to list shared public workflows
  */
-async function listPublicWorkflowsAction() {
-  try {
-    // Public listings don't necessarily require auth, but we should still track the actor if available
-    
-    const list = await WorkflowDbService.listPublicWorkflows();
-    return { success: true, data: list };
-  } catch (err: any) {
-    console.error('[listPublicWorkflowsAction] Exception:', err);
-    return { success: false, error: 'Failed to retrieve public workflows', data: [] };
-  }
-}
 
 /**
  * Server action to securely delete a workflow

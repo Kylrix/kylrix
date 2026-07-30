@@ -6,8 +6,7 @@ import {
   Code, 
   Eye, 
   EyeOff, 
-  Flag,
-  X
+  Flag
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { FormSubmissions } from '@/generated/appwrite/types';

@@ -3,11 +3,10 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { CallHistory } from '@/components/call/CallHistory';
 import { CallActionModal } from '@/components/call/CallActionModal';
-import { Hash, ArrowRight, FileText } from 'lucide-react';
+import { Hash, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { MultiSectionContainer, useSection } from '@/context/SectionContext';
-import { listNotes } from '@/lib/appwrite';
 
 
 function CallsContent() {

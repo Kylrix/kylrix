@@ -99,75 +99,9 @@ function isSensitiveField(field: BitwardenCustomField): boolean {
   return sensitivePatterns.some((pattern) => pattern.test(field.name));
 }
 
-function extractFieldValue(
-  fields: ProcessedCustomField[],
-  fieldName: string,
-): string | null {
-  const field = fields.find(
-    (f) => f.name.toLowerCase() === fieldName.toLowerCase(),
-  );
-  return field ? field.value : null;
-}
 
-function getFieldsByType(
-  fields: ProcessedCustomField[],
-  type: "text" | "hidden" | "boolean" | "linked",
-): ProcessedCustomField[] {
-  return fields.filter((field) => field.type === type);
-}
 
-function getSensitiveFields(
-  fields: ProcessedCustomField[],
-): ProcessedCustomField[] {
-  return fields.filter((field) => field.sensitive);
-}
 
-function getNonSensitiveFields(
-  fields: ProcessedCustomField[],
-): ProcessedCustomField[] {
-  return fields.filter((field) => !field.sensitive);
-}
 
 // Common field name mappings for better organization
-const COMMON_FIELD_MAPPINGS = {
-  // Security-related
-  "Security Question": "security_question",
-  "Security Answer": "security_answer",
-  "Recovery Code": "recovery_code",
-  "Backup Code": "backup_code",
 
-  // Personal info
-  "Phone Number": "phone",
-  Mobile: "phone",
-  Email: "email",
-  Address: "address",
-
-  // Financial
-  "Account Number": "account_number",
-  "Routing Number": "routing_number",
-  "Card Number": "card_number",
-  CVV: "cvv",
-  Expiry: "expiry",
-
-  // Common variations
-  URL: "url",
-  Website: "url",
-  Server: "server",
-  Host: "host",
-} as const;
-
-function normalizeFieldName(name: string): string {
-  // Check if it matches a common mapping
-  const mapping =
-    COMMON_FIELD_MAPPINGS[name as keyof typeof COMMON_FIELD_MAPPINGS];
-  if (mapping) {
-    return mapping;
-  }
-
-  // Otherwise, normalize the name
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^_|_$/g, "");
-}

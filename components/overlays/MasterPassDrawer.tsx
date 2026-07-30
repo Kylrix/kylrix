@@ -19,14 +19,11 @@ import {
 import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
-  LockIcon,
   Shield as ShieldIcon,
   Logout as LogoutIcon,
   FingerprintOutlined as FingerprintIcon,
   ErrorOutline as ErrorOutlineIcon,
-  Apps as AppsIcon,
   Close as CloseIcon} from '@/lib/openbricks/icons';
-import Logo from '../common/Logo';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 import { useFinalizeAuth } from '@/lib/finalizeAuth';
@@ -276,7 +273,6 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
         }
 
         // Prioritize stable over pending for authentication
-        const stableEntry = passwordEntries.find(e => !e.isPending);
         const pendingEntry = passwordEntries.find(e => e.isPending);
 
 

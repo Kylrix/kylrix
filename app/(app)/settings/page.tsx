@@ -3,25 +3,16 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
-    ArrowLeft,
-    Lock, 
-    Shield, 
-    AlertCircle, 
-    Fingerprint, 
-    Smartphone,
+    ArrowLeft, 
+    Fingerprint,
     Trash2,
     RefreshCw,
-    User,
     ChevronRight,
-    Key,
     Bot,
     Lightbulb,
-    Link,
     Loader2 as SpinnerIcon,
-    Database,
-    Info,
     Edit3,
     UserCircle as ProfileIcon,
     ShieldCheck as SecurityIcon,
@@ -29,18 +20,7 @@ import {
     History as ActivityIcon,
     Sliders as PreferencesIcon,
     Settings2 as RootAccountIcon,
-    ShieldAlert as AdminIcon,
-    AlertTriangle,
-    Mail,
-    Ticket,
-    Cpu,
-    TrendingUp,
-    Users,
-    Zap,
-    MoreVertical,
-    CheckCircle2,
-    UserPlus,
-    Activity
+    ShieldAlert as AdminIcon
 } from 'lucide-react';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -58,7 +38,6 @@ import { useAppwriteVault } from '@/context/appwrite-context';
 import { getUserProfilePicId, getEffectiveDisplayName, getEffectiveUsername } from '@/lib/utils';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { getComputeBalanceAction } from '@/lib/actions/ai';
-import { getProfilePicturePreview } from '@/lib/appwrite';
 import { getCachedProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId as getSdkUserProfilePicId } from '@/lib/user-utils';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
@@ -69,7 +48,6 @@ import SessionsManager from '@/components/SessionsManager';
 import ActivityLogs from '@/components/ActivityLogs';
 import ConnectedIdentities from '@/components/ConnectedIdentities';
 import PreferencesManager from '@/components/PreferencesManager';
-import MasterPassManager from '@/components/MasterPassManager';
 import PinManager from '@/components/PinManager';
 import { TwoFactorDrawer } from '@/components/overlays/TwoFactorDrawer';
 import { BillingDrawer } from '@/components/overlays/BillingDrawer';
@@ -108,8 +86,8 @@ export default function SettingsPage() {
 
 function SettingsPageInner() {
     const { user, refreshUser, getJWT } = useAuth();
-    const { currentTier, expiresAt, refreshEntitlement } = useSubscription();
-    const { masterpassForLoginEnabled, setMasterpassForLoginEnabled } = useAppwriteVault();
+    const { currentTier, expiresAt} = useSubscription();
+    const { masterpassForLoginEnabled} = useAppwriteVault();
     const router = useRouter();
     const searchParams = useSearchParams();
     const { requestSudo} = useSudo();
@@ -167,7 +145,7 @@ function SettingsPageInner() {
     const [_pushEnabled, _setPushEnabled] = useState(true);
     const [_statusEnabled, _setStatusEnabled] = useState(true);
     const [_isLocalhost, setIsLocalhost] = useState(false);
-    const [demoModeEnabled, setDemoModeEnabled] = useState(false);
+    const [_demoModeEnabled, setDemoModeEnabled] = useState(false);
     const [computeBalance, setComputeBalance] = useState<{ balance: number; maxBalance: number; tier: string; percent: number } | null>(null);
     const [_profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
     const [showPorterDrawer, setShowPorterDrawer] = useState(false);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode, useState, useCallback, useEffect } from 'react';
+import React, { createContext, ReactNode, useState, useCallback, useEffect } from 'react';
 import { SecurityEngine, KeychainEntry } from '@/lib/services/SecurityEngine';
 import { useAuth } from '@/context/auth/AuthContext';
 

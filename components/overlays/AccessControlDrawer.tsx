@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Globe, ShieldCheck, Ban, Copy, Check } from 'lucide-react';
+import { X, Globe, ShieldCheck, Copy, Check } from 'lucide-react';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
 import { useToast } from '@/hooks/useToast';

@@ -203,52 +203,17 @@ class AuditLogger {
 const auditLogger = new AuditLogger();
 
 // Export convenience functions
-const logSecurityEvent = (
-  userId: string,
-  eventType: SecurityEventType,
-  success: boolean,
-  details?: Record<string, unknown>
-) => auditLogger.log(userId, eventType, success, details);
 
-const logLoginSuccess = (userId: string, details?: Record<string, unknown>) =>
-  auditLogger.log(userId, 'auth.login.success', true, details);
 
-const logLoginFailed = (userId: string, details?: Record<string, unknown>) =>
-  auditLogger.log(userId, 'auth.login.failed', false, details);
 
-const logVaultUnlocked = (userId: string, method?: string) =>
-  auditLogger.log(userId, 'vault.unlocked', true, { method });
 
-const logVaultUnlockFailed = (userId: string, reason?: string) =>
-  auditLogger.log(userId, 'vault.unlock_failed', false, { reason });
 
 export const logPasskeyAdded = (userId: string, details?: Record<string, unknown>) =>
   auditLogger.log(userId, 'passkey.added', true, details);
 
-const logPasskeyRemoved = (userId: string, details?: Record<string, unknown>) =>
-  auditLogger.log(userId, 'passkey.removed', true, details);
 
-const logMFAEnabled = (userId: string, type?: string) =>
-  auditLogger.log(userId, 'mfa.enabled', true, { type });
 
-const logMFADisabled = (userId: string, type?: string) =>
-  auditLogger.log(userId, 'mfa.disabled', true, { type });
 
-const logCredentialAccessed = (userId: string, credentialId: string, action: 'viewed' | 'copied') =>
-  auditLogger.log(userId, 'credential.viewed', true, { credentialId, action });
 
-const logDataExported = (userId: string, exportType: string, itemCount: number) =>
-  auditLogger.log(userId, 'data.exported', true, { exportType, itemCount });
 
-const logDataImported = (userId: string, importType: string, itemCount: number) =>
-  auditLogger.log(userId, 'data.imported', true, { importType, itemCount });
 
-const logSuspiciousActivity = (userId: string, details: Record<string, unknown>) =>
-  auditLogger.log(userId, 'security.suspicious_activity', false, details);
-
-// Clean up on page unload
-if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => {
-    auditLogger.destroy();
-  });
-}

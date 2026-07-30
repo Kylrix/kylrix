@@ -1,52 +1,23 @@
 import * as shared from './shared';
 import {
-  ID, Permission, Query, Role, Databases, TablesDB, Account
+  ID, Query
 } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getUserSubscriptionTierServer } from '@/lib/services/internal/subscription-entitlement';
 import {
   allowsCollaboratorSharing,
-  getCollaboratorCap,
-  getContainerObjectCap,
-  getProjectCap
+  getCollaboratorCap
 } from '@/lib/entitlements';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
-import { Registry } from '@/lib/core/di/registry';
-import { createServerClient } from '@/lib/appwrite/server';
-import { InternalKylrixTokenService } from '@/lib/services/internal/kylrix-token';
-import { trackEngagementView, type TrackEngagementInput } from '@/lib/services/internal/engagement-views';
-import { deleteCallIfExpired } from '@/lib/services/internal/calls';
 import { applyPermissionMutation, revokePermissionMutation } from '@/lib/services/internal/permissions';
-import { normalizeTargetUserIds, upsertLockboxRows, provisionHybridTeamExpansionSecure } from '@/lib/api/permission-updater';
-import { reconcileStaleLiveCallPresenceForUser } from '@/lib/services/internal/live-call-presence-reconcile';
-import { executeSessionRuntimeJob, isSessionRuntimeJobId } from '@/lib/runtime-functions/session-jobs';
-import { isMfaRequiredError } from '@/lib/mfa';
-import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
+import { normalizeTargetUserIds, upsertLockboxRows } from '@/lib/api/permission-updater';
 import { permissionsInternal } from '@/lib/services/internal/permissions';
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
 import { dispatchSecureNotification } from '@/lib/services/internal/notification-dispatcher';
-import { executeCascadeDeleteSecure } from '../cascade-delete';
-import { verifyCreatorDeletionProof } from '@/lib/ephemeral/ephemeral-proof';
-import { verifyTurnstileToken } from '@/lib/turnstile';
-import { validatePublicNoteAccess } from '@/lib/appwrite/note';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
-import { PublicResourceType } from '@/lib/share/resource-types';
 import {
   MutatePermissionsSchema,
-  IDSchema,
-  JWTSchema,
-  CreateRowSchema,
-  UpdateRowSchema,
-  CRUDParamsSchema,
-  ListParamsSchema,
-  NoteSchema,
-  ProjectSchema,
-  EventSchema,
-  FormSchema,
-  TokenOperationSchema,
-  TelemetrySchema,
-  EphemeralNoteSchema,
-  SuggestionParamsSchema
+  IDSchema
 } from '@/lib/validations/schemas';
 import {
   isValidAppwriteRowId,
@@ -54,7 +25,7 @@ import {
   resolveResourceOwnerId} from '@/lib/utils/resource-ids';
 
 // Import interfaces / types from shared
-import { PermissionChangeInput, PermissionLevel, TokenAction } from './shared';
+import { PermissionChangeInput } from './shared';
 
 // Bind shared helper properties and variables to local scope for convenience
 const {

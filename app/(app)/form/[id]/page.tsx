@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, use } from 'react';
-import { Send, CheckCircle2, Upload as UploadIcon, X as XIcon, ChevronDown, ArrowLeft } from 'lucide-react';
+import { Send, CheckCircle2, Upload as UploadIcon, X as XIcon, ArrowLeft } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';
 import { useDataNexus } from '@/context/DataNexusContext';

@@ -5,23 +5,17 @@ import {
     Plus, 
     Edit, 
     Trash2, 
-    ExternalLink, 
     FileText, 
-    MoreVertical, 
     Sparkles, 
     History, 
     Settings, 
     Pin, 
-    Share2, 
     FolderKanban,
-    Lock,
-    Link as LinkIcon,
     RefreshCw
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
 import { Forms } from '@/generated/appwrite/types';
-import Link from 'next/link';
 import FormDialog from '@/components/forms/FormDialog';
 import FormSettingsDialog from '@/components/forms/FormSettingsDialog';
 import { useAuth } from '@/context/auth/AuthContext';

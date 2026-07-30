@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useMemo, useRef, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Box,
   IconButton,
@@ -27,7 +26,6 @@ import {
   Copy,
   ChevronLeft,
   Send,
-  Users,
   Edit} from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { IdentityAvatar } from '@/components/IdentityBadge';

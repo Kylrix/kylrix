@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { Plus, ArrowUpDown, Filter, List, LayoutGrid, Calendar, ArrowUp, ArrowDown, CheckCircle2, Trash2, Sparkles, ChevronDown, ChevronUp, Tag, X, RefreshCw } from 'lucide-react';
 import GoalObjectRow from './GoalObjectRow';
-import { useRouter } from 'next/navigation';
 import { useTask } from '@/context/TaskContext';
 import { useFAB } from '@/context/FABContext';
 import { ViewMode, SortField, TaskStatus } from '@/types';
@@ -29,7 +28,7 @@ export default function TaskList() {
     labels,
     isLoading,
     refreshTasks} = useTask();
-  const { setConfiguration, resetConfiguration } = useFAB();
+  const { setConfiguration} = useFAB();
   const { open } = useUnifiedDrawer();
 
   const [isSortOpen, setIsSortOpen] = useState(false);

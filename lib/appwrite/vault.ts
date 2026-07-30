@@ -7,10 +7,7 @@ import {
   Role,
   AuthenticatorType} from "appwrite";
 import { 
-  account, 
   databases, 
-  storage, 
-  realtime, 
   client, 
   getCurrentUser, 
   invalidateCurrentUserCache,
@@ -20,7 +17,6 @@ import {
   appwriteAvatars,
   APPWRITE_DATABASE_ID,
   APPWRITE_BUCKET_BACKUPS_ID,
-  APPWRITE_BUCKET_PROFILE_PICTURES_ID,
   APPWRITE_COLLECTION_KEYCHAIN_ID
 } from './client';
 import { buildVaultNoteTags } from "../sdk/crosslinks";
@@ -522,7 +518,6 @@ export const COLLECTION_SCHEMAS = {
     )},
 };
 
-import { fetchOptimized, invalidateCache } from '@/lib/ecosystem/nexus-fetcher';
 
 const VAULT_TTL = 1000 * 60 * 60; // 1 hour
 

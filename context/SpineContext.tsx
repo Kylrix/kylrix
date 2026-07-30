@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, ReactNode, useState } from 'react';
+import React, { createContext, useEffect, ReactNode, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { SpineEngine, SpineTickData } from '@/lib/services/SpineEngine';
 

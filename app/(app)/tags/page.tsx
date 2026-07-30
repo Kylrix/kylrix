@@ -30,7 +30,7 @@ import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 export default function TagsPage() {
   const { user, isAuthenticated, openIDMWindow } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
-  const { setConfiguration, resetConfiguration } = useFAB();
+  const { setConfiguration} = useFAB();
   const { setActiveDetail } = useSection();
   const { openSidebar } = useDynamicSidebar();
   const { openSecondarySidebar } = useLayout();

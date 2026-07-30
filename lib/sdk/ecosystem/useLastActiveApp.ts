@@ -1,6 +1,4 @@
 "use client";
-import { useEffect } from 'react';
-import { isFlowPath } from '@/lib/routing/app-paths';
 
 type AppName = 'accounts' | 'note' | 'vault' | 'flow' | 'connect';
 
@@ -12,35 +10,6 @@ type AppName = 'accounts' | 'note' | 'vault' | 'flow' | 'connect';
 /**
  * Detect which Kylrix app the user is currently in by parsing window.location
  */
-function detectCurrentApp(): AppName | null {
-  if (typeof window === 'undefined') return null;
-
-  const pathname = window.location.pathname.toLowerCase();
-  if (pathname === '/accounts' || pathname.startsWith('/accounts/')) return 'accounts';
-  if (pathname === '/app' || pathname.startsWith('/app/') || pathname.startsWith('/idea/')) return 'note';
-  if (pathname === '/vault' || pathname.startsWith('/vault/')) return 'vault';
-  if (isFlowPath(pathname)) return 'flow';
-  if (pathname === '/connect' || pathname.startsWith('/connect/')) return 'connect';
-
-  const hostname = window.location.hostname.toLowerCase();
-
-  // Parse: accounts.kylrix.space, accounts.localhost, localhost:3000, etc.
-  if (hostname.includes('accounts')) return 'accounts';
-  if (hostname.includes('note')) return 'note';
-  if (hostname.includes('vault')) return 'vault';
-  if (hostname.includes('flow')) return 'flow';
-  if (hostname.includes('connect')) return 'connect';
-
-  // Local dev: check port number
-  const port = window.location.port;
-  if (port === '3000') return 'accounts';
-  if (port === '3001') return 'note';
-  if (port === '3002') return 'vault';
-  if (port === '3003') return 'flow';
-  if (port === '3004') return 'connect';
-
-  return null;
-}
 
 /**
  * Get the last active app, or default to 'connect' if none found

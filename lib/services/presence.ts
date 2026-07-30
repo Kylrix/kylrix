@@ -1,7 +1,6 @@
 'use client';
 
 import { realtime } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 export type UserPresenceState = 'online' | 'away' | 'busy' | 'offline';
 

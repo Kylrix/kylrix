@@ -5,7 +5,6 @@ import { deleteNote } from '@/lib/actions/client-ops';
 import { useNotes } from '@/context/NotesContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Suspense } from 'react';
 import { CircularProgress } from '@/lib/openbricks/primitives';
 import type { Notes } from '@/types/appwrite';
 import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
@@ -23,10 +22,6 @@ import {
   FolderKanban as ProjectIcon, 
   FileText as NoteIcon, 
   Tag as TagIcon,
-  ChevronDown, 
-  ChevronUp, 
-  Maximize2, 
-  Share2,
   Info,
   Plus as PlusIcon,
   Edit2 as EditIcon,
@@ -50,7 +45,6 @@ import { ProjectsService } from '@/lib/appwrite/projects';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { NoteObjectDetail } from '@/components/objects/NoteObjectDetail';
-import { sidebarIgnoreProps } from '@/constants/sidebar';
 import { NotesErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
 import { isClientEncryptedNote, resolvePinnedNoteRows } from '@/lib/note/note-visibility';

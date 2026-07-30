@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
 import { MultiSectionContainer } from '@/context/SectionContext';
@@ -14,8 +14,6 @@ import {
   Loader2 as SpinnerIcon,
   RefreshCw,
   Clock,
-  ShieldAlert,
-  Info,
   CheckCircle2,
   Trash
 } from 'lucide-react';

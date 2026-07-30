@@ -1,4 +1,3 @@
-import { ID } from 'appwrite';
 import { secureUploadFile } from '../actions/client-ops';
 import { storage } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';

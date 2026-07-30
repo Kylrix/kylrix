@@ -1,13 +1,13 @@
 "use server";
 
-import { ID, Query } from 'node-appwrite';
+import { ID } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { createSystemTablesDB } from '@/lib/appwrite-admin';
 import * as shared from './shared';
 
 const { getActor } = shared;
 
-import { createPublicClient, createWalletClient, http, verifyTypedData } from 'viem';
+import { createWalletClient, http, verifyTypedData } from 'viem';
 import { arbitrum, arbitrumSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 

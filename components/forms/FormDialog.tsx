@@ -11,21 +11,16 @@ import {
   MenuItem,
   Divider,
   Stack,
-  FormControl,
-  InputLabel,
   Select,
   Switch,
   FormControlLabel,
   Paper,
   alpha,
   Tooltip,
-  Alert,
   Chip,
-  useTheme,
-  useMediaQuery} from '@/lib/openbricks/primitives';
+  useTheme} from '@/lib/openbricks/primitives';
 import {
   Add as AddIcon,
-  Delete as DeleteIcon,
   Close as CloseIcon,
   List as ListIcon,
   RadioButtonChecked as RadioIcon,

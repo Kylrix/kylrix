@@ -3,7 +3,6 @@
  * Cloud and self-hosted builds read the same helpers; callers never branch on env vars directly.
  */
 
-type DeploymentSurface = 'cloud' | 'selfhosted';
 
 const TRUTHY = new Set(['true', '1', 'yes', 'on']);
 

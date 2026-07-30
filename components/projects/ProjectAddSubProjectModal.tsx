@@ -15,11 +15,8 @@ import {
   ListItemIcon,
   ListItemText,
   CircularProgress,
-  alpha,
   useTheme,
-  Button,
-  Stack,
-} from '@/lib/openbricks/primitives';
+  Button} from '@/lib/openbricks/primitives';
 import { X, Search, Plus, FolderKanban } from 'lucide-react';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';

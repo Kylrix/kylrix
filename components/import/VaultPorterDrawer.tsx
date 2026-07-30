@@ -7,15 +7,12 @@ import {
   Download,
   Key,
   Shield,
-  Lock,
   ChevronRight,
   ArrowRight,
   Database,
   CheckCircle2,
-  FileText,
   AlertTriangle,
-  Info,
-  Copy} from 'lucide-react';
+  Info} from 'lucide-react';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { useBackgroundTask } from '@/context/BackgroundTaskContext';
 import { validateBitwardenExport, analyzeBitwardenExport } from '@/utils/import/bitwarden-mapper';

@@ -4,28 +4,22 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Notes } from '@/types/appwrite';
 
 import NoteContentRenderer from '@/components/NoteContentRenderer';
-import { VoiceNotePlayer } from '@/components/LinkRenderer';
 
 import {
   Mic,
   Square,
   FolderKanban,
   Trash2 as TrashIcon,
-  Paperclip as PaperClipIcon,
   ExternalLink as OpenIcon,
   Pin as PinIcon,
   ArrowLeft as BackIcon,
   Link2 as LinkIcon,
   Lock as LockIcon,
   Unlock as UnlockIcon,
-  Globe as PublicIcon,
-  RefreshCw as RefreshIcon,
   X as CloseIcon,
   Sparkles as ActionIcon,
   Video as VideoCallIcon,
   CheckSquare as TaskIcon,
-  Calendar as EventIcon,
-  Key as KeyIcon,
   Copy as CopyIcon,
   Tag as TagIcon,
   Plus,
@@ -34,8 +28,7 @@ import {
   Bold,
   Italic,
   Heading1,
-  Code2,
-  Info
+  Code2
 } from 'lucide-react';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
@@ -85,12 +78,11 @@ import {
   createTaskFromNote 
 } from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { formatFileSize } from '@/lib/utils';
 import { StorageService } from '@/lib/services/storage';
 import { useCallLauncher } from '@/context/CallLauncherContext';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { resolveResourceOwnerId, isValidAppwriteRowId } from '@/lib/utils/resource-ids';
+import { isValidAppwriteRowId } from '@/lib/utils/resource-ids';
 import { attachObject } from '@/lib/actions/client-ops';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
@@ -228,7 +220,7 @@ export function NoteDetailSidebar({
   const [title, setTitle] = useState(liveNote.title || '');
   const [content, setContent] = useState(liveNote.content || '');
   const [tags, setTags] = useState(liveNote.tags?.join(', ') || '');
-  const [isPublic, setIsPublic] = useState(getNotePublicState(liveNote));
+  const [isPublic, _setIsPublic] = useState(getNotePublicState(liveNote));
 
   /**
    * Direct Funnel to Local Copy: Any edit in detail immediately updates NotesContext live copy & triggers sync cycle.

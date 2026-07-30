@@ -2,7 +2,7 @@ import { ID, Models, Permission, Role, Query } from 'appwrite';
 import { tablesDB, realtime } from './appwrite/client';
 import { APPWRITE_CONFIG } from './appwrite/config';
 import { getEcosystemUrl } from './constants';
-import { Calendar, Task, Event, EventGuest, FocusSession } from '../types/kylrixflow';
+import { Calendar, Task, Event, EventGuest } from '../types/kylrixflow';
 import type { CollaboratorPermission, TaskCollaborator } from '../types';
 import { sendKylrixEmailNotification } from './email-notifications';
 

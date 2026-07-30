@@ -25,21 +25,7 @@ interface CrossObjectMetadata extends CrossObjectOrigin {
   maximizedRoute: string | null;
 }
 
-interface EcosystemIntent {
-  kind: EcosystemObjectKind;
-  targetApp: KylrixApp;
-  targetRoute: string;
-  openMode: EcosystemOpenMode;
-  origin: CrossObjectOrigin;
-  title?: string | null;
-  metadata?: Record<string, unknown>;
-}
 
-interface NavigationPolicyInput {
-  suppressBrowserMenu?: boolean;
-  suppressReload?: boolean;
-  allowModifiedClicks?: boolean;
-}
 
 export function createCrossObjectMetadata(
   origin: CrossObjectOrigin,
@@ -66,10 +52,4 @@ export function createCrossObjectMetadata(
 }
 
 
-function shouldOpenInSameTab(event?: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean; altKey?: boolean; button?: number }) {
-  if (!event) return true;
-  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return false;
-  if (typeof event.button === 'number' && event.button !== 0) return false;
-  return true;
-}
 

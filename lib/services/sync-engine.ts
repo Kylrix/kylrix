@@ -13,7 +13,7 @@
 
 import { markNotePersistedRemote, markComposePersisted, markComposeDraft } from '@/lib/notes/compose-draft-registry';
 import { updateNote, createNote } from '@/lib/actions/client-ops';
-import { getNote, getNotePublicState } from '@/lib/appwrite';
+import { getNotePublicState } from '@/lib/appwrite';
 import { pickNoteAutosavePayload } from '@/lib/appwrite/note';
 import { getLiveNoteForSync, getLiveGoalForSync } from '@/lib/sync/pending-sync-bridge';
 import { parseGoalPendingKey, goalPendingKey } from '@/lib/sync/goal-keys';

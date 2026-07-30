@@ -1,4 +1,3 @@
-import { Query } from 'appwrite';
 import type { KylrixApp } from '../design';
 
 type ForwardTargetKind = 'person' | 'conversation';
@@ -436,17 +435,7 @@ export function createForwardDirectory(deps: ForwardDirectoryDeps) {
   return service;
 }
 
-interface AppwriteForwardSourceConfig {
-  databaseId: string;
-  conversationsTableId: string;
-  conversationMembersTableId: string;
-  contactsTableId: string;
-  profilesTableId: string;
-}
 
-interface AppwriteForwardSourceClient {
-  listRows(databaseId: string, tableId: string, queries?: string[]): Promise<{ rows: any[] }>;
-}
 
 
 
