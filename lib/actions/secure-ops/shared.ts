@@ -144,7 +144,7 @@ export const isViewerTokenValid = (token: string) => {
  * Replaces legacy /api/shared/[noteid] route.
  */
 /**
- * Read-only public goal/task payload for /flow/goal/[id] guest pages.
+ * Read-only public goal/task payload for /goal/[id] guest pages.
  */
 
 

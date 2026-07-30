@@ -39,7 +39,7 @@ export function buildPublicResourcePath(
       return `/vault/totp/${id}`;
     case 'goal':
     case 'task':
-      return `/flow/goal/${id}`;
+      return `/goal/${id}`;
     case 'form':
       return `/flow/form/${id}`;
     case 'event':

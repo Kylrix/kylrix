@@ -161,10 +161,12 @@ export function UnifiedFileAttachmentDrawer() {
       const db = await getRxDB();
 
       if (activeSubTab === 'ideas') {
-        // Ideas / Notes — Unified 0ms Local Copy
+        // Ideas / Notes — Unified 0ms Local Copy (context → RxDB → LocalEngine → network)
         items = localContextNotes && localContextNotes.length > 0 ? localContextNotes : [];
         if (items.length === 0) {
-          items = (await db.notes.find().exec()).map((d) => d.toJSON());
+          const { loadNotesFromLocalCopy } = await import('@/lib/notes/load-local-notes');
+          const local = await loadNotesFromLocalCopy({ userId });
+          items = local?.notes || [];
         }
         if (items.length === 0) {
           const res = await listNotesPaginated({ limit: 100 });

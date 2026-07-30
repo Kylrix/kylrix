@@ -38,6 +38,7 @@ import {
 } from '@/lib/sync/local-copy-sync';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { registerLiveNoteGetter } from '@/lib/sync/pending-sync-bridge';
+import { loadNotesFromLocalCopy, warmNotesLocalCopy } from '@/lib/notes/load-local-notes';
 
 type LiveEditGuard = {
   title: string;
@@ -194,9 +195,6 @@ async function getGhostNotes(): Promise<Notes[]> {
   }
 }
 
-const PINNED_CACHE_KEY = 'pinned_note_ids';
-const INITIAL_NOTES_CACHE_KEY = 'initial_notes_page';
-
 // Outside component scope
 const sweepInFlightRef = { current: false };
 
@@ -211,6 +209,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const [cursor, setCursor] = useState<string | null>(null);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [isCacheLoaded, setIsCacheLoaded] = useState(false);
+  const hydratedUserIdRef = useRef<string | null>(null);
 
   // Make useAuth optional - try to use it if available
   let user = null;
@@ -234,43 +233,6 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const PINNED_CACHE_KEY = useMemo(() => `pinned_ids_${activeUserId}`, [activeUserId]);
   const INITIAL_NOTES_CACHE_KEY = useMemo(() => `initial_notes_${activeUserId}`, [activeUserId]);
 
-  // Load from cache on mount (Instant Cold-Start Hydration)
-  useEffect(() => {
-    if (isCacheLoaded) return;
-
-    const hydrateFromCache = async () => {
-        if (PINNED_CACHE_KEY && INITIAL_NOTES_CACHE_KEY) {
-            // Try Async hit first (checks memory then RxDB/IndexedDB)
-            const [cachedPinned, cachedNotes] = await Promise.all([
-                getCachedDataAsync<string[]>(PINNED_CACHE_KEY),
-                getCachedDataAsync<{
-                    notes: Notes[];
-                    totalNotes: number;
-                    cursor: string | null;
-                    hasMore: boolean;
-                }>(INITIAL_NOTES_CACHE_KEY)
-            ]);
-
-            if (cachedPinned && Array.isArray(cachedPinned)) {
-                setPinnedIds(cachedPinned);
-            }
-
-            if (cachedNotes && Array.isArray(cachedNotes.notes) && cachedNotes.notes.length > 0) {
-                setNotes(cachedNotes.notes);
-                setTotalNotes(cachedNotes.totalNotes || 0);
-                setCursor(cachedNotes.cursor || null);
-                setHasMore(cachedNotes.hasMore ?? true);
-                console.log('[NotesContext] Sub-millisecond cold start via RxDB substrate.');
-            }
-        }
-        // Always release loading after local hydration — show empty state instantly, network fills in background
-        setIsLoading(false);
-        setIsCacheLoaded(true);
-    };
-    
-    void hydrateFromCache();
-  }, [isCacheLoaded, getCachedDataAsync, PINNED_CACHE_KEY, INITIAL_NOTES_CACHE_KEY]);
-
   // Refs to avoid unnecessary re-creations / dependency loops
   const isFetchingRef = useRef(false);
   const notesRef = useRef<Notes[]>([]);
@@ -280,6 +242,65 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const activeComposeNoteIdsRef = useRef(new Set<string>());
   useEffect(() => { notesRef.current = notes; }, [notes]);
   useEffect(() => { cursorRef.current = cursor; }, [cursor]);
+
+  // Instant local hydration — same cascade as attach-object drawer / goals.
+  // Re-runs when auth resolves guest → real user so we don't stick on an empty guest miss.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let cancelled = false;
+
+    const hydrateFromCache = async () => {
+      const userId = activeUserId;
+      // Skip once this userId is hydrated. Re-runs when guest → real user (activeUserId changes).
+      if (hydratedUserIdRef.current === userId && isCacheLoaded) {
+        return;
+      }
+
+      const syncPinned = getCachedData<string[]>(PINNED_CACHE_KEY);
+      if (syncPinned && Array.isArray(syncPinned) && syncPinned.length) {
+        setPinnedIds(syncPinned);
+      }
+
+      const local = await loadNotesFromLocalCopy({
+        userId,
+        existingNotes: notesRef.current,
+        getCachedDataSync: (key) => getCachedData(key),
+        getCachedDataAsync: (key) => getCachedDataAsync(key),
+      });
+
+      if (cancelled) return;
+
+      if (local?.notes?.length) {
+        setNotes((prev) => (prev.length ? prev : local.notes));
+        setTotalNotes(local.totalNotes || local.notes.length);
+        setCursor(local.cursor ?? null);
+        setHasMore(local.hasMore ?? true);
+        void warmNotesLocalCopy(userId, local.notes);
+        console.log('[NotesContext] Instant cold start via local copy cascade.');
+      } else if (!syncPinned?.length) {
+        const cachedPinned = await getCachedDataAsync<string[]>(PINNED_CACHE_KEY);
+        if (!cancelled && cachedPinned && Array.isArray(cachedPinned)) {
+          setPinnedIds(cachedPinned);
+        }
+      }
+
+      hydratedUserIdRef.current = userId;
+      setIsLoading(false);
+      setIsCacheLoaded(true);
+    };
+
+    void hydrateFromCache();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeUserId,
+    isAuthLoading,
+    isCacheLoaded,
+    getCachedData,
+    getCachedDataAsync,
+    PINNED_CACHE_KEY,
+  ]);
 
   const PAGE_SIZE = Number(process.env.NEXT_PUBLIC_NOTES_PAGE_SIZE || 50);
 
@@ -367,6 +388,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         withGhosts.forEach(note => {
           if (note?.$id) setCachedData(`note_${note.$id}`, note);
         });
+        if (user?.$id) void warmNotesLocalCopy(user.$id, withGhosts);
 
       } else {
         // Normal pagination or force refetch
@@ -411,6 +433,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
                 cursor: res?.nextCursor || null,
                 hasMore: !!res?.hasMore
             });
+            if (user?.$id) void warmNotesLocalCopy(user.$id, batch);
         }
       }
     } catch (err: any) {

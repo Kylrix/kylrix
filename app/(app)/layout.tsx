@@ -55,6 +55,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         path.startsWith('/connect/call/') ||
         path.startsWith('/flow/form/') ||
         path.startsWith('/flow/goal/') ||
+        path.startsWith('/goal/') ||
         path.startsWith('/flow/forms/') ||
         path.startsWith('/flow/events/') ||
         path.startsWith('/agents/session/') ||

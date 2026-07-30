@@ -100,6 +100,16 @@ const nextConfig = {
         permanent: true,
       },
       {
+        source: '/flow/goal/:id',
+        destination: '/goal/:id',
+        permanent: true,
+      },
+      {
+        source: '/flow/goal/:id/:path*',
+        destination: '/goal/:id/:path*',
+        permanent: true,
+      },
+      {
         source: '/flow/goals',
         destination: '/goals',
         permanent: true,
