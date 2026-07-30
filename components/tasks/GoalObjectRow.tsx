@@ -15,15 +15,15 @@ type Props = {
   compact?: boolean;
 };
 
-/** List row for goals — shared ObjectCard chrome. */
-export default function GoalObjectRow({ task, compact }: Props) {
+/** Goal row — ObjectCard chrome (profile-drawer primitive). */
+export default function GoalObjectRow({ task }: Props) {
   const { selectTask, completeTask } = useTask();
   const { openSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
 
   const openDetail = useCallback(() => {
     selectTask(task.id);
-    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
     if (isDesktop) {
       openSidebar(
         <GoalObjectDetail taskId={task.id} embedded />,
@@ -48,7 +48,6 @@ export default function GoalObjectRow({ task, compact }: Props) {
     <ObjectCard
       item={item}
       onOpen={openDetail}
-      className={compact ? 'py-2.5' : undefined}
       trailing={
         <button
           type="button"

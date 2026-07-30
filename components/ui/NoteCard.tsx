@@ -16,9 +16,7 @@ import {
 
 import { useContextMenu } from './ContextMenuContext';
 import { useNotes } from '@/context/NotesContext';
-import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import type { Notes } from '@/types/appwrite';
-import { sidebarIgnoreProps } from '@/constants/sidebar';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useSection } from '@/context/SectionContext';
 import { ShareLockButton } from '../share/ShareLockButton';
@@ -33,6 +31,9 @@ import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { generateAIAction } from '@/lib/ai-actions';
+import { ObjectCard } from '@/components/objects/ObjectCard';
+import { noteToCard } from '@/lib/objects/adapters';
+import { sidebarIgnoreProps } from '@/constants/sidebar';
 
 interface NoteCardProps {
   note: Notes;
@@ -279,126 +280,115 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   ], [pinned, accessControlItems, isPro, handlePinToggle, isLockedT5, handleLockToggle, handleAIAction, handleCreateTodo, openShare, openDelete]);
 
   const cardTitle = React.useMemo(
-    () => (isLockedT5 ? '🔒 Locked Note' : isEncryptedNote ? '🔒 Encrypted note' : resolveNoteCardTitle(liveNote.title, liveNote.content) || 'Untitled Note'),
+    () => (isLockedT5 ? 'Locked' : isEncryptedNote ? 'Encrypted' : resolveNoteCardTitle(liveNote.title, liveNote.content) || 'Untitled'),
     [isEncryptedNote, isLockedT5, liveNote.content, liveNote.title],
   );
+
+  const previewText = React.useMemo(() => {
+    if (isEncryptedNote) return isLockedT5 ? 'Locked note' : 'Encrypted note';
+    if (note.format === 'doodle') return 'Sketch note (no longer supported)';
+    const cleaned = (liveNote.content || '')
+      .replace(/\[\[kylrix-object:.*?\]\]/g, '')
+      .replace(/!\[.*?\]\(.*?\)/g, '')
+      .replace(/\[voice:[a-zA-Z0-9_-]+\]/g, 'Voice note')
+      .trim();
+    if (cleaned) return cleaned;
+    if (previewImageUrl) return 'Image attached';
+    return 'No preview';
+  }, [isEncryptedNote, isLockedT5, liveNote.content, note.format, previewImageUrl]);
+
+  const cardItem = React.useMemo(() => {
+    const base = noteToCard({ ...liveNote, title: cardTitle });
+    return {
+      ...base,
+      title: cardTitle,
+      subtitle: previewText,
+      isPinned: pinned,
+    };
+  }, [liveNote, cardTitle, previewText, pinned]);
 
   return (
     <>
       {!mounted ? (
-        <div className="h-[200px]" />
+        <div className="h-[168px]" />
       ) : (
-        <div
-          {...sidebarIgnoreProps}
-          onClick={handleClick}
-          onContextMenu={handleRightClick}
-          className="relative flex flex-col justify-between p-6 w-full min-h-[196px] rounded-[28px] bg-[#161412] border border-[#34322F] hover:border-[#EC4899]/40 hover:bg-[#1C1A18] transition-all duration-300 ease-out cursor-pointer overflow-hidden group select-none max-w-full"
-        >
-          {/* Top Section */}
-          <div className="flex items-start gap-4 flex-1 min-w-0 w-full">
-
-            {/* Grouped Copy Column */}
-            <div className="flex-1 min-w-0 flex flex-col gap-2.5">
-              {/* Header Row */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {pinned && (
-                  <PinIcon size={14} className="text-[#EC4899] fill-[#EC4899] rotate-45 flex-shrink-0" />
-                )}
-                <h3 className="text-white text-base font-black tracking-tight leading-tight truncate flex-1 min-w-0 font-mono">
-                  {cardTitle}
-                </h3>
-              </div>
-
-              {/* Summary / Content Preview */}
-              <div className="text-sm text-white/50 font-medium leading-relaxed mt-1.5 overflow-hidden flex flex-col gap-2">
-                <p className="line-clamp-2 break-words select-text">
-                  {isEncryptedNote 
-                    ? (isLockedT5 ? '🔒 Locked Note' : '🔒 Encrypted note') 
-                    : note.format === 'doodle'
-                      ? 'Sketch note (no longer supported)'
-                      : (liveNote.content || '')
-                          .replace(/\[\[kylrix-object:.*?\]\]/g, '')
-                          .replace(/!\[.*?\]\(.*?\)/g, '')
-                          .replace(/\[voice:[a-zA-Z0-9_-]+\]/g, '🎙️ Voice Note')
-                          .trim() || (previewImageUrl ? '📷 Image attached' : 'Empty note')
-                  }
-                </p>
-
-                {/* Preview Image Card */}
-                {previewImageUrl && !isEncryptedNote && (
-                  <div className="relative w-full h-24 sm:h-28 rounded-xl overflow-hidden bg-[#161412] border border-white/10 group-hover:border-pink-500/30 transition-all">
-                    <img 
-                      src={previewImageUrl} 
-                      alt="Preview" 
-                      className="w-full h-full object-cover object-center opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
-                      onError={(e) => {
-                        (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Top-Right Inline Actions (Pin, Lock/Link) */}
-            <div className="flex items-center gap-0.5 flex-shrink-0">
-              <button
-                onClick={handlePinToggle}
-                className={`p-1.5 rounded-lg transition-all duration-200 ${pinned ? 'text-[#EC4899] bg-[#EC4899]/5' : 'text-white/20 hover:text-[#EC4899] hover:bg-[#EC4899]/5'}`}
-                title={pinned ? 'Unpin' : 'Pin'}
-              >
-                <PinIcon size={16} className={pinned ? 'fill-[#EC4899]' : ''} />
-              </button>
-
-              <ShareLockButton 
-                resourceType="note"
-                resourceId={note.$id}
-                isPublic={getNotePublicState(liveNote)}
-                isGuest={!!liveNote.isGuest}
-                accentColor="#EC4899"
-                onPublished={({ isPublic, isGuest }) => {
-                  const updated = { ...note, isPublic, isGuest };
-                  upsertNote(updated);
-                  onUpdate?.(updated);
-                }}
-                canPublish={!isEncryptedNote}
-                blockReason="Unlock vault to share encrypted notes"
-              />
-            </div>
-
-          </div>
-
-          {/* Bottom Action Bar */}
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/4 flex-shrink-0 select-none">
-            {/* Sync Status Dot */}
-            <div className="flex items-center gap-1.5">
-              <SyncStatusDot noteId={note.$id} />
-            </div>
-
-            {/* Attachments / Tag Badges */}
-            <div className="flex items-center gap-1.5 overflow-hidden max-w-[60%] justify-end">
-              {note.attachments && note.attachments.length > 0 && (
-                <span className="flex-shrink-0 bg-[#6366F1]/10 text-[#818CF8] text-[9px] font-black font-mono px-2 py-0.5 rounded border border-[#6366F1]/20 flex items-center gap-1">
-                  <AttachFileIcon size={10} />
-                  {note.attachments.length}
-                </span>
-              )}
-              {note.tags && note.tags.slice(0, 2).map((tag: string, index: number) => (
-                <span
-                  key={index}
-                  className="text-[9px] font-black font-mono uppercase tracking-wider bg-white/3 text-white/40 border border-white/8 px-2 py-0.5 rounded"
+        <div {...sidebarIgnoreProps} className="w-full max-w-full">
+          <ObjectCard
+            item={cardItem}
+            onOpen={() => handleClick()}
+            onContextMenu={handleRightClick}
+            trailing={
+              <>
+                <button
+                  type="button"
+                  onClick={handlePinToggle}
+                  className={`p-1.5 rounded-lg transition-all duration-200 ${
+                    pinned
+                      ? 'text-[#EC4899] bg-[#EC4899]/10'
+                      : 'text-white/25 hover:text-[#EC4899] hover:bg-[#EC4899]/10'
+                  }`}
+                  title={pinned ? 'Unpin' : 'Pin'}
+                  aria-label={pinned ? 'Unpin' : 'Pin'}
                 >
-                  {tag}
-                </span>
-              ))}
+                  <PinIcon size={15} className={pinned ? 'fill-[#EC4899]' : ''} />
+                </button>
+                <ShareLockButton
+                  resourceType="note"
+                  resourceId={note.$id}
+                  isPublic={getNotePublicState(liveNote)}
+                  isGuest={!!liveNote.isGuest}
+                  accentColor="#EC4899"
+                  onPublished={({ isPublic, isGuest }) => {
+                    const updated = { ...note, isPublic, isGuest };
+                    upsertNote(updated);
+                    onUpdate?.(updated);
+                  }}
+                  canPublish={!isEncryptedNote}
+                  blockReason="Unlock vault to share encrypted notes"
+                />
+              </>
+            }
+            footer={
+              (note.attachments && note.attachments.length > 0) || (note.tags && note.tags.length > 0) ? (
+                <div className="flex items-center gap-1.5 overflow-hidden w-full justify-end">
+                  {note.attachments && note.attachments.length > 0 ? (
+                    <span className="flex-shrink-0 bg-white/[0.03] text-white/45 text-[9px] font-black font-mono px-2 py-0.5 rounded-lg border border-white/[0.06] flex items-center gap-1">
+                      <AttachFileIcon size={10} />
+                      {note.attachments.length}
+                    </span>
+                  ) : null}
+                  {note.tags?.slice(0, 2).map((tag: string, index: number) => (
+                    <span
+                      key={index}
+                      className="text-[9px] font-black font-mono uppercase tracking-wider bg-white/[0.03] text-white/40 border border-white/[0.06] px-2 py-0.5 rounded-lg truncate max-w-[7rem]"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null
+            }
+          >
+            <div className="flex flex-col gap-3">
+              <p className="text-white/70 font-satoshi text-sm font-semibold leading-normal line-clamp-3 break-words m-0 select-text">
+                {previewText}
+              </p>
+              {previewImageUrl && !isEncryptedNote ? (
+                <div className="relative w-full h-24 sm:h-28 rounded-[14px] overflow-hidden bg-[#0B0A09] border border-white/[0.06]">
+                  <img
+                    src={previewImageUrl}
+                    alt=""
+                    className="w-full h-full object-cover object-center opacity-90"
+                    onError={(e) => {
+                      (e.currentTarget.parentElement as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+              ) : null}
             </div>
-          </div>
-
+          </ObjectCard>
         </div>
       )}
-
-
     </>
   );
 });

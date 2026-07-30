@@ -241,7 +241,9 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
     return {};
   });
 
-  const [screenWidth, setScreenWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
+  // Mobile-first default — never SSR a desktop multi-column shell that squishes content.
+  const [screenWidth, setScreenWidth] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 390);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -331,11 +333,11 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
     let columnsCount = 2;
     let sections: SectionConfig['sections'] = [];
 
-    if (screenWidth < 768) {
-      // Mobile: Standard single-column flow
+    if (screenWidth < 900) {
+      // Mobile / narrow tablet: single column — never reserve empty sidebar tracks
       columnsCount = 1;
       sections = [{ id: 'original', type: 'original', width: '1fr' }];
-    } else if (screenWidth >= 768 && screenWidth < 1440) {
+    } else if (screenWidth >= 900 && screenWidth < 1440) {
       // Laptop: Standard 2-column sidebar layout
       columnsCount = 2;
       sections = [
@@ -683,13 +685,13 @@ export function MultiSectionContainer({ children, panels}: MultiSectionContainer
       <Box 
         sx={{ 
           display: 'grid', 
-          gridTemplateColumns, 
-          gap: 4, 
+          // Always single track under md so hidden panel columns cannot steal width
+          gridTemplateColumns: { xs: '1fr', md: gridTemplateColumns },
+          gap: { xs: 0, md: 4 }, 
           alignItems: 'flex-start',
           width: '100%',
           maxWidth: '100%',
           margin: '0 auto',
-          // Premium margin padding positioning sides of the screen
           px: { xs: 1, lg: 2, xl: 3 },
           boxSizing: 'border-box'
         }}
@@ -697,7 +699,7 @@ export function MultiSectionContainer({ children, panels}: MultiSectionContainer
         {layout.sections.map((section) => {
           if (section.type === 'original') {
             return (
-              <Box key={section.id} sx={{ minWidth: 0, width: '100%' }}>
+              <Box key={section.id} sx={{ minWidth: 0, width: '100%', gridColumn: { xs: '1 / -1', md: 'auto' } }}>
                 {children}
               </Box>
             );
