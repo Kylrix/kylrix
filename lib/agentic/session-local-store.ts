@@ -26,6 +26,7 @@ export interface AgenticLocalSession {
   chatHistory: AgenticLocalMessage[];
   isPublic?: boolean;
   isGuest?: boolean;
+  isPinned?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -37,8 +38,19 @@ export interface AgenticSessionListItem {
   chatHistory: string;
   isPublic?: boolean;
   isGuest?: boolean;
+  isPinned?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+function sortSessions(rows: AgenticSessionListItem[]): AgenticSessionListItem[] {
+  return [...rows].sort((a, b) => {
+    const pinDelta = Number(b.isPinned === true) - Number(a.isPinned === true);
+    if (pinDelta !== 0) return pinDelta;
+    const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
+    const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+    return bTime - aTime;
+  });
 }
 
 const listeners = new Set<() => void>();
@@ -83,7 +95,7 @@ export const AgenticSessionLocalStore = {
 
   async setSessionsList(userId: string, rows: AgenticSessionListItem[]): Promise<void> {
     const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    await LocalEngine.cacheSet(sessionsListKey(userId), rows);
+    await LocalEngine.cacheSet(sessionsListKey(userId), sortSessions(rows));
     emit();
   },
 
@@ -112,6 +124,7 @@ export const AgenticSessionLocalStore = {
       chatHistory: chatHistoryStr,
       isPublic: session.isPublic,
       isGuest: session.isGuest,
+      isPinned: session.isPinned,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
@@ -201,6 +214,22 @@ export const AgenticSessionLocalStore = {
     const active = await this.getActiveSessionId(userId);
     if (active === sessionId) await this.setActiveSessionId(userId, null);
     emit();
+  },
+
+  async patchSessionMeta(
+    userId: string,
+    sessionId: string,
+    patch: Partial<Pick<AgenticLocalSession, 'isPublic' | 'isGuest' | 'isPinned' | 'context' | 'createdAt' | 'updatedAt'>>,
+  ): Promise<void> {
+    const session = await this.getSession(sessionId);
+    if (session) {
+      await this.upsertSession({ ...session, ...patch, id: sessionId, userId });
+      return;
+    }
+
+    const list = await this.getSessionsList(userId);
+    const next = list.map((row) => (row.id === sessionId ? { ...row, ...patch } : row));
+    await this.setSessionsList(userId, next);
   },
 
   isMessagePending(message?: AgenticLocalMessage | null): boolean {

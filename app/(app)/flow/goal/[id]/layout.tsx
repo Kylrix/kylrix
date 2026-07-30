@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getPublicGoalDataSecure } from '@/lib/actions/secure-ops';
+import { buildOgMetadata } from '@/lib/og/share-card';
 
 export async function generateMetadata({
   params,
@@ -23,29 +24,7 @@ export async function generateMetadata({
       goal.updatedAt || id
     )}`;
 
-    return {
-      title,
-      description,
-      openGraph: {
-        title,
-        description,
-        type: 'website',
-        images: [
-          {
-            url: previewImage,
-            width: 1200,
-            height: 630,
-            alt: title,
-          },
-        ],
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title,
-        description,
-        images: [previewImage],
-      },
-    };
+    return buildOgMetadata({ title, description, imageUrl: previewImage });
   } catch (e) {
     return {
       title: 'Shared Goal | Kylrix Flow',

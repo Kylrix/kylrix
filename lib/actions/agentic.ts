@@ -1029,6 +1029,7 @@ export async function listAgentSessions(jwt?: string) {
     chatHistory: row.chatHistory || '[]',
     isPublic: row.isPublic === true,
     isGuest: row.isGuest === true,
+    isPinned: row.isPinned === true,
     createdAt: row.$createdAt,
     updatedAt: row.$updatedAt
   }));
@@ -1046,6 +1047,32 @@ export async function toggleAgentSessionShareAction(
     mode,
     jwt,
   });
+}
+
+export async function setAgentSessionPinnedAction(
+  sessionId: string,
+  pinned: boolean,
+  jwt?: string,
+) {
+  const user = await requireUser(jwt);
+  const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
+  const tables = createSystemTablesDB();
+
+  const row = await tables.getRow({
+    databaseId: 'passwordManagerDb',
+    tableId: 'agentic_sessions',
+    rowId: sessionId,
+  });
+  if (row.userId !== user.$id) throw new Error('Unauthorized');
+
+  await tables.updateRow({
+    databaseId: 'passwordManagerDb',
+    tableId: 'agentic_sessions',
+    rowId: sessionId,
+    data: { isPinned: pinned },
+  });
+
+  return { success: true, isPinned: pinned };
 }
 
 export async function toggleAgentConversationShareAction(
@@ -1295,6 +1322,7 @@ export async function selectAgentSession(sessionId: string, jwt?: string) {
       chatHistory: row.chatHistory || '[]',
       isPublic: row.isPublic === true,
       isGuest: row.isGuest === true,
+      isPinned: row.isPinned === true,
       createdAt: row.$createdAt,
       updatedAt: row.$updatedAt
     }

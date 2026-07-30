@@ -4,6 +4,7 @@ import {
   PublicAgentMessageView,
   PublicAgentUnavailable,
 } from '@/components/agentic/PublicAgentShareViews';
+import { buildOgMetadata } from '@/lib/og/share-card';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,18 +15,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const payload = await getPublicAgentConversationSecure(id);
-  const fallbackImage = 'https://kylrix.space/logo_social.png';
+  const previewImage = `https://kylrix.space/agents/chat/${id}/opengraph-image`;
 
   if (!payload) {
-    return {
+    return buildOgMetadata({
       title: 'Shared reply · Kylrix',
       description: 'This shared message is not available.',
-      openGraph: {
-        title: 'Shared reply · Kylrix',
-        description: 'This shared message is not available.',
-        images: [{ url: fallbackImage, width: 1200, height: 630 }],
-      },
-    };
+      imageUrl: previewImage,
+    });
   }
 
   const snippet = String(payload.message.content || '')
@@ -36,21 +33,7 @@ export async function generateMetadata({
     payload.message.role === 'assistant' ? 'Shared Kylie reply · Kylrix' : 'Shared prompt · Kylrix';
   const description = snippet || 'A shared message from a chat with Kylie.';
 
-  return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      images: [{ url: fallbackImage, width: 1200, height: 630 }],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [fallbackImage],
-    },
-  };
+  return buildOgMetadata({ title, description, imageUrl: previewImage });
 }
 
 export default async function PublicAgentConversationPage({

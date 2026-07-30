@@ -3,34 +3,24 @@ import { validatePublicVaultAccess } from '@/lib/appwrite/vault';
 import SharedVaultClient from '../../SharedVaultClient';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { buildOgMetadata } from '@/lib/og/share-card';
 
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string; key?: string[] }>;
 }): Promise<Metadata> {
-  const fallbackImage = 'https://www.kylrix.space/logo_social.png';
-
   try {
     const { id } = await params;
     const credential = await validatePublicVaultAccess(id);
+    const previewImage = `https://www.kylrix.space/vault/${id}/opengraph-image`;
 
     if (!credential) {
-      return {
+      return buildOgMetadata({
         title: 'Shared Secret · Kylrix',
         description: 'View this shared credential securely.',
-        openGraph: {
-          title: 'Shared Secret · Kylrix',
-          description: 'View this shared credential securely.',
-          images: [{ url: fallbackImage, width: 1200, height: 630 }],
-        },
-        twitter: {
-          card: 'summary_large_image',
-          title: 'Shared Secret · Kylrix',
-          description: 'View this shared credential securely.',
-          images: [fallbackImage],
-        },
-      };
+        imageUrl: previewImage,
+      });
     }
 
     // name is encrypted, so we show a generic preview (safe: no secret data in OG)
@@ -38,31 +28,13 @@ export async function generateMetadata({
     const displayDesc =
       'Someone shared a password with you via Kylrix Vault. Open this link to view the credential.';
 
-    return {
-      title: displayTitle,
-      description: displayDesc,
-      openGraph: {
-        title: displayTitle,
-        description: displayDesc,
-        images: [{ url: fallbackImage, width: 1200, height: 630 }],
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: displayTitle,
-        description: displayDesc,
-        images: [fallbackImage],
-      },
-    };
+    return buildOgMetadata({ title: displayTitle, description: displayDesc, imageUrl: previewImage });
   } catch {
-    return {
+    return buildOgMetadata({
       title: 'Shared Secret · Kylrix',
       description: 'View shared credentials securely.',
-      openGraph: {
-        title: 'Shared Secret · Kylrix',
-        description: 'View shared credentials securely.',
-        images: [{ url: fallbackImage, width: 1200, height: 630 }],
-      },
-    };
+      imageUrl: 'https://www.kylrix.space/opengraph-image',
+    });
   }
 }
 

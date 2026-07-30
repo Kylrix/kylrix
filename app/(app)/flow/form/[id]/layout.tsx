@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { FormsServerService } from '@/lib/services/server/forms';
+import { buildOgMetadata } from '@/lib/og/share-card';
 
 const DEFAULT_DESCRIPTION = "Secure, shareable Kylrix Flow forms.";
 
@@ -45,28 +46,11 @@ export async function generateMetadata({
     form.$updatedAt || id
   )}`;
 
-  return {
+  return buildOgMetadata({
     title: `${form.title} | Kylrix Flow`,
     description,
-    openGraph: {
-      title: form.title,
-      description,
-      type: "website",
-      images: [
-        {
-          url: previewImage,
-          width: 1200,
-          height: 630,
-          alt: `${form.title} preview`,
-        }],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: form.title,
-      description,
-      images: [previewImage],
-    },
-  };
+    imageUrl: previewImage,
+  });
 }
 
 export default function FormPreviewLayout({

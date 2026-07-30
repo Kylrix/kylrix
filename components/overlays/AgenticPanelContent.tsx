@@ -88,6 +88,7 @@ import {
 } from '@/lib/agentic/message-blocks';
 import {
   AgenticSessionLocalStore,
+  subscribeAgenticLocalStore,
   type AgenticSyncStatus,
 } from '@/lib/agentic/session-local-store';
 
@@ -284,10 +285,13 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const [sessions, setSessions] = useState<any[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [showSessionActionsDrawer, setShowSessionActionsDrawer] = useState(false);
+  const [selectedSessionActionTarget, setSelectedSessionActionTarget] = useState<any | null>(null);
   const [messageMenuTarget, setMessageMenuTarget] = useState<ChatMessage | null>(null);
   const [composerMenuOpen, setComposerMenuOpen] = useState(false);
   const syncTimeoutRef = useRef<any>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const composerLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -382,11 +386,18 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
 
   const handleOpenSessions = async () => {
     setShowSessionsDrawer(true);
+    let hadLocal = false;
     if (user?.$id) {
       const local = await AgenticSessionLocalStore.getSessionsList(user.$id);
-      if (local.length) setSessions(local);
+      if (local.length) {
+        hadLocal = true;
+        setSessions(local);
+      }
     }
-    setLoadingSessions(true);
+    setLoadingSessions(!hadLocal);
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return;
+    }
     try {
       const { listAgentSessions } = await import('@/lib/actions/agentic');
       const { account } = await import('@/lib/appwrite/client');
@@ -421,6 +432,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           })),
         );
         setShowSessionsDrawer(false);
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
       }
 
       const { selectAgentSession, listAgentToolCallsAction } = await import('@/lib/actions/agentic');
@@ -450,6 +462,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             })),
             isPublic: res.session.isPublic,
             isGuest: res.session.isGuest,
+            isPinned: res.session.isPinned,
             createdAt: res.session.createdAt,
             updatedAt: res.session.updatedAt,
           });
@@ -507,6 +520,12 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             : s,
         ),
       );
+      if (user?.$id) {
+        await AgenticSessionLocalStore.patchSessionMeta(user.$id, sessionId, {
+          isPublic: mode === 'publish',
+          isGuest: mode === 'publish',
+        });
+      }
       if (!currentlyShared) {
         const { buildPublicResourceUrl } = await import('@/lib/share/public-url');
         const url = buildPublicResourceUrl('agent_session', sessionId);
@@ -523,6 +542,42 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       toast.error(err instanceof Error ? err.message : 'Could not update session sharing');
     }
   };
+
+  const handleToggleSessionPinned = async (sessionId: string, pinned: boolean) => {
+    try {
+      const { setAgentSessionPinnedAction } = await import('@/lib/actions/agentic');
+      const { account } = await import('@/lib/appwrite/client');
+      const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
+      await setAgentSessionPinnedAction(sessionId, pinned, jwt);
+      const nextSessions = sessions
+        .map((s) => (s.id === sessionId ? { ...s, isPinned: pinned } : s))
+        .sort((a, b) => {
+          const pinDelta = Number(b.isPinned === true) - Number(a.isPinned === true);
+          if (pinDelta !== 0) return pinDelta;
+          return new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime();
+        });
+      setSessions(nextSessions);
+      if (user?.$id) {
+        await AgenticSessionLocalStore.patchSessionMeta(user.$id, sessionId, { isPinned: pinned });
+      }
+      toast.success(pinned ? 'Session pinned.' : 'Session unpinned.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Could not update pin state');
+    }
+  };
+
+  const openSessionActionsDrawer = useCallback((sess: any) => {
+    setSelectedSessionActionTarget(sess);
+    setShowSessionActionsDrawer(true);
+  }, []);
+
+  const clearSessionLongPress = useCallback(() => {
+    if (sessionLongPressTimerRef.current) {
+      clearTimeout(sessionLongPressTimerRef.current);
+      sessionLongPressTimerRef.current = null;
+    }
+  }, []);
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -590,6 +645,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 isGuest: m.isGuest,
                 nextSteps: m.nextSteps,
               })),
+              isPinned: (session as any).isPinned === true,
             });
             await AgenticSessionLocalStore.setActiveSessionId(user.$id, session.rowId);
           }
@@ -600,6 +656,13 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     };
     void loadSessionHistory();
   }, [user?.$id]);
+
+  useEffect(() => {
+    if (!showSessionsDrawer || !user?.$id) return;
+    return subscribeAgenticLocalStore(() => {
+      void AgenticSessionLocalStore.getSessionsList(user.$id).then((rows) => setSessions(rows));
+    });
+  }, [showSessionsDrawer, user?.$id]);
 
   // Load local copy of draft prompt instantly on mount via LocalEngine
   useEffect(() => {
@@ -1768,7 +1831,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
 
             {/* List */}
             <div className="flex-1 overflow-y-auto px-5 py-3 flex flex-col gap-2">
-              {loadingSessions ? (
+              {loadingSessions && sessions.length === 0 ? (
                 <div className="flex items-center justify-center py-8 gap-2">
                   <RefreshCw size={14} className="animate-spin text-[#9B9691]" />
                   <span className="text-[#9B9691] text-xs font-semibold">Loading sessions…</span>
@@ -1798,11 +1861,26 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                     <div
                       key={sess.id}
                       onClick={() => handleSelectSession(sess.id)}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openSessionActionsDrawer(sess);
+                      }}
+                      onTouchStart={() => {
+                        clearSessionLongPress();
+                        sessionLongPressTimerRef.current = setTimeout(() => {
+                          openSessionActionsDrawer(sess);
+                        }, 450);
+                      }}
+                      onTouchEnd={clearSessionLongPress}
+                      onTouchMove={clearSessionLongPress}
+                      onTouchCancel={clearSessionLongPress}
                       className="w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] hover:border-white/10 transition cursor-pointer text-left group"
                     >
                       <div className="min-w-0 flex-1 flex flex-col gap-0.5">
-                        <span className="text-white text-xs font-bold leading-tight truncate">
+                        <span className="text-white text-xs font-bold leading-tight truncate flex items-center gap-2">
                           {titleText}
+                          {sess.isPinned === true && <span className="text-[10px] text-[#F59E0B] font-black">PINNED</span>}
                         </span>
                         <span className="text-[#9B9691] text-[10px] leading-snug line-clamp-1">
                           {previewText}
@@ -1813,7 +1891,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                           type="button"
                           onClick={(e) => handleShareSession(e, sess.id, sess.isPublic === true || sess.isGuest === true)}
                           title={sess.isPublic || sess.isGuest ? 'Session is shared' : 'Share session'}
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center border border-transparent transition opacity-0 group-hover:opacity-100 ${
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center border border-transparent transition ${
                             sess.isPublic || sess.isGuest
                               ? 'text-[#818CF8] bg-indigo-500/10'
                               : 'text-white/30 hover:text-white hover:bg-white/[0.06]'
@@ -1821,20 +1899,72 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                         >
                           <Share2 size={13} />
                         </button>
-                        <button
-                          type="button"
-                          onClick={(e) => handleDeleteSession(e, sess.id)}
-                          title="Delete Session"
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-red-500 hover:bg-red-500/10 border border-transparent transition opacity-0 group-hover:opacity-100 flex-shrink-0"
-                        >
-                          <Trash2 size={13} />
-                        </button>
                       </div>
                     </div>
                   );
                 })
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {showSessionActionsDrawer && selectedSessionActionTarget && (
+        <div className="absolute inset-0 bg-black/70 z-[60] flex flex-col justify-end">
+          <div className="bg-[#161412] border-t border-white/10 rounded-t-[24px] w-full max-h-[60dvh] px-5 py-4 flex flex-col gap-3 animate-slide-up">
+            <div className="w-10 h-1 rounded-full bg-white/10 mx-auto" />
+            <div className="text-center">
+              <div className="text-white text-sm font-extrabold">Session actions</div>
+              <div className="text-[#9B9691] text-[11px] mt-1 line-clamp-1">
+                {selectedSessionActionTarget.context || 'Manage this chat thread'}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                handleShareSession(
+                  e as any,
+                  selectedSessionActionTarget.id,
+                  selectedSessionActionTarget.isPublic === true || selectedSessionActionTarget.isGuest === true,
+                );
+                setShowSessionActionsDrawer(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/5 text-white text-sm font-bold"
+            >
+              <Share2 size={16} />
+              <span>{selectedSessionActionTarget.isPublic || selectedSessionActionTarget.isGuest ? 'Copy shared link / make private' : 'Share session'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                void handleToggleSessionPinned(
+                  selectedSessionActionTarget.id,
+                  !(selectedSessionActionTarget.isPinned === true),
+                );
+                setShowSessionActionsDrawer(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/5 text-white text-sm font-bold"
+            >
+              <Flag size={16} />
+              <span>{selectedSessionActionTarget.isPinned === true ? 'Unpin session' : 'Pin session'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                handleDeleteSession(e as any, selectedSessionActionTarget.id);
+                setShowSessionActionsDrawer(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-bold"
+            >
+              <Trash2 size={16} />
+              <span>Delete session</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSessionActionsDrawer(false)}
+              className="w-full flex items-center justify-center px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-white/70 text-sm font-bold"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}

@@ -1,6 +1,7 @@
 import React from 'react';
 import SharedNoteClient from '../SharedNoteClient';
 import { validatePublicNoteAccess } from '@/lib/appwrite';
+import { buildOgMetadata } from '@/lib/og/share-card';
 
 export async function generateMetadata({
   params,
@@ -44,21 +45,11 @@ export async function generateMetadata({
     if (isEncrypted) {
       if (!keyParam) {
         const encryptedOgUrl = `${baseUrl}/idea/${id}/opengraph-image`;
-        return {
+        return buildOgMetadata({
           title: 'Protected Note · Kylrix',
           description: 'This note is secure and password-protected.',
-          openGraph: {
-            title: 'Protected Note · Kylrix',
-            description: 'This note is secure and password-protected.',
-            images: [{ url: encryptedOgUrl, width: 1200, height: 630 }],
-          },
-          twitter: {
-            card: 'summary_large_image',
-            title: 'Protected Note · Kylrix',
-            description: 'This note is secure and password-protected.',
-            images: [encryptedOgUrl],
-          },
-        };
+          imageUrl: encryptedOgUrl,
+        });
       }
       try {
         const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
@@ -67,21 +58,11 @@ export async function generateMetadata({
       } catch (err) {
         console.warn('Failed server-side decryption of shared note metadata preview:', err);
         const encryptedOgUrl = `${baseUrl}/idea/${id}/opengraph-image`;
-        return {
+        return buildOgMetadata({
           title: 'Protected Note · Kylrix',
           description: 'This note is secure and password-protected.',
-          openGraph: {
-            title: 'Protected Note · Kylrix',
-            description: 'This note is secure and password-protected.',
-            images: [{ url: encryptedOgUrl, width: 1200, height: 630 }],
-          },
-          twitter: {
-            card: 'summary_large_image',
-            title: 'Protected Note · Kylrix',
-            description: 'This note is secure and password-protected.',
-            images: [encryptedOgUrl],
-          },
-        };
+          imageUrl: encryptedOgUrl,
+        });
       }
     }
 
@@ -90,49 +71,19 @@ export async function generateMetadata({
     const displayDesc = decryptedContent
       ? decryptedContent.substring(0, 160).trim() + '…'
       : 'View this note shared securely via Kylrix Note.';
-    const ogImage = `${baseUrl}/idea/${id}/opengraph-image${keyParam ? `?key=${encodeURIComponent(keyParam)}` : ''}`;
+    const ogQuery = new URLSearchParams();
+    if (keyParam) ogQuery.set('key', keyParam);
+    ogQuery.set('v', note.updatedAt || note.$updatedAt || note.$id || id);
+    const ogImage = `${baseUrl}/idea/${id}/opengraph-image?${ogQuery.toString()}`;
 
-    return {
-      title: displayTitle,
-      description: displayDesc,
-      openGraph: {
-        title: displayTitle,
-        description: displayDesc,
-        type: 'article',
-        images: [
-          {
-            url: ogImage,
-            width: 1200,
-            height: 630,
-            alt: displayTitle,
-          },
-        ],
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: displayTitle,
-        description: displayDesc,
-        images: [ogImage],
-      },
-    };
+    return buildOgMetadata({ title: displayTitle, description: displayDesc, imageUrl: ogImage });
   } catch (error) {
     console.error('Error generating metadata for Shared Note:', error);
-    const fallbackImage = 'https://kylrix.space/logo_social.png';
-    return {
+    return buildOgMetadata({
       title: 'Shared Note · Kylrix',
       description: 'View shared notes securely.',
-      openGraph: {
-        title: 'Shared Note · Kylrix',
-        description: 'View shared notes securely.',
-        images: [{ url: fallbackImage, width: 1200, height: 630 }],
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: 'Shared Note · Kylrix',
-        description: 'View shared notes securely.',
-        images: [fallbackImage],
-      },
-    };
+      imageUrl: 'https://kylrix.space/opengraph-image',
+    });
   }
 }
 

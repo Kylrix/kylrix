@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { getProjectInviteDetailsSecure } from '@/lib/actions/secure-ops';
+import { buildOgMetadata } from '@/lib/og/share-card';
 
 export async function generateMetadata(
   props: { params: Promise<{ projectId: string }> }
@@ -23,29 +24,11 @@ export async function generateMetadata(
     const isPublic = visibility === 'public';
     const desc = summary || `Collaborate on the project workspace "${title}" on Kylrix.`;
 
-    return {
+    return buildOgMetadata({
       title: `${title} | Project Invitation`,
       description: desc,
-      openGraph: {
-        title: `${title} | Project Workspace`,
-        description: desc,
-        type: 'website',
-        images: [
-          {
-            url: `/project/${projectId}/opengraph-image`,
-            width: 1200,
-            height: 630,
-            alt: title,
-          },
-        ],
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: `${title} | Project Workspace`,
-        description: desc,
-        images: [`/project/${projectId}/opengraph-image`],
-      },
-    };
+      imageUrl: `/project/${projectId}/opengraph-image`,
+    });
   } catch (e) {
     return {
       title: 'Project Workspace | Kylrix',

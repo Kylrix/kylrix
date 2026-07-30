@@ -1,45 +1,135 @@
 import { ImageResponse } from 'next/og';
 import { validatePublicNoteAccess } from '@/lib/appwrite';
 import { UsersService } from '@/lib/services/users';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { renderKylrixShareCard } from '@/lib/og/share-card';
 
 export const alt = 'Kylrix Shared Note';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 export const runtime = 'nodejs';
 
-function extractFirstImageUrlFromContent(content: string): string | null {
+type ImageSourceCandidate =
+  | { kind: 'remote-url'; url: string }
+  | { kind: 'storage-file'; bucketId: string; fileId: string };
+
+function isImageLikeMime(value: unknown): boolean {
+  return typeof value === 'string' && value.startsWith('image/');
+}
+
+function isImageLikeFilename(value: unknown): boolean {
+  return typeof value === 'string' && /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(value);
+}
+
+function extractFirstImageCandidateFromContent(content: string): ImageSourceCandidate | null {
   if (!content) return null;
 
-  // 1. Check for markdown image format: ![alt](url)
   const mdImageRegex = /!\[.*?\]\((.*?)\)/;
   const mdMatch = content.match(mdImageRegex);
-  if (mdMatch && mdMatch[1]) {
-    return mdMatch[1];
+  if (mdMatch?.[1]) {
+    return { kind: 'remote-url', url: mdMatch[1] };
   }
 
-  // 2. Check for HTML img tag src
   const htmlImgRegex = /<img\s+[^>]*src=["']([^"']+)["']/i;
   const htmlMatch = content.match(htmlImgRegex);
-  if (htmlMatch && htmlMatch[1]) {
-    return htmlMatch[1];
+  if (htmlMatch?.[1]) {
+    return { kind: 'remote-url', url: htmlMatch[1] };
   }
 
-  // 3. Check for kylrix-object JSON blocks that might represent an image
-  const OBJECT_BLOCK_REGEX = /\[\[kylrix-object:(\{.*?\})\]\]/g;
-  let objMatch;
-  while ((objMatch = OBJECT_BLOCK_REGEX.exec(content)) !== null) {
+  const objectBlockRegex = /\[\[kylrix-object:(\{.*?\})\]\]/g;
+  let objMatch: RegExpExecArray | null;
+  while ((objMatch = objectBlockRegex.exec(content)) !== null) {
     try {
       const payload = JSON.parse(objMatch[1]);
-      if (payload.type === 'image' && typeof payload.src === 'string') {
-        return payload.src;
+      const objectLooksLikeImage =
+        payload?.childKind === 'image' ||
+        payload?.type === 'image' ||
+        isImageLikeMime(payload?.mimeType) ||
+        isImageLikeMime(payload?.metadata?.mimeType) ||
+        isImageLikeFilename(payload?.metadata?.fileName);
+
+      if (!objectLooksLikeImage) continue;
+
+      const fileUrl = payload?.metadata?.fileUrl || payload?.src || payload?.url;
+      if (typeof fileUrl === 'string' && fileUrl.trim()) {
+        return { kind: 'remote-url', url: fileUrl };
       }
-      if (typeof payload.url === 'string' && (payload.url.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i) || payload.type === 'image')) {
-        return payload.url;
+
+      if (payload?.childId && payload?.bucketId) {
+        return {
+          kind: 'storage-file',
+          bucketId: String(payload.bucketId),
+          fileId: String(payload.childId),
+        };
       }
     } catch {}
   }
 
   return null;
+}
+
+function extractFirstImageCandidateFromAttachments(attachments: unknown): ImageSourceCandidate | null {
+  if (!Array.isArray(attachments)) return null;
+
+  for (const entry of attachments) {
+    try {
+      const parsed = typeof entry === 'string' ? JSON.parse(entry) : entry;
+      const mime = parsed?.mimeType || parsed?.mime;
+      const name = parsed?.fileName || parsed?.name;
+      const fileUrl = parsed?.fileUrl || parsed?.url;
+      const fileId = parsed?.fileId || parsed?.id || parsed?.$id;
+      const bucketId = parsed?.bucketId || APPWRITE_CONFIG.BUCKETS.NOTES_ATTACHMENTS;
+
+      if (!isImageLikeMime(mime) && !isImageLikeFilename(name)) continue;
+
+      if (typeof fileUrl === 'string' && fileUrl.trim()) {
+        return { kind: 'remote-url', url: fileUrl };
+      }
+
+      if (typeof fileId === 'string' && fileId.trim()) {
+        return {
+          kind: 'storage-file',
+          bucketId: String(bucketId),
+          fileId: fileId,
+        };
+      }
+    } catch {}
+  }
+
+  return null;
+}
+
+async function resolveCandidateToDataUrl(candidate: ImageSourceCandidate | null): Promise<string | null> {
+  if (!candidate) return null;
+
+  try {
+    if (candidate.kind === 'storage-file') {
+      const { storage } = await import('@/lib/appwrite-admin').then((mod) => mod.createSystemClient());
+      const fileBuffer = await storage.getFilePreview(candidate.bucketId, candidate.fileId, 1200, 630);
+      return `data:image/png;base64,${Buffer.from(fileBuffer).toString('base64')}`;
+    }
+
+    const imgRes = await fetch(candidate.url);
+    if (!imgRes.ok) return null;
+    const arrayBuffer = await imgRes.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const contentTypeHeader = imgRes.headers.get('content-type') || 'image/png';
+    return `data:${contentTypeHeader};base64,${buffer.toString('base64')}`;
+  } catch (e) {
+    console.warn('Failed to resolve note preview image candidate:', e);
+    return null;
+  }
+}
+
+async function resolveProfileAvatarDataUrl(fileId: string | null | undefined): Promise<string | null> {
+  if (!fileId) return null;
+  try {
+    const { storage } = await import('@/lib/appwrite-admin').then((mod) => mod.createSystemClient());
+    const fileBuffer = await storage.getFilePreview(APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES, fileId, 128, 128);
+    return `data:image/png;base64,${Buffer.from(fileBuffer).toString('base64')}`;
+  } catch {
+    return null;
+  }
 }
 
 export default async function SharedNoteOGImage(props: { 
@@ -54,6 +144,7 @@ export default async function SharedNoteOGImage(props: {
   let noteDesc = 'View this secure shared note on Kylrix.';
   let isEncrypted = false;
   let ownerName = 'Kylrix User';
+  let ownerAvatarDataUrl: string | null = null;
   let dateText = '';
   let tags: string[] = [];
   let base64Image: string | null = null;
@@ -98,47 +189,9 @@ export default async function SharedNoteOGImage(props: {
         noteDesc = cleanContent.slice(0, 180);
         if (cleanContent.length > 180) noteDesc += '...';
 
-        // Extract image URL from attachments or content
-        let imageUrl: string | null = null;
-        const attachments = (note as any).attachments || [];
-        const parsedAttachments = Array.isArray(attachments)
-          ? attachments.map(entry => {
-              try {
-                if (typeof entry === 'string') return JSON.parse(entry);
-                return entry;
-              } catch { return null; }
-            }).filter(Boolean)
-          : [];
-          
-        const firstImageAttachment = parsedAttachments.find(att => att && att.mime && att.mime.startsWith('image/'));
-        if (firstImageAttachment) {
-          try {
-            const { createSystemClient } = await import('@/lib/appwrite-admin');
-            const { storage } = createSystemClient();
-            const bucketId = 'notes_attachments';
-            imageUrl = storage.getFilePreview(bucketId, firstImageAttachment.id).toString();
-          } catch (e) {
-            console.warn('Failed to resolve attachment preview URL:', e);
-          }
-        }
-        
-        if (!imageUrl) {
-          imageUrl = extractFirstImageUrlFromContent(rawContent);
-        }
-
-        if (imageUrl) {
-          try {
-            const imgRes = await fetch(imageUrl);
-            if (imgRes.ok) {
-              const arrayBuffer = await imgRes.arrayBuffer();
-              const buffer = Buffer.from(arrayBuffer);
-              const contentTypeHeader = imgRes.headers.get('content-type') || 'image/png';
-              base64Image = `data:${contentTypeHeader};base64,${buffer.toString('base64')}`;
-            }
-          } catch (e) {
-            console.warn('Failed to fetch/encode preview image:', e);
-          }
-        }
+        const contentImageCandidate = extractFirstImageCandidateFromContent(rawContent);
+        const attachmentImageCandidate = extractFirstImageCandidateFromAttachments((note as any).attachments || []);
+        base64Image = await resolveCandidateToDataUrl(contentImageCandidate || attachmentImageCandidate);
       } else if (isEncrypted) {
         noteDesc = 'This note is protected with end-to-end encryption. Unlock it to view the full content.';
       }
@@ -158,6 +211,9 @@ export default async function SharedNoteOGImage(props: {
           const ownerProfile = await UsersService.getProfileById(note.userId);
           if (ownerProfile) {
             ownerName = ownerProfile.displayName || ownerProfile.name || ownerProfile.username || ownerName;
+            ownerAvatarDataUrl = await resolveProfileAvatarDataUrl(
+              ownerProfile.avatar || ownerProfile.profilePicId || null
+            );
           }
         } catch {}
       }
@@ -167,157 +223,18 @@ export default async function SharedNoteOGImage(props: {
   }
 
   return new ImageResponse(
-    (
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          padding: '60px 70px',
-          background: '#0A0908',
-          color: '#ffffff',
-          fontFamily: 'system-ui',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                background: '#6366F1',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#000000',
-                fontWeight: 900,
-                fontSize: '18px',
-              }}
-            >
-              K
-            </div>
-            <span style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '-0.04em' }}>Kylrix</span>
-          </div>
-          {dateText && (
-            <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>
-              {dateText}
-            </span>
-          )}
-        </div>
-
-        {base64Image ? (
-          <div style={{ display: 'flex', flexDirection: 'row', gap: '40px', flex: 1, alignItems: 'center' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, justifyContent: 'center' }}>
-              <div
-                style={{
-                  fontSize: '48px',
-                  fontWeight: 900,
-                  letterSpacing: '-0.03em',
-                  lineHeight: 1.1,
-                  maxWidth: '650px',
-                }}
-              >
-                {noteTitle}
-              </div>
-              <div
-                style={{
-                  fontSize: '20px',
-                  color: 'rgba(255,255,255,0.6)',
-                  lineHeight: 1.5,
-                  maxWidth: '650px',
-                }}
-              >
-                {noteDesc}
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexShrink: 0 }}>
-              <img
-                src={base64Image}
-                alt={noteTitle}
-                style={{
-                  width: '380px',
-                  height: '320px',
-                  objectFit: 'cover',
-                  borderRadius: '20px',
-                  border: '1px solid rgba(255,255,255,0.1)'
-                }}
-              />
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, justifyContent: 'center' }}>
-            <div
-              style={{
-                fontSize: '48px',
-                fontWeight: 900,
-                letterSpacing: '-0.03em',
-                lineHeight: 1.1,
-                maxWidth: '900px',
-              }}
-            >
-              {noteTitle}
-            </div>
-            <div
-              style={{
-                fontSize: '20px',
-                color: 'rgba(255,255,255,0.6)',
-                lineHeight: 1.5,
-                maxWidth: '900px',
-              }}
-            >
-              {noteDesc}
-            </div>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '16px',
-                fontWeight: 800,
-              }}
-            >
-              {ownerName.substring(0, 2).toUpperCase()}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>SHARED BY</span>
-              <span style={{ fontSize: '15px', fontWeight: 800 }}>{ownerName}</span>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {tags.slice(0, 3).map((tag, i) => (
-              <div
-                key={i}
-                style={{
-                  background: 'rgba(99,102,241,0.05)',
-                  border: '1px solid rgba(99,102,241,0.1)',
-                  color: '#6366F1',
-                  padding: '6px 12px',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  fontWeight: 800,
-                }}
-              >
-                {tag}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    ),
+    renderKylrixShareCard({
+      productLabel: 'Kylrix Note',
+      eyebrow: isEncrypted ? 'Protected note' : 'Shared note',
+      title: noteTitle,
+      description: noteDesc,
+      accent: 'indigo',
+      ownerName,
+      ownerAvatarDataUrl,
+      chips: [dateText, ...tags].filter(Boolean),
+      previewImageDataUrl: base64Image,
+      previewImageAlt: noteTitle,
+    }),
     { ...size }
   );
 }

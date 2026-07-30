@@ -33,10 +33,10 @@ import GlobalShell from '@/components/GlobalShell';
 export const metadata: Metadata = {
   metadataBase: new URL('https://kylrix.space'),
   title: {
-    default: 'Kylrix · The only agentic workspace where your productivity tools and autonomous agents coexist',
+    default: 'Kylrix · The agentic workspace that 10x the productivity of high agency builders',
     template: '%s · Kylrix',
   },
-  description: 'The only agentic workspace where your productivity tools and autonomous agents coexist. A deeply interconnected, zero-knowledge workspace where people create and agents execute.',
+  description: 'The agentic workspace that 10x the productivity of high agency builders.',
   icons: {
     icon: '/favicon.ico',
     apple: '/apple-touch-icon.png',
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     siteName: 'Kylrix',
     images: [
       {
-        url: '/logo_social.png',
+        url: '/opengraph-image',
         width: 1200,
         height: 630,
         alt: 'Kylrix Ecosystem',
@@ -57,9 +57,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Kylrix · The only agentic workspace where your productivity tools and autonomous agents coexist',
-    description: 'The only agentic workspace where your productivity tools and autonomous agents coexist.',
-    images: ['/logo_social.png'],
+    title: 'Kylrix · The agentic workspace that 10x the productivity of high agency builders',
+    description: 'The agentic workspace that 10x the productivity of high agency builders.',
+    images: ['/opengraph-image'],
   },
 };
 

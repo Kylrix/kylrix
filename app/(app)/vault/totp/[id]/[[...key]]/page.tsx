@@ -2,6 +2,7 @@ import { validatePublicTotpAccess } from '@/lib/appwrite/vault';
 import SharedTotpClient from '../../../SharedTotpClient';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { buildOgMetadata } from '@/lib/og/share-card';
 
 /**
  * Shared TOTP page.
@@ -17,11 +18,10 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string; key?: string[] }>;
 }): Promise<Metadata> {
-  const fallbackImage = 'https://www.kylrix.space/logo_social.png';
-
   try {
     const { id, key } = await params;
     const isTemp = key?.[0] === 'temp';
+    const previewImage = `https://www.kylrix.space/vault/totp/${id}/opengraph-image${isTemp ? '?temp=1' : ''}`;
 
     const displayTitle = isTemp
       ? 'Temporary TOTP Code · Kylrix'
@@ -30,26 +30,13 @@ export async function generateMetadata({
       ? 'A one-time time-based code was shared with you via Kylrix Vault. It expires soon.'
       : 'Someone shared a TOTP authenticator secret with you via Kylrix Vault.';
 
-    return {
-      title: displayTitle,
-      description: displayDesc,
-      openGraph: {
-        title: displayTitle,
-        description: displayDesc,
-        images: [{ url: fallbackImage, width: 1200, height: 630 }],
-      },
-      twitter: {
-        card: 'summary_large_image',
-        title: displayTitle,
-        description: displayDesc,
-        images: [fallbackImage],
-      },
-    };
+    return buildOgMetadata({ title: displayTitle, description: displayDesc, imageUrl: previewImage });
   } catch {
-    return {
+    return buildOgMetadata({
       title: 'Shared TOTP · Kylrix',
       description: 'View a shared TOTP authenticator code securely.',
-    };
+      imageUrl: 'https://www.kylrix.space/opengraph-image',
+    });
   }
 }
 

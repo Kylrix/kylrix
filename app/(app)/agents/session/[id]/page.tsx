@@ -4,6 +4,7 @@ import {
   PublicAgentSessionView,
   PublicAgentUnavailable,
 } from '@/components/agentic/PublicAgentShareViews';
+import { buildOgMetadata } from '@/lib/og/share-card';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,38 +15,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const session = await getPublicAgentSessionSecure(id);
-  const fallbackImage = 'https://kylrix.space/logo_social.png';
+  const previewImage = `https://kylrix.space/agents/session/${id}/opengraph-image`;
 
   if (!session) {
-    return {
+    return buildOgMetadata({
       title: 'Shared chat · Kylrix',
       description: 'This shared chat is not available.',
-      openGraph: {
-        title: 'Shared chat · Kylrix',
-        description: 'This shared chat is not available.',
-        images: [{ url: fallbackImage, width: 1200, height: 630 }],
-      },
-    };
+      imageUrl: previewImage,
+    });
   }
 
   const title = `${session.title} · Shared chat`;
   const description = 'A shared conversation with Kylie on Kylrix.';
 
-  return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      images: [{ url: fallbackImage, width: 1200, height: 630 }],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [fallbackImage],
-    },
-  };
+  return buildOgMetadata({ title, description, imageUrl: previewImage });
 }
 
 export default async function PublicAgentSessionPage({

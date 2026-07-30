@@ -1146,6 +1146,8 @@ export type AgenticSessions = Models.Row & {
     seen: boolean;
     chatHistory: string | null;
     isMemory: boolean;
+    isPublic: boolean;
+    isGuest: boolean;
 }
 
 export type Swept = Models.Row & {
