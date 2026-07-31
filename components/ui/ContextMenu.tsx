@@ -68,8 +68,15 @@ export function ContextMenu({ onCloseAction, items }: ContextMenuProps) {
         onClick={onCloseAction}
       />
 
-      {/* 2. Pitch Black Bottom Sheet Drawer */}
-      <div className="fixed bottom-0 left-0 right-0 h-[60vh] max-h-[600px] bg-[#0A0908] border-t border-[#34322F] rounded-t-[28px] z-[99999999] text-white p-5 flex flex-col gap-4 animate-slide-up overflow-y-auto font-satoshi shadow-[0_-24px_48px_rgba(0,0,0,0.95)] max-w-xl mx-auto">
+      {/* 2. Pitch Black Bottom Sheet Drawer
+          data-kylrix-context-menu: ContextMenuProvider capture-phase click closer
+          ignores clicks inside this sheet so item onClick handlers can run. */}
+      <div
+        data-kylrix-context-menu="true"
+        className="fixed bottom-0 left-0 right-0 h-[60vh] max-h-[600px] bg-[#0A0908] border-t border-[#34322F] rounded-t-[28px] z-[99999999] text-white p-5 flex flex-col gap-4 animate-slide-up overflow-y-auto font-satoshi shadow-[0_-24px_48px_rgba(0,0,0,0.95)] max-w-xl mx-auto"
+        onClick={(e) => e.stopPropagation()}
+        onContextMenu={(e) => e.preventDefault()}
+      >
         {/* Decorative drag handle bar */}
         <div className="w-10 h-1 bg-[#34322F] rounded-full mx-auto shrink-0 mb-1" />
 
@@ -77,7 +84,10 @@ export function ContextMenu({ onCloseAction, items }: ContextMenuProps) {
         {isSubmenu && (
           <button
             type="button"
-            onClick={handleBack}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleBack(e);
+            }}
             className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#161412] border border-[#1C1A18] text-[#9B9691] hover:text-white transition-all text-left text-xs font-bold uppercase tracking-wider mb-1"
           >
             <ChevronLeft size={16} />
@@ -91,7 +101,10 @@ export function ContextMenu({ onCloseAction, items }: ContextMenuProps) {
             <button
               key={index}
               type="button"
-              onClick={() => handleItemClick(item)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleItemClick(item);
+              }}
               className={`w-full flex items-center justify-between gap-3.5 p-3 rounded-2xl text-sm font-semibold transition-all duration-200 text-left border ${
                 item.variant === 'destructive'
                   ? 'bg-red-500/10 border-red-500/20 text-[#FF453A] hover:bg-red-500/20'

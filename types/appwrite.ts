@@ -183,6 +183,8 @@ export type Tasks = Models.Row & {
     updatedAt?: string | null;
     scheduled?: boolean | null;
     isAgentic?: boolean | null;
+    isEncrypted?: boolean | null;
+    dek?: string | null;
 }
 
 export type Projects = Models.Row & {

@@ -40,7 +40,7 @@ export function goalToCard(task: Task): UnifiedObjectCardModel {
     isPublic: Boolean(task.isPublic),
     isGuest: Boolean(task.isGuest),
     status: task.status || null,
-    accent: task.priority || null};
+    accent: null};
 }
 
 export function goalToDetail(task: Task): UnifiedObjectDetailModel {

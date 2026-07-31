@@ -393,7 +393,7 @@ export default function TaskList() {
                         </span>
                         <div className="flex-1 h-px bg-gradient-to-r from-[#A855F7]/20 to-transparent" />
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      <div className="grid gap-4 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
                         {activeTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
                       </div>
                     </div>
@@ -440,7 +440,7 @@ export default function TaskList() {
                              </button>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500">
+                          <div className="grid gap-4 items-stretch opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500 [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
                             {completedTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
                           </div>
                         </>

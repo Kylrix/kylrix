@@ -33,7 +33,9 @@ import {
   Activity,
   RefreshCw,
   ChevronRight,
-  Keyboard} from 'lucide-react';
+  Keyboard,
+  Target,
+  FolderKanban} from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -508,6 +510,9 @@ export default function ConnectTopbar({
       
       const key = event.key.toLowerCase();
 
+      // Leave Ctrl/Cmd+A for native select-all — never bind or preventDefault it.
+      if (key === 'a') return;
+
       if (event.shiftKey && key === 'v') {
         event.preventDefault();
         handleCloseAll();
@@ -821,7 +826,7 @@ export default function ConnectTopbar({
                 inputRef={searchInputRef}
                 value={searchQuery}
                 onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
-                placeholder="Search note, flow, vault, connect..."
+                placeholder="Search ideas, goals, vault, connect..."
                 fullWidth
                 autoFocus
                 sx={{
@@ -891,7 +896,7 @@ export default function ConnectTopbar({
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25 }}>
                   {[
                     { name: 'note', label: 'Ideas', color: '#EC4899', href: '/app' },
-                    { name: 'flow', label: 'Flow', color: '#A855F7', href: '/flows' },
+                    { name: 'goals', label: 'Goals', color: '#A855F7', href: '/goals' },
                     { name: 'vault', label: 'Vault', color: '#10B981', href: '/vault' },
                     { name: 'connect', label: 'Connect', color: '#F59E0B', href: '/connect' }
                   ].map((app) => (
@@ -919,7 +924,11 @@ export default function ConnectTopbar({
                       }}
                     >
                       <Box sx={{ width: 34, height: 34, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${app.color}12`, color: app.color }}>
-                        <Logo app={app.name as any} size={16} variant="icon" />
+                        {app.name === 'goals' ? (
+                          <Target size={16} strokeWidth={1.75} />
+                        ) : (
+                          <Logo app={app.name as any} size={16} variant="icon" />
+                        )}
                       </Box>
                       <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.8rem' }}>
                         {app.label}
@@ -929,53 +938,12 @@ export default function ConnectTopbar({
                 </Box>
               </Box>
 
-              {/* Quick Actions section including Send */}
+              {/* Quick Actions */}
               <Box sx={{ display: 'grid', gap: 1 }}>
                 <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
                   Quick Actions
                 </Typography>
                 <Box sx={{ display: 'grid', gap: 0.75 }}>
-                  {/* Primary Send action */}
-                  <Box
-                    component="button"
-                    onClick={() => {
-                      handleCloseAll();
-                      router.push('/send');
-                    }}
-                    sx={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1.25,
-                      px: 2,
-                      py: 1.25,
-                      borderRadius: '20px',
-                      bgcolor: 'rgba(255,255,255,0.015)',
-                      border: '1px solid rgba(255,255,255,0.04)',
-                      color: 'white',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      '&:hover': {
-                        bgcolor: 'rgba(255,255,255,0.035)',
-                        borderColor: '#10B98133',
-                        transform: 'translateX(2px)'
-                      }
-                    }}
-                  >
-                    <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(16, 185, 129, 0.12)', color: '#10B981', flexShrink: 0 }}>
-                      <Logo app="send" size={15} variant="icon" />
-                    </Box>
-                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                      <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }}>
-                        Send
-                      </Typography>
-                      <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }}>
-                        Share secure files and notes
-                      </Typography>
-                    </Box>
-                  </Box>
-
                   <Box
                     component="button"
                     onClick={openSearchShortcuts}
@@ -1112,7 +1080,7 @@ export default function ConnectTopbar({
               {(localTaskResults.length > 0 || localProjectResults.length > 0) && (
                 <Box sx={{ display: 'grid', gap: 0.75 }}>
                   <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
-                    Flow & Workspaces
+                    Goals & Workspaces
                   </Typography>
                   <Box sx={{ display: 'grid', gap: 0.75 }}>
                     {localProjectResults.slice(0, 2).map((proj) => (
@@ -1140,7 +1108,7 @@ export default function ConnectTopbar({
                         }}
                       >
                         <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(168, 85, 247, 0.12)', color: '#A855F7', flexShrink: 0 }}>
-                          <Logo app="flow" size={15} variant="icon" />
+                          <FolderKanban size={15} strokeWidth={1.75} />
                         </Box>
                         <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                           <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
@@ -1177,14 +1145,14 @@ export default function ConnectTopbar({
                         }}
                       >
                         <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(168, 85, 247, 0.12)', color: '#A855F7', flexShrink: 0 }}>
-                          <Logo app="flow" size={15} variant="icon" />
+                          <Target size={15} strokeWidth={1.75} />
                         </Box>
                         <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                           <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
-                            Task: {task.title}
+                            Goal: {task.title}
                           </Typography>
                           <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
-                            {task.description || 'Active task in roadmap'}
+                            {task.description || 'Active goal'}
                           </Typography>
                         </Box>
                       </Box>

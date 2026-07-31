@@ -103,6 +103,9 @@ export interface Task {
   scheduled?: boolean;
   /** True when Kyle (agent) created this goal rather than the user. */
   isAgentic?: boolean;
+  /** Vault-lock: presence of dek means title/description are DEK-encrypted. */
+  isEncrypted?: boolean;
+  dek?: string | null;
 }
 
 export type CollaboratorPermission = 'read' | 'write' | 'admin';

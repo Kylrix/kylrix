@@ -164,6 +164,9 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
     if (typeof window === 'undefined') return '';
     if (resourceType === 'project') return `${window.location.origin}/project/${activeResourceId}`;
     if (resourceType === 'note') return `${window.location.origin}/idea/${activeResourceId}`;
+    if (resourceType === 'goal' || resourceType === 'task') {
+      return `${window.location.origin}/goal/${activeResourceId}`;
+    }
     return `${window.location.origin}/shared/${resourceType}/${activeResourceId}`;
   }, [resourceType, activeResourceId]);
 

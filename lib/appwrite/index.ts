@@ -3,6 +3,7 @@ export * from './client';
 export * from './config';
 export * from './auth';
 export * from './note';
+export * from './goal-crypto';
 export * from './vault';
 export * from './projects';
 export { updateRow } from '@/lib/actions/client-ops';

@@ -8287,6 +8287,22 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "isEncrypted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "dek",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [

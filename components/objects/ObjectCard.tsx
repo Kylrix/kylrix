@@ -1,17 +1,7 @@
 'use client';
 
-import React from 'react';
-import {
-  FileText,
-  CheckSquare,
-  Calendar,
-  FormInput,
-  KeyRound,
-  Shield,
-  FolderKanban,
-  MessageSquare,
-  Pin,
-} from 'lucide-react';
+import React, { useCallback, useRef } from 'react';
+import { Pin } from 'lucide-react';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import { goalPendingKey } from '@/lib/sync/goal-keys';
 import {
@@ -25,48 +15,28 @@ function pendingResourceId(kind: ObjectKind, id: string): string {
   return id;
 }
 
-function KindIcon({ kind, accent }: { kind: ObjectKind; accent: string }) {
-  const props = { size: 16, strokeWidth: 2.25, color: accent };
-  switch (kind) {
-    case 'note':
-      return <FileText {...props} />;
-    case 'goal':
-      return <CheckSquare {...props} />;
-    case 'event':
-      return <Calendar {...props} />;
-    case 'form':
-      return <FormInput {...props} />;
-    case 'credential':
-      return <KeyRound {...props} />;
-    case 'totp':
-      return <Shield {...props} />;
-    case 'project':
-      return <FolderKanban {...props} />;
-    case 'agent_session':
-      return <MessageSquare {...props} />;
-    default:
-      return <FileText {...props} />;
-  }
-}
-
 type Props = {
   item: UnifiedObjectCardModel;
   onOpen?: (item: UnifiedObjectCardModel) => void;
-  onContextMenu?: (event: React.MouseEvent) => void;
-  /** Top-right actions (pin, share, complete, …) — profile-drawer trailing slot */
+  onContextMenu?: (event: React.MouseEvent | React.TouchEvent) => void;
   trailing?: React.ReactNode;
-  /** Optional inset body; defaults to subtitle preview */
   children?: React.ReactNode;
-  /** Optional row under the inset (tags, attachments) */
   footer?: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
+  /**
+   * fluid — height follows content (notes).
+   * uniform — equal card height by screen band (goals/events grids).
+   */
+  density?: 'fluid' | 'uniform';
 };
 
+const LONG_PRESS_MS = 480;
+
 /**
- * Gold-standard object chrome — same ordering as ConnectTopbar profile drawer:
- * accent Paper shell → header (icon chip + stacked title/meta + trailing) → inset body → footer.
- * Kind is the icon only. Never print redundant type labels ("Idea", "Goal").
+ * Unified object card — single ash surface.
+ * Uniform density locks height so grid tiles stay even across preview lengths.
+ * Long-press (mobile) mirrors right-click context menu.
  */
 export function ObjectCard({
   item,
@@ -77,15 +47,53 @@ export function ObjectCard({
   footer,
   className,
   style,
+  density = 'fluid',
 }: Props) {
   const accent = item.accent || objectKindAccent(item.kind);
   const done = item.status === 'done';
+  const uniform = density === 'uniform';
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFired = useRef(false);
+
+  const clearLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (!onContextMenu) return;
+      longPressFired.current = false;
+      clearLongPress();
+      const touch = e.touches[0];
+      longPressTimer.current = setTimeout(() => {
+        longPressFired.current = true;
+        onContextMenu({
+          preventDefault: () => {},
+          stopPropagation: () => {},
+          clientX: touch?.clientX ?? 0,
+          clientY: touch?.clientY ?? 0,
+        } as unknown as React.MouseEvent);
+      }, LONG_PRESS_MS);
+    },
+    [clearLongPress, onContextMenu],
+  );
+
+  const handleClick = useCallback(() => {
+    if (longPressFired.current) {
+      longPressFired.current = false;
+      return;
+    }
+    onOpen?.(item);
+  }, [item, onOpen]);
 
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={() => onOpen?.(item)}
+      onClick={handleClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -93,53 +101,48 @@ export function ObjectCard({
         }
       }}
       onContextMenu={onContextMenu}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={clearLongPress}
+      onTouchMove={clearLongPress}
+      onTouchCancel={clearLongPress}
       className={[
-        'w-full text-left rounded-[26px] bg-[#161412] overflow-hidden cursor-pointer select-none',
-        'transition-colors duration-200 hover:bg-[#1C1A18]',
+        'w-full text-left rounded-[26px] bg-[#161412] border border-[#34322F] overflow-hidden cursor-pointer select-none',
+        'transition-all duration-200 hover:border-[#3C3A38] hover:bg-[#1C1A18] hover:-translate-y-px',
+        uniform
+          ? 'h-full min-h-[152px] sm:min-h-[164px] lg:min-h-[176px] xl:min-h-[188px] flex flex-col'
+          : '',
         className || '',
       ].join(' ')}
-      style={{
-        border: `1px solid ${accent}38`,
-        ...style,
-      }}
+      style={style}
     >
-      <div className="p-3 flex flex-col gap-3">
-        {/* Header — profile drawer: icon chip | stacked copy | trailing */}
-        <div className="flex items-center justify-between gap-2 px-0.5">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div
-              className="w-[34px] h-[34px] rounded-xl grid place-items-center flex-shrink-0"
-              style={{
-                color: accent,
-                backgroundColor: `${accent}0F`,
-                border: `1px solid ${accent}2E`,
-              }}
-              aria-hidden
+      <div
+        className={[
+          'p-5 flex flex-col gap-3',
+          uniform ? 'flex-1 min-h-0 h-full' : '',
+        ].join(' ')}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 flex-shrink-0">
+          <div className="min-w-0 flex-1 flex items-center gap-2">
+            <span
+              className={[
+                'min-w-0 flex-1 text-white font-black text-[0.95rem] sm:text-[1rem] leading-[1.25] line-clamp-2',
+                done ? 'line-through text-white/45' : '',
+              ].join(' ')}
             >
-              <KindIcon kind={item.kind} accent={accent} />
-            </div>
-            <div className="min-w-0 flex-1 flex flex-col gap-0.5">
-              <span
-                className={[
-                  'block text-white font-black text-[0.95rem] leading-[1.15] truncate',
-                  done ? 'line-through text-white/45' : '',
-                ].join(' ')}
-              >
-                {item.title || 'Untitled'}
-              </span>
-              <span className="flex items-center gap-1.5 min-h-[14px]">
-                <SyncStatusDot resourceId={pendingResourceId(item.kind, item.id)} />
-                {item.isPinned ? (
-                  <Pin
-                    size={11}
-                    className="rotate-45 flex-shrink-0"
-                    style={{ color: accent, fill: accent }}
-                    aria-label="Pinned"
-                  />
-                ) : null}
-              </span>
-            </div>
+              {item.title || 'Untitled'}
+            </span>
+            <SyncStatusDot resourceId={pendingResourceId(item.kind, item.id)} />
+            {item.isPinned ? (
+              <Pin
+                size={12}
+                className="rotate-45 flex-shrink-0"
+                style={{ color: accent, fill: accent }}
+                aria-label="Pinned"
+              />
+            ) : null}
           </div>
+
           {trailing ? (
             <div
               className="flex items-center gap-0.5 flex-shrink-0"
@@ -151,18 +154,27 @@ export function ObjectCard({
           ) : null}
         </div>
 
-        {/* Inset body — profile drawer userid block rhythm */}
-        <div className="rounded-[20px] border border-white/[0.04] bg-white/[0.01] p-4">
+        {/* Preview — fixed clamp band when uniform so tiles match */}
+        <div
+          className={[
+            uniform ? 'flex-1 min-h-[2.75rem] sm:min-h-[3.25rem]' : '',
+          ].join(' ')}
+        >
           {children ?? (
-            <p className="text-white/70 font-satoshi text-sm font-semibold leading-normal line-clamp-3 break-words m-0">
-              {item.subtitle?.trim() || 'No preview'}
+            <p
+              className={[
+                'text-white/50 font-satoshi text-[0.8125rem] sm:text-sm font-medium leading-relaxed break-words m-0',
+                uniform ? 'line-clamp-2' : 'line-clamp-3',
+              ].join(' ')}
+            >
+              {item.subtitle?.trim() || (uniform ? '\u00A0' : '')}
             </p>
           )}
         </div>
 
         {footer ? (
           <div
-            className="flex items-center justify-between gap-2 px-0.5"
+            className="flex-shrink-0 mt-auto border-t border-white/[0.04]"
             onClick={(e) => e.stopPropagation()}
           >
             {footer}

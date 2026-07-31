@@ -14,6 +14,8 @@ interface AccessControlMenuItemsProps {
   isGuest: boolean;
   resourceTitle?: string;
   projectId?: string;
+  /** When set (e.g. vault/locked objects), clipboard uses DEK-in-URI share links. */
+  resolveShareUrl?: () => Promise<string>;
   onUpdate?: (updatedFields?: { isPublic: boolean; isGuest: boolean }) => void;
 }
 
@@ -24,12 +26,24 @@ export function useAccessControlMenuItems({
   isGuest,
   resourceTitle,
   projectId,
+  resolveShareUrl,
   onUpdate
 }: AccessControlMenuItemsProps) {
   const { open: openUnified } = useUnifiedDrawer();
   const { showSuccess, showError } = useToast();
 
   const isActive = isPublic || isGuest;
+
+  const copyShareUrl = async () => {
+    if (resolveShareUrl) {
+      const url = await resolveShareUrl();
+      await navigator.clipboard.writeText(url);
+      return;
+    }
+    const { buildPublicResourceUrl } = await import('@/lib/share/public-url');
+    const publicUrl = buildPublicResourceUrl(resourceType, resourceId, { projectId });
+    await navigator.clipboard.writeText(publicUrl);
+  };
 
   return [
     {
@@ -59,6 +73,18 @@ export function useAccessControlMenuItems({
             }
           },
           {
+            label: 'Copy Public Link',
+            icon: <Share2 size={16} className="text-emerald-500" />,
+            onClick: async () => {
+              try {
+                await copyShareUrl();
+                showSuccess('Link copied');
+              } catch (err: any) {
+                showError('Failed to copy link: ' + err.message);
+              }
+            }
+          },
+          {
             label: 'Access Settings',
             icon: <Share2 size={16} />,
             onClick: () => {
@@ -84,12 +110,12 @@ export function useAccessControlMenuItems({
               projectId
             });
             if (res.success) {
-              showSuccess('Published & Link copied');
               try {
-                const { buildPublicResourceUrl } = await import('@/lib/share/public-url');
-                const publicUrl = buildPublicResourceUrl(resourceType, resourceId, { projectId });
-                await navigator.clipboard.writeText(publicUrl);
-              } catch {}
+                await copyShareUrl();
+                showSuccess('Published & Link copied');
+              } catch {
+                showSuccess('Published');
+              }
               onUpdate?.({ isPublic: true, isGuest: true });
             }
           } catch (err: any) {

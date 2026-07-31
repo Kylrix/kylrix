@@ -50,6 +50,7 @@ export async function getPublicGoalDataSecure(goalId: string) {
     userId: row.userId || null,
     isPublic,
     isGuest,
+    isEncrypted: row.isEncrypted === true || !!row.dek,
     updatedAt: row.$updatedAt}));
 }
 

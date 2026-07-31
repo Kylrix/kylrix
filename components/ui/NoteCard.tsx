@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { 
   Pin as PinIcon, 
-  Paperclip as AttachFileIcon, 
   Trash2 as TrashIcon,
   Share2 as ShareIcon,
   Lock as PrivateIcon,
@@ -32,6 +31,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { generateAIAction } from '@/lib/ai-actions';
 import { ObjectCard } from '@/components/objects/ObjectCard';
+import { ObjectCardMeta } from '@/components/objects/ObjectCardMeta';
 import { noteToCard } from '@/lib/objects/adapters';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
 
@@ -65,6 +65,18 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     confirmLabel: 'Delete Note',
     onConfirm: async () => onDelete?.(note.$id) 
   }), [unifiedDrawer, note.title, note.$id, onDelete]);
+
+  const resolveNoteShareUrl = React.useCallback(async () => {
+    if (note.dek) {
+      const { getNoteShareUrlWithDek } = await import('@/lib/appwrite/goal-crypto');
+      return getNoteShareUrlWithDek(note.$id, note.dek);
+    }
+    const { getCurrentPublicNoteShareUrl } = await import('@/lib/appwrite');
+    const url = await getCurrentPublicNoteShareUrl(note.$id, note);
+    if (url) return url;
+    const { buildPublicResourceUrl } = await import('@/lib/share/public-url');
+    return buildPublicResourceUrl('note', note.$id);
+  }, [note]);
   
   const { promptSudo } = useSudo();
   const { openProUpgrade } = useProUpgrade();
@@ -207,13 +219,15 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     handleToggle();
   };
 
-  const handleRightClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleRightClick = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault?.();
+    e.stopPropagation?.();
     if (openMenu) {
+      const clientX = 'clientX' in e ? e.clientX : 0;
+      const clientY = 'clientY' in e ? e.clientY : 0;
       openMenu({
-        x: e.clientX,
-        y: e.clientY,
+        x: clientX,
+        y: clientY,
         items: contextMenuItems,
         appType: 'note',
       });
@@ -234,6 +248,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     isPublic: !!note.isPublic,
     isGuest: !!note.isGuest,
     resourceTitle: note.title || 'Untitled Note',
+    resolveShareUrl: resolveNoteShareUrl,
     onUpdate: (updatedFields?: { isPublic: boolean; isGuest: boolean }) => {
       const updated = updatedFields ? { ...note, ...updatedFields } : note;
       upsertNote(updated);
@@ -243,6 +258,32 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
 
   const useMemo = React.useMemo; const contextMenuItems = useMemo(() => [
     { label: pinned ? 'Unpin' : 'Pin', icon: <PinIcon size={16} className={pinned ? 'rotate-45 text-[#EC4899]' : ''} />, onClick: () => { handlePinToggle(); } },
+    {
+      label: 'Copy Public Link',
+      icon: <ShareIcon size={16} className="text-emerald-500" />,
+      onClick: async () => {
+        try {
+          if (!getNotePublicState(liveNote)) {
+            const { toggleResourcePublicGuest } = await import('@/lib/actions/client-ops');
+            const res = await toggleResourcePublicGuest({
+              resourceType: 'note',
+              resourceId: note.$id,
+              mode: 'publish',
+            });
+            if (res?.success) {
+              const updated = { ...note, isPublic: true, isGuest: true };
+              upsertNote(updated);
+              onUpdate?.(updated);
+            }
+          }
+          const url = await resolveNoteShareUrl();
+          await navigator.clipboard.writeText(url);
+          showSuccess(isLockedT5 ? 'Public link copied with key' : 'Public link copied');
+        } catch (err: any) {
+          showError(err?.message || 'Failed to copy share link');
+        }
+      },
+    },
     ...accessControlItems,
     { label: isLockedT5 ? 'Unlock' : 'Lock', icon: isLockedT5 ? <Unlock size={16} /> : <PrivateIcon size={16} />, onClick: () => { handleLockToggle(); } },
     
@@ -268,16 +309,9 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       label: 'Delete', 
       icon: <TrashIcon size={16} className="text-red-500" />, 
       variant: 'destructive' as const,
-      submenu: [
-        {
-          label: 'Confirm Delete',
-          icon: <TrashIcon size={16} className="text-red-500" />,
-          variant: 'destructive' as const,
-          onClick: openDelete
-        }
-      ]
+      onClick: openDelete,
     }
-  ], [pinned, accessControlItems, isPro, handlePinToggle, isLockedT5, handleLockToggle, handleAIAction, handleCreateTodo, openShare, openDelete]);
+  ], [pinned, accessControlItems, isPro, handlePinToggle, isLockedT5, handleLockToggle, handleAIAction, handleCreateTodo, openShare, openDelete, liveNote, note, onUpdate, resolveNoteShareUrl, showError, showSuccess, upsertNote]);
 
   const cardTitle = React.useMemo(
     () => (isLockedT5 ? 'Locked' : isEncryptedNote ? 'Encrypted' : resolveNoteCardTitle(liveNote.title, liveNote.content) || 'Untitled'),
@@ -343,38 +377,24 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
                     upsertNote(updated);
                     onUpdate?.(updated);
                   }}
-                  canPublish={!isEncryptedNote}
-                  blockReason="Unlock vault to share encrypted notes"
+                  canPublish
+                  getCustomShareUrl={resolveNoteShareUrl}
                 />
               </>
             }
             footer={
-              (note.attachments && note.attachments.length > 0) || (note.tags && note.tags.length > 0) ? (
-                <div className="flex items-center gap-1.5 overflow-hidden w-full justify-end">
-                  {note.attachments && note.attachments.length > 0 ? (
-                    <span className="flex-shrink-0 bg-white/[0.03] text-white/45 text-[9px] font-black font-mono px-2 py-0.5 rounded-lg border border-white/[0.06] flex items-center gap-1">
-                      <AttachFileIcon size={10} />
-                      {note.attachments.length}
-                    </span>
-                  ) : null}
-                  {note.tags?.slice(0, 2).map((tag: string, index: number) => (
-                    <span
-                      key={index}
-                      className="text-[9px] font-black font-mono uppercase tracking-wider bg-white/[0.03] text-white/40 border border-white/[0.06] px-2 py-0.5 rounded-lg truncate max-w-[7rem]"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              ) : null
+              <ObjectCardMeta
+                tags={Array.isArray(note.tags) ? note.tags.filter(Boolean) as string[] : []}
+                attachmentCount={note.attachments?.length || 0}
+              />
             }
           >
             <div className="flex flex-col gap-3">
-              <p className="text-white/70 font-satoshi text-sm font-semibold leading-normal line-clamp-3 break-words m-0 select-text">
+              <p className="text-white/55 font-satoshi text-sm font-medium leading-relaxed line-clamp-3 break-words m-0 select-text">
                 {previewText}
               </p>
               {previewImageUrl && !isEncryptedNote ? (
-                <div className="relative w-full h-24 sm:h-28 rounded-[14px] overflow-hidden bg-[#0B0A09] border border-white/[0.06]">
+                <div className="relative w-full h-24 sm:h-28 rounded-[14px] overflow-hidden border border-white/[0.06]">
                   <img
                     src={previewImageUrl}
                     alt=""

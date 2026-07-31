@@ -2192,7 +2192,17 @@ export async function getCurrentPublicNoteShareUrl(noteId: string, note?: Notes)
       try { return JSON.parse(liveNote.metadata || '{}'); } catch { return {}; }
     })();
 
-    if (meta.isEncrypted || meta.encryptionVersion === 'T4') {
+    if (meta.isEncrypted || meta.encryptionVersion === 'T4' || meta.encryptionVersion === 'T5' || liveNote.dek || liveNote.isEncrypted) {
+      // T5 lock: unwrap DEK column (MEK-wrapped) into URL fragment
+      if (liveNote.dek) {
+        try {
+          const { getNoteShareUrlWithDek } = await import('@/lib/appwrite/goal-crypto');
+          return await getNoteShareUrlWithDek(liveNote.$id, liveNote.dek);
+        } catch {
+          /* fall through to T4 path */
+        }
+      }
+
       const currentUser = await getCurrentUser();
       if (!currentUser) { return null; }
 

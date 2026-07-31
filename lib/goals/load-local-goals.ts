@@ -48,7 +48,10 @@ function normalizeGoalRow(row: any): Task | null {
     isGuest: row.isGuest === true || String(row.isGuest) === 'true',
     discussionId: row.discussionId || null,
     scheduled: row.scheduled === true || String(row.scheduled) === 'true',
-    isAgentic: row.isAgentic === true || String(row.isAgentic) === 'true'} as Task;
+    isAgentic: row.isAgentic === true || String(row.isAgentic) === 'true',
+    isEncrypted: row.isEncrypted === true || String(row.isEncrypted) === 'true',
+    dek: row.dek || null,
+  } as Task;
 }
 
 export async function loadGoalsFromLocalCopy(opts: {

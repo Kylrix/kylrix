@@ -55,19 +55,40 @@ function parseNoteMeta(note: Notes) {
 async function decryptNoteIfNeeded(note: Notes, key?: string): Promise<Notes> {
   const meta = parseNoteMeta(note);
   const isT4 = meta.isEncrypted && meta.encryptionVersion === 'T4';
+  const isT5 =
+    (!!note.dek || meta.encryptionVersion === 'T5' || note.isEncrypted === true) &&
+    !meta.clientDecrypted;
   const isGhost = !!meta.isGhost;
 
-  if (!isT4 && !isGhost) return note;
-  if (!key) throw new Error('This note is encrypted and requires a decryption key.');
+  if (!isT4 && !isT5 && !isGhost) return note;
+  if (!key) {
+    if (isT5 || isT4 || isGhost) {
+      throw new Error('This note is encrypted and requires a decryption key.');
+    }
+    return note;
+  }
 
-  const keyBuffer = ecosystemSecurity.decodeBase64(key);
+  // URL keys are URL-safe base64 (vault / lock DEK style)
+  const normalized = key.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = (4 - (normalized.length % 4)) % 4;
+  const keyBuffer = ecosystemSecurity.decodeBase64(normalized + '='.repeat(pad));
   const cryptoKey = await crypto.subtle.importKey(
     'raw',
-    keyBuffer as any,
+    keyBuffer as BufferSource,
     { name: 'AES-GCM', length: 256 },
     true,
     ['decrypt']
   );
+
+  if (isT5) {
+    const titleSource = meta.encryptedTitle || note.title || '';
+    return {
+      ...note,
+      title: await ecosystemSecurity.decryptWithKey(titleSource, cryptoKey),
+      content: await ecosystemSecurity.decryptWithKey(note.content || '', cryptoKey),
+      metadata: JSON.stringify({ ...meta, clientDecrypted: true }),
+    };
+  }
 
   if (isT4) {
     return {
