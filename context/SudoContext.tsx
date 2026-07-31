@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode, useEffect, useRef } from 'react';
 import SudoModal from '@/components/overlays/SudoModal';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { usePathname } from 'next/navigation';
@@ -8,6 +8,7 @@ import type { KylrixApp } from '@/lib/sdk/design';
 
 import { useAuth } from '@/context/auth/AuthContext';
 import { isFlowPath } from '@/lib/routing/app-paths';
+import { useRightRail } from '@/context/RightRailContext';
 
 interface SudoOptions {
     onSuccess: () => void;
@@ -26,9 +27,24 @@ interface SudoContextType {
 
 const SudoContext = createContext<SudoContextType | undefined>(undefined);
 
+function useIsDesktop() {
+    const [isDesktop, setIsDesktop] = useState(false);
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const media = window.matchMedia('(min-width: 768px)');
+        const sync = () => setIsDesktop(media.matches);
+        sync();
+        media.addEventListener('change', sync);
+        return () => media.removeEventListener('change', sync);
+    }, []);
+    return isDesktop;
+}
+
 export function SudoProvider({ children }: { children: ReactNode }) {
     const { user } = useAuth();
     const pathname = usePathname();
+    const isDesktop = useIsDesktop();
+    const { open: openRightRail, close: closeRightRail } = useRightRail();
     const [isSudoOpen, setIsSudoOpen] = useState(false);
     const [securityStatus, setSecurityStatus] = useState(ecosystemSecurity.status);
 
@@ -42,14 +58,11 @@ export function SudoProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         if (user?.$id) {
-            // Local-first snapshot + background enclave hydrate (keychain, identity, wallets)
             ecosystemSecurity.fetchSecuritySnapshot(user.$id);
             void import('@/lib/security/enclave').then(({ SecurityEnclave }) => {
                 void SecurityEnclave.hydrateFromRemote(user.$id!).catch(() => {});
             });
-            
-            // Section 1: Volatile MEK Preservation Recovery
-            // Attempt to recover MEK from Service Worker on reload
+
             if (!isUnlocked) {
                 const recoverMEK = async () => {
                     const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
@@ -77,7 +90,6 @@ export function SudoProvider({ children }: { children: ReactNode }) {
     const [sudoPromise, setSudoPromise] = useState<{ resolve: (v: boolean) => void } | null>(null);
 
     const requestSudo = useCallback((options: SudoOptions) => {
-        // Force prompt for 'upgrade' intent always, as password is required for re-wrapping
         if (isUnlocked && !options.forcePrompt && options.intent !== "upgrade") {
             options.onSuccess();
             return;
@@ -92,7 +104,7 @@ export function SudoProvider({ children }: { children: ReactNode }) {
 
         return new Promise<boolean>((resolve) => {
             setSudoPromise({ resolve });
-            setPendingAction({ 
+            setPendingAction({
                 intent,
                 forcePrompt,
                 onSuccess: () => resolve(true),
@@ -104,6 +116,7 @@ export function SudoProvider({ children }: { children: ReactNode }) {
 
     const handleSuccess = useCallback(() => {
         setIsSudoOpen(false);
+        closeRightRail('sudo');
         if (typeof window !== "undefined") {
             window.dispatchEvent(new CustomEvent("kylrix:vault-unlocked"));
         }
@@ -115,14 +128,14 @@ export function SudoProvider({ children }: { children: ReactNode }) {
             sudoPromise.resolve(true);
             setSudoPromise(null);
         }
-        // Force refresh snapshot after successful sudo action
         if (user?.$id) {
             ecosystemSecurity.fetchSecuritySnapshot(user.$id, true);
         }
-    }, [pendingAction, sudoPromise, user]);
+    }, [pendingAction, sudoPromise, user, closeRightRail]);
 
     const handleCancel = useCallback(() => {
         setIsSudoOpen(false);
+        closeRightRail('sudo');
         if (pendingAction?.onCancel) {
             pendingAction.onCancel();
         }
@@ -131,7 +144,35 @@ export function SudoProvider({ children }: { children: ReactNode }) {
             sudoPromise.resolve(false);
             setSudoPromise(null);
         }
-    }, [pendingAction, sudoPromise]);
+    }, [pendingAction, sudoPromise, closeRightRail]);
+
+    const successRef = useRef(handleSuccess);
+    const cancelRef = useRef(handleCancel);
+    successRef.current = handleSuccess;
+    cancelRef.current = handleCancel;
+
+    useEffect(() => {
+        if (!isDesktop) {
+            closeRightRail('sudo');
+            return;
+        }
+        if (!isSudoOpen) {
+            closeRightRail('sudo');
+            return;
+        }
+
+        openRightRail(
+            <SudoModal
+                isOpen
+                presentation="embedded"
+                onSuccess={() => successRef.current()}
+                onCancel={() => cancelRef.current()}
+                intent={pendingAction?.intent}
+                app={sudoApp}
+            />,
+            { key: 'sudo', width: 420 },
+        );
+    }, [isSudoOpen, isDesktop, pendingAction?.intent, sudoApp, openRightRail, closeRightRail]);
 
     const contextValue = useMemo<SudoContextType>(
         () => ({ requestSudo, promptSudo, isUnlocked, hasMasterpass, hasPasskey }),
@@ -141,13 +182,16 @@ export function SudoProvider({ children }: { children: ReactNode }) {
     return (
         <SudoContext.Provider value={contextValue}>
             {children}
-            <SudoModal
-                isOpen={isSudoOpen}
-                onSuccess={handleSuccess}
-                onCancel={handleCancel}
-                intent={pendingAction?.intent}
-                app={sudoApp}
-            />
+            {!isDesktop && (
+                <SudoModal
+                    isOpen={isSudoOpen}
+                    presentation="overlay"
+                    onSuccess={handleSuccess}
+                    onCancel={handleCancel}
+                    intent={pendingAction?.intent}
+                    app={sudoApp}
+                />
+            )}
         </SudoContext.Provider>
     );
 }

@@ -30,6 +30,12 @@ interface SudoModalProps {
     onClose?: () => void;
     intent?: "unlock" | "initialize" | "reset" | "upgrade";
     app?: KylrixApp;
+    /**
+     * push — desktop native right rail (default on md+).
+     * overlay — legacy fixed drawer (mobile / forced).
+     * embedded — fill parent (already inside a rail).
+     */
+    presentation?: "push" | "overlay" | "embedded";
 }
 
 // Simple custom media query hook to replace MUI useMediaQuery
@@ -61,18 +67,22 @@ export default function SudoModal({
     onCancel,
     onClose,
     intent,
-    app = "note"}: SudoModalProps) {
+    app = "note",
+    presentation: presentationProp}: SudoModalProps) {
     const { setIsDrawerOpen } = useDrawerState();
     const { usePasskeysByDefault } = useAppwriteVault();
     const isOpen = isOpenProp ?? open ?? false;
+    const isDesktop = useIsDesktop();
+    const presentation =
+      presentationProp ?? (isDesktop ? "push" : "overlay");
 
     useEffect(() => {
-        setIsDrawerOpen(isOpen);
+        // Only overlay mode blocks the whole app chrome as a drawer.
+        setIsDrawerOpen(isOpen && presentation === "overlay");
         return () => setIsDrawerOpen(false);
-    }, [isOpen, setIsDrawerOpen]);
+    }, [isOpen, presentation, setIsDrawerOpen]);
 
     const cancelHandler = useMemo(() => onCancel ?? onClose ?? (() => {}), [onCancel, onClose]);
-    const isDesktop = useIsDesktop();
     const { user } = useAuth();
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -488,23 +498,35 @@ export default function SudoModal({
 
     if (!isOpen) return null;
 
+    const shellClass =
+      presentation === "embedded" || presentation === "push"
+        ? "relative h-full w-full bg-[#161412] border-l border-white/8 flex flex-col overflow-hidden"
+        : `fixed z-[9999999] bg-[#161412] border-white/5 shadow-2xl transition-all duration-300 flex flex-col overflow-hidden bottom-0 right-0 w-full sm:w-[420px] rounded-t-[32px] sm:rounded-tr-none sm:rounded-l-[32px] border ${
+            isDesktop ? "animate-slideInRight" : "animate-slideInUp"
+          }`;
+
+    const shellStyle =
+      presentation === "embedded" || presentation === "push"
+        ? undefined
+        : {
+            top: isDesktop ? "88px" : "auto",
+            height: isDesktop ? "calc(100vh - 88px)" : "auto",
+            maxHeight: isDesktop ? "calc(100vh - 88px)" : "calc(100vh - 12px)",
+          };
+
     return (
         <>
-            {/* Backdrop */}
+            {presentation === "overlay" ? (
             <div 
                 className="fixed inset-0 z-[9999998] bg-black/60 transition-all duration-300 animate-fadeIn"
                 onClick={cancelHandler}
             />
+            ) : null}
 
             {/* Modal/Drawer Container */}
             <div 
-                style={{
-                    top: isDesktop ? '88px' : 'auto',
-                    height: isDesktop ? 'calc(100vh - 88px)' : 'auto',
-                    maxHeight: isDesktop ? 'calc(100vh - 88px)' : 'calc(100vh - 12px)'}}
-                className={`fixed z-[9999999] bg-[#161412] border-white/5 shadow-2xl transition-all duration-300 flex flex-col overflow-hidden bottom-0 right-0 w-full sm:w-[420px] rounded-t-[32px] sm:rounded-tr-none sm:rounded-l-[32px] border ${
-                    isDesktop ? 'animate-slideInRight' : 'animate-slideInUp'
-                }`}
+                style={shellStyle}
+                className={shellClass}
             >
                 <style>{`
                     @keyframes race {

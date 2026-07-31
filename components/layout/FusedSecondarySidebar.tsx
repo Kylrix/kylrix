@@ -15,6 +15,9 @@ type Props = {
  * In-page secondary sidebar — flexes beside main content like the primary nav.
  * Prefer this over overlay/popover drawers so chrome (topbar) stays native.
  *
+ * For global Master Pass / system panels, use RightRailContext (pushes main +
+ * contracts the primary left nav without overwriting the user's collapse preference).
+ *
  * Reuse for: chats, threads, calls, and other communicative detail surfaces.
  */
 export function FusedSecondarySidebar({

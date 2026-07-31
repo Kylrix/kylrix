@@ -19,6 +19,7 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useSidebar as useSidebarContext } from '@/components/ui/SidebarContext';
+import { useRightRailOptional } from '@/context/RightRailContext';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { FABProvider } from '@/context/FABContext';
 import UniversalFAB from '@/components/layout/UniversalFAB';
@@ -87,6 +88,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const { isOpen: isOverlayOpen, closeOverlay } = useOverlay();
   const { isOpen: isDynamicSidebarOpen, closeSidebar } = useDynamicSidebar();
   const { isCollapsed } = useSidebarContext();
+  const rightRail = useRightRailOptional();
   const { isWalletOpen, closeWallet } = useWalletOverlay();
   const { isOpen: isAgenticDrawerOpen, closeAgenticDrawer } = useAgenticDrawer();
   const { } = useAppChrome();
@@ -221,19 +223,44 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
             minWidth: 0,
             width: '100%',
             ml: showLeftSidebar ? { xs: 0, sm: 0, md: isCollapsed ? '72px' : '240px' } : 0,
+            mr: rightRail?.isOpen
+              ? { xs: 0, md: `${rightRail.width}px` }
+              : 0,
             position: 'relative',
             zIndex: 1,
-            pb: isSpecificPostPage || isChatDetailPage ? 0 : (isLandingPage ? 0 : { xs: 12, md: 4 }),
+            pb: isSpecificPostPage || isChatSurface ? 0 : (isLandingPage ? 0 : { xs: 12, md: 4 }),
             px: isProjectDetailPage
               ? { xs: 1, sm: 1, md: 2 }
-              : isNoteFullPageDetail || isChatDetailPage || pathname === '/connect/chats'
+              : isNoteFullPageDetail || isChatSurface
                 ? { xs: 0, sm: 0, md: 0 }
                 : { xs: 1.5, sm: 2, md: 2.5 },
             pointerEvents: 'auto',
-            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'}}
+            transition: 'margin 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1)'}}
         >
           {children}
         </Box>
+
+        {rightRail?.isOpen ? (
+          <Box
+            component="aside"
+            aria-label="Secondary panel"
+            sx={{
+              display: { xs: 'none', md: 'flex' },
+              flexDirection: 'column',
+              position: 'fixed',
+              top: isSpecificPostPage ? 0 : { xs: '84px', sm: '88px', md: '96px' },
+              right: 0,
+              bottom: 0,
+              width: rightRail.width,
+              zIndex: 20,
+              bgcolor: '#161412',
+              borderLeft: '1px solid rgba(255,255,255,0.08)',
+              overflow: 'hidden',
+            }}
+          >
+            {rightRail.content}
+          </Box>
+        ) : null}
       </Box>
 
       {/* --- LAYER 1: CHROME --- */}
