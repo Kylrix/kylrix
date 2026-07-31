@@ -18,7 +18,7 @@ import { useTask } from '@/context/TaskContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { ObjectCard } from '@/components/objects/ObjectCard';
-import { ObjectCardMeta } from '@/components/objects/ObjectCardMeta';
+import { ObjectCardMeta, PRIORITY_COLORS } from '@/components/objects/ObjectCardMeta';
 import { GoalObjectDetail } from '@/components/objects/GoalObjectDetail';
 import { goalToCard } from '@/lib/objects/adapters';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
@@ -348,9 +348,25 @@ export default function GoalObjectRow({ task }: Props) {
   return (
     <ObjectCard
       item={item}
+      variant="task"
       density="uniform"
+      railColor={PRIORITY_COLORS[task.priority || 'medium']}
       onOpen={openDetail}
       onContextMenu={handleRightClick}
+      leading={
+        <button
+          type="button"
+          onClick={handleComplete}
+          aria-label={task.status === 'done' ? 'Mark incomplete' : 'Mark complete'}
+          className={`flex h-5 w-5 items-center justify-center rounded-md border transition-colors ${
+            task.status === 'done'
+              ? 'border-[#A855F7] bg-[#A855F7] text-[#0A0908]'
+              : 'border-[#4A4744] text-transparent hover:border-[#A855F7]'
+          }`}
+        >
+          {task.status === 'done' ? <Check className="h-3 w-3 stroke-[3]" /> : null}
+        </button>
+      }
       trailing={
         <>
           <button
@@ -377,18 +393,6 @@ export default function GoalObjectRow({ task }: Props) {
               updateTask(task.id, { isPublic, isGuest });
             }}
           />
-          <button
-            type="button"
-            onClick={handleComplete}
-            aria-label={task.status === 'done' ? 'Mark incomplete' : 'Mark complete'}
-            className={`ml-0.5 flex h-7 w-7 items-center justify-center rounded-full border transition-colors ${
-              task.status === 'done'
-                ? 'border-[#A855F7] bg-[#A855F7] text-[#0A0908]'
-                : 'border-[#34322F] text-[#9B9691] hover:border-[#A855F7]'
-            }`}
-          >
-            {task.status === 'done' ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : null}
-          </button>
         </>
       }
       footer={
