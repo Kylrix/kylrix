@@ -55,6 +55,8 @@ import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
+import { useNativeSidebarOptional } from '@/context/RightRailContext';
+import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -86,6 +88,7 @@ export default function ConnectTopbar({
   const { openWallet } = useWalletOverlay();
   const { openAgenticDrawer, closeAgenticDrawer } = useAgenticDrawer();
   const { open: openUnified } = useUnifiedDrawer();
+  const nativeSidebar = useNativeSidebarOptional();
   const { openProUpgrade } = useProUpgrade();
   const { currentTier } = useSubscription();
   const isPro = hasEffectivePaidAccess(user, currentTier);
