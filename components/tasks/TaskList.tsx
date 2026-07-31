@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Plus, ArrowUpDown, Filter, List, LayoutGrid, Calendar, ArrowUp, ArrowDown, CheckCircle2, Trash2, Sparkles, ChevronDown, ChevronUp, Tag, X, RefreshCw } from 'lucide-react';
 import GoalObjectRow from './GoalObjectRow';
 import { useTask } from '@/context/TaskContext';
 import { useFAB } from '@/context/FABContext';
 import { ViewMode, SortField, TaskStatus } from '@/types';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
+import { buildGoalInput } from '@/lib/objects/create';
+import { useAuth } from '@/context/auth/AuthContext';
 import { toast } from 'react-hot-toast';
 
 import { EmptyStateAnomalyDetector } from '@/context/NeuralContext';
@@ -20,7 +23,7 @@ export default function TaskList() {
     setSort,
     filter,
     setFilter,
-    setTaskDialogOpen,
+    addTask,
     deleteTask,
     projects,
     selectedProjectId,
@@ -28,12 +31,34 @@ export default function TaskList() {
     labels,
     isLoading,
     refreshTasks} = useTask();
-  const {} = useFAB();
+  const { setConfiguration, resetConfiguration } = useFAB();
   const { open } = useUnifiedDrawer();
+  const { isAuthenticated, openIDMWindow, user } = useAuth();
 
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [showCompletedSection, setShowCompletedSection] = useState(true);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const openCreateGoal = useCallback(() => {
+    if (!isAuthenticated) {
+      openIDMWindow?.();
+      return;
+    }
+    setCreateOpen(true);
+  }, [isAuthenticated, openIDMWindow]);
+
+  useEffect(() => {
+    setConfiguration({
+      isVisible: true,
+      mainColor: '#A855F7',
+      mainIcon: <Plus size={32} strokeWidth={3} />,
+      onMainClick: openCreateGoal,
+      suppressWorkflow: true,
+      actions: [],
+    });
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration, openCreateGoal]);
 
   const tagFilterOptions = getTagFilterOptions();
   const activeTagFilter = filter.labels?.[0] ?? null;
@@ -313,7 +338,7 @@ export default function TaskList() {
             {/* Add Goal Button (Desktop) */}
             <button
               type="button"
-              onClick={() => setTaskDialogOpen(true)}
+              onClick={openCreateGoal}
               className="hidden sm:flex items-center gap-1.5 h-10 px-4 bg-[#A855F7]/10 hover:bg-[#A855F7]/20 border border-[#A855F7]/20 hover:border-[#A855F7]/40 text-[#C084FC] font-bold rounded-xl transition-all text-xs"
             >
               <Plus className="h-4 w-4" />
@@ -375,7 +400,7 @@ export default function TaskList() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => setTaskDialogOpen(true)}
+                    onClick={openCreateGoal}
                     className="inline-flex items-center gap-1.5 px-5 py-2.5 border border-[#1C1A18] hover:border-[#34322F] text-[#F5F2ED] font-bold rounded-xl hover:bg-[#161412] transition-colors font-satoshi text-sm"
                   >
                     <Plus className="h-4 w-4" />
@@ -475,7 +500,7 @@ export default function TaskList() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setTaskDialogOpen(true)}
+                      onClick={openCreateGoal}
                       className="text-[#9B9691] hover:text-[#F5F2ED] transition-colors p-1"
                     >
                       <Plus className="h-4.5 w-4.5" />
@@ -507,6 +532,29 @@ export default function TaskList() {
           )}
         </div>
       </div>
+
+      <ObjectCreateDrawer
+        open={createOpen}
+        kind="goal"
+        submitLabel="Create goal"
+        onClose={() => setCreateOpen(false)}
+        onSubmit={async (draft) => {
+          const created = await addTask(
+            buildGoalInput(
+              { kind: 'goal', title: draft.title, body: draft.body },
+              {
+                projectId: selectedProjectId || 'inbox',
+                creatorId: user?.$id || null,
+              },
+            ),
+          );
+          if (!created) {
+            toast.error('Could not create goal');
+            throw new Error('create failed');
+          }
+          toast.success('Goal created');
+        }}
+      />
     </EmptyStateAnomalyDetector>
   );
 }

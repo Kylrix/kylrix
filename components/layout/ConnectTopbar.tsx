@@ -35,7 +35,12 @@ import {
   ChevronRight,
   Keyboard,
   Target,
-  FolderKanban} from 'lucide-react';
+  FolderKanban,
+  FileText,
+  Lock,
+  MessageCircle,
+  GitFork,
+} from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -888,6 +893,47 @@ export default function ConnectTopbar({
             </Box>
           ) : !hasQuery ? (
             <>
+              {/* Keyboard shortcuts — top so keys are easy to find */}
+              <Box sx={{ display: 'grid', gap: 1 }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                  Keyboard shortcuts
+                </Typography>
+                <Box
+                  component="button"
+                  onClick={openSearchShortcuts}
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.25,
+                    px: 2,
+                    py: 1.25,
+                    borderRadius: '20px',
+                    bgcolor: 'rgba(255,255,255,0.015)',
+                    border: '1px solid rgba(255,255,255,0.04)',
+                    color: 'white',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.035)',
+                      borderColor: 'rgba(99, 102, 241, 0.3)',
+                      transform: 'translateX(2px)'}}}
+                >
+                  <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.12)', color: '#6366F1', flexShrink: 0 }}>
+                    <Keyboard size={15} />
+                  </Box>
+                  <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                    <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }}>
+                      View all shortcuts
+                    </Typography>
+                    <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }}>
+                      Quick keys · Ctrl+F to search
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+
               {/* Applications section */}
               <Box sx={{ display: 'grid', gap: 1 }}>
                 <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
@@ -895,11 +941,13 @@ export default function ConnectTopbar({
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25 }}>
                   {[
-                    { name: 'note', label: 'Ideas', color: '#EC4899', href: '/app' },
-                    { name: 'goals', label: 'Goals', color: '#A855F7', href: '/goals' },
-                    { name: 'vault', label: 'Vault', color: '#10B981', href: '/vault' },
-                    { name: 'connect', label: 'Connect', color: '#F59E0B', href: '/connect' }
-                  ].map((app) => (
+                    { name: 'note', label: 'Ideas', color: '#EC4899', href: '/app', Icon: FileText },
+                    { name: 'goals', label: 'Goals', color: '#A855F7', href: '/goals', Icon: Target },
+                    { name: 'vault', label: 'Vault', color: '#10B981', href: '/vault', Icon: Lock },
+                    { name: 'connect', label: 'Connect', color: '#F59E0B', href: '/connect', Icon: MessageCircle },
+                  ].map((app) => {
+                    const AppIcon = app.Icon;
+                    return (
                     <ButtonBase
                       key={app.name}
                       onClick={() => {
@@ -924,17 +972,14 @@ export default function ConnectTopbar({
                       }}
                     >
                       <Box sx={{ width: 34, height: 34, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${app.color}12`, color: app.color }}>
-                        {app.name === 'goals' ? (
-                          <Target size={16} strokeWidth={1.75} />
-                        ) : (
-                          <Logo app={app.name as any} size={16} variant="icon" />
-                        )}
+                        <AppIcon size={16} strokeWidth={1.75} />
                       </Box>
                       <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.8rem' }}>
                         {app.label}
                       </Typography>
                     </ButtonBase>
-                  ))}
+                    );
+                  })}
                 </Box>
               </Box>
 
@@ -946,7 +991,10 @@ export default function ConnectTopbar({
                 <Box sx={{ display: 'grid', gap: 0.75 }}>
                   <Box
                     component="button"
-                    onClick={openSearchShortcuts}
+                    onClick={() => {
+                      handleCloseAll();
+                      router.push('/flows');
+                    }}
                     sx={{
                       width: '100%',
                       display: 'flex',
@@ -963,18 +1011,18 @@ export default function ConnectTopbar({
                       transition: 'all 0.2s',
                       '&:hover': {
                         bgcolor: 'rgba(255,255,255,0.035)',
-                        borderColor: 'rgba(99, 102, 241, 0.3)',
+                        borderColor: 'rgba(168, 85, 247, 0.35)',
                         transform: 'translateX(2px)'}}}
                   >
-                    <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.12)', color: '#6366F1', flexShrink: 0 }}>
-                      <Keyboard size={15} />
+                    <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(168, 85, 247, 0.12)', color: '#A855F7', flexShrink: 0 }}>
+                      <GitFork size={15} strokeWidth={1.75} />
                     </Box>
                     <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                       <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }}>
-                        Keyboard shortcuts
+                        Workflows
                       </Typography>
                       <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }}>
-                        View all quick keys · Ctrl+F to search
+                        Open flows and automations
                       </Typography>
                     </Box>
                   </Box>
@@ -1010,7 +1058,17 @@ export default function ConnectTopbar({
                       }}
                     >
                       <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}12`, color: action.accent, flexShrink: 0 }}>
-                        <Logo app={action.kind as any} size={15} variant="icon" />
+                        {action.kind === 'note' ? (
+                          <FileText size={15} strokeWidth={1.75} />
+                        ) : action.kind === 'vault' ? (
+                          <Lock size={15} strokeWidth={1.75} />
+                        ) : action.kind === 'connect' ? (
+                          <MessageCircle size={15} strokeWidth={1.75} />
+                        ) : action.kind === 'flow' ? (
+                          <GitFork size={15} strokeWidth={1.75} />
+                        ) : (
+                          <Sparkles size={15} strokeWidth={1.75} />
+                        )}
                       </Box>
                       <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                         <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
