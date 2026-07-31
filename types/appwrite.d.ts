@@ -975,6 +975,7 @@ export type Forms = Models.Row & {
     source: string | null;
     keepPermission: boolean | null;
     isTrash: boolean;
+    isWorkspace?: boolean | null;
 }
 
 export type FormSubmissions = Models.Row & {

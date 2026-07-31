@@ -33,6 +33,8 @@ import {
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { registerLiveNoteGetter } from '@/lib/sync/pending-sync-bridge';
 import { loadNotesFromLocalCopy, warmNotesLocalCopy } from '@/lib/notes/load-local-notes';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 
 type LiveEditGuard = {
   title: string;
@@ -217,6 +219,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
   const { fetchOptimized, setCachedData, invalidate, getCachedData, getCachedDataAsync } = useDataNexus();
   const { pinSets, isPinned: isResourcePinned, togglePin } = useResourcePins();
+  const { activeWorkspace } = useWorkspace();
 
   const activeUserId = user?.$id || 'guest';
   const PINNED_CACHE_KEY = useMemo(() => `pinned_ids_${activeUserId}`, [activeUserId]);
@@ -983,10 +986,14 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   }, [applyNotePin]);
 
   const sortedNotes = useMemo(() => {
-    return sortPinnedThenCreatedAt(notes, (row) =>
+    const scoped =
+      activeWorkspace?.isPersonal !== false
+        ? notes.filter(isDefaultWorkspaceObject)
+        : notes;
+    return sortPinnedThenCreatedAt(scoped, (row) =>
       isResourcePinned('note', row.$id, noteOwnerId(row), row.isPinned),
     );
-  }, [notes, isResourcePinned, noteOwnerId]);
+  }, [notes, isResourcePinned, noteOwnerId, activeWorkspace?.isPersonal]);
 
   /**
    * Memoize the context value so consumers (note list, sidebar, search, etc.) don't

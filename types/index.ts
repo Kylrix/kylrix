@@ -105,6 +105,8 @@ export interface Task {
   isAgentic?: boolean;
   /** Vault-lock: non-empty dek means title/description are DEK-encrypted (MEK-wrapped key). */
   dek?: string | null;
+  /** True when this goal belongs to a named workspace (hidden from default workspace). */
+  isWorkspace?: boolean;
 }
 
 export type CollaboratorPermission = 'read' | 'write' | 'admin';

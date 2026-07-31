@@ -44,11 +44,8 @@ function ComposeProviders({ providers, children }: ComposeProvidersProps) {
  * Contains heavy logic, data-fetching contexts, and realtime subscriptions.
  * Mounted only within the protected (app) layout.
  */
-import { WorkspaceProvider } from '@/context/WorkspaceContext';
-
 const ecosystemProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   DocsProvider,
-  WorkspaceProvider,
   NotesProvider,
   ProfileProvider,
   BackgroundTaskProvider,

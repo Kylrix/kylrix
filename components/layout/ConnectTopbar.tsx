@@ -45,10 +45,10 @@ import {
 import Logo from '@/components/common/Logo';
 import { useAuth } from '@/context/auth/AuthContext';
 import { getUserProfilePicId, hasEffectivePaidAccess } from '@/lib/utils';
-import { getEcosystemUrl, APP_BASE_PATHS } from '@/lib/constants';
+import { APP_BASE_PATHS } from '@/lib/constants';
 import { getAppTone, type KylrixApp } from '@/lib/sdk/design';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
-import { createEcosystemPanelItems, createTopbarPanelMotion, createTopbarSearchSurface, isTopbarScrollAtTop } from '@/lib/sdk/topbar';
+import { createTopbarPanelMotion, createTopbarSearchSurface, isTopbarScrollAtTop } from '@/lib/sdk/topbar';
 import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePicId } from '@/lib/sdk/appwrite';
 import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
@@ -92,7 +92,7 @@ export default function ConnectTopbar({
   const router = useRouter();
   const pathname = usePathname();
   const { setIsCollapsed } = useSidebar();
-  const { activeWorkspace, workspaces, setActiveWorkspaceId} = useWorkspace();
+  const { activeWorkspace, workspaces, setActiveWorkspaceId, loadingWorkspaces } = useWorkspace();
   const { notes = [] } = useNotes();
   const { tasks = [], projects = [] } = useTask();
   // To let any drawer communicate full state expansion globally:
@@ -458,14 +458,6 @@ export default function ConnectTopbar({
     handleCloseAll();
     router.push(`/u/${encodeURIComponent(profileSeed.username)}?transition=profile`);
   }, [profileSeed, handleCloseAll, router]);
-
-  const connectApps = useMemo(
-    () => {
-      return createEcosystemPanelItems(activeApp).map((item) => ({
-        ...item,
-        href: getEcosystemUrl(item.app)}));
-    },
-    [activeApp]);
 
   const appPanelMotion = useMemo(() => createTopbarPanelMotion(), []);
 
@@ -1739,6 +1731,111 @@ export default function ConnectTopbar({
   const renderAppPanel = () => {
     if (!appMenuAnchorEl) return null;
 
+    const workspaceSwitcher = (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+          <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 800, color: '#9B9691', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            Workspaces
+          </Typography>
+          <Button
+            size="small"
+            onClick={() => {
+              handleCloseAll();
+              router.push('/workspaces');
+            }}
+            sx={{ color: '#6366F1', fontWeight: 800, fontSize: '0.75rem', textTransform: 'none', minWidth: 0 }}
+          >
+            + New
+          </Button>
+        </Box>
+
+        {loadingWorkspaces && workspaces.length <= 1 ? (
+          <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem', px: 0.5 }}>
+            Loading workspaces…
+          </Typography>
+        ) : null}
+
+        {workspaces.map((w) => {
+          const isActive = activeWorkspace?.id === w.id;
+          return (
+            <Box
+              key={w.id}
+              component="button"
+              onClick={() => {
+                setActiveWorkspaceId(w.id);
+                handleCloseAll();
+                if (w.isPersonal || w.id === user?.$id) {
+                  router.push('/app');
+                } else {
+                  router.push(`/workspaces/${w.id}`);
+                }
+              }}
+              sx={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                px: 2,
+                py: 1.25,
+                borderRadius: '14px',
+                bgcolor: isActive ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid',
+                borderColor: isActive ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255, 255, 255, 0.04)',
+                color: 'white',
+                textAlign: 'left',
+                cursor: 'pointer',
+                '&:hover': {
+                  bgcolor: isActive ? 'rgba(99, 102, 241, 0.16)' : 'rgba(255,255,255,0.04)',
+                },
+              }}
+            >
+              <Box sx={{ minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff' }} noWrap>
+                  {w.title}
+                </Typography>
+                <Typography sx={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>
+                  {w.isPersonal ? 'Default workspace' : 'Workspace'}
+                </Typography>
+              </Box>
+              {isActive ? (
+                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#6366F1', boxShadow: '0 0 8px #6366F1', flexShrink: 0 }} />
+              ) : null}
+            </Box>
+          );
+        })}
+      </Box>
+    );
+
+    const discordCta = !user?.prefs?.discordJoined ? (
+      <a
+        href="https://discord.gg/YjF5yCBCmx"
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={() => {
+          handleCloseAll();
+          if (typeof updatePreferences === 'function') {
+            void updatePreferences({ discordJoined: true }).catch(() => {});
+          }
+        }}
+        className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-[#5865F2]/20 bg-[#5865F2]/5 hover:bg-[#5865F2]/10 transition-all font-satoshi text-xs font-bold text-[#5865F2]"
+      >
+        <div className="flex items-center gap-2">
+          <svg className="w-5 h-5 fill-current" viewBox="0 0 127.14 96.36">
+            <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36c2.65-3.6,5-7.46,7-11.5a68.88,68.88,0,0,1-11-5.26c.92-.68,1.82-1.39,2.69-2.13A75.14,75.14,0,0,0,96.5,77.47c.87.74,1.77,1.45,2.69,2.13a68.88,68.88,0,0,1-11,5.26c2,4,4.35,7.9,7,11.5a105.73,105.73,0,0,0,31-18.83C129,54.65,122.68,31.58,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.9,46,53.9,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.14,46,96.14,53,91,65.69,84.69,65.69Z"/>
+          </svg>
+          <span>Join our Discord Community</span>
+        </div>
+        <span className="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-md bg-[#5865F2]/10 border border-[#5865F2]/25">Join</span>
+      </a>
+    ) : null;
+
+    const ecosystemBody = (
+      <Box sx={{ display: 'grid', gap: 2 }}>
+        {discordCta}
+        {workspaceSwitcher}
+      </Box>
+    );
+
     if (isDesktop) {
       return (
         <Drawer
@@ -1760,7 +1857,6 @@ export default function ConnectTopbar({
               boxSizing: 'border-box'}
           }}
         >
-          {/* Header */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.75 }}>
             <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
               Ecosystem
@@ -1769,62 +1865,24 @@ export default function ConnectTopbar({
               <CloseIcon size={16} />
             </IconButton>
           </Box>
-          
-          {/* App List */}
-          <Stack spacing={1.25} sx={{ overflowY: 'auto', flex: 1, mx: -2.75, px: 2.75 }}>
-            {connectApps.map((item) => {
-              const appTone = getAppTone(item.app);
-              return (
-                <Box
-                  key={item.href}
-                  component="button"
-                  onClick={() => {
-                    handleCloseAll();
-                    if (!user || user.isPulse) {
-                      openUnified('login');
-                    } else {
-                      router.push(item.href);
-                    }
-                  }}
-                  sx={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'flex-start',
-                    textAlign: 'left',
-                    px: 2.25,
-                    py: 1.5,
-                    borderRadius: '16px',
-                    color: '#fff',
-                    background: 'transparent',
-                    bgcolor: item.selected ? alpha(appTone.secondary, 0.06) : 'rgba(255, 255, 255, 0.005)',
-                    border: '1px solid',
-                    borderColor: item.selected ? alpha(appTone.secondary, 0.15) : 'rgba(255, 255, 255, 0.03)',
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      bgcolor: alpha(appTone.secondary, 0.1),
-                      borderColor: alpha(appTone.secondary, 0.2),
-                      transform: 'translateX(3px)'}
-                  }}
-                >
-                  <Stack direction="row" spacing={1.25} alignItems="center" sx={{ width: '100%' }}>
-                    <Box sx={{ width: 34, height: 34, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: alpha(appTone.secondary, 0.08), color: appTone.secondary, flexShrink: 0 }}>
-                      <Logo app={item.app} size={15} variant="icon" />
-                    </Box>
-                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
-                      <Typography component="span" sx={{ color: '#F3F2F0', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
-                        {item.label}
-                      </Typography>
-                      <Typography component="span" sx={{ color: 'rgba(255,255,255,0.62)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
-                        {item.description}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </Box>
-              );
-            })}
-          </Stack>
+
+          <Paper
+            elevation={0}
+            sx={{
+              width: '100%',
+              borderRadius: '26px',
+              bgcolor: '#161412',
+              border: `1px solid ${alpha(appAccent, 0.22)}`,
+              overflow: 'hidden',
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <Box sx={{ p: 1.25, overflowY: 'auto', flex: 1 }}>
+              {ecosystemBody}
+            </Box>
+          </Paper>
         </Drawer>
       );
     }
@@ -1838,11 +1896,11 @@ export default function ConnectTopbar({
         transition={appPanelMotion.transition}
         style={{ width: '100%', transformOrigin: 'top center' }}
       >
-        <Box 
+        <Box
           data-kylrix-topbar-panel
-          sx={{ 
-            width: '100%', 
-            bgcolor: '#161412', 
+          sx={{
+            width: '100%',
+            bgcolor: '#161412',
             overflow: 'hidden',
             borderBottom: '1px solid rgba(255,255,255,0.08)',
             borderRadius: '0 0 28px 28px',
@@ -1858,158 +1916,27 @@ export default function ConnectTopbar({
             }}
             sx={{ px: { xs: 2.25, md: 4 }, py: 1.25, maxHeight: '45vh', overflowY: 'auto' }}
           >
-            {/* Mobile Header with close button */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pb: 1.25, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: 'white', fontSize: '1rem' }}>
-                Ecosystem
-              </Typography>
-              <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255, 255, 255, 0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
-                <CloseIcon size={16} />
-              </IconButton>
-            </Box>
-
-            {/* Join Discord CTA */}
-            {!user?.prefs?.discordJoined && (
-              <a
-                href="https://discord.gg/YjF5yCBCmx"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => {
-                  handleCloseAll();
-                  if (typeof updatePreferences === 'function') {
-                    void updatePreferences({ discordJoined: true }).catch(() => {});
-                  }
-                }}
-                className="flex items-center justify-between gap-3 px-4 py-3 mb-3 rounded-2xl border border-[#5865F2]/20 bg-[#5865F2]/5 hover:bg-[#5865F2]/10 transition-all font-satoshi text-xs font-bold text-[#5865F2]"
-              >
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 fill-current" viewBox="0 0 127.14 96.36">
-                    <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36c2.65-3.6,5-7.46,7-11.5a68.88,68.88,0,0,1-11-5.26c.92-.68,1.82-1.39,2.69-2.13A75.14,75.14,0,0,0,96.5,77.47c.87.74,1.77,1.45,2.69,2.13a68.88,68.88,0,0,1-11,5.26c2,4,4.35,7.9,7,11.5a105.73,105.73,0,0,0,31-18.83C129,54.65,122.68,31.58,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.9,46,53.9,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.14,46,96.14,53,91,65.69,84.69,65.69Z"/>
-                  </svg>
-                  <span>Join our Discord Community</span>
-                </div>
-                <span className="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-md bg-[#5865F2]/10 border border-[#5865F2]/25">Join</span>
-              </a>
-            )}
-
-            {/* Workspaces Section on Mobile App Dropdown */}
-            <Box sx={{ mb: 2, pb: 2, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-                <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 800, color: '#9B9691', fontSize: '0.75rem', uppercase: true, tracking: '0.1em' }}>
-                  Workspaces
-                </Typography>
-                <Button
-                  size="small"
-                  onClick={() => {
-                    handleCloseAll();
-                    router.push('/workspaces');
-                  }}
-                  sx={{ color: '#6366F1', fontWeight: 800, fontSize: '0.75rem', textTransform: 'none' }}
-                >
-                  + New Workspace
-                </Button>
+            <Paper
+              elevation={0}
+              sx={{
+                width: '100%',
+                borderRadius: '26px',
+                bgcolor: '#161412',
+                border: `1px solid ${alpha(appAccent, 0.22)}`,
+                overflow: 'hidden'}}
+            >
+              <Box sx={{ p: 1.25 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, pb: 1.25, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: 'white', fontSize: '1rem' }}>
+                    Ecosystem
+                  </Typography>
+                  <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255, 255, 255, 0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
+                    <CloseIcon size={16} />
+                  </IconButton>
+                </Box>
+                {ecosystemBody}
               </Box>
-
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {workspaces.map((w) => {
-                  const isActive = activeWorkspace?.id === w.id;
-                  return (
-                    <Box
-                      key={w.id}
-                      component="button"
-                      onClick={() => {
-                        setActiveWorkspaceId(w.id);
-                        handleCloseAll();
-                        if (w.isPersonal || w.id === user?.$id) {
-                          router.push('/app');
-                        } else {
-                          router.push(`/workspaces/${w.id}`);
-                        }
-                      }}
-                      sx={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        px: 2,
-                        py: 1.25,
-                        borderRadius: '14px',
-                        bgcolor: isActive ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255, 255, 255, 0.02)',
-                        border: '1px solid',
-                        borderColor: isActive ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255, 255, 255, 0.04)',
-                        color: 'white',
-                        textAlign: 'left',
-                        cursor: 'pointer'}}
-                    >
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff' }} noWrap>
-                          {w.title}
-                        </Typography>
-                        <Typography sx={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>
-                          {w.isPersonal ? 'Personal Workspace' : 'Workspace'}
-                        </Typography>
-                      </Box>
-                      {isActive && (
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#6366F1', boxShadow: '0 0 8px #6366F1' }} />
-                      )}
-                    </Box>
-                  );
-                })}
-              </Box>
-            </Box>
-
-            <Box sx={{ display: 'grid', gap: 0.75 }}>
-              {connectApps.filter((item) => !['note', 'flow', 'vault'].includes(item.app)).map((item) => {
-                const appTone = getAppTone(item.app);
-                return (
-                  <Box
-                    key={item.href}
-                    component="button"
-                    onClick={() => {
-                      handleCloseAll();
-                      if (!user && item.app !== 'kylrix') {
-                        openUnified('login');
-                      } else {
-                        router.push(item.href);
-                      }
-                    }}
-                    sx={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'flex-start',
-                      textAlign: 'left',
-                      px: 2.25,
-                      py: 1.5,
-                      borderRadius: '20px',
-                      color: 'white',
-                      background: 'transparent',
-                      bgcolor: item.selected ? alpha(appTone.secondary, 0.06) : 'rgba(255,255,255,0.01)',
-                      border: '1px solid',
-                      borderColor: item.selected ? alpha(appTone.secondary, 0.15) : 'rgba(255,255,255,0.04)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      '&:hover': {
-                        bgcolor: alpha(appTone.secondary, 0.1),
-                        borderColor: alpha(appTone.secondary, 0.2)}}}
-                  >
-                    <Stack direction="row" spacing={1.25} alignItems="center" sx={{ width: '100%' }}>
-                      <Box sx={{ width: 34, height: 34, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: alpha(appTone.secondary, 0.08), color: appTone.secondary, flexShrink: 0 }}>
-                        <Logo app={item.app} size={15} variant="icon" />
-                      </Box>
-                      <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
-                        <Typography component="span" sx={{ color: '#F3F2F0', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
-                          {item.label}
-                        </Typography>
-                        <Typography component="span" sx={{ color: 'rgba(255,255,255,0.62)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
-                          {item.description}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </Box>
-                );
-              })}
-            </Box>
+            </Paper>
           </Box>
         </Box>
       </motion.div>

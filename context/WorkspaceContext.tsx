@@ -6,7 +6,7 @@ import { useDataNexus } from '@/context/DataNexusContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
 import { getSessionProjectsList } from '@/lib/projects/projects-cache';
-import { warmProjectsList } from '@/lib/projects/warm-projects-list';
+import { normalizeProjectsList, warmProjectsList } from '@/lib/projects/warm-projects-list';
 
 export interface WorkspaceItem {
   id: string;
@@ -45,15 +45,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string>(userId);
 
+  const mapProjectRows = useCallback(
+    (rows: unknown): WorkspaceItem[] =>
+      normalizeProjectsList(rows)
+        .map((p: any) => ({
+          id: String(p.$id || p.id || '').trim(),
+          title: p.title || p.name || 'Untitled Workspace',
+          ownerId: p.ownerId || p.userId || userId,
+          isPersonal: false as const,
+        }))
+        .filter((w) => w.id && w.id !== personalWorkspace.id),
+    [personalWorkspace.id, userId],
+  );
+
   const initialItems = useMemo<WorkspaceItem[]>(() => {
-    const sessionRows = getSessionProjectsList() || [];
-    const mapped = sessionRows.map((p: any) => ({
-      id: p.$id || p.id,
-      title: p.title || p.name || 'Untitled Workspace',
-      ownerId: p.ownerId || p.userId || userId,
-      isPersonal: (p.$id || p.id) === userId}));
-    return [personalWorkspace, ...mapped.filter((w) => w.id !== personalWorkspace.id)];
-  }, [personalWorkspace, userId]);
+    return [personalWorkspace, ...mapProjectRows(getSessionProjectsList() || [])];
+  }, [personalWorkspace, mapProjectRows]);
 
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>(initialItems);
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
@@ -70,19 +77,31 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         getCachedDataAsync,
         fetchOptimized});
 
-      const customItems: WorkspaceItem[] = (rows || []).map((p: any) => ({
-        id: p.$id || p.id,
-        title: p.title || p.name || 'Untitled Workspace',
-        ownerId: p.ownerId || p.userId || userId,
-        isPersonal: (p.$id || p.id) === userId}));
-
-      setWorkspaces([personalWorkspace, ...customItems.filter((w) => w.id !== personalWorkspace.id)]);
+      setWorkspaces([personalWorkspace, ...mapProjectRows(rows)]);
     } catch (err) {
       console.warn('[WorkspaceContext] Failed to load workspaces:', err);
     } finally {
       setLoadingWorkspaces(false);
     }
-  }, [userId, personalWorkspace, getCachedDataAsync, fetchOptimized]);
+  }, [personalWorkspace, getCachedDataAsync, fetchOptimized, mapProjectRows, userId]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const mapped = mapProjectRows(await LocalEngine.cacheGet('f_projects_list'));
+        if (!mapped.length) return;
+        setWorkspaces((prev) => {
+          const byId = new Map(prev.map((w) => [w.id, w]));
+          byId.set(personalWorkspace.id, personalWorkspace);
+          for (const w of mapped) byId.set(w.id, w);
+          return [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+        });
+      } catch {
+        /* optional */
+      }
+    })();
+  }, [personalWorkspace, mapProjectRows]);
 
   useEffect(() => {
     void refreshWorkspaces();
@@ -110,7 +129,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           ownerId: userId,
           isPersonal: false,
         };
-        setWorkspaces((prev) => [newItem, ...prev]);
+        setWorkspaces((prev) => [
+          personalWorkspace,
+          newItem,
+          ...prev.filter((w) => w.id !== personalWorkspace.id && w.id !== newItem.id),
+        ]);
         setActiveWorkspaceIdState(created.$id);
         void refreshWorkspaces();
         return newItem;
@@ -119,7 +142,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
     },
-    [userId, refreshWorkspaces]
+    [userId, refreshWorkspaces, personalWorkspace]
   );
 
   const attachEntityToActiveWorkspace = useCallback(
@@ -132,6 +155,32 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           projectId: activeWorkspace.id,
           entityKind,
           entityId});
+        // Mark row as workspace-scoped so default (no-workspace) views can hide it
+        try {
+          const { databases } = await import('@/lib/appwrite/client');
+          const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+          const tableByKind: Record<string, string> = {
+            note: APPWRITE_CONFIG.TABLES.NOTES,
+            idea: APPWRITE_CONFIG.TABLES.NOTES,
+            goal: APPWRITE_CONFIG.TABLES.TASKS,
+            task: APPWRITE_CONFIG.TABLES.TASKS,
+            form: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+            event: APPWRITE_CONFIG.TABLES.EVENTS,
+            credential: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+            totp: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
+          };
+          const tableId = tableByKind[entityKind];
+          if (tableId) {
+            await databases.updateRow(
+              APPWRITE_CONFIG.DATABASE_ID,
+              tableId,
+              entityId,
+              { isWorkspace: true },
+            );
+          }
+        } catch (flagErr) {
+          console.warn('[WorkspaceContext] isWorkspace flag update failed:', flagErr);
+        }
       } catch (err) {
         console.warn(`[WorkspaceContext] Auto-attach entity ${entityKind} ${entityId} failed:`, err);
       }

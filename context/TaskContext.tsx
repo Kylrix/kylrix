@@ -33,6 +33,8 @@ import { goalPendingKey } from '@/lib/sync/goal-keys';
 import { shouldSoftPull } from '@/lib/sync/local-copy-sync';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { loadGoalsFromLocalCopy } from '@/lib/goals/load-local-goals';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 
 // Mappers
 function coerceCachedTask(row: any): Task | null {
@@ -757,6 +759,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const { fetchOptimized, invalidate, getCachedData, getCachedDataAsync, setCachedData, refreshInBackground } = useDataNexus();
   const { user: authUser, isLoading: isAuthLoading } = useAuth();
   const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
+  const { activeWorkspace } = useWorkspace();
   const flowWarmOwnerRef = useRef<string | null>(null);
   const pendingStatusPatchesRef = useRef<Map<string, PendingStatusPatch>>(new Map());
 
@@ -1718,6 +1721,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   // Computed values
   const getFilteredTasks = useCallback(() => {
     let sourceTasks = state.tasks;
+    if (activeWorkspace?.isPersonal !== false) {
+      sourceTasks = sourceTasks.filter(isDefaultWorkspaceObject);
+    }
     if (state.userId && state.userId !== 'guest') {
       const activeId = state.userId;
       sourceTasks = state.tasks.filter((t) =>
@@ -1812,7 +1818,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     });
 
     return filtered;
-  }, [state.tasks, state.filter, state.sort, state.searchQuery, isResourcePinned]);
+  }, [state.tasks, state.filter, state.sort, state.searchQuery, isResourcePinned, activeWorkspace?.isPersonal, state.userId]);
 
   const getTasksByProject = useCallback(
     (projectId: string) => {

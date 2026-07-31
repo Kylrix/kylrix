@@ -8,6 +8,8 @@ import {
   deleteCredential,
   listAllCredentials} from '@/lib/appwrite';
 import { useResourcePins } from '@/context/ResourcePinContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 import toast from 'react-hot-toast';
 import CredentialItem from '@/components/app/dashboard/CredentialItem';
 import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
@@ -23,6 +25,7 @@ import { TOTPPageContent } from './totp/page';
 function DashboardPageContent() {
   const { user, needsMasterPassword, isVaultUnlocked, isVaultBlurEnabled, setVaultBlurEnabled } = useAppwriteVault();
   const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
+  const { activeWorkspace } = useWorkspace();
   const searchParams = useSearchParams();
   const router = useRouter();
   const { registerCreateModal } = useAI();
@@ -259,14 +262,18 @@ function DashboardPageContent() {
   }, [hydrateVaultData]);
 
   const sortedCredentials = useMemo(() => {
-    return [...allCredentials].sort((a, b) => {
+    const scoped =
+      activeWorkspace?.isPersonal !== false
+        ? allCredentials.filter(isDefaultWorkspaceObject)
+        : allCredentials;
+    return [...scoped].sort((a, b) => {
       const aPinned = isResourcePinned('credential', a.$id, a.userId, a.isPinned);
       const bPinned = isResourcePinned('credential', b.$id, b.userId, b.isPinned);
       if (aPinned && !bPinned) return -1;
       if (!aPinned && bPinned) return 1;
       return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
     });
-  }, [allCredentials, isResourcePinned]);
+  }, [allCredentials, isResourcePinned, activeWorkspace?.isPersonal]);
 
   const refreshCredentials = () => {
     if (!user?.$id) return;
