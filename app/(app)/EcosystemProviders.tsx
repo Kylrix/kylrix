@@ -2,7 +2,6 @@
 
 import { ReactNode } from 'react';
 import { DocsProvider } from '@/context/DocsContext';
-import { NotesProvider } from '@/context/NotesContext';
 import { BackgroundTaskProvider } from '@/context/BackgroundTaskContext';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { SourceProvider } from '@/lib/source-context';
@@ -46,7 +45,6 @@ function ComposeProviders({ providers, children }: ComposeProvidersProps) {
  */
 const ecosystemProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   DocsProvider,
-  NotesProvider,
   ProfileProvider,
   BackgroundTaskProvider,
   NotificationProvider,

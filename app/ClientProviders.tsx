@@ -10,6 +10,7 @@ import { ProUpgradeProvider } from '@/context/ProUpgradeContext';
 import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
 import { ResourcePinProvider } from '@/context/ResourcePinContext';
 import { WorkspaceProvider } from '@/context/WorkspaceContext';
+import { NotesProvider } from '@/context/NotesContext';
 import { TaskProvider } from '@/context/TaskContext';
 import { OverlayProvider } from '@/components/ui/OverlayContext';
 import { DynamicSidebarProvider } from '@/components/ui/DynamicSidebar';
@@ -73,6 +74,7 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   SubscriptionProvider,
   ResourcePinProvider,
   WorkspaceProvider,
+  NotesProvider,
   TaskProvider,
   OverlayProvider,
   DynamicSidebarProvider,

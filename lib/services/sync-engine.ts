@@ -39,6 +39,8 @@ let lastPullAt = 0;
 let syncTimeout: NodeJS.Timeout | null = null;
 let retryTimeout: NodeJS.Timeout | null = null;
 let isSyncing = false;
+/** markPending during an in-flight cycle must not drop the next flush. */
+let flushQueuedDuringSync = false;
 let persistWriteChain: Promise<void> = Promise.resolve();
 
 /** Coalesce keystroke/CRUD bursts — never tight-loop the network. */
@@ -242,7 +244,10 @@ function maxFailedAttempts(): number {
  */
 function scheduleDemandFlush(opts?: { immediate?: boolean; retry?: boolean }) {
   if (typeof window === 'undefined') return;
-  if (isSyncing) return;
+  if (isSyncing) {
+    flushQueuedDuringSync = true;
+    return;
+  }
   if (pendingById.size === 0) {
     if (syncTimeout) clearTimeout(syncTimeout);
     if (retryTimeout) clearTimeout(retryTimeout);
@@ -374,7 +379,8 @@ async function flushGoalPending(
 
   const dataPayload = pickGoalAutosavePayload(payload);
   if (!String(dataPayload.title || '').trim() && !String(dataPayload.description || '').trim()) {
-    console.warn(`[SyncEngine] Ignored empty pending goal: ${goalId}`);
+    console.warn(`[SyncEngine] Dropping empty pending goal: ${goalId}`);
+    autonomicSyncEngine.ack(pendingKey, queuedRevision);
     return;
   }
 
@@ -514,7 +520,8 @@ async function flushNotePending(
     isGuest: !!payload.isGuest};
 
   if (!String(dataPayload.content || '').trim() && !String(dataPayload.title || '').trim()) {
-    console.warn(`[SyncEngine] Ignored empty pending note: ${noteId}`);
+    console.warn(`[SyncEngine] Dropping empty pending note: ${noteId}`);
+    autonomicSyncEngine.ack(noteId, queuedRevision);
     return;
   }
 
@@ -704,6 +711,14 @@ export const autonomicSyncEngine = {
       const db = await getRxDB().catch(() => null);
 
       const tasksToFlush = pendingIds.filter((pendingId) => {
+        // Event/form/tag use dedicated commit paths until typed flush lands.
+        if (
+          pendingId.startsWith('event:') ||
+          pendingId.startsWith('form:') ||
+          pendingId.startsWith('tag:')
+        ) {
+          return false;
+        }
         if (!pendingById.has(pendingId)) return false;
         const failInfo = failedSyncAttempts.get(pendingId);
         if (failInfo) {
@@ -761,7 +776,9 @@ export const autonomicSyncEngine = {
     } finally {
       isSyncing = false;
       // Demand-only retry: if work remains, back off. Never spin at 0ms.
-      if (pendingById.size > 0) {
+      const shouldFlushAgain = flushQueuedDuringSync || pendingById.size > 0;
+      flushQueuedDuringSync = false;
+      if (shouldFlushAgain && pendingById.size > 0) {
         scheduleDemandFlush({ retry: true });
       }
     }

@@ -576,6 +576,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     // Sync engine is SoT for amber — enqueue live revision (never an Appwrite field).
     if (options?.pending !== false) {
       autonomicSyncEngine.markPending(stamped.$id, stamped.updatedAt, stamped);
+      autonomicSyncEngine.nudge();
     }
   }, [upsertNote]);
 

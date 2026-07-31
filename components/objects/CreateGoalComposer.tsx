@@ -125,6 +125,7 @@ export function CreateGoalComposer({
     (task: Task) => {
       if (typeof pushLiveGoal === 'function') {
         pushLiveGoal(task);
+        autonomicSyncEngine.nudge();
       }
       if (!announcedRef.current && (task.title?.trim() || task.description?.trim())) {
         announcedRef.current = true;

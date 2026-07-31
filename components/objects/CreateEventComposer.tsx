@@ -94,7 +94,6 @@ export function CreateEventComposer({
     const id = ID.unique();
     liveIdRef.current = id;
     setResolvedId(id);
-    autonomicSyncEngine.markPending(`event:${id}`, new Date().toISOString());
     return id;
   }, [resolvedId]);
 
@@ -151,7 +150,7 @@ export function CreateEventComposer({
       } catch {
         /* optional */
       }
-      autonomicSyncEngine.markPending(`event:${event.id}`, new Date().toISOString());
+      // Events commit remotely via onCommitEvent — do not enqueue note flush with event: keys.
     },
     [cacheKey, onEventCreated, onLiveEvent],
   );
@@ -193,8 +192,12 @@ export function CreateEventComposer({
         visibility: meta.visibility,
         autoCreateCall: meta.autoCreateCall,
       };
-      void Promise.resolve(onCommitEvent?.(enriched)).catch(() => {});
-      autonomicSyncEngine.nudge();
+      autonomicSyncEngine.markPending(`event:${event.id}`, new Date().toISOString(), enriched);
+      void Promise.resolve(onCommitEvent?.(enriched))
+        .then(() => {
+          autonomicSyncEngine.ack(`event:${event.id}`);
+        })
+        .catch(() => {});
     }
     onClose?.();
   }, [buildLive, cacheKey, content, onClose, onCommitEvent, pushLive, resolvedId, title]);
