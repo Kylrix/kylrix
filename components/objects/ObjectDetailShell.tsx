@@ -28,14 +28,14 @@ export function ObjectDetailShell({
   if (!open || !item) return null;
 
   return (
-    <div className="fixed inset-0 z-[1400] flex justify-end pointer-events-none">
+    <div className="fixed inset-0 z-[1400] flex pointer-events-none">
       <button
         type="button"
         aria-label="Close detail"
         className="absolute inset-0 bg-black/50 pointer-events-auto"
         onClick={onClose}
       />
-      <aside className="relative h-full w-full max-w-xl bg-[#0A0908] border-l border-[#2C2A28] pointer-events-auto flex flex-col md:mt-0 mt-auto max-md:h-[min(92dvh,100%)] max-md:rounded-t-2xl max-md:border-t max-md:self-end">
+      <aside className="relative h-[100dvh] w-full max-w-none bg-[#0A0908] pointer-events-auto flex flex-col">
         {chrome === 'full' ? (
           <header className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[#2C2A28]">
             <div className="min-w-0">

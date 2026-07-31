@@ -66,29 +66,30 @@ const Overlay: React.FC = () => {
     (content.type as any).name === 'EventDetails'
   );
 
-  const drawerHeight = isMobile 
-    ? (isFlapover ? '100dvh' : (isExpanded ? '100dvh' : '60dvh'))
-    : '100%';
+  const drawerHeight = '100dvh';
+  const paperWidth = isFlapover ? '100%' : isMobile ? '100%' : 'min(100vw, 720px)';
 
   return (
     <Drawer
-      anchor={isMobile && !isFlapover ? 'bottom' : 'right'}
+      anchor={isFlapover ? 'right' : isMobile ? 'bottom' : 'right'}
       open={isOpen}
       onClose={closeOverlay}
       ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
-      sx={isMobile && isFlapover ? { zIndex: 9999 } : undefined}
+      sx={isFlapover ? { zIndex: 9999 } : undefined}
       PaperProps={{
         sx: {
-          width: isMobile ? '100%' : 'min(100vw, 720px)',
-          maxWidth: isMobile ? '100%' : '720px',
+          width: paperWidth,
+          maxWidth: isFlapover ? '100vw' : isMobile ? '100%' : '720px',
+          left: isFlapover ? 0 : undefined,
+          right: isFlapover ? 0 : undefined,
           height: drawerHeight,
           maxHeight: '100dvh',
           borderTopLeftRadius: isMobile && !isFlapover ? '24px' : 0,
           borderTopRightRadius: isMobile && !isFlapover ? '24px' : 0,
-          borderLeft: isMobile ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
+          borderLeft: isMobile || isFlapover ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
           backgroundImage: 'none',
           bgcolor: '#161412',
-          boxShadow: '0 24px 48px rgba(0,0,0,0.45)',
+          boxShadow: isFlapover ? 'none' : '0 24px 48px rgba(0,0,0,0.45)',
           display: 'flex',
           flexDirection: 'column',
           transition: 'height 0.3s ease-out'}

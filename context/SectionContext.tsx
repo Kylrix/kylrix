@@ -661,9 +661,10 @@ export function MultiSectionContainer({ children, panels}: MultiSectionContainer
     return calculated;
   }, [pathname, getLayoutForRoute, panels]);
 
-  // Certain types should ALWAYS be full screen (overlaying everything)
+  // Note / goal / event / secret → true fullscreen overlay (not a 320px side column)
   const isFullScreenDetail = useMemo(() => {
-    return activeDetail?.type === 'secret';
+    const t = activeDetail?.type;
+    return t === 'secret' || t === 'note' || t === 'goal' || t === 'event';
   }, [activeDetail?.type]);
 
   // Compute CSS Grid columns style

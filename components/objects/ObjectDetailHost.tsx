@@ -29,7 +29,9 @@ export function ObjectDetailHost({
   footer}: Props) {
   if (!open || !item) return null;
 
-  if (embedded) {
+  // Always fill the parent Overlay / DynamicSidebar (those are true fullscreen).
+  // Never nest a fixed shell — Drawer transforms trap `position:fixed` to ~720px.
+  if (embedded || chrome === 'panel') {
     return (
       <div className="flex h-full min-h-0 w-full flex-col bg-[#0A0908]">
         <div className="flex-1 overflow-y-auto min-h-0">{children}</div>

@@ -75,17 +75,54 @@ export default function EventList() {
 
   useEffect(() => {
     let isCancelled = false;
-    const cacheKey = `f_user_events_${userId || 'guest'}`;
+    const userCacheKey = `f_user_events_${userId || 'guest'}`;
+
+    const normalizeList = (raw: unknown): any[] => {
+      if (Array.isArray(raw)) return raw;
+      if (raw && typeof raw === 'object' && Array.isArray((raw as { rows?: unknown }).rows)) {
+        return (raw as { rows: any[] }).rows;
+      }
+      return [];
+    };
+
+    const cacheGetFast = async (key: string): Promise<any[]> => {
+      try {
+        return normalizeList(
+          await Promise.race([
+            LocalEngine.cacheGet(key),
+            new Promise((resolve) => setTimeout(() => resolve([]), 800)),
+          ]),
+        );
+      } catch {
+        return [];
+      }
+    };
 
     const hydrateLocal = async () => {
+      // Same LocalEngine keys attach-object uses — never block the page on network.
       try {
-        const local = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
-        if (local.length && !isCancelled) {
-          setEvents(local.map(mapRemoteEvent));
-          setIsLoading(false);
+        const fromShared = await cacheGetFast('f_events_list');
+        const fromUser = fromShared.length ? [] : await cacheGetFast(userCacheKey);
+        let local = fromShared.length ? fromShared : fromUser;
+        if (!local.length) {
+          try {
+            const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+            const db = await Promise.race([
+              getRxDB().catch(() => null),
+              new Promise<null>((resolve) => setTimeout(() => resolve(null), 800)),
+            ]);
+            if (db?.events) {
+              local = (await db.events.find().exec()).map((d: any) => d.toJSON());
+            }
+          } catch {
+            /* optional */
+          }
         }
-      } catch {
-        /* optional */
+        if (!isCancelled && local.length) {
+          setEvents(local.map(mapRemoteEvent));
+        }
+      } finally {
+        if (!isCancelled) setIsLoading(false);
       }
     };
 
@@ -95,27 +132,33 @@ export default function EventList() {
       try {
         const queries: string[] = [Query.limit(100), Query.orderDesc('startTime')];
         if (userId && userId !== 'guest') {
-          // Avoid Query.or — TablesDB + secure list often fails/empties silently.
           queries.push(Query.equal('userId', userId));
         } else {
           queries.push(Query.equal('visibility', 'public'));
         }
 
-        const list = await eventApi.list(queries);
+        const list = await Promise.race([
+          eventApi.list(queries),
+          new Promise<{ rows: any[] }>((resolve) =>
+            setTimeout(() => resolve({ rows: [] }), 12_000),
+          ),
+        ]);
         if (isCancelled) return;
 
         const remoteMapped = (list?.rows || []).map(mapRemoteEvent);
+        if (remoteMapped.length === 0) return;
+
         setEvents((prev) => {
           const byId = new Map<string, Event>();
           prev.forEach((e) => byId.set(e.id, e));
           remoteMapped.forEach((e) => byId.set(e.id, e));
           const merged = Array.from(byId.values());
-          void LocalEngine.cacheSet(cacheKey, merged);
+          void LocalEngine.cacheSet(userCacheKey, merged);
+          void LocalEngine.cacheSet('f_events_list', merged);
           return merged;
         });
       } catch (error: unknown) {
         console.error('Failed to fetch events', error);
-        toast.error('Could not load events');
       } finally {
         if (!isCancelled) setIsLoading(false);
       }
@@ -297,7 +340,7 @@ export default function EventList() {
                     openSidebar(
                       <EventDetails eventId={event.id} initialData={event} />,
                       event.id,
-                      { hideHeader: true },
+                      { hideHeader: true, fullscreen: true },
                     );
                   } else {
                     openOverlay(

@@ -421,8 +421,8 @@ export default function NotesPage() {
           onDelete={handleNoteDeleted}
           embedded
         />,
-        note.$id || null,
-        { hideHeader: true }
+        note.$id || 'note-detail',
+        { hideHeader: true, fullscreen: true }
       );
       return;
     }
@@ -433,6 +433,7 @@ export default function NotesPage() {
         onUpdate={handleNoteUpdated}
         onDelete={handleNoteDeleted}
         onClose={closeOverlay}
+        embedded
       />
     );
   }, [isDesktop, openSidebar, openOverlay, closeOverlay, handleNoteUpdated, handleNoteDeleted, promptSudo]);

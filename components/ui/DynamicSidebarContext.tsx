@@ -13,6 +13,8 @@ import React, {
 
 export interface DynamicSidebarOptions {
   hideHeader?: boolean;
+  /** True = edge-to-edge viewport (idea/goal/event detail). */
+  fullscreen?: boolean;
 }
 
 interface DynamicSidebarContextType {

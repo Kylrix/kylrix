@@ -95,10 +95,10 @@ export default function GoalObjectRow({ task }: Props) {
       openSidebar(
         <GoalObjectDetail taskId={task.id} embedded />,
         task.id,
-        { hideHeader: true });
+        { hideHeader: true, fullscreen: true });
     } else {
       openOverlay(
-        <GoalObjectDetail taskId={task.id} onClose={closeOverlay} />);
+        <GoalObjectDetail taskId={task.id} onClose={closeOverlay} embedded />);
     }
   }, [closeOverlay, openOverlay, openSidebar, selectTask, task.id]);
 

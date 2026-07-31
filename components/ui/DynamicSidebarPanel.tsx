@@ -15,6 +15,25 @@ const SELF_CONTAINED_PANEL_KEYS = new Set([
   'pinned-notes',
 ]);
 
+const FULLSCREEN_PANEL_KEYS = new Set([
+  'note-detail',
+  'task-detail',
+  'event-detail',
+  'pinned-notes',
+]);
+
+function panelTypeName(content: React.ReactNode): string | null {
+  if (!content || !React.isValidElement(content)) return null;
+  const t = content.type as { name?: string; displayName?: string; type?: { name?: string } };
+  if (typeof content.type === 'function') {
+    return content.type.name || (content.type as { displayName?: string }).displayName || null;
+  }
+  if (typeof content.type === 'object' && content.type !== null) {
+    return t?.name || t?.displayName || t?.type?.name || null;
+  }
+  return null;
+}
+
 export function DynamicSidebar() {
   const { isOpen, content, closeSidebar, options, activeContentKey } = useDynamicSidebar();
   const [mounted, setMounted] = useState(false);
@@ -48,24 +67,29 @@ export function DynamicSidebar() {
 
   if (!isOpen && !mounted) return null;
 
-  const isNoteDetail =
-    content &&
-    React.isValidElement(content) &&
-    ((typeof content.type === 'function' &&
-      (content.type.name === 'NoteDetailSidebar' || content.type.name === 'NoteObjectDetail')) ||
-      (typeof content.type === 'object' &&
-        content.type !== null &&
-        ((content.type as { type?: { name?: string } }).type?.name === 'NoteDetailSidebar' ||
-          (content.type as { type?: { name?: string } }).type?.name === 'NoteObjectDetail')) ||
-      (content.props as { note?: unknown })?.note !== undefined);
+  const typeName = panelTypeName(content);
+  const isObjectDetail =
+    typeName === 'NoteDetailSidebar' ||
+    typeName === 'NoteObjectDetail' ||
+    typeName === 'GoalObjectDetail' ||
+    typeName === 'TaskDetails' ||
+    typeName === 'EventDetails' ||
+    (content &&
+      React.isValidElement(content) &&
+      ((content.props as { note?: unknown })?.note !== undefined ||
+        (content.props as { taskId?: unknown })?.taskId !== undefined ||
+        (content.props as { eventId?: unknown })?.eventId !== undefined));
 
-  const shouldHideHeader = options?.hideHeader || isNoteDetail;
+  const shouldHideHeader = options?.hideHeader || isObjectDetail;
   const isSelfContained =
-    isNoteDetail ||
+    isObjectDetail ||
     shouldHideHeader ||
     Boolean(activeContentKey && SELF_CONTAINED_PANEL_KEYS.has(activeContentKey));
 
-  const isFullscreen = activeContentKey === 'pinned-notes';
+  const isFullscreen =
+    options?.fullscreen === true ||
+    isObjectDetail ||
+    Boolean(activeContentKey && FULLSCREEN_PANEL_KEYS.has(activeContentKey));
 
   const sheet = (
     <>
@@ -84,15 +108,17 @@ export function DynamicSidebar() {
           transition: 'opacity 0.3s ease'}}
       />
 
-      {/* Side sheet — portaled above global topbar (z 1200) */}
+      {/* Side sheet — portaled above global topbar (z 1200). Object details = true fullscreen. */}
       <Box
         sx={{
           position: 'fixed',
           top: 0,
           right: 0,
           bottom: 0,
+          left: isFullscreen ? 0 : 'auto',
           height: '100dvh',
           width: isFullscreen ? '100%' : { xs: '100%', md: 480, lg: 520 },
+          maxWidth: isFullscreen ? '100%' : undefined,
           display: 'flex',
           flexDirection: 'column',
           zIndex: 10001,
@@ -102,15 +128,17 @@ export function DynamicSidebar() {
           transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)',
           overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            bottom: 0,
-            width: '1px',
-            bgcolor: 'rgba(255, 255, 255, 0.04)',
-            pointerEvents: 'none'}}}
+          '&::before': isFullscreen
+            ? undefined
+            : {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                bottom: 0,
+                width: '1px',
+                bgcolor: 'rgba(255, 255, 255, 0.04)',
+                pointerEvents: 'none'}}}
       >
         {!shouldHideHeader && (
           <Box

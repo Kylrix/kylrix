@@ -202,7 +202,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
         openSidebar(
           <EventDetails eventId={eventId} initialData={result} />,
           eventId,
-          { hideHeader: true }
+          { hideHeader: true, fullscreen: true }
         );
       } else {
         openOverlay(

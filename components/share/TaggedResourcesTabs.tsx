@@ -311,7 +311,8 @@ export function TaggedResourcesTabs({
                 onUpdate={fetchProjectData} 
                 onDelete={fetchProjectData} 
               />, 
-              'note-detail'
+              'note-detail',
+              { hideHeader: true, fullscreen: true }
             )}
             onUnlink={() => handleUnlinkTagged(note.title || 'Untitled Note')}
             keepPermission={note.keepPermission ?? true}
