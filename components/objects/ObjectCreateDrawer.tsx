@@ -46,8 +46,7 @@ type Props = {
 
 /**
  * Modular ecosystem create drawer.
- * Shell owns height (60dvh ↔ full). Composers own live-copy writes, Check close,
- * Enter-to-save in minimized mode, and SyncStatusDot.
+ * Mobile: bottom sheet. Desktop (md+): right sidebar. Never bottom sheet on desktop.
  */
 export function ObjectCreateDrawer({
   open,
@@ -66,14 +65,22 @@ export function ObjectCreateDrawer({
     formOnlyFull ? 'full' : defaultHeight || 'partial',
   );
   const [isExpanded, setIsExpanded] = useState(formOnlyFull || defaultHeight === 'full');
+  const [isDesktop, setIsDesktop] = useState(false);
   const composerCloseRef = React.useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
     const mode = formOnlyFull ? 'full' : defaultHeight || 'partial';
     setHeightMode(mode);
-    setIsExpanded(mode === 'full');
-  }, [open, formOnlyFull, defaultHeight]);
+    setIsExpanded(mode === 'full' || isDesktop);
+  }, [open, formOnlyFull, defaultHeight, isDesktop]);
 
   const requestClose = useCallback(() => {
     if (composerCloseRef.current) {
@@ -84,20 +91,28 @@ export function ObjectCreateDrawer({
   }, [onClose]);
 
   const toggleExpand = useCallback(() => {
-    if (formOnlyFull) return;
+    if (formOnlyFull || isDesktop) return;
     setIsExpanded((v) => {
       const next = !v;
       setHeightMode(next ? 'full' : 'partial');
       return next;
     });
-  }, [formOnlyFull]);
+  }, [formOnlyFull, isDesktop]);
 
   if (!open) return null;
 
-  const maxHeight = heightMode === 'full' || formOnlyFull ? '96dvh' : '60dvh';
+  const maxHeight = isDesktop
+    ? '100dvh'
+    : heightMode === 'full' || formOnlyFull
+      ? '96dvh'
+      : '60dvh';
 
   return (
-    <div className="fixed inset-0 z-[1400] flex items-end justify-center pointer-events-none">
+    <div
+      className={`fixed inset-0 z-[1400] flex pointer-events-none ${
+        isDesktop ? 'items-stretch justify-end' : 'items-end justify-center'
+      }`}
+    >
       <button
         type="button"
         aria-label="Close"
@@ -105,18 +120,24 @@ export function ObjectCreateDrawer({
         onClick={requestClose}
       />
       <div
-        className="w-full max-w-[720px] pointer-events-auto flex flex-col bg-[#161412] border border-[#34322F] border-b-0 rounded-t-[24px] overflow-hidden fixed bottom-0 left-1/2 -translate-x-1/2 shadow-[0_-12px_36px_rgba(0,0,0,0.5)]"
-        style={{ height: maxHeight, maxHeight }}
+        className={
+          isDesktop
+            ? 'w-full max-w-[480px] h-full pointer-events-auto flex flex-col bg-[#161412] border-l border-[#34322F] overflow-hidden shadow-[-12px_0_36px_rgba(0,0,0,0.5)]'
+            : 'w-full max-w-[720px] pointer-events-auto flex flex-col bg-[#161412] border border-[#34322F] border-b-0 rounded-t-[24px] overflow-hidden fixed bottom-0 left-1/2 -translate-x-1/2 shadow-[0_-12px_36px_rgba(0,0,0,0.5)]'
+        }
+        style={isDesktop ? { height: '100dvh' } : { height: maxHeight, maxHeight }}
       >
-        <button
-          type="button"
-          onClick={toggleExpand}
-          disabled={formOnlyFull}
-          className="flex justify-center py-1.5 w-full shrink-0 border-b border-[#34322F]"
-          aria-label={isExpanded ? 'Collapse drawer' : 'Expand drawer'}
-        >
-          <span className="w-10 h-1 rounded-full bg-[#3D3A36]" />
-        </button>
+        {!isDesktop ? (
+          <button
+            type="button"
+            onClick={toggleExpand}
+            disabled={formOnlyFull}
+            className="flex justify-center py-1.5 w-full shrink-0 border-b border-[#34322F]"
+            aria-label={isExpanded ? 'Collapse drawer' : 'Expand drawer'}
+          >
+            <span className="w-10 h-1 rounded-full bg-[#3D3A36]" />
+          </button>
+        ) : null}
 
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {kind === 'note' ? (
@@ -128,7 +149,7 @@ export function ObjectCreateDrawer({
               onRegisterClose={(close) => {
                 composerCloseRef.current = close;
               }}
-              isExpanded={isExpanded}
+              isExpanded={isExpanded || isDesktop}
               onToggleExpand={toggleExpand}
               onClose={onClose}
             />
@@ -140,7 +161,7 @@ export function ObjectCreateDrawer({
               onRegisterClose={(close) => {
                 composerCloseRef.current = close;
               }}
-              isExpanded={isExpanded}
+              isExpanded={isExpanded || isDesktop}
               onToggleExpand={toggleExpand}
               onClose={onClose}
             />
@@ -154,7 +175,7 @@ export function ObjectCreateDrawer({
               onRegisterClose={(close) => {
                 composerCloseRef.current = close;
               }}
-              isExpanded={isExpanded}
+              isExpanded={isExpanded || isDesktop}
               onToggleExpand={toggleExpand}
               onClose={onClose}
             />

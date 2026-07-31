@@ -1154,7 +1154,7 @@ export default function CreateNoteForm({
         className="w-full h-full min-h-0 flex flex-col bg-[#161412] text-white"
       >
         {/* Header */}
-        <div className="px-2 py-1.5 flex items-center justify-between border-b border-white/5 sticky top-0 z-20 backdrop-blur-md bg-[#161412]/95 shrink-0">
+        <div className="px-2 py-1.5 flex items-center justify-between border-b border-white/5 sticky top-0 z-20 bg-[#161412]/95 shrink-0">
           <div className="flex items-center gap-1.5 min-w-0">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-pink-500/10 border border-pink-500/20 text-pink-500 shrink-0 animate-in fade-in zoom-in-90 duration-200">
               <FileText className="w-3.5 h-3.5 animate-in fade-in duration-200" />
@@ -1288,7 +1288,7 @@ export default function CreateNoteForm({
               if (suggestions.length === 0) return null;
 
               return (
-                <div className="absolute bottom-2 left-2 right-2 z-10 flex flex-wrap gap-1.5 p-2 bg-[#0B0A09]/95 backdrop-blur border border-white/10 rounded-xl max-h-[80px] overflow-y-auto">
+                <div className="absolute bottom-2 left-2 right-2 z-10 flex flex-wrap gap-1.5 p-2 bg-[#0B0A09]/95 border border-white/10 rounded-xl max-h-[80px] overflow-y-auto">
                   {suggestions.map((s, idx) => (
                     <button
                       key={idx}

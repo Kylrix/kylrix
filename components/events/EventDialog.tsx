@@ -221,7 +221,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
     <div className="fixed inset-0 z-[10000] flex justify-end overflow-hidden pointer-events-none">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto"
+        className="absolute inset-0 bg-black/60 transition-opacity duration-300 pointer-events-auto"
         onClick={handleClose}
       />
 

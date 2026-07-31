@@ -101,8 +101,6 @@ export function DynamicSidebar() {
           inset: 0,
           zIndex: 10000,
           bgcolor: 'rgba(0, 0, 0, 0.58)',
-          backdropFilter: 'blur(10px) saturate(120%)',
-          WebkitBackdropFilter: 'blur(10px) saturate(120%)',
           opacity: isOpen ? 1 : 0,
           pointerEvents: isOpen ? 'auto' : 'none',
           transition: 'opacity 0.3s ease'}}

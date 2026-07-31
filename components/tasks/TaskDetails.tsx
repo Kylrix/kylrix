@@ -515,7 +515,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(168,85,247,0.12),transparent_60%)] pointer-events-none" />
 
       {/* Header - Sticky/Fixed at Top */}
-      <div className="relative z-20 flex flex-col gap-3 p-5 md:p-6 border-b border-white/5 bg-[#161412]/60 backdrop-blur-md shrink-0">
+      <div className="relative z-20 flex flex-col gap-3 p-5 md:p-6 border-b border-white/5 bg-[#161412] shrink-0">
         {/* Row 1: chrome only — back + actions (title is not on this line) */}
         <div className="flex items-center justify-between gap-3">
           {onBack ? (

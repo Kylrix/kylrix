@@ -97,8 +97,7 @@ const Overlay: React.FC = () => {
       slotProps={{
         backdrop: {
           sx: {
-            bgcolor: 'rgba(0, 0, 0, 0.72)',
-            backdropFilter: 'blur(10px)'}
+            bgcolor: 'rgba(0, 0, 0, 0.72)'}
         }
       }}
     >

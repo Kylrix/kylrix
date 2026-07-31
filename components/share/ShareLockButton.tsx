@@ -6,7 +6,7 @@ import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { useToast } from '@/hooks/useToast';
-import { Tooltip, IconButton } from '@/lib/openbricks/primitives';
+import { IconButton } from '@/lib/openbricks/primitives';
 
 interface ShareLockButtonProps {
   resourceType: PublicResourceType;
@@ -124,42 +124,44 @@ export function ShareLockButton({
   };
 
   const isActive = isPublic || isGuest;
+  const tip = !canPublish && !isActive
+    ? (blockReason || 'Cannot share')
+    : isActive
+      ? 'Copy public link'
+      : 'Share publicly';
 
   return (
-    <Tooltip 
-      title={!canPublish && !isActive ? blockReason || 'Cannot share' : isActive ? 'Copy public link' : 'Publish to web'}
-      placement="top"
-    >
-      <IconButton
-        onClick={handleToggle}
-        disabled={loading}
-        sx={{
-          width: 32,
-          height: 32,
+    <IconButton
+      onClick={handleToggle}
+      disabled={loading}
+      title={tip}
+      aria-label={tip}
+      sx={{
+        width: 32,
+        height: 32,
+        color: isPublic && isGuest 
+          ? accentColor 
+          : isPublic 
+            ? `color-mix(in srgb, ${accentColor} 50%, transparent)` 
+            : 'rgba(255, 255, 255, 0.15)',
+        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        '&:hover': {
           color: isPublic && isGuest 
             ? accentColor 
             : isPublic 
-              ? `color-mix(in srgb, ${accentColor} 50%, transparent)` 
-              : 'rgba(255, 255, 255, 0.15)',
-          transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-          '&:hover': {
-            color: isPublic && isGuest 
-              ? accentColor 
-              : isPublic 
-                ? `color-mix(in srgb, ${accentColor} 70%, transparent)` 
-                : 'white',
-            bgcolor: 'rgba(255, 255, 255, 0.05)',
-            transform: 'scale(1.1)'},
-          '&.ob-disabled': {
-             color: 'rgba(255, 255, 255, 0.1)'}
-        }}
-      >
-        {loading ? (
-          <Loader2 size={14} className="animate-spin" />
-        ) : (
-          <Share2 size={14} />
-        )}
-      </IconButton>
-    </Tooltip>
+              ? `color-mix(in srgb, ${accentColor} 70%, transparent)` 
+              : 'white',
+          bgcolor: 'rgba(255, 255, 255, 0.05)',
+          transform: 'scale(1.1)'},
+        '&.ob-disabled': {
+           color: 'rgba(255, 255, 255, 0.1)'}
+      }}
+    >
+      {loading ? (
+        <Loader2 size={14} className="animate-spin" />
+      ) : (
+        <Share2 size={14} />
+      )}
+    </IconButton>
   );
 }

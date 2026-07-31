@@ -41,8 +41,7 @@ export function Drawer({
       sx={{
         '& .ob-backdrop': {
           bgcolor: 'rgba(0, 0, 0, 0.7)',
-          backdropFilter: 'blur(4px)'
-        }
+          }
       }}
     >
       <IconButton

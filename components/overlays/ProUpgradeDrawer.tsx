@@ -11,52 +11,62 @@ import {
   useMediaQuery,
   alpha} from '@/lib/openbricks/primitives';
 import { Zap, ExternalLink } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 const featureDescriptions: Record<string, { desc: string; fix: string }> = {
   'Voice recording': {
-    desc: 'Voice notes require encrypted media storage.',
-    fix: 'Upgrade to Pro to unlock voice capture and upload audio thoughts instantly.'
+    desc: 'Voice capture needs more storage and upload room.',
+    fix: 'Upgrade to Pro to record and attach audio to your ideas.'
   },
   'Discussions': {
-    desc: 'Task discussion comments require secondary object sync privileges.',
-    fix: 'Upgrade to Pro to post, edit, and collaborate in real-time on task comments and threads.'
+    desc: 'Comments on goals need a Pro plan.',
+    fix: 'Upgrade to Pro to discuss and collaborate on goals in real time.'
   },
   'New Project': {
-    desc: 'The Free plan is limited to 1 active project.',
-    fix: 'Upgrade to Pro to create up to 10 projects, or Teams for unlimited team workspaces.'
+    desc: 'Free plans are limited to 1 active project.',
+    fix: 'Upgrade to Pro for more projects, or Teams for unlimited workspaces.'
   },
   'New Channel': {
-    desc: 'Creating custom group channels requires a Teams plan.',
-    fix: 'Upgrade to Teams to coordinate group channels. Pro users can use resource discussions for collaboration.'
+    desc: 'Custom group channels need a Teams plan.',
+    fix: 'Upgrade to Teams to create group channels across your workspace.'
   },
   'Collaborators': {
-    desc: 'Collaborative projects and shared resources require a premium tier.',
-    fix: 'Upgrade to Pro to add up to 3 collaborators per resource, or Teams for unlimited peers.'
+    desc: 'Sharing with others needs a paid plan.',
+    fix: 'Upgrade to Pro to invite collaborators, or Teams for larger groups.'
   },
   'Project Collaboration': {
-    desc: 'Project-level collaboration requires a Teams subscription.',
-    fix: 'Upgrade to Teams to collaborate on projects. Pro users can collaborate directly on non-project objects (e.g. notes/ideas, tasks).'
-  }
+    desc: 'Project-level invites need a Teams plan.',
+    fix: 'Upgrade to Teams to collaborate on whole projects with your group.'
+  },
+  'Pinned Notes': {
+    desc: 'You have reached the free pin limit.',
+    fix: 'Upgrade to Pro to pin more ideas for quick access.'
+  },
+  'Article Mode': {
+    desc: 'Long-form writing tools need Pro.',
+    fix: 'Upgrade to Pro to unlock article mode and richer writing tools.'
+  },
+  'Kylie Assist': {
+    desc: 'Smart assist tools need Pro.',
+    fix: 'Upgrade to Pro to summarize, fix grammar, and speed up your work.'
+  },
 };
 
 const TEAMS_ONLY_FEATURES = new Set(['Project Collaboration', 'New Channel']);
 
 const TEAMS_BENEFITS = [
   'Unlimited projects and team workspaces',
-  'Project-level collaboration and member invites',
-  'Group channels and advanced team coordination',
+  'Invite members to whole projects',
+  'Group channels for coordination',
 ];
 
 const PRO_BENEFITS = [
-  'Unlimited storage & file uploads',
-  'Ecosystem AI access & advanced automation',
-  'Temporal masterpass encryption options',
+  'More storage for files and media',
+  'Higher limits on pins, projects, and collaborators',
+  'Smart tools across the ecosystem',
 ];
 
 export function ProUpgradeDrawer() {
-  const router = useRouter();
   const { showProUpgrade, closeProUpgrade, feature } = useProUpgrade();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -67,6 +77,16 @@ export function ProUpgradeDrawer() {
   const accent = isTeamsUpgrade ? '#F59E0B' : '#6366F1';
   const benefits = isTeamsUpgrade ? TEAMS_BENEFITS : PRO_BENEFITS;
   const upgradeLabel = isTeamsUpgrade ? 'Upgrade to Teams' : 'Upgrade to Pro';
+  const checkoutHref = isTeamsUpgrade ? '/pricing?tier=teams' : '/pricing';
+
+  const goCheckout = () => {
+    closeProUpgrade();
+    // Hard navigation so checkout always starts even if the drawer tree unmounts mid-route.
+    if (typeof window !== 'undefined') {
+      window.location.assign(checkoutHref);
+      return;
+    }
+  };
 
   return (
     <Drawer
@@ -79,12 +99,10 @@ export function ProUpgradeDrawer() {
         zIndex: 14000,
         '& .ob-drawer-panel': {
           bgcolor: '#161412',
-          backgroundImage: isTeamsUpgrade
-            ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(99, 102, 241, 0.02) 100%)'
-            : 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(236, 72, 153, 0.02) 100%)',
-          borderTop: isMobile ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(255, 255, 255, 0.1)',
+          backgroundImage: 'none',
+          borderTop: isMobile ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
           borderLeft: !isMobile ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-          maxHeight: isMobile ? '60vh' : '100vh',
+          maxHeight: isMobile ? '70vh' : '100vh',
           width: isMobile ? '100%' : 420}}}
     >
       <Box
@@ -97,7 +115,6 @@ export function ProUpgradeDrawer() {
           mx: 'auto',
           justifyContent: 'space-between'}}
       >
-        {/* Header */}
         <Box>
           <Box
             sx={{
@@ -120,7 +137,7 @@ export function ProUpgradeDrawer() {
               color: '#fff',
               mb: 1.5,
               letterSpacing: '-0.02em',
-              fontFamily: 'monospace'}}
+              fontFamily: 'var(--font-clash), sans-serif'}}
           >
             {upgradeLabel}
           </Typography>
@@ -139,9 +156,9 @@ export function ProUpgradeDrawer() {
             ) : (
               <>
                 {featureName
-                  ? `${featureName} is a ${isTeamsUpgrade ? 'Teams' : 'Pro'} feature.`
-                  : `This feature requires a ${isTeamsUpgrade ? 'Teams' : 'Pro'} subscription.`}{' '}
-                Unlock full premium capabilities.
+                  ? `${featureName.trim()} needs a ${isTeamsUpgrade ? 'Teams' : 'Pro'} plan.`
+                  : `This feature needs a ${isTeamsUpgrade ? 'Teams' : 'Pro'} plan.`}{' '}
+                Unlock higher limits and more tools.
               </>
             )}
           </Typography>
@@ -165,7 +182,6 @@ export function ProUpgradeDrawer() {
           </Stack>
         </Box>
 
-        {/* CTA */}
         <Stack spacing={1.5} sx={{ mt: 'auto' }}>
           <Button
             fullWidth
@@ -181,10 +197,7 @@ export function ProUpgradeDrawer() {
               borderRadius: '12px',
               '&:hover': {
                 bgcolor: isTeamsUpgrade ? '#D97706' : '#818CF8'}}}
-            onClick={() => {
-              closeProUpgrade();
-              router.push(isTeamsUpgrade ? '/pricing?tier=teams' : '/pricing');
-            }}
+            onClick={goCheckout}
             endIcon={<ExternalLink size={16} />}
           >
             {isTeamsUpgrade ? 'View Teams Plans' : 'Upgrade Now'}

@@ -187,7 +187,7 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/70"
         style={{ zIndex: 99998 }}
         onClick={onClose}
         aria-hidden="true"

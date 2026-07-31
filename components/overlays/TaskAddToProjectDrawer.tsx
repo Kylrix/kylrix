@@ -133,7 +133,7 @@ export function TaskAddToProjectDrawer({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1200] animate-in fade-in"
+        className="fixed inset-0 bg-black/60 z-[1200] animate-in fade-in"
         onClick={onClose}
       />
 

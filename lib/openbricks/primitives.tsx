@@ -901,7 +901,7 @@ export const Dialog = React.forwardRef(({
   if (maxWidth === 'xl') maxWClass = "max-w-xl";
   
   return (
-    <div className="fixed inset-0 z-[1400] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-[1400] flex items-center justify-center p-4 bg-black/70 animate-fade-in">
       <div className="fixed inset-0" onClick={onClose} />
       <div
         ref={ref}
@@ -962,7 +962,7 @@ export const Drawer = React.forwardRef(({ open, onClose, anchor = 'right', child
       data-keep-mounted={keepMounted ? 'true' : 'false'}
     >
       <div
-        className="ob-backdrop fixed inset-0 z-0 bg-black/70 backdrop-blur-sm pointer-events-auto"
+        className="ob-backdrop fixed inset-0 z-0 bg-black/70 pointer-events-auto"
         style={backdropStyle}
         onClick={onClose}
         aria-hidden="true"
@@ -1038,13 +1038,18 @@ export const Checkbox = ({ checked, onChange, disabled, ...props }: any) => (
   </button>
 );
 
-// 18. Tooltip Component
+// 18. Tooltip Component — never leave visible ghost text when not hovered
 export const Tooltip = ({ title, children, ..._props }: any) => (
-  <div className="group relative inline-block">
+  <div className="group/tip relative inline-flex shrink-0">
     {children}
-    <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#141211] border border-[#23211F] px-2 py-1 text-xs text-stone-200 opacity-0 transition-opacity group-hover:opacity-100">
-      {title}
-    </span>
+    {title ? (
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-[200] mb-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#141211] border border-[#23211F] px-2 py-1 text-xs text-stone-200 opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible transition-opacity"
+      >
+        {title}
+      </span>
+    ) : null}
   </div>
 );
 

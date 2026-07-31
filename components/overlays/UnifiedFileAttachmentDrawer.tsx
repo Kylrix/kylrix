@@ -489,7 +489,7 @@ export function UnifiedFileAttachmentDrawer() {
   const CurrentSubTabIcon = getSubTabIcon(activeSubTab);
 
   return (
-    <div className="fixed inset-0 z-[999999] flex items-end justify-center bg-black/80 backdrop-blur-md animate-fadeIn p-0 sm:p-4">
+    <div className="fixed inset-0 z-[999999] flex items-end justify-center bg-black/80 animate-fadeIn p-0 sm:p-4">
       <div
         className={`w-full max-w-3xl bg-[#161412] border-t sm:border border-[#34322F] rounded-t-[28px] sm:rounded-[28px] p-6 shadow-2xl font-satoshi flex flex-col transition-all duration-300 ${
           isFullscreen ? 'h-[92vh]' : 'h-[60vh] max-h-[600px]'
@@ -839,7 +839,7 @@ export function UnifiedFileAttachmentDrawer() {
       {/* 4. Top-level Media Preview Sub-Drawer & Lightbox (Z-Index 99999) */}
       {previewFile && (
         <div
-          className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 transition-all animate-fadeIn"
+          className="fixed inset-0 z-[99999] bg-black/85 flex items-center justify-center p-4 transition-all animate-fadeIn"
           onClick={() => {
             setPreviewFile(null);
             setZoomScale(1);

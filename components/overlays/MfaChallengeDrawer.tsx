@@ -128,7 +128,6 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
           borderBottomLeftRadius: 0,
           borderBottomRightRadius: 0,
           backgroundColor: 'rgba(10, 10, 10, 0.98)',
-          backdropFilter: 'blur(28px) saturate(180%)',
           borderTop: isDesktop ? 0 : '1px solid rgba(255, 255, 255, 0.08)',
           borderLeft: isDesktop ? '1px solid rgba(255, 255, 255, 0.08)' : 0,
           backgroundImage: 'none',

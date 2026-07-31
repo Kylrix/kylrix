@@ -277,7 +277,7 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
         <>
             {/* Backdrop */}
             <div 
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1399] animate-in fade-in duration-200 cursor-pointer" 
+                className="fixed inset-0 bg-black/60 z-[1399] animate-in fade-in duration-200 cursor-pointer" 
                 onClick={onClose}
             />
 

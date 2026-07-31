@@ -23,7 +23,7 @@ import { useAccessControlMenuItems } from '../share/AccessControlMenuItems';
 
 import { resolveNoteCardTitle } from '@/constants/noteTitle';
 import { createTaskFromNote, getNotePublicState, lockNote, unlockNote } from '@/lib/appwrite';
-import { updateNote } from '@/lib/actions/client-ops';
+import { updateNote, deleteNote as deleteNoteAction } from '@/lib/actions/client-ops';
 import { useToast } from './Toast';
 import { useSudo } from '@/context/SudoContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
@@ -48,7 +48,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
 
   const contextMenu = useContextMenu();
   const openMenu = contextMenu?.openMenu;
-  const { isPinned, pinNote, unpinNote, upsertNote, notes: contextNotes } = useNotes();
+  const { isPinned, pinNote, unpinNote, upsertNote, notes: contextNotes, removeNote } = useNotes();
   const liveNote = React.useMemo(
     () => contextNotes?.find((candidate) => candidate.$id === note.$id) || note,
     [contextNotes, note],
@@ -60,11 +60,18 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const unifiedDrawer = useUnifiedDrawer();
   const openShare = React.useCallback(() => unifiedDrawer.open('share-note', { noteId: note.$id, noteTitle: note.title }), [unifiedDrawer, note.$id, note.title]);
   const openDelete = React.useCallback(() => unifiedDrawer.open('delete-confirm', { 
-    title: `Delete "${note.title}"?`,
-    resourceName: 'this note',
-    confirmLabel: 'Delete Note',
-    onConfirm: async () => onDelete?.(note.$id) 
-  }), [unifiedDrawer, note.title, note.$id, onDelete]);
+    title: `Delete "${note.title || 'Untitled'}"?`,
+    resourceName: 'this idea',
+    confirmLabel: 'Delete Idea',
+    onConfirm: async () => {
+      if (onDelete) {
+        await onDelete(note.$id);
+        return;
+      }
+      await deleteNoteAction(note.$id);
+      removeNote(note.$id);
+    },
+  }), [unifiedDrawer, note.title, note.$id, onDelete, removeNote]);
 
   const resolveNoteShareUrl = React.useCallback(async () => {
     if (note.dek) {

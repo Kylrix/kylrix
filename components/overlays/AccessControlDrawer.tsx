@@ -116,7 +116,7 @@ export function AccessControlDrawer({
     <>
       {/* 1. Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity duration-300 ease-in-out cursor-default"
+        className="fixed inset-0 bg-black/60 z-50 transition-opacity duration-300 ease-in-out cursor-default"
         onClick={onClose}
       />
       

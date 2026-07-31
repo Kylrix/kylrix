@@ -567,7 +567,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
     <>
       {/* Backdrop — above note detail sidebar (10001) */}
       <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10002] transition-opacity duration-300 animate-in fade-in"
+        className="fixed inset-0 bg-black/60 z-[10002] transition-opacity duration-300 animate-in fade-in"
         onClick={onClose}
       />
 
@@ -631,7 +631,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
         <>
           {/* Nested Backdrop */}
           <div 
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10004] transition-opacity duration-300 animate-in fade-in"
+            className="fixed inset-0 bg-black/60 z-[10004] transition-opacity duration-300 animate-in fade-in"
             onClick={() => setIsPermissionDrawerOpen(false)}
           />
 

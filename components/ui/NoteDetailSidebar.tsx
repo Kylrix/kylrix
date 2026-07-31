@@ -50,6 +50,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useSudo } from '@/context/SudoContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { exportToMarkdown, exportToPDF, exportToDOCX } from '@/lib/utils/export';
 import { useAuth } from '@/lib/auth';
@@ -130,6 +131,7 @@ export function NoteDetailSidebar({
   const { setIsDrawerOpen } = useDrawerState();
   const { showSuccess, showError } = useToast();
   const { closeSidebar } = useDynamicSidebar();
+  const { closeOverlay } = useOverlay();
   const { openCallLauncher } = useCallLauncher();
   const [isTagSelectorOpen, setIsTagSelectorOpen] = useState(false);
   const { ecosystemTags, refreshEcosystemTags } = useTask();
@@ -590,7 +592,9 @@ export function NoteDetailSidebar({
   const handleDelete = useCallback(() => {
     onDelete(liveNote.$id);
     setShowDeleteConfirm(false);
-  }, [onDelete, liveNote.$id]);
+    closeSidebar();
+    closeOverlay();
+  }, [onDelete, liveNote.$id, closeSidebar, closeOverlay]);
 
   const handleBackClick = useCallback(() => {
     // Create persists on close; detail keeps compose session registered — sync engine flushes.
@@ -1396,8 +1400,8 @@ export function NoteDetailSidebar({
 
       {/* Action Hub overlay */}
       {showActionHub && (
-        <div className="fixed inset-0 z-[1500] flex items-start justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowActionHub(false)}>
-          <div className="w-full max-w-lg rounded-b-[24px] bg-[#161412] border-b border-white/5 p-5 shadow-2xl flex flex-col gap-4 animate-in slide-in-from-top-1/3 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[11050] flex items-start justify-center bg-black/70 animate-in fade-in duration-200" onClick={() => setShowActionHub(false)}>
+          <div className="w-full max-w-lg md:max-w-[420px] md:ml-auto md:mr-0 md:h-full md:rounded-none rounded-b-[24px] bg-[#161412] border-b md:border-b-0 md:border-l border-white/5 p-5 shadow-2xl flex flex-col gap-4 animate-in slide-in-from-top-1/3 md:slide-in-from-right duration-200" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center">
               <h3 className="font-extrabold font-space-grotesk text-indigo-400 text-sm uppercase tracking-wide">Action Hub</h3>
               <button type="button" onClick={() => setShowActionHub(false)} className="p-1.5 text-white/60 hover:text-white rounded-lg hover:bg-white/5"><CloseIcon className="w-4 h-4" /></button>
@@ -1474,7 +1478,7 @@ export function NoteDetailSidebar({
 
       {/* Delete Dialog */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[1500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[11050] flex items-center justify-center p-4 bg-black/70 animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-[24px] bg-[#161412] border border-white/5 p-5 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95 duration-200">
             <h3 className="font-extrabold font-space-grotesk text-[#FF453A] text-lg uppercase tracking-wide">Delete Note</h3>
             <p className="text-xs text-white/60 font-sans leading-relaxed">

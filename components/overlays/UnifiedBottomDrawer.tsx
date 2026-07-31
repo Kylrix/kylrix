@@ -160,31 +160,57 @@ export function UnifiedBottomDrawer() {
 
   if (activeContent === 'delete-confirm' || activeContent === 'milestone-details') {
     return (
-      <Drawer
-        anchor="bottom"
-        open={true}
-        onClose={close}
-        disablePortal={false}
-        keepMounted={false}
-        // Above Overlay TaskDetails (z≈9999) / DynamicSidebar (z≈10001)
-        sx={{ zIndex: 11000 }}
-        ModalProps={{ keepMounted: false, disableScrollLock: false }}
-        PaperProps={{
-          sx: {
-            borderTopLeftRadius: '24px',
-            borderTopRightRadius: '24px',
-            bgcolor: '#161412',
-            borderTop: '1px solid #34322F',
-            maxWidth: 720,
-            width: '100%',
-            mx: 'auto',
-            maxHeight: '60vh',
-            overflowY: 'auto'
-          }
-        }}
-      >
-        {content}
-      </Drawer>
+      <>
+        <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+          <Drawer
+            anchor="bottom"
+            open={true}
+            onClose={close}
+            disablePortal={false}
+            keepMounted={false}
+            sx={{ zIndex: 11000 }}
+            ModalProps={{ keepMounted: false, disableScrollLock: false }}
+            PaperProps={{
+              sx: {
+                borderTopLeftRadius: '24px',
+                borderTopRightRadius: '24px',
+                bgcolor: '#161412',
+                borderTop: '1px solid #34322F',
+                maxWidth: 720,
+                width: '100%',
+                mx: 'auto',
+                maxHeight: '60vh',
+                overflowY: 'auto'
+              }
+            }}
+          >
+            {content}
+          </Drawer>
+        </Box>
+        <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+          <Drawer
+            anchor="right"
+            open={true}
+            onClose={close}
+            disablePortal={false}
+            keepMounted={false}
+            sx={{ zIndex: 11000 }}
+            ModalProps={{ keepMounted: false, disableScrollLock: false }}
+            PaperProps={{
+              sx: {
+                bgcolor: '#161412',
+                borderLeft: '1px solid #34322F',
+                height: '100%',
+                maxWidth: 420,
+                width: '100%',
+                overflowY: 'auto'
+              }
+            }}
+          >
+            {content}
+          </Drawer>
+        </Box>
+      </>
     );
   }
 

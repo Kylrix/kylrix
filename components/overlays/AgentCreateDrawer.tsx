@@ -73,7 +73,7 @@ export function AgentCreateDrawer() {
 
   return (
     <>
-      <div className="fixed inset-0 z-[1300] bg-black/60 backdrop-blur-sm" onClick={close} />
+      <div className="fixed inset-0 z-[1300] bg-black/60" onClick={close} />
       <div className="fixed z-[1301] bottom-0 left-0 right-0 h-[60dvh] max-h-[60dvh] bg-[#161412] border-t border-[#34322F] rounded-t-[28px] max-w-[640px] mx-auto flex flex-col overflow-hidden">
         <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
           <div>

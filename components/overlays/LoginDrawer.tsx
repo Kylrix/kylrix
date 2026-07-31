@@ -454,7 +454,7 @@ export function LoginDrawer() {
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 z-[1298] bg-black/60 backdrop-blur-sm transition-all duration-300 animate-fadeIn"
+        className="fixed inset-0 z-[1298] bg-black/60 transition-all duration-300 animate-fadeIn"
         onClick={handleClose}
       />
 

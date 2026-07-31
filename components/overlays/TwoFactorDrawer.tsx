@@ -277,11 +277,11 @@ export function TwoFactorDrawer({
   return (
     <>
       <div
-        className="fixed inset-0 z-[1399] bg-black/60 backdrop-blur-sm transition-all duration-300 animate-fadeIn"
+        className="fixed inset-0 z-[1399] bg-black/60 transition-all duration-300 animate-fadeIn"
         onClick={onClose}
       />
 
-      <div className="fixed z-[1400] bg-[#0A0A0A]/98 backdrop-blur-[28px] border-white/5 shadow-2xl transition-all duration-300 flex flex-col overflow-y-auto right-0 top-0 bottom-0 w-full sm:w-[420px] border-l animate-slideInRight">
+      <div className="fixed z-[1400] bg-[#0A0A0A]/98-[28px] border-white/5 shadow-2xl transition-all duration-300 flex flex-col overflow-y-auto right-0 top-0 bottom-0 w-full sm:w-[420px] border-l animate-slideInRight">
         <div className="w-full px-6 py-8">
           <div className="flex items-center justify-between gap-4 mb-6">
             <div>

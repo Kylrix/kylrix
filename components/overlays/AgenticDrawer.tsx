@@ -42,7 +42,7 @@ export function AgenticDrawer() {
   return createPortal(
     <>
       <div
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm ${isFullscreen ? 'z-[10000]' : 'z-[1300]'}`}
+        className={`fixed inset-0 bg-black/60 ${isFullscreen ? 'z-[10000]' : 'z-[1300]'}`}
         onClick={handleClose}
         aria-hidden
       />

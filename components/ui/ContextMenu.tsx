@@ -22,10 +22,17 @@ interface ContextMenuProps {
 }
 
 export function ContextMenu({ onCloseAction, items }: ContextMenuProps) {
-  // Navigation Stack for Dynamic Sub-menus
   const [menuStack, setMenuStack] = useState<ContextMenuItem[][]>([items]);
   const currentItems = menuStack[menuStack.length - 1];
   const isSubmenu = menuStack.length > 1;
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   useEffect(() => {
     setMenuStack((prev) => {
@@ -62,25 +69,36 @@ export function ContextMenu({ onCloseAction, items }: ContextMenuProps) {
 
   return (
     <>
-      {/* 1. Fullscreen Backdrop */}
-      <div 
-        className="fixed inset-0 z-[99999998] bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out cursor-default"
+      <div
+        className="fixed inset-0 z-[99999998] bg-black/60 transition-opacity duration-300 ease-in-out cursor-default"
         onClick={onCloseAction}
       />
 
-      {/* 2. Pitch Black Bottom Sheet Drawer
-          data-kylrix-context-menu: ContextMenuProvider capture-phase click closer
-          ignores clicks inside this sheet so item onClick handlers can run. */}
       <div
         data-kylrix-context-menu="true"
-        className="fixed bottom-0 left-0 right-0 h-[60vh] max-h-[600px] bg-[#0A0908] border-t border-[#34322F] rounded-t-[28px] z-[99999999] text-white p-5 flex flex-col gap-4 animate-slide-up overflow-y-auto font-satoshi shadow-[0_-24px_48px_rgba(0,0,0,0.95)] max-w-xl mx-auto"
+        className={
+          isDesktop
+            ? 'fixed top-0 right-0 bottom-0 w-full max-w-[420px] h-full bg-[#0A0908] border-l border-[#34322F] rounded-none z-[99999999] text-white p-5 flex flex-col gap-4 overflow-y-auto font-satoshi shadow-[-24px_0_48px_rgba(0,0,0,0.95)]'
+            : 'fixed bottom-0 left-0 right-0 h-[60vh] max-h-[600px] bg-[#0A0908] border-t border-[#34322F] rounded-t-[28px] z-[99999999] text-white p-5 flex flex-col gap-4 animate-slide-up overflow-y-auto font-satoshi shadow-[0_-24px_48px_rgba(0,0,0,0.95)] max-w-xl mx-auto'
+        }
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
       >
-        {/* Decorative drag handle bar */}
-        <div className="w-10 h-1 bg-[#34322F] rounded-full mx-auto shrink-0 mb-1" />
+        {!isDesktop ? (
+          <div className="w-10 h-1 bg-[#34322F] rounded-full mx-auto shrink-0 mb-1" />
+        ) : (
+          <div className="flex items-center justify-between shrink-0 mb-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#9B9691]">Actions</p>
+            <button
+              type="button"
+              onClick={onCloseAction}
+              className="text-xs font-bold text-[#9B9691] hover:text-white px-2 py-1 rounded-lg hover:bg-white/5"
+            >
+              Close
+            </button>
+          </div>
+        )}
 
-        {/* 🔙 Dynamic Back Button for Sub-menus */}
         {isSubmenu && (
           <button
             type="button"
@@ -95,7 +113,6 @@ export function ContextMenu({ onCloseAction, items }: ContextMenuProps) {
           </button>
         )}
 
-        {/* Action Items List */}
         <div className="flex flex-col gap-2">
           {currentItems.map((item, index) => (
             <button
@@ -119,11 +136,7 @@ export function ContextMenu({ onCloseAction, items }: ContextMenuProps) {
                 )}
                 <span className="whitespace-normal leading-snug break-words">{item.label}</span>
               </div>
-              {item.submenu && (
-                <span className="shrink-0 opacity-40">
-                  <ChevronRight size={16} />
-                </span>
-              )}
+              {item.submenu ? <ChevronRight size={16} className="text-[#9B9691] shrink-0" /> : null}
             </button>
           ))}
         </div>

@@ -172,7 +172,7 @@ export function CreateGoalComposer({
       onContextMenu={(e) => e.preventDefault()}
       className="w-full h-full min-h-0 flex flex-col bg-[#161412] text-white"
     >
-      <div className="px-2 py-1.5 flex items-center justify-between border-b border-white/5 sticky top-0 z-20 backdrop-blur-md bg-[#161412]/95 shrink-0">
+      <div className="px-2 py-1.5 flex items-center justify-between border-b border-white/5 sticky top-0 z-20 bg-[#161412]/95 shrink-0">
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#A855F7]/10 border border-[#A855F7]/20 text-[#A855F7] shrink-0">
             <Target className="w-3.5 h-3.5" />

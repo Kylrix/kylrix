@@ -77,7 +77,7 @@ export default function FormSettingsDialog({ open, onClose, form, onSaved }: For
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9990]"
+        className="fixed inset-0 bg-black/60 z-[9990]"
         onClick={onClose}
       />
 
