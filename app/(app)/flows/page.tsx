@@ -109,7 +109,7 @@ export default function WorkflowsPage() {
   const workflowsList = Object.values(savedWorkflows);
 
   return (
-    <Box sx={{ p: 4, bgcolor: '#0A0908', minHeight: '90vh', color: 'white', fontFamily: 'Satoshi, sans-serif' }}>
+    <Box sx={{ p: 4, bgcolor: '#000000', minHeight: '100vh', color: 'white', fontFamily: 'Satoshi, sans-serif' }}>
       {/* Back Button */}
       <IconButton
         onClick={() => router.back()}
