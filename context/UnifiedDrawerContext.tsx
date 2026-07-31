@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 
 type DrawerContent = 'navbar' | 'login' | 'agentic' | 'note' | 'wallet' | 'masterpass' | 'share-note' | 'delete-note' | 'assign-goal' | 'task-add-to-project' | 'new-chat' | 'new-channel' | 'new-tag' | 'tag-selector' | 'new-project' | 'agent-create' | 'secure-chat-setup' | 'passkey-setup' | 'delete-confirm' | 'security-confirm' | 'pro-upgrade' | 'project-invite' | 'form' | 'form-response-detail' | 'agentic-preview' | 'project-settings' | 'project-visibility' | 'project-auto-sweep' | 'project-join-request-confirm' | 'moment-composer' | 'access-control' | 'milestone-details';
 
+export type { DrawerContent };
+
 interface UnifiedDrawerContextType {
   activeContent: DrawerContent;
   drawerData: any;

@@ -905,5 +905,3 @@ export default function SudoModal({
     );
 }
 
-// Migration compatibility: some pages import this overlay as a named export.
-;

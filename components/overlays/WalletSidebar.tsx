@@ -67,10 +67,18 @@ interface WalletSidebarProps {
     onClose: () => void;
     tokenIntent?: TokenWalletIntent | null;
     onConsumeTokenIntent?: () => void;
+    /** Fill native right rail — no floating Drawer chrome */
+    embedded?: boolean;
 }
 
 
-export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTokenIntent }: WalletSidebarProps) => {
+export const WalletSidebar = ({
+    isOpen,
+    onClose,
+    tokenIntent = null,
+    onConsumeTokenIntent,
+    embedded = false,
+}: WalletSidebarProps) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { user } = useAuth();
@@ -1912,6 +1920,26 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             </Stack>
         </Drawer>
     );
+
+    if (embedded) {
+        if (!isOpen) return null;
+        return (
+            <Box
+                sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                    minHeight: 0,
+                    bgcolor: SURFACE,
+                }}
+            >
+                {renderHeader()}
+                {renderWalletContent()}
+                {renderPinDrawer()}
+            </Box>
+        );
+    }
 
     if (isMobile) {
         return (

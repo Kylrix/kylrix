@@ -20,7 +20,7 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useSidebar as useSidebarContext } from '@/components/ui/SidebarContext';
 import { useRightRailOptional } from '@/context/RightRailContext';
-import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
+import { NativeSidebarBridge } from '@/components/layout/NativeSidebarBridge';
 import { FABProvider } from '@/context/FABContext';
 import UniversalFAB from '@/components/layout/UniversalFAB';
 
@@ -36,8 +36,6 @@ import { UnifiedLeftSidebar } from '@/components/UnifiedLeftSidebar';
 const UnifiedBottomDrawer = dynamic(() => import('./overlays/UnifiedBottomDrawer').then(m => m.UnifiedBottomDrawer), { ssr: false });
 const ProUpgradeDrawer = dynamic(() => import('./overlays/ProUpgradeDrawer').then(m => m.ProUpgradeDrawer), { ssr: false });
 const TaskDialog = dynamic(() => import('@/components/tasks/TaskDialog'), { ssr: false });
-const Overlay = dynamic(() => import('@/components/ui/Overlay'), { ssr: false });
-const DynamicSidebar = dynamic(() => import('./ui/DynamicSidebarPanel').then(m => m.DynamicSidebar), { ssr: false });
 const RightSidebar = dynamic(() => import('./layout/RightSidebar'), { ssr: false });
 const AccountHealthDrawers = dynamic(() => import('./onboarding/AccountHealthDrawers').then(m => m.AccountHealthDrawers), { ssr: false });
 const UnifiedFileAttachmentDrawer = dynamic(() => import('./overlays/UnifiedFileAttachmentDrawer').then(m => m.UnifiedFileAttachmentDrawer), { ssr: false });
@@ -90,7 +88,6 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const { isCollapsed } = useSidebarContext();
   const rightRail = useRightRailOptional();
   const { isWalletOpen, closeWallet } = useWalletOverlay();
-  const { isOpen: isAgenticDrawerOpen, closeAgenticDrawer } = useAgenticDrawer();
   const { } = useAppChrome();
   const { isDrawerOpen, setIsDrawerOpen } = useDrawerState();
   const { } = useCallLauncher();
@@ -158,7 +155,6 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
 
   const lastPathnameRef = useRef(pathname);
   useEffect(() => {
-    // Single-batch UI reset on navigation - ONLY call if currently open to prevent cascading update loops!
     if (lastPathnameRef.current !== pathname) {
       lastPathnameRef.current = pathname;
       if (isDynamicSidebarOpen) closeSidebar();
@@ -166,7 +162,7 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
       if (isWalletOpen) closeWallet();
       if (showProUpgrade) closeProUpgrade();
       if (secondarySidebar.isOpen) closeSecondarySidebar();
-      if (isAgenticDrawerOpen) closeAgenticDrawer();
+      // Agentic stays open (stubborn native sidebar) across routes
       if (isDrawerOpen) setIsDrawerOpen(false);
       if (unifiedDrawerActive !== 'navbar') closeUnified();
     }
@@ -177,7 +173,6 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
     isWalletOpen,
     showProUpgrade,
     secondarySidebar.isOpen,
-    isAgenticDrawerOpen,
     isDrawerOpen,
     unifiedDrawerActive,
     closeSidebar,
@@ -185,7 +180,6 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
     closeWallet,
     closeProUpgrade,
     closeSecondarySidebar,
-    closeAgenticDrawer,
     setIsDrawerOpen,
     closeUnified
   ]);
@@ -245,13 +239,13 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
             component="aside"
             aria-label="Secondary panel"
             sx={{
-              display: { xs: 'none', md: 'flex' },
+              display: 'flex',
               flexDirection: 'column',
               position: 'fixed',
               top: isSpecificPostPage ? 0 : { xs: '84px', sm: '88px', md: '96px' },
               right: 0,
               bottom: 0,
-              width: rightRail.width,
+              width: { xs: '100%', md: rightRail.width },
               zIndex: 20,
               bgcolor: '#161412',
               borderLeft: '1px solid rgba(255,255,255,0.08)',
@@ -288,12 +282,13 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
 
       </FABProvider>
 
-      {/* --- LAYER 2: OVERLAYS (Strict Unmounting) --- */}
-      {isOverlayOpen && <Overlay />}
-      {unifiedDrawerActive !== 'navbar' && <UnifiedBottomDrawer />}
+      <NativeSidebarBridge />
+
+      {/* --- LAYER 2: OVERLAYS (legacy leftovers only) --- */}
+      {/* Detail / agentic / wallet / unified drawers → NativeSidebarBridge */}
+      {unifiedDrawerActive === 'login' && <UnifiedBottomDrawer />}
       {showProUpgrade && <ProUpgradeDrawer />}
       {taskDialogOpen && <TaskDialog />}
-      {isDynamicSidebarOpen && !isAppRoute && <DynamicSidebar />}
       {secondarySidebar.isOpen && <RightSidebar />}
       <AccountHealthDrawers />
       <UnifiedFileAttachmentDrawer />

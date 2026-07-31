@@ -2,15 +2,10 @@
 
 import React, { useEffect, Suspense, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/auth/AuthContext';
 import { hasAuthSessionHint } from '@/lib/appwrite/client';
 import { EcosystemProviders } from './EcosystemProviders';
-import { AppDynamicSidebarPortal } from '@/components/ui/AppDynamicSidebarPortal';
 import { GhostNoteClaimer } from '@/components/landing/GhostNoteClaimer';
-import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
-
-const AgenticDrawer = dynamic(() => import('@/components/overlays/AgenticDrawer').then((m) => m.AgenticDrawer), { ssr: false });
 
 export default function AppLayout({
   children}: {
@@ -24,7 +19,6 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const authGraceUntilRef = useRef(0);
-  const { isOpen: isAgenticDrawerOpen } = useAgenticDrawer();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -97,8 +91,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       <EcosystemProviders>
         <GhostNoteClaimer />
         {children}
-        {isAgenticDrawerOpen && <AgenticDrawer />}
-        <AppDynamicSidebarPortal />
+        {/* Agentic + dynamic sidebars mount via NativeSidebarBridge */}
       </EcosystemProviders>
     </Suspense>
   );

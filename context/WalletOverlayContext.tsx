@@ -9,27 +9,17 @@ import React, {
   useState,
   Suspense,
 } from 'react';
-import dynamic from 'next/dynamic';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
 import { TokenOpsProvider } from '@/context/TokenOpsContext';
 
-/**
- * Heavy crypto deps (ethers, @solana/web3.js, @mysten/sui, bitcoinjs-lib, bip32/39, …) are
- * transitively imported from WalletSidebar. Loading it eagerly forces every route to ship
- * that crypto graph in its initial JS bundle. Code-splitting it keeps the wallet code in its
- * own chunk that only loads when a user actually opens the wallet overlay.
- */
-const WalletSidebarComponent = dynamic(
-  () => import('@/components/overlays/WalletSidebar').then((m) => ({ default: m.WalletSidebar })),
-  { ssr: false }
-);
-
 interface WalletOverlayContextType {
   isWalletOpen: boolean;
+  tokenIntent: TokenWalletIntent | null;
   openWallet: () => void;
   openWalletWithIntent: (intent: TokenWalletIntent) => void;
   closeWallet: () => void;
+  consumeTokenIntent: () => void;
 }
 
 export interface TokenWalletIntent {
@@ -76,8 +66,22 @@ export function WalletOverlayProvider({ children }: { children: React.ReactNode 
   const consumeTokenIntent = useCallback(() => setTokenIntent(null), []);
 
   const value = useMemo<WalletOverlayContextType>(
-    () => ({ isWalletOpen, openWallet, openWalletWithIntent, closeWallet }),
-    [closeWallet, isWalletOpen, openWallet, openWalletWithIntent]
+    () => ({
+      isWalletOpen,
+      tokenIntent,
+      openWallet,
+      openWalletWithIntent,
+      closeWallet,
+      consumeTokenIntent,
+    }),
+    [
+      closeWallet,
+      consumeTokenIntent,
+      isWalletOpen,
+      openWallet,
+      openWalletWithIntent,
+      tokenIntent,
+    ],
   );
 
   return (
@@ -88,12 +92,7 @@ export function WalletOverlayProvider({ children }: { children: React.ReactNode 
           <OpenWalletFromQueryEffect pathname={pathname} onOpenRequested={openWallet} />
         </Suspense>
         <TokenOpsProvider>
-          <WalletSidebarComponent
-            isOpen={isWalletOpen}
-            onClose={closeWallet}
-            tokenIntent={tokenIntent}
-            onConsumeTokenIntent={consumeTokenIntent}
-          />
+          {/* Wallet UI mounts via NativeSidebarBridge — no floating Drawer here */}
         </TokenOpsProvider>
       </SubscriptionProvider>
     </WalletOverlayContext.Provider>
