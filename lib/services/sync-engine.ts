@@ -775,10 +775,16 @@ export const autonomicSyncEngine = {
       console.error('[SyncEngine] Autonomic sync error:', error);
     } finally {
       isSyncing = false;
-      // Demand-only retry: if work remains, back off. Never spin at 0ms.
-      const shouldFlushAgain = flushQueuedDuringSync || pendingById.size > 0;
+      // Demand-only retry: if flushable note/goal work remains, back off. Never spin at 0ms.
+      const hasFlushable = Array.from(pendingById.keys()).some(
+        (id) =>
+          !id.startsWith('event:') &&
+          !id.startsWith('form:') &&
+          !id.startsWith('tag:'),
+      );
+      const shouldFlushAgain = flushQueuedDuringSync || hasFlushable;
       flushQueuedDuringSync = false;
-      if (shouldFlushAgain && pendingById.size > 0) {
+      if (shouldFlushAgain && hasFlushable) {
         scheduleDemandFlush({ retry: true });
       }
     }
