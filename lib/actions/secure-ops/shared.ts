@@ -878,7 +878,8 @@ export function sanitizeEventData(data: any) {
     'isPinned',
     'isGuest',
     'keepPermission',
-    'source'
+    'source',
+    'isWorkspace',
   ];
   const sanitized: any = {};
   for (const key of allowedKeys) {

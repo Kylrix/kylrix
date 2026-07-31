@@ -8,7 +8,6 @@ import { useFAB } from '@/context/FABContext';
 import { ViewMode, SortField, TaskStatus } from '@/types';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
-import { buildGoalInput } from '@/lib/objects/create';
 import { useAuth } from '@/context/auth/AuthContext';
 import { toast } from 'react-hot-toast';
 
@@ -23,7 +22,6 @@ export default function TaskList() {
     setSort,
     filter,
     setFilter,
-    addTask,
     deleteTask,
     projects,
     selectedProjectId,
@@ -536,23 +534,9 @@ export default function TaskList() {
       <ObjectCreateDrawer
         open={createOpen}
         kind="goal"
-        submitLabel="Create goal"
         onClose={() => setCreateOpen(false)}
-        onSubmit={async (draft) => {
-          const created = await addTask(
-            buildGoalInput(
-              { kind: 'goal', title: draft.title, body: draft.body },
-              {
-                projectId: selectedProjectId || 'inbox',
-                creatorId: user?.$id || null,
-              },
-            ),
-          );
-          if (!created) {
-            toast.error('Could not create goal');
-            throw new Error('create failed');
-          }
-          toast.success('Goal created');
+        onGoalCreated={() => {
+          toast.success('Goal saved locally');
         }}
       />
     </EmptyStateAnomalyDetector>

@@ -1,59 +1,100 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
-import { X } from 'lucide-react';
-import { objectKindLabel, type ObjectKind } from '@/lib/objects/types';
+import React, { useCallback, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+import type { ObjectKind } from '@/lib/objects/types';
+import type { Notes } from '@/types/appwrite';
+import type { Task } from '@/types';
+import type { Event } from '@/types';
 
-type Draft = {
-  kind: ObjectKind;
-  title: string;
-  body: string;
-};
+const CreateNoteForm = dynamic(
+  () => import('@/app/(app)/app/(app)/notes/CreateNoteForm'),
+  { ssr: false },
+);
+const CreateGoalComposer = dynamic(
+  () => import('@/components/objects/CreateGoalComposer').then((m) => m.CreateGoalComposer),
+  { ssr: false },
+);
+const CreateEventComposer = dynamic(
+  () => import('@/components/objects/CreateEventComposer').then((m) => m.CreateEventComposer),
+  { ssr: false },
+);
+
+type HeightMode = 'partial' | 'full';
 
 type Props = {
   open: boolean;
   kind: ObjectKind;
   onClose: () => void;
-  onSubmit: (draft: Draft) => void | Promise<void>;
+  /** Forms are full-only; others start at 60dvh and can expand. */
+  defaultHeight?: HeightMode;
+  initialContent?: {
+    title?: string;
+    content?: string;
+    isPublic?: boolean;
+    isGuest?: boolean;
+  };
+  onNoteCreated?: (note: Notes) => void;
+  onGoalCreated?: (task: Task) => void;
+  onEventCreated?: (event: Event) => void;
+  onLiveEvent?: (event: Event & { visibility?: string; autoCreateCall?: boolean }) => void;
+  onCommitEvent?: (event: Event & { visibility?: string; autoCreateCall?: boolean }) => void | Promise<void>;
+  /** @deprecated Prefer live composers; kept for transitional call sites. */
+  onSubmit?: (draft: { kind: ObjectKind; title: string; body: string }) => void | Promise<void>;
   submitLabel?: string;
 };
 
 /**
- * Create drawer for all object kinds. Bottom sheet, max 60dvh (OpenBricks rule).
- * Expand only when content overflows via the top handle.
+ * Modular ecosystem create drawer.
+ * Shell owns height (60dvh ↔ full). Composers own live-copy writes, Check close,
+ * Enter-to-save in minimized mode, and SyncStatusDot.
  */
-export function ObjectCreateDrawer({ open, kind, onClose, onSubmit, submitLabel }: Props) {
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+export function ObjectCreateDrawer({
+  open,
+  kind,
+  onClose,
+  defaultHeight,
+  initialContent,
+  onNoteCreated,
+  onGoalCreated,
+  onEventCreated,
+  onLiveEvent,
+  onCommitEvent,
+}: Props) {
+  const formOnlyFull = kind === 'form';
+  const [heightMode, setHeightMode] = useState<HeightMode>(
+    formOnlyFull ? 'full' : defaultHeight || 'partial',
+  );
+  const [isExpanded, setIsExpanded] = useState(formOnlyFull || defaultHeight === 'full');
+  const composerCloseRef = React.useRef<(() => void) | null>(null);
 
-  const reset = useCallback(() => {
-    setTitle('');
-    setBody('');
-    setSaving(false);
-    setExpanded(false);
-  }, []);
+  useEffect(() => {
+    if (!open) return;
+    const mode = formOnlyFull ? 'full' : defaultHeight || 'partial';
+    setHeightMode(mode);
+    setIsExpanded(mode === 'full');
+  }, [open, formOnlyFull, defaultHeight]);
 
-  const handleClose = useCallback(() => {
-    reset();
-    onClose();
-  }, [onClose, reset]);
-
-  const handleSubmit = useCallback(async () => {
-    if (!title.trim() && !body.trim()) return;
-    setSaving(true);
-    try {
-      await onSubmit({ kind, title: title.trim(), body: body.trim() });
-      handleClose();
-    } finally {
-      setSaving(false);
+  const requestClose = useCallback(() => {
+    if (composerCloseRef.current) {
+      composerCloseRef.current();
+      return;
     }
-  }, [body, handleClose, kind, onSubmit, title]);
+    onClose();
+  }, [onClose]);
+
+  const toggleExpand = useCallback(() => {
+    if (formOnlyFull) return;
+    setIsExpanded((v) => {
+      const next = !v;
+      setHeightMode(next ? 'full' : 'partial');
+      return next;
+    });
+  }, [formOnlyFull]);
 
   if (!open) return null;
 
-  const accent = kind === 'note' ? '#EC4899' : kind === 'goal' ? '#A855F7' : '#6366F1';
+  const maxHeight = heightMode === 'full' || formOnlyFull ? '96dvh' : '60dvh';
 
   return (
     <div className="fixed inset-0 z-[1400] flex items-end justify-center pointer-events-none">
@@ -61,75 +102,70 @@ export function ObjectCreateDrawer({ open, kind, onClose, onSubmit, submitLabel 
         type="button"
         aria-label="Close"
         className="absolute inset-0 bg-black/55 pointer-events-auto"
-        onClick={handleClose}
+        onClick={requestClose}
       />
       <div
-        className="w-full max-w-xl pointer-events-auto flex flex-col bg-[#161412] border border-[#34322F] border-b-0 rounded-t-[26px] overflow-hidden fixed bottom-0 left-1/2 -translate-x-1/2"
-        style={{ maxHeight: expanded ? '92dvh' : '60dvh' }}
+        className="w-full max-w-[720px] pointer-events-auto flex flex-col bg-[#161412] border border-[#34322F] border-b-0 rounded-t-[24px] overflow-hidden fixed bottom-0 left-1/2 -translate-x-1/2 shadow-[0_-12px_36px_rgba(0,0,0,0.5)]"
+        style={{ height: maxHeight, maxHeight }}
       >
         <button
           type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="flex justify-center pt-3 pb-1 w-full"
-          aria-label={expanded ? 'Collapse drawer' : 'Expand drawer'}
+          onClick={toggleExpand}
+          disabled={formOnlyFull}
+          className="flex justify-center py-1.5 w-full shrink-0 border-b border-[#34322F]"
+          aria-label={isExpanded ? 'Collapse drawer' : 'Expand drawer'}
         >
-          <span className="w-10 h-1 rounded-full bg-white/20" />
+          <span className="w-10 h-1 rounded-full bg-[#3D3A36]" />
         </button>
 
-        <header className="flex items-center justify-between gap-3 px-5 pb-3">
-          <h2 className="text-white font-black text-[0.95rem] leading-tight truncate">
-            New {objectKindLabel(kind).toLowerCase()}
-          </h2>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="h-8 w-8 rounded-full border border-white/[0.06] bg-white/[0.05] flex items-center justify-center text-white/70 hover:text-white"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </header>
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          {kind === 'note' ? (
+            <CreateNoteForm
+              initialContent={initialContent}
+              onNoteCreated={(note) => {
+                onNoteCreated?.(note);
+              }}
+              onRegisterClose={(close) => {
+                composerCloseRef.current = close;
+              }}
+              isExpanded={isExpanded}
+              onToggleExpand={toggleExpand}
+              onClose={onClose}
+            />
+          ) : null}
 
-        <div className="flex-1 overflow-y-auto min-h-0 px-5 pb-3 space-y-4">
-          <label className="block space-y-1.5">
-            <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/40">Title</span>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title"
-              autoFocus
-              className="w-full rounded-xl border border-[#34322F] bg-[#161412] px-3 py-2.5 text-white outline-none focus:border-white/20"
+          {kind === 'goal' ? (
+            <CreateGoalComposer
+              onGoalCreated={onGoalCreated}
+              onRegisterClose={(close) => {
+                composerCloseRef.current = close;
+              }}
+              isExpanded={isExpanded}
+              onToggleExpand={toggleExpand}
+              onClose={onClose}
             />
-          </label>
-          <label className="block space-y-1.5">
-            <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/40">Details</span>
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={expanded ? 12 : 5}
-              placeholder="Optional details"
-              className="w-full rounded-xl border border-[#34322F] bg-[#161412] px-3 py-2.5 text-white outline-none focus:border-white/20 resize-none"
+          ) : null}
+
+          {kind === 'event' ? (
+            <CreateEventComposer
+              onEventCreated={onEventCreated}
+              onLiveEvent={onLiveEvent}
+              onCommitEvent={onCommitEvent}
+              onRegisterClose={(close) => {
+                composerCloseRef.current = close;
+              }}
+              isExpanded={isExpanded}
+              onToggleExpand={toggleExpand}
+              onClose={onClose}
             />
-          </label>
+          ) : null}
+
+          {kind === 'form' ? (
+            <div className="p-4 text-sm text-white/50 font-satoshi">
+              Forms use the full-height builder. Open create form from Forms.
+            </div>
+          ) : null}
         </div>
-
-        <footer className="flex justify-end gap-2 px-5 py-3 border-t border-white/[0.05]">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="rounded-xl px-4 py-2 text-sm font-semibold text-white/50 hover:text-white"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => void handleSubmit()}
-            className="rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-            style={{ backgroundColor: accent }}
-          >
-            {saving ? 'Saving…' : submitLabel || 'Create'}
-          </button>
-        </footer>
       </div>
     </div>
   );

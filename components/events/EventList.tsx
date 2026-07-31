@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus } from 'lucide-react';
 import { EventObjectRow } from './EventObjectRow';
-import EventDialog from './EventDialog';
+import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
 import { Event } from '@/types';
 import { events as eventApi } from '@/lib/kylrixflow';
 import { useTask } from '@/context/TaskContext';
@@ -17,6 +17,29 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useFAB } from '@/context/FABContext';
 import EventDetails from './EventDetails';
+import { LocalEngine } from '@/lib/services/LocalEngine';
+import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { autonomicSyncEngine } from '@/lib/services/sync-engine';
+
+function mapRemoteEvent(doc: any): Event {
+  return {
+    id: doc.$id || doc.id,
+    title: doc.title,
+    description: doc.description,
+    startTime: new Date(doc.startTime),
+    endTime: new Date(doc.endTime),
+    location: doc.location,
+    url: doc.meetingUrl || doc.url || '',
+    coverImage: doc.coverImageId || doc.coverImage || '',
+    attendees: [],
+    isPublic: doc.visibility === 'public' || Boolean(doc.isPublic),
+    isPinned: Boolean(doc.isPinned),
+    creatorId: doc.userId || doc.creatorId || '',
+    createdAt: new Date(doc.$createdAt || doc.createdAt || Date.now()),
+    updatedAt: new Date(doc.$updatedAt || doc.updatedAt || Date.now()),
+  };
+}
 
 export default function EventList() {
   const [tabValue, setTabValue] = useState(0);
@@ -24,15 +47,15 @@ export default function EventList() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { userId } = useTask();
-  const { openSidebar} = useDynamicSidebar();
+  const { openSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
   const { isAuthenticated, openIDMWindow } = useAuth();
   const { setConfiguration, resetConfiguration } = useFAB();
-
+  const { activeWorkspace } = useWorkspace();
   const [isDesktop, _setIsDesktop] = useState(true);
+  const committedIdsRef = React.useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    // Configure FAB for this page
     setConfiguration({
       isVisible: true,
       mainColor: '#6366F1',
@@ -45,181 +68,162 @@ export default function EventList() {
         setIsDialogOpen(true);
       },
       suppressWorkflow: true,
-      actions: []
+      actions: [],
     });
-
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, isAuthenticated]);
+  }, [setConfiguration, resetConfiguration, isAuthenticated, openIDMWindow]);
 
   useEffect(() => {
     let isCancelled = false;
     const cacheKey = `f_user_events_${userId || 'guest'}`;
 
-    (async () => {
+    const hydrateLocal = async () => {
       try {
-        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-        const db = await getRxDB().catch(() => null);
-        if (db) {
-          const cachedDoc = await db.cache.findOne(cacheKey).exec().catch(() => null);
-          if (cachedDoc?.data && Array.isArray(cachedDoc.data) && !isCancelled) {
-            const parsed = (cachedDoc.data as any[]).map((e) => ({
-              ...e,
-              startTime: new Date(e.startTime),
-              endTime: new Date(e.endTime),
-              createdAt: new Date(e.createdAt),
-              updatedAt: new Date(e.updatedAt)}));
-            setEvents(parsed);
-            setIsLoading(false);
-          }
+        const local = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
+        if (local.length && !isCancelled) {
+          setEvents(local.map(mapRemoteEvent));
+          setIsLoading(false);
         }
-      } catch {}
-    })();
+      } catch {
+        /* optional */
+      }
+    };
+
+    void hydrateLocal();
 
     const fetchEvents = async () => {
       try {
-        const queries: string[] = [Query.limit(100)];
+        const queries: string[] = [Query.limit(100), Query.orderDesc('startTime')];
         if (userId && userId !== 'guest') {
-          queries.push(Query.or([Query.equal('userId', userId), Query.equal('visibility', 'public')]));
+          // Avoid Query.or — TablesDB + secure list often fails/empties silently.
+          queries.push(Query.equal('userId', userId));
         } else {
           queries.push(Query.equal('visibility', 'public'));
         }
 
-        const list = await eventApi.list(queries).catch(() => ({ rows: [] }));
+        const list = await eventApi.list(queries);
         if (isCancelled) return;
 
-        const remoteMapped = list.rows.map(doc => ({
-          id: doc.$id,
-          title: doc.title,
-          description: doc.description,
-          startTime: new Date(doc.startTime),
-          endTime: new Date(doc.endTime),
-          location: doc.location,
-          url: doc.meetingUrl || '',
-          coverImage: doc.coverImageId || '',
-          attendees: [],
-          isPublic: doc.visibility === 'public',
-          isPinned: false,
-          creatorId: doc.userId || '',
-          createdAt: new Date(doc.$createdAt),
-          updatedAt: new Date(doc.$updatedAt)}));
-
+        const remoteMapped = (list?.rows || []).map(mapRemoteEvent);
         setEvents((prev) => {
           const byId = new Map<string, Event>();
           prev.forEach((e) => byId.set(e.id, e));
           remoteMapped.forEach((e) => byId.set(e.id, e));
           const merged = Array.from(byId.values());
-
-          (async () => {
-            try {
-              const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-              const db = await getRxDB().catch(() => null);
-              if (db) {
-                await db.cache.upsert({
-                  id: cacheKey,
-                  data: merged as any,
-                  timestamp: Date.now()}).catch(() => {});
-              }
-            } catch {}
-          })();
-
+          void LocalEngine.cacheSet(cacheKey, merged);
           return merged;
         });
-      } catch (_error: unknown) {
-        console.error('Failed to fetch events', _error);
+      } catch (error: unknown) {
+        console.error('Failed to fetch events', error);
+        toast.error('Could not load events');
       } finally {
         if (!isCancelled) setIsLoading(false);
       }
     };
 
-    fetchEvents();
+    void fetchEvents();
     return () => {
       isCancelled = true;
     };
   }, [userId, isAuthenticated]);
 
-  const handleCreateEvent = async (eventData: any) => {
-    try {
-      const currentUserId = userId || 'guest';
-      const visibility: EventVisibility = eventData.visibility || 'public';
-      
-      const eventPermissions = permissions.forVisibility(visibility, currentUserId);
-      
-      let meetingUrl = eventData.url || '';
+  const upsertLocal = useCallback((event: Event) => {
+    setEvents((prev) => [event, ...prev.filter((e) => e.id !== event.id)]);
+  }, []);
 
-      if (eventData.autoCreateCall && currentUserId !== 'guest') {
-        try {
-          const call = await CallService.createCallLink(
-            currentUserId,
-            'video',
-            undefined,
-            eventData.title,
-            eventData.startTime.toISOString(),
-            60
-          );
-          meetingUrl = `/connect/call/${call.$id}`;
-          toast.success('Kylrix Connect call scheduled');
-        } catch (callErr) {
-          console.error('Failed to create call link', callErr);
-          toast.error('Failed to create call link, but event will be created');
-        }
-      }
+  const handleCommitEvent = useCallback(
+    async (eventData: Event & { visibility?: string; autoCreateCall?: boolean }) => {
+      if (committedIdsRef.current.has(eventData.id)) return;
+      committedIdsRef.current.add(eventData.id);
 
-      const newDoc = await eventApi.create(
-        {
-          userId: currentUserId || 'guest',
-          calendarId: '',
-          title: eventData.title,
-          description: eventData.description || '',
-          startTime: eventData.startTime.toISOString(),
-          endTime: eventData.endTime.toISOString(),
-          location: eventData.location || '',
-          meetingUrl: meetingUrl,
-          visibility: visibility,
-          status: 'confirmed',
-          coverImageId: eventData.coverImage || '',
-          maxAttendees: 0,
-          recurrenceRule: eventData.recurrenceRule || ''} as any,
-        eventPermissions
-      );
-
-      const createdEvent: Event = {
-        id: newDoc.$id,
-        title: newDoc.title,
-        description: newDoc.description,
-        startTime: new Date(newDoc.startTime),
-        endTime: new Date(newDoc.endTime),
-        location: newDoc.location,
-        url: newDoc.meetingUrl || '',
-        coverImage: newDoc.coverImageId || '',
-        attendees: [],
-        isPublic: newDoc.visibility === 'public',
-        isPinned: false,
-        creatorId: currentUserId,
-        createdAt: new Date(newDoc.$createdAt),
-        updatedAt: new Date(newDoc.$updatedAt)};
-
-      setEvents((prev) => [createdEvent, ...prev.filter((e) => e.id !== createdEvent.id)]);
-
-      const cacheKey = `f_user_events_${userId || 'guest'}`;
       try {
-        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-        const db = await getRxDB().catch(() => null);
-        if (db) {
-          const doc = await db.cache.findOne(cacheKey).exec().catch(() => null);
-          const currentList = Array.isArray(doc?.data) ? doc.data : [];
-          await db.cache.upsert({
-            id: cacheKey,
-            data: [createdEvent, ...currentList.filter((e: any) => e.id !== createdEvent.id)],
-            timestamp: Date.now()}).catch(() => {});
+        const currentUserId = userId || 'guest';
+        const visibility: EventVisibility =
+          (eventData.visibility as EventVisibility) ||
+          (eventData.isPublic ? 'public' : 'private');
+        const eventPermissions = permissions.forVisibility(visibility, currentUserId);
+
+        let meetingUrl = eventData.url || '';
+        if (eventData.autoCreateCall && currentUserId !== 'guest') {
+          try {
+            const call = await CallService.createCallLink(
+              currentUserId,
+              'video',
+              undefined,
+              eventData.title,
+              new Date(eventData.startTime).toISOString(),
+              60,
+            );
+            meetingUrl = `/connect/call/${call.$id}`;
+            toast.success('Call link scheduled');
+          } catch (callErr) {
+            console.error('Failed to create call link', callErr);
+            toast.error('Call link failed — saving event anyway');
+          }
         }
-      } catch {}
-      setIsDialogOpen(false);
-      return createdEvent;
-    } catch (_error: unknown) {
-      console.error('Failed to create event', _error);
-      return null;
+
+        const newDoc = await eventApi.create(
+          {
+            userId: currentUserId,
+            calendarId: currentUserId,
+            title: eventData.title,
+            description: eventData.description || '',
+            startTime: new Date(eventData.startTime).toISOString(),
+            endTime: new Date(eventData.endTime).toISOString(),
+            location: eventData.location || '',
+            meetingUrl,
+            visibility,
+            status: 'confirmed',
+            coverImageId: eventData.coverImage || '',
+            recurrenceRule: '',
+            isWorkspace: activeWorkspace?.isPersonal === false,
+          } as any,
+          eventPermissions,
+        );
+
+        const created = mapRemoteEvent(newDoc);
+        // Replace ephemeral live id with remote id in the list
+        setEvents((prev) => [
+          created,
+          ...prev.filter((e) => e.id !== eventData.id && e.id !== created.id),
+        ]);
+        autonomicSyncEngine.ack(`event:${eventData.id}`);
+        autonomicSyncEngine.ack(`event:${created.id}`);
+
+        const cacheKey = `f_user_events_${userId || 'guest'}`;
+        try {
+          const current = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
+          await LocalEngine.cacheSet(cacheKey, [
+            created,
+            ...current.filter((e: any) => (e.id || e.$id) !== eventData.id && (e.id || e.$id) !== created.id),
+          ]);
+        } catch {
+          /* optional */
+        }
+      } catch (error: unknown) {
+        console.error('Failed to create event', error);
+        toast.error('Could not save event');
+        committedIdsRef.current.delete(eventData.id);
+      }
+    },
+    [activeWorkspace?.isPersonal, userId],
+  );
+
+  const visibleEvents = useMemo(() => {
+    const now = Date.now();
+    let list = events;
+    if (activeWorkspace?.isPersonal !== false) {
+      list = list.filter((e) => isDefaultWorkspaceObject(e as any));
     }
-  };
+    if (tabValue === 0) {
+      list = list.filter((e) => new Date(e.startTime).getTime() >= now);
+    } else if (tabValue === 1) {
+      list = list.filter((e) => new Date(e.startTime).getTime() < now);
+    } else if (tabValue === 2 && userId) {
+      list = list.filter((e) => e.creatorId === userId);
+    }
+    return list;
+  }, [activeWorkspace?.isPersonal, events, tabValue, userId]);
 
   if (isLoading) {
     return (
@@ -235,12 +239,10 @@ export default function EventList() {
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4 p-1">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-3xl font-black font-clash text-white tracking-tight">
-                Events
-              </h1>
-              {events.length > 0 && (
+              <h1 className="text-3xl font-black font-clash text-white tracking-tight">Events</h1>
+              {visibleEvents.length > 0 && (
                 <span className="px-2.5 py-0.5 rounded-full bg-[#6366F1]/10 border border-[#6366F1]/20 text-[#6366F1] text-[10px] font-black uppercase tracking-wider mt-1">
-                  {events.length} {events.length === 1 ? 'Event' : 'Events'}
+                  {visibleEvents.length} {visibleEvents.length === 1 ? 'Event' : 'Events'}
                 </span>
               )}
             </div>
@@ -250,7 +252,7 @@ export default function EventList() {
           </div>
           <button
             type="button"
-            className="flex items-center gap-2 px-5 py-3 font-bold rounded-[14px] bg-[#6366F1] hover:bg-[#4F46E5] text-white hover:text-white font-satoshi transition-all hover:-translate-y-0.5 cursor-pointer text-sm"
+            className="flex items-center gap-2 px-5 py-3 font-bold rounded-[14px] bg-[#6366F1] hover:bg-[#4F46E5] text-white font-satoshi transition-all hover:-translate-y-0.5 cursor-pointer text-sm"
             onClick={() => {
               if (!isAuthenticated) {
                 openIDMWindow();
@@ -264,7 +266,6 @@ export default function EventList() {
           </button>
         </div>
 
-        {/* Tab Selector */}
         <div className="mb-8 bg-[#161412] rounded-[28px] p-1 border border-[#34322F] flex gap-1 w-fit">
           {['Upcoming', 'Past', ...(isAuthenticated ? ['My Events'] : [])].map((tab, idx) => {
             const isActive = tabValue === idx;
@@ -277,9 +278,7 @@ export default function EventList() {
                   setTabValue(idx);
                 }}
                 className={`rounded-full px-5 py-2 font-bold text-xs sm:text-sm font-satoshi transition-all cursor-pointer ${
-                  isActive 
-                    ? 'bg-[#1C1A18] text-white' 
-                    : 'text-[#8E8A86] hover:text-white hover:bg-[#1C1A18]/50'
+                  isActive ? 'bg-[#1C1A18] text-white' : 'text-[#8E8A86] hover:text-white hover:bg-[#1C1A18]/50'
                 }`}
               >
                 {tab}
@@ -289,7 +288,7 @@ export default function EventList() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {events.map((event) => (
+          {visibleEvents.map((event) => (
             <div key={event.id}>
               <EventObjectRow
                 event={event}
@@ -298,11 +297,11 @@ export default function EventList() {
                     openSidebar(
                       <EventDetails eventId={event.id} initialData={event} />,
                       event.id,
-                      { hideHeader: true }
+                      { hideHeader: true },
                     );
                   } else {
                     openOverlay(
-                      <EventDetails eventId={event.id} initialData={event} onBack={closeOverlay} />
+                      <EventDetails eventId={event.id} initialData={event} onBack={closeOverlay} />,
                     );
                   }
                 }}
@@ -311,13 +310,13 @@ export default function EventList() {
           ))}
         </div>
 
-        {isDialogOpen && (
-          <EventDialog
-            open={isDialogOpen}
-            onClose={() => setIsDialogOpen(false)}
-            onSubmit={handleCreateEvent}
-          />
-        )}
+        <ObjectCreateDrawer
+          open={isDialogOpen}
+          kind="event"
+          onClose={() => setIsDialogOpen(false)}
+          onLiveEvent={upsertLocal}
+          onCommitEvent={handleCommitEvent}
+        />
       </MultiSectionContainer>
     </div>
   );

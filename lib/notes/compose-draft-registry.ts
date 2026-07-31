@@ -9,6 +9,7 @@ const unpersistedDraftIds: Set<string> = globalAny.__unpersistedDraftIds;
 const persistedRemoteIds: Set<string> = globalAny.__persistedRemoteIds;
 
 const PERSISTED_SESSION_KEY = 'kylrix:compose:persisted';
+const persistLocks = new Map<string, Promise<unknown>>();
 
 
 function readPersistedSessionIds(): string[] {
@@ -97,6 +98,13 @@ export function isUnpersistedComposeDraft(noteId?: string | null): boolean {
 /** Snapshot of client-only pending ids for the sync engine (never sent to Appwrite). */
 
 /** Whether the next save should call create (vs update) for this compose note ID. */
+export function shouldCreateComposeNote(noteId?: string | null): boolean {
+  const id = String(noteId || '').trim();
+  if (!id) return true;
+  if (id.startsWith('live-') || id.startsWith('ghost-')) return true;
+  if (isNotePersistedRemote(id)) return false;
+  return isUnpersistedComposeDraft(id);
+}
 
 /** Legacy live-* drafts plus unpersisted Appwrite-format compose IDs (local-only delete). */
 export function isEphemeralComposeNoteId(noteId?: string | null): boolean {
@@ -106,5 +114,34 @@ export function isEphemeralComposeNoteId(noteId?: string | null): boolean {
   return isUnpersistedComposeDraft(id) && !isNotePersistedRemote(id);
 }
 
+export function isAlreadyExistsAppwriteError(error: unknown): boolean {
+  const message = String((error as { message?: string })?.message || error || '').toLowerCase();
+  return message.includes('already exists') || message.includes('duplicate');
+}
 
 /** Serialize persist operations per note ID to prevent parallel create races. */
+export async function withNotePersistLock<T>(noteId: string, fn: () => Promise<T>): Promise<T> {
+  const id = String(noteId || '').trim();
+  if (!id) return fn();
+
+  const previous = persistLocks.get(id) ?? Promise.resolve();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  const run = previous
+    .catch(() => undefined)
+    .then(() => gate)
+    .then(fn)
+    .finally(() => release());
+
+  persistLocks.set(id, run);
+  try {
+    return await run;
+  } finally {
+    if (persistLocks.get(id) === run) {
+      persistLocks.delete(id);
+    }
+  }
+}

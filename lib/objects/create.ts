@@ -2,18 +2,20 @@
 
 import { ID } from 'appwrite';
 import type { Notes } from '@/types/appwrite';
-import type { Task } from '@/types';
+import type { Priority, Task } from '@/types';
 import { resolveNoteCardTitle } from '@/constants/noteTitle';
 
 export type ObjectDraft = {
-  kind: 'note' | 'goal';
+  kind: 'note' | 'goal' | 'event' | 'form';
   title: string;
   body: string;
+  priority?: Priority;
+  dueDate?: string | null;
 };
 
 /** Build a live-copy note shell (sync engine is SoT for pending). */
 export function buildNoteShell(
-  draft: ObjectDraft,
+  draft: { title: string; body: string },
   userId?: string | null,
   opts?: { isPublic?: boolean; isGuest?: boolean }): Notes {
   const id = ID.unique();
@@ -47,15 +49,20 @@ export function buildNoteShell(
     updatedAt: now} as unknown as Notes;
 }
 
-/** Minimal goal payload for TaskContext.addTask. */
+/** Minimal goal payload for TaskContext.addTask (legacy helpers). */
 export function buildGoalInput(
-  draft: ObjectDraft,
+  draft: { title: string; body: string; priority?: Priority; dueDate?: string | null },
   opts?: { projectId?: string; creatorId?: string | null }): Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'position'> {
   const creatorId = opts?.creatorId || 'guest';
+  const due =
+    draft.dueDate && String(draft.dueDate).trim()
+      ? new Date(`${String(draft.dueDate).trim()}T12:00:00`)
+      : undefined;
+
   return {
     title: draft.title.trim() || 'Untitled Goal',
     description: draft.body.trim() || undefined,
-    priority: 'medium',
+    priority: draft.priority || 'medium',
     status: 'todo',
     projectId: opts?.projectId || 'inbox',
     labels: [],
@@ -72,5 +79,7 @@ export function buildGoalInput(
     isPinned: false,
     isArchived: false,
     isPublic: false,
-    isGuest: false};
+    isGuest: false,
+    dueDate: due && !Number.isNaN(due.getTime()) ? due : undefined,
+  };
 }

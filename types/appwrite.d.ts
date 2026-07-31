@@ -253,6 +253,7 @@ export type Credentials = Models.Row & {
     dek: string | null;
     keepPermission: boolean | null;
     isTrash: boolean;
+    isWorkspace: boolean;
 }
 
 export type Identities = Models.Row & {
@@ -331,6 +332,7 @@ export type TotpSecrets = Models.Row & {
     dek: string | null;
     keepPermission: boolean | null;
     isTrash: boolean;
+    isWorkspace: boolean;
 }
 
 export type Keychain = Models.Row & {
@@ -409,6 +411,7 @@ export type Notes = Models.Row & {
     dek: string | null;
     article: boolean | null;
     isTrash: boolean;
+    isWorkspace: boolean;
 }
 
 export type Comments = Models.Row & {
@@ -920,6 +923,7 @@ export type Events = Models.Row & {
     keepPermission: boolean | null;
     isDeleted: boolean;
     isTrash: boolean;
+    isWorkspace: boolean;
 }
 
 export type Calendars = Models.Row & {
@@ -959,6 +963,7 @@ export type Tasks = Models.Row & {
     isAgentic: boolean;
     isEncrypted: boolean;
     dek: string | null;
+    isWorkspace: boolean;
 }
 
 export type Forms = Models.Row & {
@@ -975,7 +980,7 @@ export type Forms = Models.Row & {
     source: string | null;
     keepPermission: boolean | null;
     isTrash: boolean;
-    isWorkspace?: boolean | null;
+    isWorkspace: boolean;
 }
 
 export type FormSubmissions = Models.Row & {
