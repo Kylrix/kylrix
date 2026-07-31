@@ -5,10 +5,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Box, Paper, Tooltip } from '@/lib/openbricks/primitives';
 import {
   FileText as NotesIcon,
+  Target as GoalsIcon,
   Lock as VaultIcon,
   GitFork as FlowIcon,
   MessageCircle as ConnectIcon,
-  Tag as TagsIcon} from 'lucide-react';
+} from 'lucide-react';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
@@ -18,14 +19,16 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { useAuth } from '@/context/auth/AuthContext';
 
-type NavId = 'note' | 'flow' | 'vault' | 'connect' | 'tags';
+type NavId = 'note' | 'goal' | 'vault' | 'connect' | 'flow';
 
+/** Same order + accents as UnifiedBottomBar: ideas → goals → vault → connect → flows */
 const NAV_COLORS: Record<NavId, string> = {
   note: '#EC4899',
-  flow: '#A855F7',
+  goal: '#A855F7',
   vault: '#10B981',
   connect: '#F59E0B',
-  tags: '#6366F1'};
+  flow: '#A855F7',
+};
 
 
 import { useWorkspace } from '@/context/WorkspaceContext';
@@ -47,16 +50,16 @@ export function UnifiedLeftSidebar() {
 
 
   const getCurrentTab = (): NavId | null => {
-    if (pathname?.startsWith('/tags')) return 'tags';
-    if (isFlowPath(pathname)) return 'flow';
     if (pathname?.startsWith('/app')) return 'note';
+    if (pathname?.startsWith('/goals') || pathname?.startsWith('/events') || pathname?.startsWith('/goal')) return 'goal';
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/connect')) return 'connect';
+    if (isFlowPath(pathname)) return 'flow';
     return null;
   };
 
   useEffect(() => {
-    ['/app', '/goals', '/vault', '/connect', '/flows', '/tags'].forEach((route) => {
+    ['/app', '/goals', '/vault', '/connect', '/flows'].forEach((route) => {
       router.prefetch(route);
     });
   }, [router]);
@@ -64,10 +67,11 @@ export function UnifiedLeftSidebar() {
   const handleNavChange = (navId: NavId) => {
     const routes: Record<NavId, string> = {
       note: '/app',
-      flow: '/flows',
+      goal: '/goals',
       vault: '/vault',
       connect: '/connect',
-      tags: '/tags'};
+      flow: '/flows',
+    };
     router.push(routes[navId] || '/app');
   };
 
@@ -78,10 +82,10 @@ export function UnifiedLeftSidebar() {
 
   const navItems: { id: NavId; label: string; icon: typeof NotesIcon }[] = [
     { id: 'note', label: 'Ideas', icon: NotesIcon },
-    { id: 'flow', label: 'Flow', icon: FlowIcon },
+    { id: 'goal', label: 'Goals', icon: GoalsIcon },
     { id: 'vault', label: 'Vault', icon: VaultIcon },
     { id: 'connect', label: 'Connect', icon: ConnectIcon },
-    { id: 'tags', label: 'Tags', icon: TagsIcon },
+    { id: 'flow', label: 'Flows', icon: FlowIcon },
   ];
 
   return (
@@ -115,6 +119,8 @@ export function UnifiedLeftSidebar() {
           px: isCollapsed ? 0 : 2,
           boxSizing: 'border-box',
           overflow: 'hidden',
+          overflowY: 'hidden',
+          overflowX: 'hidden',
           transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'}}
       >
         {/* Workspace Switcher Header */}
