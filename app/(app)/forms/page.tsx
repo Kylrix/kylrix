@@ -21,9 +21,9 @@ import FormSettingsDialog from '@/components/forms/FormSettingsDialog';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { useRouter } from 'next/navigation';
-import { useDataNexus } from '@/context/DataNexusContext';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import { toast } from 'react-hot-toast';
+import { LocalEngine } from '@/lib/services/LocalEngine';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useFAB } from '@/context/FABContext';
@@ -36,7 +36,6 @@ export default function FormsDashboard() {
     const { user } = useAuth();
     const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
     const router = useRouter();
-    const { invalidate, getCachedDataAsync, setCachedData } = useDataNexus();
     const { open: openDrawer } = useUnifiedDrawer();
     const { setActiveDetail } = useSection();
     const { setConfiguration, resetConfiguration } = useFAB();
@@ -79,100 +78,105 @@ export default function FormsDashboard() {
         formsRef.current = forms;
     }, [forms]);
 
+    const sortForms = useCallback((rows: Forms[]) => {
+        return [...rows].sort((a: any, b: any) => {
+            const aPinned = isResourcePinned('form', a.$id, a.userId, a.isPinned);
+            const bPinned = isResourcePinned('form', b.$id, b.userId, b.isPinned);
+            if (aPinned && !bPinned) return -1;
+            if (!aPinned && bPinned) return 1;
+            return (
+                new Date(b.$createdAt || Date.now()).getTime() -
+                new Date(a.$createdAt || Date.now()).getTime()
+            );
+        });
+    }, [isResourcePinned]);
+
     const fetchForms = useCallback(async (showLoading = true) => {
         const userId = user?.$id || 'guest';
-        const cacheKey = `f_user_forms_${userId}`;
         const isStateEmpty = formsRef.current.length === 0;
-        const shouldShowLoading = showLoading && isStateEmpty;
-        if (shouldShowLoading) setLoading(true);
+        if (showLoading && isStateEmpty) setLoading(true);
 
-        // 1) Local-first render via DataNexus cache (no direct RxDB in UI).
-        if (isStateEmpty) {
-            try {
-                const cached = await getCachedDataAsync<Forms[]>(cacheKey);
-                if (Array.isArray(cached)) {
-                    setForms(cached);
-                }
-            } catch (e) {
-                console.warn('[Forms] cache read failed:', e);
-            }
-            // Show empty state immediately (avoid "minutes empty" feeling).
-            if (shouldShowLoading) setLoading(false);
-        }
-
-        // 2) Remote refresh (network). If it fails, we keep the local cache as SoT.
+        // Same path as UnifiedFileAttachmentDrawer forms tab:
+        // RxDB → LocalEngine `f_forms_list` → FormsService.listUserForms live refresh.
         try {
-            let response: any = [];
-            if (user?.$id) {
-                try {
-                    response = await FormsService.listUserForms(user.$id);
-                } catch (e) {
-                    console.error('[Forms] listUserForms failed:', e);
+            let items: any[] = [];
+            try {
+                const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+                const db = await getRxDB();
+                items = (await db.forms.find().exec()).map((d: any) => d.toJSON());
+            } catch {
+                items = [];
+            }
+            if (items.length === 0) {
+                items = (await LocalEngine.cacheGet<any[]>('f_forms_list')) || [];
+            }
+            if (items.length > 0) {
+                setForms(sortForms(items as Forms[]));
+                setLoading(false);
+            }
+
+            try {
+                if (userId && userId !== 'guest') {
+                    const response = await FormsService.listUserForms(userId);
+                    items = Array.isArray(response)
+                        ? response
+                        : (Array.isArray((response as any)?.rows) ? (response as any).rows : []);
+                }
+            } catch {
+                if (items.length === 0) {
+                    try {
+                        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+                        const db = await getRxDB();
+                        items = (await db.forms.find().exec()).map((d: any) => d.toJSON());
+                    } catch {
+                        items = [];
+                    }
+                    if (items.length === 0) {
+                        items = (await LocalEngine.cacheGet<any[]>('f_forms_list')) || [];
+                    }
                 }
             }
 
-            const formRows: any[] = Array.isArray(response)
-                ? response
-                : (Array.isArray((response as any)?.rows)
-                    ? (response as any).rows
-                    : (Array.isArray((response as any)?.documents) ? (response as any).documents : []));
+            if (items.length > 0) {
+                const byId = new Map<string, Forms>();
+                (formsRef.current || []).forEach((f) => f?.$id && byId.set(f.$id, f));
+                items.forEach((f: any) => f?.$id && byId.set(f.$id, f));
+                const merged = sortForms(Array.from(byId.values()));
+                setForms(merged);
+                void LocalEngine.cacheSet('f_forms_list', merged);
+            }
 
-            const byId = new Map<string, Forms>();
-            (formsRef.current || []).forEach((f) => f && f.$id && byId.set(f.$id, f));
-            formRows.forEach((f: any) => f && f.$id && byId.set(f.$id, f));
-
-            const merged = Array.from(byId.values()).sort((a: any, b: any) => {
-                const aPinned = isResourcePinned('form', a.$id, a.userId, a.isPinned);
-                const bPinned = isResourcePinned('form', b.$id, b.userId, b.isPinned);
-                if (aPinned && !bPinned) return -1;
-                if (!aPinned && bPinned) return 1;
-                return (
-                    new Date(b.$createdAt || Date.now()).getTime() -
-                    new Date(a.$createdAt || Date.now()).getTime()
-                );
-            });
-
-            setForms(merged);
-            try {
-                await setCachedData(cacheKey, merged as any);
-            } catch {}
-
-            // Load offline drafts (doesn't block initial forms render because loading has been released).
             const manifest = await DraftsService.getManifest();
             setFormDraftStatus(
                 Object.keys(manifest).reduce((acc, id) => ({ ...acc, [id]: true }), {}));
 
             const draftList: FormDraft[] = [];
-            const draftPromises = Object.keys(manifest).map(async (id) => {
-                const d = await DraftsService.getDraft(id);
-                if (d) draftList.push(d);
-            });
-            await Promise.all(draftPromises);
+            await Promise.all(
+                Object.keys(manifest).map(async (id) => {
+                    const d = await DraftsService.getDraft(id);
+                    if (d) draftList.push(d);
+                }),
+            );
             setOfflineDrafts(
                 draftList.sort(
                     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
         } catch (err) {
             console.error('Failed to fetch forms', err);
         } finally {
-            // If we never showed loading (because cache existed), leave it as-is.
-            if (shouldShowLoading) setLoading(false);
+            setLoading(false);
         }
-    }, [user, isResourcePinned, getCachedDataAsync, setCachedData]);
+    }, [user?.$id, sortForms]);
 
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const handleManualRefresh = useCallback(async () => {
-        if (!user) return;
         setIsRefreshing(true);
         try {
-            // Invalidate the cache to ensure we get fresh data
-            invalidate(`f_user_forms_${user.$id}`);
             await fetchForms(true);
         } finally {
-            // Force a minimum roll animation duration of 600ms
             setTimeout(() => setIsRefreshing(false), 600);
         }
-    }, [user, fetchForms, invalidate]);
+    }, [fetchForms]);
 
     const handleCreate = () => {
         setSelectedForm(null);
@@ -204,7 +208,16 @@ export default function FormsDashboard() {
                 if (!user) return;
                 try {
                     await FormsService.deleteForm(form.$id);
-                    invalidate(`f_user_forms_${user.$id}`);
+                    setForms((prev) => prev.filter((f) => f.$id !== form.$id));
+                    try {
+                        const cached = (await LocalEngine.cacheGet<any[]>('f_forms_list')) || [];
+                        await LocalEngine.cacheSet(
+                            'f_forms_list',
+                            cached.filter((f: any) => f.$id !== form.$id),
+                        );
+                    } catch {
+                        /* optional */
+                    }
                     fetchForms(false);
                 } catch (err) {
                     console.error("Failed to delete form", err);
@@ -259,10 +272,8 @@ export default function FormsDashboard() {
     };
 
     useEffect(() => {
-        if (user) {
-            fetchForms();
-        }
-    }, [user, fetchForms]);
+        void fetchForms();
+    }, [fetchForms]);
 
     const getStatusColor = (status: string) => {
         switch (status) {

@@ -11,7 +11,6 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { permissions, EventVisibility } from '@/lib/permissions';
 import { CallService } from '@/lib/services/call';
 import toast from 'react-hot-toast';
-import { Query } from 'appwrite';
 import { MultiSectionContainer } from '@/context/SectionContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -23,12 +22,14 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 
 function mapRemoteEvent(doc: any): Event {
+  const start = doc.startTime ? new Date(doc.startTime) : new Date();
+  const end = doc.endTime ? new Date(doc.endTime) : start;
   return {
     id: doc.$id || doc.id,
     title: doc.title,
     description: doc.description,
-    startTime: new Date(doc.startTime),
-    endTime: new Date(doc.endTime),
+    startTime: Number.isNaN(start.getTime()) ? new Date() : start,
+    endTime: Number.isNaN(end.getTime()) ? start : end,
     location: doc.location,
     url: doc.meetingUrl || doc.url || '',
     coverImage: doc.coverImageId || doc.coverImage || '',
@@ -38,7 +39,8 @@ function mapRemoteEvent(doc: any): Event {
     creatorId: doc.userId || doc.creatorId || '',
     createdAt: new Date(doc.$createdAt || doc.createdAt || Date.now()),
     updatedAt: new Date(doc.$updatedAt || doc.updatedAt || Date.now()),
-  };
+    isWorkspace: Boolean(doc.isWorkspace),
+  } as Event;
 }
 
 export default function EventList() {
@@ -75,100 +77,62 @@ export default function EventList() {
 
   useEffect(() => {
     let isCancelled = false;
-    const userCacheKey = `f_user_events_${userId || 'guest'}`;
 
-    const normalizeList = (raw: unknown): any[] => {
-      if (Array.isArray(raw)) return raw;
-      if (raw && typeof raw === 'object' && Array.isArray((raw as { rows?: unknown }).rows)) {
-        return (raw as { rows: any[] }).rows;
-      }
-      return [];
-    };
-
-    const cacheGetFast = async (key: string): Promise<any[]> => {
+    // Same path as UnifiedFileAttachmentDrawer events tab:
+    // RxDB → LocalEngine `f_events_list` → events.list() live refresh.
+    const loadEvents = async () => {
       try {
-        return normalizeList(
-          await Promise.race([
-            LocalEngine.cacheGet(key),
-            new Promise((resolve) => setTimeout(() => resolve([]), 800)),
-          ]),
-        );
-      } catch {
-        return [];
-      }
-    };
+        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+        const db = await getRxDB();
+        let items: any[] = [];
 
-    const hydrateLocal = async () => {
-      // Same LocalEngine keys attach-object uses — never block the page on network.
-      try {
-        const fromShared = await cacheGetFast('f_events_list');
-        const fromUser = fromShared.length ? [] : await cacheGetFast(userCacheKey);
-        let local = fromShared.length ? fromShared : fromUser;
-        if (!local.length) {
-          try {
-            const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-            const db = await Promise.race([
-              getRxDB().catch(() => null),
-              new Promise<null>((resolve) => setTimeout(() => resolve(null), 800)),
-            ]);
-            if (db?.events) {
-              local = (await db.events.find().exec()).map((d: any) => d.toJSON());
+        try {
+          items = (await db.events.find().exec()).map((d: any) => d.toJSON());
+        } catch {
+          items = [];
+        }
+        if (items.length === 0) {
+          items = (await LocalEngine.cacheGet<any[]>('f_events_list')) || [];
+        }
+        if (!isCancelled && items.length > 0) {
+          setEvents(items.map(mapRemoteEvent));
+          setIsLoading(false);
+        }
+
+        try {
+          const res = await eventApi.list();
+          items = res?.rows || (Array.isArray(res) ? res : []);
+        } catch {
+          // keep local rows — attach drawer uses the same fallback order
+          if (items.length === 0) {
+            try {
+              items = (await db.events.find().exec()).map((d: any) => d.toJSON());
+            } catch {
+              items = [];
             }
-          } catch {
-            /* optional */
+            if (items.length === 0) {
+              items = (await LocalEngine.cacheGet<any[]>('f_events_list')) || [];
+            }
           }
         }
-        if (!isCancelled && local.length) {
-          setEvents(local.map(mapRemoteEvent));
-        }
-      } finally {
-        if (!isCancelled) setIsLoading(false);
-      }
-    };
 
-    void hydrateLocal();
-
-    const fetchEvents = async () => {
-      try {
-        const queries: string[] = [Query.limit(100), Query.orderDesc('startTime')];
-        if (userId && userId !== 'guest') {
-          queries.push(Query.equal('userId', userId));
-        } else {
-          queries.push(Query.equal('visibility', 'public'));
-        }
-
-        const list = await Promise.race([
-          eventApi.list(queries),
-          new Promise<{ rows: any[] }>((resolve) =>
-            setTimeout(() => resolve({ rows: [] }), 12_000),
-          ),
-        ]);
         if (isCancelled) return;
-
-        const remoteMapped = (list?.rows || []).map(mapRemoteEvent);
-        if (remoteMapped.length === 0) return;
-
-        setEvents((prev) => {
-          const byId = new Map<string, Event>();
-          prev.forEach((e) => byId.set(e.id, e));
-          remoteMapped.forEach((e) => byId.set(e.id, e));
-          const merged = Array.from(byId.values());
-          void LocalEngine.cacheSet(userCacheKey, merged);
-          void LocalEngine.cacheSet('f_events_list', merged);
-          return merged;
-        });
+        if (items.length > 0) {
+          setEvents(items.map(mapRemoteEvent));
+          void LocalEngine.cacheSet('f_events_list', items);
+        }
       } catch (error: unknown) {
-        console.error('Failed to fetch events', error);
+        console.error('Failed to load events', error);
       } finally {
         if (!isCancelled) setIsLoading(false);
       }
     };
 
-    void fetchEvents();
+    void loadEvents();
     return () => {
       isCancelled = true;
     };
-  }, [userId, isAuthenticated]);
+  }, []);
 
   const upsertLocal = useCallback((event: Event) => {
     setEvents((prev) => [event, ...prev.filter((e) => e.id !== event.id)]);
@@ -236,10 +200,12 @@ export default function EventList() {
         const cacheKey = `f_user_events_${userId || 'guest'}`;
         try {
           const current = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
-          await LocalEngine.cacheSet(cacheKey, [
+          const next = [
             created,
             ...current.filter((e: any) => (e.id || e.$id) !== eventData.id && (e.id || e.$id) !== created.id),
-          ]);
+          ];
+          await LocalEngine.cacheSet(cacheKey, next);
+          await LocalEngine.cacheSet('f_events_list', next);
         } catch {
           /* optional */
         }
@@ -258,13 +224,15 @@ export default function EventList() {
     if (activeWorkspace?.isPersonal !== false) {
       list = list.filter((e) => isDefaultWorkspaceObject(e as any));
     }
-    if (tabValue === 0) {
-      list = list.filter((e) => new Date(e.startTime).getTime() >= now);
-    } else if (tabValue === 1) {
-      list = list.filter((e) => new Date(e.startTime).getTime() < now);
+    if (tabValue === 1) {
+      list = list.filter((e) => {
+        const t = new Date(e.startTime).getTime();
+        return !Number.isNaN(t) && t < now;
+      });
     } else if (tabValue === 2 && userId) {
       list = list.filter((e) => e.creatorId === userId);
     }
+    // tab 0 = all (same rows attach-object shows), not an empty "upcoming-only" trap
     return list;
   }, [activeWorkspace?.isPersonal, events, tabValue, userId]);
 
@@ -310,7 +278,7 @@ export default function EventList() {
         </div>
 
         <div className="mb-8 bg-[#161412] rounded-[28px] p-1 border border-[#34322F] flex gap-1 w-fit">
-          {['Upcoming', 'Past', ...(isAuthenticated ? ['My Events'] : [])].map((tab, idx) => {
+          {['All', 'Past', ...(isAuthenticated ? ['My Events'] : [])].map((tab, idx) => {
             const isActive = tabValue === idx;
             return (
               <button

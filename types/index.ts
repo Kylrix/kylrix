@@ -185,6 +185,7 @@ export interface Event {
   isPublic: boolean;
   isPinned: boolean;
   isGuest?: boolean;
+  isWorkspace?: boolean;
   creatorId: string;
   createdAt: Date;
   updatedAt: Date;
