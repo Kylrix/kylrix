@@ -50,7 +50,8 @@ export async function getPublicGoalDataSecure(goalId: string) {
     userId: row.userId || null,
     isPublic,
     isGuest,
-    isEncrypted: row.isEncrypted === true || !!row.dek,
+    // Locked when dek is non-empty (do not expose wrapped dek to guests)
+    locked: typeof row.dek === 'string' && row.dek.trim().length > 0,
     updatedAt: row.$updatedAt}));
 }
 

@@ -28,9 +28,9 @@ export function pickGoalAutosavePayload(task: Task): Record<string, unknown> {
   const assigneeIds = (task.assigneeIds || []).filter(
     (id) => !!id && id !== 'guest' && id !== 'ghost');
 
-  return {
-    title,
-    description: task.description || '',
+  const locked = typeof task.dek === 'string' && task.dek.trim().length > 0;
+
+  const payload: Record<string, unknown> = {
     status: task.status || 'todo',
     priority: task.priority || 'medium',
     dueDate: task.dueDate
@@ -53,7 +53,15 @@ export function pickGoalAutosavePayload(task: Task): Record<string, unknown> {
     isArchived: !!task.isArchived,
     isDeleted: false,
     isTrash: false,
-    isEncrypted: !!task.isEncrypted,
     dek: task.dek || null,
-    tags};
+    tags,
+  };
+
+  // While locked, never push title/description — may be session-decrypted plaintext.
+  if (!locked) {
+    payload.title = title;
+    payload.description = task.description || '';
+  }
+
+  return payload;
 }

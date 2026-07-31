@@ -92,8 +92,8 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       return {};
     }
   }, [note.metadata]);
-  const isLockedT5 = (!!note.dek || (noteMeta?.encryptionVersion === 'T5' && !!noteMeta?.dek)) && !noteMeta?.clientDecrypted;
-  const isEncryptedNote = (noteMeta?.encryptionVersion === 'T4' || isLockedT5) && !noteMeta?.clientDecrypted;
+  const isLocked = !!note.dek && !noteMeta?.clientDecrypted;
+  const isEncryptedNote = ((noteMeta?.encryptionVersion === 'T4' && !!noteMeta?.isEncrypted) || isLocked) && !noteMeta?.clientDecrypted;
   const pinned = isPinned(note.$id);
 
   // Extract first image URL from note content, attachments, or object blocks
@@ -200,11 +200,11 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const handleLockToggle = async () => {
     const handleToggle = async () => {
       try {
-        const isLocked = !!note.dek || (noteMeta?.encryptionVersion === 'T5' && !!noteMeta?.dek);
-        const updated = isLocked ? await unlockNote(note.$id) : await lockNote(note.$id);
+        const isLockedNow = !!note.dek;
+        const updated = isLockedNow ? await unlockNote(note.$id) : await lockNote(note.$id);
         if (updated) {
           upsertNote(updated);
-          showSuccess(isLocked ? 'Note unlocked' : 'Note locked');
+          showSuccess(isLockedNow ? 'Note unlocked' : 'Note locked');
         }
       } catch (err: any) {
         if (err.message === 'VAULT_LOCKED') {
@@ -278,14 +278,14 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           }
           const url = await resolveNoteShareUrl();
           await navigator.clipboard.writeText(url);
-          showSuccess(isLockedT5 ? 'Public link copied with key' : 'Public link copied');
+          showSuccess(isLocked ? 'Public link copied with key' : 'Public link copied');
         } catch (err: any) {
           showError(err?.message || 'Failed to copy share link');
         }
       },
     },
     ...accessControlItems,
-    { label: isLockedT5 ? 'Unlock' : 'Lock', icon: isLockedT5 ? <Unlock size={16} /> : <PrivateIcon size={16} />, onClick: () => { handleLockToggle(); } },
+    { label: isLocked ? 'Unlock' : 'Lock', icon: isLocked ? <Unlock size={16} /> : <PrivateIcon size={16} />, onClick: () => { handleLockToggle(); } },
     
     ...(isPro ? [
       { 
@@ -311,15 +311,15 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       variant: 'destructive' as const,
       onClick: openDelete,
     }
-  ], [pinned, accessControlItems, isPro, handlePinToggle, isLockedT5, handleLockToggle, handleAIAction, handleCreateTodo, openShare, openDelete, liveNote, note, onUpdate, resolveNoteShareUrl, showError, showSuccess, upsertNote]);
+  ], [pinned, accessControlItems, isPro, handlePinToggle, isLocked, handleLockToggle, handleAIAction, handleCreateTodo, openShare, openDelete, liveNote, note, onUpdate, resolveNoteShareUrl, showError, showSuccess, upsertNote]);
 
   const cardTitle = React.useMemo(
-    () => (isLockedT5 ? 'Locked' : isEncryptedNote ? 'Encrypted' : resolveNoteCardTitle(liveNote.title, liveNote.content) || 'Untitled'),
-    [isEncryptedNote, isLockedT5, liveNote.content, liveNote.title],
+    () => (isLocked ? 'Locked' : isEncryptedNote ? 'Encrypted' : resolveNoteCardTitle(liveNote.title, liveNote.content) || 'Untitled'),
+    [isEncryptedNote, isLocked, liveNote.content, liveNote.title],
   );
 
   const previewText = React.useMemo(() => {
-    if (isEncryptedNote) return isLockedT5 ? 'Locked note' : 'Encrypted note';
+    if (isEncryptedNote) return isLocked ? 'Locked note' : 'Encrypted note';
     if (note.format === 'doodle') return 'Sketch note (no longer supported)';
     const cleaned = (liveNote.content || '')
       .replace(/\[\[kylrix-object:.*?\]\]/g, '')
@@ -329,7 +329,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     if (cleaned) return cleaned;
     if (previewImageUrl) return 'Image attached';
     return 'No preview';
-  }, [isEncryptedNote, isLockedT5, liveNote.content, note.format, previewImageUrl]);
+  }, [isEncryptedNote, isLocked, liveNote.content, note.format, previewImageUrl]);
 
   const cardItem = React.useMemo(() => {
     const base = noteToCard({ ...liveNote, title: cardTitle });

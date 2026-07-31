@@ -20,7 +20,7 @@ export async function generateMetadata({
     try {
       meta = JSON.parse(note.metadata || '{}');
     } catch {}
-    const isEncrypted = note.isEncrypted === true || meta.isEncrypted === true;
+    const isEncrypted = !!note.dek || meta.isEncrypted === true;
 
     const titleText = note.title?.trim() || 'Shared Note';
     const title = isEncrypted ? 'Protected Note · Kylrix' : `${titleText} · Kylrix`;

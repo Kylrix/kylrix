@@ -74,7 +74,6 @@ function coerceCachedTask(row: any): Task | null {
       discussionId: row.discussionId || null,
       scheduled: row.scheduled === true || String(row.scheduled) === 'true',
       isAgentic: row.isAgentic === true || String(row.isAgentic) === 'true',
-      isEncrypted: row.isEncrypted === true || String(row.isEncrypted) === 'true',
       dek: row.dek || null,
     } as Task;
   }
@@ -172,7 +171,6 @@ const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
     discussionId: raw.discussionId || null,
     scheduled: raw.scheduled === true || String(raw.scheduled) === 'true',
     isAgentic: raw.isAgentic === true || String(raw.isAgentic) === 'true',
-    isEncrypted: raw.isEncrypted === true || String(raw.isEncrypted) === 'true',
     dek: raw.dek || null,
   };
 };

@@ -49,7 +49,6 @@ function normalizeGoalRow(row: any): Task | null {
     discussionId: row.discussionId || null,
     scheduled: row.scheduled === true || String(row.scheduled) === 'true',
     isAgentic: row.isAgentic === true || String(row.isAgentic) === 'true',
-    isEncrypted: row.isEncrypted === true || String(row.isEncrypted) === 'true',
     dek: row.dek || null,
   } as Task;
 }

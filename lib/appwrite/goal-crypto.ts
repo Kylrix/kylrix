@@ -1,13 +1,13 @@
 /**
- * Goal lock/unlock — same DEK pattern as vault secrets / locked notes.
- * Presence of `dek` (+ isEncrypted) means the goal is vault-locked.
+ * Goal lock/unlock — same DEK pattern as vault secrets.
+ * Non-empty `dek` means the object is encrypted; value is the MEK-wrapped DEK.
  * Share URLs append the unwrapped DEK as `/goal/[id]/[key]` (never the MEK).
+ * Unlock (non-vault objects only) restores plaintext and clears `dek`.
  */
 
 import { Permission, Role } from 'appwrite';
-import { databases } from '@/lib/appwrite/client';
+import { databases, getCurrentUser } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { getCurrentUser } from '@/lib/appwrite/client';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import type { Task as AppwriteTask } from '@/types/kylrixflow';
 
@@ -26,8 +26,9 @@ function toUrlSafeBase64(value: string): string {
   return value.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-export function isGoalLocked(goal: { dek?: string | null; isEncrypted?: boolean | null }): boolean {
-  return !!(goal?.dek) || goal?.isEncrypted === true;
+/** Locked iff DEK column is non-empty (vault-native rule). */
+export function isGoalLocked(goal: { dek?: string | null }): boolean {
+  return typeof goal?.dek === 'string' && goal.dek.trim().length > 0;
 }
 
 export async function lockGoal(goalId: string): Promise<AppwriteTask> {
@@ -39,9 +40,7 @@ export async function lockGoal(goalId: string): Promise<AppwriteTask> {
   const ownerId = row.userId || currentUser.$id;
   if (ownerId !== currentUser.$id) throw new Error('Permission denied');
 
-  if (row.dek || row.isEncrypted) {
-    return row;
-  }
+  if (isGoalLocked(row)) return row;
 
   const { encryptField } = await import('@/lib/masterpass-crypto');
 
@@ -50,12 +49,9 @@ export async function lockGoal(goalId: string): Promise<AppwriteTask> {
   const dekBase64 = bytesToBase64(new Uint8Array(rawKey));
   const wrappedDek = await encryptField(dekBase64);
 
-  const plainTitle = row.title || '';
-  const plainDescription = row.description || '';
-
-  const encryptedTitle = await ecosystemSecurity.encryptWithKey(plainTitle, dek);
-  const encryptedDescription = plainDescription
-    ? await ecosystemSecurity.encryptWithKey(plainDescription, dek)
+  const encryptedTitle = await ecosystemSecurity.encryptWithKey(row.title || '', dek);
+  const encryptedDescription = row.description
+    ? await ecosystemSecurity.encryptWithKey(row.description, dek)
     : '';
 
   const permissions = [Permission.read(Role.user(ownerId))];
@@ -67,7 +63,6 @@ export async function lockGoal(goalId: string): Promise<AppwriteTask> {
     {
       title: encryptedTitle,
       description: encryptedDescription || null,
-      isEncrypted: true,
       dek: wrappedDek,
     },
     permissions,
@@ -85,12 +80,10 @@ export async function unlockGoal(goalId: string): Promise<AppwriteTask> {
   const ownerId = row.userId || currentUser.$id;
   if (ownerId !== currentUser.$id) throw new Error('Permission denied');
 
-  if (!row.dek) {
-    return row;
-  }
+  if (!isGoalLocked(row)) return row;
 
   const { decryptField } = await import('@/lib/masterpass-crypto');
-  const dekBase64 = await decryptField(row.dek);
+  const dekBase64 = await decryptField(row.dek!);
   const rawKey = base64ToBytes(dekBase64);
   const dek = await crypto.subtle.importKey(
     'raw',
@@ -114,13 +107,47 @@ export async function unlockGoal(goalId: string): Promise<AppwriteTask> {
     {
       title: plaintextTitle,
       description: plaintextDescription || null,
-      isEncrypted: false,
       dek: null,
     },
     permissions,
   );
 
   return updated as unknown as AppwriteTask;
+}
+
+/** Session decrypt for opening a locked goal (does not clear dek). */
+export async function decryptGoalForView(goal: {
+  title?: string | null;
+  description?: string | null;
+  dek?: string | null;
+}): Promise<{ title: string; description: string }> {
+  if (!isGoalLocked(goal)) {
+    return {
+      title: goal.title || '',
+      description: goal.description || '',
+    };
+  }
+  if (!ecosystemSecurity.status.isUnlocked) {
+    throw new Error('VAULT_LOCKED');
+  }
+
+  const { decryptField } = await import('@/lib/masterpass-crypto');
+  const dekBase64 = await decryptField(goal.dek!);
+  const rawKey = base64ToBytes(dekBase64);
+  const dek = await crypto.subtle.importKey(
+    'raw',
+    rawKey as BufferSource,
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt'],
+  );
+
+  return {
+    title: await ecosystemSecurity.decryptWithKey(goal.title || '', dek),
+    description: goal.description
+      ? await ecosystemSecurity.decryptWithKey(goal.description, dek)
+      : '',
+  };
 }
 
 /** Unwrap MEK-wrapped DEK and return a public share URL with `/[key]`. */
@@ -141,7 +168,7 @@ export async function getGoalShareUrlWithDek(goalId: string, wrappedDek?: string
   return `${baseUrl}/${toUrlSafeBase64(dekBase64)}`;
 }
 
-/** Build idea share URL with unwrapped T5 DEK when present. */
+/** Build idea share URL with unwrapped DEK when present. */
 export async function getNoteShareUrlWithDek(
   noteId: string,
   wrappedDek?: string | null,

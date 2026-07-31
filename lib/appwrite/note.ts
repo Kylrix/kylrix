@@ -1770,15 +1770,19 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
     if (meta.clientDecrypted) return note;
 
     const rawDek = note.dek || meta.dek;
-    if (rawDek && (meta.encryptionVersion === 'T5' || !meta.encryptionVersion)) {
+    if (rawDek) {
       if (!ecosystemSecurity.status.isUnlocked) {
         return note; // cannot decrypt locked note, leave as encrypted
       }
       try {
-        const decryptedDekRaw = await ecosystemSecurity.decrypt(rawDek);
-        const dekBase64 = (() => {
-          try { return JSON.parse(decryptedDekRaw); } catch { return decryptedDekRaw; }
-        })();
+        const { decryptField } = await import('../masterpass-crypto');
+        let dekBase64: string;
+        try {
+          dekBase64 = await decryptField(rawDek);
+        } catch {
+          const decryptedDekRaw = await ecosystemSecurity.decrypt(rawDek);
+          try { dekBase64 = JSON.parse(decryptedDekRaw); } catch { dekBase64 = decryptedDekRaw; }
+        }
         const rawKey = base64ToBytes(dekBase64);
         const dek = await crypto.subtle.importKey(
           "raw",
@@ -1787,7 +1791,7 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
           true,
           ["encrypt", "decrypt"]
         );
-        const decryptedTitle = await ecosystemSecurity.decryptWithKey(meta.encryptedTitle || '', dek);
+        const decryptedTitle = await ecosystemSecurity.decryptWithKey(meta.encryptedTitle || note.title || '', dek);
         const decryptedContent = await ecosystemSecurity.decryptWithKey(note.content || '', dek);
         activeNoteKeys.set(note.$id, dek);
         return {
@@ -1796,7 +1800,7 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
           title: decryptedTitle,
           content: decryptedContent};
       } catch (err: any) {
-        console.error('T5 decryption failed, attempting self-healing fallback:', err);
+        console.error('DEK decryption failed, attempting self-healing fallback:', err);
         return {
           ...note,
           metadata: JSON.stringify({ ...meta, clientDecrypted: true })};
@@ -2192,8 +2196,8 @@ export async function getCurrentPublicNoteShareUrl(noteId: string, note?: Notes)
       try { return JSON.parse(liveNote.metadata || '{}'); } catch { return {}; }
     })();
 
-    if (meta.isEncrypted || meta.encryptionVersion === 'T4' || meta.encryptionVersion === 'T5' || liveNote.dek || liveNote.isEncrypted) {
-      // T5 lock: unwrap DEK column (MEK-wrapped) into URL fragment
+    if (meta.isEncrypted || meta.encryptionVersion === 'T4' || liveNote.dek) {
+      // Lock (dek column): unwrap MEK-wrapped DEK into URL fragment
       if (liveNote.dek) {
         try {
           const { getNoteShareUrlWithDek } = await import('@/lib/appwrite/goal-crypto');
@@ -2326,7 +2330,7 @@ export async function lockNote(noteId: string): Promise<Notes | null> {
     try { return JSON.parse(note.metadata || '{}'); } catch { return {}; }
   })();
 
-  if ((note.isEncrypted || meta.isEncrypted) && (note.dek || meta.dek)) {
+  if (note.dek || meta.dek) {
     return note;
   }
 
@@ -2338,19 +2342,20 @@ export async function lockNote(noteId: string): Promise<Notes | null> {
   const encryptedTitle = await ecosystemSecurity.encryptWithKey(note.title || '', dek);
   const encryptedContent = await ecosystemSecurity.encryptWithKey(note.content || '', dek);
 
+  // dek alone marks lock; encryptedTitle kept in metadata for display placeholder title
   const updatedMeta = {
     ...meta,
-    isEncrypted: true,
-    encryptionVersion: 'T5',
     encryptedTitle
   };
+  delete updatedMeta.isEncrypted;
+  delete updatedMeta.encryptionVersion;
+  delete updatedMeta.dek;
 
   const updatePayload: any = {
     id: note.$id,
     userId: ownerId,
-    title: '🔒 Locked Note',
+    title: 'Locked',
     content: encryptedContent,
-    isEncrypted: true,
     dek: wrappedDek,
     metadata: JSON.stringify(updatedMeta)
   };
@@ -2389,10 +2394,14 @@ export async function unlockNote(noteId: string): Promise<Notes | null> {
     return note;
   }
 
-  const decryptedDekRaw = await ecosystemSecurity.decrypt(rawDek);
-  const dekBase64 = (() => {
-    try { return JSON.parse(decryptedDekRaw); } catch { return decryptedDekRaw; }
-  })();
+  const { decryptField } = await import("../masterpass-crypto");
+  let dekBase64: string;
+  try {
+    dekBase64 = await decryptField(rawDek);
+  } catch {
+    const decryptedDekRaw = await ecosystemSecurity.decrypt(rawDek);
+    try { dekBase64 = JSON.parse(decryptedDekRaw); } catch { dekBase64 = decryptedDekRaw; }
+  }
   const rawKey = base64ToBytes(dekBase64);
   const dek = await crypto.subtle.importKey(
     "raw",
@@ -2416,7 +2425,6 @@ export async function unlockNote(noteId: string): Promise<Notes | null> {
     userId: ownerId,
     title: plaintextTitle,
     content: plaintextContent,
-    isEncrypted: false,
     dek: null,
     metadata: JSON.stringify(updatedMeta)
   };

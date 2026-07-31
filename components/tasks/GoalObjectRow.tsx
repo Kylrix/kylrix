@@ -150,7 +150,6 @@ export default function GoalObjectRow({ task }: Props) {
         updateTask(task.id, {
           title: updated.title,
           description: updated.description,
-          isEncrypted: !!updated.isEncrypted,
           dek: updated.dek || null,
         } as Partial<Task>);
         toast.success(locked ? 'Goal unlocked' : 'Goal locked');

@@ -300,7 +300,13 @@ export function NoteDetailSidebar({
   }, []);
 
   // ENCRYPTION LOGIC
-  const isT4Encrypted = useMemo(() => (noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') && (noteMeta?.encryptionVersion === 'T4' || noteMeta?.encryptionVersion === 'T5') || !!liveNote.dek, [noteMeta, liveNote.dek]);
+  const isT4Encrypted = useMemo(
+    () =>
+      !!liveNote.dek ||
+      ((noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') &&
+        noteMeta?.encryptionVersion === 'T4'),
+    [noteMeta, liveNote.dek],
+  );
   const isEncryptedNote = useMemo(() => isT4Encrypted && !noteMeta?.clientDecrypted && !isLocallyDecrypted, [isT4Encrypted, noteMeta, isLocallyDecrypted]);
   const shouldMaskEncrypted = useMemo(() => isEncryptedNote && !vaultUnlocked, [isEncryptedNote, vaultUnlocked]);
 

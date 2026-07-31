@@ -55,14 +55,13 @@ function parseNoteMeta(note: Notes) {
 async function decryptNoteIfNeeded(note: Notes, key?: string): Promise<Notes> {
   const meta = parseNoteMeta(note);
   const isT4 = meta.isEncrypted && meta.encryptionVersion === 'T4';
-  const isT5 =
-    (!!note.dek || meta.encryptionVersion === 'T5' || note.isEncrypted === true) &&
-    !meta.clientDecrypted;
+  // Lock state = non-empty dek column (same rule as vault)
+  const isLocked = !!note.dek && !meta.clientDecrypted;
   const isGhost = !!meta.isGhost;
 
-  if (!isT4 && !isT5 && !isGhost) return note;
+  if (!isT4 && !isLocked && !isGhost) return note;
   if (!key) {
-    if (isT5 || isT4 || isGhost) {
+    if (isLocked || isT4 || isGhost) {
       throw new Error('This note is encrypted and requires a decryption key.');
     }
     return note;
@@ -80,7 +79,7 @@ async function decryptNoteIfNeeded(note: Notes, key?: string): Promise<Notes> {
     ['decrypt']
   );
 
-  if (isT5) {
+  if (isLocked) {
     const titleSource = meta.encryptedTitle || note.title || '';
     return {
       ...note,

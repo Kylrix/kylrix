@@ -401,7 +401,8 @@ export default function NotesPage() {
     const isLocked = !!note.dek || (() => {
       try {
         const meta = JSON.parse(note.metadata || '{}');
-        return meta.isEncrypted === true || meta.isEncrypted === 'true' || meta.encryptionVersion === 'T4' || meta.encryptionVersion === 'T5' || !!meta.dek;
+        // T4 public-share encryption (legacy metadata) still needs vault; lock uses dek only
+        return !!meta.dek || (meta.encryptionVersion === 'T4' && !!meta.isEncrypted);
       } catch {
         return false;
       }

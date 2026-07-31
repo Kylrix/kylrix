@@ -13,7 +13,7 @@ type PublicGoal = {
   status: string;
   priority: string;
   dueDate: string | null;
-  isEncrypted?: boolean;
+  locked?: boolean;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -93,7 +93,7 @@ export default function SharedGoalClient({
     let cancelled = false;
     async function run() {
       if (!goal) return;
-      if (!goal.isEncrypted) {
+      if (!goal.locked) {
         setView(goal);
         return;
       }
@@ -113,7 +113,7 @@ export default function SharedGoalClient({
           ? await decryptWithDek(goal.description, dek)
           : null;
         if (!cancelled) {
-          setView({ ...goal, title, description, isEncrypted: false });
+          setView({ ...goal, title, description, locked: false });
           setError(null);
         }
       } catch (err: any) {

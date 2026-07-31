@@ -103,8 +103,7 @@ export interface Task {
   scheduled?: boolean;
   /** True when Kyle (agent) created this goal rather than the user. */
   isAgentic?: boolean;
-  /** Vault-lock: presence of dek means title/description are DEK-encrypted. */
-  isEncrypted?: boolean;
+  /** Vault-lock: non-empty dek means title/description are DEK-encrypted (MEK-wrapped key). */
   dek?: string | null;
 }
 
