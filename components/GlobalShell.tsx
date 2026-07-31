@@ -98,8 +98,8 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     () => Boolean(pathname?.match(/^\/idea\/[^/]+$/)),
     [pathname]);
 
-  const isChatDetailPage = useMemo(
-    () => Boolean(pathname?.match(/^\/connect\/chats\/[^/]+$/)),
+  const isChatSurface = useMemo(
+    () => Boolean(pathname === '/connect/chats' || pathname?.match(/^\/connect\/chats\/[^/]+$/)),
     [pathname],
   );
 
@@ -123,9 +123,9 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
     if (showLeftSidebar) parts.push('with-sidebar');
     if (isProjectDetailPage) parts.push('project-detail');
     if (isNoteFullPageDetail) parts.push('note-detail');
-    if (isChatDetailPage || pathname === '/connect/chats') parts.push('chat-surface');
+    if (isChatSurface) parts.push('chat-surface');
     return parts.join(' ');
-  }, [showLeftSidebar, isProjectDetailPage, isNoteFullPageDetail, isChatDetailPage, pathname]);
+  }, [showLeftSidebar, isProjectDetailPage, isNoteFullPageDetail, isChatSurface]);
 
   // 3. Automated Logic
   useEffect(() => {

@@ -116,7 +116,7 @@ export function NewChatDrawer({
 
                 if (foundGhost) {
                     toast.dismiss('ghost-init');
-                    router.push(`/connect/chats/${foundGhost.$id}`);
+                    router.push(`/connect/chats?c=${foundGhost.$id}`);
                     onClose();
                     return;
                 }
@@ -124,7 +124,7 @@ export function NewChatDrawer({
                 const title = targetUser.displayName || targetUser.username || targetUser.title || (mode === 'thread' ? 'Thread' : 'Secure Chat');
                 const newGhost = await createGhostNoteChat(title, [user.$id, targetUserId]);
                 toast.success(copy.success, { id: 'ghost-init' });
-                router.push(`/connect/chats/${newGhost.$id}`);
+                router.push(`/connect/chats?c=${newGhost.$id}`);
                 onClose();
             } catch (error: any) {
                 console.error('Failed to create thread chat:', error);
@@ -139,7 +139,7 @@ export function NewChatDrawer({
                 c.type === 'direct' && c.participants.includes(targetUserId)
             );
             if (found) {
-                router.push(`/connect/chats/${found.$id}`);
+                router.push(`/connect/chats?c=${found.$id}`);
                 onClose();
                 return;
             }
@@ -151,7 +151,7 @@ export function NewChatDrawer({
                     await ecosystemSecurity.ensureE2EIdentity(user.$id);
                     const newConv = await ChatService.createConversation([user.$id, targetUserId], 'direct');
                     toast.success(copy.success, { id: 'ghost-init' });
-                    router.push(`/connect/chats/${newConv.$id}`);
+                    router.push(`/connect/chats?c=${newConv.$id}`);
                     onClose();
                 } catch (error: any) {
                     toast.error(formatSecureChatStartError(error, mode), { id: 'ghost-init' });

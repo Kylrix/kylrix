@@ -136,7 +136,7 @@ export default function HangoutInvitePage() {
 
       if (data.alreadyJoined) {
         setRequestState('joined');
-        router.push(`/connect/chats/${conversationId}`);
+        router.push(`/connect/chats?c=${conversationId}`);
         return;
       }
 
@@ -204,7 +204,7 @@ export default function HangoutInvitePage() {
             ) : null}
 
             {requestState === 'joined' ? (
-              <Button fullWidth variant="contained" endIcon={<ArrowRight size={16} />} onClick={() => router.push(`/connect/chats/${conversationId}`)}>
+              <Button fullWidth variant="contained" endIcon={<ArrowRight size={16} />} onClick={() => router.push(`/connect/chats?c=${conversationId}`)}>
                 Go to chat
               </Button>
             ) : requestState === 'pending' ? (

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Hash, MessageSquare, Plus } from 'lucide-react';
+import { Hash, MessageSquare, Plus, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { ChatService } from '@/lib/services/chat';
 import { listGhostNoteChats } from '@/lib/actions/client-ops';
@@ -14,6 +14,7 @@ import {
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { useSudo } from '@/context/SudoContext';
 
 type RailMode = 'compact' | 'full';
 type RailTab = 'secure' | 'public';
@@ -61,12 +62,15 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
   const { user } = useAuth();
   const router = useRouter();
   const { open: openUnified } = useUnifiedDrawer();
+  const { requestSudo } = useSudo();
   const [tab, setTab] = useState<RailTab>(
     ecosystemSecurity.status.isUnlocked ? 'secure' : 'public',
   );
   const [secure, setSecure] = useState<RailItem[]>([]);
   const [threads, setThreads] = useState<RailItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
+  const [needsMasterPass, setNeedsMasterPass] = useState(false);
 
   const openItem = useCallback(
     (id: string) => {
@@ -74,10 +78,37 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
         onSelect(id);
         return;
       }
-      router.push(`/connect/chats/${id}`);
+      router.replace(`/connect/chats?c=${encodeURIComponent(id)}`, { scroll: false });
     },
     [onSelect, router],
   );
+
+  useEffect(() => {
+    const unsub = ecosystemSecurity.onStatusChange((status) => {
+      setIsUnlocked(status.isUnlocked);
+      if (status.isUnlocked) setNeedsMasterPass(false);
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    if (!user?.$id || isUnlocked) {
+      setNeedsMasterPass(false);
+      return;
+    }
+    let cancelled = false;
+    import('@/lib/appwrite/keychain')
+      .then(({ KeychainService }) => KeychainService.hasMasterpass(user.$id))
+      .then((has) => {
+        if (!cancelled) setNeedsMasterPass(!has);
+      })
+      .catch(() => {
+        if (!cancelled) setNeedsMasterPass(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.$id, isUnlocked]);
 
   useEffect(() => {
     let cancelled = false;
@@ -201,6 +232,37 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
+        {mode === 'full' && tab === 'secure' && (needsMasterPass || !isUnlocked) ? (
+          <div className="m-2 rounded-2xl border border-[#F59E0B]/25 bg-[#161412] p-4 text-center">
+            <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-[#F59E0B]/10 text-[#F59E0B]">
+              <ShieldCheck size={20} />
+            </div>
+            <p className="text-white text-xs font-black font-clash m-0 mb-1">
+              {needsMasterPass ? 'Set up Master Pass' : 'Unlock secure chats'}
+            </p>
+            <p className="text-white/45 text-[10px] leading-relaxed m-0 mb-3">
+              {needsMasterPass
+                ? 'Create a Master Pass to use private chats on this device.'
+                : 'Unlock to load your private conversations.'}
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                requestSudo({
+                  intent: needsMasterPass ? 'initialize' : undefined,
+                  onSuccess: () => {
+                    setIsUnlocked(true);
+                    setNeedsMasterPass(false);
+                  },
+                })
+              }
+              className="w-full h-9 rounded-xl bg-[#F59E0B] text-black text-[11px] font-extrabold"
+            >
+              {needsMasterPass ? 'Set up Master Pass' : 'Unlock'}
+            </button>
+          </div>
+        ) : null}
+
         {loading && items.length === 0 ? (
           <div className="p-3 space-y-2">
             {[1, 2, 3, 4].map((n) => (

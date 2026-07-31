@@ -175,13 +175,6 @@ function ConnectHomeContent() {
                 <Plus size={14} strokeWidth={3} />
                 New chat
               </button>
-              <button
-                type="button"
-                onClick={() => router.push('/connect/chats')}
-                className="h-10 px-4 rounded-xl border border-[#34322F] bg-[#161412] text-white text-xs font-bold hover:border-white/20"
-              >
-                Open full view
-              </button>
             </div>
           </header>
           <div className="p-4 md:p-5 bg-[#161412] border border-[#34322F] rounded-[28px]">

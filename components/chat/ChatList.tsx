@@ -94,7 +94,9 @@ export const ChatList = ({
     onTabChange,
     hideTabs = false,
     skipSecureLoad = false,
-    skipThreadsLoad = false}: { 
+    skipThreadsLoad = false,
+    onOpenConversation,
+}: { 
     externalQuery?: string;
     activeTab?: 'secure' | 'public';
     onTabChange?: (tab: 'secure' | 'public') => void;
@@ -103,6 +105,8 @@ export const ChatList = ({
     skipSecureLoad?: boolean;
     /** Desktop secure panel — skip ghost thread fetch. */
     skipThreadsLoad?: boolean;
+    /** Prefer in-page selection over route navigation. */
+    onOpenConversation?: (conversationId: string) => void;
 }) => {
     const { user } = useAuth();
     const { unreadConversations } = useChatNotifications();
@@ -161,6 +165,14 @@ export const ChatList = ({
         if (onTabChange) onTabChange(tab);
     }, [onTabChange]);
 
+    const openConversation = useCallback((conversationId: string) => {
+        if (onOpenConversation) {
+            onOpenConversation(conversationId);
+            return;
+        }
+        router.replace(`/connect/chats?c=${encodeURIComponent(conversationId)}`, { scroll: false });
+    }, [onOpenConversation, router]);
+
     const handleItemClick = useCallback((event: React.MouseEvent) => {
         if (isInitializing) {
             event.preventDefault();
@@ -187,13 +199,13 @@ export const ChatList = ({
                 {
                     label: 'Open Secure Chat',
                     icon: <ExternalLink size={18} />,
-                    onClick: () => router.push(`/connect/chats/${conv.$id}`)
+                    onClick: () => openConversation(conv.$id)
                 },
                 {
                     label: 'Copy Connection Link',
                     icon: <LinkIcon size={18} />,
                     onClick: () => {
-                        const link = `${window.location.origin}/connect/chats/${conv.$id}`;
+                        const link = `${window.location.origin}/connect/chats?c=${conv.$id}`;
                         navigator.clipboard.writeText(link);
                         toast.success('Connection link copied');
                     }
@@ -243,7 +255,7 @@ export const ChatList = ({
                 {
                     label: 'Open Discussion Thread',
                     icon: <ExternalLink size={18} />,
-                    onClick: () => router.push(`/connect/chats/${conv.$id}`)
+                    onClick: () => openConversation(conv.$id)
                 },
                 {
                     label: 'Copy Thread ID',
@@ -257,7 +269,7 @@ export const ChatList = ({
                     label: 'Copy Discussion Link',
                     icon: <LinkIcon size={18} />,
                     onClick: () => {
-                        const link = `${window.location.origin}/connect/chats/${conv.$id}`;
+                        const link = `${window.location.origin}/connect/chats?c=${conv.$id}`;
                         navigator.clipboard.writeText(link);
                         toast.success('Discussion link copied');
                     }
@@ -629,22 +641,14 @@ export const ChatList = ({
 
                 if (foundGhost) {
                     toast.dismiss('ghost-init');
-                    if (isDesktop) {
-                        setActiveDetail({ type: 'chat', id: foundGhost.$id, data: foundGhost });
-                    } else {
-                        router.push(`/connect/chats/${foundGhost.$id}`);
-                    }
+                    openConversation(foundGhost.$id);
                     return;
                 }
 
                 const title = targetUser.displayName || targetUser.username || 'Huddle';
                 const newGhost = await createGhostNoteChat(title, [user.$id, targetUserId]);
                 toast.success('Huddle thread ready!', { id: 'ghost-init' });
-                if (isDesktop) {
-                    setActiveDetail({ type: 'chat', id: newGhost.$id, data: newGhost });
-                } else {
-                    router.push(`/connect/chats/${newGhost.$id}`);
-                }
+                openConversation(newGhost.$id);
             } catch (error: any) {
                 console.error('Failed to create thread:', error);
                 toast.error(formatSecureChatStartError(error, activeTab === 'public' ? 'thread' : 'secure'), { id: 'ghost-init' });
@@ -658,11 +662,7 @@ export const ChatList = ({
         );
 
         if (found) {
-            if (isDesktop) {
-                setActiveDetail({ type: 'chat', id: found.$id, data: found });
-            } else {
-                router.push(`/connect/chats/${found.$id}`);
-            }
+            openConversation(found.$id);
             return;
         }
 
@@ -673,11 +673,7 @@ export const ChatList = ({
                     await ecosystemSecurity.ensureE2EIdentity(user.$id);
                     const participants = [user.$id, targetUserId];
                     const newConv = await ChatService.createConversation(participants, 'direct');
-                    if (isDesktop) {
-                        setActiveDetail({ type: 'chat', id: newConv.$id, data: newConv });
-                    } else {
-                        router.push(`/connect/chats/${newConv.$id}`);
-                    }
+                    openConversation(newConv.$id);
                 } catch (error: any) {
                     console.error('Failed to create chat:', error);
                     toast.error(formatSecureChatStartError(error, 'secure'));
@@ -1265,24 +1261,17 @@ export const ChatList = ({
                                         role="button"
                                         tabIndex={0}
                                         onClick={(e: React.MouseEvent) => {
-                                            if (isDesktop) {
-                                                e.preventDefault();
-                                                setActiveDetail({ type: 'chat', id: conv.$id, data: conv });
-                                                return;
-                                            }
                                             handleItemClick(e);
                                             if (!isInitializing) {
-                                                router.push(`/connect/chats/${conv.$id}`);
+                                                openConversation(conv.$id);
                                             }
                                         }}
                                         onContextMenu={(e) => handleConversationRightClick(e, conv)}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
                                                 e.preventDefault();
-                                                if (isDesktop) {
-                                                    setActiveDetail({ type: 'chat', id: conv.$id, data: conv });
-                                                } else if (!isInitializing) {
-                                                    router.push(`/connect/chats/${conv.$id}`);
+                                                if (!isInitializing) {
+                                                    openConversation(conv.$id);
                                                 }
                                             }
                                         }}
@@ -1410,24 +1399,17 @@ export const ChatList = ({
                                         role="button"
                                         tabIndex={0}
                                         onClick={(e: React.MouseEvent) => {
-                                            if (isDesktop) {
-                                                e.preventDefault();
-                                                setActiveDetail({ type: 'chat', id: conv.$id, data: conv });
-                                                return;
-                                            }
                                             handleItemClick(e);
                                             if (!isInitializing) {
-                                                router.push(`/connect/chats/${conv.$id}`);
+                                                openConversation(conv.$id);
                                             }
                                         }}
                                         onContextMenu={(e) => handleGhostConversationRightClick(e, conv)}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
                                                 e.preventDefault();
-                                                if (isDesktop) {
-                                                    setActiveDetail({ type: 'chat', id: conv.$id, data: conv });
-                                                } else if (!isInitializing) {
-                                                    router.push(`/connect/chats/${conv.$id}`);
+                                                if (!isInitializing) {
+                                                    openConversation(conv.$id);
                                                 }
                                             }
                                         }}
@@ -1548,91 +1530,44 @@ export const ChatList = ({
                 onConversationDeleted={handleConversationDeleted}
             />
 
-            {showCountdownDrawer && (
-                <SetupCountdownDrawer 
-                    onCancel={handleCancelRedirect}
-                    callbackUrl="/connect/chats"
-                />
-            )}
-        </div>
-    );
-};
-
-const SetupCountdownDrawer = ({ 
-    onCancel, 
-    callbackUrl 
-}: { 
-    onCancel: () => void; 
-    callbackUrl: string; 
-}) => {
-    const router = useRouter();
-    const { requestSudo } = useSudo();
-    const [secondsLeft, setSecondsLeft] = useState(5);
-    const [isCancelled, setIsCancelled] = useState(false);
-
-    useEffect(() => {
-        if (isCancelled || secondsLeft <= 0) {
-            if (secondsLeft === 0 && !isCancelled) {
-                if (typeof window !== 'undefined') {
-                    localStorage.setItem('kylrix_connect_active_tab', 'secure');
-                }
-                requestSudo({
-                    intent: 'initialize',
-                    onSuccess: () => {
-                        router.replace(callbackUrl);
-                    }
-                });
-            }
-            return;
-        }
-
-        const timer = setInterval(() => {
-            setSecondsLeft(prev => prev - 1);
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [secondsLeft, isCancelled, router, callbackUrl]);
-
-    return (
-        <div className="fixed inset-0 z-[1550] flex items-end justify-center pointer-events-none">
-            {/* Backdrop */}
-            <div 
-                className="absolute inset-0 bg-black/60 transition-opacity duration-300 pointer-events-auto"
-                style={{ top: '88px' }}
-                onClick={() => {
-                    setIsCancelled(true);
-                    onCancel();
-                }}
-            />
-            {/* Content panel */}
-            <div className="relative w-full max-w-[600px] bg-[#161412] border-t border-white/8 rounded-t-3xl p-6 text-center text-white shadow-2xl transition-transform duration-300 transform translate-y-0 z-10 pointer-events-auto">
-                {/* Drag handle line */}
-                <div className="mx-auto w-12 h-1 bg-white/10 rounded-full mb-6 animate-pulse" />
-                
-                <div className="flex flex-col items-center gap-6">
-                    <div className="p-4 rounded-full bg-[#F59E0B]/10 text-[#F59E0B]">
-                        <ShieldCheck size={36} />
+            {showCountdownDrawer ? (
+                <div className="mx-2 mb-4 rounded-2xl border border-[#F59E0B]/25 bg-[#161412] p-5 text-center">
+                    <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#F59E0B]/10 text-[#F59E0B]">
+                        <ShieldCheck size={24} />
                     </div>
-                    <h6 className="text-lg font-black font-clash">
-                        Secure Chat Requires Setup
+                    <h6 className="text-sm font-black font-clash text-white m-0 mb-2">
+                        Secure chat needs a Master Pass
                     </h6>
-                    <p className="text-[#9B9691] text-sm max-w-sm leading-relaxed">
-                        End-to-End Encryption requires setting up an Ecosystem MasterPass to secure your local cryptographic keys.
+                    <p className="text-[#9B9691] text-xs leading-relaxed m-0 mb-4">
+                        Set up your Master Pass to unlock private chats on this device.
                     </p>
-                    <span className="text-xl font-black text-[#F59E0B] font-mono">
-                        Navigating to setup in {secondsLeft}...
-                    </span>
-                    <button
-                        onClick={() => {
-                            setIsCancelled(true);
-                            onCancel();
-                        }}
-                        className="px-8 py-3 rounded-xl border border-white/10 text-white font-bold text-sm hover:bg-white/5 hover:border-white/20 transition-all duration-200"
-                    >
-                        Cancel Redirect
-                    </button>
+                    <div className="flex flex-col gap-2">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowCountdownDrawer(false);
+                                requestSudo({
+                                    intent: 'initialize',
+                                    onSuccess: () => {
+                                        setIsUnlocked(true);
+                                        void loadConversations({ forceRefresh: true });
+                                    },
+                                });
+                            }}
+                            className="w-full py-2.5 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold"
+                        >
+                            Set up Master Pass
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleCancelRedirect}
+                            className="w-full py-2.5 rounded-xl border border-white/10 text-white text-xs font-bold hover:bg-white/5"
+                        >
+                            Not now
+                        </button>
+                    </div>
                 </div>
-            </div>
+            ) : null}
         </div>
     );
 };

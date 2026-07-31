@@ -586,7 +586,7 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
                   <span>Edit Profile</span>
                 </button>
                 <button
-                  onClick={() => router.push(`/connect/chats/${currentUser?.$id}`)}
+                  onClick={() => router.push(`/connect/chats?c=${currentUser?.$id}`)}
                   className="flex-1 md:flex-none py-2.5 px-6 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/8 font-black text-sm transition-all flex items-center justify-center gap-2"
                 >
                   <MessageSquare size={15} />
@@ -611,7 +611,7 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
                 {profile?.isContact !== false && (
                   <>
                     <button
-                      onClick={() => router.push(`/connect/chats/${targetUserId}`)}
+                      onClick={() => router.push(`/connect/chats?c=${targetUserId}`)}
                       disabled={!currentUser}
                       className="flex-1 md:flex-none py-2.5 px-6 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/8 font-black text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >
@@ -619,7 +619,7 @@ function ProfileRedesign({ username, initialProfile }: ProfileProps) {
                       <span>Message</span>
                     </button>
                     <button
-                      onClick={() => router.push(`/connect/chats/${targetUserId}?startCall=1`)}
+                      onClick={() => router.push(`/connect/chats?c=${targetUserId}&startCall=1`)}
                       disabled={!currentUser}
                       className="flex-1 md:flex-none py-2.5 px-6 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/8 font-black text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >

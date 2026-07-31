@@ -45,15 +45,14 @@ export default function UniversalFAB() {
   );
 
   if (isDrawerOpen || isAgenticDrawerOpen) return null;
+  // Desktop: no FABs — actions live in native page chrome / sidebars.
+  if (isDesktop) return null;
   if (!config.isVisible && !isAppRoute) return null;
 
   const actions = config.actions || [];
   const mainIcon = config.mainIcon;
   const mainColor = config.mainColor || '#6366F1';
   const onMainClick = config.onMainClick;
-
-  // Speed-dial stays mobile-only; direct-action FABs (onMainClick) work on desktop too.
-  if (isDesktop && !onMainClick) return null;
 
   const anchorSx = {
     position: 'fixed' as const,

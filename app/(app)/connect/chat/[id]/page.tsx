@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 
-/** Legacy `/connect/chat/[id]` → canonical `/connect/chats/[id]`. */
+/** Legacy `/connect/chat/[id]` → `/connect/chats?c=`. */
 function RedirectBody() {
   const params = useParams();
   const router = useRouter();
@@ -12,9 +12,13 @@ function RedirectBody() {
   const id = params.id as string;
 
   useEffect(() => {
-    if (!id) return;
-    const q = searchParams?.toString();
-    router.replace(q ? `/connect/chats/${id}?${q}` : `/connect/chats/${id}`);
+    if (!id) {
+      router.replace('/connect/chats');
+      return;
+    }
+    const next = new URLSearchParams(searchParams?.toString() || '');
+    next.set('c', id);
+    router.replace(`/connect/chats?${next.toString()}`);
   }, [id, router, searchParams]);
 
   return (

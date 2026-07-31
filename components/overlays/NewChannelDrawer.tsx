@@ -91,7 +91,7 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
                     }
 
                     const newConv = await ChatService.createConversation(participantIds, 'group', channelName.trim());
-                    router.push(`/connect/chats/${newConv.$id}`);
+                    router.push(`/connect/chats?c=${newConv.$id}`);
                     onClose();
                 } catch (error: any) {
                     toast.error(`Failed: ${error.message}`);
