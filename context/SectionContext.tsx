@@ -641,9 +641,25 @@ export function MultiSectionContainer({ children, panels}: MultiSectionContainer
   const pathname = usePathname();
   const { getLayoutForRoute, activeDetail, setActiveDetail } = useSection();
 
+  // Note / goal / event / secret → true fullscreen overlay (not a 320px side column)
+  const isFullScreenDetail = useMemo(() => {
+    const t = activeDetail?.type;
+    return t === 'secret' || t === 'note' || t === 'goal' || t === 'event';
+  }, [activeDetail?.type]);
+
+  // Side-rail panels no longer render widget chrome — only an inline detail host.
+  // Don't reserve empty 320px+ columns; let page content use the full width.
+  const showSideRail = Boolean(activeDetail && !isFullScreenDetail);
+
   const layout = useMemo(() => {
+    if (!showSideRail) {
+      return {
+        columnsCount: 1,
+        sections: [{ id: 'original', type: 'original' as const, width: '1fr' }],
+      };
+    }
+
     const calculated = getLayoutForRoute(pathname);
-    // If explicit panels prop is passed, override computed panels in columns
     if (panels && calculated.columnsCount > 1) {
       if (calculated.columnsCount === 2) {
         calculated.sections[1].panels = panels;
@@ -659,13 +675,7 @@ export function MultiSectionContainer({ children, panels}: MultiSectionContainer
       }
     }
     return calculated;
-  }, [pathname, getLayoutForRoute, panels]);
-
-  // Note / goal / event / secret → true fullscreen overlay (not a 320px side column)
-  const isFullScreenDetail = useMemo(() => {
-    const t = activeDetail?.type;
-    return t === 'secret' || t === 'note' || t === 'goal' || t === 'event';
-  }, [activeDetail?.type]);
+  }, [pathname, getLayoutForRoute, panels, showSideRail]);
 
   // Compute CSS Grid columns style
   const gridTemplateColumns = useMemo(() => {
