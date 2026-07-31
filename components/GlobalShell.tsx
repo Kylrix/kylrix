@@ -46,9 +46,25 @@ const AppDynamicSidebarPortal = dynamic(
   { ssr: false },
 );
 
+function useIsDesktopShell() {
+  const [isDesktop, setIsDesktop] = React.useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches,
+  );
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(min-width: 768px)');
+    const sync = () => setIsDesktop(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
+  return isDesktop;
+}
+
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user, isLoading } = useAuth();
+  const isDesktopShell = useIsDesktopShell();
   
   // 0. Aggressive Optimization Hooks
   useServiceWorker();
@@ -290,12 +306,12 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
 
       <NativeSidebarBridge />
 
-      {/* Object details: true fullscreen hosts (event-detail gold standard) */}
-      {isOverlayOpen && <Overlay />}
-      <AppDynamicSidebarPortal />
+      {/* Mobile only: edge-to-edge drawers. Desktop details → native right rail. */}
+      {!isDesktopShell && isOverlayOpen && <Overlay />}
+      {!isDesktopShell && <AppDynamicSidebarPortal />}
 
       {/* --- LAYER 2: OVERLAYS --- */}
-      {/* Agentic / wallet / unified → NativeSidebarBridge; details → Overlay/DynamicSidebar */}
+      {/* Agentic / wallet / unified → NativeSidebarBridge; mobile details → Overlay/DynamicSidebar */}
       {unifiedDrawerActive === 'login' && <UnifiedBottomDrawer />}
       {showProUpgrade && <ProUpgradeDrawer />}
       {taskDialogOpen && <TaskDialog />}

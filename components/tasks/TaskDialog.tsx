@@ -34,7 +34,7 @@ export default function TaskDialog() {
           openSidebar(
             <GoalObjectDetail taskId={task.id} embedded onClose={closeSidebar} />,
             task.id,
-            { hideHeader: true, fullscreen: true },
+            { hideHeader: true },
           );
         } else {
           openOverlay(<GoalObjectDetail taskId={task.id} onClose={closeOverlay} embedded />);

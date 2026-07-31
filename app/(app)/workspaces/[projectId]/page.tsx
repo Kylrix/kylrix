@@ -1043,7 +1043,7 @@ export default function ProjectDetailPage() {
                                                 onDelete={fetchProjectData} 
                                               />, 
                                               'note-detail',
-                                              { hideHeader: true, fullscreen: true }
+                                              { hideHeader: true }
                                             )}
                                             onUnlink={() => handleRemoveObject(note.$id)}
                                             onExtractGoals={() => {

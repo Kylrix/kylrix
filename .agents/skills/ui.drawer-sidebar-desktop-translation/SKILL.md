@@ -78,10 +78,11 @@ const paperSx = {
 To heavily de-incentivize navigation and foster a snappy, immersive, application-like feel across the suite, all object details (notes, moments/posts, tasks/goals, events, forms, E2E secrets, tags, E2E chats, calls) must intercept direct page routing and traditional sliding sidebars.
 
 #### Core Behaviors:
-1. **Mobile Layout**: Object details are rendered inside a **100% full-screen bottom drawer (`anchor="bottom"`, height `100dvh`)**. This is the **ONLY exception** to the traditional 60% max-height drawer rule. When closed, it physically unmounts from the DOM (`keepMounted: false`, `disablePortal: true`) to mathematically prevent interaction blocking.
-2. **Desktop Layout**: Object details temporarily hijack the **rightmost section/column of the screen** (within the multi-column section grid).
-3. **Explicit Back Navigation**: Both mobile drawers and desktop hijacked sections must display a prominent, simple, and clean `[Back]` button at the top. Clicking this button clears the hijacked state, returning the panel/drawer to its default contents (e.g. chats, calls, projects, huddles).
-4. **Link Sharing Fail-Safe**: Standalone dynamic page routes (e.g., `/post/[id]`, `/note/[id]`, etc.) must remain fully functional for external public link shares, falling back to the standard page layout when loaded directly.
+1. **Mobile Layout**: Object details are rendered inside a **100% full-screen bottom drawer (`anchor="bottom"`, height `100dvh`)**. This is the **ONLY exception** to the traditional 60% max-height drawer rule. When closed, it physically unmounts from the DOM (`keepMounted: false`, `disablePortal: true`) to mathematically prevent interaction blocking. Host: `Overlay` / mobile `DynamicSidebarPanel`.
+2. **Desktop Layout**: Object details open in the **native right sidebar** (`NativeSidebarBridge` → push rail). Never fullscreen. Never Overlay flapover on desktop.
+3. **Canonical rule**: see `ui.chrome-surfaces` — mobile users top and bottom drawers for everything, desktop uses right sidebars for everything.
+4. **Explicit Back Navigation**: Both mobile drawers and desktop right rails must display a prominent, simple, and clean `[Back]` button at the top. Clicking this button clears the surface.
+5. **Link Sharing Fail-Safe**: Standalone dynamic page routes (e.g., `/post/[id]`, `/note/[id]`, etc.) must remain fully functional for external public link shares, falling back to the standard page layout when loaded directly.
 
 #### Implementation with SectionContext:
 Always utilize `activeDetail` inside the global `SectionContext` to manage details hijacking and trigger this pattern seamlessly from list cards or clicks:

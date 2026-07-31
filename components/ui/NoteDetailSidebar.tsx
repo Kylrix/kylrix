@@ -918,7 +918,7 @@ export function NoteDetailSidebar({
   }, [content, liveNote.$id]);
 
   // --- RENDER ---
-  if (awaitingLocalCopy || isLoading) {
+  if (awaitingLocalCopy) {
     return (
       <div
         className={`note-detail-sidebar-root flex flex-col bg-[#0A0908] overflow-hidden text-white w-full ${

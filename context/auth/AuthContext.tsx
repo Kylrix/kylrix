@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getCurrentUser, account, getKylrixPulse, setKylrixPulse, clearKylrixPulse, invalidateCurrentUserCache, onCurrentUserChanged, hasAuthSessionHint } from '@/lib/appwrite/client';
+import { getCurrentUser, account, getKylrixPulse, setKylrixPulse, clearKylrixPulse, invalidateCurrentUserCache, onCurrentUserChanged, hasAuthSessionHint, getCurrentUserSnapshot } from '@/lib/appwrite/client';
 import { getEcosystemUrl } from '@/lib/ecosystem';
 import { assertAuthenticatedAccount, completeMfaChallenge, isMfaRequiredError } from '@/lib/mfa';
 
@@ -33,11 +33,22 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // 1. Instant Synchronous Load from Pulse Cache (Bridge or Local)
+  // 1. Instant Synchronous Load — pulse, then last known local user (local-first).
+  // Network account.verify runs in the background; UI must not wait on it.
   const [user, setUser] = useState<User | null>(() => {
     const pulse = getKylrixPulse();
     if (pulse) {
         return { $id: pulse.$id, name: pulse.name, isPulse: true, email: null, profilePicId: pulse.profilePicId };
+    }
+    const snap = getCurrentUserSnapshot();
+    if (snap?.$id) {
+        return {
+            ...snap,
+            $id: snap.$id,
+            name: snap.name ?? null,
+            email: snap.email ?? null,
+            isPulse: true,
+        };
     }
     return null;
   });

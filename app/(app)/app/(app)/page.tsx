@@ -5,7 +5,6 @@ import { deleteNote } from '@/lib/actions/client-ops';
 import { useNotes } from '@/context/NotesContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { CircularProgress } from '@/lib/openbricks/primitives';
 import type { Notes } from '@/types/appwrite';
 import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
 import { Button } from '@/components/ui/Button';
@@ -76,7 +75,6 @@ export default function NotesPage() {
   const { 
     notes: allNotes, 
     totalNotes, 
-    isLoading: isNotesLoading,
     pushLiveNote,
     removeNote,
     refetchNotes,
@@ -85,7 +83,6 @@ export default function NotesPage() {
     hasMore,
     loadMore
   } = useNotes();
-  const isInitialLoading = isNotesLoading && allNotes.length === 0;
   const { promptSudo } = useSudo();
   const { openOverlay, closeOverlay } = useOverlay();
   const { setConfiguration, resetConfiguration } = useFAB();
@@ -422,7 +419,7 @@ export default function NotesPage() {
           embedded
         />,
         note.$id || 'note-detail',
-        { hideHeader: true, fullscreen: true }
+        { hideHeader: true }
       );
       return;
     }
@@ -787,27 +784,22 @@ export default function NotesPage() {
       {paginatedNotes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center select-none">
           <div className="w-24 h-24 bg-white/5 border border-white/10 rounded-[28px] flex items-center justify-center mb-6 shadow-2xl">
-            {isInitialLoading ? (
-              <CircularProgress size={28} className="text-[#EC4899]" />
-            ) : hasSearchResults ? (
+            {hasSearchResults ? (
               <SearchIcon size={38} className="text-white/30" />
             ) : (
               <PlusCircleIcon size={38} className="text-white/30" />
             )}
           </div>
           <h4 className="text-white font-black text-lg tracking-tight mb-2">
-            {isInitialLoading ? 'Loading Ideas...' : hasSearchResults ? 'No Results' : 'No Ideas Yet'}
+            {hasSearchResults ? 'No Results' : 'No Ideas Yet'}
           </h4>
           <p className="text-white/40 text-xs font-semibold max-w-xs leading-relaxed mb-6">
-            {isInitialLoading
-              ? 'Loading your ideas...'
-              : hasSearchResults
+            {hasSearchResults
               ? `No matches found for "${searchQuery}". Try adjusting your query.`
               : 'Capture your thoughts and tasks here.'
             }
           </p>
-          {!isInitialLoading && (
-            hasSearchResults ? (
+          {hasSearchResults ? (
               <div className="flex items-center gap-3">
                 <Button variant="outlined" onClick={clearSearch}>
                   Clear Search
@@ -820,8 +812,7 @@ export default function NotesPage() {
               <Button onClick={handleCreateNoteClick}>
                 Open Composer
               </Button>
-            )
-          )}
+            )}
         </div>
       ) : (
         <div className="flex flex-col gap-8">
@@ -906,7 +897,7 @@ export default function NotesPage() {
             </div>
           )}
           
-          {hasNextPage && !isInitialLoading && !hasSearchResults && (
+          {hasNextPage && !hasSearchResults && (
             <div className="flex justify-center mt-2">
               <Button variant="outlined" onClick={nextPage}>
                 Load More

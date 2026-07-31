@@ -250,36 +250,38 @@ function canUseStorage() {
     return typeof window !== 'undefined';
 }
 
+function readLastLoggedInUser(): any | null {
+    if (!canUseStorage()) return null;
+    try {
+        const lastUserRaw = localStorage.getItem('kylrix_last_logged_in_user');
+        if (!lastUserRaw) return null;
+        return JSON.parse(lastUserRaw);
+    } catch {
+        return null;
+    }
+}
+
 function readCurrentUserSnapshot() {
     if (!canUseStorage()) return null;
     try {
         const raw = localStorage.getItem(CURRENT_USER_CACHE_KEY);
         if (!raw) {
-            // Fallback to last logged in user if we are offline
-            const isOffline = typeof window !== 'undefined' && !window.navigator.onLine;
-            if (isOffline) {
-                const lastUserRaw = localStorage.getItem('kylrix_last_logged_in_user');
-                if (lastUserRaw) {
-                    const user = JSON.parse(lastUserRaw);
-                    return { user, expiresAt: Date.now() + CURRENT_USER_CACHE_TTL };
-                }
+            // Local-first: always prefer last known user for instant hydration.
+            const lastUser = readLastLoggedInUser();
+            if (lastUser) {
+                return { user: lastUser, expiresAt: Date.now() + CURRENT_USER_CACHE_TTL };
             }
             return null;
         }
         const parsed = JSON.parse(raw) as { user: any; expiresAt: number; lastForcedAt?: number };
         if (!parsed?.user) return null;
         if (parsed.expiresAt <= Date.now()) {
-            const isOffline = typeof window !== 'undefined' && !window.navigator.onLine;
-            if (isOffline) {
-                return parsed;
+            const lastUser = readLastLoggedInUser();
+            if (lastUser) {
+                return { user: lastUser, expiresAt: Date.now() + CURRENT_USER_CACHE_TTL };
             }
-            const lastUserRaw = localStorage.getItem('kylrix_last_logged_in_user');
-            if (lastUserRaw) {
-                const user = JSON.parse(lastUserRaw);
-                return { user, expiresAt: Date.now() + CURRENT_USER_CACHE_TTL };
-            }
-            localStorage.removeItem(CURRENT_USER_CACHE_KEY);
-            return null;
+            // Keep expired snapshot for local-first UI; network verify refreshes later.
+            return parsed;
         }
         return parsed;
     } catch {
@@ -313,16 +315,24 @@ function emitCurrentUserChange(user: any | null) {
 }
 
 function hydrateCurrentUserCache() {
-    if (currentUserCache) return;
+    // Refresh when missing or expired so local-first pages keep a stable user id.
+    if (currentUserCache && currentUserCache.expiresAt > Date.now()) return;
     const snapshot = readCurrentUserSnapshot();
     if (snapshot) {
         currentUserCache = snapshot;
     }
 }
 
+/** Optimistic local user for instant hydration — never waits on account.get. */
 export function getCurrentUserSnapshot() {
     hydrateCurrentUserCache();
-    return currentUserCache && currentUserCache.expiresAt > Date.now() ? currentUserCache.user : null;
+    return currentUserCache?.user ?? null;
+}
+
+/** True when snapshot TTL is still fresh (safe to skip forced network probe). */
+export function isCurrentUserSnapshotFresh() {
+    hydrateCurrentUserCache();
+    return Boolean(currentUserCache && currentUserCache.expiresAt > Date.now());
 }
 
 import { Query } from 'appwrite';

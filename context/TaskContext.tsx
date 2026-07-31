@@ -4,7 +4,7 @@ import React, { createContext, useContext, useReducer, useCallback, ReactNode, u
 import { usePathname } from 'next/navigation';
 import { ID, Query } from 'appwrite';
 import { tasks as taskApi, calendars as calendarApi, taskCollaborators, subscribeToTable, buildTaskPermissions } from '@/lib/kylrixflow';
-import { getCurrentUser } from '@/lib/appwrite/client';
+import { getCurrentUser, getCurrentUserSnapshot } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getEcosystemUrl } from '@/lib/constants';
 import { Task as AppwriteTask, Calendar as AppwriteCalendar } from '@/types/kylrixflow';
@@ -320,7 +320,7 @@ const initialState: TaskState = {
     field: 'dueDate',
     direction: 'asc'},
   viewMode: 'list',
-  isLoading: true,
+  isLoading: false,
   error: null,
   sidebarOpen: true,
   taskDialogOpen: false,
@@ -947,7 +947,12 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     const hydrateInstant = async () => {
-      const userId = authUser?.$id || flowWarmOwnerRef.current || 'guest';
+      const userId =
+        authUser?.$id ||
+        flowWarmOwnerRef.current ||
+        getCurrentUserSnapshot()?.$id ||
+        'guest';
+      if (userId !== 'guest') flowWarmOwnerRef.current = userId;
       const instant = await loadGoalsFromLocalCopy({
         userId,
         existingTasks: tasksRef.current,

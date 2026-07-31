@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
@@ -23,8 +23,26 @@ const WalletSidebar = dynamic(
   { ssr: false },
 );
 
+const DESKTOP_MQ = '(min-width: 768px)';
+
+function useIsDesktopRail() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia(DESKTOP_MQ).matches,
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia(DESKTOP_MQ);
+    const sync = () => setIsDesktop(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
+  return isDesktop;
+}
+
 /**
- * Bridges legacy overlays / drawers into the single native right sidebar host.
+ * Bridges legacy overlays / drawers into the native right sidebar on desktop.
+ * Mobile object details stay on Overlay / DynamicSidebar (true fullscreen drawers).
  */
 export function NativeSidebarBridge() {
   const { open, close, dismiss, isOpen, activeKey, sticky } = useNativeSidebar();
@@ -33,6 +51,7 @@ export function NativeSidebarBridge() {
   const agentic = useAgenticDrawer();
   const wallet = useWalletOverlay();
   const unified = useUnifiedDrawer();
+  const isDesktop = useIsDesktopRail();
   const lastKeyRef = useRef<string | null>(null);
 
   const openRef = useRef(open);
@@ -50,7 +69,7 @@ export function NativeSidebarBridge() {
       lastKeyRef.current = 'agentic';
       openRef.current(
         <AgenticPanelContent
-          isDesktop
+          isDesktop={isDesktop}
           onClose={() => {
             agentic.closeAgenticDrawer();
             dismissRef.current();
@@ -123,16 +142,53 @@ export function NativeSidebarBridge() {
       return;
     }
 
-    // Object details (notes/goals/events/…) use Overlay + DynamicSidebarPanel —
-    // true edge-to-edge fullscreen hosts (event-detail gold standard). Do not
-    // swallow them into the push rail (which sits under top/bottom chrome).
-    if ((dynamic.isOpen && dynamic.content) || (overlay.isOpen && overlay.content)) {
-      const owned = lastKeyRef.current;
-      if (owned) {
-        lastKeyRef.current = null;
-        closeRef.current(owned);
+    // Mobile: object details use Overlay / DynamicSidebarPanel (edge-to-edge drawers).
+    // Desktop: same content lives in the native right rail (never fullscreen).
+    if (!isDesktop) {
+      if ((dynamic.isOpen && dynamic.content) || (overlay.isOpen && overlay.content)) {
+        const owned = lastKeyRef.current;
+        if (owned && owned !== 'agentic') {
+          lastKeyRef.current = null;
+          closeRef.current(owned);
+        }
+        return;
       }
-      return;
+    } else {
+      if (dynamic.isOpen && dynamic.content) {
+        const key = dynamic.activeContentKey || 'dynamic';
+        lastKeyRef.current = key;
+        openRef.current(
+          <div className="h-full min-h-0 overflow-hidden flex flex-col bg-[#0A0908]">
+            {dynamic.content}
+          </div>,
+          {
+            key,
+            width: NATIVE_SIDEBAR_WIDTHS.detail,
+            title: 'Detail',
+            restore: {
+              type: 'dynamic',
+              payload: { key: dynamic.activeContentKey },
+            },
+          },
+        );
+        return;
+      }
+
+      if (overlay.isOpen && overlay.content) {
+        lastKeyRef.current = 'overlay';
+        openRef.current(
+          <div className="h-full min-h-0 overflow-hidden flex flex-col bg-[#0A0908]">
+            {overlay.content}
+          </div>,
+          {
+            key: 'overlay',
+            width: NATIVE_SIDEBAR_WIDTHS.detail,
+            title: 'Detail',
+            restore: { type: 'overlay' },
+          },
+        );
+        return;
+      }
     }
 
     const owned = lastKeyRef.current;
@@ -155,9 +211,11 @@ export function NativeSidebarBridge() {
     unified.drawerData,
     dynamic.isOpen,
     dynamic.content,
+    dynamic.activeContentKey,
     overlay.isOpen,
     overlay.content,
     sticky,
+    isDesktop,
     wallet,
     unified,
   ]);

@@ -11,7 +11,8 @@ import {
   realtime,
   APPWRITE_DATABASE_ID,
   getNotePublicState,
-  decryptPublicEncryptedNote
+  decryptPublicEncryptedNote,
+  getCurrentUserSnapshot,
 } from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import type { Notes } from '@/types/appwrite';
@@ -194,7 +195,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const [composeSyncEpoch, setComposeSyncEpoch] = useState(0);
   const [unpersistedComposeDraftIds, setUnpersistedComposeDraftIds] = useState<Set<string>>(new Set());
   const [totalNotes, setTotalNotes] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -221,7 +222,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const { pinSets, isPinned: isResourcePinned, togglePin } = useResourcePins();
   const { activeWorkspace } = useWorkspace();
 
-  const activeUserId = user?.$id || 'guest';
+  const activeUserId = user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.$id || 'guest') : 'guest');
   const PINNED_CACHE_KEY = useMemo(() => `pinned_ids_${activeUserId}`, [activeUserId]);
   const INITIAL_NOTES_CACHE_KEY = useMemo(() => `initial_notes_${activeUserId}`, [activeUserId]);
 

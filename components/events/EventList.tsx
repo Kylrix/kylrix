@@ -311,7 +311,7 @@ export default function EventList() {
                     openSidebar(
                       <EventDetails eventId={event.id} initialData={event} />,
                       event.id,
-                      { hideHeader: true, fullscreen: true },
+                      { hideHeader: true },
                     );
                   } else {
                     openOverlay(
