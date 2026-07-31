@@ -4,8 +4,10 @@ import React, { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Globe, Heart, MessageCircle, Shield } from 'lucide-react';
 import type { UnifiedFeedItem } from '@/components/connect/useConnectMomentsFeed';
+import { ObjectCard } from '@/components/objects/ObjectCard';
+import type { UnifiedObjectCardModel } from '@/lib/objects/types';
 
-const PREVIEW_CHARS = 180;
+const PREVIEW_CHARS = 160;
 
 function stripUrls(text: string) {
   return text.replace(/(https?:\/\/[^\s]+)/g, '').replace(/\s+/g, ' ').trim();
@@ -25,70 +27,74 @@ function itemsEqual(a: UnifiedFeedItem, b: UnifiedFeedItem) {
 function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
   const router = useRouter();
   const body = useMemo(() => stripUrls(item.content), [item.content]);
-  const preview = body.length > PREVIEW_CHARS ? `${body.slice(0, PREVIEW_CHARS).trimEnd()}…` : body;
+  const preview =
+    body.length > PREVIEW_CHARS ? `${body.slice(0, PREVIEW_CHARS).trimEnd()}…` : body;
   const momentId = item.rawEvent?.$id || item.rawEvent?.id;
   const canOpen = item.source === 'ecosystem' && momentId;
+  const isNostr = item.source === 'nostr';
+
+  const cardItem = useMemo<UnifiedObjectCardModel>(
+    () => ({
+      kind: 'moment',
+      id: item.id,
+      title: item.authorName || 'Someone',
+      subtitle: preview || 'Shared an update',
+      updatedAt: item.createdAt ? new Date(item.createdAt) : null,
+      accent: '#F59E0B',
+      status: isNostr ? 'nostr' : 'kylrix',
+    }),
+    [item.authorName, item.createdAt, item.id, isNostr, preview],
+  );
 
   const open = () => {
     if (canOpen) router.push(`/connect/post/${momentId}`);
   };
 
   return (
-    <article
-      role={canOpen ? 'button' : undefined}
-      tabIndex={canOpen ? 0 : undefined}
-      onClick={canOpen ? open : undefined}
-      onKeyDown={
-        canOpen
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                open();
-              }
-            }
-          : undefined
+    <ObjectCard
+      item={cardItem}
+      density="uniform"
+      onOpen={canOpen ? open : undefined}
+      trailing={
+        <span className="shrink-0 px-2 py-1 rounded-lg bg-[#0A0908] border border-white/8 text-[10px] font-mono text-white/55 flex items-center gap-1">
+          {isNostr ? (
+            <Globe size={11} className="text-[#F59E0B]" />
+          ) : (
+            <Shield size={11} className="text-emerald-400" />
+          )}
+          {isNostr ? 'Nostr' : 'Kylrix'}
+        </span>
       }
-      style={{
-        // Skip offscreen raster + reserve the slot: smallest possible repaint area
-        contentVisibility: 'auto',
-        containIntrinsicSize: 'auto 196px'}}
-      className={`p-6 rounded-[32px] bg-[#161412] border border-white/5 flex flex-col gap-4 h-[196px] overflow-hidden ${
-        canOpen ? 'cursor-pointer hover:border-white/10' : ''
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3 shrink-0">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-white truncate">{item.authorName}</p>
-          <p className="text-[10px] font-mono text-white/35 mt-0.5">
-            {new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-          </p>
+      footer={
+        <div className="flex items-center justify-between gap-3 pt-3">
+          <div className="flex items-center gap-4 text-[11px] font-bold text-white/45">
+            <span className="flex items-center gap-1">
+              <Heart size={13} className="text-[#F59E0B]/80" />
+              {item.likesCount || 0}
+            </span>
+            <span className="flex items-center gap-1">
+              <MessageCircle size={13} />
+              {item.repliesCount || 0}
+            </span>
+          </div>
+          <span className="text-[10px] font-mono text-white/35">
+            {item.createdAt
+              ? new Date(item.createdAt).toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                })
+              : ''}
+          </span>
         </div>
-        <span className="shrink-0 px-2 py-1 rounded-lg bg-[#121110] border border-white/5 text-[10px] font-mono text-white/45 flex items-center gap-1">
-          {item.source === 'nostr' ? <Globe size={11} className="text-[#F59E0B]" /> : <Shield size={11} className="text-emerald-400" />}
-          {item.source === 'nostr' ? 'Nostr' : 'Kylrix'}
-        </span>
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-hidden">
-        {preview ? (
-          <p className="text-sm text-white/75 leading-relaxed break-words">{preview}</p>
-        ) : (
-          <p className="text-sm text-white/30 italic">Shared an update</p>
-        )}
-      </div>
-
-      <div className="shrink-0 flex items-center gap-4 text-[11px] font-bold text-white/35 pt-2 border-t border-white/5">
-        <span className="flex items-center gap-1">
-          <Heart size={13} />
-          {item.likesCount || 0}
-        </span>
-        <span className="flex items-center gap-1">
-          <MessageCircle size={13} />
-          {item.repliesCount || 0}
-        </span>
-      </div>
-    </article>
+      }
+    >
+      <p className="text-white/70 font-satoshi text-sm font-medium leading-relaxed line-clamp-3 break-words m-0">
+        {preview || 'Shared an update'}
+      </p>
+    </ObjectCard>
   );
 }
 
-export const MomentCard = React.memo(MomentCardInner, (prev, next) => itemsEqual(prev.item, next.item));
+export const MomentCard = React.memo(MomentCardInner, (prev, next) =>
+  itemsEqual(prev.item, next.item),
+);

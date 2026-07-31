@@ -11,7 +11,8 @@ export type ObjectKind =
   | 'credential'
   | 'totp'
   | 'project'
-  | 'agent_session';
+  | 'agent_session'
+  | 'moment';
 
 type ObjectRef = {
   kind: ObjectKind;
@@ -47,6 +48,8 @@ export function objectKindAccent(kind: ObjectKind): string {
       return '#6366F1';
     case 'event':
       return '#22C55E';
+    case 'moment':
+      return '#F59E0B';
     case 'credential':
     case 'totp':
       return '#F59E0B';
@@ -69,6 +72,8 @@ export function objectKindLabel(kind: ObjectKind): string {
       return 'Form';
     case 'event':
       return 'Event';
+    case 'moment':
+      return 'Moment';
     case 'credential':
       return 'Secret';
     case 'totp':
