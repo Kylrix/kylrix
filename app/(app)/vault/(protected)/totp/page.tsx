@@ -418,14 +418,14 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
       <div
         onClick={() => setSelectedTotp(totp)}
         onContextMenu={handleContextMenu}
-        className={`p-5 rounded-3xl transition-all duration-300 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer border ${
+        className={`h-full p-5 rounded-3xl transition-all duration-300 flex flex-col gap-4 cursor-pointer border ${
           isSelected 
             ? 'bg-[#1C1A18] border-emerald-500/40' 
             : 'bg-[#161412] border-[#1C1A18] hover:bg-[#1C1A18] hover:border-emerald-500/20'
         } hover:-translate-y-0.5 shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),0_2px_3px_-3px_rgba(37,35,33,0.9)]`}
       >
         {/* Left Side: Logo/Avatar & Info */}
-        <div className="flex items-center gap-3.5 min-w-0 w-full sm:w-auto">
+        <div className="flex items-center gap-3.5 min-w-0 w-full">
           {faviconUrl ? (
             <div className="w-[52px] h-[52px] rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center flex-shrink-0 transition-colors">
               <img 
@@ -479,7 +479,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
         </div>
 
         {/* Right Side: Code, Timer & Actions */}
-        <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 w-full sm:w-auto mt-5 sm:mt-0 pt-5 sm:pt-0 border-t sm:border-t-0 border-white/5">
+        <div className="flex items-center justify-between gap-4 w-full mt-auto pt-4 border-t border-white/5">
           {/* 6-Digit Code & Copy Button */}
           <div className="flex items-center gap-3">
             <span 

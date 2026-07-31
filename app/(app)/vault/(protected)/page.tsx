@@ -267,13 +267,28 @@ function DashboardPageContent() {
         ? allCredentials.filter(isDefaultWorkspaceObject)
         : allCredentials;
     return [...scoped].sort((a, b) => {
-      const aPinned = isResourcePinned('credential', a.$id, a.userId, a.isPinned);
-      const bPinned = isResourcePinned('credential', b.$id, b.userId, b.isPinned);
-      if (aPinned && !bPinned) return -1;
-      if (!aPinned && bPinned) return 1;
       return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
     });
-  }, [allCredentials, isResourcePinned, activeWorkspace?.isPersonal]);
+  }, [allCredentials, activeWorkspace?.isPersonal]);
+
+  const pinnedCredentials = useMemo(
+    () =>
+      sortedCredentials.filter((c) =>
+        isResourcePinned('credential', c.$id, c.userId, c.isPinned),
+      ),
+    [sortedCredentials, isResourcePinned],
+  );
+
+  const unpinnedCredentials = useMemo(
+    () =>
+      sortedCredentials.filter(
+        (c) => !isResourcePinned('credential', c.$id, c.userId, c.isPinned),
+      ),
+    [sortedCredentials, isResourcePinned],
+  );
+
+  const vaultGridClass =
+    'grid gap-4 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]';
 
   const refreshCredentials = () => {
     if (!user?.$id) return;
@@ -414,12 +429,14 @@ function DashboardPageContent() {
                     </div>
                   </div>
 
-                  {/* Credentials List */}
-                  <div className="flex flex-col gap-3.5 max-w-3xl">
+                  {/* Credentials — goals-style desktop grid + pinned section (UI-only) */}
+                  <div className="flex flex-col gap-8 w-full max-w-none">
                     {loading ? (
-                      Array.from({ length: 6 }).map((_, i) => (
-                        <CredentialItem key={`skeleton-${i}`} credential={{ $id: `skeleton-${i}`, name: 'Loading...', username: '', type: 'password' } as any} onCopy={() => {}} onEdit={() => {}} onDelete={() => {}} />
-                      ))
+                      <div className={vaultGridClass}>
+                        {Array.from({ length: 6 }).map((_, i) => (
+                          <CredentialItem key={`skeleton-${i}`} credential={{ $id: `skeleton-${i}`, name: 'Loading...', username: '', type: 'password' } as any} onCopy={() => {}} onEdit={() => {}} onDelete={() => {}} />
+                        ))}
+                      </div>
                     ) : allCredentials.length === 0 ? (
                       <div className="p-24 text-center rounded-[32px] bg-[#161412] border border-dashed border-[#1C1A18]">
                         <h2 className="text-xl font-black text-white mb-2 font-clash">
@@ -430,29 +447,81 @@ function DashboardPageContent() {
                         </p>
                       </div>
                     ) : (
-                      sortedCredentials.map((cred: Credentials) => (
-                        <CredentialItem
-                          key={cred.$id}
-                          credential={cred}
-                          onCopy={handleCopy}
-                          onEdit={() => handleEdit(cred)}
-                          onDelete={() => openDeleteModal(cred)}
-                          onTogglePin={() => handleTogglePin(cred.$id)}
-                          isBlurEnabled={isVaultBlurEnabled}
-                          isSelectMode={isSelectMode}
-                          isSelected={selectedIds.includes(cred.$id)}
-                          onToggleSelect={() => toggleSelection(cred.$id)}
-                          onShared={(id) => {
-                            setAllCredentials(prev =>
-                              prev.map(c => c.$id === id ? { ...c, isPublic: true, isGuest: true } : c)
-                            );
-                          }}
-                          onClick={() => {
-                            setSelectedCredential(cred);
-                            setActiveDetail({ type: 'secret', id: cred.$id, data: cred });
-                          }}
-                        />
-                      ))
+                      <>
+                        {pinnedCredentials.length > 0 && (
+                          <div className="space-y-4">
+                            <div className="flex items-center gap-3 px-1 mb-2">
+                              <span className="text-[10px] font-black text-[#F59E0B] uppercase tracking-[0.2em] font-mono">
+                                Pinned ({pinnedCredentials.length})
+                              </span>
+                              <div className="flex-1 h-px bg-gradient-to-r from-[#F59E0B]/20 to-transparent" />
+                            </div>
+                            <div className={vaultGridClass}>
+                              {pinnedCredentials.map((cred: Credentials) => (
+                                <CredentialItem
+                                  key={cred.$id}
+                                  credential={cred}
+                                  onCopy={handleCopy}
+                                  onEdit={() => handleEdit(cred)}
+                                  onDelete={() => openDeleteModal(cred)}
+                                  onTogglePin={() => handleTogglePin(cred.$id)}
+                                  isBlurEnabled={isVaultBlurEnabled}
+                                  isSelectMode={isSelectMode}
+                                  isSelected={selectedIds.includes(cred.$id)}
+                                  onToggleSelect={() => toggleSelection(cred.$id)}
+                                  onShared={(id) => {
+                                    setAllCredentials(prev =>
+                                      prev.map(c => c.$id === id ? { ...c, isPublic: true, isGuest: true } : c)
+                                    );
+                                  }}
+                                  onClick={() => {
+                                    setSelectedCredential(cred);
+                                    setActiveDetail({ type: 'secret', id: cred.$id, data: cred });
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {unpinnedCredentials.length > 0 && (
+                          <div className="space-y-4">
+                            {pinnedCredentials.length > 0 && (
+                              <div className="flex items-center gap-3 px-1 mb-2">
+                                <span className="text-[10px] font-black text-[#10B981] uppercase tracking-[0.2em] font-mono">
+                                  All Secrets ({unpinnedCredentials.length})
+                                </span>
+                                <div className="flex-1 h-px bg-gradient-to-r from-[#10B981]/20 to-transparent" />
+                              </div>
+                            )}
+                            <div className={vaultGridClass}>
+                              {unpinnedCredentials.map((cred: Credentials) => (
+                                <CredentialItem
+                                  key={cred.$id}
+                                  credential={cred}
+                                  onCopy={handleCopy}
+                                  onEdit={() => handleEdit(cred)}
+                                  onDelete={() => openDeleteModal(cred)}
+                                  onTogglePin={() => handleTogglePin(cred.$id)}
+                                  isBlurEnabled={isVaultBlurEnabled}
+                                  isSelectMode={isSelectMode}
+                                  isSelected={selectedIds.includes(cred.$id)}
+                                  onToggleSelect={() => toggleSelection(cred.$id)}
+                                  onShared={(id) => {
+                                    setAllCredentials(prev =>
+                                      prev.map(c => c.$id === id ? { ...c, isPublic: true, isGuest: true } : c)
+                                    );
+                                  }}
+                                  onClick={() => {
+                                    setSelectedCredential(cred);
+                                    setActiveDetail({ type: 'secret', id: cred.$id, data: cred });
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
