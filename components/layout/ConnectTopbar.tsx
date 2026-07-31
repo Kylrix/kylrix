@@ -792,6 +792,16 @@ export default function ConnectTopbar({
           maxHeight: isDesktop ? 'none' : '45vh',
           overflowY: isDesktop ? 'visible' : 'auto'}}
       >
+        <Paper
+          elevation={0}
+          sx={{
+            width: '100%',
+            borderRadius: '26px',
+            bgcolor: '#161412',
+            border: `1px solid ${alpha(appAccent, 0.22)}`,
+            overflow: 'hidden'}}
+        >
+          <Box sx={{ p: 1.25 }}>
         {/* For Mobile Search Input */}
         {!isDesktop && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
@@ -1376,6 +1386,8 @@ export default function ConnectTopbar({
             </Box>
           )}
         </Stack>
+          </Box>
+        </Paper>
       </Box>
     );
 
