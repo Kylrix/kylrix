@@ -1387,6 +1387,59 @@ export default function ConnectTopbar({
     );
 
     if (isDesktop) {
+      if (nativeSidebar) {
+        return (
+          <NativeSidebarMount
+            active={searchOpen}
+            sidebarKey="topbar-search"
+            width={420}
+            title="Search"
+          >
+            <Box sx={{ p: 2.75, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#161412' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3.5 }}>
+                <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
+                  Search System
+                </Typography>
+                <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' }, width: 32, height: 32 }}>
+                  <CloseIcon size={16} />
+                </IconButton>
+              </Box>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  bgcolor: 'rgba(0, 0, 0, 0.25)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '16px',
+                  px: 2,
+                  py: 1.25,
+                  mb: 3,
+                }}
+              >
+                <Search size={18} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 10, flexShrink: 0 }} />
+                <InputBase
+                  inputRef={searchInputRef}
+                  value={searchQuery}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
+                  placeholder="Search globally..."
+                  fullWidth
+                  autoFocus
+                  sx={{
+                    color: 'white',
+                    fontFamily: 'var(--font-satoshi)',
+                    fontWeight: 600,
+                    fontSize: '0.92rem',
+                    '& input::placeholder': { color: 'rgba(255,255,255,0.25)', opacity: 1 }}}
+                  onKeyDown={(event: React.KeyboardEvent) => {
+                    if (event.key === 'Escape') handleCloseAll();
+                  }}
+                />
+              </Box>
+              <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>{searchContent}</Box>
+            </Box>
+          </NativeSidebarMount>
+        );
+      }
       return (
         <Drawer
           anchor="left"
@@ -1689,6 +1742,18 @@ export default function ConnectTopbar({
     );
 
     if (isDesktop) {
+      if (nativeSidebar) {
+        return (
+          <NativeSidebarMount
+            active={Boolean(profileMenuAnchorEl)}
+            sidebarKey="topbar-profile"
+            width={380}
+            title="Profile"
+          >
+            {profileContent}
+          </NativeSidebarMount>
+        );
+      }
       return (
         <Drawer
           anchor="left"

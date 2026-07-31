@@ -8,7 +8,6 @@ import { UsersService } from '@/lib/services/users';
 import { tablesDB, realtime  } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { usePresence } from '../providers/PresenceProvider';
-import { useSection } from '@/context/SectionContext';
 import { showIslandNotification } from '@/lib/island-notification';
 import { createGhostNoteChat, listGhostNoteChats, deleteGhostThread } from '@/lib/actions/client-ops';
 import { isValidX25519PublicKey, formatSecureChatStartError } from '@/lib/crypto/public-key';
@@ -116,15 +115,6 @@ export const ChatList = ({
     const contextMenu = useContextMenu();
     const openMenu = contextMenu?.openMenu;
     const { open: openUnified } = useUnifiedDrawer();
-    const [isDesktop, setIsDesktop] = useState(false);
-    useEffect(() => {
-        const media = window.matchMedia('(min-width: 1024px)');
-        setIsDesktop(media.matches);
-        const listener = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
-        media.addEventListener('change', listener);
-        return () => media.removeEventListener('change', listener);
-    }, []);
-    const { setActiveDetail } = useSection();
     const initialSecureCache = readSecureCache();
     const initialThreadsCache = readThreadsCache();
     const [conversations, setConversations] = useState<any[]>(() => initialSecureCache);
@@ -134,7 +124,9 @@ export const ChatList = ({
     const [_searching, setSearching] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const isUnlockedRef = React.useRef(isUnlocked);
-    isUnlockedRef.current = isUnlocked;
+    useEffect(() => {
+        isUnlockedRef.current = isUnlocked;
+    }, [isUnlocked]);
     const [selectedConversation, setSelectedConversation] = useState<any | null>(null);
     const conversationsRef = React.useRef<any[]>(initialSecureCache);
     const loadRequestRef = React.useRef(0);

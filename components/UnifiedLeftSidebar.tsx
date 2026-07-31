@@ -49,9 +49,6 @@ export function UnifiedLeftSidebar() {
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = React.useState(false);
   const workspaceSectionRef = React.useRef<HTMLDivElement | null>(null);
 
-  // 5 nav rows (46) + 4 gaps (10) + Discord (46+12) + spacing ≈ leave room, never scroll the sidebar.
-  const NAV_DISCORD_RESERVE_PX = 360;
-
   useEffect(() => {
     if (isCollapsed) setWorkspaceMenuOpen(false);
   }, [isCollapsed]);

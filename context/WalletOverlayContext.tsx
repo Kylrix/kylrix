@@ -11,7 +11,6 @@ import React, {
 } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
-import { TokenOpsProvider } from '@/context/TokenOpsContext';
 
 interface WalletOverlayContextType {
   isWalletOpen: boolean;
@@ -91,9 +90,6 @@ export function WalletOverlayProvider({ children }: { children: React.ReactNode 
         <Suspense fallback={null}>
           <OpenWalletFromQueryEffect pathname={pathname} onOpenRequested={openWallet} />
         </Suspense>
-        <TokenOpsProvider>
-          {/* Wallet UI mounts via NativeSidebarBridge — no floating Drawer here */}
-        </TokenOpsProvider>
       </SubscriptionProvider>
     </WalletOverlayContext.Provider>
   );

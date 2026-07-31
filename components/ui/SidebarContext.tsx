@@ -8,7 +8,6 @@ import React, {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from 'react';
 import { Box } from '@/lib/openbricks/primitives';
 

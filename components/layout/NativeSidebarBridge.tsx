@@ -38,14 +38,25 @@ export function NativeSidebarBridge() {
   const openRef = useRef(open);
   const closeRef = useRef(close);
   const dismissRef = useRef(dismiss);
-  openRef.current = open;
-  closeRef.current = close;
-  dismissRef.current = dismiss;
+
+  useEffect(() => {
+    openRef.current = open;
+    closeRef.current = close;
+    dismissRef.current = dismiss;
+  }, [open, close, dismiss]);
 
   useEffect(() => {
     if (agentic.isOpen) {
       lastKeyRef.current = 'agentic';
-      openRef.current(<AgenticPanelContent />, {
+      openRef.current(
+        <AgenticPanelContent
+          isDesktop
+          onClose={() => {
+            agentic.closeAgenticDrawer();
+            dismissRef.current();
+          }}
+        />,
+        {
         key: 'agentic',
         width: NATIVE_SIDEBAR_WIDTHS.default + 20,
         sticky: true,

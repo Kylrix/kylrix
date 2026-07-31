@@ -77,6 +77,7 @@ export function NativeSidebarProvider({ children }: { children: ReactNode }) {
   const [sticky, setSticky] = useState(false);
   const [title, setTitle] = useState<string | null>(null);
   const keyRef = useRef<string | null>(null);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
   const stickyRef = useRef(false);
   const restoreRef = useRef<SidebarRestoreHint | null>(null);
   const memoryRef = useRef<SidebarMemoryDoc>(emptySidebarMemory());
@@ -191,6 +192,7 @@ export function NativeSidebarProvider({ children }: { children: ReactNode }) {
           releaseRightRail(keyRef.current);
         }
         keyRef.current = nextKey;
+        setActiveKey(nextKey);
         acquireRightRail(nextKey);
       }
       stickyRef.current = nextSticky;
@@ -238,6 +240,7 @@ export function NativeSidebarProvider({ children }: { children: ReactNode }) {
     keyRef.current = null;
     stickyRef.current = false;
     restoreRef.current = null;
+    setActiveKey(null);
     setSticky(false);
     setContent(null);
     setTitle(null);
@@ -276,7 +279,7 @@ export function NativeSidebarProvider({ children }: { children: ReactNode }) {
       isOpen: content !== null,
       width,
       content,
-      activeKey: keyRef.current,
+      activeKey,
       sticky,
       title,
       open,
@@ -284,7 +287,7 @@ export function NativeSidebarProvider({ children }: { children: ReactNode }) {
       close,
       dismiss,
     }),
-    [content, width, sticky, title, open, swap, close, dismiss],
+    [content, width, activeKey, sticky, title, open, swap, close, dismiss],
   );
 
   return (

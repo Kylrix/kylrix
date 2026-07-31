@@ -21,6 +21,7 @@ import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useSidebar as useSidebarContext } from '@/components/ui/SidebarContext';
 import { useRightRailOptional } from '@/context/RightRailContext';
 import { NativeSidebarBridge } from '@/components/layout/NativeSidebarBridge';
+import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { FABProvider } from '@/context/FABContext';
 import UniversalFAB from '@/components/layout/UniversalFAB';
 

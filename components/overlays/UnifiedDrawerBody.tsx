@@ -126,7 +126,12 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
     case 'login':
       return <LoginDrawer />;
     case 'agentic':
-      return <AgenticPanelContent />;
+      return (
+        <AgenticPanelContent
+          isDesktop
+          onClose={onClose}
+        />
+      );
     case 'note':
       return <NoteDrawer />;
     case 'new-tag':
