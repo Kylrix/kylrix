@@ -6,6 +6,8 @@ import { ObjectDetailHost } from '@/components/objects/ObjectDetailHost';
 import { noteToDetail } from '@/lib/objects/adapters';
 import type { Notes } from '@/types/appwrite';
 import { useNotes } from '@/context/NotesContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
 
 type Props = {
   note: Notes;
@@ -29,18 +31,24 @@ export function NoteObjectDetail({
   accessRole,
   layout = 'drawer'}: Props) {
   const { notes } = useNotes();
+  const { closeSidebar } = useDynamicSidebar();
+  const { closeOverlay } = useOverlay();
   const live = useMemo(
     () => notes.find((n) => n.$id === note.$id) || note,
     [note, notes]);
   const item = useMemo(() => noteToDetail(live), [live]);
-  const handleClose = useCallback(() => onClose?.(), [onClose]);
+  const handleClose = useCallback(() => {
+    onClose?.();
+    closeSidebar();
+    closeOverlay();
+  }, [onClose, closeSidebar, closeOverlay]);
 
   const body = (
     <NoteDetailSidebar
       note={live}
       onUpdate={onUpdate}
       onDelete={onDelete}
-      onBack={layout === 'drawer' && !embedded ? handleClose : undefined}
+      onBack={layout === 'drawer' ? handleClose : undefined}
       layout={layout}
       readOnly={readOnly}
       accessRole={accessRole}

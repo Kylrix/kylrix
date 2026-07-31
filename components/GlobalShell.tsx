@@ -40,6 +40,11 @@ const TaskDialog = dynamic(() => import('@/components/tasks/TaskDialog'), { ssr:
 const RightSidebar = dynamic(() => import('./layout/RightSidebar'), { ssr: false });
 const AccountHealthDrawers = dynamic(() => import('./onboarding/AccountHealthDrawers').then(m => m.AccountHealthDrawers), { ssr: false });
 const UnifiedFileAttachmentDrawer = dynamic(() => import('./overlays/UnifiedFileAttachmentDrawer').then(m => m.UnifiedFileAttachmentDrawer), { ssr: false });
+const Overlay = dynamic(() => import('@/components/ui/Overlay'), { ssr: false });
+const AppDynamicSidebarPortal = dynamic(
+  () => import('@/components/ui/AppDynamicSidebarPortal').then((m) => m.AppDynamicSidebarPortal),
+  { ssr: false },
+);
 
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -285,8 +290,12 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
 
       <NativeSidebarBridge />
 
-      {/* --- LAYER 2: OVERLAYS (legacy leftovers only) --- */}
-      {/* Detail / agentic / wallet / unified drawers → NativeSidebarBridge */}
+      {/* Object details: true fullscreen hosts (event-detail gold standard) */}
+      {isOverlayOpen && <Overlay />}
+      <AppDynamicSidebarPortal />
+
+      {/* --- LAYER 2: OVERLAYS --- */}
+      {/* Agentic / wallet / unified → NativeSidebarBridge; details → Overlay/DynamicSidebar */}
       {unifiedDrawerActive === 'login' && <UnifiedBottomDrawer />}
       {showProUpgrade && <ProUpgradeDrawer />}
       {taskDialogOpen && <TaskDialog />}

@@ -91,7 +91,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       <EcosystemProviders>
         <GhostNoteClaimer />
         {children}
-        {/* Agentic + dynamic sidebars mount via NativeSidebarBridge */}
+        {/* Agentic/wallet/unified → NativeSidebarBridge; object details → Overlay/DynamicSidebar */}
       </EcosystemProviders>
     </Suspense>
   );

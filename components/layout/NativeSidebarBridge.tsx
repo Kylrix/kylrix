@@ -123,41 +123,15 @@ export function NativeSidebarBridge() {
       return;
     }
 
-    if (dynamic.isOpen && dynamic.content) {
-      const key = dynamic.activeContentKey || 'dynamic';
-      lastKeyRef.current = key;
-      openRef.current(
-        <div className="h-full min-h-0 overflow-hidden flex flex-col bg-[#0A0908]">
-          {dynamic.content}
-        </div>,
-        {
-          key,
-          width: dynamic.options?.fullscreen
-            ? NATIVE_SIDEBAR_WIDTHS.wide
-            : NATIVE_SIDEBAR_WIDTHS.detail,
-          title: 'Detail',
-          restore: {
-            type: 'dynamic',
-            payload: { key: dynamic.activeContentKey },
-          },
-        },
-      );
-      return;
-    }
-
-    if (overlay.isOpen && overlay.content) {
-      lastKeyRef.current = 'overlay';
-      openRef.current(
-        <div className="h-full min-h-0 overflow-hidden flex flex-col bg-[#0A0908]">
-          {overlay.content}
-        </div>,
-        {
-          key: 'overlay',
-          width: NATIVE_SIDEBAR_WIDTHS.wide,
-          title: 'Detail',
-          restore: { type: 'overlay' },
-        },
-      );
+    // Object details (notes/goals/events/…) use Overlay + DynamicSidebarPanel —
+    // true edge-to-edge fullscreen hosts (event-detail gold standard). Do not
+    // swallow them into the push rail (which sits under top/bottom chrome).
+    if ((dynamic.isOpen && dynamic.content) || (overlay.isOpen && overlay.content)) {
+      const owned = lastKeyRef.current;
+      if (owned) {
+        lastKeyRef.current = null;
+        closeRef.current(owned);
+      }
       return;
     }
 
@@ -181,8 +155,6 @@ export function NativeSidebarBridge() {
     unified.drawerData,
     dynamic.isOpen,
     dynamic.content,
-    dynamic.activeContentKey,
-    dynamic.options?.fullscreen,
     overlay.isOpen,
     overlay.content,
     sticky,
