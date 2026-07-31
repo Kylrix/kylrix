@@ -380,7 +380,7 @@ export default function ConversationActionsSheet({
 
   const handleOpenDirectChat = () => {
     if (!currentConversation) return;
-    router.push(`/connect/chat/${currentConversation.$id}`);
+    router.push(`/connect/chats/${currentConversation.$id}`);
     onClose();
   };
 

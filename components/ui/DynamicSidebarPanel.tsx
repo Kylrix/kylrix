@@ -72,6 +72,7 @@ export function DynamicSidebar() {
     typeName === 'NoteDetailSidebar' ||
     typeName === 'NoteObjectDetail' ||
     typeName === 'GoalObjectDetail' ||
+    typeName === 'CommObjectDetail' ||
     typeName === 'TaskDetails' ||
     typeName === 'EventDetails' ||
     (content &&

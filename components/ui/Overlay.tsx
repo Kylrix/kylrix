@@ -59,10 +59,12 @@ const Overlay: React.FC = () => {
     (content.props as any).note !== undefined ||
     (content.props as any).taskId !== undefined ||
     (content.props as any).eventId !== undefined ||
+    (content.props as any).conversationId !== undefined ||
     (content.type as any).name === 'NoteDetailSidebar' ||
     (content.type as any).name === 'NoteObjectDetail' ||
     (content.type as any).name === 'TaskDetails' ||
     (content.type as any).name === 'GoalObjectDetail' ||
+    (content.type as any).name === 'CommObjectDetail' ||
     (content.type as any).name === 'EventDetails'
   );
 

@@ -68,6 +68,11 @@ import { hasPaidKylrixPlan } from '@/lib/utils';
 import { showUpgradeIsland } from '@/lib/upgrade-island';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 
+import { LocalEngine } from '@/lib/services/LocalEngine';
+import {
+    chatConversationCacheKey,
+    chatMessagesCacheKey,
+} from '@/lib/chat/local-chat-cache';
 import type { ChatMessage, ChatReaction, SenderProfile } from './chat-types';
 import { MessagesType } from './chat-types';
 import {
@@ -80,7 +85,16 @@ import {
 import { ChatDraftInput } from './ChatDraftInput';
 import { ChatMessageContent } from './ChatMessageContent';
 
-export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?: () => void }) => {
+export const ChatWindow = ({
+    conversationId,
+    onBack,
+    layout = 'fill',
+}: {
+    conversationId: string;
+    onBack?: () => void;
+    /** fill = in-page / object detail (respects primary sidebar). fixed = legacy fullscreen. */
+    layout?: 'fill' | 'fixed';
+}) => {
     const { user } = useAuth();
     const { openProUpgrade } = useProUpgrade();
     const { markConversationRead: markConversationReadInContext } = useChatNotifications();
@@ -225,8 +239,13 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
     const loadConversation = React.useCallback(async () => {
         if (!user?.$id) return;
         try {
+            const cachedConv = await LocalEngine.cacheGet<any>(chatConversationCacheKey(conversationId));
+            if (cachedConv?.$id || cachedConv?.id) {
+                startTransition(() => setConversation(cachedConv));
+            }
+
             if (ecosystemSecurity.status.isUnlocked) {
-                await UsersService.forceSyncProfileWithIdentity(user);
+                void UsersService.forceSyncProfileWithIdentity(user);
             }
             const conv = await ChatService.getConversationById(conversationId, user.$id);
             if (conv.type === 'direct') {
@@ -248,13 +267,13 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
                             } catch (_e) {}
                         }
                         seedIdentityCache({ ...profile, avatar: profile?.avatar || avatarUrl });
-                        startTransition(() => {
-                            setConversation({
-                                ...conv,
-                                name: profile ? (profile.displayName || profile.username) : `@${otherId.slice(0, 7)}`,
-                                avatarUrl
-                            });
-                        });
+                        const next = {
+                            ...conv,
+                            name: profile ? (profile.displayName || profile.username) : `@${otherId.slice(0, 7)}`,
+                            avatarUrl
+                        };
+                        startTransition(() => setConversation(next));
+                        void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), next);
                     } catch (_e: unknown) {
                         startTransition(() => {
                             setPartnerProfile(null);
@@ -279,9 +298,9 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
                         } catch (_e) {}
                     }
                     seedIdentityCache({ ...myProfile, avatar: myProfile?.avatar || avatarUrl });
-                    startTransition(() => {
-                        setConversation({ ...conv, name: `${myName} (You)`, avatarUrl });
-                    });
+                    const next = { ...conv, name: `${myName} (You)`, avatarUrl };
+                    startTransition(() => setConversation(next));
+                    void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), next);
                 }
             } else {
                 startTransition(() => {
@@ -289,6 +308,7 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
                     setPartnerVerification(getVerificationState(null));
                     setConversation(conv);
                 });
+                void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), conv);
             }
         } catch (error: unknown) {
             console.error('Failed to load conversation:', error);
@@ -318,12 +338,21 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
 
     const loadMessages = React.useCallback(async () => {
         if (!conversationId) return;
-        setLoading(true);
         console.log('[ChatWindow] loadMessages start for:', conversationId);
         try {
+            const cachedMessages = await LocalEngine.cacheGet<ChatMessage[]>(
+                chatMessagesCacheKey(conversationId),
+            );
+            if (cachedMessages?.length) {
+                startTransition(() => setMessages(cachedMessages));
+                setLoading(false);
+            } else {
+                setLoading(true);
+            }
+
             startTransition(() => setMessageReactions({}));
             if (user?.$id && ecosystemSecurity.status.isUnlocked) {
-                await UsersService.forceSyncProfileWithIdentity(user);
+                void UsersService.forceSyncProfileWithIdentity(user);
             }
             const conv = await ChatService.getConversationById(conversationId, user?.$id);
             console.log('[ChatWindow] loadMessages: conversation fetched:', conv?.$id);
@@ -347,9 +376,11 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
             }
 
             // Reverse once for display order (bottom is newest)
+            const ordered = displayMessages.reverse() as unknown as ChatMessage[];
             startTransition(() => {
-                setMessages(displayMessages.reverse() as unknown as ChatMessage[]);
+                setMessages(ordered);
             });
+            void LocalEngine.cacheSet(chatMessagesCacheKey(conversationId), ordered);
             void loadReactions();
         } catch (error: unknown) {
             console.error('[ChatWindow] loadMessages failed:', error);
@@ -1102,12 +1133,12 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
     return (
         <Box sx={{
             bgcolor: '#0A0908',
-            position: 'fixed',
-            top: '88px', // Start below GlobalShell topbar
+            position: layout === 'fill' ? 'absolute' : 'fixed',
+            top: layout === 'fill' ? 0 : '88px',
             bottom: 0,
             left: 0,
             right: 0,
-            zIndex: 1200,
+            zIndex: layout === 'fill' ? 1 : 1200,
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column'}}>
@@ -1123,7 +1154,7 @@ export const ChatWindow = ({ conversationId}: { conversationId: string; onBack?:
                 pt: 'env(safe-area-inset-top)',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.5)'}}>
                 <Toolbar sx={{ gap: 1, minHeight: '72px' }}>
-                    <IconButton edge="start" onClick={() => router.back()} sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: '#fff', bgcolor: '#161412' } }}>
+                    <IconButton edge="start" onClick={() => (onBack ? onBack() : router.back())} sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: '#fff', bgcolor: '#161412' } }}>
                         <ChevronLeft size={20} strokeWidth={2} />
                     </IconButton>
                     <Box

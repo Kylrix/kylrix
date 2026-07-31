@@ -150,7 +150,7 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
             toast.error("User ID not available for this call");
             return;
         }
-        router.push(`/connect/chat/${call.otherUser.$id}`);
+        router.push(`/connect/chats/${call.otherUser.$id}`);
     };
 
     if (loading) {

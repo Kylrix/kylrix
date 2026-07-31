@@ -1,0 +1,285 @@
+'use client';
+
+import React, { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Hash, MessageSquare, Plus } from 'lucide-react';
+import { useAuth } from '@/context/auth/AuthContext';
+import { ChatService } from '@/lib/services/chat';
+import { listGhostNoteChats } from '@/lib/actions/client-ops';
+import { LocalEngine } from '@/lib/services/LocalEngine';
+import {
+  CHATS_LIST_CACHE_KEY,
+  THREADS_LIST_CACHE_KEY,
+} from '@/lib/chat/local-chat-cache';
+import { IdentityAvatar } from '@/components/common/IdentityBadge';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
+
+type RailMode = 'compact' | 'full';
+type RailTab = 'secure' | 'public';
+
+type Props = {
+  mode?: RailMode;
+  activeId?: string | null;
+  /** When set, clicking a row calls this instead of navigating (optional). */
+  onSelect?: (id: string) => void;
+};
+
+type RailItem = {
+  id: string;
+  name: string;
+  avatar?: string | null;
+  kind: 'secure' | 'thread';
+  subtitle?: string;
+};
+
+function mapSecure(rows: any[]): RailItem[] {
+  return (rows || []).map((c) => ({
+    id: c.$id || c.id,
+    name: c.name || c.title || 'Chat',
+    avatar: c.avatarUrl || c.avatar || null,
+    kind: 'secure' as const,
+    subtitle: c.lastMessageText || c.lastMessage || '',
+  }));
+}
+
+function mapThreads(rows: any[]): RailItem[] {
+  return (rows || []).map((c) => ({
+    id: c.$id || c.id,
+    name: c.title || c.name || 'Thread',
+    avatar: c.avatarUrl || c.avatar || null,
+    kind: 'thread' as const,
+    subtitle: c.lastMessageText || '',
+  }));
+}
+
+/**
+ * Communicative secondary rail — WhatsApp-style chat switcher.
+ * full: icons + names (list home). compact: avatar strip (detail).
+ */
+export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Props) {
+  const { user } = useAuth();
+  const router = useRouter();
+  const { open: openUnified } = useUnifiedDrawer();
+  const [tab, setTab] = useState<RailTab>(
+    ecosystemSecurity.status.isUnlocked ? 'secure' : 'public',
+  );
+  const [secure, setSecure] = useState<RailItem[]>([]);
+  const [threads, setThreads] = useState<RailItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const openItem = useCallback(
+    (id: string) => {
+      if (onSelect) {
+        onSelect(id);
+        return;
+      }
+      router.push(`/connect/chats/${id}`);
+    },
+    [onSelect, router],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user?.$id) return;
+      const cachedSecure =
+        (await LocalEngine.cacheGet<any[]>(CHATS_LIST_CACHE_KEY)) || [];
+      const cachedThreads =
+        (await LocalEngine.cacheGet<any[]>(THREADS_LIST_CACHE_KEY)) || [];
+      if (!cancelled) {
+        if (cachedSecure.length) {
+          setSecure(mapSecure(cachedSecure));
+          setLoading(false);
+        }
+        if (cachedThreads.length) setThreads(mapThreads(cachedThreads));
+      }
+
+      try {
+        const [secureRes, ghostRows] = await Promise.all([
+          ChatService.getConversations(user.$id).catch(() => ({ rows: [] as any[] })),
+          listGhostNoteChats().catch(() => [] as any[]),
+        ]);
+        const secureRows = (secureRes as any)?.rows || [];
+        const threadRows = Array.isArray(ghostRows) ? ghostRows : [];
+        if (!cancelled) {
+          setSecure(mapSecure(secureRows));
+          setThreads(mapThreads(threadRows));
+          setLoading(false);
+        }
+        void LocalEngine.cacheSet(CHATS_LIST_CACHE_KEY, secureRows);
+        if (threadRows.length) {
+          void LocalEngine.cacheSet(THREADS_LIST_CACHE_KEY, threadRows);
+        }
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.$id]);
+
+  const items = tab === 'secure' ? secure : threads;
+
+  return (
+    <div className="flex flex-col h-full min-h-0 bg-[#000000]">
+      <div
+        className={`shrink-0 border-b border-white/8 ${
+          mode === 'compact' ? 'p-2' : 'px-3 py-3'
+        }`}
+      >
+        {mode === 'full' ? (
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h2 className="text-white font-black text-sm font-clash tracking-tight">Chats</h2>
+            <button
+              type="button"
+              onClick={() =>
+                openUnified('new-chat', {
+                  mode: tab === 'public' ? 'thread' : 'secure',
+                })
+              }
+              className="w-8 h-8 rounded-lg bg-[#F59E0B] text-black flex items-center justify-center"
+              aria-label="New chat"
+            >
+              <Plus size={16} strokeWidth={3} />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() =>
+              openUnified('new-chat', {
+                mode: tab === 'public' ? 'thread' : 'secure',
+              })
+            }
+            className="w-full aspect-square rounded-xl bg-[#161412] border border-[#34322F] flex items-center justify-center text-[#F59E0B] mb-2"
+            aria-label="New chat"
+          >
+            <Plus size={18} strokeWidth={2.5} />
+          </button>
+        )}
+
+        <div
+          className={`flex ${mode === 'compact' ? 'flex-col gap-1' : 'gap-1 p-1 bg-[#161412] rounded-xl border border-[#34322F]'}`}
+        >
+          <button
+            type="button"
+            onClick={() => setTab('secure')}
+            className={
+              mode === 'compact'
+                ? `w-full aspect-square rounded-xl flex items-center justify-center ${
+                    tab === 'secure' ? 'bg-[#F59E0B] text-black' : 'text-white/60 hover:bg-white/5'
+                  }`
+                : `flex-1 py-1.5 rounded-lg text-[10px] font-extrabold ${
+                    tab === 'secure' ? 'bg-[#F59E0B] text-black' : 'text-white/55'
+                  }`
+            }
+            aria-label="Secure chats"
+            title="Secure"
+          >
+            {mode === 'compact' ? <MessageSquare size={16} /> : 'Secure'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('public')}
+            className={
+              mode === 'compact'
+                ? `w-full aspect-square rounded-xl flex items-center justify-center ${
+                    tab === 'public' ? 'bg-[#F59E0B] text-black' : 'text-white/60 hover:bg-white/5'
+                  }`
+                : `flex-1 py-1.5 rounded-lg text-[10px] font-extrabold ${
+                    tab === 'public' ? 'bg-[#F59E0B] text-black' : 'text-white/55'
+                  }`
+            }
+            aria-label="Threads"
+            title="Threads"
+          >
+            {mode === 'compact' ? <Hash size={16} /> : 'Threads'}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {loading && items.length === 0 ? (
+          <div className="p-3 space-y-2">
+            {[1, 2, 3, 4].map((n) => (
+              <div
+                key={n}
+                className={`rounded-xl bg-[#161412] animate-pulse ${
+                  mode === 'compact' ? 'aspect-square' : 'h-14'
+                }`}
+              />
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <p className="text-white/35 text-[10px] font-bold text-center px-2 py-6">
+            {mode === 'compact' ? '—' : 'No chats yet'}
+          </p>
+        ) : (
+          <ul className={`py-1 ${mode === 'compact' ? 'px-1.5 space-y-1' : 'px-2 space-y-0.5'}`}>
+            {items.map((item) => {
+              const active = item.id === activeId;
+              if (mode === 'compact') {
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      onClick={() => openItem(item.id)}
+                      title={item.name}
+                      className={`w-full aspect-square rounded-xl flex items-center justify-center border transition-colors ${
+                        active
+                          ? 'border-[#F59E0B] bg-[#F59E0B]/15'
+                          : 'border-transparent hover:bg-white/5'
+                      }`}
+                    >
+                      <IdentityAvatar
+                        userId={item.id}
+                        fileId={item.avatar}
+                        alt={item.name}
+                        fallback={item.name.replace(/^@/, '').charAt(0).toUpperCase() || 'C'}
+                        size={36}
+                      />
+                    </button>
+                  </li>
+                );
+              }
+
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => openItem(item.id)}
+                    className={`w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-left transition-colors ${
+                      active
+                        ? 'bg-[#F59E0B]/12 border border-[#F59E0B]/35'
+                        : 'border border-transparent hover:bg-white/5'
+                    }`}
+                  >
+                    <IdentityAvatar
+                      userId={item.id}
+                      fileId={item.avatar}
+                      alt={item.name}
+                      fallback={item.name.replace(/^@/, '').charAt(0).toUpperCase() || 'C'}
+                      size={40}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-white text-sm font-bold truncate font-satoshi m-0">
+                        {item.name}
+                      </p>
+                      {item.subtitle ? (
+                        <p className="text-white/40 text-[11px] truncate m-0 mt-0.5">
+                          {item.subtitle}
+                        </p>
+                      ) : null}
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}

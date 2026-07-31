@@ -45,6 +45,13 @@
     }
 }
 
+/* Chat / communicative surfaces — fused secondary rail, zero side padding */
+.kylrix-main-content.chat-surface {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
+}
+
 /* Skeleton pulse — CPU-friendly, no forced compositor layers */
 .nexus-skeleton-pulse {
   animation: visual-fade 1.2s infinite ease-in-out;

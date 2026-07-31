@@ -2,7 +2,7 @@
 
 import { ChatList } from '@/components/chat/ChatList';
 import { useFAB } from '@/context/FABContext';
-import { MessageSquare, Phone, Hash } from 'lucide-react';
+import { MessageSquare, Phone, Hash, Plus } from 'lucide-react';
 import { useEffect, Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ChatService } from '@/lib/services/chat';
@@ -12,9 +12,10 @@ import toast from 'react-hot-toast';
 import { useSudo } from '@/context/SudoContext';
 import { KeychainService } from '@/lib/appwrite/keychain';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { ArrowLeft, Plus } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { MultiSectionContainer } from '@/context/SectionContext';
+import { FusedSecondarySidebar } from '@/components/layout/FusedSecondarySidebar';
+import { ConnectCommRail } from '@/components/connect/ConnectCommRail';
+import { MessageCircle } from 'lucide-react';
 
 function ChatHandler() {
   const searchParams = useSearchParams();
@@ -30,13 +31,15 @@ function ChatHandler() {
           await UsersService.ensureProfileForUser(user);
           const targetProfile = await UsersService.getProfileById(userId);
           if (!targetProfile) {
-            toast.error("User profile not found.");
+            toast.error('User profile not found.');
             router.replace('/connect/chats');
             return;
           }
 
           if (!targetProfile.publicKey) {
-            toast.error(`${targetProfile.displayName || targetProfile.username} hasn't set up their account for secure chatting yet.`);
+            toast.error(
+              `${targetProfile.displayName || targetProfile.username} hasn't set up their account for secure chatting yet.`,
+            );
             router.replace('/connect/chats');
             return;
           }
@@ -44,21 +47,24 @@ function ChatHandler() {
           const actualTargetUserId = targetProfile.userId || userId;
           const existing = await ChatService.getConversations(user.$id);
           const found = existing.rows.find(
-            (c: any) => c.type === 'direct' && c.participants.includes(actualTargetUserId)
+            (c: any) => c.type === 'direct' && c.participants.includes(actualTargetUserId),
           );
 
           if (found) {
-            router.push(`/connect/chat/${found.$id}`);
+            router.push(`/connect/chats/${found.$id}`);
             return;
           }
 
           if (ecosystemSecurity.status.isUnlocked) {
             try {
               await ecosystemSecurity.ensureE2EIdentity(user.$id);
-              const newConv = await ChatService.createConversation([user.$id, actualTargetUserId], 'direct');
-              router.push(`/connect/chat/${newConv.$id}`);
+              const newConv = await ChatService.createConversation(
+                [user.$id, actualTargetUserId],
+                'direct',
+              );
+              router.push(`/connect/chats/${newConv.$id}`);
             } catch (err: any) {
-              console.error("Failed to create chat:", err);
+              console.error('Failed to create chat:', err);
               toast.error(`Failed to create chat: ${err?.message || 'Unknown error'}`);
               router.replace('/connect/chats');
             }
@@ -70,20 +76,23 @@ function ChatHandler() {
                 try {
                   await UsersService.ensureProfileForUser(user);
                   await ecosystemSecurity.ensureE2EIdentity(user.$id);
-                  const newConv = await ChatService.createConversation([user.$id, actualTargetUserId], 'direct');
-                  router.push(`/connect/chat/${newConv.$id}`);
+                  const newConv = await ChatService.createConversation(
+                    [user.$id, actualTargetUserId],
+                    'direct',
+                  );
+                  router.push(`/connect/chats/${newConv.$id}`);
                 } catch (err: any) {
-                  console.error("Failed to create chat:", err);
+                  console.error('Failed to create chat:', err);
                   toast.error(`Failed to create chat: ${err?.message || 'Unknown error'}`);
                   router.replace('/connect/chats');
                 }
               },
-              onCancel: () => router.replace('/connect/chats')
+              onCancel: () => router.replace('/connect/chats'),
             });
           }
         } catch (e) {
-          console.error("Failed to auto-init chat", e);
-          toast.error("Failed to initialize chat.");
+          console.error('Failed to auto-init chat', e);
+          toast.error('Failed to initialize chat.');
           router.replace('/connect/chats');
         }
       };
@@ -94,39 +103,72 @@ function ChatHandler() {
   return null;
 }
 
-export default function Home() {
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(min-width: 768px)');
+    const sync = () => setIsDesktop(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
+  return isDesktop;
+}
+
+export default function ConnectChatsPage() {
   const router = useRouter();
+  const isDesktop = useIsDesktop();
   const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
-  const [activeTab, setActiveTab] = useState<'secure' | 'public'>(() => {
-    return ecosystemSecurity.status.isUnlocked ? 'secure' : 'public';
-  });
+  const [activeTab, setActiveTab] = useState<'secure' | 'public'>(() =>
+    ecosystemSecurity.status.isUnlocked ? 'secure' : 'public',
+  );
 
   const { setConfiguration, resetConfiguration } = useFAB();
   const { open: openUnified } = useUnifiedDrawer();
 
   useEffect(() => {
     if (activeTab === 'public') {
-      // Threads tab active
       setConfiguration({
         isVisible: true,
         mainColor: '#F59E0B',
         mainIcon: <Plus size={32} strokeWidth={3} />,
         onMainClick: () => openUnified('new-chat', { mode: 'thread' }),
         actions: [
-          { id: 'new-thread', label: 'NEW THREAD', icon: <Hash size={20} />, onClick: () => openUnified('new-chat', { mode: 'thread' }) }
-        ]
+          {
+            id: 'new-thread',
+            label: 'NEW THREAD',
+            icon: <Hash size={20} />,
+            onClick: () => openUnified('new-chat', { mode: 'thread' }),
+          },
+        ],
       });
     } else {
-      // Secure tab active
       setConfiguration({
         isVisible: true,
         mainColor: '#F59E0B',
         mainIcon: <Plus size={32} strokeWidth={3} />,
         onMainClick: () => openUnified('new-chat', { mode: 'secure' }),
         actions: [
-          { id: 'secret-chat', label: 'SECURE CHAT', icon: <MessageSquare size={20} />, onClick: () => openUnified('new-chat', { mode: 'secure' }) },
-          { id: 'channel', label: 'NEW CHANNEL', icon: <Plus size={20} />, onClick: () => openUnified('new-channel') },
-          { id: 'huddle', label: 'START HUDDLE', icon: <Phone size={20} />, onClick: () => router.push('/connect/calls?start=1') }]
+          {
+            id: 'secret-chat',
+            label: 'SECURE CHAT',
+            icon: <MessageSquare size={20} />,
+            onClick: () => openUnified('new-chat', { mode: 'secure' }),
+          },
+          {
+            id: 'channel',
+            label: 'NEW CHANNEL',
+            icon: <Plus size={20} />,
+            onClick: () => openUnified('new-channel'),
+          },
+          {
+            id: 'huddle',
+            label: 'START HUDDLE',
+            icon: <Phone size={20} />,
+            onClick: () => router.push('/connect/calls?start=1'),
+          },
+        ],
       });
     }
     return () => resetConfiguration();
@@ -135,86 +177,55 @@ export default function Home() {
   useEffect(() => {
     const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
       setIsUnlocked(status.isUnlocked);
-      if (status.isUnlocked) {
-        setActiveTab('secure');
-      } else {
-        setActiveTab('public');
-      }
+      setActiveTab(status.isUnlocked ? 'secure' : 'public');
     });
     return unsubscribe;
   }, []);
 
   useEffect(() => {
-    if (isUnlocked) {
-      setActiveTab('secure');
-    } else {
-      setActiveTab('public');
-    }
+    setActiveTab(isUnlocked ? 'secure' : 'public');
   }, [isUnlocked]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0A0908] relative pointer-events-auto pt-4 md:pt-8">
+    <div className="bg-[#000000] pointer-events-auto min-h-[calc(100dvh-96px)]">
       <Suspense fallback={null}>
         <ChatHandler />
       </Suspense>
-      
-      <MultiSectionContainer panels={['projects', 'huddles', 'note']}>
-        <div className="w-full">
-          <div className="flex items-center gap-3.5 mb-8">
-            <button 
-              onClick={() => router.back()} 
-              className="p-2 text-white bg-[#161412] border border-[#1C1A18] rounded-xl hover:bg-[#1C1A18] transition-colors"
+
+      {isDesktop ? (
+        <div className="flex h-[calc(100dvh-96px)] min-h-0 w-full overflow-hidden">
+          <FusedSecondarySidebar density="full" label="Chats">
+            <ConnectCommRail mode="full" />
+          </FusedSecondarySidebar>
+          <div className="flex-1 min-w-0 min-h-0 flex flex-col items-center justify-center gap-3 px-6 text-center bg-[#0A0908] border-l border-white/5">
+            <div className="w-16 h-16 rounded-2xl bg-[#161412] border border-[#34322F] flex items-center justify-center">
+              <MessageCircle size={28} className="text-[#F59E0B]/80" />
+            </div>
+            <h1 className="text-white font-black text-xl font-clash m-0">Select a chat</h1>
+            <p className="text-white/40 text-xs font-semibold max-w-xs m-0">
+              Pick a conversation from the list, or start a new one.
+            </p>
+            <button
+              type="button"
+              onClick={() => openUnified('new-chat', { mode: 'secure' })}
+              className="mt-2 h-10 px-4 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold inline-flex items-center gap-1.5"
             >
-              <ArrowLeft size={20} />
+              <Plus size={14} strokeWidth={3} />
+              New chat
             </button>
-            <h1 className="text-2xl font-black font-clash text-white">
-              Connect Chats
-            </h1>
-          </div>
-
-          {/* Desktop Stacked View */}
-          <div className="hidden lg:flex flex-col gap-8">
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-black font-clash text-white">
-                  Secret Chats
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => openUnified('new-chat', { mode: 'secure' })}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold hover:brightness-110 transition"
-                >
-                  <Plus size={14} strokeWidth={3} />
-                  New secure chat
-                </button>
-              </div>
-              <ChatList activeTab="secure" hideTabs={true} skipThreadsLoad />
-            </div>
-            <hr className="border-white/5 my-4" />
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-black font-clash text-white">
-                  Threads
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => openUnified('new-chat', { mode: 'thread' })}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold hover:brightness-110 transition"
-                >
-                  <Plus size={14} strokeWidth={3} />
-                  New thread
-                </button>
-              </div>
-              <ChatList activeTab="public" hideTabs={true} skipSecureLoad />
-            </div>
-          </div>
-
-          {/* Mobile Tabbed View */}
-          <div className="block lg:hidden">
-            <ChatList activeTab={activeTab} onTabChange={setActiveTab} />
           </div>
         </div>
-      </MultiSectionContainer>
+      ) : (
+        <div className="flex flex-col w-full pt-2 pb-8 px-1">
+          <header className="mb-6">
+            <h1 className="text-2xl font-black font-clash text-white m-0">Chats</h1>
+            <p className="text-white/45 text-xs font-semibold mt-1">
+              Secure messages and public threads
+            </p>
+          </header>
+          <ChatList activeTab={activeTab} onTabChange={setActiveTab} />
+        </div>
+      )}
     </div>
   );
 }

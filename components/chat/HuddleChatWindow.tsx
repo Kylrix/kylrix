@@ -49,9 +49,20 @@ interface HuddleChatWindowProps {
   standalone?: boolean;
   expiresAt?: string;
   shareLink?: string;
+  /** fill = in-page / object detail. fixed = legacy fullscreen. */
+  layout?: 'fill' | 'fixed';
 }
 
-export function HuddleChatWindow({ chatNoteId, user, title, participants = [], onBack, expiresAt, shareLink }: HuddleChatWindowProps) {
+export function HuddleChatWindow({
+  chatNoteId,
+  user,
+  title,
+  participants = [],
+  onBack,
+  expiresAt,
+  shareLink,
+  layout = 'fill',
+}: HuddleChatWindowProps) {
   const { openProUpgrade } = useProUpgrade();
   const { showSuccess, showError } = useToast();
   const [messages, setMessages] = useState<any[]>([]);
@@ -527,12 +538,12 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
   return (
     <Box sx={{ 
       bgcolor: '#0A0908', 
-      position: 'fixed',
-      top: '88px', // Start below the main topbar
+      position: layout === 'fill' ? 'absolute' : 'fixed',
+      top: layout === 'fill' ? 0 : '88px',
       bottom: 0,
       left: 0,
       right: 0,
-      zIndex: 1200,
+      zIndex: layout === 'fill' ? 1 : 1200,
       overflow: 'hidden',
       display: 'flex', 
       flexDirection: 'column'}}>

@@ -98,6 +98,11 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     () => Boolean(pathname?.match(/^\/idea\/[^/]+$/)),
     [pathname]);
 
+  const isChatDetailPage = useMemo(
+    () => Boolean(pathname?.match(/^\/connect\/chats\/[^/]+$/)),
+    [pathname],
+  );
+
 const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/post/')), [pathname]);
   const isProjectDetailPage = useMemo(() => Boolean(pathname?.match(/^\/workspaces\/[^/]+$/)), [pathname]);
 
@@ -118,8 +123,9 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
     if (showLeftSidebar) parts.push('with-sidebar');
     if (isProjectDetailPage) parts.push('project-detail');
     if (isNoteFullPageDetail) parts.push('note-detail');
+    if (isChatDetailPage || pathname === '/connect/chats') parts.push('chat-surface');
     return parts.join(' ');
-  }, [showLeftSidebar, isProjectDetailPage, isNoteFullPageDetail]);
+  }, [showLeftSidebar, isProjectDetailPage, isNoteFullPageDetail, isChatDetailPage, pathname]);
 
   // 3. Automated Logic
   useEffect(() => {
@@ -217,8 +223,12 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
             ml: showLeftSidebar ? { xs: 0, sm: 0, md: isCollapsed ? '72px' : '240px' } : 0,
             position: 'relative',
             zIndex: 1,
-            pb: isSpecificPostPage ? 0 : (isLandingPage ? 0 : { xs: 12, md: 4 }),
-            px: isProjectDetailPage ? { xs: 1, sm: 1, md: 2 } : isNoteFullPageDetail ? { xs: 0, sm: 0, md: 0 } : { xs: 1.5, sm: 2, md: 2.5 },
+            pb: isSpecificPostPage || isChatDetailPage ? 0 : (isLandingPage ? 0 : { xs: 12, md: 4 }),
+            px: isProjectDetailPage
+              ? { xs: 1, sm: 1, md: 2 }
+              : isNoteFullPageDetail || isChatDetailPage || pathname === '/connect/chats'
+                ? { xs: 0, sm: 0, md: 0 }
+                : { xs: 1.5, sm: 2, md: 2.5 },
             pointerEvents: 'auto',
             transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'}}
         >

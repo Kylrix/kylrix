@@ -70,7 +70,7 @@ export default function ChatIslandPresence({ notification, onDismiss }: ChatIsla
                 if (notification.type === 'call' && notification.callId) {
                   router.push(`/connect/call/${notification.callId}`);
                 } else {
-                  router.push(`/connect/chat/${notification.id}`);
+                  router.push(`/connect/chats/${notification.id}`);
                 }
                 onDismiss();
               }}

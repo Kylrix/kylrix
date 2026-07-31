@@ -13,6 +13,11 @@ import { showIslandNotification } from '@/lib/island-notification';
 import { createGhostNoteChat, listGhostNoteChats, deleteGhostThread } from '@/lib/actions/client-ops';
 import { isValidX25519PublicKey, formatSecureChatStartError } from '@/lib/crypto/public-key';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { LocalEngine } from '@/lib/services/LocalEngine';
+import {
+    CHATS_LIST_CACHE_KEY,
+    THREADS_LIST_CACHE_KEY,
+} from '@/lib/chat/local-chat-cache';
 import { 
     Trash2, 
     ShieldCheck, 
@@ -182,13 +187,13 @@ export const ChatList = ({
                 {
                     label: 'Open Secure Chat',
                     icon: <ExternalLink size={18} />,
-                    onClick: () => router.push(`/connect/chat/${conv.$id}`)
+                    onClick: () => router.push(`/connect/chats/${conv.$id}`)
                 },
                 {
                     label: 'Copy Connection Link',
                     icon: <LinkIcon size={18} />,
                     onClick: () => {
-                        const link = `${window.location.origin}/connect/chat/${conv.$id}`;
+                        const link = `${window.location.origin}/connect/chats/${conv.$id}`;
                         navigator.clipboard.writeText(link);
                         toast.success('Connection link copied');
                     }
@@ -238,7 +243,7 @@ export const ChatList = ({
                 {
                     label: 'Open Discussion Thread',
                     icon: <ExternalLink size={18} />,
-                    onClick: () => router.push(`/connect/chat/${conv.$id}`)
+                    onClick: () => router.push(`/connect/chats/${conv.$id}`)
                 },
                 {
                     label: 'Copy Thread ID',
@@ -252,7 +257,7 @@ export const ChatList = ({
                     label: 'Copy Discussion Link',
                     icon: <LinkIcon size={18} />,
                     onClick: () => {
-                        const link = `${window.location.origin}/connect/chat/${conv.$id}`;
+                        const link = `${window.location.origin}/connect/chats/${conv.$id}`;
                         navigator.clipboard.writeText(link);
                         toast.success('Discussion link copied');
                     }
@@ -451,6 +456,7 @@ export const ChatList = ({
             if (typeof window !== 'undefined') {
                 localStorage.setItem(THREADS_CACHE_KEY, JSON.stringify(mapped));
             }
+            void LocalEngine.cacheSet(THREADS_LIST_CACHE_KEY, mapped);
             startTransition(() => {
                 setGhostConversations(mapped);
             });
@@ -626,7 +632,7 @@ export const ChatList = ({
                     if (isDesktop) {
                         setActiveDetail({ type: 'chat', id: foundGhost.$id, data: foundGhost });
                     } else {
-                        router.push(`/connect/chat/${foundGhost.$id}`);
+                        router.push(`/connect/chats/${foundGhost.$id}`);
                     }
                     return;
                 }
@@ -637,7 +643,7 @@ export const ChatList = ({
                 if (isDesktop) {
                     setActiveDetail({ type: 'chat', id: newGhost.$id, data: newGhost });
                 } else {
-                    router.push(`/connect/chat/${newGhost.$id}`);
+                    router.push(`/connect/chats/${newGhost.$id}`);
                 }
             } catch (error: any) {
                 console.error('Failed to create thread:', error);
@@ -655,7 +661,7 @@ export const ChatList = ({
             if (isDesktop) {
                 setActiveDetail({ type: 'chat', id: found.$id, data: found });
             } else {
-                router.push(`/connect/chat/${found.$id}`);
+                router.push(`/connect/chats/${found.$id}`);
             }
             return;
         }
@@ -670,7 +676,7 @@ export const ChatList = ({
                     if (isDesktop) {
                         setActiveDetail({ type: 'chat', id: newConv.$id, data: newConv });
                     } else {
-                        router.push(`/connect/chat/${newConv.$id}`);
+                        router.push(`/connect/chats/${newConv.$id}`);
                     }
                 } catch (error: any) {
                     console.error('Failed to create chat:', error);
@@ -862,6 +868,7 @@ export const ChatList = ({
             if (typeof window !== 'undefined') {
                 localStorage.setItem(SECURE_CACHE_KEY, JSON.stringify(sorted));
             }
+            void LocalEngine.cacheSet(CHATS_LIST_CACHE_KEY, sorted);
             startTransition(() => {
                 setConversations(sorted);
                 conversationsRef.current = sorted;
@@ -1265,7 +1272,7 @@ export const ChatList = ({
                                             }
                                             handleItemClick(e);
                                             if (!isInitializing) {
-                                                router.push(`/connect/chat/${conv.$id}`);
+                                                router.push(`/connect/chats/${conv.$id}`);
                                             }
                                         }}
                                         onContextMenu={(e) => handleConversationRightClick(e, conv)}
@@ -1275,7 +1282,7 @@ export const ChatList = ({
                                                 if (isDesktop) {
                                                     setActiveDetail({ type: 'chat', id: conv.$id, data: conv });
                                                 } else if (!isInitializing) {
-                                                    router.push(`/connect/chat/${conv.$id}`);
+                                                    router.push(`/connect/chats/${conv.$id}`);
                                                 }
                                             }
                                         }}
@@ -1410,7 +1417,7 @@ export const ChatList = ({
                                             }
                                             handleItemClick(e);
                                             if (!isInitializing) {
-                                                router.push(`/connect/chat/${conv.$id}`);
+                                                router.push(`/connect/chats/${conv.$id}`);
                                             }
                                         }}
                                         onContextMenu={(e) => handleGhostConversationRightClick(e, conv)}
@@ -1420,7 +1427,7 @@ export const ChatList = ({
                                                 if (isDesktop) {
                                                     setActiveDetail({ type: 'chat', id: conv.$id, data: conv });
                                                 } else if (!isInitializing) {
-                                                    router.push(`/connect/chat/${conv.$id}`);
+                                                    router.push(`/connect/chats/${conv.$id}`);
                                                 }
                                             }
                                         }}
