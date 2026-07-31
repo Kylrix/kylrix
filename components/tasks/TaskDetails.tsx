@@ -32,6 +32,8 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { goalPendingKey } from '@/lib/sync/goal-keys';
 import { useLayout } from '@/context/LayoutContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
 import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
 import { useTask } from '@/context/TaskContext';
 import { useAI } from '@/hooks/useAI';
@@ -83,12 +85,17 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const { open: openUnified } = useUnifiedDrawer();
   const { closeSecondarySidebar} = useLayout();
 
+  const { closeSidebar } = useDynamicSidebar();
+  const { closeOverlay } = useOverlay();
+
   const handleClose = () => {
     if (onBack) {
       onBack();
-    } else {
-      closeSecondarySidebar();
+      return;
     }
+    closeSidebar();
+    closeOverlay();
+    closeSecondarySidebar();
   };
   const { joinResource} = usePresence();
 

@@ -64,7 +64,7 @@ export default function GoalObjectRow({ task }: Props) {
     labels,
   } = useTask();
   const { isPinned: isResourcePinned } = useResourcePins();
-  const { openSidebar } = useDynamicSidebar();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
   const contextMenu = useContextMenu();
   const openMenu = contextMenu?.openMenu;
@@ -93,14 +93,14 @@ export default function GoalObjectRow({ task }: Props) {
     const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
     if (isDesktop) {
       openSidebar(
-        <GoalObjectDetail taskId={task.id} embedded />,
+        <GoalObjectDetail taskId={task.id} embedded onClose={closeSidebar} />,
         task.id,
         { hideHeader: true, fullscreen: true });
     } else {
       openOverlay(
         <GoalObjectDetail taskId={task.id} onClose={closeOverlay} embedded />);
     }
-  }, [closeOverlay, openOverlay, openSidebar, selectTask, task.id]);
+  }, [closeOverlay, closeSidebar, openOverlay, openSidebar, selectTask, task.id]);
 
   const handleComplete = useCallback(
     async (e: React.MouseEvent) => {

@@ -12,7 +12,7 @@ import { GoalObjectDetail } from '@/components/objects/GoalObjectDetail';
  */
 export default function TaskDialog() {
   const { taskDialogOpen, setTaskDialogOpen } = useTask();
-  const { openSidebar } = useDynamicSidebar();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
 
   const handleClose = useCallback(() => {
@@ -32,7 +32,7 @@ export default function TaskDialog() {
         const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
         if (isDesktop) {
           openSidebar(
-            <GoalObjectDetail taskId={task.id} embedded />,
+            <GoalObjectDetail taskId={task.id} embedded onClose={closeSidebar} />,
             task.id,
             { hideHeader: true, fullscreen: true },
           );

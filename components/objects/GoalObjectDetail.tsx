@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import TaskDetails from '@/components/tasks/TaskDetails';
 import { ObjectDetailHost } from '@/components/objects/ObjectDetailHost';
 import { goalToDetail } from '@/lib/objects/adapters';
@@ -8,6 +8,8 @@ import { useTask } from '@/context/TaskContext';
 import { isGoalLocked, decryptGoalForView } from '@/lib/appwrite/goal-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useSudo } from '@/context/SudoContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
 
 type Props = {
   taskId: string;
@@ -19,8 +21,16 @@ type Props = {
 export function GoalObjectDetail({ taskId, onClose, embedded = false }: Props) {
   const { tasks, updateTask } = useTask();
   const { promptSudo } = useSudo();
+  const { closeSidebar } = useDynamicSidebar();
+  const { closeOverlay } = useOverlay();
   const task = useMemo(() => tasks.find((t) => t.id === taskId), [taskId, tasks]);
   const decryptedIdRef = useRef<string | null>(null);
+
+  const handleClose = useCallback(() => {
+    onClose?.();
+    closeSidebar();
+    closeOverlay();
+  }, [onClose, closeSidebar, closeOverlay]);
 
   // Session decrypt for viewing: updates local task fields but autosave skips
   // title/description while `dek` remains set, so ciphertext on the server is safe.
@@ -60,15 +70,12 @@ export function GoalObjectDetail({ taskId, onClose, embedded = false }: Props) {
       task
         ? goalToDetail(task)
         : { kind: 'goal' as const, id: taskId, title: 'Goal' },
-    [task, taskId]);
-
-  const body = (
-    <TaskDetails taskId={taskId} onBack={embedded ? undefined : onClose} />
+    [task, taskId],
   );
 
   return (
-    <ObjectDetailHost item={item} open onClose={onClose || (() => {})} embedded={embedded} chrome="panel">
-      {body}
+    <ObjectDetailHost item={item} open onClose={handleClose} embedded={embedded} chrome="panel">
+      <TaskDetails taskId={taskId} onBack={handleClose} />
     </ObjectDetailHost>
   );
 }
