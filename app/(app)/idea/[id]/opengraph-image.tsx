@@ -123,7 +123,7 @@ export default async function SharedNoteOGImage({
       try {
         meta = JSON.parse(note.metadata || '{}');
       } catch {}
-      isEncrypted = note.isEncrypted === true || meta.isEncrypted === true;
+      isEncrypted = !!note.dek || meta.isEncrypted === true;
       noteTitle = note.title || 'Untitled Note';
 
       if (isEncrypted) {
