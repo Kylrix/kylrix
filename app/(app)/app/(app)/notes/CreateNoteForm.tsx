@@ -18,8 +18,6 @@ import {
   Clipboard,
   CheckSquare,
   Copy,
-  Paperclip,
-  Link as LinkIcon,
 } from 'lucide-react';
 import { Drawer, Box, Typography } from '@/lib/openbricks/primitives';
 import { StorageService } from '@/lib/services/storage';
@@ -28,7 +26,7 @@ import { pickNoteAutosavePayload } from '@/lib/appwrite/note';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useToast } from '@/components/ui/Toast';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
-import { getNote, getNotePublicState, toggleNoteVisibility, getAllTags } from '@/lib/appwrite';
+import { getNote, getNotePublicState, toggleNoteVisibility } from '@/lib/appwrite';
 import { createNote, updateNote, attachObject } from '@/lib/actions/client-ops';
 import type { Notes } from '@/types/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -47,7 +45,6 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
-import { useAutosave } from '@/hooks/useAutosave';
 import { isEphemeralComposeNoteId, isUnpersistedComposeDraft, markNotePersistedRemote, shouldCreateComposeNote, withNotePersistLock, isAlreadyExistsAppwriteError } from '@/lib/notes/compose-draft-registry';
 import { isValidAppwriteRowId } from '@/lib/utils/resource-ids';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
@@ -94,7 +91,6 @@ export default function CreateNoteForm({
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
   const { openFileDrawer } = useUnifiedFileDrawer();
-  const hasMasterKey = ecosystemSecurity.status.hasKey;
 
   const [title, setTitle] = useState(initialContent?.title || '');
   const [content, setContent] = useState(initialContent?.content || '');
@@ -105,7 +101,7 @@ export default function CreateNoteForm({
   const [isContextDrawerOpen, setIsContextDrawerOpen] = useState(false);
   const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(false);
   const [currentTag, setCurrentTag] = useState('');
-  const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
+  const [_isTagDropdownOpen, _setIsTagDropdownOpen] = useState(false);
   const [resolvedNoteId, setResolvedNoteId] = useState<string | undefined>(noteId);
   const [persistedIsPublic, setPersistedIsPublic] = useState(initialContent?.isPublic || false);
   const [persistedIsGuest, setPersistedIsGuest] = useState(initialContent?.isGuest || false);
@@ -141,7 +137,7 @@ export default function CreateNoteForm({
   const pasteTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isRecording, setIsRecording] = useState(false);
-  const [isUploadingVoice, setIsUploadingVoice] = useState(false);
+  const [_isUploadingVoice, setIsUploadingVoice] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -153,8 +149,8 @@ export default function CreateNoteForm({
   const isExpanded = controlledIsExpanded !== undefined ? controlledIsExpanded : localIsExpanded;
   const toggleExpand = onToggleExpand || (() => setLocalIsExpanded(prev => !prev));
   const [isAttachDrawerOpen, setIsAttachDrawerOpen] = useState(false);
-  const [isAttachingFile, setIsAttachingFile] = useState(false);
-  const [isCheckingUrl, setIsCheckingUrl] = useState(false);
+  const [_isAttachingFile, setIsAttachingFile] = useState(false);
+  const [_isCheckingUrl, setIsCheckingUrl] = useState(false);
   const [pendingBlockDelete, setPendingBlockDelete] = useState<ParsedObjectBlock | null>(null);
   const fileUploadRef = useRef<HTMLInputElement | null>(null);
 
@@ -313,7 +309,7 @@ export default function CreateNoteForm({
   }, [ensureLiveDraftId, insertObjectBlock, showSuccess, showError]);
 
   // Paste URL → HEAD-check → objects table → insert block
-  const attachUrl = useCallback(async () => {
+  const _attachUrl = useCallback(async () => {
     const href = window.prompt('Paste a URL to attach:');
     if (!href || !href.trim()) return;
     const url = href.trim();
@@ -446,7 +442,7 @@ export default function CreateNoteForm({
     return Array.from(tagSet);
   }, [allNotes, ecosystemTags]);
 
-  const filteredExistingTags = useMemo(() => {
+  const _filteredExistingTags = useMemo(() => {
     const available = existingTags.filter((t) => !tags.includes(t));
     if (!currentTag.trim()) return available;
     const query = currentTag.toLowerCase().trim();
@@ -790,7 +786,7 @@ export default function CreateNoteForm({
     setTags((prev) => prev.filter((candidate) => candidate !== tag));
   }, []);
 
-  const wrapSelection = useCallback((before: string, after = before) => {
+  const _wrapSelection = useCallback((before: string, after = before) => {
     const input = contentRef.current;
     if (!input) return;
 
@@ -1044,9 +1040,9 @@ export default function CreateNoteForm({
     user?.$id,
   ]);
 
-  const [isSaving, setIsSaving] = useState(false);
+  const [_isSaving, setIsSaving] = useState(false);
 
-  const persist = useCallback(async (showToast = true) => {
+  const _persist = useCallback(async (showToast = true) => {
     const finalDraft = flushLiveNoteDraft();
     if (!finalDraft?.$id) return null;
     setIsSaving(true);
@@ -1141,7 +1137,7 @@ export default function CreateNoteForm({
     }, 2000); // 2s protection window for formatting after paste
   }, []);
 
-  const handleTagKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+  const _handleTagKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       event.preventDefault();
       appendTag(currentTag);
@@ -1527,7 +1523,7 @@ export default function CreateNoteForm({
                       }
                       showSuccess('Pasted', 'Text pasted from clipboard.');
                     }
-                  } catch (err) {
+                  } catch (_err) {
                     showError('Paste Failed', 'Could not read from clipboard.');
                   }
                 }}

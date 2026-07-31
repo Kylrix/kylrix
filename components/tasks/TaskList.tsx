@@ -31,7 +31,7 @@ export default function TaskList() {
     refreshTasks} = useTask();
   const { setConfiguration, resetConfiguration } = useFAB();
   const { open } = useUnifiedDrawer();
-  const { isAuthenticated, openIDMWindow, user } = useAuth();
+  const { isAuthenticated, openIDMWindow } = useAuth();
 
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
