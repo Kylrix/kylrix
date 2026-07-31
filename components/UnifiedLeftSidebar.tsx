@@ -47,6 +47,31 @@ export function UnifiedLeftSidebar() {
   const { user, updatePreferences } = useAuth();
   const { activeWorkspace, workspaces, setActiveWorkspaceId } = useWorkspace();
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = React.useState(false);
+  const workspaceSectionRef = React.useRef<HTMLDivElement | null>(null);
+
+  // 5 nav rows (46) + 4 gaps (10) + Discord (46+12) + spacing ≈ leave room, never scroll the sidebar.
+  const NAV_DISCORD_RESERVE_PX = 360;
+
+  useEffect(() => {
+    if (isCollapsed) setWorkspaceMenuOpen(false);
+  }, [isCollapsed]);
+
+  useEffect(() => {
+    if (!workspaceMenuOpen) return;
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      const root = workspaceSectionRef.current;
+      const target = event.target as Node | null;
+      if (root && target && !root.contains(target)) {
+        setWorkspaceMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown, true);
+    document.addEventListener('touchstart', onPointerDown, true);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown, true);
+      document.removeEventListener('touchstart', onPointerDown, true);
+    };
+  }, [workspaceMenuOpen]);
 
 
   const getCurrentTab = (): NavId | null => {
