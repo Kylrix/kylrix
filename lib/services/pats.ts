@@ -36,15 +36,11 @@ function hashToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
-function makePrefix() {
-  return randomBytes(6).toString('base64url').slice(0, 10);
-}
-
 function makeSecret() {
   return randomBytes(24).toString('base64url');
 }
 
-/** Full token shown once: kyl_pat_<prefix>_<secret> */
+/** Full token shown once: kyl_pat_<appwriteUniqueId>_<secret> */
 export function formatPatToken(prefix: string, secret: string) {
   return `kyl_pat_${prefix}_${secret}`;
 }
@@ -88,9 +84,9 @@ export const PatService = {
     const name = String(params.name || '').trim().slice(0, 128);
     if (!name) throw new Error('Name is required');
 
-    const prefix = makePrefix();
+    const rowId = ID.unique();
     const secret = makeSecret();
-    const token = formatPatToken(prefix, secret);
+    const token = formatPatToken(rowId, secret);
     const tokenHash = hashToken(token);
     const now = new Date().toISOString();
     const tables = createSystemTablesDB();
@@ -98,11 +94,11 @@ export const PatService = {
     const row = await tables.createRow({
       databaseId: DB,
       tableId: TABLE,
-      rowId: ID.unique(),
+      rowId,
       data: {
         userId: params.userId,
         name,
-        tokenPrefix: prefix,
+        tokenPrefix: rowId,
         tokenHash,
         scopes: JSON.stringify(scopes),
         status: 'active',
@@ -130,7 +126,7 @@ export const PatService = {
           childId: row.$id,
           childKind: 'pat',
           userId: params.userId,
-          metadata: JSON.stringify({ tokenPrefix: prefix, name }),
+          metadata: JSON.stringify({ tokenPrefix: rowId, name }),
           createdAt: now,
           updatedAt: now,
           isPublic: false,

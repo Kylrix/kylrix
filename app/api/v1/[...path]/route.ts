@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { withApiGuard, jsonOk, requireScope, type ApiActor } from '@/lib/api/guard';
+import { withApiGuard, jsonOk, type ApiActor } from '@/lib/api/guard';
 import { ApiResources } from '@/lib/api/resources';
 
 export const runtime = 'nodejs';
@@ -8,16 +8,22 @@ export const dynamic = 'force-dynamic';
 /**
  * Public HTTP API for Personal Access Tokens.
  *
- * Auth: Authorization: Bearer kyl_pat_<prefix>_<secret>
+ * Auth: Authorization: Bearer kyl_pat_<id>_<secret>
  *
- * Routes:
- *   GET  /api/v1/me
- *   GET  /api/v1/notes
- *   GET  /api/v1/notes/:id
- *   GET  /api/v1/goals
- *   GET  /api/v1/flows
- *   POST /api/v1/tools/execute  { toolId, params }
+ * REST CRUD only — tools are internal infrastructure, not an HTTP surface.
+ *
+ *   GET/POST          /api/v1/notes
+ *   GET/PATCH/DELETE  /api/v1/notes/:id
+ *   GET/POST          /api/v1/goals
+ *   GET/PATCH/DELETE  /api/v1/goals/:id
+ *   GET               /api/v1/flows
+ *   GET               /api/v1/me
  */
+async function readBody(req: NextRequest): Promise<Record<string, unknown>> {
+  const raw = await req.json().catch(() => ({}));
+  return raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+}
+
 async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
   const method = req.method.toUpperCase();
   const [a, b, c] = parts;
@@ -26,18 +32,40 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
     return jsonOk(await ApiResources.me(actor));
   }
 
-  if (method === 'GET' && a === 'notes' && !b) {
-    const limit = Number(req.nextUrl.searchParams.get('limit') || 25);
-    return jsonOk(await ApiResources.listNotes(actor, limit));
+  // Notes
+  if (a === 'notes' && !b) {
+    if (method === 'GET') {
+      const limit = Number(req.nextUrl.searchParams.get('limit') || 25);
+      return jsonOk(await ApiResources.listNotes(actor, limit));
+    }
+    if (method === 'POST') {
+      return jsonOk(await ApiResources.createNote(actor, await readBody(req)));
+    }
+  }
+  if (a === 'notes' && b && !c) {
+    if (method === 'GET') return jsonOk(await ApiResources.getNote(actor, b));
+    if (method === 'PATCH' || method === 'PUT') {
+      return jsonOk(await ApiResources.updateNote(actor, b, await readBody(req)));
+    }
+    if (method === 'DELETE') return jsonOk(await ApiResources.deleteNote(actor, b));
   }
 
-  if (method === 'GET' && a === 'notes' && b && !c) {
-    return jsonOk(await ApiResources.getNote(actor, b));
+  // Goals
+  if (a === 'goals' && !b) {
+    if (method === 'GET') {
+      const limit = Number(req.nextUrl.searchParams.get('limit') || 25);
+      return jsonOk(await ApiResources.listGoals(actor, limit));
+    }
+    if (method === 'POST') {
+      return jsonOk(await ApiResources.createGoal(actor, await readBody(req)));
+    }
   }
-
-  if (method === 'GET' && a === 'goals' && !b) {
-    const limit = Number(req.nextUrl.searchParams.get('limit') || 25);
-    return jsonOk(await ApiResources.listGoals(actor, limit));
+  if (a === 'goals' && b && !c) {
+    if (method === 'GET') return jsonOk(await ApiResources.getGoal(actor, b));
+    if (method === 'PATCH' || method === 'PUT') {
+      return jsonOk(await ApiResources.updateGoal(actor, b, await readBody(req)));
+    }
+    if (method === 'DELETE') return jsonOk(await ApiResources.deleteGoal(actor, b));
   }
 
   if (method === 'GET' && a === 'flows' && !b) {
@@ -45,21 +73,14 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
     return jsonOk(await ApiResources.listFlows(actor, limit));
   }
 
-  if (method === 'POST' && a === 'tools' && b === 'execute' && !c) {
-    requireScope(actor, 'tools:execute');
-    const body = await req.json().catch(() => ({}));
-    const toolId = String(body?.toolId || '').trim();
-    if (!toolId) {
-      const err = new Error('toolId required');
-      (err as any).status = 400;
-      throw err;
-    }
-    const result = await ApiResources.executeTool(
-      actor,
-      toolId,
-      body?.params && typeof body.params === 'object' ? body.params : {}
+  // Retired dual surface — tools stay in-process only
+  if (a === 'tools') {
+    const err = new Error(
+      'Use REST resource routes (e.g. POST /api/v1/notes). Tool execution is not a public API.'
     );
-    return jsonOk(result);
+    (err as any).status = 410;
+    (err as any).code = 'gone';
+    throw err;
   }
 
   const err = new Error('Not found');

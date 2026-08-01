@@ -47,7 +47,11 @@ export function DevelopersTab() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
-  const [selected, setSelected] = useState<PatScope[]>(['profile:read', 'notes:read']);
+  const [selected, setSelected] = useState<PatScope[]>([
+    'profile:read',
+    'notes:read',
+    'notes:write',
+  ]);
   const [revealedToken, setRevealedToken] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -100,8 +104,13 @@ export function DevelopersTab() {
       const res = await createPat({ name: name.trim(), scopes: selected });
       setRevealedToken(res.token);
       setName('');
+      try {
+        await navigator.clipboard.writeText(res.token);
+        toast.success('Token created and copied');
+      } catch {
+        toast.success('Token created — copy it now');
+      }
       await refresh();
-      toast.success('Token created — copy it now');
     } catch (err: any) {
       toast.error(err?.message || 'Create failed');
     } finally {
@@ -185,27 +194,6 @@ export function DevelopersTab() {
         </div>
       </Section>
 
-      {revealedToken && (
-        <Section title="Copy now — shown once">
-          <div className="rounded-2xl bg-[#0A0908] border border-amber-500/25 p-3.5 space-y-2">
-            <p className="text-[11px] font-bold text-amber-400">
-              Store this token safely. You will not see it again.
-            </p>
-            <code className="block text-[11px] font-mono text-white/80 break-all select-all">
-              {revealedToken}
-            </code>
-            <button
-              type="button"
-              onClick={() => void copy(revealedToken)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold bg-[#161412] border border-white/[0.08] text-white cursor-pointer"
-            >
-              <Copy size={14} />
-              Copy
-            </button>
-          </div>
-        </Section>
-      )}
-
       <Section
         title="Personal access tokens"
         action={
@@ -253,6 +241,25 @@ export function DevelopersTab() {
             Create token
           </button>
         </div>
+
+        {revealedToken && (
+          <div className="rounded-2xl bg-[#0A0908] border border-amber-500/25 p-3.5 space-y-2">
+            <p className="text-[11px] font-bold text-amber-400">
+              Copied to clipboard. Store it safely — shown once.
+            </p>
+            <code className="block text-[11px] font-mono text-white/80 break-all select-all">
+              {revealedToken}
+            </code>
+            <button
+              type="button"
+              onClick={() => void copy(revealedToken)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold bg-[#161412] border border-white/[0.08] text-white cursor-pointer"
+            >
+              <Copy size={14} />
+              Copy again
+            </button>
+          </div>
+        )}
 
         {loading ? (
           <p className="text-xs text-white/40 px-1">Loading…</p>
@@ -315,8 +322,10 @@ export function DevelopersTab() {
             <Code2 size={14} />
             <p className="text-[11px] font-extrabold uppercase tracking-wider">curl</p>
           </div>
-          <pre className="text-[11px] font-mono text-white/55 whitespace-pre-wrap break-all">{`curl -H "Authorization: Bearer kyl_pat_…" \\
-  https://www.kylrix.space/api/v1/me`}</pre>
+          <pre className="text-[11px] font-mono text-white/55 whitespace-pre-wrap break-all">{`curl -X POST -H "Authorization: Bearer kyl_pat_…" \\
+  -H "Content-Type: application/json" \\
+  -d '{"title":"Hello","content":"From API"}' \\
+  https://www.kylrix.space/api/v1/notes`}</pre>
         </div>
       </Section>
     </div>

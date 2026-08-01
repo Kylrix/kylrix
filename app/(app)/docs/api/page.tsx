@@ -18,10 +18,31 @@ const ENDPOINTS = [
     query: 'limit (1–100, default 25)',
   },
   {
+    method: 'POST',
+    path: '/notes',
+    scope: 'notes:write',
+    summary: 'Create an idea. Body: { title, content?, isPublic?, tags? }.',
+    query: null,
+  },
+  {
     method: 'GET',
     path: '/notes/:id',
     scope: 'notes:read',
-    summary: 'Single idea (title, content, updatedAt, isPublic). 404 if not owned.',
+    summary: 'Single idea. 404 if not owned.',
+    query: null,
+  },
+  {
+    method: 'PATCH',
+    path: '/notes/:id',
+    scope: 'notes:write',
+    summary: 'Update an idea. Body: { title?, content?, isPublic? }.',
+    query: null,
+  },
+  {
+    method: 'DELETE',
+    path: '/notes/:id',
+    scope: 'notes:write',
+    summary: 'Delete an idea you own.',
     query: null,
   },
   {
@@ -32,18 +53,39 @@ const ENDPOINTS = [
     query: 'limit (1–100, default 25)',
   },
   {
+    method: 'POST',
+    path: '/goals',
+    scope: 'goals:write',
+    summary: 'Create a goal. Body: { title, description?, status? }.',
+    query: null,
+  },
+  {
+    method: 'GET',
+    path: '/goals/:id',
+    scope: 'goals:read',
+    summary: 'Single goal. 404 if not owned.',
+    query: null,
+  },
+  {
+    method: 'PATCH',
+    path: '/goals/:id',
+    scope: 'goals:write',
+    summary: 'Update a goal. Body: { title?, description?, status? }.',
+    query: null,
+  },
+  {
+    method: 'DELETE',
+    path: '/goals/:id',
+    scope: 'goals:write',
+    summary: 'Delete a goal you own.',
+    query: null,
+  },
+  {
     method: 'GET',
     path: '/flows',
     scope: 'flows:read',
     summary: 'List flows owned by the token user.',
     query: 'limit (1–100, default 25)',
-  },
-  {
-    method: 'POST',
-    path: '/tools/execute',
-    scope: 'tools:execute',
-    summary: 'Run a registered tool. Body: { toolId, params }.',
-    query: null,
   },
 ] as const;
 
@@ -52,68 +94,10 @@ const ERRORS = [
   { status: 401, code: 'invalid_pat', meaning: 'Token invalid, expired, or revoked' },
   { status: 403, code: 'scope_denied', meaning: 'Required permission not on this token' },
   { status: 404, code: 'not_found', meaning: 'Unknown path or resource' },
+  { status: 410, code: 'gone', meaning: 'Retired path (e.g. /tools/execute) — use REST CRUD' },
   { status: 413, code: '—', meaning: 'Request body larger than ~256 KB' },
   { status: 429, code: 'rate_limited', meaning: 'Slow down; honor Retry-After header' },
   { status: 500, code: 'internal_error', meaning: 'Unexpected server failure' },
-] as const;
-
-const TOOL_GROUPS = [
-  {
-    title: 'Profile & search',
-    ids: ['user.profile.read', 'user.settings.update', 'search.ecosystem', 'ui.navigate'],
-  },
-  {
-    title: 'Workspaces',
-    ids: [
-      'workspace.create',
-      'workspace.read',
-      'workspace.update',
-      'workspace.delete',
-      'workspace.search',
-    ],
-  },
-  {
-    title: 'Ideas',
-    ids: [
-      'objects.idea.create',
-      'objects.idea.read',
-      'objects.idea.update',
-      'objects.idea.delete',
-      'objects.idea.search',
-    ],
-  },
-  {
-    title: 'Goals',
-    ids: [
-      'objects.goal.create',
-      'objects.goal.read',
-      'objects.goal.update',
-      'objects.goal.delete',
-      'objects.goal.search',
-    ],
-  },
-  {
-    title: 'Forms & tags',
-    ids: [
-      'objects.form.read',
-      'objects.form.submit',
-      'objects.tag.create',
-      'objects.tag.search',
-    ],
-  },
-  {
-    title: 'Vault (sensitive)',
-    ids: [
-      'objects.vault.secret.create',
-      'objects.vault.secret.read',
-      'objects.vault.secret.delete',
-      'objects.vault.secret.search',
-    ],
-  },
-  {
-    title: 'Developer PATs',
-    ids: ['developer.pat.create', 'developer.pat.list', 'developer.pat.revoke'],
-  },
 ] as const;
 
 function CodeBlock({ children }: { children: string }) {
@@ -138,7 +122,8 @@ export default function ApiDocsPage() {
           <h1 className="font-clash text-3xl font-semibold tracking-tight mt-3">HTTP API</h1>
           <p className="mt-2 text-sm text-white/50">
             Base path <code className="text-white/70">/api/v1</code>. Auth via{' '}
-            <code className="text-white/70">Authorization: Bearer kyl_pat_…</code>
+            <code className="text-white/70">Authorization: Bearer kyl_pat_…</code>. REST CRUD
+            only — tools are internal and not exposed over HTTP.
           </p>
         </div>
 
@@ -147,8 +132,7 @@ export default function ApiDocsPage() {
             Agent skill
           </h2>
           <p className="text-sm text-white/50">
-            Install into Claude Code, Cursor, and other agent tools so they know every endpoint
-            and permission.
+            Install into Claude Code, Cursor, and other agent tools.
           </p>
           <CodeBlock>{KYLRIX_API_SKILL_INSTALL}</CodeBlock>
           <p className="text-xs text-white/40">
@@ -164,14 +148,17 @@ export default function ApiDocsPage() {
           <h2 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">
             Quick start
           </h2>
-          <CodeBlock>{`export KYLRIX_PAT='kyl_pat_<prefix>_<secret>'
+          <CodeBlock>{`export KYLRIX_PAT='kyl_pat_<id>_<secret>'
 
-curl -sS \\
+# Create an idea
+curl -sS -X POST \\
   -H "Authorization: Bearer $KYLRIX_PAT" \\
-  ${KYLRIX_API_BASE_PROD}/me`}</CodeBlock>
+  -H "Content-Type: application/json" \\
+  -d '{"title":"Hello","content":"From the API","isPublic":false}' \\
+  ${KYLRIX_API_BASE_PROD}/notes`}</CodeBlock>
           <p className="text-xs text-white/40">
-            Success envelope: <code className="text-white/60">{`{ "ok": true, "data": … }`}</code>.
-            Errors: <code className="text-white/60">{`{ "ok": false, "error": { "code", "message" } }`}</code>.
+            Success: <code className="text-white/60">{`{ "ok": true, "data": … }`}</code>. Errors:{' '}
+            <code className="text-white/60">{`{ "ok": false, "error": { "code", "message" } }`}</code>.
           </p>
         </section>
 
@@ -195,40 +182,6 @@ curl -sS \\
               </li>
             ))}
           </ul>
-        </section>
-
-        <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-3">
-          <h2 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">
-            Tools execute
-          </h2>
-          <p className="text-sm text-white/50">
-            Prefer REST list/get for reads. Use tools for mutations and richer ops. Requires{' '}
-            <code className="text-white/70">tools:execute</code> plus matching resource scopes.
-          </p>
-          <CodeBlock>{`curl -sS -X POST \\
-  -H "Authorization: Bearer $KYLRIX_PAT" \\
-  -H "Content-Type: application/json" \\
-  -d '{"toolId":"objects.idea.search","params":{"query":"roadmap"}}' \\
-  ${KYLRIX_API_BASE_PROD}/tools/execute`}</CodeBlock>
-          <div className="space-y-3 pt-1">
-            {TOOL_GROUPS.map((g) => (
-              <div key={g.title}>
-                <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/40 mb-1.5">
-                  {g.title}
-                </p>
-                <ul className="flex flex-wrap gap-1.5">
-                  {g.ids.map((id) => (
-                    <li
-                      key={id}
-                      className="text-[10px] font-mono px-2 py-1 rounded-lg bg-[#0A0908] border border-white/[0.05] text-white/55"
-                    >
-                      {id}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
         </section>
 
         <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-2">
@@ -297,10 +250,9 @@ curl -sS \\
           </h2>
           <ul className="list-disc pl-4 space-y-1.5 text-sm text-white/50">
             <li>Tokens act as you for granted scopes — treat like passwords.</li>
-            <li>Shown once at create; only a hash is stored.</li>
-            <li>Prefer read-only scopes for agents; avoid vault + tools:execute unless needed.</li>
+            <li>Shown once at create (auto-copied); only a hash is stored.</li>
+            <li>Prefer read-only scopes when write is not needed.</li>
             <li>Revoke compromised tokens immediately in Developers settings.</li>
-            <li>OAuth apps (Sign in with Kylrix) coming soon — use PATs until then.</li>
           </ul>
         </section>
       </div>
