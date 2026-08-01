@@ -27,7 +27,7 @@ When changing endpoints, scopes, or rate limits — **update `api/SKILL.md` and 
 | `pats` | Token metadata (prefix + hash, never plaintext secret) |
 | `pat_rate_state` | 1 row/PAT — minute/hour counters via `incrementRowColumn` |
 | `api_user_rate_state` | 1 row/user — account-level ceilings |
-| `oauth_apps` / `oauth_app_installs` | OAuth foundation (UI coming soon / External apps list) |
+| `oauth_apps` / `oauth_app_installs` | Optional product overlays only — **Appwrite Apps/grants are SoT** for Sign in with Kylrix (see `system.oauth2-sign-in-with-kylrix`). Do not use local tables as the IdP grant store. |
 
 Column types: **varchar / text / mediumtext** only (see `system.appwrite-cli-ops`).
 
