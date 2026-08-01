@@ -29,8 +29,8 @@ export function RememberUnlockSettings() {
   const hours = resolveRememberUnlockHours(prefs);
 
   return (
-    <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-4 py-3 bg-[#1C1A18] border-b border-white/[0.04]">
+    <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-4 space-y-3">
+      <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55 font-satoshi">
             Remember unlock
@@ -42,7 +42,7 @@ export function RememberUnlockSettings() {
           disabled={!hydrated}
           onClick={() => save({ enabled: !prefs.enabled })}
           className={`py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border-none ${
-            prefs.enabled ? 'bg-amber-500 text-black' : 'bg-[#0A0908] text-white/70 border border-white/10'
+            prefs.enabled ? 'bg-amber-500 text-black' : 'bg-[#0A0908] text-white/70'
           }`}
         >
           {prefs.enabled ? 'On' : 'Off'}
@@ -50,7 +50,7 @@ export function RememberUnlockSettings() {
       </div>
 
       {prefs.enabled ? (
-        <div className="p-3 bg-[#0A0908] space-y-2">
+        <div className="space-y-2">
           <div className="flex flex-wrap gap-1.5">
             {REMEMBER_UNLOCK_DURATION_OPTIONS.map((opt) => (
               <button
@@ -60,7 +60,7 @@ export function RememberUnlockSettings() {
                 className={`py-1.5 px-2.5 rounded-lg text-[11px] font-bold cursor-pointer border ${
                   prefs.durationId === opt.id
                     ? 'bg-[#6366F1]/20 border-[#6366F1]/40 text-[#A5B4FC]'
-                    : 'bg-[#161412] border-white/[0.06] text-white/55'
+                    : 'bg-[#0A0908] border-white/[0.06] text-white/55'
                 }`}
               >
                 {opt.label}
@@ -68,7 +68,7 @@ export function RememberUnlockSettings() {
             ))}
           </div>
           {prefs.durationId === 'custom' ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 rounded-[16px] bg-[#0A0908] border border-white/[0.04] px-3 py-2">
               <input
                 type="number"
                 min={1}
@@ -82,7 +82,7 @@ export function RememberUnlockSettings() {
                 }
                 className="w-20 rounded-lg bg-[#161412] border border-white/10 px-2 py-1.5 text-xs font-bold text-white outline-none"
               />
-              <span className="text-[11px] text-white/40">hours · {hours}h max {REMEMBER_UNLOCK_MAX_HOURS}</span>
+              <span className="text-[11px] text-white/40">hours · max {REMEMBER_UNLOCK_MAX_HOURS}</span>
             </div>
           ) : (
             <p className="text-[10px] text-white/35 px-0.5">{hours}h · not applied yet</p>

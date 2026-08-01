@@ -56,6 +56,7 @@ function passkeyUseLabels(pk: PasskeyEntry): string[] {
   return labels;
 }
 
+/** Continuous ash panel — one fill; nested pieces bring their own surface. */
 function Section({
   title,
   action,
@@ -66,14 +67,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-4 py-3 bg-[#1C1A18] border-b border-white/[0.04]">
+    <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-4 space-y-3">
+      <div className="flex items-center justify-between gap-3">
         <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55 font-satoshi">
           {title}
         </h3>
         {action}
       </div>
-      <div className="p-3 bg-[#0A0908] space-y-2">{children}</div>
+      <div className="space-y-2">{children}</div>
     </section>
   );
 }
@@ -90,8 +91,8 @@ function Row({
   trailing?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-[16px] bg-[#161412] border border-white/[0.04] px-3 py-3">
-      <div className="p-2 rounded-xl bg-[#0A0908] border border-white/[0.06] text-[#6366F1] shrink-0">
+    <div className="flex items-center gap-3 rounded-[16px] bg-[#0A0908] border border-white/[0.04] px-3 py-3">
+      <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-[#6366F1] shrink-0">
         {icon}
       </div>
       <div className="min-w-0 flex-1">
@@ -161,9 +162,9 @@ export function SecurityTab({
           <button
             type="button"
             onClick={onAddPasskey}
-            className="w-full flex items-center gap-3 rounded-[16px] bg-[#161412] border border-dashed border-white/10 px-3 py-4 text-left cursor-pointer"
+            className="w-full flex items-center gap-3 rounded-[16px] bg-[#0A0908] border border-dashed border-white/10 px-3 py-4 text-left cursor-pointer"
           >
-            <div className="p-2 rounded-xl bg-[#0A0908] border border-white/[0.06] text-[#6366F1]">
+            <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-[#6366F1]">
               <Fingerprint className="w-4 h-4" />
             </div>
             <span className="text-sm font-bold text-white/70">Add a passkey</span>
@@ -195,7 +196,7 @@ export function SecurityTab({
                   <button
                     type="button"
                     onClick={() => onRemovePasskey(pk.$id)}
-                    className="p-2 rounded-lg bg-[#0A0908] border border-red-500/20 text-red-400 cursor-pointer shrink-0"
+                    className="p-2 rounded-lg bg-[#161412] border border-red-500/20 text-red-400 cursor-pointer shrink-0"
                     aria-label="Remove passkey"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
