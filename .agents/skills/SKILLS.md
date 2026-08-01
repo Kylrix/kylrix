@@ -19,11 +19,16 @@ _Catalog covers 86 skills._
 | Skill | Helps with |
 |-------|------------|
 | `kylrix-guardrails` | Enforces Kylrix safety and architecture rules in the single Next.js codebase. Use before editing app logic, data flows, shared services, or cross-app UX. |
+| `architecture.local-first` | Paint local first, live copy as SoT, soft remote merge, auth late-binding. |
+| `architecture.security-session` | Unlock as RAM session, prompt on gated ops, no general browser enclave, client seal + server escalate. |
+| `openbricks` | Canonical UI language: opaque ash panels, minimal copy, mobile drawers / desktop right rails. |
 
 ## Architecture & routing
 
 | Skill | Helps with |
 |-------|------------|
+| `architecture.local-first` | Product-wide local-first invariants (no store names). |
+| `architecture.security-session` | Unlock session and trust-boundary invariants (no key/table names). |
 | `system.navigation-policy` | Enforces same-tab navigation and canonical route helpers. Use when editing links, redirects, shell transitions, or chrome active states. |
 | `system.routing-canonical` | Canonical Kylrix App Router paths after the scorched-earth route wipe. Use before adding links, redirects, nav items, or isXPath helpers. |
 

@@ -22,3 +22,4 @@ disable-model-invocation: true
 12. Layman UI copy — no jargon in user-facing strings.
 13. Keep changes surgical. Do not expand scope into unrelated refactors.
 14. Dead code: Knip for unused files/exports (`system.dead-code-knip`); do not enable unused-vars in default `pnpm lint`.
+15. Local-first invariants: `architecture.local-first`. Unlock/trust boundaries: `architecture.security-session`. Product UI: `openbricks`.

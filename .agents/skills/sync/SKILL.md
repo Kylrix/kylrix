@@ -9,7 +9,7 @@ description: >-
 
 # Sync (Offline-First Local Copy ↔ Appwrite)
 
-**Canonical skill** for suite-wide offline-first sync. Notes/Ideas are the reference implementation; every other object type must follow the same contract.
+**Canonical skill** for suite-wide offline-first sync. Notes/Ideas are the reference implementation; every other object type must follow the same contract. Invariants without paths: `architecture.local-first`.
 
 | Companion | Purpose |
 |-----------|---------|
