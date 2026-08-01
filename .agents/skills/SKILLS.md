@@ -107,11 +107,13 @@ _Catalog covers 86 skills._
 
 | Skill | Helps with |
 |-------|------------|
+| `openbricks` | **Canonical** OpenBricks design system: opaque ash surfaces, no gradients/blur, minimal copy, shade sectioning, mobile drawers / desktop right rails. |
 | `brand.general` | A dark-only brand language system for Kylrix-style products. Use to define or critique UI tone, spacing, chrome, accent color direction, and the openbricks syst |
 | `brand.kylrix` | Applies Kylrix brand language (logo, palette, typography, surface hierarchy) while preserving readability and UX clarity. Use for top-level UI visual decisions. |
-| `brand.openbricks-3.0` | Unified OpenBricks 3.0 specifications combining tactile depth, glow dynamics, micro-interactions, minimal contextual copy, and strict sectional hierarchy. |
+| `brand.openbricks-3.0` | Legacy OpenBricks 3.0 notes — defers to `openbricks` for all product UI. |
 | `colors` | Canonical color map specifications for the Kylrix ecosystem, restricting all interfaces to five core branding hues plus neutral accents. |
 | `copy.plain-language` | Enforces plain, user-facing language and blocks jargon-heavy product copy. Use when UI text drifts into buzzwords, metaphors, or internal terminology that users |
+| `ui.chrome-surfaces` | Mobile top/bottom drawers vs desktop native right sidebars for details and drawers. |
 | `ui.drawer` | Applies drawer-first interaction patterns for secondary actions, pickers, and in-context workflows. Use when replacing modal-heavy flows or stabilizing drawer U |
 | `ui.drawer-sidebar-desktop-translation` | Direct layout translation of mobile drawers into unified desktop sidebars. Outlines rules for anchor placement, dimensions, stacking behavior, and responsive CS |
 | `ui.fluid-layouts` | Unified specifications for dynamic, responsive canvas layouts. Explains the deprecation of rigid multi-column sections in favor of fluid UI morphs that adapt se |
@@ -170,7 +172,7 @@ _Catalog covers 86 skills._
 Retired during the 2026 route & architecture wipe (or replaced):
 
 - `system.accounts-api`, `system.router` — accounts shell & meta-router gone
-- `brand.openbricks`, `brand.openbricks-2.1` — use `brand.openbricks-3.0`
+- `brand.openbricks`, `brand.openbricks-2.1` — use `openbricks` (canonical); `brand.openbricks-3.0` is a legacy pointer
 - `call.realtime`, `call.presence-mesh` — use `call.webrtc-huddles` + `call.presence-heartbeat-mesh`
 - `flow.tasks`, `note.intelligence` — superseded by routing + domain skills
 - `ui.gpu-compositor-feed-stability`, `ui.muted-v3-design` — obsolete surfaces
