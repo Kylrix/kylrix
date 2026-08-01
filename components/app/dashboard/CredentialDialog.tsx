@@ -27,6 +27,8 @@ import {
   CreditCard 
 } from 'lucide-react';
 import { useSection } from '@/context/SectionContext';
+import { useSudo } from '@/context/SudoContext';
+import { masterPassCrypto } from '@/lib/masterpass-crypto';
 
 
 export default function CredentialDialog({
@@ -56,6 +58,7 @@ export default function CredentialDialog({
   const { user } = useAppwriteVault();
   const { setIsDrawerOpen } = useDrawerState();
   const { setActiveDetail } = useSection();
+  const { requestSudo } = useSudo();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleClose = () => {
@@ -218,6 +221,17 @@ export default function CredentialDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!masterPassCrypto.isVaultUnlocked()) {
+      requestSudo({
+        onSuccess: () => {
+          const fake = { preventDefault() {} } as React.FormEvent;
+          void handleSubmit(fake);
+        },
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       if (!user) throw new Error("Not authenticated");
@@ -301,6 +315,16 @@ export default function CredentialDialog({
 
   const handleMorphToDetail = async () => {
     if (!form.name.trim()) return;
+
+    if (!masterPassCrypto.isVaultUnlocked()) {
+      requestSudo({
+        onSuccess: () => {
+          void handleMorphToDetail();
+        },
+      });
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {

@@ -111,11 +111,11 @@ export function UnifiedFileAttachmentDrawer() {
   const [activeSubTab, setActiveSubTab] = useState<ObjectSubTab>('goals');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Auto-trigger unified Masterpass SudoModal when switching to encrypted sub-tabs if locked
+  // Auto MasterPass when switching to encrypted sub-tabs — suppressed when unlock-on-demand (default).
   useEffect(() => {
     if (isOpen && activeTab === 'objects' && (activeSubTab === 'totps' || activeSubTab === 'vault')) {
       if (!isUnlocked) {
-        promptSudo('unlock');
+        void promptSudo('unlock', false, true);
       }
     }
   }, [isOpen, activeTab, activeSubTab, isUnlocked, promptSudo]);
@@ -372,7 +372,15 @@ export function UnifiedFileAttachmentDrawer() {
 
   if (!isOpen || !options) return null;
 
-  const handleSelectObject = (item: any) => {
+  const handleSelectObject = async (item: any) => {
+    if (
+      (activeSubTab === 'totps' || activeSubTab === 'vault') &&
+      !isUnlocked
+    ) {
+      const ok = await promptSudo('unlock');
+      if (!ok) return;
+    }
+
     const isEncrypted = item.isEncrypted || item.encrypted || item.locked;
     const itemTitle = isEncrypted
       ? 'Encrypted Item'
@@ -615,8 +623,21 @@ export function UnifiedFileAttachmentDrawer() {
                   <Loader2 className="w-6 h-6 animate-spin text-[#A855F7]" />
                 </div>
               ) : filteredObjects.length === 0 ? (
-                <div className="text-center py-16 text-[#9B9691] text-xs">
-                  No {activeSubTab} found.
+                <div className="text-center py-16 text-[#9B9691] text-xs space-y-3">
+                  {!isUnlocked && (activeSubTab === 'totps' || activeSubTab === 'vault') ? (
+                    <>
+                      <p>Unlock to browse and attach {activeSubTab}.</p>
+                      <button
+                        type="button"
+                        onClick={() => void promptSudo('unlock')}
+                        className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-[#6366F1] text-white text-[11px] font-extrabold cursor-pointer border-none"
+                      >
+                        Unlock
+                      </button>
+                    </>
+                  ) : (
+                    <p>No {activeSubTab} found.</p>
+                  )}
                 </div>
               ) : (
                 filteredObjects.map((item, idx) => {

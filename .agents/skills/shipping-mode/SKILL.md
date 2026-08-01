@@ -14,9 +14,11 @@ The user values extreme velocity and trust. Skip implementation plans and procee
 3. **No Speculation**: Fix exactly what is requested or identified. Do not proactively check for related issues unless they block the current task.
 4. **Maintain Aesthetics**: Always adhere to the "Ultra Premium" design standards (Tailwind CSS, Vanilla CSS, sleek animations).
 5. **Zero Technical Jargon**: Use simple, layman-friendly English in all UI copy.
+6. **Always commit and push**: Every completed fix/update must end with a commit and push. Never leave a clean working tree uncommitted after shipping work.
 
 ## Workflow
 1. Research the task using `grep` and `view_file`.
 2. Directly apply changes using `replace_file_content` or `multi_replace_file_content`.
-3. Verify surgically.
-4. Report completion concisely.
+3. Verify surgically (lint/build only when needed or when asked).
+4. **Commit + push immediately (STRICT)**: After every fix or feature, consolidate changes, commit with a pure descriptive message (no co-author trailers), and `git push` to the tracked remote. Do not wait for the user to remind you. This matches `AGENTS.md` SOURCE CONTROL PERMISSIONS.
+5. Report completion concisely.

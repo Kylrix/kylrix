@@ -11,6 +11,7 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { RememberUnlockSettings } from '@/components/settings/RememberUnlockSettings';
+import { UnlockOnDemandSettings } from '@/components/settings/UnlockOnDemandSettings';
 import { formatDateWithFallback } from '@/lib/date-utils';
 
 type PasskeyEntry = {
@@ -207,6 +208,8 @@ export function SecurityTab({
           })
         )}
       </Section>
+
+      <UnlockOnDemandSettings />
 
       <RememberUnlockSettings />
 

@@ -408,6 +408,7 @@ export const WalletSidebar = ({
         }
         setUnlockPromptedForSession(true);
         requestSudo({
+            auto: true,
             intent: 'unlock',
             onSuccess: async () => {
                 toast.success('Wallet unlocked');
@@ -421,6 +422,7 @@ export const WalletSidebar = ({
     useEffect(() => {
         if (isOpen && hasMasterpass === false) {
             requestSudo({
+                auto: true,
                 intent: 'initialize',
                 onSuccess: async () => {
                     await refreshWallets();

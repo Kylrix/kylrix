@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 import { Drawer, Box, IconButton } from '@/lib/openbricks/primitives';
 import { X, Shield } from 'lucide-react';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { useSudo } from '@/context/SudoContext';
+import { masterPassCrypto } from '@/lib/masterpass-crypto';
 
 const DRAWER_SX = {
   borderTopLeftRadius: '24px',
@@ -37,6 +39,7 @@ export default function NewTotpDialog({
 }) {
   const { user } = useAppwriteVault();
   const { setIsDrawerOpen } = useDrawerState();
+  const { requestSudo } = useSudo();
   
   const [form, setForm] = useState({
     issuer: "",
@@ -83,6 +86,17 @@ export default function NewTotpDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!masterPassCrypto.isVaultUnlocked()) {
+      requestSudo({
+        onSuccess: () => {
+          const fake = { preventDefault() {} } as React.FormEvent;
+          void handleSubmit(fake);
+        },
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       if (!user) throw new Error("Not authenticated");

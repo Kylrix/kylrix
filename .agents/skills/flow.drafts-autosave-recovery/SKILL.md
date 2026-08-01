@@ -55,3 +55,7 @@ clearDraft(id: string) {
 ```
 
 This prevents orphaned drafts from polluting browser memory over time.
+
+## 4. Agent shipping note (STRICT)
+
+Drafts are local and uncommitted by design — **agent code changes are not**. After any fix or feature that touches this skill’s surface (or any other Kylrix work), agents must **commit and push immediately** per `AGENTS.md` and `shipping-mode`. Never leave shipped work sitting uncommitted waiting for a user reminder.

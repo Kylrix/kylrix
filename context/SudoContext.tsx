@@ -9,20 +9,32 @@ import type { KylrixApp } from '@/lib/sdk/design';
 import { useAuth } from '@/context/auth/AuthContext';
 import { isFlowPath } from '@/lib/routing/app-paths';
 import { useRightRail } from '@/context/RightRailContext';
+import { useUnlockOnDemand } from '@/hooks/useUnlockOnDemand';
 
 interface SudoOptions {
     onSuccess: () => void;
     onCancel?: () => void;
     intent?: "unlock" | "initialize" | "reset" | "upgrade";
     forcePrompt?: boolean;
+    /**
+     * Navigation / tab / open-surface auto prompts.
+     * Suppressed when unlock-on-demand is enabled (default).
+     */
+    auto?: boolean;
 }
 
 interface SudoContextType {
     requestSudo: (options: SudoOptions) => void;
-    promptSudo: (intent?: "unlock" | "initialize" | "reset" | "upgrade", forcePrompt?: boolean) => Promise<boolean>;
+    promptSudo: (
+        intent?: "unlock" | "initialize" | "reset" | "upgrade",
+        forcePrompt?: boolean,
+        auto?: boolean
+    ) => Promise<boolean>;
     isUnlocked: boolean;
     hasMasterpass: boolean | null;
     hasPasskey: boolean | null;
+    /** When true (default), skip auto MasterPass prompts. */
+    unlockOnDemand: boolean;
 }
 
 const SudoContext = createContext<SudoContextType | undefined>(undefined);
@@ -45,6 +57,9 @@ export function SudoProvider({ children }: { children: ReactNode }) {
     const pathname = usePathname();
     const isDesktop = useIsDesktop();
     const { open: openRightRail, close: closeRightRail } = useRightRail();
+    const { unlockOnDemand } = useUnlockOnDemand();
+    const unlockOnDemandRef = useRef(unlockOnDemand);
+    unlockOnDemandRef.current = unlockOnDemand;
     const [isSudoOpen, setIsSudoOpen] = useState(false);
     const [securityStatus, setSecurityStatus] = useState(ecosystemSecurity.status);
 
@@ -90,6 +105,11 @@ export function SudoProvider({ children }: { children: ReactNode }) {
     const [sudoPromise, setSudoPromise] = useState<{ resolve: (v: boolean) => void } | null>(null);
 
     const requestSudo = useCallback((options: SudoOptions) => {
+        if (options.auto && unlockOnDemandRef.current) {
+            options.onCancel?.();
+            return;
+        }
+
         if (isUnlocked && !options.forcePrompt && options.intent !== "upgrade") {
             options.onSuccess();
             return;
@@ -99,7 +119,13 @@ export function SudoProvider({ children }: { children: ReactNode }) {
         setIsSudoOpen(true);
     }, [isUnlocked]);
 
-    const promptSudo = useCallback((intent: "unlock" | "initialize" | "reset" | "upgrade" = "unlock", forcePrompt = false) => {
+    const promptSudo = useCallback((
+        intent: "unlock" | "initialize" | "reset" | "upgrade" = "unlock",
+        forcePrompt = false,
+        auto = false
+    ) => {
+        if (auto && unlockOnDemandRef.current) return Promise.resolve(false);
+
         if (isUnlocked && !forcePrompt && intent !== "upgrade") return Promise.resolve(true);
 
         return new Promise<boolean>((resolve) => {
@@ -107,6 +133,7 @@ export function SudoProvider({ children }: { children: ReactNode }) {
             setPendingAction({
                 intent,
                 forcePrompt,
+                auto,
                 onSuccess: () => resolve(true),
                 onCancel: () => resolve(false)
             });
@@ -175,8 +202,8 @@ export function SudoProvider({ children }: { children: ReactNode }) {
     }, [isSudoOpen, isDesktop, pendingAction?.intent, sudoApp, openRightRail, closeRightRail]);
 
     const contextValue = useMemo<SudoContextType>(
-        () => ({ requestSudo, promptSudo, isUnlocked, hasMasterpass, hasPasskey }),
-        [requestSudo, promptSudo, isUnlocked, hasMasterpass, hasPasskey]
+        () => ({ requestSudo, promptSudo, isUnlocked, hasMasterpass, hasPasskey, unlockOnDemand }),
+        [requestSudo, promptSudo, isUnlocked, hasMasterpass, hasPasskey, unlockOnDemand]
     );
 
     return (

@@ -27,8 +27,8 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   const { user, needsMasterPassword, isVaultUnlocked, isVaultBlurEnabled } = useAppwriteVault();
   const { setConfiguration, resetConfiguration } = useFAB();
   
-  // Master password modal state
-  const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(!!user && (needsMasterPassword || !isVaultUnlocked()));
+  // Master password modal — only auto-open when unlock-on-demand is off
+  const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(false);
   
   type TotpItem = {
     $id: string;
@@ -61,42 +61,54 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   const [selectedTotp, setSelectedTotp] = useState<TotpItem | null>(null);
 
   useEffect(() => {
+    if (!isVaultUnlocked()) return;
     if (totpCodes.length > 0 && !selectedTotp) {
       setSelectedTotp(totpCodes[0]);
     }
-  }, [totpCodes, selectedTotp]);
+  }, [totpCodes, selectedTotp, isVaultUnlocked]);
 
-  const { requestSudo } = useSudo();
+  const { requestSudo, unlockOnDemand } = useSudo();
+
+  const requireUnlock = useCallback(
+    (onSuccess: () => void) => {
+      if (isVaultUnlocked()) {
+        onSuccess();
+        return;
+      }
+      requestSudo({ onSuccess });
+    },
+    [isVaultUnlocked, requestSudo]
+  );
 
   useEffect(() => {
     setConfiguration({
       isVisible: true,
       mainColor: '#10B981',
       mainIcon: <Plus size={32} strokeWidth={3} />,
-      onMainClick: () => setShowNew(true),
+      onMainClick: () => requireUnlock(() => setShowNew(true)),
       actions: [
-        { id: 'add-totp', label: 'ADD CODE', icon: <Plus size={20} />, onClick: () => setShowNew(true) }]
+        { id: 'add-totp', label: 'ADD CODE', icon: <Plus size={20} />, onClick: () => requireUnlock(() => setShowNew(true)) }]
     });
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration]);
+  }, [setConfiguration, resetConfiguration, requireUnlock]);
 
   // Handle action query param
   useEffect(() => {
     const action = searchParams?.get('action');
     if (action === 'add-totp') {
       setEditingTotp(null);
-      setShowNew(true);
+      requireUnlock(() => setShowNew(true));
       
       const params = new URLSearchParams(window.location.search);
       params.delete('action');
       const newRelativePathQuery = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
       router.replace(newRelativePathQuery);
     }
-  }, [searchParams, router]);
+  }, [searchParams, router, requireUnlock]);
 
   useEffect(() => {
     if (!user?.$id) return;
-    if (!isVaultUnlocked()) return;
+    if (!isVaultUnlocked() && !unlockOnDemand) return;
 
     const cacheKey = `vault_totp_${user.$id}`;
     let isCancelled = false;
@@ -150,15 +162,19 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     return () => {
       isCancelled = true;
     };
-  }, [user, showNew, isVaultUnlocked]);
+  }, [user, showNew, isVaultUnlocked, unlockOnDemand]);
 
   useEffect(() => {
+    if (unlockOnDemand) {
+      setShowMasterPassDrawer(false);
+      return;
+    }
     if (user && (needsMasterPassword || !isVaultUnlocked())) {
       setShowMasterPassDrawer(true);
     } else {
       setShowMasterPassDrawer(false);
     }
-  }, [user, needsMasterPassword, isVaultUnlocked]);
+  }, [user, needsMasterPassword, isVaultUnlocked, unlockOnDemand]);
 
   const handleMasterPassSuccess = useCallback(() => {
     setShowMasterPassDrawer(false);
@@ -186,7 +202,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   };
 
   const openDeleteDialog = (id: string) => {
-    setDeleteDialog({ open: true, id });
+    requireUnlock(() => setDeleteDialog({ open: true, id }));
   };
 
   const getTimeRemaining = (period: number = 30): number => {
@@ -199,8 +215,10 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   };
 
   const openEditDialog = (totp: TotpItem) => {
-    setEditingTotp(totp);
-    setShowNew(true);
+    requireUnlock(() => {
+      setEditingTotp(totp);
+      setShowNew(true);
+    });
   };
 
   const getFaviconUrl = (url: string | null | undefined) => {
@@ -416,7 +434,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
 
     return (
       <div
-        onClick={() => setSelectedTotp(totp)}
+        onClick={() => requireUnlock(() => setSelectedTotp(totp))}
         onContextMenu={handleContextMenu}
         className={`h-full p-5 rounded-3xl transition-all duration-300 flex flex-col gap-4 cursor-pointer border ${
           isSelected 
@@ -621,7 +639,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
             />
           </div>
           <button 
-            onClick={() => setShowNew(true)}
+            onClick={() => requireUnlock(() => setShowNew(true))}
             className="flex items-center justify-center gap-2 px-8 h-12 font-black bg-[#10B981] text-black hover:bg-[#059669] rounded-2xl transition-colors shadow-[0_8px_16px_rgba(16, 185, 129, 0.1)]"
           >
             <Plus size={18} />
@@ -644,7 +662,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
               Your secure vault is ready to manage two-step verification codes.
             </p>
             <button 
-              onClick={() => setShowNew(true)} 
+              onClick={() => requireUnlock(() => setShowNew(true))} 
               className="inline-flex items-center gap-2 px-6 h-12 bg-[#10B981] hover:bg-[#059669] text-black font-black rounded-2xl transition-colors"
             >
               <Plus size={18} />

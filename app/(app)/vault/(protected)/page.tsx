@@ -29,12 +29,12 @@ function DashboardPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { registerCreateModal } = useAI();
-  const { requestSudo } = useSudo();
+  const { requestSudo, unlockOnDemand } = useSudo();
   const { setConfiguration, resetConfiguration } = useFAB();
   const { setActiveDetail } = useSection();
   
-  // Master password modal state
-  const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(!!user && (needsMasterPassword || !isVaultUnlocked()));
+  // Master password modal — only auto-open when unlock-on-demand is off
+  const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(false);
   // Vault porter drawer state
   const [showPorterDrawer, setShowPorterDrawer] = useState(false);
   const [activeTab, setActiveTab] = useState<'secrets' | 'totp'>('secrets');
@@ -70,10 +70,49 @@ function DashboardPageContent() {
 
   // Handlers
   const handleAdd = useCallback(() => {
+    if (!isVaultUnlocked()) {
+      requestSudo({
+        onSuccess: () => {
+          setEditCredential(null);
+          setDialogType("login");
+          setShowDialog(true);
+        },
+      });
+      return;
+    }
     setEditCredential(null);
     setDialogType("login");
     setShowDialog(true);
-  }, []);
+  }, [isVaultUnlocked, requestSudo]);
+
+  const requireUnlock = useCallback(
+    (onSuccess: () => void) => {
+      if (isVaultUnlocked()) {
+        onSuccess();
+        return;
+      }
+      requestSudo({ onSuccess });
+    },
+    [isVaultUnlocked, requestSudo]
+  );
+
+  const openCredential = useCallback(
+    (cred: Credentials) => {
+      const open = () => {
+        setSelectedCredential(cred);
+        setActiveDetail({ type: 'secret', id: cred.$id, data: cred });
+      };
+      requireUnlock(open);
+    },
+    [requireUnlock, setActiveDetail]
+  );
+
+  const handleEdit = (cred: Credentials) => {
+    requireUnlock(() => {
+      setEditCredential(cred);
+      setShowDialog(true);
+    });
+  };
 
   const loadAllCredentials = useCallback(async (background = false) => {
     if (!user?.$id) {
@@ -123,9 +162,10 @@ function DashboardPageContent() {
       await loadAllCredentials();
       return;
     }
-    if (!isVaultUnlocked()) return;
+    // With unlock-on-demand, list metadata while locked; decrypt happens on open.
+    if (!isVaultUnlocked() && !unlockOnDemand) return;
     await loadAllCredentials();
-  }, [user, isVaultUnlocked, loadAllCredentials]);
+  }, [user, isVaultUnlocked, unlockOnDemand, loadAllCredentials]);
 
   useEffect(() => {
     if (user?.$id) return;
@@ -166,48 +206,54 @@ function DashboardPageContent() {
   useEffect(() => {
     const action = searchParams?.get('action');
     if (action && ['add-login', 'add-card'].includes(action)) {
-      setEditCredential(null);
-      setDialogType(action.split('-')[1]);
-      setShowDialog(true);
-      
+      requireUnlock(() => {
+        setEditCredential(null);
+        setDialogType(action.split('-')[1]);
+        setShowDialog(true);
+      });
+
       const params = new URLSearchParams(searchParams.toString());
       params.delete('action');
       const newPath = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
       router.replace(newPath);
     }
-  }, [searchParams, router]);
+  }, [searchParams, router, requireUnlock]);
 
   useEffect(() => {
+    if (unlockOnDemand) {
+      setShowMasterPassDrawer(false);
+      return;
+    }
     if (user && (needsMasterPassword || !isVaultUnlocked())) {
       setShowMasterPassDrawer(true);
     } else {
       setShowMasterPassDrawer(false);
     }
-  }, [user, needsMasterPassword, isVaultUnlocked]);
+  }, [user, needsMasterPassword, isVaultUnlocked, unlockOnDemand]);
 
   useEffect(() => {
     registerCreateModal((prefill) => {
-      setEditCredential(null);
-      setDialogType("login");
-      setDialogPrefill(prefill);
-      setShowDialog(true);
+      requireUnlock(() => {
+        setEditCredential(null);
+        setDialogType("login");
+        setDialogPrefill(prefill);
+        setShowDialog(true);
+      });
     });
-  }, [registerCreateModal]);
+  }, [registerCreateModal, requireUnlock]);
 
   useEffect(() => {
-    if (user?.$id && isVaultUnlocked()) {
+    if (!user?.$id) return;
+    if (isVaultUnlocked() || unlockOnDemand) {
       void hydrateVaultData();
     }
-  }, [user, isVaultUnlocked, hydrateVaultData]);
-
-  const handleEdit = (cred: Credentials) => {
-    setEditCredential(cred);
-    setShowDialog(true);
-  };
+  }, [user, isVaultUnlocked, unlockOnDemand, hydrateVaultData]);
 
   const openDeleteModal = (cred: Credentials) => {
-    setCredentialToDelete(cred);
-    setIsDeleteModalOpen(true);
+    requireUnlock(() => {
+      setCredentialToDelete(cred);
+      setIsDeleteModalOpen(true);
+    });
   };
 
   const handleDelete = async () => {
@@ -297,12 +343,24 @@ function DashboardPageContent() {
 
   const handleManualRefresh = useCallback(async () => {
     if (isRefreshing) return;
+    if (user?.$id && !isVaultUnlocked()) {
+      requireUnlock(() => {
+        void (async () => {
+          setIsRefreshing(true);
+          try {
+            await loadAllCredentials(true);
+          } catch (error: unknown) {
+            console.error('Manual secrets refresh failed:', error);
+            toast.error('Could not refresh secrets. Try again.');
+          } finally {
+            setTimeout(() => setIsRefreshing(false), 600);
+          }
+        })();
+      });
+      return;
+    }
     setIsRefreshing(true);
     try {
-      if (user?.$id && !isVaultUnlocked()) {
-        toast.error('Unlock your vault to refresh secrets.');
-        return;
-      }
       await loadAllCredentials(true);
     } catch (error: unknown) {
       console.error('Manual secrets refresh failed:', error);
@@ -310,9 +368,17 @@ function DashboardPageContent() {
     } finally {
       setTimeout(() => setIsRefreshing(false), 600);
     }
-  }, [isRefreshing, user?.$id, isVaultUnlocked, loadAllCredentials]);
+  }, [isRefreshing, user?.$id, isVaultUnlocked, loadAllCredentials, requireUnlock]);
 
   const handleCopy = (value: string) => {
+    if (!isVaultUnlocked()) {
+      requireUnlock(() => {
+        void hydrateVaultData().then(() => {
+          toast.success('Unlocked — tap copy again');
+        });
+      });
+      return;
+    }
     navigator.clipboard.writeText(value);
     toast.success("Copied to clipboard!");
   };
@@ -474,10 +540,7 @@ function DashboardPageContent() {
                                       prev.map(c => c.$id === id ? { ...c, isPublic: true, isGuest: true } : c)
                                     );
                                   }}
-                                  onClick={() => {
-                                    setSelectedCredential(cred);
-                                    setActiveDetail({ type: 'secret', id: cred.$id, data: cred });
-                                  }}
+                                  onClick={() => openCredential(cred)}
                                 />
                               ))}
                             </div>
@@ -512,10 +575,7 @@ function DashboardPageContent() {
                                       prev.map(c => c.$id === id ? { ...c, isPublic: true, isGuest: true } : c)
                                     );
                                   }}
-                                  onClick={() => {
-                                    setSelectedCredential(cred);
-                                    setActiveDetail({ type: 'secret', id: cred.$id, data: cred });
-                                  }}
+                                  onClick={() => openCredential(cred)}
                                 />
                               ))}
                             </div>
