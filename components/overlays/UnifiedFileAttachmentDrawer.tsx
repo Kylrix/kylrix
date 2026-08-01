@@ -278,7 +278,7 @@ export function UnifiedFileAttachmentDrawer() {
     } finally {
       setLoading(false);
     }
-  }, [activeSubTab, userId, localContextNotes]);
+  }, [activeSubTab, userId, localContextNotes, localContextGoals, isUnlocked]);
 
   // Load Synced Media from LocalEngine + Storage Buckets + Local Notes Attachments
   const loadSyncedMedia = useCallback(async () => {
