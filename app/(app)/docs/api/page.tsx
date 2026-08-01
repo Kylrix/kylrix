@@ -141,6 +141,10 @@ export default function ApiDocsPage() {
             <Link href="/settings?tab=developers" className="text-[#A5B4FC] hover:text-white">
               Settings → Developers
             </Link>
+            . For Sign in with Kylrix, see{' '}
+            <Link href="/docs/oauth2" className="text-[#A5B4FC] hover:text-white">
+              OAuth docs
+            </Link>
             .
           </p>
         </section>
