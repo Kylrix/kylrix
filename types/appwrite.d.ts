@@ -261,6 +261,22 @@ export enum FlowReviewsToolTierMax {
     SYSTEM = "system"
 }
 
+export enum PatsStatus {
+    ACTIVE = "active",
+    REVOKED = "revoked"
+}
+
+export enum OauthAppsStatus {
+    DRAFT = "draft",
+    ACTIVE = "active",
+    SUSPENDED = "suspended"
+}
+
+export enum OauthAppInstallsStatus {
+    ACTIVE = "active",
+    REVOKED = "revoked"
+}
+
 export type SecurityLogs = Models.Row & {
     userId: string;
     eventType: string;
@@ -1277,4 +1293,55 @@ export type FlowReviews = Models.Row & {
     piiSummary: string | null;
     createdAt: string | null;
     updatedAt: string | null;
+}
+
+export type Pats = Models.Row & {
+    userId: string;
+    name: string;
+    tokenPrefix: string;
+    tokenHash: string;
+    scopes: string;
+    status: PatsStatus;
+    expiresAt: string | null;
+    lastUsedAt: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
+export type PatRateState = Models.Row & {
+    patId: string;
+    userId: string;
+    minuteKey: string;
+    minuteCount: number;
+    hourKey: string;
+    hourCount: number;
+    updatedAt: string | null;
+}
+
+export type ApiUserRateState = Models.Row & {
+    userId: string;
+    minuteKey: string;
+    minuteCount: number;
+    hourKey: string;
+    hourCount: number;
+    updatedAt: string | null;
+}
+
+export type OauthApps = Models.Row & {
+    ownerId: string;
+    name: string;
+    clientId: string;
+    clientSecretHash: string | null;
+    redirectUris: string | null;
+    scopes: string | null;
+    status: OauthAppsStatus;
+    createdAt: string | null;
+}
+
+export type OauthAppInstalls = Models.Row & {
+    userId: string;
+    appId: string;
+    grantedScopes: string | null;
+    status: OauthAppInstallsStatus;
+    installedAt: string | null;
 }

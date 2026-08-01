@@ -1,4 +1,4 @@
-import { ID, Permission, Query, Role } from 'node-appwrite';
+import { Permission, Query, Role } from 'node-appwrite';
 import { createSystemTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { hasPaidKylrixPlanServer } from '@/lib/services/internal/subscription-entitlement';

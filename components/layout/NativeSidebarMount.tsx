@@ -71,7 +71,10 @@ export function NativeSidebarMount({
   const api = useNativeSidebarApiOptional();
   const openedRef = useRef(false);
   const childrenRef = useRef(children);
-  childrenRef.current = children;
+
+  useEffect(() => {
+    childrenRef.current = children;
+  }, [children]);
 
   // Keep slot payload fresh without touching sidebar React state.
   useEffect(() => {
