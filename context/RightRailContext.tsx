@@ -49,9 +49,20 @@ type NativeSidebarContextType = {
   dismiss: () => void;
 };
 
+/** Stable API only — mounts must not subscribe to `content` or they loop. */
+type NativeSidebarApi = {
+  open: NativeSidebarContextType['open'];
+  swap: NativeSidebarContextType['swap'];
+  close: NativeSidebarContextType['close'];
+  dismiss: NativeSidebarContextType['dismiss'];
+  getActiveKey: () => string | null;
+};
+
 const NativeSidebarContext = createContext<NativeSidebarContextType | undefined>(
   undefined,
 );
+
+const NativeSidebarApiContext = createContext<NativeSidebarApi | null>(null);
 
 const DEFAULT_WIDTH = 420;
 const DETAIL_WIDTH = 560;
@@ -187,6 +198,8 @@ export function NativeSidebarProvider({ children }: { children: ReactNode }) {
     (next: ReactNode, options?: NativeSidebarOpenOptions, mode: 'open' | 'swap' = 'open') => {
       const nextKey = options?.key ?? 'native';
       const nextSticky = Boolean(options?.sticky);
+      const nextWidth = options?.width ?? DEFAULT_WIDTH;
+      const nextTitle = options?.title ?? null;
       if (mode === 'open' || keyRef.current !== nextKey) {
         if (keyRef.current && keyRef.current !== nextKey) {
           releaseRightRail(keyRef.current);
@@ -197,14 +210,14 @@ export function NativeSidebarProvider({ children }: { children: ReactNode }) {
       }
       stickyRef.current = nextSticky;
       restoreRef.current = options?.restore ?? null;
-      setSticky(nextSticky);
-      setWidth(options?.width ?? DEFAULT_WIDTH);
-      setTitle(options?.title ?? null);
+      setSticky((prev) => (prev === nextSticky ? prev : nextSticky));
+      setWidth((prev) => (prev === nextWidth ? prev : nextWidth));
+      setTitle((prev) => (prev === nextTitle ? prev : nextTitle));
       setContent(next);
 
       writeRouteMemory({
         key: nextKey,
-        width: options?.width ?? DEFAULT_WIDTH,
+        width: nextWidth,
         sticky: nextSticky,
         restore: options?.restore ?? null,
       });
@@ -290,10 +303,23 @@ export function NativeSidebarProvider({ children }: { children: ReactNode }) {
     [content, width, activeKey, sticky, title, open, swap, close, dismiss],
   );
 
+  const apiValue = useMemo<NativeSidebarApi>(
+    () => ({
+      open,
+      swap,
+      close,
+      dismiss,
+      getActiveKey: () => keyRef.current,
+    }),
+    [open, swap, close, dismiss],
+  );
+
   return (
-    <NativeSidebarContext.Provider value={value}>
-      {children}
-    </NativeSidebarContext.Provider>
+    <NativeSidebarApiContext.Provider value={apiValue}>
+      <NativeSidebarContext.Provider value={value}>
+        {children}
+      </NativeSidebarContext.Provider>
+    </NativeSidebarApiContext.Provider>
   );
 }
 
@@ -303,6 +329,11 @@ export function useNativeSidebar() {
     throw new Error('useNativeSidebar must be used within a NativeSidebarProvider');
   }
   return ctx;
+}
+
+/** API-only — safe for mounts/topbar (does not re-render on content swaps). */
+export function useNativeSidebarApiOptional() {
+  return useContext(NativeSidebarApiContext);
 }
 
 export function useNativeSidebarOptional() {
