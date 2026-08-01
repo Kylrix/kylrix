@@ -201,36 +201,30 @@ export function UnifiedFileAttachmentDrawer() {
           items = (await LocalEngine.cacheGet<any[]>('f_threads_list')) || [];
         }
       } else if (activeSubTab === 'totps') {
-        // TOTPs / Credentials — Decrypted via VaultService when unlocked
+        // Decrypt only in RAM via VaultService while unlocked — never persist plaintext.
+        void LocalEngine.cacheDelete(`f_decrypted_totps_${userId}`).catch(() => undefined);
         if (isUnlocked) {
           try {
             const res = await VaultService.listTOTPSecrets(userId);
             items = Array.isArray(res) ? res : [];
-            if (items.length > 0) {
-              void LocalEngine.cacheSet(`f_decrypted_totps_${userId}`, items);
-            }
           } catch (_e) {
-            items = (await LocalEngine.cacheGet<any[]>(`f_decrypted_totps_${userId}`)) || [];
+            items = [];
           }
         } else {
-          const cached = await LocalEngine.cacheGet<any[]>(`f_decrypted_totps_${userId}`);
-          items = cached && cached.length > 0 ? cached : [];
+          items = [];
         }
       } else if (activeSubTab === 'vault') {
-        // Vault Items / Secrets — Decrypted via VaultService when unlocked
+        // Decrypt only in RAM via VaultService while unlocked — never persist plaintext.
+        void LocalEngine.cacheDelete(`f_decrypted_vault_${userId}`).catch(() => undefined);
         if (isUnlocked) {
           try {
             const res = await VaultService.listAllCredentials(userId);
             items = Array.isArray(res) ? res : (res as any)?.rows || [];
-            if (items.length > 0) {
-              void LocalEngine.cacheSet(`f_decrypted_vault_${userId}`, items);
-            }
           } catch (_e) {
-            items = (await LocalEngine.cacheGet<any[]>(`f_decrypted_vault_${userId}`)) || [];
+            items = [];
           }
         } else {
-          const cached = await LocalEngine.cacheGet<any[]>(`f_decrypted_vault_${userId}`);
-          items = cached && cached.length > 0 ? cached : [];
+          items = [];
         }
       } else if (activeSubTab === 'tags') {
         // Tags
@@ -363,12 +357,18 @@ export function UnifiedFileAttachmentDrawer() {
     }
   }, [isOpen, loadLocalObjects, loadSyncedMedia]);
 
-  // Re-hydrate objects when vault is unlocked
+  // Re-hydrate when unlocked; clear RAM list when locked (never keep plaintext rows).
   useEffect(() => {
-    if (isOpen && isUnlocked && (activeSubTab === 'totps' || activeSubTab === 'vault')) {
+    if (!isOpen) return;
+    if (activeSubTab !== 'totps' && activeSubTab !== 'vault') return;
+    if (isUnlocked) {
       void loadLocalObjects();
+    } else {
+      setObjectItems([]);
+      void LocalEngine.cacheDelete(`f_decrypted_totps_${userId}`).catch(() => undefined);
+      void LocalEngine.cacheDelete(`f_decrypted_vault_${userId}`).catch(() => undefined);
     }
-  }, [isOpen, isUnlocked, activeSubTab, loadLocalObjects]);
+  }, [isOpen, isUnlocked, activeSubTab, loadLocalObjects, userId]);
 
   if (!isOpen || !options) return null;
 

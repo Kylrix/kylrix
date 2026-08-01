@@ -967,6 +967,18 @@ class EcosystemSecurity {
     if (typeof sessionStorage !== "undefined") {
       sessionStorage.removeItem("kylrix_vault_unlocked");
     }
+    // Never leave plaintext vault/TOTP lists on disk after lock.
+    if (typeof window !== "undefined" && this.currentUserId) {
+      const uid = this.currentUserId;
+      void import("@/lib/services/LocalEngine")
+        .then(({ LocalEngine }) =>
+          Promise.all([
+            LocalEngine.cacheDelete(`f_decrypted_totps_${uid}`),
+            LocalEngine.cacheDelete(`f_decrypted_vault_${uid}`),
+          ]),
+        )
+        .catch(() => undefined);
+    }
     this.emitStatusChange();
   }
 
