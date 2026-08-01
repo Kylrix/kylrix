@@ -49,7 +49,7 @@ import SessionsManager from '@/components/SessionsManager';
 import ActivityLogs from '@/components/ActivityLogs';
 import ConnectedIdentities from '@/components/ConnectedIdentities';
 import PreferencesManager from '@/components/PreferencesManager';
-import { TwoFactorDrawer } from '@/components/overlays/TwoFactorDrawer';
+import { TwoFactorPanel } from '@/components/overlays/TwoFactorDrawer';
 import { BillingDrawer } from '@/components/overlays/BillingDrawer';
 import { AppwriteService } from '@/lib/appwrite';
 import { account } from '@/lib/appwrite/client';
@@ -58,6 +58,8 @@ import UsersManagement from '@/components/admin/UsersManagement';
 import EmailOrchestrator from '@/components/admin/EmailOrchestrator';
 import AdminCouponsPage from '@/components/admin/AdminCoupons';
 import { PasskeySetup } from '@/components/overlays/PasskeySetup';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 
 // Inline Custom Telegram Icon SVG for lucide alignment
 function TelegramIcon({ className = "w-5 h-5" }: { className?: string }) {
@@ -92,11 +94,12 @@ function SettingsPageInner() {
     const searchParams = useSearchParams();
     const { requestSudo} = useSudo();
     const { open: openDrawer } = useUnifiedDrawer();
+    const { openOverlay, closeOverlay } = useOverlay();
+    const { openSidebar, closeSidebar } = useDynamicSidebar();
 
     // Tab state
     const [activeTab, setActiveTab] = useState<'general' | 'profile' | 'security' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
     const [billingDrawerOpen, setBillingDrawerOpen] = useState(false);
-    const [twoFactorDrawerOpen, setTwoFactorDrawerOpen] = useState(false);
     const [mfaFactors, setMfaFactors] = useState<any>(null);
     const [accountMfaEnabled, setAccountMfaEnabled] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
@@ -119,9 +122,49 @@ function SettingsPageInner() {
         }
         if (typeof window !== 'undefined' && window.location.hash === '#mfa') {
             setActiveTab('security');
-            setTwoFactorDrawerOpen(true);
         }
     }, [searchParams]);
+
+    const refreshMfaFactors = useCallback(async () => {
+        if (!user?.$id) return;
+        try {
+            const factors = await AppwriteService.getMfaFactors();
+            setMfaFactors(factors);
+            setAccountMfaEnabled(Boolean(factors?.email && factors?.totp));
+        } catch (err) {
+            console.warn('Failed to load MFA factors:', err);
+        }
+    }, [user?.$id]);
+
+    const openTwoFactorSurface = useCallback(() => {
+        if (!user?.$id) return;
+        const close = () => {
+            if (typeof window !== 'undefined' && window.innerWidth >= 768) closeSidebar();
+            else closeOverlay();
+        };
+        const panel = (
+            <TwoFactorPanel
+                userId={user.$id}
+                loginMethod="password"
+                onClose={close}
+                onChanged={() => {
+                    void refreshMfaFactors();
+                }}
+            />
+        );
+        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+            openSidebar(panel, '2fa-setup', { hideHeader: true });
+        } else {
+            openOverlay(panel);
+        }
+    }, [user?.$id, openSidebar, closeSidebar, openOverlay, closeOverlay, refreshMfaFactors]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (window.location.hash !== '#mfa') return;
+        if (!user?.$id) return;
+        openTwoFactorSurface();
+    }, [user?.$id, openTwoFactorSurface]);
 
     // Delete/export state
     const [_confirmExportOpen, _setConfirmExportOpen] = useState(false);
@@ -303,22 +346,8 @@ function SettingsPageInner() {
     }, [getJWT]);
 
     useEffect(() => {
-        let active = true;
-        async function checkMfa() {
-            if (!user?.$id) return;
-            try {
-                const factors = await AppwriteService.getMfaFactors();
-                if (active) {
-                    setMfaFactors(factors);
-                    setAccountMfaEnabled(factors.email && factors.totp);
-                }
-            } catch (err) {
-                console.warn('Failed to load MFA factors:', err);
-            }
-        }
-        checkMfa();
-        return () => { active = false; };
-    }, [user?.$id]);
+        void refreshMfaFactors();
+    }, [refreshMfaFactors]);
 
     const loadPasskeys = useCallback(async () => {
         if (!user?.$id) return;
@@ -817,7 +846,7 @@ function SettingsPageInner() {
                         onRemovePasskey={handleRemovePasskey}
                         accountMfaEnabled={accountMfaEnabled}
                         mfaFactors={mfaFactors}
-                        onManageMfa={() => setTwoFactorDrawerOpen(true)}
+                        onManageMfa={openTwoFactorSurface}
                     />
                 )}
 
@@ -973,23 +1002,6 @@ function SettingsPageInner() {
             <BillingDrawer
                 isOpen={billingDrawerOpen}
                 onClose={() => setBillingDrawerOpen(false)}
-            />
-        )}
-        {twoFactorDrawerOpen && user && (
-            <TwoFactorDrawer
-                open={twoFactorDrawerOpen}
-                onClose={() => setTwoFactorDrawerOpen(false)}
-                userId={user.$id}
-                loginMethod="password"
-                onEnabled={() => {
-                    setTwoFactorDrawerOpen(false);
-                    if (user?.$id) {
-                        AppwriteService.getMfaFactors().then((factors: any) => {
-                            setMfaFactors(factors);
-                            setAccountMfaEnabled(factors.email && factors.totp);
-                        });
-                    }
-                }}
             />
         )}
         {passkeySetupOpen && (

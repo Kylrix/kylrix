@@ -12,14 +12,12 @@ import {
   type RememberUnlockPrefs,
 } from '@/lib/security/remember-unlock';
 
-/** Preference-only — not wired to vault unlock yet. */
+/** Preference UI only — vault wiring not connected. Disabled as coming soon. */
 export function RememberUnlockSettings() {
   const [prefs, setPrefs] = useState<RememberUnlockPrefs>(DEFAULT_REMEMBER_UNLOCK_PREFS);
-  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     setPrefs(readRememberUnlockPrefs());
-    setHydrated(true);
   }, []);
 
   const save = (patch: Partial<Omit<RememberUnlockPrefs, 'updatedAt'>>) => {
@@ -27,30 +25,40 @@ export function RememberUnlockSettings() {
   };
 
   const hours = resolveRememberUnlockHours(prefs);
+  const comingSoon = true;
 
   return (
-    <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-4 space-y-3">
+    <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-3.5">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55 font-satoshi">
-            Remember unlock
-          </h3>
-          <p className="text-[10px] text-amber-400/80 font-bold mt-0.5">Less safe</p>
+          <div className="flex items-center gap-2">
+            <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55 font-satoshi">
+              Remember unlock
+            </h3>
+            <span className="text-[9px] font-extrabold uppercase tracking-wide text-amber-400/90 bg-[#0A0908] border border-amber-500/25 px-1.5 py-0.5 rounded-md">
+              Coming soon
+            </span>
+          </div>
+          <p className="text-[10px] text-white/35 font-bold mt-1">Less safe when enabled</p>
         </div>
         <button
           type="button"
-          disabled={!hydrated}
+          disabled={comingSoon}
           onClick={() => save({ enabled: !prefs.enabled })}
-          className={`py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border-none ${
-            prefs.enabled ? 'bg-amber-500 text-black' : 'bg-[#0A0908] text-white/70'
+          className={`py-1.5 px-3 rounded-lg text-[11px] font-extrabold border-none ${
+            comingSoon
+              ? 'bg-[#0A0908] text-white/30 cursor-not-allowed'
+              : prefs.enabled
+                ? 'bg-amber-500 text-black cursor-pointer'
+                : 'bg-[#0A0908] text-white/70 cursor-pointer'
           }`}
         >
-          {prefs.enabled ? 'On' : 'Off'}
+          {prefs.enabled && !comingSoon ? 'On' : 'Off'}
         </button>
       </div>
 
-      {prefs.enabled ? (
-        <div className="space-y-2">
+      {!comingSoon && prefs.enabled ? (
+        <div className="space-y-2.5">
           <div className="flex flex-wrap gap-1.5">
             {REMEMBER_UNLOCK_DURATION_OPTIONS.map((opt) => (
               <button
@@ -68,7 +76,7 @@ export function RememberUnlockSettings() {
             ))}
           </div>
           {prefs.durationId === 'custom' ? (
-            <div className="flex items-center gap-2 rounded-[16px] bg-[#0A0908] border border-white/[0.04] px-3 py-2">
+            <div className="flex items-center gap-2 rounded-[16px] bg-[#0A0908] border border-white/[0.04] px-3 py-2.5">
               <input
                 type="number"
                 min={1}
@@ -85,7 +93,7 @@ export function RememberUnlockSettings() {
               <span className="text-[11px] text-white/40">hours · max {REMEMBER_UNLOCK_MAX_HOURS}</span>
             </div>
           ) : (
-            <p className="text-[10px] text-white/35 px-0.5">{hours}h · not applied yet</p>
+            <p className="text-[10px] text-white/35 px-0.5">{hours}h</p>
           )}
         </div>
       ) : null}

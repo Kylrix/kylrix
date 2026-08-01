@@ -132,23 +132,33 @@ export async function verifyTotpAuthenticator(
     otp: otp.trim()});
 }
 
-async function deleteTotpAuthenticator(target: Account = account): Promise<void> {
+export async function removeTotpFactor(target: Account = account): Promise<void> {
   await target.deleteMfaAuthenticator({ type: AuthenticatorType.Totp });
+  const factors = await listCurrentMfaFactors();
+  if (!isMfaFullyEnabled(factors)) {
+    await disableAccountMfa(target);
+  }
 }
 
-async function deleteEmailAuthenticator(target: Account = account): Promise<void> {
+export async function removeEmailFactor(target: Account = account): Promise<void> {
   await (target as Account & {
     deleteMfaAuthenticator: (params: { type: string }) => Promise<unknown>;
   }).deleteMfaAuthenticator({ type: 'email' });
+  const factors = await listCurrentMfaFactors();
+  if (!isMfaFullyEnabled(factors)) {
+    await disableAccountMfa(target);
+  }
 }
 
 export async function disableAllMfaFactors(target: Account = account): Promise<void> {
   const factors = await listCurrentMfaFactors();
   if (factors.totp) {
-    await deleteTotpAuthenticator(target);
+    await target.deleteMfaAuthenticator({ type: AuthenticatorType.Totp }).catch(() => undefined);
   }
   if (factors.email) {
-    await deleteEmailAuthenticator(target);
+    await (target as Account & {
+      deleteMfaAuthenticator: (params: { type: string }) => Promise<unknown>;
+    }).deleteMfaAuthenticator({ type: 'email' }).catch(() => undefined);
   }
   await disableAccountMfa(target);
 }

@@ -67,14 +67,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-4 space-y-3">
+    <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-3.5">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55 font-satoshi">
           {title}
         </h3>
         {action}
       </div>
-      <div className="space-y-2">{children}</div>
+      <div className="space-y-2.5">{children}</div>
     </section>
   );
 }
@@ -91,7 +91,7 @@ function Row({
   trailing?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-[16px] bg-[#0A0908] border border-white/[0.04] px-3 py-3">
+    <div className="flex items-center gap-3 rounded-[16px] bg-[#0A0908] border border-white/[0.04] px-3.5 py-3.5">
       <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-[#6366F1] shrink-0">
         {icon}
       </div>
@@ -117,7 +117,7 @@ export function SecurityTab({
   onManageMfa,
 }: Props) {
   return (
-    <div className="flex flex-col gap-3 pb-24 max-w-3xl text-white">
+    <div className="flex flex-col gap-4 pb-24 max-w-3xl text-white">
       <Section
         title="Vault"
         action={
@@ -222,32 +222,36 @@ export function SecurityTab({
           </button>
         }
       >
-        <Row
-          icon={<Mail className="w-4 h-4" />}
-          title="Email codes"
-          trailing={
-            <span
-              className={`text-[10px] font-extrabold uppercase tracking-wide ${
-                mfaFactors?.email ? 'text-emerald-400' : 'text-white/35'
-              }`}
-            >
-              {mfaFactors?.email ? 'On' : 'Off'}
-            </span>
-          }
-        />
-        <Row
-          icon={<Smartphone className="w-4 h-4" />}
-          title="Authenticator"
-          trailing={
-            <span
-              className={`text-[10px] font-extrabold uppercase tracking-wide ${
-                mfaFactors?.totp ? 'text-emerald-400' : 'text-white/35'
-              }`}
-            >
-              {mfaFactors?.totp ? 'On' : 'Off'}
-            </span>
-          }
-        />
+        <button type="button" onClick={onManageMfa} className="w-full text-left cursor-pointer border-none bg-transparent p-0">
+          <Row
+            icon={<Mail className="w-4 h-4" />}
+            title="Email codes"
+            trailing={
+              <span
+                className={`text-[10px] font-extrabold uppercase tracking-wide ${
+                  mfaFactors?.email ? 'text-emerald-400' : 'text-white/35'
+                }`}
+              >
+                {mfaFactors?.email ? 'On' : 'Off'}
+              </span>
+            }
+          />
+        </button>
+        <button type="button" onClick={onManageMfa} className="w-full text-left cursor-pointer border-none bg-transparent p-0">
+          <Row
+            icon={<Smartphone className="w-4 h-4" />}
+            title="Authenticator"
+            trailing={
+              <span
+                className={`text-[10px] font-extrabold uppercase tracking-wide ${
+                  mfaFactors?.totp ? 'text-emerald-400' : 'text-white/35'
+                }`}
+              >
+                {mfaFactors?.totp ? 'On' : 'Off'}
+              </span>
+            }
+          />
+        </button>
       </Section>
     </div>
   );
