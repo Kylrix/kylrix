@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { AlertTriangle, Timer } from 'lucide-react';
 import {
   DEFAULT_REMEMBER_UNLOCK_PREFS,
   REMEMBER_UNLOCK_DURATION_OPTIONS,
@@ -11,7 +12,6 @@ import {
   type RememberUnlockDurationId,
   type RememberUnlockPrefs,
 } from '@/lib/security/remember-unlock';
-import { probeAppMek } from '@/lib/security/app-mek';
 
 /**
  * Security tab control for Remember Unlock.
@@ -20,7 +20,6 @@ import { probeAppMek } from '@/lib/security/app-mek';
 export function RememberUnlockSettings() {
   const [prefs, setPrefs] = useState<RememberUnlockPrefs>(DEFAULT_REMEMBER_UNLOCK_PREFS);
   const [hydrated, setHydrated] = useState(false);
-  const mek = probeAppMek();
 
   useEffect(() => {
     setPrefs(readRememberUnlockPrefs());
@@ -34,35 +33,38 @@ export function RememberUnlockSettings() {
   const hours = resolveRememberUnlockHours(prefs);
 
   return (
-    <div id="remember-unlock" className="space-y-4">
-      <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
-        Remember Unlock
-      </h2>
-      <div className="bg-[#161412] border border-amber-500/20 rounded-[32px] p-6 md:p-8 space-y-5">
-        <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3">
-          <p className="text-amber-200 text-xs font-bold leading-relaxed">
-            Warning: this is less safe. If someone has your device, they may open private
-            data without your master password until the timer ends. Leave this off unless
-            you accept that risk.
+    <section id="remember-unlock" className="flex flex-col gap-2">
+      <span className="text-[10px] font-mono font-bold tracking-wider text-[#8E8A86] uppercase">
+        Remember unlock
+      </span>
+      <div className="p-4 rounded-[20px] bg-[#0A0908] border border-amber-500/20 shadow-[0_8px_24px_rgba(0,0,0,0.45)] flex flex-col gap-4">
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-3.5 py-3">
+          <AlertTriangle className="w-4 h-4 text-amber-300 shrink-0 mt-0.5" />
+          <p className="text-amber-100/90 text-xs font-semibold font-satoshi leading-relaxed">
+            Less safe. Anyone with this device could open private data until the timer
+            ends. Keep this off unless you accept that risk.
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h4 className="text-base font-extrabold text-white mb-1">Remember Unlock</h4>
-            <p className="text-xs text-[#9B9691] leading-relaxed max-w-[540px]">
-              After you unlock once, skip master-password prompts for a while.
-              Preference only for now — vault crypto is not changed yet.
+        <div className="flex items-start gap-3">
+          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 shrink-0">
+            <Timer className="w-4 h-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-bold text-white leading-tight">Skip unlock prompts</h3>
+            <p className="text-xs text-[#8E8A86] mt-1 font-satoshi leading-relaxed">
+              After you unlock once, stay unlocked for a while. Preference saved now —
+              vault behavior is not changed yet.
             </p>
           </div>
           <button
             type="button"
             disabled={!hydrated}
             onClick={() => save({ enabled: !prefs.enabled })}
-            className={`py-3 px-5 rounded-xl font-black text-xs transition-all cursor-pointer flex-shrink-0 border-none ${
+            className={`py-2.5 px-4 rounded-[12px] font-bold text-xs font-satoshi transition-all cursor-pointer flex-shrink-0 border-none ${
               prefs.enabled
-                ? 'bg-amber-500 hover:bg-amber-600 text-black shadow-lg'
-                : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
+                ? 'bg-amber-500 hover:bg-amber-600 text-black'
+                : 'bg-[#1C1A18] hover:bg-[#242220] border border-[#34322F] text-white'
             }`}
           >
             {prefs.enabled ? 'On' : 'Off'}
@@ -70,20 +72,20 @@ export function RememberUnlockSettings() {
         </div>
 
         {prefs.enabled && (
-          <div className="space-y-3 pt-1 border-t border-white/5">
-            <label className="block text-[11px] font-extrabold uppercase tracking-wider text-white/45">
+          <div className="space-y-3 pt-1 border-t border-white/[0.04]">
+            <span className="text-[10px] font-mono font-bold tracking-wider text-indigo-400 uppercase">
               How long
-            </label>
+            </span>
             <div className="flex flex-wrap gap-2">
               {REMEMBER_UNLOCK_DURATION_OPTIONS.map((opt) => (
                 <button
                   key={opt.id}
                   type="button"
                   onClick={() => save({ durationId: opt.id as RememberUnlockDurationId })}
-                  className={`py-2 px-3.5 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                  className={`py-2 px-3 rounded-xl text-xs font-bold font-satoshi transition-all border cursor-pointer ${
                     prefs.durationId === opt.id
                       ? 'bg-[#6366F1]/20 border-[#6366F1]/40 text-[#A5B4FC]'
-                      : 'bg-white/[0.02] border-white/5 text-white/60 hover:bg-white/5'
+                      : 'bg-[#161412] border-white/[0.06] text-white/65 hover:bg-[#1C1A18]'
                   }`}
                 >
                   {opt.label}
@@ -104,27 +106,20 @@ export function RememberUnlockSettings() {
                       durationId: 'custom',
                     })
                   }
-                  className="w-24 rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-sm font-bold text-white outline-none focus:border-[#6366F1]/50"
+                  className="w-24 rounded-xl bg-[#161412] border border-[#34322F] px-3 py-2 text-sm font-bold text-white outline-none focus:border-[#6366F1]/50"
                 />
-                <span className="text-xs text-[#9B9691] font-semibold">
+                <span className="text-xs text-[#8E8A86] font-semibold font-satoshi">
                   hours (max {REMEMBER_UNLOCK_MAX_HOURS})
                 </span>
               </div>
             )}
 
-            <p className="text-[11px] text-white/35 font-semibold">
-              Selected window: {hours} hour{hours === 1 ? '' : 's'}. Not applied to unlock
-              prompts until this feature is connected.
+            <p className="text-[11px] text-[#8E8A86] font-satoshi">
+              Selected: {hours} hour{hours === 1 ? '' : 's'} (not applied to prompts yet)
             </p>
           </div>
         )}
-
-        <p className="text-[10px] text-white/25 font-mono leading-relaxed">
-          App wrap key probe: {mek.runtime} · public=
-          {mek.publicKeyPresent ? 'yes' : 'no'} · usable=
-          {mek.usableInThisRuntime ? 'yes' : 'no'} (foundation only)
-        </p>
       </div>
-    </div>
+    </section>
   );
 }

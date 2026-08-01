@@ -23,7 +23,7 @@ import {
     ShieldAlert as AdminIcon
 } from 'lucide-react';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
-import { RememberUnlockSettings } from '@/components/settings/RememberUnlockSettings';
+import { SecurityTab } from '@/components/settings/SecurityTab';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
 import { KeychainService } from '@/lib/appwrite/keychain';
@@ -49,7 +49,6 @@ import SessionsManager from '@/components/SessionsManager';
 import ActivityLogs from '@/components/ActivityLogs';
 import ConnectedIdentities from '@/components/ConnectedIdentities';
 import PreferencesManager from '@/components/PreferencesManager';
-import PinManager from '@/components/PinManager';
 import { TwoFactorDrawer } from '@/components/overlays/TwoFactorDrawer';
 import { BillingDrawer } from '@/components/overlays/BillingDrawer';
 import { AppwriteService } from '@/lib/appwrite';
@@ -795,151 +794,31 @@ function SettingsPageInner() {
                 )}
 
                 {activeTab === 'security' && (
-                    <div className="flex flex-col gap-8 pb-24 max-w-3xl">
-                        {/* Vault Status Block */}
-                        <div id="vault-status" className="space-y-4">
-                            <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
-                                Vault Status
-                            </h2>
-                            <div className="bg-[#161412] border border-white/5 rounded-[32px] p-6 md:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                <div>
-                                    <h4 className="text-base font-extrabold text-white mb-1">
-                                        Vault Status: {isUnlocked ? 'Unlocked' : 'Locked'}
-                                    </h4>
-                                    <p className="text-xs text-[#9B9691] leading-relaxed max-w-[540px]">
-                                        {isUnlocked 
-                                            ? 'Your local cryptographic vault is unlocked. Private records are decrypted in RAM.' 
-                                            : 'Your vault is locked. Secure credentials and keys cannot be decrypted.'}
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (isUnlocked) {
-                                            ecosystemSecurity.lock();
-                                            setIsUnlocked(false);
-                                            toast.success('Vault locked successfully');
-                                        } else {
-                                            requestSudo({
-                                                intent: 'unlock',
-                                                forcePrompt: true,
-                                                onSuccess: () => {
-                                                    setIsUnlocked(true);
-                                                    toast.success('Vault unlocked successfully');
-                                                }
-                                            });
-                                        }
-                                    }}
-                                    className={`py-3 px-5 rounded-xl font-black text-xs transition-all cursor-pointer flex-shrink-0 border-none ${
-                                        isUnlocked 
-                                            ? 'bg-amber-500 hover:bg-amber-600 text-black shadow-lg' 
-                                            : 'bg-[#6366F1] hover:bg-[#5458E8] text-white shadow-lg'
-                                    }`}
-                                >
-                                    {isUnlocked ? 'Lock Vault' : 'Unlock Vault'}
-                                </button>
-                            </div>
-                        </div>
-
-                        <RememberUnlockSettings />
-
-                        {/* Passkeys Configuration Section */}
-                        <div id="passkeys-setup" className="space-y-4">
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
-                                    Passkeys
-                                </h2>
-                                <button
-                                    type="button"
-                                    onClick={() => setPasskeySetupOpen(true)}
-                                    className="py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-white font-extrabold text-xs transition-all border border-white/5 cursor-pointer"
-                                >
-                                    Add Passkey
-                                </button>
-                            </div>
-                            <div className="bg-[#161412] border border-white/5 rounded-[32px] p-6 md:p-8 space-y-4">
-                                {loadingPasskeys ? (
-                                    <p className="text-xs text-[#9B9691]">Loading passkeys...</p>
-                                ) : passkeyEntries.length === 0 ? (
-                                    <p className="text-xs text-[#9B9691]">No passkeys registered yet. Set up a passkey to sign in and unlock your vault securely.</p>
-                                ) : (
-                                    <div className="flex flex-col gap-3">
-                                        {passkeyEntries.map((pk) => (
-                                            <div key={pk.$id} className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl flex justify-between items-center">
-                                                <div>
-                                                    <h4 className="text-sm font-extrabold text-white">{pk.params?.name || 'Registered Passkey'}</h4>
-                                                    <p className="text-[10px] text-[#9B9691] font-mono mt-0.5">ID: {pk.$id}</p>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemovePasskey(pk.$id)}
-                                                    className="py-2 px-3.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 font-extrabold text-xs transition-all border border-red-500/10 cursor-pointer"
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div id="pin" className="space-y-4">
-                            <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
-                                Quick Access
-                            </h2>
-                            <div className="bg-[#161412] border border-white/5 rounded-[32px] p-6 md:p-10">
-                                <PinManager />
-                            </div>
-                        </div>
-
-                        <div id="mfa" className="space-y-4">
-                            <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
-                                2FA
-                            </h2>
-                            <div className="bg-white/[0.02] border border-white/5 rounded-[28px] p-6 space-y-4">
-                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                    <div>
-                                        <h4 className="text-base font-extrabold text-white mb-1">2FA Status</h4>
-                                        <p className="text-xs text-[#9B9691] leading-relaxed max-w-[540px]">
-                                            2FA is on only when both Email and TOTP are enabled.
-                                        </p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setTwoFactorDrawerOpen(true)}
-                                        className="py-3 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-black text-xs transition-colors cursor-pointer flex-shrink-0"
-                                    >
-                                        {accountMfaEnabled ? 'Manage 2FA' : 'Set up 2FA'}
-                                    </button>
-                                </div>
-
-                                <div className="flex flex-wrap gap-2">
-                                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${
-                                        accountMfaEnabled 
-                                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                                            : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
-                                    }`}>
-                                        2FA: {accountMfaEnabled ? 'enabled' : 'off'}
-                                    </span>
-                                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${
-                                        mfaFactors?.email 
-                                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                                            : 'bg-white/5 border-white/10 text-white/50'
-                                    }`}>
-                                        Email: {mfaFactors?.email ? 'enabled' : 'off'}
-                                    </span>
-                                    <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${
-                                        mfaFactors?.totp 
-                                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                                            : 'bg-white/5 border-white/10 text-white/50'
-                                    }`}>
-                                        TOTP: {mfaFactors?.totp ? 'enabled' : 'off'}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <SecurityTab
+                        isUnlocked={isUnlocked}
+                        onLockVault={() => {
+                            ecosystemSecurity.lock();
+                            setIsUnlocked(false);
+                            toast.success('Vault locked successfully');
+                        }}
+                        onUnlockVault={() => {
+                            requestSudo({
+                                intent: 'unlock',
+                                forcePrompt: true,
+                                onSuccess: () => {
+                                    setIsUnlocked(true);
+                                    toast.success('Vault unlocked successfully');
+                                }
+                            });
+                        }}
+                        loadingPasskeys={loadingPasskeys}
+                        passkeyEntries={passkeyEntries}
+                        onAddPasskey={() => setPasskeySetupOpen(true)}
+                        onRemovePasskey={handleRemovePasskey}
+                        accountMfaEnabled={accountMfaEnabled}
+                        mfaFactors={mfaFactors}
+                        onManageMfa={() => setTwoFactorDrawerOpen(true)}
+                    />
                 )}
 
                 {activeTab === 'sessions' && (
