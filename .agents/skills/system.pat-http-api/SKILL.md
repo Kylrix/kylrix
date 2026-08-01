@@ -33,9 +33,15 @@ Column types: **varchar / text / mediumtext** only (see `system.appwrite-cli-ops
 
 ## Auth
 
-`Authorization: Bearer kyl_pat_<prefix>_<secret>`
+`Authorization: Bearer kyl_pat_<appwriteUniqueId>_<secret>`
 
-Verify: lookup `tokenPrefix` → compare `sha256(token)` → check status/expiry → rate limit → scope gate.
+Row id = `ID.unique()` = tokenPrefix (collision-free). Secret is random; only SHA-256 hash stored.
+
+Verify: lookup `tokenPrefix` → compare hash → status/expiry → rate limit → scope gate.
+
+## Public HTTP surface
+
+REST CRUD only (`/me`, `/notes`, `/goals`, `/flows`). **No** `/tools/execute` (410). Tools remain in-process for the app, not PAT HTTP.
 
 ## Limits
 
