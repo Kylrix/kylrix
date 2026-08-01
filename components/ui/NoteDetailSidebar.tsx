@@ -121,7 +121,7 @@ export function NoteDetailSidebar({
   layout = 'drawer',
   showExpandButton = true,
   showHeaderDeleteButton = true,
-  isLoading = false,
+  isLoading: _isLoading = false,
   readOnly = false,
   accessRole}: NoteDetailSidebarProps) {
   const { open: openUnified } = useUnifiedDrawer();
