@@ -122,7 +122,8 @@ export default function ApiDocsPage() {
           <h1 className="font-clash text-3xl font-semibold tracking-tight mt-3">HTTP API</h1>
           <p className="mt-2 text-sm text-white/50">
             Base path <code className="text-white/70">/api/v1</code>. Auth via{' '}
-            <code className="text-white/70">Authorization: Bearer kyl_pat_…</code>. REST CRUD
+            <code className="text-white/70">Authorization: Bearer kyl_pat_…</code> or an OAuth
+            access token from Sign in with Kylrix. REST CRUD
             only — tools are internal and not exposed over HTTP.
           </p>
         </div>

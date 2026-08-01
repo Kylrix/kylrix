@@ -27,6 +27,7 @@
     "dompurify": "^3.4.7",
     "framer-motion": "^12.34.3",
     "hash-wasm": "^4.12.0",
+    "jose": "^5.10.0",
     "lucide-react": "^0.575.0",
     "marked": "^18.0.4",
     "next": "^16.1.6",

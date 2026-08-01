@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Copy, KeyRound, Plus, Trash2, Code2, AppWindow, BookOpen } from 'lucide-react';
+import { Copy, KeyRound, Plus, Trash2, Code2, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { PAT_SCOPES, PAT_SCOPE_META, type PatScope } from '@/lib/api/scopes';
 import { KYLRIX_API_SKILL_INSTALL } from '@/lib/api/public';
 import { createPat, listPats, revokePat } from '@/lib/actions/client-ops';
 import { account } from '@/lib/appwrite/client';
+import { OAuthAppsPanel } from '@/components/settings/OAuthAppsPanel';
 
 type PatItem = {
   id: string;
@@ -302,18 +303,7 @@ export function DevelopersTab() {
       </Section>
 
       <Section title="OAuth apps">
-        <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] px-3.5 py-3.5 flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-white/35">
-            <AppWindow size={16} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-white">Create OAuth app</p>
-            <p className="text-[11px] text-white/40">Sign in with Kylrix for third-party apps</p>
-          </div>
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-white/30 shrink-0">
-            Coming soon
-          </span>
-        </div>
+        <OAuthAppsPanel />
       </Section>
 
       <Section title="Quick start">

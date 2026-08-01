@@ -87,9 +87,15 @@ Prefer building Developers “OAuth apps” and consent against **Appwrite Clien
 5. Token lifetimes: keep defaults unless product needs otherwise.
 6. Later: device verification URL + `deviceFlow` on CLI/TV clients.
 
-## Product surfaces to build next
+## Shipped product surfaces
 
-1. `/oauth/consent` — grant_id / authorize params, getGrant, approve/reject.
-2. Developers → OAuth apps — wrap Client SDK `apps` (+ secret reveal once).
-3. Connected Apps — list/revoke via Appwrite (and optional install cache).
-4. `/api/v1` — accept Bearer OAuth access JWT (JWKS/introspect) + existing PAT; enforce scopes.
+1. `/oauth/consent` — `grant_id` / authorize params → getGrant → approve/reject (Appwrite SoT).
+2. Settings → Developers → OAuth apps — Appwrite `/apps` (+ secret once for confidential).
+3. `/api/v1` — Bearer PAT **or** OAuth access JWT (JWKS verify) with scope enforcement.
+4. Local `oauth_*` tables — optional overlays only; leave until cleanup pass.
+
+## Console (already set on this project)
+
+Active; Authorization URL `https://www.kylrix.space/oauth/consent`; custom scopes
+`notes:read` `notes:write` `goals:read` `goals:write` `flows:read` `profile:read` (+ OIDC built-ins).
+Discovery: `https://fra.cloud.appwrite.io/v1/oauth2/<PROJECT_ID>/.well-known/openid-configuration`.

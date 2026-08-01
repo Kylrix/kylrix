@@ -6,9 +6,11 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * Public HTTP API for Personal Access Tokens.
+ * Public HTTP API for PATs and Sign-in-with-Kylrix OAuth access tokens.
  *
- * Auth: Authorization: Bearer kyl_pat_<id>_<secret>
+ * Auth:
+ *   Authorization: Bearer kyl_pat_<id>_<secret>
+ *   Authorization: Bearer <oauth2_access_jwt>
  *
  * REST CRUD only — tools are internal infrastructure, not an HTTP surface.
  *

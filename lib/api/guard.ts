@@ -3,11 +3,13 @@ import { PatService } from '@/lib/services/pats';
 import { enforceApiRateLimits, RateLimitError } from '@/lib/api/rate-limits';
 import { assertScope, type PatScope } from '@/lib/api/scopes';
 import { getActor } from '@/lib/actions/secure-ops';
+import { looksLikeJwt, verifyOAuthAccessToken } from '@/lib/oauth2/verify-access-token';
 
 export type ApiActor = {
   userId: string;
-  kind: 'pat' | 'session';
+  kind: 'pat' | 'oauth' | 'session';
   patId?: string;
+  clientId?: string;
   scopes: string[];
 };
 
@@ -45,6 +47,23 @@ export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
       patId: verified.pat.$id,
       scopes: verified.scopes,
     };
+  }
+
+  // Appwrite OAuth2 access token (Sign in with Kylrix)
+  if (looksLikeJwt(bearer)) {
+    const oauth = await verifyOAuthAccessToken(bearer);
+    if (oauth) {
+      await enforceApiRateLimits({
+        userId: oauth.userId,
+        patId: `oauth_${(oauth.clientId || 'client').slice(0, 28)}`,
+      });
+      return {
+        userId: oauth.userId,
+        kind: 'oauth',
+        clientId: oauth.clientId,
+        scopes: oauth.scopes,
+      };
+    }
   }
 
   // Session JWT path (for future clients) — still rate-limited via synthetic pat bucket id
