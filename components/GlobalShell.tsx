@@ -260,6 +260,7 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
           <Box
             component="aside"
             aria-label="Secondary panel"
+            data-kylrix-native-sidebar
             sx={{
               display: 'flex',
               flexDirection: 'column',

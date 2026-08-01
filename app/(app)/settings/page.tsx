@@ -23,6 +23,7 @@ import {
     ShieldAlert as AdminIcon
 } from 'lucide-react';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
+import { RememberUnlockSettings } from '@/components/settings/RememberUnlockSettings';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
 import { KeychainService } from '@/lib/appwrite/keychain';
@@ -839,6 +840,8 @@ function SettingsPageInner() {
                                 </button>
                             </div>
                         </div>
+
+                        <RememberUnlockSettings />
 
                         {/* Passkeys Configuration Section */}
                         <div id="passkeys-setup" className="space-y-4">

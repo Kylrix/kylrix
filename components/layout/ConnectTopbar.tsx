@@ -474,7 +474,7 @@ export default function ConnectTopbar({
       if (headerRef.current?.contains(target)) return true;
       return Boolean(
         target.closest(
-          '[data-kylrix-topbar-panel], .ob-drawer-root, .ob-drawer-panel, .kylrix-sidebar'));
+          '[data-kylrix-topbar-panel], [data-kylrix-native-sidebar], .ob-drawer-root, .ob-drawer-panel, .kylrix-sidebar'));
     };
 
     const handlePointerDown = (event: PointerEvent) => {
