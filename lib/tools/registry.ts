@@ -27,7 +27,8 @@ interface EcosystemToolDefinition {
     | 'user'
     | 'storage'
     | 'github'
-    | 'wallet';
+    | 'wallet'
+    | 'developer';
   action: 'create' | 'read' | 'update' | 'delete' | 'search' | 'custom';
   name: string;
   description: string;
@@ -551,7 +552,69 @@ function registerCoreTools() {
         userId: context?.userId});
       return { success: true, data: result };
     }});
+
+  toolRegistry.register({
+    id: 'developer.pat.create',
+    domain: 'developer',
+    action: 'create',
+    name: 'Create personal access token',
+    description: 'Mint a PAT with selected scopes for the current user.',
+    isSecure: true,
+    parameters: {
+      name: { type: 'string', description: 'Token label', required: true },
+      scopes: { type: 'array', description: 'Permission scopes', required: true },
+    },
+    execute: async (params, context) => {
+      if (!context?.userId) return { success: false, error: 'Unauthorized' };
+      const { PatService } = await import('@/lib/services/pats');
+      const created = await PatService.create({
+        userId: context.userId,
+        name: String(params.name || ''),
+        scopes: params.scopes,
+      });
+      return { success: true, data: { pat: created.pat, token: created.token } };
+    },
+  });
+
+  toolRegistry.register({
+    id: 'developer.pat.list',
+    domain: 'developer',
+    action: 'read',
+    name: 'List personal access tokens',
+    description: 'List PATs for the current user (no secrets).',
+    parameters: {},
+    execute: async (_params, context) => {
+      if (!context?.userId) return { success: false, error: 'Unauthorized' };
+      const { PatService } = await import('@/lib/services/pats');
+      const data = await PatService.listForUser(context.userId);
+      return { success: true, data };
+    },
+  });
+
+  toolRegistry.register({
+    id: 'developer.pat.revoke',
+    domain: 'developer',
+    action: 'delete',
+    name: 'Revoke personal access token',
+    description: 'Revoke a PAT by id.',
+    isSecure: true,
+    parameters: {
+      patId: { type: 'string', description: 'PAT row id', required: true },
+    },
+    execute: async (params, context) => {
+      if (!context?.userId) return { success: false, error: 'Unauthorized' };
+      const { PatService } = await import('@/lib/services/pats');
+      await PatService.revoke({
+        patId: String(params.patId || ''),
+        userId: context.userId,
+      });
+      return { success: true };
+    },
+  });
 }
 
 // Self-register core tools on module evaluation
 registerCoreTools();
+
+export { toolRegistry };
+export type { EcosystemToolDefinition, ToolParameterSpec };

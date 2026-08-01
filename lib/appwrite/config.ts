@@ -92,7 +92,15 @@ export const APPWRITE_CONFIG = {
             FORM_SUBMISSIONS: 'formSubmissions',
             AGENTS: 'agents',
             OBJECTS: 'objects',
-            AGENT_PAYMENT_INTENTS: 'agent_payment_intents'
+            AGENT_PAYMENT_INTENTS: 'agent_payment_intents',
+            WORKFLOWS: 'workflows',
+            FLOW_INSTALLS: 'flow_installs',
+            FLOW_REVIEWS: 'flow_reviews',
+            PATS: 'pats',
+            PAT_RATE_STATE: 'pat_rate_state',
+            API_USER_RATE_STATE: 'api_user_rate_state',
+            OAUTH_APPS: 'oauth_apps',
+            OAUTH_APP_INSTALLS: 'oauth_app_installs'
         },
         CONNECT: {
             USERS: 'users',

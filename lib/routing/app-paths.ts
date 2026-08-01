@@ -1,13 +1,18 @@
 /**
  * Canonical routes:
- * - Flow (= workflows): /flows only
+ * - Flow (= workflows): /flows list, /flow/[id] share
  * - Goals/forms/events: their own prefixes (not Flow)
  * - Workspaces (projects table): /workspaces
  */
 
 export function isFlowPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
-  return pathname === '/flows' || pathname.startsWith('/flows/');
+  return (
+    pathname === '/flows' ||
+    pathname.startsWith('/flows/') ||
+    pathname === '/flow' ||
+    pathname.startsWith('/flow/')
+  );
 }
 
 /** @deprecated use isFlowPath — Flow is workflows */

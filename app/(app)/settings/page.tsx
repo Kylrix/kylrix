@@ -20,10 +20,12 @@ import {
     History as ActivityIcon,
     Sliders as PreferencesIcon,
     Settings2 as RootAccountIcon,
-    ShieldAlert as AdminIcon
+    ShieldAlert as AdminIcon,
+    Code2 as DevelopersIcon
 } from 'lucide-react';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { SecurityTab } from '@/components/settings/SecurityTab';
+import { DevelopersTab } from '@/components/settings/DevelopersTab';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
 import { KeychainService } from '@/lib/appwrite/keychain';
@@ -98,7 +100,7 @@ function SettingsPageInner() {
     const { openSidebar, closeSidebar } = useDynamicSidebar();
 
     // Tab state
-    const [activeTab, setActiveTab] = useState<'general' | 'profile' | 'security' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'profile' | 'security' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
     const [billingDrawerOpen, setBillingDrawerOpen] = useState(false);
     const [mfaFactors, setMfaFactors] = useState<any>(null);
     const [accountMfaEnabled, setAccountMfaEnabled] = useState(false);
@@ -108,7 +110,7 @@ function SettingsPageInner() {
     useEffect(() => {
         const section = (searchParams.get('section') || '').toLowerCase();
         const tab = (searchParams.get('tab') || '').toLowerCase();
-        const allowed = new Set(['general', 'profile', 'security', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
+        const allowed = new Set(['general', 'profile', 'security', 'developers', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
         if (section.startsWith('admin') || tab === 'admin') {
             setActiveTab('admin');
             if (section.includes('user')) setAdminSubTab('users');
@@ -457,6 +459,7 @@ function SettingsPageInner() {
         { id: 'general', label: 'General', icon: RootAccountIcon },
         { id: 'profile', label: 'Profile', icon: ProfileIcon },
         { id: 'security', label: 'Security & 2FA', icon: SecurityIcon },
+        { id: 'developers', label: 'Developers', icon: DevelopersIcon },
         { id: 'sessions', label: 'Sessions', icon: SessionsIcon },
         { id: 'activity', label: 'Activity Logs', icon: ActivityIcon },
         { id: 'identities', label: 'Connected Apps', icon: Fingerprint },
@@ -852,6 +855,8 @@ function SettingsPageInner() {
                     />
                 )}
 
+                {activeTab === 'developers' && <DevelopersTab />}
+
                 {activeTab === 'sessions' && (
                     <div id="active-sessions" className="space-y-4 pb-24 max-w-3xl">
                         <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
@@ -875,7 +880,10 @@ function SettingsPageInner() {
                 )}
 
                 {activeTab === 'identities' && (
-                    <div id="oauth" className="pb-24 max-w-3xl">
+                    <div id="oauth" className="pb-24 max-w-3xl space-y-4">
+                        <h2 className="text-xl font-black font-clash text-white tracking-tight">
+                            Connected Apps
+                        </h2>
                         <div className="bg-[#161412] border border-white/5 rounded-[32px] p-6 md:p-10">
                             <ConnectedIdentities />
                         </div>

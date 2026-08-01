@@ -10,8 +10,8 @@ disable-model-invocation: true
 
 1. Read `AGENTS.md` and `.agents/skills/SKILLS.md` first. Then open only the specific skill you need.
 2. Canonical app tree is this repo (`kylrix/`). Prefer `lib/sdk`, `lib/services`, and Server Actions over new surfaces.
-3. **No new in-app HTTP APIs** (`app/api/*`, `route.ts`) for product flows — use Server Actions / in-process helpers.
-4. Never edit `generated/` or hand-edit generated Appwrite types. Schema changes only when the user explicitly requests them (`appwrite.config.json` + CLI).
+3. **No new in-app HTTP APIs** (`app/api/*`, `route.ts`) for product UI flows — use Server Actions / in-process helpers. **Exception:** public developer surface `app/api/v1/*` (PAT-authenticated; see `system.pat-http-api`).
+4. Never edit `generated/` or hand-edit generated Appwrite types. Schema changes only when the user explicitly requests them — follow **`system.appwrite-cli-ops`** (durable CLI SoT; survives official `appwrite-cli` reinstall). Never hand-edit `appwrite.config.json`; never `push tables`.
 5. Single database: `passwordManagerDb`. Never introduce other DB IDs.
 6. Terminology: **Table** / **Row** only (never Collection/Document) in code, logs, and UI.
 7. Routing: Flow = `/flows` (workflows only). Workspaces = `/workspaces`. Goals/forms/events are separate. See `system.routing-canonical`.

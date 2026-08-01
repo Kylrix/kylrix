@@ -13,7 +13,7 @@ Source of truth: `lib/routing/app-paths.ts` + `next.config.js` redirects.
 |---------|----------------|-------|
 | Home / auth entry | `/` | No `/login` page — auth drawers open from `/` |
 | Ideas (notes) | `/app`, `/app/[id]`, `/idea/[id]` | Primary note list under `/app` |
-| Flow (= workflows only) | `/flows` | Not goals/forms/events. `/flow` and `/workflows` redirect here |
+| Flow (= workflows only) | `/flows`, `/flow/[id]` | List at `/flows`. Share links at `/flow/[id]`. Bare `/flow` and `/workflows` redirect to `/flows` |
 | Workspaces | `/workspaces`, `/workspaces/[projectId]` | Projects **table** under the hood. `/projects` redirects |
 | Goals / forms / events | `/goals`, `/goal/[id]`, `/forms`, `/form/[id]`, `/events`, `/events/[id]` | Own products — **not** Flow |
 | Connect | `/connect`, chats, calls, hangouts invite, posts | Groups invite lives under hangouts |
@@ -28,7 +28,7 @@ Source of truth: `lib/routing/app-paths.ts` + `next.config.js` redirects.
 
 ## Helpers
 
-- `isFlowPath` → `/flows` only
+- `isFlowPath` → `/flows` and `/flow/[id]`
 - `isGoalsSurfacePath` → goals/forms/events
 - `isWorkspacesPath` → `/workspaces`
 

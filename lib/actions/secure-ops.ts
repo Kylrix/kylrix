@@ -96,6 +96,20 @@ import {
   toggleTaskReminderSecure} from './secure-ops/misc';
 
 import {
+  installFlowSecure,
+  listMyFlowInstallsSecure,
+  revokeFlowInstallSecure,
+  requestFlowPublishSecure,
+} from './secure-ops/flows';
+
+import {
+  createPatSecure,
+  listPatsSecure,
+  revokePatSecure,
+  listOAuthAppInstallsSecure,
+} from './secure-ops/pats';
+
+import {
   getNostrIdentityAction,
   registerNostrIdentityAction,
   resolveNostrPubkeysAction} from './secure-ops/nostr';
@@ -207,6 +221,14 @@ export {
   
   createStandaloneTagSecure,
   toggleTaskReminderSecure,
+  installFlowSecure,
+  listMyFlowInstallsSecure,
+  revokeFlowInstallSecure,
+  requestFlowPublishSecure,
+  createPatSecure,
+  listPatsSecure,
+  revokePatSecure,
+  listOAuthAppInstallsSecure,
   getNostrIdentityAction,
   registerNostrIdentityAction,
   resolveNostrPubkeysAction};

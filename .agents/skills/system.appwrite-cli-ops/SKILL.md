@@ -1,51 +1,123 @@
 ---
 name: system.appwrite-cli-ops
-description: Guide for Appwrite CLI operations, especially table creation and schema management. Always check CLI version first. Use when creating tables, columns, indexes, or managing database schema via CLI instead of manual config editing.
+description: >-
+  Kylrix durable Appwrite CLI / schema SoT. Survives official skill reinstalls
+  (appwrite-cli, appwrite-typescript). Use for ALL table/column/index work,
+  guardrails, deprecated types, pull/push policy, and secure cross-owner writes.
 disable-model-invocation: false
 ---
 
-# Appwrite CLI Operations
+# Appwrite CLI Operations (Kylrix SoT)
+
+**This skill is repo-owned.** Official `appwrite-cli` / `appwrite-typescript` (via `npx skills add appwrite/agent-skills`) can be overwritten on reinstall. **Every Kylrix Appwrite CLI nuance and guardrail lives here.** Prefer this skill over the official ones when they conflict.
+
+Canonical DB: **`passwordManagerDb`** (single-database mandate). Terminology: **Table** / **Row** — never collection/document.
+
+---
 
 ## Prerequisites
-
-**Always check the CLI version first:**
 
 ```bash
 appwrite --version
 ```
 
-⚠️ **CRITICAL GUARDRAIL (DO NOT BYPASS):**
-- **NEVER mutate the Appwrite CLI client config**: DO NOT run commands like `appwrite client --endpoint`, `appwrite client --key`, `appwrite client --project-id`, or `appwrite client --reset`. Doing so will instantly overwrite or delete the user's active login session on their local machine.
-- **Respect User Sessions**: Always assume the user is already authenticated in their terminal. If a command fails with "Session not found" or similar auth issues, **do not** try to configure the client or reset it. Stop immediately and politely ask the user to run `appwrite login` on their terminal.
+Supported: **17.4.0+** (tables-db). Current ecosystem often **21.x+**.
 
-⚠️ **Important:** This skill does **not** have permission to run `appwrite update`. If the version is too old and critical subcommands are missing, notify the user to update manually or consult Appwrite docs for the version you're running.
+⚠️ **Do not run `appwrite update`** from the agent — ask the user if the CLI is too old.
 
-Supported versions: **17.4.0+** (tables-db, init table, push tables commands available)
+### Client / session guardrails (STRICT)
 
-## When to Use This Skill
+- **NEVER** mutate CLI client config: no `appwrite client --endpoint`, `--key`, `--project-id`, or `--reset`. That wipes the user's local session/prefs.
+- Assume the user is already authenticated. On "Session not found" / auth errors: **stop** and ask them to run `appwrite login`. Do not improvise with keys in ways that rewrite prefs.
 
-- Creating new tables with columns and indexes via CLI instead of hand-editing `appwrite.config.json`
-- Adding columns, indexes, or relationships to existing tables
-- Validating schema consistency between live Appwrite and local config
-- Running interactive table setup flows
-- Pushing schema changes to Appwrite
+---
 
-## Table Operations Workflow
+## Ecosystem policy (STRICT — never bypass)
 
-### 1. Create a New Table
+### Config & generated types
 
-Use the interactive or flag-based approach:
+- **NEVER** hand-edit `appwrite.config.json` (schema drift / wipe risk).
+- **NEVER** hand-edit `generated/` — only `appwrite generate --language typescript` after a successful pull.
+- `generated/` is the runtime type SoT; `appwrite.config.json` is sync output only.
 
-**Interactive (recommended for first-time setup):**
-```bash
-appwrite init table
-# Follow prompts for database-id, table-id, name
-```
+### Pull / push
 
-**Direct with flags:**
+- **NEVER** `appwrite push tables` (destroys/overwrites live schema & data risk).
+- **NEVER** `appwrite pull all`.
+- **NEVER** `appwrite pull functions` / `appwrite functions pull` (overwrites local function code).
+- **Allowed sync path for schema:**
+  1. Incremental live CLI: `create-table` / `create-*-column` / `create-index` on the remote.
+  2. `appwrite pull tables` → refresh local `appwrite.config.json`.
+  3. `appwrite generate --language typescript`.
+
+### Destructive schema (STRICT)
+
+- **NEVER** `update-*-column` / change type, size, required, default, encrypt, or array on an **existing** column.
+- **NEVER** `delete-column`, `delete-index`, `delete-column-index`, `delete-table`, or database delete.
+- **NEVER** `update-table` to strip permissions, disable `rowSecurity`, rename, or $id-swap live tables.
+- **Additive only:** new table ids, new column keys, new index keys.
+- Before create: `list-columns` / `list-indexes`; **skip if key exists**.
+- New columns on tables with rows: `required false` and/or safe `--xdefault`.
+- Prefer a **new table** over reshaping a hot table when the shape change is large.
+
+### Cross-owner / counters
+
+- Install counts, reviews, and any stranger→owner mutation go through **secure-ops + system client** with explicit authz. Never grant strangers write on owner rows.
+
+### Skill reinstall survival
+
+- Put **all** new CLI/schema policy in **this** file (`system.appwrite-cli-ops`), not in `appwrite-cli` / `appwrite-typescript`.
+- After `npx skills add appwrite/agent-skills`, re-check that this skill still exists and agents still prefer it for schema work.
+
+---
+
+## Column types — deprecated vs prefer
+
+### Deprecated (do not create)
+
+| Type | Status |
+|------|--------|
+| **`string`** (`create-string-column`) | **Deprecated.** Legacy only. Existing columns keep working — **do not migrate in place** (see destructive rules). For **new** columns, never use `string`. |
+
+No other column types are marked deprecated in current Appwrite Tables docs. Prefer the explicit text family below.
+
+### Prefer for new text / blob fields
+
+Think about **size + indexing** before creating:
+
+| Prefer | CLI | Max chars | Storage | Indexing | Use when |
+|--------|-----|-----------|---------|----------|----------|
+| **`varchar`** | `create-varchar-column` | 16,383 | Inline (counts toward **~64KB row** budget) | **Full** index if **size ≤ 768** | IDs, handles, short titles, enum-like codes you filter/sort on |
+| **`text`** | `create-text-column` | 16,383 | Off-page (20-byte pointer in row) | Prefix only | Descriptions, short JSON-ish blobs, notes |
+| **`mediumtext`** | `create-mediumtext-column` | ~4.2M | Off-page | Prefix only | Large JSON (steps, grants, findings), long bodies |
+| **`longtext`** | `create-longtext-column` | ~1B | Off-page | Prefix only | Huge payloads / logs — rare; prefer mediumtext first |
+
+**Caveats (extra thought required):**
+
+1. **`varchar` eats row budget** — many large varchars can blow the 64KB row limit. Keep indexed keys small (≤768 for full indexes).
+2. **Off-page types** (`text`+) do not need a `size` the same way; they are weaker for full-value indexes — design queries around keys/`varchar` + payload in mediumtext.
+3. **Do not** pick `longtext` by default “to be safe” — prefer the smallest type that fits.
+4. **IDs / foreign keys / scope keys:** `varchar` size 64–191, required as appropriate, indexable.
+5. **Encrypted secrets:** still use explicit types + `--encrypt` where the product requires it; encryption does not excuse using deprecated `string`.
+
+### Other column types (unchanged preference)
+
+- `create-boolean-column`, `create-integer-column` (counters: min 0 + xdefault 0), `create-float-column`
+- `create-datetime-column` (ISO 8601)
+- `create-enum-column` (closed vocab: status, tiers)
+- `create-email-column`, `create-url-column`, `create-ip-column` when the domain matches
+- `create-big-int-column` when values exceed 32-bit integer
+- Geometry / relationship only when the product model needs them
+
+---
+
+## Table operations workflow
+
+### 1. Create table
+
 ```bash
 appwrite tables-db create-table \
-  --database-id <db-id> \
+  --database-id passwordManagerDb \
   --table-id <table-id> \
   --name <table-name> \
   --permissions 'create("users")' \
@@ -53,187 +125,146 @@ appwrite tables-db create-table \
   --enabled true
 ```
 
-### 2. Add Columns
+### 2. Add columns (examples — no deprecated string)
 
-**String column:**
+**Short indexed id / title:**
+
 ```bash
-appwrite tables-db create-string-column \
-  --database-id chat \
+appwrite tables-db create-varchar-column \
+  --database-id passwordManagerDb \
   --table-id <table-id> \
-  --key <column-name> \
-  --size 255 \
-  --required true \
+  --key ownerId \
+  --size 64 \
+  --required false \
   --encrypt false
 ```
 
-**Enum column:**
+**Description / moderate text:**
+
 ```bash
-appwrite tables-db create-enum-column \
-  --database-id chat \
+appwrite tables-db create-text-column \
+  --database-id passwordManagerDb \
   --table-id <table-id> \
-  --key <column-name> \
-  --elements value1 value2 value3 \
-  --required false \
-  --xdefault value1
+  --key description \
+  --required false
 ```
 
-**DateTime column:**
+**Large JSON / findings:**
+
 ```bash
+appwrite tables-db create-mediumtext-column \
+  --database-id passwordManagerDb \
+  --table-id <table-id> \
+  --key grants \
+  --required false
+```
+
+**Enum / datetime / integer / boolean:**
+
+```bash
+appwrite tables-db create-enum-column \
+  --database-id passwordManagerDb --table-id <table-id> \
+  --key status --elements active revoked \
+  --required false --xdefault active
+
 appwrite tables-db create-datetime-column \
-  --database-id chat \
-  --table-id <table-id> \
-  --key <column-name> \
-  --required false
-```
+  --database-id passwordManagerDb --table-id <table-id> \
+  --key createdAt --required false
 
-**Integer column:**
-```bash
 appwrite tables-db create-integer-column \
-  --database-id chat \
-  --table-id <table-id> \
-  --key <column-name> \
-  --required false \
-  --xdefault 0
-```
+  --database-id passwordManagerDb --table-id <table-id> \
+  --key installCount --required false --min 0 --xdefault 0
 
-**Boolean column:**
-```bash
 appwrite tables-db create-boolean-column \
-  --database-id chat \
-  --table-id <table-id> \
-  --key <column-name> \
-  --required false
+  --database-id passwordManagerDb --table-id <table-id> \
+  --key enabled --required false
 ```
 
-### 3. Add Indexes
+### 3. Indexes
 
-**Key index (default lookup):**
 ```bash
 appwrite tables-db create-index \
-  --database-id chat \
-  --table-id <table-id> \
-  --key <index-name> \
-  --type key \
-  --columns col1 col2 \
-  --orders ASC DESC
-```
+  --database-id passwordManagerDb --table-id <table-id> \
+  --key idx_<name> --type key \
+  --columns col1 col2 --orders ASC DESC
 
-**Unique index (enforce uniqueness):**
-```bash
 appwrite tables-db create-index \
-  --database-id chat \
-  --table-id <table-id> \
-  --key <index-name> \
-  --type unique \
-  --columns col1 col2 col3 \
-  --orders ASC ASC ASC
+  --database-id passwordManagerDb --table-id <table-id> \
+  --key idx_<name>_uq --type unique \
+  --columns col1 col2 col3 --orders ASC ASC ASC
 ```
 
-**Fulltext index (search):**
+Index columns that are queried together. Unique indexes need clean data first.
+
+### 4. Verify → pull → generate
+
 ```bash
-appwrite tables-db create-index \
-  --database-id chat \
-  --table-id <table-id> \
-  --key <index-name> \
-  --type fulltext \
-  --columns col1 col2
+appwrite tables-db list-columns --database-id passwordManagerDb --table-id <table-id>
+appwrite tables-db list-indexes --database-id passwordManagerDb --table-id <table-id>
+# wait until status=available
+appwrite pull tables
+appwrite generate --language typescript
 ```
 
-### 4. Verify Schema
+---
 
-**List all columns:**
-```bash
-appwrite tables-db list-columns \
-  --database-id chat \
-  --table-id <table-id>
-```
-
-**List all indexes:**
-```bash
-appwrite tables-db list-indexes \
-  --database-id chat \
-  --table-id <table-id>
-```
-
-**Get table details:**
-```bash
-appwrite tables-db get-table \
-  --database-id chat \
-  --table-id <table-id>
-```
-
-## Common Patterns
-
-### Pattern: Create a Project-like Table
+## Pattern: new table (correct types)
 
 ```bash
-# 1. Create base table
+DB=passwordManagerDb
+TID=example_items
+
 appwrite tables-db create-table \
-  --database-id chat --table-id my_projects \
-  --name my_projects --permissions 'create("users")' \
-  --row-security true
+  --database-id "$DB" --table-id "$TID" --name "$TID" \
+  --permissions 'create("users")' --row-security true --enabled true
 
-# 2. Add required fields
-appwrite tables-db create-string-column \
-  --database-id chat --table-id my_projects \
-  --key title --size 255 --required true
+appwrite tables-db create-varchar-column \
+  --database-id "$DB" --table-id "$TID" \
+  --key ownerId --size 64 --required true --encrypt false
 
-appwrite tables-db create-string-column \
-  --database-id chat --table-id my_projects \
-  --key ownerId --size 64 --required true
+appwrite tables-db create-varchar-column \
+  --database-id "$DB" --table-id "$TID" \
+  --key title --size 255 --required true --encrypt false
 
-# 3. Add optional fields
-appwrite tables-db create-string-column \
-  --database-id chat --table-id my_projects \
-  --key description --size 65535 --required false
+appwrite tables-db create-text-column \
+  --database-id "$DB" --table-id "$TID" \
+  --key description --required false
+
+appwrite tables-db create-mediumtext-column \
+  --database-id "$DB" --table-id "$TID" \
+  --key payload --required false
 
 appwrite tables-db create-enum-column \
-  --database-id chat --table-id my_projects \
+  --database-id "$DB" --table-id "$TID" \
   --key status --elements active archived \
   --required false --xdefault active
 
 appwrite tables-db create-datetime-column \
-  --database-id chat --table-id my_projects \
+  --database-id "$DB" --table-id "$TID" \
   --key createdAt --required false
 
-# 4. Add indexes
 appwrite tables-db create-index \
-  --database-id chat --table-id my_projects \
-  --key idx_owner_created \
-  --type key --columns ownerId createdAt \
-  --orders ASC DESC
+  --database-id "$DB" --table-id "$TID" \
+  --key idx_owner_created --type key \
+  --columns ownerId createdAt --orders ASC DESC
 ```
 
-## Why CLI Over Config Editing
-
-- **Guaranteed consistency**: CLI validates schema before writing
-- **Live feedback**: Column/index status shows as "available" or "processing"
-- **No stale config**: Changes sync immediately with Appwrite server
-- **Less error-prone**: No manual JSON formatting or trailing commas
+---
 
 ## Troubleshooting
 
-**Column creation returns "processing" but verification shows "available":**
-This is normal. Appwrite processes columns asynchronously; CLI shows interim status. Wait 10–15 seconds and re-check.
+- **processing → available:** wait 10–15s and re-list.
+- **Table already exists:** new `--table-id` only — do not delete.
+- **Unique index fails:** dedupe data first; never delete columns to “fix” it without an explicit human disaster plan.
+- **Auth / permission denied:** `appwrite whoami`; ask user to login — do not rewrite client config.
 
-**"Table already exists" error:**
-CLI prevents duplicate table IDs in the same database. Use a different `--table-id` or delete the old table first.
+## CLI limitations
 
-**Unique index creation fails:**
-Ensure the column combination doesn't already have duplicate values. If the table has data, you may need to clean it first.
+- No batch create; no automatic rollback mid-flight; clean up only with **additive** follow-ups or human-approved ops (still no delete-column by agent default).
 
-**Permission denied on create operations:**
-Verify your Appwrite credentials via `appwrite whoami` and ensure your API key has `tables.write` scope.
+## Related
 
-## CLI Limitations
-
-- **No batch operations**: Columns and indexes are created one at a time
-- **No rollback**: If schema creation fails mid-way, you must manually clean up
-- **No bulk import**: Cannot load schema from file; use interactive or flag-based workflows
-
-## Static Configuration File Restrictions
-
-⚠️ **CRITICAL ARCHITECTURAL MANDATE:**
-- **DO NOT edit `appwrite.config.json` directly**: Manually editing static configuration files is strictly prohibited. It is slow to process, highly error-prone, and can lead to overwriting or breaking live production databases.
-- **DO NOT edit the `generated/` directory manually**: Files in the `generated/` folder are autogenerated. You must only consume or import them, never edit them manually.
-- **Strictly use Appwrite CLI live commands**: All schema mutations, including creating tables, columns, and indexes, must be executed directly via live Appwrite CLI commands.
+- Official CLI reference (overwritable): `appwrite-cli`
+- Official TS patterns (overwritable): `appwrite-typescript`
+- Flow install/review punches: `flow.schema-install-review`
+- Single DB / Table-Row terms: root `AGENTS.md`

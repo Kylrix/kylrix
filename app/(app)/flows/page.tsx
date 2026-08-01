@@ -1,363 +1,438 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  Paper, 
-  Chip, 
-  IconButton, 
-  Divider,
-  Alert
-} from '@/lib/openbricks/primitives';
-import { 
-  RotateLeft as NegateIcon, 
-  Visibility as PublicIcon, 
-  VisibilityOff as PrivateIcon, 
-  DeleteOutline as DeleteIcon, 
-  Security as AnonIcon, 
-  Circle as DotIcon,
-  ToggleOn as DynamicIcon
-} from '@/lib/openbricks/icons';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Download,
+  Layers,
+  Plus,
+  Square,
+  Trash2,
+  Workflow,
+} from 'lucide-react';
 import { useLocalContext } from '@/lib/context-engine';
-import { anonymizeWorkflow, negateWorkflow, WorkflowChain } from '@/lib/workflow-engine';
-import { 
-  saveWorkflowAction, 
-  listWorkflowsAction, 
-  deleteWorkflowAction 
+import { WorkflowChain } from '@/lib/workflow-engine';
+import {
+  saveWorkflowAction,
+  listWorkflowsAction,
+  listDiscoverFlowsAction,
+  deleteWorkflowAction,
 } from '@/lib/actions/workflows';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { useFAB } from '@/context/FABContext';
+import {
+  useNativeSidebarApiOptional,
+  NATIVE_SIDEBAR_WIDTHS,
+} from '@/context/RightRailContext';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { FlowDetailDrawer, VerifiedMark } from '@/components/flows/FlowDetailDrawer';
+import { BUILTIN_FLOWS } from '@/lib/flows/builtins';
+import type { DiscoverFlow, FlowPublisher } from '@/lib/flows/types';
+import {
+  installFlowLocal,
+  isFlowInstalled,
+  listInstalledFlowIds,
+  uninstallFlowLocal,
+} from '@/lib/flows/installed';
+import { installFlow } from '@/lib/actions/client-ops';
+import { buildPublicResourceUrl } from '@/lib/share/public-url';
+import toast from 'react-hot-toast';
 
-export default function WorkflowsPage() {
-  const router = useRouter();
-  const { 
-    isRecording, 
-    startRecording, 
-    stopRecording, 
-    savedWorkflows, 
-    updateWorkflow, 
-    clearSavedWorkflows 
+type Tab = 'discover' | 'installed';
+
+function communityPublisher(wf: WorkflowChain & { metadata?: unknown }): FlowPublisher {
+  const meta = wf.metadata;
+  let handle = '@user';
+  let verified: FlowPublisher['verified'] = null;
+  try {
+    const parsed = typeof meta === 'string' ? JSON.parse(meta) : meta;
+    if (parsed?.publisherHandle) handle = String(parsed.publisherHandle);
+    if (parsed?.verified === 'ecosystem' || parsed?.verified === true) verified = 'ecosystem';
+    if (parsed?.verified === 'kylrix') verified = 'kylrix';
+  } catch {
+    /* ignore */
+  }
+  return { handle, verified };
+}
+
+function FlowRow({
+  flow,
+  trailing,
+  onOpen,
+}: {
+  flow: DiscoverFlow;
+  trailing?: React.ReactNode;
+  onOpen: () => void;
+}) {
+  return (
+    <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] overflow-hidden">
+      <div className="flex items-center gap-3 p-3.5">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex items-center gap-3 min-w-0 flex-1 text-left cursor-pointer"
+        >
+          <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-[#A855F7] shrink-0">
+            <Layers size={16} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-white truncate">{flow.name}</p>
+            <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+              <span className="text-[11px] font-bold text-white/40 truncate">
+                {flow.publisher.handle}
+              </span>
+              <VerifiedMark kind={flow.publisher.verified} />
+              <span className="text-[11px] text-white/25 truncate">
+                · {flow.steps.length} steps
+              </span>
+            </div>
+          </div>
+        </button>
+        {trailing}
+      </div>
+    </div>
+  );
+}
+
+export default function FlowsPage() {
+  const { setConfiguration, resetConfiguration } = useFAB();
+  const native = useNativeSidebarApiOptional();
+  const { openOverlay, closeOverlay } = useOverlay();
+  const {
+    isRecording,
+    startRecording,
+    stopRecording,
+    savedWorkflows,
+    updateWorkflow,
+    clearSavedWorkflows,
   } = useLocalContext();
 
-  const [negationError, setNegationError] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('discover');
+  const [installedIds, setInstalledIds] = useState<string[]>([]);
+  const [community, setCommunity] = useState<WorkflowChain[]>([]);
+  const [isDesktop, setIsDesktop] = useState(false);
 
-  // Sync workflows from Appwrite database on mount
+  useEffect(() => {
+    setInstalledIds(listInstalledFlowIds());
+    const check = () => setIsDesktop(window.innerWidth >= 1024);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   useEffect(() => {
     const syncDb = async () => {
-      const res = await listWorkflowsAction();
-      if (res.success && res.data) {
-        res.data.forEach(wf => {
-          updateWorkflow(wf.id, wf);
-        });
+      const [mine, disco] = await Promise.all([
+        listWorkflowsAction(),
+        listDiscoverFlowsAction(),
+      ]);
+      if (mine.success && mine.data) {
+        mine.data.forEach((wf) => updateWorkflow(wf.id, wf));
+      }
+      if (disco.success && disco.data) {
+        setCommunity(disco.data);
       }
     };
-    syncDb();
+    void syncDb();
   }, [updateWorkflow]);
 
-  const handleTogglePrivacy = async (id: string, wf: WorkflowChain) => {
-    const updated = {
-      ...wf,
-      isPublic: !wf.isPublic
-    };
-    updateWorkflow(id, updated);
-    await saveWorkflowAction(updated);
-  };
-
-  const handleAnonymize = async (id: string, wf: WorkflowChain) => {
-    const anon = anonymizeWorkflow(wf);
-    updateWorkflow(id, anon);
-    await saveWorkflowAction(anon);
-  };
-
-  const handleNegate = async (id: string, wf: WorkflowChain) => {
-    setNegationError(null);
-    const res = negateWorkflow(wf);
-    if (!res.success || !res.workflow) {
-      setNegationError(res.error || 'Failed to invert workflow.');
+  const handleRecordToggle = useCallback(() => {
+    if (isRecording) {
+      const wf = stopRecording('New flow', 'Recorded steps', 'workspace');
+      if (wf) {
+        void saveWorkflowAction(wf);
+        setInstalledIds(installFlowLocal(wf.id));
+        setTab('installed');
+      }
       return;
     }
-    updateWorkflow(res.workflow.id, res.workflow);
-    await saveWorkflowAction(res.workflow);
-  };
+    startRecording();
+  }, [isRecording, startRecording, stopRecording]);
 
-  const handleToggleStepDynamic = async (wfId: string, wf: WorkflowChain, stepIndex: number) => {
-    const updatedSteps = [...wf.steps];
-    updatedSteps[stepIndex] = {
-      ...updatedSteps[stepIndex],
-      isDynamic: !updatedSteps[stepIndex].isDynamic
-    };
-    const updated = {
-      ...wf,
-      steps: updatedSteps
-    };
-    updateWorkflow(wfId, updated);
-    await saveWorkflowAction(updated);
-  };
+  useEffect(() => {
+    setConfiguration({
+      isVisible: true,
+      mainColor: isRecording ? '#EF4444' : '#A855F7',
+      mainIcon: isRecording ? (
+        <Square size={28} strokeWidth={3} fill="currentColor" />
+      ) : (
+        <Plus size={32} strokeWidth={3} />
+      ),
+      onMainClick: handleRecordToggle,
+      suppressWorkflow: true,
+      actions: [],
+    });
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration, isRecording, handleRecordToggle]);
 
-  const handleDeleteWorkflow = async (id: string) => {
-    await deleteWorkflowAction(id);
-    const nextSaved = { ...savedWorkflows };
-    delete nextSaved[id];
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('kylrix_saved_workflows', JSON.stringify(nextSaved));
+  const yours = useMemo(() => Object.values(savedWorkflows), [savedWorkflows]);
+
+  const discoverList: DiscoverFlow[] = useMemo(() => {
+    const builtins = BUILTIN_FLOWS.map((f) => ({
+      ...f,
+      installed: installedIds.includes(f.id) || isFlowInstalled(f.id),
+    }));
+    const seen = new Set(builtins.map((b) => b.id));
+    const fromCommunity: DiscoverFlow[] = community
+      .filter((wf) => wf.isPublic && !seen.has(wf.id) && !BUILTIN_FLOWS.some((b) => b.id === wf.id))
+      .map((wf) => ({
+        ...wf,
+        publisher: communityPublisher(wf),
+        source: 'community' as const,
+        installed: installedIds.includes(wf.id),
+      }));
+    return [...builtins, ...fromCommunity];
+  }, [community, installedIds]);
+
+  const installedList: DiscoverFlow[] = useMemo(() => {
+    const byId = new Map<string, DiscoverFlow>();
+
+    yours.forEach((wf) => {
+      byId.set(wf.id, {
+        ...wf,
+        publisher: { handle: '@you', verified: null },
+        source: 'yours',
+        installed: true,
+      });
+    });
+
+    installedIds.forEach((id) => {
+      if (byId.has(id)) return;
+      const builtin = BUILTIN_FLOWS.find((b) => b.id === id);
+      if (builtin) {
+        byId.set(id, { ...builtin, installed: true });
+        return;
+      }
+      const pub = community.find((c) => c.id === id);
+      if (pub) {
+        byId.set(id, {
+          ...pub,
+          publisher: communityPublisher(pub),
+          source: 'community',
+          installed: true,
+        });
+      }
+    });
+
+    return Array.from(byId.values());
+  }, [yours, installedIds, community]);
+
+  const closeDetail = useCallback(() => {
+    native?.close(`flow-detail`);
+    closeOverlay();
+  }, [native, closeOverlay]);
+
+  const openDetail = useCallback(
+    (flow: DiscoverFlow, isOwner: boolean) => {
+      const panel = (
+        <FlowDetailDrawer
+          flow={flow}
+          publisher={flow.publisher}
+          isOwner={isOwner}
+          onClose={closeDetail}
+          onChanged={(next) => {
+            updateWorkflow(next.id, next);
+            if (next.isPublic) {
+              setCommunity((prev) => {
+                const rest = prev.filter((p) => p.id !== next.id);
+                return [next, ...rest];
+              });
+            } else {
+              setCommunity((prev) => prev.filter((p) => p.id !== next.id));
+            }
+          }}
+        />
+      );
+
+      if (isDesktop && native) {
+        native.open(panel, {
+          key: 'flow-detail',
+          width: NATIVE_SIDEBAR_WIDTHS.detail,
+          title: flow.name,
+        });
+      } else {
+        openOverlay(panel);
+      }
+    },
+    [isDesktop, native, openOverlay, closeDetail, updateWorkflow]
+  );
+
+  const handleInstall = async (id: string) => {
+    try {
+      const res = await installFlow({ flowId: id, scope: { type: 'user' } });
+      if (!res?.success) {
+        toast.error('Install failed');
+        return;
+      }
+      setInstalledIds(installFlowLocal(id));
+      toast.success(res.created ? 'Installed' : 'Already installed');
+    } catch (err: any) {
+      toast.error(err?.message || 'Install failed');
     }
-    window.location.reload();
   };
 
-  const workflowsList = Object.values(savedWorkflows);
+  const handleUninstall = async (flow: DiscoverFlow) => {
+    if (flow.source === 'yours') {
+      await deleteWorkflowAction(flow.id);
+      const nextSaved = { ...savedWorkflows };
+      delete nextSaved[flow.id];
+      clearSavedWorkflows();
+      Object.values(nextSaved).forEach((wf) => updateWorkflow(wf.id, wf));
+    }
+    setInstalledIds(uninstallFlowLocal(flow.id));
+    toast.success('Removed');
+  };
+
+  const handleShareCopy = async (id: string) => {
+    const url = buildPublicResourceUrl('flow', id);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copied');
+    } catch {
+      toast.success(url);
+    }
+  };
+
+  const list = tab === 'discover' ? discoverList : installedList;
 
   return (
-    <Box sx={{ p: 4, bgcolor: '#000000', minHeight: '100vh', color: 'white', fontFamily: 'Satoshi, sans-serif' }}>
-      {/* Back Button */}
-      <IconButton
-        onClick={() => router.back()}
-        sx={{
-          mb: 3,
-          bgcolor: '#161412',
-          color: '#fff',
-          border: '1px solid rgba(255,255,255,0.06)',
-          '&:hover': { bgcolor: '#1C1A18' }}}
-      >
-        <ArrowLeft size={18} />
-      </IconButton>
-
-      {/* Header section */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Box>
-          <Typography variant="h4" fontWeight={900} sx={{ letterSpacing: '-0.02em', mb: 1, fontFamily: 'Clash Display, sans-serif' }}>
-            Action Workflows
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#8C8A84' }}>
-            Record, negate, and share automated action chains to multiply productivity.
-          </Typography>
-        </Box>
-
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          {isRecording ? (
-            <Button
-              variant="contained"
-              onClick={() => {
-                const name = prompt("Name your workflow:") || "Custom Flow";
-                const desc = prompt("Workflow description:") || "Automated chain";
-                stopRecording(name, desc, 'workspace');
-              }}
-              sx={{
-                bgcolor: '#EF4444',
-                color: 'white',
-                fontWeight: 800,
-                px: 3,
-                borderRadius: '12px',
-                '&:hover': { bgcolor: '#DC2626' }
-              }}
-            >
-              Stop Recording
-            </Button>
-          ) : (
-            <Button
-              variant="contained"
-              onClick={startRecording}
-              sx={{
-                bgcolor: '#6366F1',
-                color: 'white',
-                fontWeight: 800,
-                px: 3,
-                borderRadius: '12px',
-                '&:hover': { bgcolor: '#4F46E5' }
-              }}
-            >
-              Record New Flow
-            </Button>
-          )}
-
-          {workflowsList.length > 0 && (
-            <Button
-              variant="outlined"
-              onClick={clearSavedWorkflows}
-              sx={{
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: '#EF4444',
-                fontWeight: 800,
-                borderRadius: '12px',
-                '&:hover': { borderColor: '#EF4444', bgcolor: 'rgba(239, 68, 68, 0.05)' }
-              }}
-            >
-              Clear All
-            </Button>
-          )}
-        </Box>
-      </Box>
-
-      {negationError && (
-        <Alert severity="error" sx={{ mb: 3, bgcolor: '#1E1010', color: '#F87171', border: '1px solid #7F1D1D', borderRadius: '12px' }} onClose={() => setNegationError(null)}>
-          {negationError}
-        </Alert>
-      )}
-
-      {workflowsList.length === 0 ? (
-        <Paper
-          elevation={0}
-          sx={{
-            p: 8,
-            textAlign: 'center',
-            bgcolor: '#141312',
-            border: '1px solid #232220',
-            borderRadius: '20px'
-          }}
-        >
-          <Typography variant="h6" fontWeight={800} sx={{ mb: 1 }}>
-            No workflows recorded yet
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#8C8A84', mb: 3, maxWidth: 400, mx: 'auto' }}>
-            Click &quot;Record New Flow&quot; above or open the bottom SpeedDial FAB menu to record a chain of actions.
-          </Typography>
-          <Button
-            variant="contained"
-            onClick={startRecording}
-            sx={{ bgcolor: '#272624', border: '1px solid #363532', color: 'white', fontWeight: 800, borderRadius: '10px' }}
+    <div className="flex-1 min-h-screen pointer-events-auto font-satoshi text-white">
+      <div className="w-full max-w-[880px] mx-auto p-4 md:p-8 space-y-5">
+        <div className="flex items-end justify-between gap-4">
+          <h1 className="font-clash text-2xl md:text-3xl font-semibold tracking-tight text-white">
+            Flows
+          </h1>
+          <button
+            type="button"
+            onClick={handleRecordToggle}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold cursor-pointer transition-colors ${
+              isRecording
+                ? 'bg-red-500 text-white hover:bg-red-600'
+                : 'bg-[#A855F7] text-white hover:bg-[#9333EA]'
+            }`}
           >
-            Record Action Chain
-          </Button>
-        </Paper>
-      ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {workflowsList.map((wf) => (
-            <Box key={wf.id}>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 3,
-                  bgcolor: '#141312',
-                  border: '1px solid #232220',
-                  borderRadius: '20px',
-                  position: 'relative'
-                }}
+            {isRecording ? (
+              <>
+                <Square size={14} fill="currentColor" />
+                Stop
+              </>
+            ) : (
+              <>
+                <Plus size={14} strokeWidth={3} />
+                New
+              </>
+            )}
+          </button>
+        </div>
+
+        {isRecording && (
+          <div className="rounded-xl bg-[#161412] border border-red-500/25 px-4 py-3 flex items-center gap-3">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-60" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+            </span>
+            <p className="text-xs font-bold text-white/70">Recording</p>
+          </div>
+        )}
+
+        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#161412] border border-white/[0.06] w-fit">
+          {(
+            [
+              { id: 'discover', label: 'Discover', count: discoverList.length },
+              { id: 'installed', label: 'Installed', count: installedList.length },
+            ] as const
+          ).map((f) => {
+            const active = tab === f.id;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setTab(f.id)}
+                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-colors cursor-pointer ${
+                  active
+                    ? 'bg-[#A855F7] text-white'
+                    : 'text-white/45 hover:text-white hover:bg-white/[0.04]'
+                }`}
               >
-                {/* Upper bar */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-                      <Typography variant="h6" fontWeight={900} sx={{ color: 'white' }}>
-                        {wf.name}
-                      </Typography>
-                      <Chip 
-                        label={wf.niche.toUpperCase()} 
-                        size="small" 
-                        sx={{ 
-                          bgcolor: 'rgba(99, 102, 241, 0.1)', 
-                          color: '#818CF8', 
-                          fontWeight: 800,
-                          fontSize: '10px',
-                          border: '1px solid rgba(99, 102, 241, 0.2)'
-                        }} 
-                      />
-                      {wf.isAnonymized && (
-                        <Chip 
-                          label="SECURELY ANONYMIZED" 
-                          size="small" 
-                          sx={{ bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#34D399', fontWeight: 800, fontSize: '10px' }} 
-                        />
-                      )}
-                    </Box>
-                    <Typography variant="body2" sx={{ color: '#8C8A84' }}>
-                      {wf.description}
-                    </Typography>
-                  </Box>
+                {f.label}
+                <span className={`ml-1.5 ${active ? 'text-white/70' : 'text-white/25'}`}>
+                  {f.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <IconButton 
-                      onClick={() => handleTogglePrivacy(wf.id, wf)}
-                      title={wf.isPublic ? "Make Private" : "Make Public"}
-                      sx={{ color: 'rgba(255, 255, 255, 0.4)', '&:hover': { color: 'white', bgcolor: 'rgba(255, 255, 255, 0.05)' } }}
-                    >
-                      {wf.isPublic ? <PublicIcon fontSize="small" /> : <PrivateIcon fontSize="small" />}
-                    </IconButton>
+        <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-2.5">
+          <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">
+            {tab === 'discover' ? 'Discover' : 'Installed'}
+          </h3>
 
-                    {!wf.isAnonymized && (
-                      <IconButton 
-                        onClick={() => handleAnonymize(wf.id, wf)}
-                        title="Securely Anonymize Metadata"
-                        sx={{ color: 'rgba(255, 255, 255, 0.4)', '&:hover': { color: '#34D399', bgcolor: 'rgba(16, 185, 129, 0.05)' } }}
-                      >
-                        <AnonIcon fontSize="small" />
-                      </IconButton>
-                    )}
-
-                    <IconButton 
-                      onClick={() => handleNegate(wf.id, wf)}
-                      title="Create Negation Inversion Flow"
-                      sx={{ color: 'rgba(255, 255, 255, 0.4)', '&:hover': { color: '#818CF8', bgcolor: 'rgba(99, 102, 241, 0.05)' } }}
-                    >
-                      <NegateIcon fontSize="small" />
-                    </IconButton>
-
-                    <IconButton 
-                      onClick={() => handleDeleteWorkflow(wf.id)}
-                      title="Delete Workflow"
-                      sx={{ color: 'rgba(255, 255, 255, 0.4)', '&:hover': { color: '#EF4444', bgcolor: 'rgba(239, 68, 68, 0.05)' } }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </Box>
-
-                <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.05)' }} />
-
-                {/* Steps Trace Line */}
-                <Typography variant="caption" fontWeight={800} sx={{ color: '#A2A09B', display: 'block', mb: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Interaction Path ({wf.steps.length} Steps)
-                </Typography>
-
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  {wf.steps.map((step, idx) => (
-                    <Box key={idx} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pl: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <DotIcon sx={{ fontSize: 8, color: step.importance === 'high' ? '#6366F1' : '#3E3A36' }} />
-                        <Typography 
-                          variant="caption" 
-                          sx={{ 
-                            fontFamily: 'monospace', 
-                            color: step.importance === 'high' ? '#FFFFFF' : '#8C8A84',
-                            fontWeight: step.importance === 'high' ? 800 : 500
-                          }}
+          {list.length === 0 ? (
+            <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] px-4 py-10 text-center space-y-4">
+              <div className="mx-auto w-fit p-3 rounded-2xl bg-[#161412] border border-white/[0.06] text-[#A855F7]">
+                <Workflow size={22} />
+              </div>
+              <p className="text-sm font-bold text-white/50">
+                {tab === 'discover' ? 'Nothing to discover yet' : 'No flows installed'}
+              </p>
+              {tab === 'installed' && (
+                <button
+                  type="button"
+                  onClick={() => setTab('discover')}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#161412] border border-white/[0.08] text-white cursor-pointer"
+                >
+                  Browse Discover
+                </button>
+              )}
+            </div>
+          ) : (
+            list.map((flow) => {
+              const isOwner = flow.source === 'yours';
+              const installed = installedIds.includes(flow.id) || isOwner;
+              return (
+                <FlowRow
+                  key={flow.id}
+                  flow={flow}
+                  onOpen={() => openDetail(flow, isOwner)}
+                  trailing={
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {tab === 'discover' && !installed && (
+                        <button
+                          type="button"
+                          title="Install"
+                          onClick={() => void handleInstall(flow.id)}
+                          className="p-2 rounded-lg bg-[#161412] border border-white/[0.06] text-[#A855F7] hover:bg-[#1C1A18] cursor-pointer"
                         >
-                          {step.actionId}
-                        </Typography>
-                        {step.isDynamic && (
-                          <Chip 
-                            label="DYNAMIC RESOLUTION" 
-                            size="small" 
-                            sx={{ height: 16, fontSize: '8px', bgcolor: 'rgba(245, 158, 11, 0.1)', color: '#FBBF24', fontWeight: 800 }} 
-                          />
-                        )}
-                      </Box>
-
-                      {step.importance === 'high' && (
-                        <Button
-                          size="small"
-                          onClick={() => handleToggleStepDynamic(wf.id, wf, idx)}
-                          startIcon={<DynamicIcon sx={{ fontSize: 12 }} />}
-                          sx={{
-                            color: step.isDynamic ? '#FBBF24' : 'rgba(255, 255, 255, 0.3)',
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            textTransform: 'none',
-                            py: 0.2,
-                            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.03)' }
-                          }}
-                        >
-                          {step.isDynamic ? 'Make Static' : 'Make Dynamic'}
-                        </Button>
+                          <Download size={14} />
+                        </button>
                       )}
-                    </Box>
-                  ))}
-                </Box>
-              </Paper>
-            </Box>
-          ))}
-        </Box>
-      )}
-    </Box>
+                      {tab === 'installed' && (
+                        <>
+                          <button
+                            type="button"
+                            title="Share link"
+                            onClick={() => void handleShareCopy(flow.id)}
+                            className="px-2.5 py-2 rounded-lg bg-[#161412] border border-white/[0.06] text-[10px] font-extrabold uppercase tracking-wider text-white/50 hover:text-white cursor-pointer"
+                          >
+                            Share
+                          </button>
+                          <button
+                            type="button"
+                            title="Remove"
+                            onClick={() => void handleUninstall(flow)}
+                            className="p-2 rounded-lg bg-[#161412] border border-red-500/20 text-red-400 cursor-pointer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  }
+                />
+              );
+            })
+          )}
+        </section>
+      </div>
+    </div>
   );
 }

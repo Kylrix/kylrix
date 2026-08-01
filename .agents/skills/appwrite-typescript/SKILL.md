@@ -6,6 +6,9 @@ description: Appwrite TypeScript SDK skill. Use when building browser-based Java
 
 # Appwrite TypeScript SDK
 
+> [!IMPORTANT]
+> **Kylrix schema/CLI policy** (no push tables, additive-only columns, never create deprecated `string` — use varchar/text/mediumtext/longtext) lives in **`system.appwrite-cli-ops`**. That skill survives Appwrite official skill reinstalls. Prefer it for any TablesDB mutation.
+
 ## Installation
 
 ```bash

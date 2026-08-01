@@ -6,21 +6,11 @@ description: Appwrite CLI skill. Use when managing Appwrite projects from the co
 
 # Appwrite CLI
 
+> [!IMPORTANT]
+> **Kylrix policy SoT:** All repo guardrails (no push tables, no pull all/functions, additive-only schema, no mutate/delete columns, no client config mutation, deprecated `string` → prefer varchar/text/mediumtext/longtext, secure-ops for cross-owner counters) live in **`system.appwrite-cli-ops`**. That skill is repo-owned and survives `npx skills add appwrite/agent-skills` reinstalls. **Do not** re-home Kylrix policy in this file — it will be overwritten.
+
 > [!CAUTION]
-> **NEVER MANUALLY EDIT `appwrite.config.json` DIRECTLY.**
-> Manually editing database configurations/schemas inside `appwrite.config.json` can cause catastrophic state mismatches or accidental destruction/overwrite of production database tables.
-> Always pull the latest schema first using `appwrite pull tables`, perform database schema manipulations using the proper Appwrite CLI commands (e.g. `appwrite tables-db create-integer-column ...`), and then generate types using `appwrite generate --language typescript`.
-> 
-> **STRICT ECOSYSTEM POLICY: WE NEVER PUSH TABLES, NEVER PULL FUNCTIONS, & NEVER RUN PULL ALL.**
-> Running `appwrite push tables` or `appwrite pull all` is strictly prohibited. Pushing table schemas will destroy user data and overwrite database configurations. Pulling functions will overwrite local function code and configurations.
-> Specifically:
-> - NEVER run `appwrite pull all`.
-> - NEVER run `appwrite pull functions` or `appwrite functions pull`.
-> - When introducing changes:
->   1. Use incremental Appwrite CLI commands to create tables, columns, or indexes on the remote server (e.g., `appwrite tables-db create-table --database-id ...`).
->   2. Run `appwrite pull tables` to sync those changes back to your local `appwrite.config.json`.
->   3. Generate TypeScript SDK files with `appwrite generate --language typescript`. Note that the `generated/` directory is the sole source of truth for runtime database models and types throughout the application; `appwrite.config.json` should never be treated as the direct source of types.
->   4. NEVER use push commands for tables.
+> Follow **`system.appwrite-cli-ops`** before any TablesDB mutation. Official examples below may still mention legacy flows; Kylrix overrides them.
 
 ## Installation
 

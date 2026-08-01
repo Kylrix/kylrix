@@ -9652,6 +9652,91 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "ownerId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "installCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "flowKind",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "workflow",
+                    "format": "enum",
+                    "elements": [
+                        "workflow",
+                        "extension",
+                        "template",
+                        "prompt",
+                        "guardrail",
+                        "ui",
+                        "pack"
+                    ]
+                },
+                {
+                    "key": "toolTierMax",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "general",
+                    "format": "enum",
+                    "elements": [
+                        "general",
+                        "fine",
+                        "system"
+                    ]
+                },
+                {
+                    "key": "reviewStatus",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "draft",
+                    "format": "enum",
+                    "elements": [
+                        "draft",
+                        "pending",
+                        "approved",
+                        "rejected",
+                        "blocked"
+                    ]
+                },
+                {
+                    "key": "publisherHandle",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "verifiedKind",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "none",
+                    "format": "enum",
+                    "elements": [
+                        "none",
+                        "ecosystem",
+                        "kylrix"
+                    ]
                 }
             ],
             "indexes": [
@@ -9696,6 +9781,52 @@
                         "isPublic"
                     ],
                     "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_ownerId",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_reviewStatus",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "reviewStatus"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_installCount",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "installCount"
+                    ],
+                    "orders": [
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_flowKind_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "flowKind",
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC",
                         "ASC"
                     ]
                 }
@@ -10728,6 +10859,781 @@
                     "orders": [
                         "ASC",
                         "DESC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "flow_installs",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "flow_installs",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "flowId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "installerId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "scopeKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "scopeType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "user",
+                        "object",
+                        "kind",
+                        "all"
+                    ]
+                },
+                {
+                    "key": "grants",
+                    "type": "mediumtext",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "active",
+                    "format": "enum",
+                    "elements": [
+                        "active",
+                        "revoked"
+                    ]
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_flow_installer_scope",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "flowId",
+                        "installerId",
+                        "scopeKey"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_installerId",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "installerId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_flowId_status",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "flowId",
+                        "status"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "flow_reviews",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "flow_reviews",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "flowId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "actorId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "sessionId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "verdict",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "pending",
+                    "format": "enum",
+                    "elements": [
+                        "pending",
+                        "approved",
+                        "rejected",
+                        "needs_changes",
+                        "blocked"
+                    ]
+                },
+                {
+                    "key": "toolTierMax",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "general",
+                    "format": "enum",
+                    "elements": [
+                        "general",
+                        "fine",
+                        "system"
+                    ]
+                },
+                {
+                    "key": "findings",
+                    "type": "mediumtext",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "piiSummary",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1024,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_flowId_created",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "flowId",
+                        "createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_verdict",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "verdict"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_actorId",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "actorId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "pats",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "pats",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "name",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "tokenPrefix",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "tokenHash",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "scopes",
+                    "type": "mediumtext",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "active",
+                    "format": "enum",
+                    "elements": [
+                        "active",
+                        "revoked"
+                    ]
+                },
+                {
+                    "key": "expiresAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "lastUsedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_tokenPrefix",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "tokenPrefix"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_userId_status",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "status"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_tokenHash",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "tokenHash"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "pat_rate_state",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "pat_rate_state",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "patId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "minuteKey",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "minuteCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "hourKey",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 14,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "hourCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_patId",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "patId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_userId",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "api_user_rate_state",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "api_user_rate_state",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "minuteKey",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "minuteCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "hourKey",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 14,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "hourCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_userId",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "oauth_apps",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "oauth_apps",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "ownerId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "name",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "clientId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "clientSecretHash",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "redirectUris",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "scopes",
+                    "type": "mediumtext",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "draft",
+                    "format": "enum",
+                    "elements": [
+                        "draft",
+                        "active",
+                        "suspended"
+                    ]
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_clientId",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "clientId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_ownerId",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "oauth_app_installs",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "oauth_app_installs",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "appId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "grantedScopes",
+                    "type": "mediumtext",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "active",
+                    "format": "enum",
+                    "elements": [
+                        "active",
+                        "revoked"
+                    ]
+                },
+                {
+                    "key": "installedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_user_app",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "appId"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_userId_status",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "status"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
                     ]
                 }
             ]

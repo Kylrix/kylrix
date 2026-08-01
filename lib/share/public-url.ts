@@ -55,6 +55,8 @@ function buildPublicResourcePath(
       return `/agents/session/${id}`;
     case 'agent_conversation':
       return `/agents/chat/${id}`;
+    case 'flow':
+      return `/flow/${id}`;
     default:
       return `/${type}/${id}`;
   }

@@ -205,6 +205,62 @@ export enum NotificationsType {
     SUGGESTED = "suggested"
 }
 
+export enum WorkflowsFlowKind {
+    WORKFLOW = "workflow",
+    EXTENSION = "extension",
+    TEMPLATE = "template",
+    PROMPT = "prompt",
+    GUARDRAIL = "guardrail",
+    UI = "ui",
+    PACK = "pack"
+}
+
+export enum WorkflowsToolTierMax {
+    GENERAL = "general",
+    FINE = "fine",
+    SYSTEM = "system"
+}
+
+export enum WorkflowsReviewStatus {
+    DRAFT = "draft",
+    PENDING = "pending",
+    APPROVED = "approved",
+    REJECTED = "rejected",
+    BLOCKED = "blocked"
+}
+
+export enum WorkflowsVerifiedKind {
+    NONE = "none",
+    ECOSYSTEM = "ecosystem",
+    KYLRIX = "kylrix"
+}
+
+export enum FlowInstallsScopeType {
+    USER = "user",
+    OBJECT = "object",
+    KIND = "kind",
+    ALL = "all"
+}
+
+export enum FlowInstallsStatus {
+    ACTIVE = "active",
+    REVOKED = "revoked"
+}
+
+export enum FlowReviewsVerdict {
+    PENDING = "pending",
+    APPROVED = "approved",
+    REJECTED = "rejected",
+    NEEDS_CHANGES = "needs_changes",
+    BLOCKED = "blocked"
+}
+
+export enum FlowReviewsToolTierMax {
+    GENERAL = "general",
+    FINE = "fine",
+    SYSTEM = "system"
+}
+
 export type SecurityLogs = Models.Row & {
     userId: string;
     eventType: string;
@@ -1086,6 +1142,13 @@ export type Workflows = Models.Row & {
     steps: string;
     metadata: string | null;
     isGuest: boolean | null;
+    ownerId: string | null;
+    installCount: number;
+    flowKind: WorkflowsFlowKind;
+    toolTierMax: WorkflowsToolTierMax;
+    reviewStatus: WorkflowsReviewStatus;
+    publisherHandle: string | null;
+    verifiedKind: WorkflowsVerifiedKind;
 }
 
 export type Objects = Models.Row & {
@@ -1191,4 +1254,27 @@ export type ToolCalls = Models.Row & {
     status: string | null;
     resultSummary: string | null;
     createdAt: string | null;
+}
+
+export type FlowInstalls = Models.Row & {
+    flowId: string;
+    installerId: string;
+    scopeKey: string;
+    scopeType: FlowInstallsScopeType;
+    grants: string | null;
+    status: FlowInstallsStatus;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
+export type FlowReviews = Models.Row & {
+    flowId: string;
+    actorId: string;
+    sessionId: string | null;
+    verdict: FlowReviewsVerdict;
+    toolTierMax: FlowReviewsToolTierMax;
+    findings: string | null;
+    piiSummary: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
 }

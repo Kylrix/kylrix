@@ -460,5 +460,63 @@ export async function toggleTaskReminder(taskId: string, enabled: boolean) {
   return toggleTaskReminderSecure(taskId, enabled, jwt);
 }
 
+export async function installFlow(params: {
+  flowId: string;
+  scope?: import('@/lib/flows/bindings').FlowScopeInput;
+  grants?: Record<string, unknown> | null;
+  bindObject?: boolean;
+}) {
+  const jwt = await getJwt();
+  const { installFlowSecure } = await import('./secure-ops');
+  return installFlowSecure({ ...params, jwt });
+}
 
+export async function listMyFlowInstalls() {
+  const jwt = await getJwt();
+  const { listMyFlowInstallsSecure } = await import('./secure-ops');
+  return listMyFlowInstallsSecure(jwt);
+}
+
+export async function revokeFlowInstall(installId: string) {
+  const jwt = await getJwt();
+  const { revokeFlowInstallSecure } = await import('./secure-ops');
+  return revokeFlowInstallSecure({ installId, jwt });
+}
+
+export async function requestFlowPublish(params: {
+  flowId: string;
+  confirmAware: boolean;
+}) {
+  const jwt = await getJwt();
+  const { requestFlowPublishSecure } = await import('./secure-ops');
+  return requestFlowPublishSecure({ ...params, jwt });
+}
+
+export async function createPat(params: {
+  name: string;
+  scopes: string[];
+  expiresAt?: string | null;
+}) {
+  const jwt = await getJwt();
+  const { createPatSecure } = await import('./secure-ops');
+  return createPatSecure({ ...params, jwt });
+}
+
+export async function listPats() {
+  const jwt = await getJwt();
+  const { listPatsSecure } = await import('./secure-ops');
+  return listPatsSecure(jwt);
+}
+
+export async function revokePat(patId: string) {
+  const jwt = await getJwt();
+  const { revokePatSecure } = await import('./secure-ops');
+  return revokePatSecure({ patId, jwt });
+}
+
+export async function listOAuthAppInstalls() {
+  const jwt = await getJwt();
+  const { listOAuthAppInstallsSecure } = await import('./secure-ops');
+  return listOAuthAppInstallsSecure(jwt);
+}
 

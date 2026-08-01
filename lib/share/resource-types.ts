@@ -11,7 +11,8 @@ export type PublicResourceType =
   | 'call' 
   | 'moment'
   | 'agent_session'
-  | 'agent_conversation';
+  | 'agent_conversation'
+  | 'flow';
 
 export interface PublicUrlOptions {
   projectId?: string;

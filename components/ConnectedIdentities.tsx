@@ -14,8 +14,78 @@ import {
   IconButton} from '@/lib/openbricks/primitives';
 import { Delete as DeleteIcon } from '@/lib/openbricks/icons';
 import { Models } from 'appwrite';
+import { listOAuthAppInstalls } from '@/lib/actions/client-ops';
 
 type Identity = Models.Identity;
+
+function ExternalAppsList() {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await listOAuthAppInstalls();
+        if (!cancelled && res?.success) setRows(res.data || []);
+      } catch {
+        if (!cancelled) setRows([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+        <CircularProgress size={24} sx={{ color: '#6366F1' }} />
+      </Box>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <Box
+        sx={{
+          backgroundColor: '#0A0908',
+          border: '1px solid rgba(255,255,255,0.05)',
+          borderRadius: '16px',
+          p: 3,
+          textAlign: 'center'}}
+      >
+        <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem' }}>
+          No external apps installed yet.
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Stack spacing={2}>
+      {rows.map((row) => (
+        <Box
+          key={row.$id}
+          sx={{
+            backgroundColor: '#0A0908',
+            border: '1px solid rgba(255,255,255,0.05)',
+            borderRadius: '16px',
+            p: 2}}
+        >
+          <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff' }}>
+            {row.appId}
+          </Typography>
+          <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
+            {row.status || 'active'}
+          </Typography>
+        </Box>
+      ))}
+    </Stack>
+  );
+}
 
 interface ConnectedIdentitiesProps {
   onIdentitiesLoaded?: (count: number) => void;
@@ -137,6 +207,9 @@ export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIde
 
   return (
     <Box>
+      <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mb: 2 }}>
+        Sign-in methods
+      </Typography>
       {error && (
         <Alert severity="error" sx={{ mb: 3, bgcolor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#FCA5A5', borderRadius: '10px' }}>
           <AlertTitle sx={{ fontWeight: 700 }}>Error</AlertTitle>
@@ -147,13 +220,14 @@ export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIde
       {identities.length === 0 ? (
         <Box
           sx={{
-            backgroundColor: '#161514',
-            borderRadius: '12px',
+            backgroundColor: '#0A0908',
+            border: '1px solid rgba(255,255,255,0.05)',
+            borderRadius: '16px',
             p: 4,
             textAlign: 'center'}}
         >
           <Typography sx={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.95rem' }}>
-            No connected identities. Connect a social account to link your profile.
+            No sign-in methods linked yet.
           </Typography>
         </Box>
       ) : (
@@ -252,6 +326,11 @@ export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIde
           ))}
         </Stack>
       )}
+
+      <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mt: 5, mb: 2 }}>
+        External apps
+      </Typography>
+      <ExternalAppsList />
 
       {/* Delete Confirmation Bottom Drawer */}
       <Drawer

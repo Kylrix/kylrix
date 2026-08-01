@@ -61,7 +61,8 @@ _Catalog covers 86 skills._
 | `storage.upload-gating` | Deep dive into the server-side file upload security engine in Kylrix. Explains the subscription plan gates, bucket-level byte ceilings, and Next.js Server Actio |
 | `sync` | Canonical offline-first local-copy sync for Kylrix. Live copy = UI content SoT; autonomic sync engine pending queue (RxDB) = amber/green SoT; Appwrite confirms  |
 | `system.appwrite-audit` | Audits table/index usage against live schema config without proposing schema edits. Use when validating data flow, query alignment, and stale table assumptions. |
-| `system.appwrite-cli-ops` | Guide for Appwrite CLI operations, especially table creation and schema management. Always check CLI version first. Use when creating tables, columns, indexes,  |
+| `system.appwrite-cli-ops` | **Durable SoT** for Appwrite CLI/schema (survives official skill reinstall). Guardrails, no push tables, additive-only, deprecated `string` → varchar/text/mediumtext/longtext. |
+| `system.pat-http-api` | Personal Access Tokens, `/api/v1`, rate buckets, Developers tab, scopes catalog. |
 | `system.chat-relay-relay` | Deep dive into the server-side real-time chat sync and event propagation. Explains conversation member permission mappings, SHA-256 base64url reaction indexing, |
 | `system.cross-app-linking` | Maintains cross-app pointers and metadata links between notes, tasks, calls, and secure objects. Use when connecting features across domain surfaces without dup |
 | `system.domain-canonicalization` | Enforce using the canonical www.kylrix.space subdomain for all outgoing URLs, email CTAs, Telegram push messages, share links, and public metadata assets. Use w |

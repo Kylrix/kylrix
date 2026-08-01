@@ -175,11 +175,6 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: '/flow/:path*',
-        destination: '/flows',
-        permanent: true,
-      },
-      {
         source: '/workflows',
         destination: '/flows',
         permanent: true,

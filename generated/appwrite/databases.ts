@@ -103,6 +103,13 @@ tableIdMap["passwordManagerDb"]["Agentic Sessions"] = "agentic_sessions";
 tableIdMap["passwordManagerDb"]["swept"] = "swept";
 tableIdMap["passwordManagerDb"]["Session Objects"] = "session_objects";
 tableIdMap["passwordManagerDb"]["Tool Calls"] = "tool_calls";
+tableIdMap["passwordManagerDb"]["flow_installs"] = "flow_installs";
+tableIdMap["passwordManagerDb"]["flow_reviews"] = "flow_reviews";
+tableIdMap["passwordManagerDb"]["pats"] = "pats";
+tableIdMap["passwordManagerDb"]["pat_rate_state"] = "pat_rate_state";
+tableIdMap["passwordManagerDb"]["api_user_rate_state"] = "api_user_rate_state";
+tableIdMap["passwordManagerDb"]["oauth_apps"] = "oauth_apps";
+tableIdMap["passwordManagerDb"]["oauth_app_installs"] = "oauth_app_installs";
 
 const tablesWithRelationships = new Set<string>();
 

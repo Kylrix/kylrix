@@ -14,7 +14,12 @@ export const WorkflowDbService = {
   async saveWorkflow(wf: WorkflowChain, userId?: string): Promise<string> {
     try {
       const tables = createSystemTablesDB();
-      const payload = {
+      const extra = wf as WorkflowChain & {
+        flowKind?: string;
+        toolTierMax?: string;
+        publisherHandle?: string;
+      };
+      const payload: Record<string, unknown> = {
         workflowId: wf.id,
         name: wf.name,
         description: wf.description,
@@ -25,8 +30,12 @@ export const WorkflowDbService = {
         metadata: JSON.stringify({
           originalCreatedAt: wf.createdAt,
           savedAt: new Date().toISOString()
-        })
+        }),
       };
+      if (userId) payload.ownerId = userId;
+      if (extra.flowKind) payload.flowKind = extra.flowKind;
+      if (extra.toolTierMax) payload.toolTierMax = extra.toolTierMax;
+      if (extra.publisherHandle) payload.publisherHandle = extra.publisherHandle;
 
       // Set user as document owner if provided
       const permissions = userId ? [
@@ -43,6 +52,7 @@ export const WorkflowDbService = {
 
       if (existing.rows.length > 0) {
         const row = existing.rows[0];
+        // Never clobber denormalized installCount / review fields on ordinary save
         await tables.updateRow({
           databaseId: DATABASE_ID,
           tableId: TABLE_ID,
@@ -56,7 +66,14 @@ export const WorkflowDbService = {
           databaseId: DATABASE_ID,
           tableId: TABLE_ID,
           rowId: ID.unique(),
-          data: payload,
+          data: {
+            ...payload,
+            installCount: 0,
+            reviewStatus: 'draft',
+            verifiedKind: 'none',
+            toolTierMax: extra.toolTierMax || 'general',
+            flowKind: extra.flowKind || 'workflow',
+          },
           permissions
         });
         return wf.id;
@@ -136,8 +153,9 @@ export const WorkflowDbService = {
           steps,
           isPublic: row.isPublic,
           isAnonymized: row.isAnonymized,
-          createdAt: row.$createdAt
-        };
+          createdAt: row.$createdAt,
+          metadata: row.metadata,
+        } as WorkflowChain & { metadata?: string | null };
       });
     } catch (err) {
       console.error('[WorkflowDbService] Failed to list public workflows:', err);
@@ -168,5 +186,168 @@ export const WorkflowDbService = {
       console.error('[WorkflowDbService] Failed to delete workflow:', err);
       throw err;
     }
-  }
+  },
+
+  rowToChain(row: Record<string, any>): WorkflowChain & {
+    $id?: string;
+    $permissions?: string[];
+    metadata?: string | null;
+    ownerId?: string | null;
+    installCount?: number;
+    flowKind?: string;
+    toolTierMax?: string;
+    reviewStatus?: string;
+    publisherHandle?: string | null;
+    verifiedKind?: string;
+  } {
+    let steps = [];
+    try {
+      steps = typeof row.steps === 'string' ? JSON.parse(row.steps) : row.steps || [];
+    } catch {
+      steps = [];
+    }
+    return {
+      id: row.workflowId,
+      name: row.name,
+      description: row.description || '',
+      niche: row.niche as TelemetryNiche,
+      steps,
+      isPublic: !!row.isPublic,
+      isAnonymized: !!row.isAnonymized,
+      createdAt: row.$createdAt,
+      $id: row.$id,
+      $permissions: row.$permissions,
+      metadata: row.metadata ?? null,
+      ownerId: row.ownerId ?? null,
+      installCount: typeof row.installCount === 'number' ? row.installCount : 0,
+      flowKind: row.flowKind || 'workflow',
+      toolTierMax: row.toolTierMax || 'general',
+      reviewStatus: row.reviewStatus || 'draft',
+      publisherHandle: row.publisherHandle ?? null,
+      verifiedKind: row.verifiedKind || 'none',
+    };
+  },
+
+  async getByWorkflowId(workflowId: string) {
+    try {
+      const tables = createSystemTablesDB();
+      const existing = await tables.listRows({
+        databaseId: DATABASE_ID,
+        tableId: TABLE_ID,
+        queries: [Query.equal('workflowId', workflowId), Query.limit(1)],
+      });
+      if (existing.rows.length === 0) return null;
+      return this.rowToChain(existing.rows[0] as any);
+    } catch (err) {
+      console.error('[WorkflowDbService] Failed to get workflow:', err);
+      return null;
+    }
+  },
+
+  /** System-only counter punch — never expose to client RLS writes. */
+  async incrementInstallCount(workflowId: string): Promise<number> {
+    const tables = createSystemTablesDB();
+    const existing = await tables.listRows({
+      databaseId: DATABASE_ID,
+      tableId: TABLE_ID,
+      queries: [Query.equal('workflowId', workflowId), Query.limit(1)],
+    });
+    if (existing.rows.length === 0) return 0;
+    const row = existing.rows[0] as any;
+    const next = Math.max(0, Number(row.installCount || 0) + 1);
+    await tables.updateRow({
+      databaseId: DATABASE_ID,
+      tableId: TABLE_ID,
+      rowId: row.$id,
+      data: { installCount: next },
+    });
+    return next;
+  },
+
+  async setPublishState(
+    workflowId: string,
+    opts: {
+      isPublic: boolean;
+      isGuest?: boolean;
+      actorId: string;
+      reviewStatus?: string;
+    }
+  ): Promise<WorkflowChain> {
+    const tables = createSystemTablesDB();
+    const existing = await tables.listRows({
+      databaseId: DATABASE_ID,
+      tableId: TABLE_ID,
+      queries: [Query.equal('workflowId', workflowId), Query.limit(1)],
+    });
+    if (existing.rows.length === 0) throw new Error('Flow not found');
+
+    const row = existing.rows[0] as any;
+    const perms: string[] = Array.isArray(row.$permissions) ? row.$permissions : [];
+    const owns =
+      row.ownerId === opts.actorId ||
+      perms.some(
+        (p: string) =>
+          p.includes(`user:${opts.actorId}`) && (p.startsWith('write(') || p.startsWith('update('))
+      );
+    if (!owns) throw new Error('Only the owner can publish this flow');
+
+    if (opts.isPublic) {
+      if (row.toolTierMax === 'system') {
+        throw new Error('System-tier flows cannot be published');
+      }
+      if (row.toolTierMax === 'fine' && row.reviewStatus !== 'approved' && opts.reviewStatus !== 'approved') {
+        throw new Error('Fine-grained flows need agent review before publish');
+      }
+    }
+
+    const nextPerms = opts.isPublic
+      ? Array.from(new Set([...perms, 'read("any")', 'read("users")']))
+      : perms.filter((p: string) => p !== 'read("any")');
+
+    const data: Record<string, unknown> = {
+      isPublic: opts.isPublic,
+      isGuest: opts.isGuest ?? opts.isPublic,
+    };
+    if (opts.reviewStatus) data.reviewStatus = opts.reviewStatus;
+
+    await tables.updateRow({
+      databaseId: DATABASE_ID,
+      tableId: TABLE_ID,
+      rowId: row.$id,
+      data,
+      permissions: nextPerms,
+    });
+
+    return {
+      ...this.rowToChain(row),
+      isPublic: opts.isPublic,
+    } as any;
+  },
+
+  async setReviewStatus(
+    workflowId: string,
+    reviewStatus: string,
+    extra?: { isPublic?: boolean }
+  ) {
+    const tables = createSystemTablesDB();
+    const existing = await tables.listRows({
+      databaseId: DATABASE_ID,
+      tableId: TABLE_ID,
+      queries: [Query.equal('workflowId', workflowId), Query.limit(1)],
+    });
+    if (existing.rows.length === 0) throw new Error('Flow not found');
+    const row = existing.rows[0] as any;
+    const data: Record<string, unknown> = { reviewStatus };
+    if (typeof extra?.isPublic === 'boolean') {
+      data.isPublic = extra.isPublic;
+      data.isGuest = extra.isPublic;
+    }
+    await tables.updateRow({
+      databaseId: DATABASE_ID,
+      tableId: TABLE_ID,
+      rowId: row.$id,
+      data,
+    });
+    return this.rowToChain({ ...row, ...data });
+  },
 };
