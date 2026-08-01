@@ -164,7 +164,9 @@ function SettingsPageInner() {
         if (window.location.hash !== '#mfa') return;
         if (!user?.$id) return;
         openTwoFactorSurface();
-    }, [user?.$id, openTwoFactorSurface]);
+        // Open once when user is ready for deep-link; avoid re-opening on callback identity churn.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.$id]);
 
     // Delete/export state
     const [_confirmExportOpen, _setConfirmExportOpen] = useState(false);
