@@ -23,7 +23,6 @@ import {
   listMyApps,
   type OauthApp,
 } from '@/lib/oauth2/apps';
-import { OAUTH2_DISCOVERY_URL } from '@/lib/oauth2/config';
 import { CreatePatDrawer } from '@/components/settings/CreatePatDrawer';
 import { CreateOAuthAppDrawer } from '@/components/settings/CreateOAuthAppDrawer';
 
@@ -304,24 +303,6 @@ export function DevelopersTab() {
           OAuth apps for third-party Sign in with Kylrix
         </p>
 
-        <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5 space-y-2">
-          <p className="text-[10px] font-extrabold uppercase tracking-wider text-white/40">
-            Discovery URL
-          </p>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 min-w-0 text-[10px] font-mono text-white/55 break-all">
-              {OAUTH2_DISCOVERY_URL}
-            </code>
-            <button
-              type="button"
-              onClick={() => void copy(OAUTH2_DISCOVERY_URL)}
-              className="p-2 rounded-lg bg-[#161412] border border-white/[0.08] text-white/70 cursor-pointer shrink-0"
-            >
-              <Copy size={14} />
-            </button>
-          </div>
-        </div>
-
         {loadingApps ? (
           <p className="text-xs text-white/40 px-1">Loading…</p>
         ) : apps.length === 0 ? (
@@ -345,8 +326,13 @@ export function DevelopersTab() {
               key={app.$id}
               className="flex items-center gap-3 rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5"
             >
-              <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-[#6366F1] shrink-0">
-                <AppWindow size={16} />
+              <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-[#6366F1] shrink-0 overflow-hidden">
+                {app.logoUri ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={app.logoUri} alt="" className="h-4 w-4 object-cover rounded" />
+                ) : (
+                  <AppWindow size={16} />
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-white truncate">{app.name}</p>

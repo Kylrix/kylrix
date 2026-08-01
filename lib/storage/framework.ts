@@ -21,6 +21,10 @@ const BUCKET_LIMITS: Record<string, StorageGatingConfig> = {
     maxSizeBytes: 1 * 1024 * 1024, // 1 MB
     allowedExtensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'],
     compress: true},
+  app_logos: {
+    maxSizeBytes: 1 * 1024 * 1024, // 1 MB after client compression
+    allowedExtensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'],
+    compress: true},
   messages: {
     maxSizeBytes: 1 * 1024 * 1024, // 1 MB
     compress: true},

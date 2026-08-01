@@ -16,6 +16,31 @@ type Step = 'name' | 'scopes' | 'done';
 
 const DEFAULT_SCOPES: PatScope[] = ['profile:read', 'notes:read', 'notes:write'];
 
+function paperSx(isDesktop: boolean) {
+  return {
+    bgcolor: '#161412',
+    backgroundImage: 'none',
+    color: '#fff',
+    border: '1px solid rgba(255,255,255,0.06)',
+    boxSizing: 'border-box' as const,
+    ...(isDesktop
+      ? {
+          height: '100dvh',
+          width: 'min(100vw, 420px)',
+          borderRadius: '26px 0 0 26px',
+          borderLeft: '1px solid rgba(255,255,255,0.08)',
+        }
+      : {
+          // OpenBricks: bottom drawers are a fixed ~60% of the viewport
+          height: '60dvh',
+          maxHeight: '60dvh',
+          width: '100%',
+          borderRadius: '26px 26px 0 0',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+        }),
+  };
+}
+
 export function CreatePatDrawer({
   open,
   onClose,
@@ -96,30 +121,9 @@ export function CreatePatDrawer({
       disablePortal
       ModalProps={{ keepMounted: false }}
       slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
-      PaperProps={{
-        sx: {
-          bgcolor: '#161412',
-          backgroundImage: 'none',
-          color: '#fff',
-          border: '1px solid rgba(255,255,255,0.06)',
-          boxSizing: 'border-box',
-          ...(isDesktop
-            ? {
-                height: '100dvh',
-                width: 'min(100vw, 420px)',
-                borderRadius: '26px 0 0 26px',
-                borderLeft: '1px solid rgba(255,255,255,0.08)',
-              }
-            : {
-                width: '100%',
-                maxHeight: '85dvh',
-                borderRadius: '26px 26px 0 0',
-                borderTop: '1px solid rgba(255,255,255,0.08)',
-              }),
-        },
-      }}
+      PaperProps={{ sx: paperSx(isDesktop) }}
     >
-      <div className="flex flex-col h-full max-h-[inherit] font-satoshi">
+      <div className="flex flex-col h-full font-satoshi overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3 shrink-0">
           <div className="min-w-0">
             <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/40">
@@ -141,7 +145,7 @@ export function CreatePatDrawer({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5 space-y-4">
           {step === 'name' && (
             <>
               <input

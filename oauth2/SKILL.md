@@ -27,15 +27,15 @@ For HTTP API + personal access tokens (CLI / scripts), use the other skill inste
 npx skills add kylrix/kylrix/api
 ```
 
-## Discovery
+## Discovery (integrators only)
 
-Point any OIDC-capable library at:
+OIDC libraries need this once — app developers registering on Kylrix do **not** paste it into their product UI (same idea as Google: you get client id + secret; libraries already know Google’s endpoints).
 
 ```text
 https://fra.cloud.appwrite.io/v1/oauth2/67fe9627001d97e37ef3/.well-known/openid-configuration
 ```
 
-That document lists authorize, token, userinfo, JWKS, revoke, and introspect.
+Docs: https://www.kylrix.space/docs/oauth2
 
 ## Register a client
 

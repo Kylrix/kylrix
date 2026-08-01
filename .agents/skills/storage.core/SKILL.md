@@ -28,6 +28,7 @@ Enforce the following strict limits at both the client layer (first gate) and th
 | Bucket ID | Hard Size limit | Allowed Formats / Notes |
 | :--- | :--- | :--- |
 | **`profile_pictures`** | **1 MB** | `png, jpg, jpeg, webp, gif`. WebP compression mandatory. |
+| **`app_logos`** | **1 MB** | OAuth / Sign-in-with-Kylrix app logos. WebP compression mandatory (≤512px preferred). Public read for consent. |
 | **`messages`** (Chat) | **1 MB** | All formats. Audio transcoded/minimized; images compressed. |
 | **`notes_attachments`**| **5 MB** | Text, markdown, images, PDF. |
 | **General Limit Ceiling** | **10 MB** | Guideline upper bound for any discrete upload. |

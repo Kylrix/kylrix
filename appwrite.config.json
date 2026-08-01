@@ -12193,6 +12193,27 @@
             "compression": "zstd",
             "encryption": true,
             "antivirus": true
+        },
+        {
+            "$id": "app_logos",
+            "$permissions": [
+                "read(\"any\")",
+                "create(\"users\")"
+            ],
+            "fileSecurity": true,
+            "name": "App logos",
+            "enabled": true,
+            "maximumFileSize": 1048576,
+            "allowedFileExtensions": [
+                "png",
+                "jpg",
+                "jpeg",
+                "webp",
+                "gif"
+            ],
+            "compression": "none",
+            "encryption": true,
+            "antivirus": true
         }
     ]
 }

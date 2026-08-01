@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { X, ChevronLeft, ChevronRight, Copy, AppWindow } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { X, ChevronLeft, ChevronRight, Copy, AppWindow, ImagePlus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   Drawer,
@@ -9,10 +9,34 @@ import {
   useMediaQuery,
 } from '@/lib/openbricks/primitives';
 import { createApp, createAppSecret } from '@/lib/oauth2/apps';
-import { OAUTH2_DISCOVERY_URL } from '@/lib/oauth2/config';
+import { uploadOAuthAppLogo } from '@/lib/oauth2/logo';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
-type Step = 'name' | 'type' | 'redirect' | 'done';
+type Step = 'name' | 'type' | 'redirect' | 'logo' | 'done';
+
+function paperSx(isDesktop: boolean) {
+  return {
+    bgcolor: '#161412',
+    backgroundImage: 'none',
+    color: '#fff',
+    border: '1px solid rgba(255,255,255,0.06)',
+    boxSizing: 'border-box' as const,
+    ...(isDesktop
+      ? {
+          height: '100dvh',
+          width: 'min(100vw, 420px)',
+          borderRadius: '26px 0 0 26px',
+          borderLeft: '1px solid rgba(255,255,255,0.08)',
+        }
+      : {
+          height: '60dvh',
+          maxHeight: '60dvh',
+          width: '100%',
+          borderRadius: '26px 26px 0 0',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+        }),
+  };
+}
 
 export function CreateOAuthAppDrawer({
   open,
@@ -25,10 +49,13 @@ export function CreateOAuthAppDrawer({
 }) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const fileRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<Step>('name');
   const [name, setName] = useState('');
   const [clientType, setClientType] = useState<'confidential' | 'public'>('confidential');
   const [redirectUri, setRedirectUri] = useState('');
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
   const [result, setResult] = useState<{
     appId: string;
@@ -41,9 +68,17 @@ export function CreateOAuthAppDrawer({
     setName('');
     setClientType('confidential');
     setRedirectUri('');
+    setLogoPreview(null);
+    setLogoFile(null);
     setCreating(false);
     setResult(null);
   }, [open]);
+
+  useEffect(() => {
+    return () => {
+      if (logoPreview) URL.revokeObjectURL(logoPreview);
+    };
+  }, [logoPreview]);
 
   if (!open) return null;
 
@@ -54,6 +89,21 @@ export function CreateOAuthAppDrawer({
     } catch {
       toast.success(text);
     }
+  };
+
+  const onPickLogo = (file: File | null) => {
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    if (!file) {
+      setLogoFile(null);
+      setLogoPreview(null);
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Pick an image file');
+      return;
+    }
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
   };
 
   const handleCreate = async () => {
@@ -68,10 +118,16 @@ export function CreateOAuthAppDrawer({
     }
     setCreating(true);
     try {
+      let logoUri: string | undefined;
+      if (logoFile) {
+        const uploaded = await uploadOAuthAppLogo(logoFile);
+        logoUri = uploaded.logoUri;
+      }
       const app = await createApp({
         name: name.trim(),
         redirectUris: [uri],
         type: clientType,
+        logoUri,
       });
       let secret: string | null = null;
       if (clientType === 'confidential') {
@@ -84,7 +140,7 @@ export function CreateOAuthAppDrawer({
           toast.success('App created — copy the secret now');
         }
       } else {
-        toast.success('Public app created (PKCE)');
+        toast.success('Public app created');
       }
       setResult({ appId: app.$id, secret });
       setStep('done');
@@ -105,30 +161,9 @@ export function CreateOAuthAppDrawer({
       disablePortal
       ModalProps={{ keepMounted: false }}
       slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
-      PaperProps={{
-        sx: {
-          bgcolor: '#161412',
-          backgroundImage: 'none',
-          color: '#fff',
-          border: '1px solid rgba(255,255,255,0.06)',
-          boxSizing: 'border-box',
-          ...(isDesktop
-            ? {
-                height: '100dvh',
-                width: 'min(100vw, 420px)',
-                borderRadius: '26px 0 0 26px',
-                borderLeft: '1px solid rgba(255,255,255,0.08)',
-              }
-            : {
-                width: '100%',
-                maxHeight: '85dvh',
-                borderRadius: '26px 26px 0 0',
-                borderTop: '1px solid rgba(255,255,255,0.08)',
-              }),
-        },
-      }}
+      PaperProps={{ sx: paperSx(isDesktop) }}
     >
-      <div className="flex flex-col h-full max-h-[inherit] font-satoshi">
+      <div className="flex flex-col h-full font-satoshi overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3 shrink-0">
           <div className="min-w-0">
             <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/40">
@@ -138,6 +173,7 @@ export function CreateOAuthAppDrawer({
               {step === 'name' && 'App name'}
               {step === 'type' && 'Client type'}
               {step === 'redirect' && 'Redirect URL'}
+              {step === 'logo' && 'Logo'}
               {step === 'done' && 'Credentials'}
             </h2>
           </div>
@@ -151,7 +187,7 @@ export function CreateOAuthAppDrawer({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 pb-5 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5 space-y-4">
           {step === 'name' && (
             <>
               <input
@@ -202,9 +238,7 @@ export function CreateOAuthAppDrawer({
                 }`}
               >
                 <p className="text-sm font-bold text-white">Browser or mobile</p>
-                <p className="text-[11px] text-white/40 mt-0.5">
-                  No secret — uses PKCE
-                </p>
+                <p className="text-[11px] text-white/40 mt-0.5">No secret — uses PKCE</p>
               </button>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -250,7 +284,69 @@ export function CreateOAuthAppDrawer({
                 </button>
                 <button
                   type="button"
-                  disabled={creating || !redirectUri.trim()}
+                  disabled={!redirectUri.trim()}
+                  onClick={() => setStep('logo')}
+                  className="inline-flex items-center justify-center gap-1.5 py-3 rounded-2xl bg-[#6366F1] text-white text-sm font-extrabold cursor-pointer disabled:opacity-40"
+                >
+                  Next
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 'logo' && (
+            <>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => onPickLogo(e.target.files?.[0] || null)}
+              />
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="w-full rounded-2xl border border-dashed border-white/15 bg-[#0A0908] px-4 py-6 flex flex-col items-center gap-2 cursor-pointer"
+              >
+                {logoPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoPreview}
+                    alt=""
+                    className="h-16 w-16 rounded-2xl object-cover border border-white/10"
+                  />
+                ) : (
+                  <div className="p-3 rounded-2xl bg-[#161412] border border-white/[0.06] text-[#6366F1]">
+                    <ImagePlus size={22} />
+                  </div>
+                )}
+                <p className="text-sm font-bold text-white">
+                  {logoPreview ? 'Change logo' : 'Add logo (optional)'}
+                </p>
+                <p className="text-[11px] text-white/35">Compressed under 1MB before upload</p>
+              </button>
+              {logoFile && (
+                <button
+                  type="button"
+                  onClick={() => onPickLogo(null)}
+                  className="text-[11px] font-extrabold text-white/40 cursor-pointer"
+                >
+                  Remove
+                </button>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStep('redirect')}
+                  className="inline-flex items-center justify-center gap-1.5 py-3 rounded-2xl border border-white/10 text-white/70 text-sm font-extrabold cursor-pointer"
+                >
+                  <ChevronLeft size={16} />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  disabled={creating}
                   onClick={() => void handleCreate()}
                   className="inline-flex items-center justify-center gap-1.5 py-3 rounded-2xl bg-[#6366F1] text-white text-sm font-extrabold cursor-pointer disabled:opacity-40"
                 >
@@ -302,23 +398,6 @@ export function CreateOAuthAppDrawer({
                   Public client — use PKCE on authorize and token exchange.
                 </p>
               )}
-
-              <div className="rounded-2xl bg-[#0A0908] border border-white/[0.06] p-4 space-y-2">
-                <p className="text-[10px] font-extrabold uppercase tracking-wider text-white/40">
-                  Discovery
-                </p>
-                <code className="block text-[10px] font-mono text-white/55 break-all">
-                  {OAUTH2_DISCOVERY_URL}
-                </code>
-                <button
-                  type="button"
-                  onClick={() => void copy(OAUTH2_DISCOVERY_URL)}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#A5B4FC] cursor-pointer"
-                >
-                  <Copy size={12} />
-                  Copy
-                </button>
-              </div>
 
               <button
                 type="button"

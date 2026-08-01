@@ -23,6 +23,7 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
   // 1. Strict Bucket Whitelist
   const ALLOWED_BUCKETS = new Set([
     APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES,
+    APPWRITE_CONFIG.BUCKETS.APP_LOGOS,
     APPWRITE_CONFIG.BUCKETS.MESSAGES,
     APPWRITE_CONFIG.BUCKETS.NOTES_ATTACHMENTS,
     APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE,
@@ -56,6 +57,7 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
   // 1. Enforce strict server-side bucket size limits and 10MB upward guideline ceiling
   const SERVER_BUCKET_LIMITS: Record<string, number> = {
     profile_pictures: 1 * 1024 * 1024,   // 1 MB
+    app_logos: 1 * 1024 * 1024,          // 1 MB
     messages: 1 * 1024 * 1024,           // 1 MB
     notes_attachments: 5 * 1024 * 1024,   // 5 MB
     generalstorage: 10 * 1024 * 1024,    // 10 MB
@@ -75,6 +77,7 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
   // 2. Enforce Pro subscription for restricted buckets
   const allowedFreeBuckets = [
     APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES,
+    APPWRITE_CONFIG.BUCKETS.APP_LOGOS,
   ];
 
   if (!allowedFreeBuckets.includes(bucketId) && actor?.$id) {
@@ -111,7 +114,14 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
 
     const permissions: string[] = [];
     if (actor?.$id) {
-      permissions.push(Permission.read(Role.user(actor.$id)));
+      if (bucketId === APPWRITE_CONFIG.BUCKETS.APP_LOGOS) {
+        // Consent screens and marketplaces need to show logos to any visitor.
+        permissions.push(Permission.read(Role.any()));
+        permissions.push(Permission.update(Role.user(actor.$id)));
+        permissions.push(Permission.delete(Role.user(actor.$id)));
+      } else {
+        permissions.push(Permission.read(Role.user(actor.$id)));
+      }
     }
 
     const uploadedFile = await Registry.getStorage().uploadFile(bucketId, fileId, {

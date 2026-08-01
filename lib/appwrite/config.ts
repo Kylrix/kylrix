@@ -147,7 +147,8 @@ export const APPWRITE_CONFIG = {
         CHAT_UPLOADS: 'chat_uploads',
         TASK_ATTACHMENTS: 'notes_attachments', // Alias
         EVENT_COVERS: 'event_covers', // Alias
-        VOICE: 'voice'
+        VOICE: 'voice',
+        APP_LOGOS: 'app_logos'
     },
     FUNCTIONS: {
         PERMISSION_UPDATER: '69c0ff79001b60e664d2',
