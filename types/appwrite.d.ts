@@ -272,9 +272,21 @@ export enum OauthAppsStatus {
     SUSPENDED = "suspended"
 }
 
+export enum OauthAppsClientType {
+    CONFIDENTIAL = "confidential",
+    PUBLIC = "public"
+}
+
 export enum OauthAppInstallsStatus {
     ACTIVE = "active",
     REVOKED = "revoked"
+}
+
+export enum OauthConsentRequestsStatus {
+    PENDING = "pending",
+    APPROVED = "approved",
+    DENIED = "denied",
+    EXPIRED = "expired"
 }
 
 export type SecurityLogs = Models.Row & {
@@ -1336,6 +1348,17 @@ export type OauthApps = Models.Row & {
     scopes: string | null;
     status: OauthAppsStatus;
     createdAt: string | null;
+    clientType: OauthAppsClientType;
+    description: string | null;
+    homepageUrl: string | null;
+    logoUrl: string | null;
+    privacyPolicyUrl: string | null;
+    termsUrl: string | null;
+    contactEmail: string | null;
+    grantTypes: string | null;
+    tokenEndpointAuthMethod: string | null;
+    updatedAt: string | null;
+    lastUsedAt: string | null;
 }
 
 export type OauthAppInstalls = Models.Row & {
@@ -1344,4 +1367,27 @@ export type OauthAppInstalls = Models.Row & {
     grantedScopes: string | null;
     status: OauthAppInstallsStatus;
     installedAt: string | null;
+    clientId: string | null;
+    updatedAt: string | null;
+    revokedAt: string | null;
+    lastUsedAt: string | null;
+    consentRequestId: string | null;
+}
+
+export type OauthConsentRequests = Models.Row & {
+    clientId: string;
+    userId: string | null;
+    redirectUri: string;
+    requestedScopes: string | null;
+    state: string | null;
+    nonce: string | null;
+    codeChallenge: string | null;
+    codeChallengeMethod: string | null;
+    responseType: string | null;
+    status: OauthConsentRequestsStatus;
+    continueUrl: string | null;
+    requestMeta: string | null;
+    createdAt: string | null;
+    expiresAt: string | null;
+    decidedAt: string | null;
 }

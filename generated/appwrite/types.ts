@@ -269,9 +269,21 @@ export enum OauthAppsStatus {
     SUSPENDED = "suspended"
 }
 
+export enum OauthAppsClientType {
+    CONFIDENTIAL = "confidential",
+    PUBLIC = "public"
+}
+
 export enum OauthAppInstallsStatus {
     ACTIVE = "active",
     REVOKED = "revoked"
+}
+
+export enum OauthConsentRequestsStatus {
+    PENDING = "pending",
+    APPROVED = "approved",
+    DENIED = "denied",
+    EXPIRED = "expired"
 }
 export type SecurityLogsCreate = {
     "userId": string;
@@ -2382,6 +2394,17 @@ export type OauthAppsCreate = {
     "scopes"?: string | null;
     "status"?: OauthAppsStatus;
     "createdAt"?: string | null;
+    "clientType"?: OauthAppsClientType;
+    "description"?: string | null;
+    "homepageUrl"?: string | null;
+    "logoUrl"?: string | null;
+    "privacyPolicyUrl"?: string | null;
+    "termsUrl"?: string | null;
+    "contactEmail"?: string | null;
+    "grantTypes"?: string | null;
+    "tokenEndpointAuthMethod"?: string | null;
+    "updatedAt"?: string | null;
+    "lastUsedAt"?: string | null;
 }
 
 export type OauthApps = Models.Row & {
@@ -2393,6 +2416,17 @@ export type OauthApps = Models.Row & {
     "scopes"?: string | null;
     "status"?: OauthAppsStatus;
     "createdAt"?: string | null;
+    "clientType"?: OauthAppsClientType;
+    "description"?: string | null;
+    "homepageUrl"?: string | null;
+    "logoUrl"?: string | null;
+    "privacyPolicyUrl"?: string | null;
+    "termsUrl"?: string | null;
+    "contactEmail"?: string | null;
+    "grantTypes"?: string | null;
+    "tokenEndpointAuthMethod"?: string | null;
+    "updatedAt"?: string | null;
+    "lastUsedAt"?: string | null;
 }
 
 export type OauthAppInstallsCreate = {
@@ -2401,6 +2435,11 @@ export type OauthAppInstallsCreate = {
     "grantedScopes"?: string | null;
     "status"?: OauthAppInstallsStatus;
     "installedAt"?: string | null;
+    "clientId"?: string | null;
+    "updatedAt"?: string | null;
+    "revokedAt"?: string | null;
+    "lastUsedAt"?: string | null;
+    "consentRequestId"?: string | null;
 }
 
 export type OauthAppInstalls = Models.Row & {
@@ -2409,6 +2448,47 @@ export type OauthAppInstalls = Models.Row & {
     "grantedScopes"?: string | null;
     "status"?: OauthAppInstallsStatus;
     "installedAt"?: string | null;
+    "clientId"?: string | null;
+    "updatedAt"?: string | null;
+    "revokedAt"?: string | null;
+    "lastUsedAt"?: string | null;
+    "consentRequestId"?: string | null;
+}
+
+export type OauthConsentRequestsCreate = {
+    "clientId": string;
+    "userId"?: string | null;
+    "redirectUri": string;
+    "requestedScopes"?: string | null;
+    "state"?: string | null;
+    "nonce"?: string | null;
+    "codeChallenge"?: string | null;
+    "codeChallengeMethod"?: string | null;
+    "responseType"?: string | null;
+    "status"?: OauthConsentRequestsStatus;
+    "continueUrl"?: string | null;
+    "requestMeta"?: string | null;
+    "createdAt"?: string | null;
+    "expiresAt"?: string | null;
+    "decidedAt"?: string | null;
+}
+
+export type OauthConsentRequests = Models.Row & {
+    "clientId": string;
+    "userId"?: string | null;
+    "redirectUri": string;
+    "requestedScopes"?: string | null;
+    "state"?: string | null;
+    "nonce"?: string | null;
+    "codeChallenge"?: string | null;
+    "codeChallengeMethod"?: string | null;
+    "responseType"?: string | null;
+    "status"?: OauthConsentRequestsStatus;
+    "continueUrl"?: string | null;
+    "requestMeta"?: string | null;
+    "createdAt"?: string | null;
+    "expiresAt"?: string | null;
+    "decidedAt"?: string | null;
 }
 
 declare const __roleStringBrand: unique symbol;
@@ -4824,6 +4904,17 @@ export type DatabaseTableMap = {
         "scopes"?: string | null;
         "status"?: OauthAppsStatus;
         "createdAt"?: string | null;
+        "clientType"?: OauthAppsClientType;
+        "description"?: string | null;
+        "homepageUrl"?: string | null;
+        "logoUrl"?: string | null;
+        "privacyPolicyUrl"?: string | null;
+        "termsUrl"?: string | null;
+        "contactEmail"?: string | null;
+        "grantTypes"?: string | null;
+        "tokenEndpointAuthMethod"?: string | null;
+        "updatedAt"?: string | null;
+        "lastUsedAt"?: string | null;
       }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<OauthApps>;
       get: (id: string) => Promise<OauthApps>;
       update: (id: string, data: Partial<{
@@ -4835,6 +4926,17 @@ export type DatabaseTableMap = {
         "scopes"?: string | null;
         "status"?: OauthAppsStatus;
         "createdAt"?: string | null;
+        "clientType"?: OauthAppsClientType;
+        "description"?: string | null;
+        "homepageUrl"?: string | null;
+        "logoUrl"?: string | null;
+        "privacyPolicyUrl"?: string | null;
+        "termsUrl"?: string | null;
+        "contactEmail"?: string | null;
+        "grantTypes"?: string | null;
+        "tokenEndpointAuthMethod"?: string | null;
+        "updatedAt"?: string | null;
+        "lastUsedAt"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<OauthApps>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<OauthApps>>(field: K, value: QueryableFieldValue<OauthApps, K>) => string; notEqual: <K extends QueryableKeys<OauthApps>>(field: K, value: QueryableFieldValue<OauthApps, K>) => string; lessThan: <K extends QueryableKeys<OauthApps>>(field: K, value: QueryableFieldValue<OauthApps, K>) => string; lessThanEqual: <K extends QueryableKeys<OauthApps>>(field: K, value: QueryableFieldValue<OauthApps, K>) => string; greaterThan: <K extends QueryableKeys<OauthApps>>(field: K, value: QueryableFieldValue<OauthApps, K>) => string; greaterThanEqual: <K extends QueryableKeys<OauthApps>>(field: K, value: QueryableFieldValue<OauthApps, K>) => string; contains: <K extends QueryableKeys<OauthApps>>(field: K, value: QueryableFieldValue<OauthApps, K>) => string; search: <K extends QueryableKeys<OauthApps>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<OauthApps>>(field: K) => string; isNotNull: <K extends QueryableKeys<OauthApps>>(field: K) => string; startsWith: <K extends QueryableKeys<OauthApps>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<OauthApps>>(field: K, value: string) => string; between: <K extends QueryableKeys<OauthApps>>(field: K, start: QueryableFieldValue<OauthApps, K>, end: QueryableFieldValue<OauthApps, K>) => string; select: <K extends keyof OauthApps>(fields: K[]) => string; orderAsc: <K extends keyof OauthApps>(field: K) => string; orderDesc: <K extends keyof OauthApps>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: OauthApps[] }>;
@@ -4846,6 +4948,11 @@ export type DatabaseTableMap = {
         "grantedScopes"?: string | null;
         "status"?: OauthAppInstallsStatus;
         "installedAt"?: string | null;
+        "clientId"?: string | null;
+        "updatedAt"?: string | null;
+        "revokedAt"?: string | null;
+        "lastUsedAt"?: string | null;
+        "consentRequestId"?: string | null;
       }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<OauthAppInstalls>;
       get: (id: string) => Promise<OauthAppInstalls>;
       update: (id: string, data: Partial<{
@@ -4854,9 +4961,53 @@ export type DatabaseTableMap = {
         "grantedScopes"?: string | null;
         "status"?: OauthAppInstallsStatus;
         "installedAt"?: string | null;
+        "clientId"?: string | null;
+        "updatedAt"?: string | null;
+        "revokedAt"?: string | null;
+        "lastUsedAt"?: string | null;
+        "consentRequestId"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<OauthAppInstalls>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<OauthAppInstalls>>(field: K, value: QueryableFieldValue<OauthAppInstalls, K>) => string; notEqual: <K extends QueryableKeys<OauthAppInstalls>>(field: K, value: QueryableFieldValue<OauthAppInstalls, K>) => string; lessThan: <K extends QueryableKeys<OauthAppInstalls>>(field: K, value: QueryableFieldValue<OauthAppInstalls, K>) => string; lessThanEqual: <K extends QueryableKeys<OauthAppInstalls>>(field: K, value: QueryableFieldValue<OauthAppInstalls, K>) => string; greaterThan: <K extends QueryableKeys<OauthAppInstalls>>(field: K, value: QueryableFieldValue<OauthAppInstalls, K>) => string; greaterThanEqual: <K extends QueryableKeys<OauthAppInstalls>>(field: K, value: QueryableFieldValue<OauthAppInstalls, K>) => string; contains: <K extends QueryableKeys<OauthAppInstalls>>(field: K, value: QueryableFieldValue<OauthAppInstalls, K>) => string; search: <K extends QueryableKeys<OauthAppInstalls>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<OauthAppInstalls>>(field: K) => string; isNotNull: <K extends QueryableKeys<OauthAppInstalls>>(field: K) => string; startsWith: <K extends QueryableKeys<OauthAppInstalls>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<OauthAppInstalls>>(field: K, value: string) => string; between: <K extends QueryableKeys<OauthAppInstalls>>(field: K, start: QueryableFieldValue<OauthAppInstalls, K>, end: QueryableFieldValue<OauthAppInstalls, K>) => string; select: <K extends keyof OauthAppInstalls>(fields: K[]) => string; orderAsc: <K extends keyof OauthAppInstalls>(field: K) => string; orderDesc: <K extends keyof OauthAppInstalls>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: OauthAppInstalls[] }>;
+    };
+    "oauth_consent_requests": {
+      create: (data: {
+        "clientId": string;
+        "userId"?: string | null;
+        "redirectUri": string;
+        "requestedScopes"?: string | null;
+        "state"?: string | null;
+        "nonce"?: string | null;
+        "codeChallenge"?: string | null;
+        "codeChallengeMethod"?: string | null;
+        "responseType"?: string | null;
+        "status"?: OauthConsentRequestsStatus;
+        "continueUrl"?: string | null;
+        "requestMeta"?: string | null;
+        "createdAt"?: string | null;
+        "expiresAt"?: string | null;
+        "decidedAt"?: string | null;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<OauthConsentRequests>;
+      get: (id: string) => Promise<OauthConsentRequests>;
+      update: (id: string, data: Partial<{
+        "clientId": string;
+        "userId"?: string | null;
+        "redirectUri": string;
+        "requestedScopes"?: string | null;
+        "state"?: string | null;
+        "nonce"?: string | null;
+        "codeChallenge"?: string | null;
+        "codeChallengeMethod"?: string | null;
+        "responseType"?: string | null;
+        "status"?: OauthConsentRequestsStatus;
+        "continueUrl"?: string | null;
+        "requestMeta"?: string | null;
+        "createdAt"?: string | null;
+        "expiresAt"?: string | null;
+        "decidedAt"?: string | null;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<OauthConsentRequests>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<OauthConsentRequests>>(field: K, value: QueryableFieldValue<OauthConsentRequests, K>) => string; notEqual: <K extends QueryableKeys<OauthConsentRequests>>(field: K, value: QueryableFieldValue<OauthConsentRequests, K>) => string; lessThan: <K extends QueryableKeys<OauthConsentRequests>>(field: K, value: QueryableFieldValue<OauthConsentRequests, K>) => string; lessThanEqual: <K extends QueryableKeys<OauthConsentRequests>>(field: K, value: QueryableFieldValue<OauthConsentRequests, K>) => string; greaterThan: <K extends QueryableKeys<OauthConsentRequests>>(field: K, value: QueryableFieldValue<OauthConsentRequests, K>) => string; greaterThanEqual: <K extends QueryableKeys<OauthConsentRequests>>(field: K, value: QueryableFieldValue<OauthConsentRequests, K>) => string; contains: <K extends QueryableKeys<OauthConsentRequests>>(field: K, value: QueryableFieldValue<OauthConsentRequests, K>) => string; search: <K extends QueryableKeys<OauthConsentRequests>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<OauthConsentRequests>>(field: K) => string; isNotNull: <K extends QueryableKeys<OauthConsentRequests>>(field: K) => string; startsWith: <K extends QueryableKeys<OauthConsentRequests>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<OauthConsentRequests>>(field: K, value: string) => string; between: <K extends QueryableKeys<OauthConsentRequests>>(field: K, start: QueryableFieldValue<OauthConsentRequests, K>, end: QueryableFieldValue<OauthConsentRequests, K>) => string; select: <K extends keyof OauthConsentRequests>(fields: K[]) => string; orderAsc: <K extends keyof OauthConsentRequests>(field: K) => string; orderDesc: <K extends keyof OauthConsentRequests>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: OauthConsentRequests[] }>;
     }
   }
 };

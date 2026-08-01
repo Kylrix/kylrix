@@ -100,7 +100,8 @@ export const APPWRITE_CONFIG = {
             PAT_RATE_STATE: 'pat_rate_state',
             API_USER_RATE_STATE: 'api_user_rate_state',
             OAUTH_APPS: 'oauth_apps',
-            OAUTH_APP_INSTALLS: 'oauth_app_installs'
+            OAUTH_APP_INSTALLS: 'oauth_app_installs',
+            OAUTH_CONSENT_REQUESTS: 'oauth_consent_requests'
         },
         CONNECT: {
             USERS: 'users',

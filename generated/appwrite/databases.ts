@@ -110,6 +110,7 @@ tableIdMap["passwordManagerDb"]["pat_rate_state"] = "pat_rate_state";
 tableIdMap["passwordManagerDb"]["api_user_rate_state"] = "api_user_rate_state";
 tableIdMap["passwordManagerDb"]["oauth_apps"] = "oauth_apps";
 tableIdMap["passwordManagerDb"]["oauth_app_installs"] = "oauth_app_installs";
+tableIdMap["passwordManagerDb"]["oauth_consent_requests"] = "oauth_consent_requests";
 
 const tablesWithRelationships = new Set<string>();
 
