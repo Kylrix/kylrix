@@ -1,5 +1,8 @@
 import Link from 'next/link';
-import { KYLRIX_API_SKILL_INSTALL } from '@/lib/api/public';
+import {
+  KYLRIX_API_SKILL_INSTALL,
+  KYLRIX_OAUTH2_SKILL_INSTALL,
+} from '@/lib/api/public';
 
 export default function DocsHomePage() {
   return (
@@ -11,20 +14,28 @@ export default function DocsHomePage() {
           </p>
           <h1 className="font-clash text-3xl font-semibold tracking-tight">Kylrix docs</h1>
           <p className="mt-2 text-sm text-white/50 max-w-xl">
-            Guides for extending Kylrix with personal access tokens, tools, and apps.
+            HTTP API tokens and Sign in with Kylrix for third-party apps.
           </p>
         </div>
 
-        <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-2.5">
+        <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-4">
           <h2 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">
-            Install agent skill
+            Agent skills
           </h2>
-          <pre className="text-[11px] font-mono text-white/70 whitespace-pre-wrap break-all bg-[#0A0908] rounded-xl p-3 border border-white/[0.05]">
-            {KYLRIX_API_SKILL_INSTALL}
-          </pre>
-          <p className="text-xs text-white/40">
-            Works with Claude Code, Cursor, and other tools that support the skills CLI.
-          </p>
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-bold text-white/70 mb-1.5">HTTP API</p>
+              <pre className="text-[11px] font-mono text-white/70 whitespace-pre-wrap break-all bg-[#0A0908] rounded-xl p-3 border border-white/[0.05]">
+                {KYLRIX_API_SKILL_INSTALL}
+              </pre>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white/70 mb-1.5">Sign in with Kylrix</p>
+              <pre className="text-[11px] font-mono text-white/70 whitespace-pre-wrap break-all bg-[#0A0908] rounded-xl p-3 border border-white/[0.05]">
+                {KYLRIX_OAUTH2_SKILL_INSTALL}
+              </pre>
+            </div>
+          </div>
         </section>
 
         <div className="grid gap-3">
@@ -34,7 +45,16 @@ export default function DocsHomePage() {
           >
             <h2 className="font-clash text-lg font-semibold">HTTP API</h2>
             <p className="text-xs text-white/45 mt-1">
-              PATs, scopes, rate limits, endpoints, tools.execute, and errors.
+              Personal access tokens, scopes, rate limits, and REST endpoints.
+            </p>
+          </Link>
+          <Link
+            href="/docs/oauth2"
+            className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 hover:border-white/10 transition-colors"
+          >
+            <h2 className="font-clash text-lg font-semibold">Sign in with Kylrix</h2>
+            <p className="text-xs text-white/45 mt-1">
+              OAuth 2.1 / OIDC discovery, clients, consent, and access tokens.
             </p>
           </Link>
           <Link
@@ -43,7 +63,7 @@ export default function DocsHomePage() {
           >
             <h2 className="font-clash text-lg font-semibold">Developers settings</h2>
             <p className="text-xs text-white/45 mt-1">
-              Create and revoke tokens; copy the skill install command.
+              Create tokens and OAuth apps; copy skill install commands.
             </p>
           </Link>
         </div>

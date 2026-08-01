@@ -20,6 +20,14 @@ npx skills add kylrix/kylrix/api
 
 Token UI: **Settings → Developers** (token is auto-copied on create).
 
+For **Sign in with Kylrix** (OAuth provider for third-party apps), install the sibling skill instead:
+
+```bash
+npx skills add kylrix/kylrix/oauth2
+```
+
+Docs: https://www.kylrix.space/docs/api · OAuth: https://www.kylrix.space/docs/oauth2
+
 ## Auth
 
 ```http

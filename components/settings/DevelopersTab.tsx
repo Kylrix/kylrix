@@ -1,14 +1,31 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Copy, KeyRound, Plus, Trash2, Code2, BookOpen } from 'lucide-react';
+import {
+  Copy,
+  KeyRound,
+  Trash2,
+  BookOpen,
+  AppWindow,
+  Plus,
+} from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { PAT_SCOPES, PAT_SCOPE_META, type PatScope } from '@/lib/api/scopes';
-import { KYLRIX_API_SKILL_INSTALL } from '@/lib/api/public';
-import { createPat, listPats, revokePat } from '@/lib/actions/client-ops';
+import {
+  KYLRIX_API_SKILL_INSTALL,
+  KYLRIX_OAUTH2_SKILL_INSTALL,
+} from '@/lib/api/public';
+import { listPats, revokePat } from '@/lib/actions/client-ops';
 import { account } from '@/lib/appwrite/client';
-import { OAuthAppsPanel } from '@/components/settings/OAuthAppsPanel';
+import {
+  deleteApp,
+  deleteAppTokens,
+  listMyApps,
+  type OauthApp,
+} from '@/lib/oauth2/apps';
+import { OAUTH2_DISCOVERY_URL } from '@/lib/oauth2/config';
+import { CreatePatDrawer } from '@/components/settings/CreatePatDrawer';
+import { CreateOAuthAppDrawer } from '@/components/settings/CreateOAuthAppDrawer';
 
 type PatItem = {
   id: string;
@@ -16,8 +33,6 @@ type PatItem = {
   tokenPrefix: string;
   scopes: string[];
   status: string;
-  createdAt: string | null;
-  lastUsedAt: string | null;
 };
 
 function Section({
@@ -42,36 +57,94 @@ function Section({
   );
 }
 
+function SkillRow({
+  title,
+  install,
+  docsHref,
+  docsLabel,
+}: {
+  title: string;
+  install: string;
+  docsHref: string;
+  docsLabel: string;
+}) {
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(install);
+      toast.success('Copied');
+    } catch {
+      toast.success(install);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5 space-y-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-bold text-white">{title}</p>
+        <Link
+          href={docsHref}
+          className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-[#A5B4FC] hover:text-white shrink-0"
+        >
+          <BookOpen size={12} />
+          {docsLabel}
+        </Link>
+      </div>
+      <div className="flex items-center gap-2">
+        <code className="flex-1 min-w-0 text-[11px] font-mono text-white/70 bg-[#161412] border border-white/[0.06] rounded-xl px-3 py-2.5 break-all select-all">
+          {install}
+        </code>
+        <button
+          type="button"
+          onClick={() => void copy()}
+          className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white cursor-pointer shrink-0"
+        >
+          <Copy size={14} />
+          Copy
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function DevelopersTab() {
   const [developerMode, setDeveloperMode] = useState(false);
   const [pats, setPats] = useState<PatItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [name, setName] = useState('');
-  const [selected, setSelected] = useState<PatScope[]>([
-    'profile:read',
-    'notes:read',
-    'notes:write',
-  ]);
-  const [revealedToken, setRevealedToken] = useState<string | null>(null);
+  const [apps, setApps] = useState<OauthApp[]>([]);
+  const [loadingPats, setLoadingPats] = useState(true);
+  const [loadingApps, setLoadingApps] = useState(true);
+  const [patDrawerOpen, setPatDrawerOpen] = useState(false);
+  const [oauthDrawerOpen, setOauthDrawerOpen] = useState(false);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refreshPats = useCallback(async () => {
+    setLoadingPats(true);
     try {
       const prefs = await account.getPrefs().catch(() => ({} as any));
       setDeveloperMode(!!(prefs as any)?.developerMode);
       const res = await listPats();
       if (res?.success) setPats((res.data || []) as PatItem[]);
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to load');
+      toast.error(err?.message || 'Failed to load tokens');
     } finally {
-      setLoading(false);
+      setLoadingPats(false);
+    }
+  }, []);
+
+  const refreshApps = useCallback(async () => {
+    setLoadingApps(true);
+    try {
+      const user = await account.get();
+      setApps(await listMyApps(user.$id));
+    } catch {
+      setApps([]);
+    } finally {
+      setLoadingApps(false);
     }
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void refreshPats();
+    void refreshApps();
+  }, [refreshPats, refreshApps]);
 
   const toggleDeveloperMode = async () => {
     try {
@@ -85,50 +158,6 @@ export function DevelopersTab() {
     }
   };
 
-  const toggleScope = (s: PatScope) => {
-    setSelected((prev) =>
-      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
-    );
-  };
-
-  const handleCreate = async () => {
-    if (!name.trim()) {
-      toast.error('Name required');
-      return;
-    }
-    if (selected.length === 0) {
-      toast.error('Pick at least one permission');
-      return;
-    }
-    setCreating(true);
-    try {
-      const res = await createPat({ name: name.trim(), scopes: selected });
-      setRevealedToken(res.token);
-      setName('');
-      try {
-        await navigator.clipboard.writeText(res.token);
-        toast.success('Token created and copied');
-      } catch {
-        toast.success('Token created — copy it now');
-      }
-      await refresh();
-    } catch (err: any) {
-      toast.error(err?.message || 'Create failed');
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const handleRevoke = async (id: string) => {
-    try {
-      await revokePat(id);
-      toast.success('Revoked');
-      await refresh();
-    } catch (err: any) {
-      toast.error(err?.message || 'Revoke failed');
-    }
-  };
-
   const copy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -138,138 +167,94 @@ export function DevelopersTab() {
     }
   };
 
+  const handleRevokePat = async (id: string) => {
+    try {
+      await revokePat(id);
+      toast.success('Revoked');
+      await refreshPats();
+    } catch (err: any) {
+      toast.error(err?.message || 'Revoke failed');
+    }
+  };
+
+  const handleDeleteApp = async (appId: string) => {
+    try {
+      await deleteApp(appId);
+      toast.success('App deleted');
+      await refreshApps();
+    } catch (err: any) {
+      toast.error(err?.message || 'Delete failed');
+    }
+  };
+
+  const handleRevokeAppTokens = async (appId: string) => {
+    try {
+      await deleteAppTokens(appId);
+      toast.success('All tokens revoked');
+    } catch (err: any) {
+      toast.error(err?.message || 'Revoke failed');
+    }
+  };
+
+  const activePats = pats.filter((p) => p.status === 'active').length;
+
   return (
     <div className="space-y-4 pb-24 max-w-3xl font-satoshi">
-      <div className="flex items-end justify-between gap-3">
-        <h2 className="text-xl font-black font-clash text-white tracking-tight">Developers</h2>
-        <Link
-          href="/docs/api"
-          className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider text-[#6366F1] hover:text-white"
-        >
-          <BookOpen size={14} />
-          Docs
-        </Link>
-      </div>
+      <h2 className="text-xl font-black font-clash text-white tracking-tight">Developers</h2>
 
-      <Section title="Agent skill">
-        <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5 space-y-2.5">
-          <p className="text-[11px] text-white/45">
-            Install the Kylrix API skill in Claude Code, Cursor, and other agent tools.
-          </p>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 min-w-0 text-[11px] font-mono text-white/80 bg-[#161412] border border-white/[0.06] rounded-xl px-3 py-2.5 break-all select-all">
-              {KYLRIX_API_SKILL_INSTALL}
-            </code>
-            <button
-              type="button"
-              onClick={() => void copy(KYLRIX_API_SKILL_INSTALL)}
-              className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white cursor-pointer shrink-0"
-            >
-              <Copy size={14} />
-              Copy
-            </button>
-          </div>
-        </div>
-      </Section>
-
-      <Section title="Developer mode">
-        <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#0A0908] border border-white/[0.05] px-3.5 py-3.5">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-white">Developer mode</p>
-            <p className="text-[11px] text-white/40">Unlocks advanced tooling and demo helpers</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => void toggleDeveloperMode()}
-            className={`relative h-7 w-12 rounded-full border transition-colors cursor-pointer shrink-0 ${
-              developerMode ? 'bg-[#6366F1] border-[#6366F1]' : 'bg-[#161412] border-white/15'
-            }`}
-            aria-pressed={developerMode}
-          >
-            <span
-              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                developerMode ? 'left-6' : 'left-0.5'
-              }`}
-            />
-          </button>
-        </div>
+      <Section title="Agent skills">
+        <SkillRow
+          title="HTTP API (CLI & scripts)"
+          install={KYLRIX_API_SKILL_INSTALL}
+          docsHref="/docs/api"
+          docsLabel="API docs"
+        />
+        <SkillRow
+          title="Sign in with Kylrix (OAuth)"
+          install={KYLRIX_OAUTH2_SKILL_INSTALL}
+          docsHref="/docs/oauth2"
+          docsLabel="OAuth docs"
+        />
       </Section>
 
       <Section
         title="Personal access tokens"
         action={
-          <span className="text-[10px] font-extrabold text-white/30 uppercase tracking-wider">
-            {pats.filter((p) => p.status === 'active').length} active
-          </span>
-        }
-      >
-        <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5 space-y-3">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Token name"
-            className="w-full rounded-xl bg-[#161412] border border-white/10 px-3 py-2.5 text-sm text-white outline-none focus:border-[#6366F1]"
-          />
-          <div className="flex flex-wrap gap-1.5">
-            {PAT_SCOPES.map((s) => {
-              const on = selected.includes(s);
-              const meta = PAT_SCOPE_META[s];
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => toggleScope(s)}
-                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-extrabold cursor-pointer border ${
-                    on
-                      ? meta.danger
-                        ? 'bg-red-500/15 border-red-500/30 text-red-300'
-                        : 'bg-[#6366F1]/20 border-[#6366F1]/40 text-[#A5B4FC]'
-                      : 'bg-[#161412] border-white/[0.06] text-white/35'
-                  }`}
-                >
-                  {meta.label}
-                </button>
-              );
-            })}
-          </div>
           <button
             type="button"
-            disabled={creating}
-            onClick={() => void handleCreate()}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white cursor-pointer disabled:opacity-40"
+            onClick={() => setPatDrawerOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-[#6366F1] text-white cursor-pointer"
           >
-            <Plus size={14} strokeWidth={3} />
-            Create token
+            <Plus size={12} strokeWidth={3} />
+            Set up
           </button>
+        }
+      >
+        <div className="flex items-center justify-between gap-2 px-0.5">
+          <p className="text-[11px] text-white/40">
+            For scripts and agents that call the HTTP API
+          </p>
+          <span className="text-[10px] font-extrabold text-white/30 uppercase tracking-wider shrink-0">
+            {activePats} active
+          </span>
         </div>
 
-        {revealedToken && (
-          <div className="rounded-2xl bg-[#0A0908] border border-amber-500/25 p-3.5 space-y-2">
-            <p className="text-[11px] font-bold text-amber-400">
-              Copied to clipboard. Store it safely — shown once.
-            </p>
-            <code className="block text-[11px] font-mono text-white/80 break-all select-all">
-              {revealedToken}
-            </code>
-            <button
-              type="button"
-              onClick={() => void copy(revealedToken)}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-extrabold bg-[#161412] border border-white/[0.08] text-white cursor-pointer"
-            >
-              <Copy size={14} />
-              Copy again
-            </button>
-          </div>
-        )}
-
-        {loading ? (
+        {loadingPats ? (
           <p className="text-xs text-white/40 px-1">Loading…</p>
         ) : pats.length === 0 ? (
-          <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] px-4 py-8 text-center">
-            <div className="mx-auto w-fit p-3 rounded-2xl bg-[#161412] border border-white/[0.06] text-[#6366F1] mb-3">
+          <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] px-4 py-7 text-center space-y-3">
+            <div className="mx-auto w-fit p-3 rounded-2xl bg-[#161412] border border-white/[0.06] text-[#6366F1]">
               <KeyRound size={20} />
             </div>
             <p className="text-sm font-bold text-white/50">No tokens yet</p>
+            <button
+              type="button"
+              onClick={() => setPatDrawerOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white cursor-pointer"
+            >
+              <Plus size={14} strokeWidth={3} />
+              Set up token
+            </button>
           </div>
         ) : (
           pats.map((pat) => (
@@ -291,7 +276,7 @@ export function DevelopersTab() {
                 <button
                   type="button"
                   title="Revoke"
-                  onClick={() => void handleRevoke(pat.id)}
+                  onClick={() => void handleRevokePat(pat.id)}
                   className="p-2 rounded-lg bg-[#161412] border border-red-500/20 text-red-400 cursor-pointer shrink-0"
                 >
                   <Trash2 size={14} />
@@ -302,22 +287,139 @@ export function DevelopersTab() {
         )}
       </Section>
 
-      <Section title="OAuth apps">
-        <OAuthAppsPanel />
+      <Section
+        title="Sign in with Kylrix"
+        action={
+          <button
+            type="button"
+            onClick={() => setOauthDrawerOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-[#6366F1] text-white cursor-pointer"
+          >
+            <Plus size={12} strokeWidth={3} />
+            Set up
+          </button>
+        }
+      >
+        <p className="text-[11px] text-white/40 px-0.5">
+          OAuth apps for third-party Sign in with Kylrix
+        </p>
+
+        <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5 space-y-2">
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-white/40">
+            Discovery URL
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 min-w-0 text-[10px] font-mono text-white/55 break-all">
+              {OAUTH2_DISCOVERY_URL}
+            </code>
+            <button
+              type="button"
+              onClick={() => void copy(OAUTH2_DISCOVERY_URL)}
+              className="p-2 rounded-lg bg-[#161412] border border-white/[0.08] text-white/70 cursor-pointer shrink-0"
+            >
+              <Copy size={14} />
+            </button>
+          </div>
+        </div>
+
+        {loadingApps ? (
+          <p className="text-xs text-white/40 px-1">Loading…</p>
+        ) : apps.length === 0 ? (
+          <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] px-4 py-7 text-center space-y-3">
+            <div className="mx-auto w-fit p-3 rounded-2xl bg-[#161412] border border-white/[0.06] text-[#6366F1]">
+              <AppWindow size={20} />
+            </div>
+            <p className="text-sm font-bold text-white/50">No OAuth apps yet</p>
+            <button
+              type="button"
+              onClick={() => setOauthDrawerOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white cursor-pointer"
+            >
+              <Plus size={14} strokeWidth={3} />
+              Set up app
+            </button>
+          </div>
+        ) : (
+          apps.map((app) => (
+            <div
+              key={app.$id}
+              className="flex items-center gap-3 rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5"
+            >
+              <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-[#6366F1] shrink-0">
+                <AppWindow size={16} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-white truncate">{app.name}</p>
+                <p className="text-[11px] text-white/40 font-mono truncate">
+                  {app.$id} · {app.type || 'confidential'}
+                </p>
+              </div>
+              <button
+                type="button"
+                title="Copy client id"
+                onClick={() => void copy(app.$id)}
+                className="p-2 rounded-lg bg-[#161412] border border-white/[0.08] text-white/70 cursor-pointer shrink-0"
+              >
+                <Copy size={14} />
+              </button>
+              <button
+                type="button"
+                title="Revoke all tokens"
+                onClick={() => void handleRevokeAppTokens(app.$id)}
+                className="p-2 rounded-lg bg-[#161412] border border-white/[0.08] text-amber-300/80 cursor-pointer shrink-0"
+              >
+                <KeyRound size={14} />
+              </button>
+              <button
+                type="button"
+                title="Delete app"
+                onClick={() => void handleDeleteApp(app.$id)}
+                className="p-2 rounded-lg bg-[#161412] border border-red-500/20 text-red-400 cursor-pointer shrink-0"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))
+        )}
       </Section>
 
-      <Section title="Quick start">
-        <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5 space-y-2">
-          <div className="flex items-center gap-2 text-[#6366F1]">
-            <Code2 size={14} />
-            <p className="text-[11px] font-extrabold uppercase tracking-wider">curl</p>
+      <Section title="Developer mode">
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#0A0908] border border-white/[0.05] px-3.5 py-3.5">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-white">Developer mode</p>
+            <p className="text-[11px] text-white/40">Advanced tooling and demo helpers</p>
           </div>
-          <pre className="text-[11px] font-mono text-white/55 whitespace-pre-wrap break-all">{`curl -X POST -H "Authorization: Bearer kyl_pat_…" \\
-  -H "Content-Type: application/json" \\
-  -d '{"title":"Hello","content":"From API"}' \\
-  https://www.kylrix.space/api/v1/notes`}</pre>
+          <button
+            type="button"
+            onClick={() => void toggleDeveloperMode()}
+            className={`relative h-7 w-12 rounded-full border transition-colors cursor-pointer shrink-0 ${
+              developerMode ? 'bg-[#6366F1] border-[#6366F1]' : 'bg-[#161412] border-white/15'
+            }`}
+            aria-pressed={developerMode}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                developerMode ? 'left-6' : 'left-0.5'
+              }`}
+            />
+          </button>
         </div>
       </Section>
+
+      {patDrawerOpen && (
+        <CreatePatDrawer
+          open={patDrawerOpen}
+          onClose={() => setPatDrawerOpen(false)}
+          onCreated={() => void refreshPats()}
+        />
+      )}
+      {oauthDrawerOpen && (
+        <CreateOAuthAppDrawer
+          open={oauthDrawerOpen}
+          onClose={() => setOauthDrawerOpen(false)}
+          onCreated={() => void refreshApps()}
+        />
+      )}
     </div>
   );
 }
