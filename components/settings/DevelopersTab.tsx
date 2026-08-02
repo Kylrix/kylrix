@@ -133,8 +133,12 @@ export function DevelopersTab() {
     try {
       const user = await account.get();
       setApps(await listMyApps(user.$id));
-    } catch {
+    } catch (err: any) {
       setApps([]);
+      if (err?.message) {
+        console.error('[Developers OAuth apps]', err);
+        toast.error(err.message);
+      }
     } finally {
       setLoadingApps(false);
     }

@@ -75,9 +75,29 @@ export async function createApp(params: {
   postLogoutRedirectUris?: string[];
   deviceFlow?: boolean;
 }): Promise<OauthApp> {
-  return appwriteSessionFetch<OauthApp>('POST', '/apps', {
+  // Create with the minimal required fields first (Appwrite Apps create).
+  const created = await appwriteSessionFetch<OauthApp>('POST', '/apps', {
     body: {
       appId: ID.unique(),
+      name: params.name,
+      redirectUris: params.redirectUris,
+    },
+  });
+
+  const needsUpdate =
+    params.type ||
+    params.description ||
+    params.logoUri ||
+    params.tagline ||
+    params.privacyPolicyUrl ||
+    params.termsUrl ||
+    params.postLogoutRedirectUris ||
+    params.deviceFlow != null;
+
+  if (!needsUpdate) return created;
+
+  try {
+    return await updateApp(created.$id, {
       name: params.name,
       redirectUris: params.redirectUris,
       type: params.type || 'confidential',
@@ -89,8 +109,11 @@ export async function createApp(params: {
       postLogoutRedirectUris: params.postLogoutRedirectUris,
       deviceFlow: params.deviceFlow ?? false,
       enabled: true,
-    },
-  });
+    });
+  } catch {
+    // App exists even if branding update fails — return create result.
+    return created;
+  }
 }
 
 export async function updateApp(

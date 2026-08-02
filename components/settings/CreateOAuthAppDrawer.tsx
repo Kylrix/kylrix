@@ -120,8 +120,14 @@ export function CreateOAuthAppDrawer({
     try {
       let logoUri: string | undefined;
       if (logoFile) {
-        const uploaded = await uploadOAuthAppLogo(logoFile);
-        logoUri = uploaded.logoUri;
+        try {
+          const uploaded = await uploadOAuthAppLogo(logoFile);
+          logoUri = uploaded.logoUri;
+        } catch (logoErr: any) {
+          toast.error(logoErr?.message || 'Logo upload failed');
+          setCreating(false);
+          return;
+        }
       }
       const app = await createApp({
         name: name.trim(),
@@ -131,13 +137,22 @@ export function CreateOAuthAppDrawer({
       });
       let secret: string | null = null;
       if (clientType === 'confidential') {
-        const secretRow = await createAppSecret(app.$id);
-        secret = secretRow.secret;
         try {
-          await navigator.clipboard.writeText(secret);
-          toast.success('App created — secret copied');
-        } catch {
-          toast.success('App created — copy the secret now');
+          const secretRow = await createAppSecret(app.$id);
+          secret = secretRow.secret;
+          try {
+            await navigator.clipboard.writeText(secret);
+            toast.success('App created — secret copied');
+          } catch {
+            toast.success('App created — copy the secret now');
+          }
+        } catch (secretErr: any) {
+          // App exists; surface secret failure clearly so user can rotate later.
+          toast.error(secretErr?.message || 'App created, but secret could not be issued');
+          setResult({ appId: app.$id, secret: null });
+          setStep('done');
+          onCreated?.();
+          return;
         }
       } else {
         toast.success('Public app created');
@@ -146,7 +161,19 @@ export function CreateOAuthAppDrawer({
       setStep('done');
       onCreated?.();
     } catch (err: any) {
-      toast.error(err?.message || 'Create failed');
+      const detail =
+        err?.response && typeof err.response === 'string'
+          ? (() => {
+              try {
+                const parsed = JSON.parse(err.response);
+                return parsed?.message || err.message;
+              } catch {
+                return err.message;
+              }
+            })()
+          : err?.message;
+      console.error('[CreateOAuthApp]', err);
+      toast.error(detail || 'Create failed');
     } finally {
       setCreating(false);
     }
