@@ -746,7 +746,8 @@ export const ChatService = {
         }
 
         const previewConversationIds = conversationRows.map((conversation: any) => conversation.$id).filter(Boolean);
-        const needsPreviewHydration = conversationRows.some((conversation) => !conversation.lastMessageAt || !conversation.lastMessageText);
+        // Skip bulk message scrape — list paints from LocalEngine; previews hydrate via realtime / memory.
+        const needsPreviewHydration = false;
         const latestMessageByConversation = new Map<string, any>();
 
         if (needsPreviewHydration && previewConversationIds.length > 0) {

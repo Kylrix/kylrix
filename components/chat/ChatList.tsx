@@ -40,11 +40,13 @@ import { ProfilePeekDrawer } from '@/components/profile/ProfilePeekDrawer';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import {
-    CHATS_LIST_CACHE_KEY,
-    THREADS_LIST_CACHE_KEY,
-    sanitizeConversationListForRest,
+    peekChatsListMemory,
+    peekThreadsListMemory,
+    readChatsListLocal,
+    readThreadsListLocal,
+    writeChatsListLocal,
+    writeThreadsListLocal,
 } from '@/lib/chat/local-chat-cache';
-import { LocalEngine } from '@/lib/services/LocalEngine';
 const alpha = (hexColor: string, opacity: number) => {
     let hex = hexColor.replace('#', '');
     if (hex.length === 3) {
@@ -80,7 +82,7 @@ function migrateLegacyChatListCache() {
         if (secure) {
             const parsed = JSON.parse(secure);
             if (Array.isArray(parsed) && parsed.length) {
-                void LocalEngine.cacheSet(CHATS_LIST_CACHE_KEY, sanitizeConversationListForRest(parsed));
+                writeChatsListLocal(parsed);
             }
             localStorage.removeItem(SECURE_CACHE_KEY);
         }
@@ -88,7 +90,7 @@ function migrateLegacyChatListCache() {
         if (threads) {
             const parsed = JSON.parse(threads);
             if (Array.isArray(parsed) && parsed.length) {
-                void LocalEngine.cacheSet(THREADS_LIST_CACHE_KEY, parsed);
+                writeThreadsListLocal(parsed);
             }
             localStorage.removeItem(THREADS_CACHE_KEY);
         }
@@ -126,8 +128,10 @@ export const ChatList = ({
     const openMenu = contextMenu?.openMenu;
     const { open: openUnified } = useUnifiedDrawer();
     const { isPinned: isResourcePinned, togglePin, pinSets } = useResourcePins();
-    const [conversations, setConversations] = useState<any[]>([]);
-    const [loading, setLoading] = useState(() => !skipSecureLoad);
+    const initialChats = peekChatsListMemory();
+    const initialThreads = peekThreadsListMemory();
+    const [conversations, setConversations] = useState<any[]>(() => initialChats);
+    const [loading, setLoading] = useState(() => !skipSecureLoad && initialChats.length === 0);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [_searching, setSearching] = useState(false);
@@ -142,7 +146,7 @@ export const ChatList = ({
       username?: string;
       seed?: { displayName?: string; username?: string; avatar?: string };
     } | null>(null);
-    const conversationsRef = React.useRef<any[]>([]);
+    const conversationsRef = React.useRef<any[]>(initialChats);
     const loadRequestRef = React.useRef(0);
     const loadConversationsInflightRef = React.useRef<Promise<void> | null>(null);
     const reloadConversationsTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,8 +163,8 @@ export const ChatList = ({
     });
     const activeTab = propActiveTab || activeTabState;
 
-    const [ghostConversations, setGhostConversations] = useState<any[]>([]);
-    const [loadingGhost, setLoadingGhost] = useState(() => !skipThreadsLoad);
+    const [ghostConversations, setGhostConversations] = useState<any[]>(() => initialThreads);
+    const [loadingGhost, setLoadingGhost] = useState(() => !skipThreadsLoad && initialThreads.length === 0);
 
     const [isInitializing, setIsInitializing] = useState(false);
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
@@ -410,14 +414,14 @@ export const ChatList = ({
         }
     }, [activeTab, hasMasterpass, hideTabs]);
 
-    // Instant paint from LocalEngine (RxDB) — migrate legacy localStorage once
+    // Instant paint: memory → LocalEngine. Never wait on network for first frame.
     useEffect(() => {
         migrateLegacyChatListCache();
         let cancelled = false;
         void (async () => {
-            if (!skipSecureLoad) {
-                const cached = await LocalEngine.cacheGet<any[]>(CHATS_LIST_CACHE_KEY);
-                if (!cancelled && cached?.length) {
+            if (!skipSecureLoad && conversationsRef.current.length === 0) {
+                const cached = await readChatsListLocal();
+                if (!cancelled && cached.length) {
                     startTransition(() => {
                         setConversations(cached);
                         conversationsRef.current = cached;
@@ -425,9 +429,9 @@ export const ChatList = ({
                     });
                 }
             }
-            if (!skipThreadsLoad) {
-                const cachedThr = await LocalEngine.cacheGet<any[]>(THREADS_LIST_CACHE_KEY);
-                if (!cancelled && cachedThr?.length) {
+            if (!skipThreadsLoad && ghostConversations.length === 0) {
+                const cachedThr = await readThreadsListLocal();
+                if (!cancelled && cachedThr.length) {
                     startTransition(() => {
                         setGhostConversations(cachedThr);
                         setLoadingGhost(false);
@@ -438,6 +442,7 @@ export const ChatList = ({
         return () => {
             cancelled = true;
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount hydrate only
     }, [skipSecureLoad, skipThreadsLoad, startTransition]);
 
     useEffect(() => {
@@ -463,11 +468,19 @@ export const ChatList = ({
         rememberConversationRoster([]);
     }, []);
 
+    const ghostConversationsRef = React.useRef<any[]>(initialThreads);
+    useEffect(() => {
+        ghostConversationsRef.current = ghostConversations;
+    }, [ghostConversations]);
+
     const loadGhostConversations = React.useCallback(async (options?: { silent?: boolean }) => {
         if (!user) return;
-        const hasCachedRows = ghostConversations.length > 0;
+        const hasCachedRows =
+            ghostConversationsRef.current.length > 0 || peekThreadsListMemory().length > 0;
         if (!options?.silent && !hasCachedRows) {
             setLoadingGhost(true);
+        } else {
+            setLoadingGhost(false);
         }
         try {
             const results = await listGhostNoteChats();
@@ -523,11 +536,12 @@ export const ChatList = ({
                 return new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime();
             });
 
-            void LocalEngine.cacheSet(THREADS_LIST_CACHE_KEY, mapped);
+            writeThreadsListLocal(mapped);
             startTransition(() => {
                 setGhostConversations(mapped);
             });
             setIsInitializing(false);
+            setLoadingGhost(false);
 
             void (async () => {
                 const enriched = await Promise.all(mapped.map(async (entry: any) => {
@@ -561,7 +575,7 @@ export const ChatList = ({
                     if (ap !== bp) return bp - ap;
                     return new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime();
                 });
-                void LocalEngine.cacheSet(THREADS_LIST_CACHE_KEY, enriched);
+                writeThreadsListLocal(enriched);
                 startTransition(() => {
                     setGhostConversations(enriched);
                 });
@@ -571,7 +585,7 @@ export const ChatList = ({
         } finally {
             setLoadingGhost(false);
         }
-    }, [user, startTransition, ghostConversations.length, pinSets.conversation]);
+    }, [user, startTransition, pinSets.conversation]);
 
     // Keep pinned chats at the top when pin set changes
     useEffect(() => {
@@ -586,11 +600,6 @@ export const ChatList = ({
             });
         });
     }, [pinSets.conversation, sortConversations]);
-
-    useEffect(() => {
-        if (skipThreadsLoad || activeTab !== 'public') return;
-        loadGhostConversations();
-    }, [activeTab, loadGhostConversations, skipThreadsLoad]);
 
     // Sync external query to local search
     useEffect(() => {
@@ -802,9 +811,12 @@ export const ChatList = ({
                 return;
             }
 
-            const hasCachedRows = conversationsRef.current.length > 0;
+            const hasCachedRows =
+                conversationsRef.current.length > 0 || peekChatsListMemory().length > 0;
             if (!options?.silent && !hasCachedRows) {
                 setLoading(true);
+            } else {
+                setLoading(false);
             }
 
             const response = await ChatService.getConversations(user!.$id, {
@@ -924,10 +936,26 @@ export const ChatList = ({
                     lastMessageSenderId: previewSenderId};
             });
 
-            const sorted = sortConversations(baseRows);
+            const prevById = new Map(
+                conversationsRef.current.map((c) => [c.$id, c] as const),
+            );
+            const mergedRows = baseRows.map((row) => {
+                const prev = prevById.get(row.$id);
+                if (!prev) return row;
+                return {
+                    ...row,
+                    name: row.name && !String(row.name).startsWith('@') ? row.name : (prev.name || row.name),
+                    avatarUrl: row.avatarUrl || prev.avatarUrl || null,
+                    isSelf: row.isSelf || prev.isSelf,
+                    otherUserId: row.otherUserId || prev.otherUserId,
+                    lastMessageText: row.lastMessageText || prev.lastMessageText,
+                };
+            });
+
+            const sorted = sortConversations(mergedRows);
 
             console.log('[ChatList] Base conversations count:', sorted.length);
-            void LocalEngine.cacheSet(CHATS_LIST_CACHE_KEY, sanitizeConversationListForRest(sorted));
+            writeChatsListLocal(sorted);
             startTransition(() => {
                 setConversations(sorted);
                 conversationsRef.current = sorted;
@@ -986,7 +1014,7 @@ export const ChatList = ({
                 if (loadRequestRef.current !== requestId) return;
                 const enriched = settled.map((entry, index) => entry.status === 'fulfilled' ? entry.value : sorted[index]);
                 const next = sortConversations(enriched);
-                void LocalEngine.cacheSet(CHATS_LIST_CACHE_KEY, sanitizeConversationListForRest(next));
+                writeChatsListLocal(next);
                 startTransition(() => {
                     setConversations(next);
                     conversationsRef.current = next;
@@ -1025,7 +1053,18 @@ export const ChatList = ({
             const wasUnlocked = isUnlockedRef.current;
             setIsUnlocked(status.isUnlocked);
             if (status.isUnlocked && !wasUnlocked) {
-                void loadConversations({ forceRefresh: true });
+                // Paint local copy immediately, then refresh in background
+                void (async () => {
+                    const cached = await readChatsListLocal();
+                    if (cached.length) {
+                        startTransition(() => {
+                            setConversations(cached);
+                            conversationsRef.current = cached;
+                            setLoading(false);
+                        });
+                    }
+                    void loadConversations({ silent: true, forceRefresh: true });
+                })();
             } else if (!status.isUnlocked) {
                 ChatService.clearConversationPreviewCache();
                 ChatService.invalidateConversationsListCache(user?.$id);
@@ -1038,34 +1077,24 @@ export const ChatList = ({
         return unsubscribe;
     }, [loadConversations, user?.$id, startTransition]);
 
+    // Secure list + realtime — once per user mount. Do NOT re-run on tab switch.
     useEffect(() => {
         if (!user) return;
 
         if (!skipSecureLoad) {
             void loadConversations({ silent: conversationsRef.current.length > 0 });
         }
-        if (!skipThreadsLoad && activeTab === 'public') {
-            void loadGhostConversations({ silent: ghostConversations.length > 0 });
-        }
 
         const conversationChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS}.documents`;
         const messageChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`;
-        const noteChannel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents`;
 
-        const channels = skipSecureLoad
-            ? [noteChannel]
-            : skipThreadsLoad
-                ? [conversationChannel, messageChannel]
-                : [conversationChannel, messageChannel, noteChannel];
+        if (skipSecureLoad) {
+            return;
+        }
 
-        const subscription: any = realtime.subscribe(channels, async (response) => {
-            if (response.channels.some(ch => ch.includes(APPWRITE_CONFIG.TABLES.NOTE.NOTES))) {
-                if (!skipThreadsLoad) {
-                    void loadGhostConversations({ silent: true });
-                }
-                return;
-            }
-            if (skipSecureLoad) return;
+        const subscription: any = realtime.subscribe(
+            [conversationChannel, messageChannel],
+            async (response) => {
             const payload = response.payload;
             const isConversationEvent = Array.isArray(payload?.participants);
             const relatedConversationId = isConversationEvent ? payload?.$id : payload?.conversationId;
@@ -1178,9 +1207,25 @@ export const ChatList = ({
             if (typeof subscription === 'function') subscription();
             else if (subscription?.unsubscribe) subscription.unsubscribe();
         };
-    }, [user, activeTab, loadConversations, loadGhostConversations, formatPreviewFromMessage, startTransition, skipSecureLoad, skipThreadsLoad, scheduleConversationsReload, ghostConversations.length]);
+    }, [user, loadConversations, formatPreviewFromMessage, startTransition, skipSecureLoad, scheduleConversationsReload]);
 
-    if (loading && activeTab === 'secure' && !skipSecureLoad) return (
+    // Threads: load once when tab opens; keep local copy visible; refresh silently
+    useEffect(() => {
+        if (!user || skipThreadsLoad || activeTab !== 'public') return;
+        void loadGhostConversations({ silent: ghostConversations.length > 0 || peekThreadsListMemory().length > 0 });
+
+        const noteChannel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents`;
+        const subscription: any = realtime.subscribe([noteChannel], () => {
+            void loadGhostConversations({ silent: true });
+        });
+        return () => {
+            if (typeof subscription === 'function') subscription();
+            else if (subscription?.unsubscribe) subscription.unsubscribe();
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: tab enter, not every ghost length change
+    }, [user, activeTab, skipThreadsLoad, loadGhostConversations]);
+
+    if (loading && conversations.length === 0 && activeTab === 'secure' && !skipSecureLoad) return (
         <div className="p-4 space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex items-center gap-4 p-2 animate-pulse">

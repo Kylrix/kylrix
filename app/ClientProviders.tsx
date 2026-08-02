@@ -57,10 +57,13 @@ import { UnifiedFileDrawerProvider } from '@/context/UnifiedFileDrawerContext';
  * Mandatory for GlobalShell and UI orchestration. 
  * Lightweight UI-state providers that don't block hydration with heavy data fetching.
  */
+import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
+
 const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   SpineProvider,
   NeuralProvider,
   SecurityProvider,
+  ChatNotificationProvider,
   UnifiedFileDrawerProvider,
   DrawerStateProvider,
   AppwriteProvider,
