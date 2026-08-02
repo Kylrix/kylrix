@@ -5,6 +5,34 @@ import { KYLRIX_API_SKILL_INSTALL, KYLRIX_API_BASE_PROD } from '@/lib/api/public
 const ENDPOINTS = [
   {
     method: 'GET',
+    path: '/token',
+    scope: '(any valid PAT)',
+    summary: 'Inspect this PAT, its scopes, and the full scope catalog. Rescue hatch.',
+    query: null as string | null,
+  },
+  {
+    method: 'GET',
+    path: '/token/scopes',
+    scope: '(any valid PAT)',
+    summary: 'List the scope catalog.',
+    query: null,
+  },
+  {
+    method: 'PATCH',
+    path: '/token/scopes',
+    scope: '(self)',
+    summary: 'Replace scopes on this PAT. Body: { scopes: string[] }. No new token needed.',
+    query: null,
+  },
+  {
+    method: 'POST',
+    path: '/token/scopes/grant',
+    scope: '(self)',
+    summary: 'Add scopes to this PAT. Body: { scopes: string[] }.',
+    query: null,
+  },
+  {
+    method: 'GET',
     path: '/me',
     scope: 'profile:read',
     summary: 'Token owner id, auth kind, granted scopes, patId.',

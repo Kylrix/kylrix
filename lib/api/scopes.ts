@@ -21,6 +21,19 @@ export const PAT_SCOPES = [
   'objects:read',
   'objects:write',
   'tools:execute',
+  // Token self-service + minting other PATs
+  'pats:read',
+  'pats:write',
+  // Workspaces (projects)
+  'workspaces:read',
+  'workspaces:write',
+  // Connect / chat
+  'chats:read',
+  'chats:write',
+  // Agentic sessions (+ harness mirrors)
+  'agents:read',
+  'agents:write',
+  'agents:harness',
 ] as const;
 
 export type PatScope = (typeof PAT_SCOPES)[number];
@@ -46,6 +59,15 @@ export const PAT_SCOPE_META: Record<
   'objects:read': { label: 'Read object links' },
   'objects:write': { label: 'Write object links' },
   'tools:execute': { label: 'Run tools', danger: true },
+  'pats:read': { label: 'List access tokens' },
+  'pats:write': { label: 'Create or revoke access tokens', danger: true },
+  'workspaces:read': { label: 'Read workspaces' },
+  'workspaces:write': { label: 'Write workspaces' },
+  'chats:read': { label: 'Read chats' },
+  'chats:write': { label: 'Write chats', danger: true },
+  'agents:read': { label: 'Read agent sessions' },
+  'agents:write': { label: 'Write agent sessions' },
+  'agents:harness': { label: 'Mirror CLI harness sessions', danger: true },
 };
 
 export function normalizeScopes(input: unknown): PatScope[] {
@@ -81,4 +103,13 @@ export function assertScope(granted: string[], needed: PatScope) {
     (err as any).code = 'scope_denied';
     throw err;
   }
+}
+
+/** Full catalog for clients / self-refresh UIs. */
+export function listScopeCatalog() {
+  return PAT_SCOPES.map((id) => ({
+    id,
+    label: PAT_SCOPE_META[id].label,
+    danger: !!PAT_SCOPE_META[id].danger,
+  }));
 }

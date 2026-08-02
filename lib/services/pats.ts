@@ -177,6 +177,74 @@ export const PatService = {
     return { success: true };
   },
 
+  /**
+   * Replace scopes on a PAT the caller owns.
+   * Used by the self-service rescue hatch (PATCH /api/v1/token/scopes).
+   */
+  async updateScopes(params: {
+    patId: string;
+    userId: string;
+    scopes: unknown;
+    mode?: 'replace' | 'grant';
+  }): Promise<PatPublic> {
+    const tables = createSystemTablesDB();
+    const row = (await tables.getRow({
+      databaseId: DB,
+      tableId: TABLE,
+      rowId: params.patId,
+    }).catch(() => null)) as PatRow | null;
+    if (!row) {
+      const err = new Error('Token not found');
+      (err as any).status = 404;
+      throw err;
+    }
+    if (row.userId !== params.userId) {
+      const err = new Error('Forbidden');
+      (err as any).status = 403;
+      throw err;
+    }
+    if (row.status !== 'active') {
+      const err = new Error('Token is revoked');
+      (err as any).status = 400;
+      throw err;
+    }
+
+    const incoming = normalizeScopes(params.scopes);
+    if (incoming.length === 0) {
+      const err = new Error('Select at least one permission');
+      (err as any).status = 400;
+      throw err;
+    }
+
+    const next =
+      params.mode === 'grant'
+        ? normalizeScopes([...normalizeScopes(row.scopes), ...incoming])
+        : incoming;
+
+    const updated = (await tables.updateRow({
+      databaseId: DB,
+      tableId: TABLE,
+      rowId: params.patId,
+      data: {
+        scopes: JSON.stringify(next),
+        updatedAt: new Date().toISOString(),
+      },
+    })) as unknown as PatRow;
+
+    return toPublic(updated);
+  },
+
+  async getOwned(params: { patId: string; userId: string }): Promise<PatPublic | null> {
+    const tables = createSystemTablesDB();
+    const row = (await tables.getRow({
+      databaseId: DB,
+      tableId: TABLE,
+      rowId: params.patId,
+    }).catch(() => null)) as PatRow | null;
+    if (!row || row.userId !== params.userId) return null;
+    return toPublic(row);
+  },
+
   async verifyBearer(rawToken: string): Promise<{
     pat: PatRow;
     scopes: PatScope[];

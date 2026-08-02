@@ -41,6 +41,11 @@ Verify: lookup `tokenPrefix` → compare hash → status/expiry → rate limit �
 
 ## Public HTTP surface
 
+Self-service (any valid PAT): `GET /token`, `GET|PATCH /token/scopes`, `POST /token/scopes/grant`.
+Also: workspaces, chats, agents/harness, events, forms, pats.
+
+## Public HTTP surface
+
 REST CRUD only (`/me`, `/notes`, `/goals`, `/flows`). **No** `/tools/execute` (410). Tools remain in-process for the app, not PAT HTTP.
 
 ## Limits

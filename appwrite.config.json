@@ -10466,6 +10466,15 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "harness",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [

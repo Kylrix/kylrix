@@ -3,6 +3,8 @@ import { createSystemTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import type { ApiActor } from '@/lib/api/guard';
 import { requireScope } from '@/lib/api/guard';
+import { listScopeCatalog } from '@/lib/api/scopes';
+import { PatService } from '@/lib/services/pats';
 import { clampNoteTitle } from '@/constants/noteTitle';
 import {
   cleanRowData,
@@ -281,6 +283,306 @@ export const ApiResources = {
       isPublic: !!r.isPublic,
       installCount: r.installCount ?? 0,
       reviewStatus: r.reviewStatus || null,
+    }));
+  },
+
+  // ─── Token self-service (rescue hatch — no extra scope required) ───
+
+  async tokenMe(actor: ApiActor) {
+    if (actor.kind !== 'pat' || !actor.patId) {
+      return {
+        auth: actor.kind,
+        userId: actor.userId,
+        scopes: actor.scopes,
+        patId: null,
+        note: 'Session/OAuth tokens have no PAT row; use a kyl_pat_ token for self-service.',
+      };
+    }
+    const pat = await PatService.getOwned({ patId: actor.patId, userId: actor.userId });
+    return {
+      auth: 'pat',
+      userId: actor.userId,
+      patId: actor.patId,
+      scopes: actor.scopes,
+      pat,
+      catalog: listScopeCatalog(),
+    };
+  },
+
+  async tokenScopeCatalog(_actor: ApiActor) {
+    return { scopes: listScopeCatalog() };
+  },
+
+  /**
+   * Self-service scope refresh on the CURRENT bearer PAT.
+   * Intentionally does not require pats:write — this is the rescue hatch so a
+   * half-baked token can grant itself new scopes as the catalog grows.
+   */
+  async tokenUpdateScopes(
+    actor: ApiActor,
+    body: Record<string, unknown>,
+    mode: 'replace' | 'grant' = 'replace',
+  ) {
+    if (actor.kind !== 'pat' || !actor.patId) {
+      badRequest('Only personal access tokens can refresh their own scopes');
+    }
+    const scopes = body.scopes ?? body.grant ?? body.add;
+    const pat = await PatService.updateScopes({
+      patId: actor.patId!,
+      userId: actor.userId,
+      scopes,
+      mode: body.mode === 'grant' || mode === 'grant' ? 'grant' : 'replace',
+    });
+    return {
+      pat,
+      scopes: pat.scopes,
+      hint: 'New scopes apply on the next request with this same token (no re-mint).',
+    };
+  },
+
+  async listPats(actor: ApiActor) {
+    requireScope(actor, 'pats:read');
+    return PatService.listForUser(actor.userId);
+  },
+
+  async createPat(actor: ApiActor, body: Record<string, unknown>) {
+    requireScope(actor, 'pats:write');
+    const name = String(body.name || '').trim();
+    if (!name) badRequest('name required');
+    return PatService.create({
+      userId: actor.userId,
+      name,
+      scopes: body.scopes,
+      expiresAt: body.expiresAt != null ? String(body.expiresAt) : null,
+    });
+  },
+
+  async revokePat(actor: ApiActor, patId: string) {
+    requireScope(actor, 'pats:write');
+    if (actor.patId && actor.patId === patId) {
+      badRequest('Refuse to revoke the token currently authenticating this request');
+    }
+    return PatService.revoke({ patId, userId: actor.userId });
+  },
+
+  async listWorkspaces(actor: ApiActor, limit = 25) {
+    requireScope(actor, 'workspaces:read');
+    const tables = createSystemTablesDB();
+    const res = await tables.listRows({
+      databaseId: FLOW_DB,
+      tableId: 'projects',
+      queries: [
+        Query.equal('ownerId', actor.userId),
+        Query.orderDesc('$updatedAt'),
+        Query.limit(Math.min(100, Math.max(1, limit))),
+      ],
+    });
+    return res.rows.map((r: any) => ({
+      id: r.$id,
+      title: r.title || r.name || 'Untitled',
+      summary: r.summary || r.description || null,
+      visibility: r.visibility || null,
+      updatedAt: r.$updatedAt || r.updatedAt || null,
+      createdAt: r.$createdAt || r.createdAt || null,
+    }));
+  },
+
+  async getWorkspace(actor: ApiActor, id: string) {
+    requireScope(actor, 'workspaces:read');
+    const tables = createSystemTablesDB();
+    const row = (await tables
+      .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: id })
+      .catch(() => null)) as any;
+    if (!row || row.ownerId !== actor.userId) notFound('Workspace not found');
+    return {
+      id: row.$id,
+      title: row.title || row.name || 'Untitled',
+      summary: row.summary || row.description || null,
+      visibility: row.visibility || null,
+      updatedAt: row.$updatedAt || row.updatedAt || null,
+      createdAt: row.$createdAt || row.createdAt || null,
+    };
+  },
+
+  async listEvents(actor: ApiActor, limit = 25) {
+    requireScope(actor, 'events:read');
+    const tables = createSystemTablesDB();
+    const res = await tables.listRows({
+      databaseId: FLOW_DB,
+      tableId: 'events',
+      queries: [
+        Query.equal('userId', actor.userId),
+        Query.orderDesc('$updatedAt'),
+        Query.limit(Math.min(100, Math.max(1, limit))),
+      ],
+    });
+    return res.rows.map((r: any) => ({
+      id: r.$id,
+      title: r.title || r.name || 'Untitled',
+      startsAt: r.startsAt || r.startAt || null,
+      endsAt: r.endsAt || r.endAt || null,
+      updatedAt: r.$updatedAt || null,
+    }));
+  },
+
+  async listForms(actor: ApiActor, limit = 25) {
+    requireScope(actor, 'forms:read');
+    const tables = createSystemTablesDB();
+    const res = await tables.listRows({
+      databaseId: FLOW_DB,
+      tableId: 'forms',
+      queries: [
+        Query.equal('userId', actor.userId),
+        Query.orderDesc('$updatedAt'),
+        Query.limit(Math.min(100, Math.max(1, limit))),
+      ],
+    });
+    return res.rows.map((r: any) => ({
+      id: r.$id,
+      title: r.title || r.name || 'Untitled',
+      updatedAt: r.$updatedAt || null,
+      isPublic: !!r.isPublic,
+    }));
+  },
+
+  async listAgentSessions(actor: ApiActor, limit = 25, opts?: { harness?: string | null }) {
+    requireScope(actor, 'agents:read');
+    const tables = createSystemTablesDB();
+    const queries: string[] = [
+      Query.equal('userId', actor.userId),
+      Query.orderDesc('$updatedAt'),
+      Query.limit(Math.min(100, Math.max(1, limit))),
+    ];
+    if (opts?.harness) {
+      requireScope(actor, 'agents:harness');
+      queries.unshift(Query.equal('harness', String(opts.harness)));
+    }
+    const res = await tables.listRows({
+      databaseId: FLOW_DB,
+      tableId: 'agentic_sessions',
+      queries,
+    });
+    return res.rows.map((r: any) => ({
+      id: r.$id,
+      harness: r.harness || null,
+      isPublic: !!r.isPublic,
+      isPinned: !!r.isPinned,
+      seen: !!r.seen,
+      updatedAt: r.$updatedAt || null,
+      createdAt: r.$createdAt || null,
+    }));
+  },
+
+  async createHarnessSession(actor: ApiActor, body: Record<string, unknown>) {
+    requireScope(actor, 'agents:harness');
+    requireScope(actor, 'agents:write');
+    const harness = String(body.harness || body.name || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '')
+      .slice(0, 64);
+    if (!harness) badRequest('harness required (e.g. claude-code, codex)');
+    const tables = createSystemTablesDB();
+    const now = new Date().toISOString();
+    const title = String(body.title || `[${harness}] mirror`).slice(0, 200);
+    const seed = {
+      role: 'system',
+      content: `Harness mirror session for ${harness}. Read-only prompts/tool calls land here.`,
+      at: now,
+    };
+    const row = await tables.createRow({
+      databaseId: FLOW_DB,
+      tableId: 'agentic_sessions',
+      rowId: ID.unique(),
+      data: {
+        userId: actor.userId,
+        harness,
+        context: title,
+        chatHistory: JSON.stringify([seed]),
+        seen: false,
+        isMemory: false,
+        isPublic: false,
+        isGuest: false,
+        isPinned: false,
+      },
+      permissions: [
+        Permission.read(Role.user(actor.userId)),
+        Permission.update(Role.user(actor.userId)),
+        Permission.delete(Role.user(actor.userId)),
+      ],
+    });
+    return {
+      id: (row as any).$id,
+      harness,
+      context: title,
+      mode: 'mirror',
+      writable: false,
+    };
+  },
+
+  async appendHarnessMirror(actor: ApiActor, sessionId: string, body: Record<string, unknown>) {
+    requireScope(actor, 'agents:harness');
+    requireScope(actor, 'agents:write');
+    const tables = createSystemTablesDB();
+    const row = (await tables
+      .getRow({ databaseId: FLOW_DB, tableId: 'agentic_sessions', rowId: sessionId })
+      .catch(() => null)) as any;
+    if (!row || row.userId !== actor.userId) notFound('Session not found');
+    if (!row.harness) badRequest('Not a harness session');
+
+    let history: any[] = [];
+    try {
+      history = JSON.parse(row.chatHistory || '[]');
+      if (!Array.isArray(history)) history = [];
+    } catch {
+      history = [];
+    }
+    const entry = {
+      role: String(body.role || 'assistant').slice(0, 32),
+      content: String(body.content || body.prompt || body.response || '').slice(0, 12000),
+      toolCalls: body.toolCalls ?? null,
+      at: new Date().toISOString(),
+    };
+    if (!entry.content && !entry.toolCalls) badRequest('content or toolCalls required');
+    history.push(entry);
+    // Cap history size in row
+    while (history.length > 200) history.shift();
+
+    await tables.updateRow({
+      databaseId: FLOW_DB,
+      tableId: 'agentic_sessions',
+      rowId: sessionId,
+      data: {
+        chatHistory: JSON.stringify(history),
+        seen: false,
+      },
+    });
+    return { id: sessionId, appended: true, count: history.length };
+  },
+
+  async listChats(actor: ApiActor, limit = 25) {
+    requireScope(actor, 'chats:read');
+    const tables = createSystemTablesDB();
+    const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
+    const convTable =
+      APPWRITE_CONFIG.TABLES.CONNECT?.CONVERSATIONS ||
+      APPWRITE_CONFIG.TABLES.CHAT?.CONVERSATIONS ||
+      'conversations';
+    const res = await tables.listRows({
+      databaseId: chatDb,
+      tableId: convTable,
+      queries: [
+        Query.contains('participants', actor.userId),
+        Query.limit(Math.min(100, Math.max(1, limit))),
+      ],
+    });
+    return res.rows.map((r: any) => ({
+      id: r.$id,
+      type: r.type || null,
+      name: r.name || null,
+      participantCount: r.participantCount ?? (Array.isArray(r.participants) ? r.participants.length : null),
+      lastMessageAt: r.lastMessageAt || null,
+      isEncrypted: !!r.isEncrypted,
     }));
   },
 };

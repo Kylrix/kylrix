@@ -50,7 +50,16 @@ Supported: **17.4.0+** (tables-db). Current ecosystem often **21.x+**.
   2. `appwrite pull tables` → refresh local `appwrite.config.json`.
   3. `appwrite generate --language typescript`.
 
+### Row data (STRICT — never bypass)
+
+- **NEVER** create, update, delete, or upsert **rows** via the Appwrite CLI (`create-row`, `update-row`, `delete-row`, `upsert-row`, bulk import, etc.).
+- Row CRUD for user/account data goes through the **Kylrix HTTP API (PAT)** or in-app secure-ops — so agents dogfood the product surface, not the admin CLI.
+- The CLI role is **schema only**: additive tables/columns/indexes (and rare admin tasks that cannot be expressed via the PAT API).
+- **Ambiguous API result?** Prefer re-calling the PAT API. Only as a last resort, and only for **read verification** of existence (never mutate), may you use CLI list/get — and document why the API was ambiguous.
+- **Destructive or irreversible ideas** (drop a table, wipe data, reshape live columns, “this table looks unused — remove it”) require **explicit user approval** before any action. Propose → wait → do not freestyle.
+
 ### Destructive schema (STRICT)
+
 
 - **NEVER** `update-*-column` / change type, size, required, default, encrypt, or array on an **existing** column.
 - **NEVER** `delete-column`, `delete-index`, `delete-column-index`, `delete-table`, or database delete.
