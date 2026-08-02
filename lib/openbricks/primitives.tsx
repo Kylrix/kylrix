@@ -2086,7 +2086,7 @@ export const TablePagination = React.forwardRef(({
 });
 TablePagination.displayName = 'TablePagination';
 
-export const Zoom = ({ children, timeout, sx, ...props }: any) => React.createElement('div', { 
+export const Zoom = ({ children, timeout, in: inProp, sx, ...props }: any) => React.createElement('div', { 
     ...props, 
     style: {
         ...cleanSx(sx)

@@ -144,6 +144,7 @@ export const ChatList = ({
     const [peekProfile, setPeekProfile] = useState<{
       userId?: string;
       username?: string;
+      conversationId?: string;
       seed?: { displayName?: string; username?: string; avatar?: string };
     } | null>(null);
     const conversationsRef = React.useRef<any[]>(initialChats);
@@ -195,6 +196,7 @@ export const ChatList = ({
         setPeekProfile({
             userId: otherId || conv?.otherUserId || (conv?.isSelf ? user?.$id : undefined),
             username: conv?.username || conv?.otherUsername,
+            conversationId: conv?.$id,
             seed: {
                 displayName: conv?.name,
                 username: conv?.username || conv?.otherUsername,
@@ -1656,6 +1658,7 @@ export const ChatList = ({
                 onClose={() => setPeekProfile(null)}
                 userId={peekProfile?.userId}
                 username={peekProfile?.username}
+                conversationId={peekProfile?.conversationId}
                 seed={peekProfile?.seed}
             />
 

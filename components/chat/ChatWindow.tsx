@@ -1897,8 +1897,9 @@ export const ChatWindow = ({
             <ProfilePeekDrawer
                 open={profilePeekOpen}
                 onClose={() => setProfilePeekOpen(false)}
-                userId={partnerId}
+                userId={isSelf ? user?.$id : partnerId}
                 username={partnerProfile?.username}
+                conversationId={conversationId}
                 seed={{
                     displayName: partnerProfile?.displayName || conversation?.name,
                     username: partnerProfile?.username,

@@ -3,17 +3,21 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { ChevronUp, MessageSquare, UserPlus, X } from 'lucide-react';
+import { ChevronUp, MessageSquare, PhoneCall, X } from 'lucide-react';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import { UsersService } from '@/lib/services/users';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getCachedIdentityById } from '@/lib/identity-cache';
+import { useAuth } from '@/lib/auth';
+import { useCallLauncher } from '@/context/CallLauncherContext';
 
 type Props = {
   open: boolean;
   onClose: () => void;
   userId?: string | null;
   username?: string | null;
+  /** When peeking from an open chat, call uses this conversation */
+  conversationId?: string | null;
   /** Optional seed so the sheet paints before network */
   seed?: {
     displayName?: string;
@@ -27,8 +31,17 @@ type Props = {
  * Compact profile peek — miniature /u/[username].
  * Expand → navigates to full profile page.
  */
-export function ProfilePeekDrawer({ open, onClose, userId, username, seed }: Props) {
+export function ProfilePeekDrawer({
+  open,
+  onClose,
+  userId,
+  username,
+  conversationId,
+  seed,
+}: Props) {
   const router = useRouter();
+  const { user } = useAuth();
+  const { openCallLauncher } = useCallLauncher();
   const [mounted, setMounted] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [profile, setProfile] = useState<any>(seed || null);
@@ -55,7 +68,6 @@ export function ProfilePeekDrawer({ open, onClose, userId, username, seed }: Pro
     if (!open) return;
     setProfile(seed || null);
     setAvatarUrl(seed?.avatar?.startsWith?.('http') ? seed.avatar : null);
-    // seed object identity changes every parent render — key off identity fields only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, userId, username, seed?.displayName, seed?.username, seed?.bio, seed?.avatar]);
 
@@ -107,7 +119,6 @@ export function ProfilePeekDrawer({ open, onClose, userId, username, seed }: Pro
       setExpanded(false);
       return;
     }
-    // Expanding all the way = open the real profile page
     goFullProfile();
   }, [expanded, goFullProfile]);
 
@@ -123,6 +134,35 @@ export function ProfilePeekDrawer({ open, onClose, userId, username, seed }: Pro
   const bio = (profile?.bio || seed?.bio || '').trim();
   const shortBio = bio.length > 140 ? `${bio.slice(0, 139).trim()}…` : bio;
   const uid = profile?.userId || profile?.$id || userId;
+  const isOwn = Boolean(user?.$id && uid && user.$id === uid);
+  const displayName = name.replace(/\s*\(You\)\s*/gi, '').trim() || name;
+
+  const goMessage = () => {
+    onClose();
+    if (!uid) return;
+    if (isOwn) {
+      router.push('/connect/chats');
+      return;
+    }
+    if (conversationId) {
+      // Already in this chat — just dismiss peek
+      return;
+    }
+    router.push(`/connect/chats?userId=${encodeURIComponent(uid)}`);
+  };
+
+  const goCall = () => {
+    if (!uid || isOwn) return;
+    onClose();
+    const participants = user?.$id ? [user.$id, uid] : [uid];
+    openCallLauncher({
+      source: 'chat',
+      conversationId: conversationId || undefined,
+      conversationName: displayName,
+      participantIds: participants,
+      title: 'Audio Call',
+    });
+  };
 
   const sheet = (
     <div className="fixed inset-0 z-[10020] flex justify-center overflow-hidden pointer-events-none">
@@ -178,14 +218,24 @@ export function ProfilePeekDrawer({ open, onClose, userId, username, seed }: Pro
             <div className="shrink-0 rounded-full overflow-hidden border border-white/[0.06] bg-[#0A0908]">
               <IdentityAvatar
                 userId={uid || undefined}
-                fileId={avatarUrl || profile?.avatar || null}
-                alt={name}
-                fallback={name.replace(/^@/, '').charAt(0).toUpperCase() || '?'}
+                src={avatarUrl?.startsWith?.('http') ? avatarUrl : null}
+                fileId={
+                  avatarUrl?.startsWith?.('http')
+                    ? null
+                    : avatarUrl || profile?.avatar || null
+                }
+                alt={displayName}
+                fallback={displayName.replace(/^@/, '').charAt(0).toUpperCase() || '?'}
                 size={64}
               />
             </div>
             <div className="min-w-0 flex-1 overflow-hidden">
-              <h3 className="text-lg font-black font-clash text-white truncate m-0">{name}</h3>
+              <h3 className="text-lg font-black font-clash text-white truncate m-0">
+                {displayName}
+                {isOwn ? (
+                  <span className="text-[#F59E0B] font-bold text-sm ml-1.5">(You)</span>
+                ) : null}
+              </h3>
               {handle ? (
                 <p className="text-sm font-mono text-[#F59E0B]/90 truncate m-0 mt-0.5">@{handle}</p>
               ) : null}
@@ -215,29 +265,35 @@ export function ProfilePeekDrawer({ open, onClose, userId, username, seed }: Pro
             </div>
           </div>
 
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={goFullProfile}
-              className="flex-1 h-11 rounded-xl bg-[#F59E0B] text-black font-extrabold text-sm inline-flex items-center justify-center gap-1.5"
-            >
-              <UserPlus size={16} />
-              View profile
-            </button>
-            {uid ? (
+          {uid ? (
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <button
                 type="button"
-                onClick={() => {
-                  onClose();
-                  router.push(`/connect/chats?userId=${encodeURIComponent(uid)}`);
-                }}
-                className="h-11 px-4 rounded-xl bg-[#0A0908] border border-[#34322F] text-white font-bold text-sm inline-flex items-center justify-center"
-                aria-label="Message"
+                onClick={goMessage}
+                className="h-11 rounded-xl bg-[#F59E0B] text-black font-extrabold text-sm inline-flex items-center justify-center gap-2"
               >
-                <MessageSquare size={16} />
+                <MessageSquare size={16} strokeWidth={2.5} />
+                {isOwn ? 'Notes to self' : 'Message'}
               </button>
-            ) : null}
-          </div>
+              <button
+                type="button"
+                onClick={goCall}
+                disabled={isOwn}
+                className="h-11 rounded-xl bg-[#0A0908] border border-[#34322F] text-white font-extrabold text-sm inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <PhoneCall size={16} strokeWidth={2.5} />
+                Call
+              </button>
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={goFullProfile}
+            className="w-full h-10 rounded-xl text-[#9B9691] hover:text-white hover:bg-[#0A0908] border border-transparent hover:border-[#34322F] font-bold text-sm transition-colors"
+          >
+            View full profile
+          </button>
         </div>
       </div>
     </div>
