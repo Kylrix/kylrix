@@ -2,38 +2,30 @@
 
 Install: `npx skills add kylrix/kylrix/api`
 
-Base: `http://localhost:3005/api/v1` (local) · `https://www.kylrix.space/api/v1` (prod)
+Base: `http://localhost:3005/api/v1` · prod `https://www.kylrix.space/api/v1`
 
-Auth: `Authorization: Bearer kyl_pat_<id>_<secret>`
-
-## Self-service (any valid PAT — rescue hatch)
-
-| Method | Path | Notes |
-|--------|------|-------|
-| GET | `/token` | Current PAT + scopes + catalog |
-| GET | `/token/scopes` | Scope catalog |
-| PATCH | `/token/scopes` | Replace scopes on **this** PAT |
-| POST | `/token/scopes/grant` | Additive grant on **this** PAT |
+## Self-service
+| Method | Path |
+|--------|------|
+| GET | `/token` |
+| GET/PATCH | `/token/scopes` |
+| POST | `/token/scopes/grant` |
 
 ## Resources
-
 | Method | Path | Scope |
 |--------|------|-------|
 | GET | `/me` | profile:read |
-| GET/POST | `/notes` | notes:read / notes:write |
-| GET/PATCH/DELETE | `/notes/:id` | notes:read / notes:write |
-| GET/POST | `/goals` | goals:read / goals:write |
-| GET/PATCH/DELETE | `/goals/:id` | goals:read / goals:write |
+| CRUD | `/notes`, `/notes/:id` | notes:* |
+| CRUD | `/goals`, `/goals/:id` | goals:* |
+| CRUD | `/workspaces`, `/workspaces/:id` | workspaces:* |
+| CRUD | `/events`, `/events/:id` | events:* |
+| CRUD | `/forms`, `/forms/:id` | forms:* |
 | GET | `/flows` | flows:read |
-| GET | `/workspaces`, `/projects` | workspaces:read |
-| GET | `/workspaces/:id` | workspaces:read |
-| GET | `/events` | events:read |
-| GET | `/forms` | forms:read |
-| GET | `/chats` | chats:read |
-| GET | `/agents`, `/agents/sessions` | agents:read |
-| POST | `/agents/harness` | agents:harness + agents:write |
-| POST | `/agents/sessions/:id/mirror` | agents:harness + agents:write |
-| GET/POST | `/pats` | pats:read / pats:write |
-| DELETE | `/pats/:id` | pats:write |
+| GET/POST | `/flows/installs`, `/flows/install` | flows:read / flows:install |
+| GET | `/chats`, `/chats/:id`, `/chats/:id/messages` | chats:read |
+| GET | `/vault` | vault:read (metadata only) |
+| GET | `/moments`, `/tags`, `/objects` | moments/tags/objects:read |
+| GET/DELETE | `/agents/sessions`, `/agents/sessions/:id` | agents:* |
+| POST | `/agents/harness`, `/agents/sessions/:id/mirror` | agents:harness |
 
-`POST /tools/*` → **410**. Full narrative: `api/SKILL.md`.
+Intentional gaps: E2EE chat send, vault secret plaintext, WebRTC calls.

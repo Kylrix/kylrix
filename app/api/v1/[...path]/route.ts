@@ -5,22 +5,6 @@ import { ApiResources } from '@/lib/api/resources';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/**
- * Public HTTP API for PATs and Sign-in-with-Kylrix OAuth access tokens.
- *
- * Auth:
- *   Authorization: Bearer kyl_pat_<id>_<secret>
- *   Authorization: Bearer <oauth2_access_jwt>
- *
- * REST resource surface — expand toward UI parity. Tools stay in-process
- * (POST /tools → 410) except where a resource route wraps the same capability.
- *
- * Token self-service (rescue hatch, no extra scope):
- *   GET    /api/v1/token
- *   GET    /api/v1/token/scopes
- *   PATCH  /api/v1/token/scopes          { scopes: [...] } replace
- *   POST   /api/v1/token/scopes/grant    { scopes: [...] } additive
- */
 async function readBody(req: NextRequest): Promise<Record<string, unknown>> {
   const raw = await req.json().catch(() => ({}));
   return raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
@@ -28,50 +12,38 @@ async function readBody(req: NextRequest): Promise<Record<string, unknown>> {
 
 async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
   const method = req.method.toUpperCase();
-  const [a, b, c] = parts;
+  const [a, b, c, d] = parts;
+  const limit = () => Number(req.nextUrl.searchParams.get('limit') || 25);
 
   if (method === 'GET' && a === 'me' && !b) {
     return jsonOk(await ApiResources.me(actor));
   }
 
-  // ── Token self-service ──
-  if (a === 'token' && !b) {
-    if (method === 'GET') return jsonOk(await ApiResources.tokenMe(actor));
-  }
+  // Token self-service
+  if (a === 'token' && !b && method === 'GET') return jsonOk(await ApiResources.tokenMe(actor));
   if (a === 'token' && b === 'scopes' && !c) {
     if (method === 'GET') return jsonOk(await ApiResources.tokenScopeCatalog(actor));
-    if (method === 'PATCH' || method === 'PUT') {
-      return jsonOk(await ApiResources.tokenUpdateScopes(actor, await readBody(req), 'replace'));
-    }
-    if (method === 'POST') {
-      // POST /token/scopes also accepted as replace for simple clients
+    if (method === 'PATCH' || method === 'PUT' || method === 'POST') {
       return jsonOk(await ApiResources.tokenUpdateScopes(actor, await readBody(req), 'replace'));
     }
   }
-  if (a === 'token' && b === 'scopes' && c === 'grant') {
-    if (method === 'POST' || method === 'PATCH') {
-      return jsonOk(await ApiResources.tokenUpdateScopes(actor, await readBody(req), 'grant'));
-    }
+  if (a === 'token' && b === 'scopes' && c === 'grant' && (method === 'POST' || method === 'PATCH')) {
+    return jsonOk(await ApiResources.tokenUpdateScopes(actor, await readBody(req), 'grant'));
   }
 
-  // ── PATs (manage other tokens; needs pats:* ) ──
+  // PATs
   if (a === 'pats' && !b) {
     if (method === 'GET') return jsonOk(await ApiResources.listPats(actor));
     if (method === 'POST') return jsonOk(await ApiResources.createPat(actor, await readBody(req)));
   }
-  if (a === 'pats' && b && !c) {
-    if (method === 'DELETE') return jsonOk(await ApiResources.revokePat(actor, b));
+  if (a === 'pats' && b && !c && method === 'DELETE') {
+    return jsonOk(await ApiResources.revokePat(actor, b));
   }
 
   // Notes
   if (a === 'notes' && !b) {
-    if (method === 'GET') {
-      const limit = Number(req.nextUrl.searchParams.get('limit') || 25);
-      return jsonOk(await ApiResources.listNotes(actor, limit));
-    }
-    if (method === 'POST') {
-      return jsonOk(await ApiResources.createNote(actor, await readBody(req)));
-    }
+    if (method === 'GET') return jsonOk(await ApiResources.listNotes(actor, limit()));
+    if (method === 'POST') return jsonOk(await ApiResources.createNote(actor, await readBody(req)));
   }
   if (a === 'notes' && b && !c) {
     if (method === 'GET') return jsonOk(await ApiResources.getNote(actor, b));
@@ -83,13 +55,8 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
 
   // Goals
   if (a === 'goals' && !b) {
-    if (method === 'GET') {
-      const limit = Number(req.nextUrl.searchParams.get('limit') || 25);
-      return jsonOk(await ApiResources.listGoals(actor, limit));
-    }
-    if (method === 'POST') {
-      return jsonOk(await ApiResources.createGoal(actor, await readBody(req)));
-    }
+    if (method === 'GET') return jsonOk(await ApiResources.listGoals(actor, limit()));
+    if (method === 'POST') return jsonOk(await ApiResources.createGoal(actor, await readBody(req)));
   }
   if (a === 'goals' && b && !c) {
     if (method === 'GET') return jsonOk(await ApiResources.getGoal(actor, b));
@@ -100,62 +67,101 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
   }
 
   // Flows
-  if (method === 'GET' && a === 'flows' && !b) {
-    const limit = Number(req.nextUrl.searchParams.get('limit') || 25);
-    return jsonOk(await ApiResources.listFlows(actor, limit));
+  if (a === 'flows' && !b) {
+    if (method === 'GET') return jsonOk(await ApiResources.listFlows(actor, limit()));
+  }
+  if (a === 'flows' && b === 'installs' && !c) {
+    if (method === 'GET') return jsonOk(await ApiResources.listFlowInstalls(actor));
+    if (method === 'POST') return jsonOk(await ApiResources.installFlow(actor, await readBody(req)));
+  }
+  if (a === 'flows' && b === 'install' && !c && method === 'POST') {
+    return jsonOk(await ApiResources.installFlow(actor, await readBody(req)));
   }
 
-  // Workspaces (projects)
+  // Workspaces
   if ((a === 'workspaces' || a === 'projects') && !b) {
-    if (method === 'GET') {
-      const limit = Number(req.nextUrl.searchParams.get('limit') || 25);
-      return jsonOk(await ApiResources.listWorkspaces(actor, limit));
-    }
+    if (method === 'GET') return jsonOk(await ApiResources.listWorkspaces(actor, limit()));
+    if (method === 'POST') return jsonOk(await ApiResources.createWorkspace(actor, await readBody(req)));
   }
   if ((a === 'workspaces' || a === 'projects') && b && !c) {
     if (method === 'GET') return jsonOk(await ApiResources.getWorkspace(actor, b));
+    if (method === 'PATCH' || method === 'PUT') {
+      return jsonOk(await ApiResources.updateWorkspace(actor, b, await readBody(req)));
+    }
+    if (method === 'DELETE') return jsonOk(await ApiResources.deleteWorkspace(actor, b));
   }
 
-  // Events / forms (list)
-  if (a === 'events' && !b && method === 'GET') {
-    const limit = Number(req.nextUrl.searchParams.get('limit') || 25);
-    return jsonOk(await ApiResources.listEvents(actor, limit));
+  // Events
+  if (a === 'events' && !b) {
+    if (method === 'GET') return jsonOk(await ApiResources.listEvents(actor, limit()));
+    if (method === 'POST') return jsonOk(await ApiResources.createEvent(actor, await readBody(req)));
   }
-  if (a === 'forms' && !b && method === 'GET') {
-    const limit = Number(req.nextUrl.searchParams.get('limit') || 25);
-    return jsonOk(await ApiResources.listForms(actor, limit));
+  if (a === 'events' && b && !c) {
+    if (method === 'GET') return jsonOk(await ApiResources.getEvent(actor, b));
+    if (method === 'PATCH' || method === 'PUT') {
+      return jsonOk(await ApiResources.updateEvent(actor, b, await readBody(req)));
+    }
+    if (method === 'DELETE') return jsonOk(await ApiResources.deleteEvent(actor, b));
+  }
+
+  // Forms
+  if (a === 'forms' && !b) {
+    if (method === 'GET') return jsonOk(await ApiResources.listForms(actor, limit()));
+    if (method === 'POST') return jsonOk(await ApiResources.createForm(actor, await readBody(req)));
+  }
+  if (a === 'forms' && b && !c) {
+    if (method === 'GET') return jsonOk(await ApiResources.getForm(actor, b));
+    if (method === 'PATCH' || method === 'PUT') {
+      return jsonOk(await ApiResources.updateForm(actor, b, await readBody(req)));
+    }
+    if (method === 'DELETE') return jsonOk(await ApiResources.deleteForm(actor, b));
   }
 
   // Chats
   if (a === 'chats' && !b && method === 'GET') {
-    const limit = Number(req.nextUrl.searchParams.get('limit') || 25);
-    return jsonOk(await ApiResources.listChats(actor, limit));
+    return jsonOk(await ApiResources.listChats(actor, limit()));
+  }
+  if (a === 'chats' && b && !c && method === 'GET') {
+    return jsonOk(await ApiResources.getChat(actor, b));
+  }
+  if (a === 'chats' && b && c === 'messages' && !d && method === 'GET') {
+    return jsonOk(await ApiResources.listChatMessages(actor, b, limit()));
   }
 
-  // Agent / harness sessions
-  if (a === 'agents' && (b === 'sessions' || !b) && !c && method === 'GET') {
-    const limit = Number(req.nextUrl.searchParams.get('limit') || 25);
+  // Agents
+  if (a === 'agents' && (!b || b === 'sessions') && !c && method === 'GET') {
     const harness = req.nextUrl.searchParams.get('harness');
     return jsonOk(
-      await ApiResources.listAgentSessions(actor, limit, {
-        harness: harness || null,
-      }),
+      await ApiResources.listAgentSessions(actor, limit(), { harness: harness || null }),
     );
+  }
+  if (a === 'agents' && b === 'sessions' && c && !d) {
+    if (method === 'GET') return jsonOk(await ApiResources.getAgentSession(actor, c));
+    if (method === 'DELETE') return jsonOk(await ApiResources.deleteAgentSession(actor, c));
   }
   if (a === 'agents' && b === 'harness' && !c && method === 'POST') {
     return jsonOk(await ApiResources.createHarnessSession(actor, await readBody(req)));
   }
-  if (a === 'agents' && b === 'sessions' && c && method === 'POST') {
-    // Append mirror entry: POST /agents/sessions/:id/mirror — path may be [agents,sessions,id,mirror]
-    // Handled below when parts[3] === 'mirror'
-  }
-  if (a === 'agents' && b === 'sessions' && c && parts[3] === 'mirror') {
-    if (method === 'POST') {
-      return jsonOk(await ApiResources.appendHarnessMirror(actor, c, await readBody(req)));
-    }
+  if (a === 'agents' && b === 'sessions' && c && d === 'mirror' && method === 'POST') {
+    return jsonOk(await ApiResources.appendHarnessMirror(actor, c, await readBody(req)));
   }
 
-  // Retired dual surface — tools stay in-process only
+  // Vault metadata
+  if (a === 'vault' && (!b || b === 'items') && !c && method === 'GET') {
+    return jsonOk(await ApiResources.listVaultItems(actor, limit()));
+  }
+
+  // Moments / tags / objects
+  if (a === 'moments' && !b && method === 'GET') {
+    return jsonOk(await ApiResources.listMoments(actor, limit()));
+  }
+  if (a === 'tags' && !b && method === 'GET') {
+    return jsonOk(await ApiResources.listTags(actor, limit()));
+  }
+  if (a === 'objects' && !b && method === 'GET') {
+    return jsonOk(await ApiResources.listObjects(actor, limit()));
+  }
+
   if (a === 'tools') {
     const err = new Error(
       'Use REST resource routes (e.g. POST /api/v1/notes). Tool execution is not a public API.',

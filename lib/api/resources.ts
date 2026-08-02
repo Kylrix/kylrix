@@ -585,4 +585,462 @@ export const ApiResources = {
       isEncrypted: !!r.isEncrypted,
     }));
   },
+
+  async getChat(actor: ApiActor, id: string) {
+    requireScope(actor, 'chats:read');
+    const tables = createSystemTablesDB();
+    const convTable =
+      APPWRITE_CONFIG.TABLES.CONNECT?.CONVERSATIONS || 'conversations';
+    const row = (await tables
+      .getRow({ databaseId: APPWRITE_CONFIG.DATABASES.CHAT, tableId: convTable, rowId: id })
+      .catch(() => null)) as any;
+    if (!row) notFound('Chat not found');
+    const parts = Array.isArray(row.participants) ? row.participants : [];
+    if (!parts.includes(actor.userId)) notFound('Chat not found');
+    return {
+      id: row.$id,
+      type: row.type || null,
+      name: row.name || null,
+      participants: parts,
+      lastMessageAt: row.lastMessageAt || null,
+      isEncrypted: !!row.isEncrypted,
+    };
+  },
+
+  async listChatMessages(actor: ApiActor, conversationId: string, limit = 50) {
+    requireScope(actor, 'chats:read');
+    await this.getChat(actor, conversationId);
+    const tables = createSystemTablesDB();
+    const msgTable = APPWRITE_CONFIG.TABLES.CONNECT?.MESSAGES || 'messages';
+    const res = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: msgTable,
+      queries: [
+        Query.equal('conversationId', conversationId),
+        Query.orderDesc('$createdAt'),
+        Query.limit(Math.min(200, Math.max(1, limit))),
+      ],
+    });
+    // Ciphertext / metadata only — PAT cannot unlock E2EE vaults
+    return res.rows.map((r: any) => ({
+      id: r.$id,
+      conversationId: r.conversationId,
+      senderId: r.senderId || null,
+      createdAt: r.$createdAt || r.createdAt || null,
+      isEncrypted: r.isEncrypted !== false,
+      hasCiphertext: !!(r.content || r.ciphertext || r.body),
+      contentPreview: r.isEncrypted === false ? (r.content || r.body || null) : null,
+    }));
+  },
+
+  async createWorkspace(actor: ApiActor, body: Record<string, unknown>) {
+    requireScope(actor, 'workspaces:write');
+    const title = String(body.title || '').trim();
+    if (!title) badRequest('title required');
+    const now = new Date().toISOString();
+    const tables = createSystemTablesDB();
+    const visibility = String(body.visibility || 'private');
+    const row = await tables.createRow({
+      databaseId: FLOW_DB,
+      tableId: 'projects',
+      rowId: ID.unique(),
+      data: {
+        title: title.slice(0, 255),
+        summary: body.summary != null ? String(body.summary) : '',
+        ownerId: actor.userId,
+        visibility,
+        status: 'active',
+        isPublic: visibility === 'public',
+        isGuest: visibility === 'public',
+        createdAt: now,
+        updatedAt: now,
+      },
+      permissions: [
+        Permission.read(Role.user(actor.userId)),
+        Permission.update(Role.user(actor.userId)),
+        Permission.delete(Role.user(actor.userId)),
+      ],
+    });
+    return {
+      id: (row as any).$id,
+      title: (row as any).title,
+      summary: (row as any).summary || null,
+      visibility: (row as any).visibility || null,
+    };
+  },
+
+  async updateWorkspace(actor: ApiActor, id: string, body: Record<string, unknown>) {
+    requireScope(actor, 'workspaces:write');
+    await this.getWorkspace(actor, id);
+    const tables = createSystemTablesDB();
+    const patch: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+    if (body.title !== undefined) patch.title = String(body.title).trim().slice(0, 255);
+    if (body.summary !== undefined) patch.summary = String(body.summary);
+    if (body.visibility !== undefined) {
+      patch.visibility = String(body.visibility);
+      patch.isPublic = String(body.visibility) === 'public';
+    }
+    const row = await tables.updateRow({
+      databaseId: FLOW_DB,
+      tableId: 'projects',
+      rowId: id,
+      data: patch as any,
+    });
+    return {
+      id: (row as any).$id,
+      title: (row as any).title,
+      summary: (row as any).summary || null,
+      visibility: (row as any).visibility || null,
+    };
+  },
+
+  async deleteWorkspace(actor: ApiActor, id: string) {
+    requireScope(actor, 'workspaces:write');
+    await this.getWorkspace(actor, id);
+    const tables = createSystemTablesDB();
+    await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: id });
+    return { id, deleted: true };
+  },
+
+  async getEvent(actor: ApiActor, id: string) {
+    requireScope(actor, 'events:read');
+    const tables = createSystemTablesDB();
+    const row = (await tables
+      .getRow({ databaseId: FLOW_DB, tableId: 'events', rowId: id })
+      .catch(() => null)) as any;
+    if (!row || row.userId !== actor.userId) notFound('Event not found');
+    return {
+      id: row.$id,
+      title: row.title || 'Untitled',
+      description: row.description || null,
+      startTime: row.startTime || null,
+      endTime: row.endTime || null,
+      location: row.location || null,
+      isPublic: !!row.isPublic,
+    };
+  },
+
+  async createEvent(actor: ApiActor, body: Record<string, unknown>) {
+    requireScope(actor, 'events:write');
+    const title = String(body.title || '').trim();
+    if (!title) badRequest('title required');
+    const startTime =
+      body.startTime != null
+        ? String(body.startTime)
+        : new Date().toISOString();
+    const endTime =
+      body.endTime != null
+        ? String(body.endTime)
+        : new Date(new Date(startTime).getTime() + 60 * 60 * 1000).toISOString();
+    const tables = createSystemTablesDB();
+
+    let calendarId = body.calendarId != null ? String(body.calendarId) : '';
+    if (!calendarId) {
+      const cals = await tables.listRows({
+        databaseId: FLOW_DB,
+        tableId: 'calendars',
+        queries: [Query.equal('userId', actor.userId), Query.limit(20)],
+      });
+      const preferred =
+        (cals.rows as any[]).find((c) => c.isDefault) || (cals.rows as any[])[0];
+      if (preferred) {
+        calendarId = preferred.$id;
+      } else {
+        const cal = await tables.createRow({
+          databaseId: FLOW_DB,
+          tableId: 'calendars',
+          rowId: ID.unique(),
+          data: {
+            name: 'Personal',
+            color: '#F59E0B',
+            isDefault: true,
+            userId: actor.userId,
+            isPublic: false,
+            isGuest: false,
+            isPinned: false,
+          },
+          permissions: [
+            Permission.read(Role.user(actor.userId)),
+            Permission.update(Role.user(actor.userId)),
+            Permission.delete(Role.user(actor.userId)),
+          ],
+        });
+        calendarId = (cal as any).$id;
+      }
+    }
+
+    const row = await tables.createRow({
+      databaseId: FLOW_DB,
+      tableId: 'events',
+      rowId: ID.unique(),
+      data: {
+        title: title.slice(0, 255),
+        description: body.description != null ? String(body.description) : '',
+        startTime,
+        endTime,
+        calendarId,
+        location: body.location != null ? String(body.location) : null,
+        userId: actor.userId,
+        status: String(body.status || 'confirmed'),
+        visibility: String(body.visibility || 'private'),
+        isPublic: !!body.isPublic,
+        isGuest: false,
+        isPinned: false,
+        isDeleted: false,
+        isTrash: false,
+      },
+      permissions: [
+        Permission.read(Role.user(actor.userId)),
+        Permission.update(Role.user(actor.userId)),
+        Permission.delete(Role.user(actor.userId)),
+      ],
+    });
+    return this.getEvent(actor, (row as any).$id);
+  },
+
+  async updateEvent(actor: ApiActor, id: string, body: Record<string, unknown>) {
+    requireScope(actor, 'events:write');
+    await this.getEvent(actor, id);
+    const tables = createSystemTablesDB();
+    const patch: Record<string, unknown> = {};
+    for (const k of ['title', 'description', 'startTime', 'endTime', 'location', 'status', 'visibility'] as const) {
+      if (body[k] !== undefined) patch[k] = body[k] == null ? null : String(body[k]);
+    }
+    if (body.isPublic !== undefined) patch.isPublic = !!body.isPublic;
+    await tables.updateRow({ databaseId: FLOW_DB, tableId: 'events', rowId: id, data: patch as any });
+    return this.getEvent(actor, id);
+  },
+
+  async deleteEvent(actor: ApiActor, id: string) {
+    requireScope(actor, 'events:write');
+    await this.getEvent(actor, id);
+    const tables = createSystemTablesDB();
+    await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'events', rowId: id });
+    return { id, deleted: true };
+  },
+
+  async getForm(actor: ApiActor, id: string) {
+    requireScope(actor, 'forms:read');
+    const tables = createSystemTablesDB();
+    const row = (await tables
+      .getRow({ databaseId: FLOW_DB, tableId: 'forms', rowId: id })
+      .catch(() => null)) as any;
+    if (!row || row.userId !== actor.userId) notFound('Form not found');
+    return {
+      id: row.$id,
+      title: row.title || 'Untitled',
+      description: row.description || null,
+      schema: row.schema || null,
+      status: row.status || null,
+      isPublic: !!row.isPublic,
+    };
+  },
+
+  async createForm(actor: ApiActor, body: Record<string, unknown>) {
+    requireScope(actor, 'forms:write');
+    const title = String(body.title || '').trim();
+    if (!title) badRequest('title required');
+    const tables = createSystemTablesDB();
+    const row = await tables.createRow({
+      databaseId: FLOW_DB,
+      tableId: 'forms',
+      rowId: ID.unique(),
+      data: {
+        title: title.slice(0, 255),
+        description: body.description != null ? String(body.description) : '',
+        schema: body.schema != null ? (typeof body.schema === 'string' ? body.schema : JSON.stringify(body.schema)) : '[]',
+        userId: actor.userId,
+        status: String(body.status || 'published'),
+        visibility: String(body.visibility || 'private'),
+        isPublic: body.isPublic !== undefined ? !!body.isPublic : false,
+        isGuest: false,
+        isPinned: false,
+        isTrash: false,
+      },
+      permissions: [
+        Permission.read(Role.user(actor.userId)),
+        Permission.update(Role.user(actor.userId)),
+        Permission.delete(Role.user(actor.userId)),
+      ],
+    });
+    return this.getForm(actor, (row as any).$id);
+  },
+
+  async updateForm(actor: ApiActor, id: string, body: Record<string, unknown>) {
+    requireScope(actor, 'forms:write');
+    await this.getForm(actor, id);
+    const tables = createSystemTablesDB();
+    const patch: Record<string, unknown> = {};
+    if (body.title !== undefined) patch.title = String(body.title).trim().slice(0, 255);
+    if (body.description !== undefined) patch.description = String(body.description);
+    if (body.schema !== undefined) {
+      patch.schema = typeof body.schema === 'string' ? body.schema : JSON.stringify(body.schema);
+    }
+    if (body.status !== undefined) patch.status = String(body.status);
+    if (body.isPublic !== undefined) patch.isPublic = !!body.isPublic;
+    await tables.updateRow({ databaseId: FLOW_DB, tableId: 'forms', rowId: id, data: patch as any });
+    return this.getForm(actor, id);
+  },
+
+  async deleteForm(actor: ApiActor, id: string) {
+    requireScope(actor, 'forms:write');
+    await this.getForm(actor, id);
+    const tables = createSystemTablesDB();
+    await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'forms', rowId: id });
+    return { id, deleted: true };
+  },
+
+  async installFlow(actor: ApiActor, body: Record<string, unknown>) {
+    requireScope(actor, 'flows:install');
+    const flowId = String(body.flowId || body.id || '').trim();
+    if (!flowId) badRequest('flowId required');
+    const { FlowInstallService } = await import('@/lib/services/flow-installs');
+    const result = await FlowInstallService.install({
+      flowId,
+      installerId: actor.userId,
+      scope: (body.scope as any) || { type: 'user' },
+      grants: (body.grants as any) || null,
+      bindObject: body.bindObject !== false,
+    });
+    return {
+      created: result.created,
+      installId: result.install.$id,
+      installCount: result.installCount,
+      scopeKey: result.install.scopeKey,
+    };
+  },
+
+  async listFlowInstalls(actor: ApiActor) {
+    requireScope(actor, 'flows:read');
+    const { FlowInstallService } = await import('@/lib/services/flow-installs');
+    const rows = await FlowInstallService.listForInstaller(actor.userId);
+    return rows.map((r: any) => ({
+      id: r.$id,
+      flowId: r.flowId || r.workflowId || null,
+      scopeKey: r.scopeKey || null,
+      createdAt: r.$createdAt || r.createdAt || null,
+    }));
+  },
+
+  async listVaultItems(actor: ApiActor, limit = 25) {
+    requireScope(actor, 'vault:read');
+    const tables = createSystemTablesDB();
+    const res = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+      tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
+      queries: [
+        Query.equal('userId', actor.userId),
+        Query.equal('isDeleted', false),
+        Query.orderDesc('$updatedAt'),
+        Query.limit(Math.min(100, Math.max(1, limit))),
+      ],
+    });
+    // Metadata only — never return password / card secrets over PAT
+    return res.rows.map((r: any) => ({
+      id: r.$id,
+      name: r.name || 'Untitled',
+      itemType: r.itemType || null,
+      url: r.url || null,
+      username: r.username || null,
+      folderId: r.folderId || null,
+      isFavorite: !!r.isFavorite,
+      updatedAt: r.$updatedAt || r.updatedAt || null,
+      hasSecret: !!(r.password || r.cardNumber),
+    }));
+  },
+
+  async listMoments(actor: ApiActor, limit = 25) {
+    requireScope(actor, 'moments:read');
+    const tables = createSystemTablesDB();
+    const res = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+      tableId: APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS || 'moments',
+      queries: [
+        Query.equal('userId', actor.userId),
+        Query.orderDesc('$createdAt'),
+        Query.limit(Math.min(100, Math.max(1, limit))),
+      ],
+    });
+    return res.rows.map((r: any) => ({
+      id: r.$id,
+      type: r.type || null,
+      caption: r.caption || null,
+      fileId: r.fileId || null,
+      createdAt: r.$createdAt || r.createdAt || null,
+      isPublic: !!r.isPublic,
+    }));
+  },
+
+  async listTags(actor: ApiActor, limit = 50) {
+    requireScope(actor, 'tags:read');
+    const tables = createSystemTablesDB();
+    const res = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+      tableId: APPWRITE_CONFIG.TABLES.TAGS || APPWRITE_CONFIG.TABLES.NOTE.TAGS,
+      queries: [
+        Query.equal('userId', actor.userId),
+        Query.limit(Math.min(200, Math.max(1, limit))),
+      ],
+    });
+    return res.rows.map((r: any) => ({
+      id: r.$id,
+      name: r.name || r.label || r.$id,
+      color: r.color || null,
+    }));
+  },
+
+  async listObjects(actor: ApiActor, limit = 50) {
+    requireScope(actor, 'objects:read');
+    const tables = createSystemTablesDB();
+    const res = await tables.listRows({
+      databaseId: FLOW_DB,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects',
+      queries: [
+        Query.equal('userId', actor.userId),
+        Query.orderDesc('$createdAt'),
+        Query.limit(Math.min(200, Math.max(1, limit))),
+      ],
+    });
+    return res.rows.map((r: any) => ({
+      id: r.$id,
+      parentKind: r.parentKind || null,
+      parentId: r.parentId || null,
+      childKind: r.childKind || null,
+      childId: r.childId || null,
+      createdAt: r.$createdAt || r.createdAt || null,
+    }));
+  },
+
+  async getAgentSession(actor: ApiActor, id: string) {
+    requireScope(actor, 'agents:read');
+    const tables = createSystemTablesDB();
+    const row = (await tables
+      .getRow({ databaseId: FLOW_DB, tableId: 'agentic_sessions', rowId: id })
+      .catch(() => null)) as any;
+    if (!row || row.userId !== actor.userId) notFound('Session not found');
+    if (row.harness) requireScope(actor, 'agents:harness');
+    let history: unknown[] = [];
+    try {
+      history = JSON.parse(row.chatHistory || '[]');
+    } catch {
+      history = [];
+    }
+    return {
+      id: row.$id,
+      harness: row.harness || null,
+      context: row.context || null,
+      isPublic: !!row.isPublic,
+      isPinned: !!row.isPinned,
+      history,
+      updatedAt: row.$updatedAt || null,
+    };
+  },
+
+  async deleteAgentSession(actor: ApiActor, id: string) {
+    requireScope(actor, 'agents:write');
+    await this.getAgentSession(actor, id);
+    const tables = createSystemTablesDB();
+    await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'agentic_sessions', rowId: id });
+    return { id, deleted: true };
+  },
 };

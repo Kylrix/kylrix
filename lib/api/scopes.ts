@@ -34,6 +34,10 @@ export const PAT_SCOPES = [
   'agents:read',
   'agents:write',
   'agents:harness',
+  'moments:read',
+  'moments:write',
+  'tags:read',
+  'tags:write',
 ] as const;
 
 export type PatScope = (typeof PAT_SCOPES)[number];
@@ -68,6 +72,10 @@ export const PAT_SCOPE_META: Record<
   'agents:read': { label: 'Read agent sessions' },
   'agents:write': { label: 'Write agent sessions' },
   'agents:harness': { label: 'Mirror CLI harness sessions', danger: true },
+  'moments:read': { label: 'Read moments' },
+  'moments:write': { label: 'Write moments' },
+  'tags:read': { label: 'Read tags' },
+  'tags:write': { label: 'Write tags' },
 };
 
 export function normalizeScopes(input: unknown): PatScope[] {

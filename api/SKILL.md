@@ -1,112 +1,52 @@
 ---
 name: api
 description: >-
-  Use the Kylrix HTTP API with Personal Access Tokens (PATs). REST CRUD toward
-  full UI parity: notes, goals, flows, workspaces, chats, agents/harness,
-  events, forms, and token self-service (scope refresh without minting a new
-  PAT). Base URL local: http://localhost:3005/api/v1 — prod:
-  https://www.kylrix.space/api/v1
+  Use the Kylrix HTTP API with Personal Access Tokens (PATs). REST toward UI
+  parity: notes, goals, flows (+install), workspaces, events, forms, chats
+  (metadata/ciphertext), vault metadata, moments, tags, objects, agents/harness,
+  and token self-service. Not a 1:1 UI clone — E2EE unlock, WebRTC calls, and
+  browser-only chrome stay client-side.
 ---
 
 # Kylrix HTTP API (PAT)
 
-Install:
-
 ```bash
 npx skills add kylrix/kylrix/api
-```
-
-Internal companion: `.agents/skills/system.pat-http-api/SKILL.md`
-
-## Auth
-
-```http
-Authorization: Bearer kyl_pat_<appwriteUniqueId>_<secret>
-```
-
-## Rescue hatch — refresh THIS token’s scopes
-
-Any valid PAT can inspect and expand **its own** scopes without `pats:write`.
-Use this when dogfooding: grant new scopes as the catalog grows — **do not mint a second PAT**.
-
-```bash
 export KYLRIX_PAT='kyl_pat_…'
 export BASE="${KYLRIX_API_BASE:-http://localhost:3005/api/v1}"
-
-# Inspect current token + catalog
-curl -sS "$BASE/token" -H "Authorization: Bearer $KYLRIX_PAT" | jq .
-
-# List catalog only
-curl -sS "$BASE/token/scopes" -H "Authorization: Bearer $KYLRIX_PAT" | jq .
-
-# Replace scopes (full set)
-curl -sS -X PATCH "$BASE/token/scopes" \
-  -H "Authorization: Bearer $KYLRIX_PAT" -H "Content-Type: application/json" \
-  -d '{"scopes":["profile:read","notes:read","notes:write","goals:read","goals:write","forms:read","forms:write","events:read","events:write","flows:read","flows:write","flows:install","vault:read","vault:write","objects:read","objects:write","tools:execute","pats:read","pats:write","workspaces:read","workspaces:write","chats:read","chats:write","agents:read","agents:write","agents:harness"]}'
-
-# Additive grant (keep existing + add)
-curl -sS -X POST "$BASE/token/scopes/grant" \
-  -H "Authorization: Bearer $KYLRIX_PAT" -H "Content-Type: application/json" \
-  -d '{"scopes":["agents:harness","workspaces:read"]}'
 ```
 
-New scopes apply on the **next** request with the same bearer string.
+## Honest parity
 
-## Core CRUD
+| UI area | PAT API | Notes |
+|---------|---------|-------|
+| Ideas (notes) | Full CRUD | ✅ |
+| Goals | Full CRUD | ✅ |
+| Workspaces | Full CRUD | ✅ |
+| Events / Forms | Full CRUD | ✅ |
+| Flows list + install | ✅ | Builtin installs may also live client-side |
+| Chats | List / get / messages meta | ❌ No E2EE send (needs unlocked vault) |
+| Vault | List metadata | ❌ No secret plaintext without master unlock |
+| Moments / tags / objects | List | Writes still expanding |
+| Agents + harness mirror | List/get/delete + mirror append | ✅ |
+| Calls / WebRTC | — | Client realtime only |
+| Token self-scope refresh | ✅ | Rescue hatch — no remint |
 
-| Method | Path | Scope |
-|--------|------|-------|
-| GET | `/me` | profile:read |
-| GET | `/token` | *(any valid PAT)* |
-| GET/PATCH | `/token/scopes` | *(self)* |
-| POST | `/token/scopes/grant` | *(self)* |
-| GET/POST | `/notes` | notes:read / notes:write |
-| GET/PATCH/DELETE | `/notes/:id` | notes:read / notes:write |
-| GET/POST | `/goals` | goals:read / goals:write |
-| GET/PATCH/DELETE | `/goals/:id` | goals:read / goals:write |
-| GET | `/flows` | flows:read |
-| GET | `/workspaces` (alias `/projects`) | workspaces:read |
-| GET | `/workspaces/:id` | workspaces:read |
-| GET | `/events` | events:read |
-| GET | `/forms` | forms:read |
-| GET | `/chats` | chats:read |
-| GET | `/agents` or `/agents/sessions` | agents:read |
-| POST | `/agents/harness` | agents:harness + agents:write |
-| POST | `/agents/sessions/:id/mirror` | agents:harness + agents:write |
-| GET/POST | `/pats` | pats:read / pats:write |
-| DELETE | `/pats/:id` | pats:write |
-
-`POST /tools/*` → **410 Gone** (tools stay in-process).
-
-## Harness sessions (CLI mirror)
-
-`agentic_sessions.harness` tags mirror sessions (e.g. `claude-code`, `codex`).
-Titles/context use `[harness_name]` style. Today: **read-only mirror** of prompts /
-tool calls into the session history. Future: webhooks / push prompts into the CLI.
+## Rescue hatch
 
 ```bash
-# Create mirror session
-curl -sS -X POST "$BASE/agents/harness" \
+curl -sS -X POST "$BASE/token/scopes/grant" \
   -H "Authorization: Bearer $KYLRIX_PAT" -H "Content-Type: application/json" \
-  -d '{"harness":"claude-code","title":"[claude-code] dogfood"}'
-
-# Append a mirrored turn
-curl -sS -X POST "$BASE/agents/sessions/<id>/mirror" \
-  -H "Authorization: Bearer $KYLRIX_PAT" -H "Content-Type: application/json" \
-  -d '{"role":"user","content":"hello from CLI"}'
+  -d '{"scopes":["moments:read","tags:read","agents:harness"]}'
 ```
 
-## Dogfood findings (keep updating)
+## Routes (summary)
 
-- Notes CRUD works end-to-end against live TablesDB.
-- Prefer `localhost` over `127.0.0.1` when the dev server binds IPv6 (`-H localhost`).
-- `/flows` may return `[]` for users who only have builtin installs (localStorage) —
-  remote `workflows` rows are owner-published flows.
-- Scope denials return `{ ok:false, error:{ code:"scope_denied" } }` with HTTP 403.
-- Never put PATs in git. Rotate via Developers settings if leaked in chat logs.
+`/me` · `/token` · `/token/scopes` · `/token/scopes/grant` · `/pats`  
+`/notes` · `/goals` · `/workspaces` · `/events` · `/forms`  
+`/flows` · `/flows/install` · `/flows/installs`  
+`/chats` · `/chats/:id` · `/chats/:id/messages`  
+`/vault` · `/moments` · `/tags` · `/objects`  
+`/agents/sessions` · `/agents/harness` · `/agents/sessions/:id/mirror`
 
-## Appwrite CLI vs PAT
-
-- **PAT / this API:** all user-data CRUD and product dogfooding.
-- **Appwrite CLI:** additive schema only (columns/tables/indexes). **Never touch rows.**
-  See `system.appwrite-cli-ops` guardrails.
+Full table: `api/references/http-api.md`. Internal: `system.pat-http-api`.

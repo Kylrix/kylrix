@@ -2,13 +2,30 @@
 
 Install: `npx skills add kylrix/kylrix/api`
 
-REST CRUD only. `/tools/execute` returns 410.
+Base: `http://localhost:3005/api/v1` · prod `https://www.kylrix.space/api/v1`
 
+## Self-service
+| Method | Path |
+|--------|------|
+| GET | `/token` |
+| GET/PATCH | `/token/scopes` |
+| POST | `/token/scopes/grant` |
+
+## Resources
 | Method | Path | Scope |
 |--------|------|-------|
 | GET | `/me` | profile:read |
-| GET/POST | `/notes` | notes:read / notes:write |
-| GET/PATCH/DELETE | `/notes/:id` | notes:read / notes:write |
-| GET/POST | `/goals` | goals:read / goals:write |
-| GET/PATCH/DELETE | `/goals/:id` | goals:read / goals:write |
+| CRUD | `/notes`, `/notes/:id` | notes:* |
+| CRUD | `/goals`, `/goals/:id` | goals:* |
+| CRUD | `/workspaces`, `/workspaces/:id` | workspaces:* |
+| CRUD | `/events`, `/events/:id` | events:* |
+| CRUD | `/forms`, `/forms/:id` | forms:* |
 | GET | `/flows` | flows:read |
+| GET/POST | `/flows/installs`, `/flows/install` | flows:read / flows:install |
+| GET | `/chats`, `/chats/:id`, `/chats/:id/messages` | chats:read |
+| GET | `/vault` | vault:read (metadata only) |
+| GET | `/moments`, `/tags`, `/objects` | moments/tags/objects:read |
+| GET/DELETE | `/agents/sessions`, `/agents/sessions/:id` | agents:* |
+| POST | `/agents/harness`, `/agents/sessions/:id/mirror` | agents:harness |
+
+Intentional gaps: E2EE chat send, vault secret plaintext, WebRTC calls.
