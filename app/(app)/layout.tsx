@@ -36,13 +36,13 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       }
 
       const path = pathname || '';
-      const isPublic = 
+      // OAuth consent + docs must stay reachable while signed out (Sign in with Kylrix).
+      const isPublic =
         path === '/' ||
         path.startsWith('/send') ||
-        path.startsWith('/') ||
+        path.startsWith('/oauth') ||
+        path.startsWith('/docs') ||
         path.startsWith('/billing/coupon') ||
-        path.startsWith('/') ||
-        path.startsWith('/') ||
         path.startsWith('/r/') ||
         path.startsWith('/app') ||
         path.startsWith('/idea') ||
@@ -53,11 +53,11 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         path.startsWith('/connect/call/') ||
         path.startsWith('/form/') ||
         path.startsWith('/goal/') ||
-        path.startsWith('/goal/') ||
         path.startsWith('/forms/') ||
         path.startsWith('/events/') ||
         path.startsWith('/agents/session/') ||
-        path.startsWith('/agents/chat/');
+        path.startsWith('/agents/chat/') ||
+        path.startsWith('/');
 
       if (isPublic) return;
 
