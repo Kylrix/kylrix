@@ -1133,6 +1133,9 @@ export const ChatService = {
 
             console.log('[ChatService] listRows returned:', res.total, 'rows:', res.rows.length);
 
+            // Snapshot ciphertext before decrypt — safe for LocalEngine at-rest cache
+            const atRestRows = res.rows.map((msg: any) => ({ ...msg }));
+
             // Decrypt messages in parallel
             res.rows = await Promise.all(res.rows.map(async (msg: any) => {
                 const isEncrypted = ecosystemSecurity.status.isUnlocked && (
@@ -1185,11 +1188,61 @@ export const ChatService = {
                 });
             }
 
-            return res;
+            return Object.assign(res, { atRestRows });
         } catch (error: any) {
             console.error('[ChatService] getMessages failed:', error);
             throw error;
         }
+    },
+
+    /** Decrypt ciphertext message rows (e.g. LocalEngine hydrate). Mutates copies. */
+    async decryptMessageRows(rows: any[], conversation: any, userId?: string) {
+        if (!rows?.length) return rows || [];
+        if (!ecosystemSecurity.status.isUnlocked) return rows.map((m) => ({ ...m }));
+
+        const convKey = userId
+            ? await resolveConversationKey(conversation, userId)
+            : conversationKeyCache.get(conversation?.$id || conversation?.id) ||
+              ecosystemSecurity.getConversationKey(conversation?.$id || conversation?.id);
+
+        return Promise.all(
+            rows.map(async (raw: any) => {
+                const msg = { ...raw };
+                const needsDecrypt =
+                    (msg.type === 'text' && msg.content && isLikelyCiphertext(msg.content)) ||
+                    isLikelyCiphertext(msg.metadata);
+                if (!needsDecrypt) return msg;
+
+                try {
+                    let messageKey =
+                        conversation?.type === 'group' &&
+                        String(conversation?.encryptionVersion || '').toUpperCase() === 'T4' &&
+                        userId
+                            ? await resolveConversationKey(conversation, userId, msg.createdAt)
+                            : convKey;
+
+                    if (!messageKey && userId) {
+                        messageKey = await resolveConversationKey(conversation, userId);
+                    }
+                    if (!messageKey) return msg;
+
+                    if (msg.type === 'text' && msg.content && isLikelyCiphertext(msg.content)) {
+                        msg.content = await ecosystemSecurity.decryptWithKey(msg.content, messageKey);
+                    }
+                    if (msg.metadata && isLikelyCiphertext(msg.metadata)) {
+                        const decryptedMeta = await ecosystemSecurity.decryptWithKey(msg.metadata, messageKey);
+                        try {
+                            msg.metadata = JSON.parse(decryptedMeta);
+                        } catch {
+                            msg.metadata = decryptedMeta;
+                        }
+                    }
+                } catch (err) {
+                    console.warn('[ChatService] decryptMessageRows failed:', msg.$id, err);
+                }
+                return msg;
+            }),
+        );
     },
 
     /**

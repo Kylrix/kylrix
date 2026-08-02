@@ -24,8 +24,9 @@ type Props = {
 };
 
 /**
- * Communicative object detail — mural chat UI for chats, threads, and (later) calls.
- * Mobile: overlay object detail. Desktop: embed inside fused secondary+main layout.
+ * Communicative object detail — mural chat UI for chats, hangouts, threads.
+ * Mobile: fullscreen overlay. Desktop: embed in right pane / sidebar.
+ * Paints chat UI immediately (mosaic) while cache / network settles.
  */
 export function CommObjectDetail({
   conversationId,
@@ -38,52 +39,49 @@ export function CommObjectDetail({
   const router = useRouter();
   const [isHuddle, setIsHuddle] = useState(kind === 'thread');
   const [huddleTitle, setHuddleTitle] = useState(title || 'Thread');
-  const [booting, setBooting] = useState(true);
 
   const handleClose = useCallback(() => {
     if (onClose) onClose();
     else router.push('/connect/chats');
   }, [onClose, router]);
 
+  // Hydrate huddle flag from local copy first — never block mural paint.
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      if (kind === 'call') {
-        if (!cancelled) setBooting(false);
-        return;
-      }
+    void (async () => {
+      if (kind === 'call') return;
 
-      const cached = await LocalEngine.cacheGet<{
-        isHuddle?: boolean;
-        title?: string;
-      }>(chatConversationCacheKey(conversationId));
-      if (cached && !cancelled) {
-        if (cached.isHuddle) {
+      try {
+        const cached = await LocalEngine.cacheGet<{
+          isHuddle?: boolean;
+          title?: string;
+        }>(chatConversationCacheKey(conversationId));
+        if (!cancelled && cached?.isHuddle) {
           setIsHuddle(true);
           setHuddleTitle(cached.title || title || 'Thread');
         }
-        setBooting(false);
+      } catch {
+        /* ignore */
       }
 
       try {
         const note = (await getNote(conversationId)) as any;
-        if (!cancelled && note && (note.isChat || note.isThread || note.isGhost)) {
+        if (cancelled) return;
+        if (note && (note.isChat || note.isThread || note.isGhost)) {
           setIsHuddle(true);
           setHuddleTitle(note.title || title || 'Thread');
           void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), {
             isHuddle: true,
             title: note.title || title || 'Thread',
           });
-        } else if (!cancelled) {
+        } else {
           setIsHuddle(false);
           void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), {
             isHuddle: false,
           });
         }
       } catch {
-        if (!cancelled) setIsHuddle(false);
-      } finally {
-        if (!cancelled) setBooting(false);
+        /* keep current surface */
       }
     })();
     return () => {
@@ -102,25 +100,23 @@ export function CommObjectDetail({
     [conversationId, huddleTitle, kind, title],
   );
 
-  const body = booting ? (
-    <div className="flex h-full min-h-[320px] items-center justify-center bg-[#0A0908]">
-      <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-[#F59E0B]" />
-    </div>
-  ) : kind === 'call' ? (
-    <div className="flex h-full items-center justify-center bg-[#0A0908] text-white/50 text-sm font-bold">
-      Call surface uses this same shell next.
-    </div>
-  ) : isHuddle ? (
-    <HuddleChatWindow
-      chatNoteId={conversationId}
-      user={user}
-      title={huddleTitle}
-      onBack={handleClose}
-      layout="fill"
-    />
-  ) : (
-    <ChatWindow conversationId={conversationId} onBack={handleClose} layout="fill" />
-  );
+  // Instant mural — ChatWindow / Huddle own their loading states.
+  const body =
+    kind === 'call' ? (
+      <div className="flex h-full items-center justify-center bg-[#0A0908] text-white/50 text-sm font-bold">
+        Call surface uses this same shell next.
+      </div>
+    ) : isHuddle ? (
+      <HuddleChatWindow
+        chatNoteId={conversationId}
+        user={user}
+        title={huddleTitle}
+        onBack={handleClose}
+        layout="fill"
+      />
+    ) : (
+      <ChatWindow conversationId={conversationId} onBack={handleClose} layout="fill" />
+    );
 
   if (embedded) {
     return (
@@ -131,8 +127,38 @@ export function CommObjectDetail({
   }
 
   return (
-    <ObjectDetailHost item={item} open onClose={handleClose} embedded={false} chrome="panel">
-      <div className="relative h-full min-h-0 w-full overflow-hidden">{body}</div>
+    <ObjectDetailHost item={item} open onClose={handleClose} embedded chrome="panel">
+      <div className="relative h-full min-h-0 w-full max-w-full min-w-0 overflow-hidden overflow-x-hidden">
+        {body}
+      </div>
     </ObjectDetailHost>
   );
+}
+
+CommObjectDetail.displayName = 'CommObjectDetail';
+
+export function openCommObjectDetail(opts: {
+  conversationId: string;
+  kind?: CommKind;
+  title?: string;
+  openSidebar: (content: React.ReactNode, key?: string, options?: { hideHeader?: boolean }) => void;
+  openOverlay: (content: React.ReactNode) => void;
+  closeSidebar: () => void;
+  closeOverlay: () => void;
+}) {
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
+  const node = (
+    <CommObjectDetail
+      conversationId={opts.conversationId}
+      kind={opts.kind}
+      title={opts.title}
+      embedded
+      onClose={isDesktop ? opts.closeSidebar : opts.closeOverlay}
+    />
+  );
+  if (isDesktop) {
+    opts.openSidebar(node, opts.conversationId, { hideHeader: true });
+  } else {
+    opts.openOverlay(node);
+  }
 }

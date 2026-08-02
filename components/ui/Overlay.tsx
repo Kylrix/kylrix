@@ -60,11 +60,13 @@ const Overlay: React.FC = () => {
     (content.props as any).taskId !== undefined ||
     (content.props as any).eventId !== undefined ||
     (content.props as any).conversationId !== undefined ||
+    (content.props as any).momentId !== undefined ||
     (content.type as any).name === 'NoteDetailSidebar' ||
     (content.type as any).name === 'NoteObjectDetail' ||
     (content.type as any).name === 'TaskDetails' ||
     (content.type as any).name === 'GoalObjectDetail' ||
     (content.type as any).name === 'CommObjectDetail' ||
+    (content.type as any).name === 'MomentObjectDetail' ||
     (content.type as any).name === 'EventDetails'
   );
 
@@ -86,6 +88,8 @@ const Overlay: React.FC = () => {
           right: isFlapover ? 0 : undefined,
           height: drawerHeight,
           maxHeight: '100dvh',
+          overflowX: 'hidden',
+          overflowY: 'hidden',
           borderTopLeftRadius: isMobile && !isFlapover ? '24px' : 0,
           borderTopRightRadius: isMobile && !isFlapover ? '24px' : 0,
           borderLeft: isMobile || isFlapover ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
@@ -110,9 +114,13 @@ const Overlay: React.FC = () => {
             display: 'flex',
             flexDirection: 'column',
             width: '100%',
+            maxWidth: '100%',
+            minWidth: 0,
             minHeight: 0,
             flex: 1,
-            maxHeight: '100vh',
+            maxHeight: '100dvh',
+            overflowX: 'hidden',
+            overflowY: 'hidden',
             userSelect: 'none'}}
           onMouseDown={isMobile ? handleMouseDown : undefined}
           onMouseMove={isMobile ? handleMouseMove : undefined}

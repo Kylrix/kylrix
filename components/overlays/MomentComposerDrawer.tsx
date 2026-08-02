@@ -1,75 +1,237 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  ChevronDown,
+  ChevronUp,
+  Globe,
+  Lock,
+  Mic,
+  Paperclip,
+  Send,
+  Sparkles,
+  Square,
+  X,
+} from 'lucide-react';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import { useNostrFeed } from '@/hooks/useNostrFeed';
 import { SocialService } from '@/lib/services/social';
 import { LocalEngine } from '@/lib/services/LocalEngine';
+import { StorageService } from '@/lib/services/storage';
 import { useAuth } from '@/context/auth/AuthContext';
-import { Lock, Sparkles, Send, Globe } from 'lucide-react';
+import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 interface MomentComposerDrawerProps {
   onClose: () => void;
 }
 
+type PendingAttach = {
+  id: string;
+  label: string;
+  kind: 'file' | 'object' | 'voice';
+  url?: string;
+};
+
+/**
+ * Bottom-sheet create moment — EventDialog gold standard:
+ * starts at ~60dvh, expands to true `inset-0 h-[100dvh]` fullscreen (no top gap).
+ */
 export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
   const { user } = useAuth();
   const { identity, isVaultLocked, unlockAndLoad } = useNostrIdentity();
   const { publishPost } = useNostrFeed();
+  const { openFileDrawer } = useUnifiedFileDrawer();
+  const { openProUpgrade } = useProUpgrade();
+  const isPro = hasPaidKylrixPlan(user);
+
   const [content, setContent] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [syncToNostr, setSyncToNostr] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [attachments, setAttachments] = useState<PendingAttach[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
 
-  // Hydrate user preference for Sync to Nostr from LocalEngine (0ms)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const durationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
-    void (async () => {
-      const pref = await LocalEngine.cacheGet<boolean>('f_sync_to_nostr_pref');
-      if (pref !== null && pref !== undefined) {
-        setSyncToNostr(Boolean(pref));
+    setMounted(true);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
       }
-    })();
+    };
   }, []);
 
-  const handleToggleSyncToNostr = (checked: boolean) => {
-    setSyncToNostr(checked);
-    void LocalEngine.cacheSet('f_sync_to_nostr_pref', checked);
+  useEffect(() => {
+    void LocalEngine.cacheGet<boolean>('f_sync_to_nostr_pref').then((pref) => {
+      if (pref !== null && pref !== undefined) setSyncToNostr(Boolean(pref));
+    });
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [onClose]);
+
+  const persistSync = (next: boolean) => {
+    setSyncToNostr(next);
+    void LocalEngine.cacheSet('f_sync_to_nostr_pref', next);
+  };
+
+  const handleAttach = () => {
+    openFileDrawer({
+      title: 'Attach to moment',
+      onSelectFile: (file) => {
+        const isObject = file.mimeType === 'application/x-kylrix-object' || file.fileUrl?.startsWith('[[kylrix-object:');
+        setAttachments((prev) => {
+          if (prev.some((a) => a.id === file.$id)) return prev;
+          return [
+            ...prev,
+            {
+              id: file.$id,
+              label: file.name || 'Attachment',
+              kind: isObject ? 'object' : 'file',
+              url: file.fileUrl,
+            },
+          ];
+        });
+        if (file.fileUrl && /^https?:\/\//.test(file.fileUrl) && !isObject) {
+          setContent((c) => (c.includes(file.fileUrl!) ? c : `${c.trim()}\n${file.fileUrl}`.trim()));
+        }
+      },
+    });
+  };
+
+  const stopRecordingTimers = () => {
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+    }
+  };
+
+  const toggleRecording = async () => {
+    if (isRecording) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+      stopRecordingTimers();
+      return;
+    }
+
+    if (!isPro) {
+      openProUpgrade('Voice recording');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const options: MediaRecorderOptions = { audioBitsPerSecond: 16000 };
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        options.mimeType = 'audio/webm;codecs=opus';
+      }
+
+      const mediaRecorder = new MediaRecorder(stream, options);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        stopRecordingTimers();
+        stream.getTracks().forEach((t) => t.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, {
+          type: 'audio/webm',
+        });
+        try {
+          const uploaded = await StorageService.uploadFile(audioFile, 'voice');
+          const viewUrl = StorageService.getFileView(uploaded.$id, 'voice').toString();
+          setAttachments((prev) => [
+            ...prev,
+            {
+              id: uploaded.$id,
+              label: 'Voice note',
+              kind: 'voice',
+              url: viewUrl,
+            },
+          ]);
+          toast.success('Voice note attached');
+        } catch (err) {
+          console.error(err);
+          toast.error('Could not save voice note');
+        }
+        setRecordingDuration(0);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+      durationIntervalRef.current = setInterval(() => {
+        setRecordingDuration((d) => d + 1);
+      }, 1000);
+    } catch {
+      toast.error('Microphone access is required for voice notes');
+    }
   };
 
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() || !user?.$id) return;
+    if (!content.trim() && !attachments.length) return;
+    if (!user?.$id) return;
 
     setPublishing(true);
     try {
-      // 1. Always create moment in Kylrix Ecosystem local copy & database
+      const mediaIds = attachments.map((a) => a.id);
+      let body = content.trim();
+      for (const a of attachments) {
+        if (a.url && /^https?:\/\//.test(a.url) && !body.includes(a.url)) {
+          body = `${body}\n${a.url}`.trim();
+        }
+      }
+
       const createdMoment = await SocialService.createMoment(
         user.$id,
-        content.trim(),
+        body || 'Shared an update',
         'post',
-        [],
-        'public'
+        mediaIds,
+        'public',
       );
 
-      // Save to local moments cache for instant 0ms feed update
       if (createdMoment) {
         const cachedMoments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
         await LocalEngine.cacheSet('f_moments_list', [createdMoment, ...cachedMoments]);
       }
 
-      // 2. Optionally sync to Nostr if enabled AND vault is unlocked
       let nostrSynced = false;
       if (syncToNostr && !isVaultLocked && identity) {
-        nostrSynced = await publishPost(content.trim());
+        nostrSynced = await publishPost(body || content.trim());
+      } else if (syncToNostr && isVaultLocked) {
+        toast.error('Unlock vault to sync to Nostr');
       }
 
       toast.success(
-        nostrSynced
-          ? 'Published to Kylrix ecosystem & Nostr relays!'
-          : 'Published to Kylrix moments feed!'
+        nostrSynced ? 'Published to Kylrix and Nostr' : 'Published to your moments feed',
       );
 
       setContent('');
+      setAttachments([]);
       onClose();
     } catch (err) {
       console.error('Failed to create moment:', err);
@@ -79,85 +241,215 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
     }
   };
 
-  const isNostrActive = syncToNostr && !isVaultLocked;
+  if (!mounted) return null;
 
-  return (
-    <div className="w-full bg-[#0B0A09] text-white p-6 font-satoshi flex flex-col gap-5 rounded-t-3xl border-t border-white/10 max-h-[85vh] overflow-y-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/5 pb-3">
-        <h3 className="text-sm font-black uppercase tracking-widest text-[#F59E0B] flex items-center gap-1.5 font-clash">
-          <Sparkles size={16} />
-          Create Moment
-        </h3>
-        <button onClick={onClose} className="text-xs text-white/40 hover:text-white transition-all font-bold">
-          Cancel
-        </button>
-      </div>
+  const canPost = Boolean(content.trim() || attachments.length);
 
-      <form onSubmit={handlePublish} className="flex flex-col gap-4">
-        {/* Post Textarea */}
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="What's happening in your engineering workflow?"
-          rows={4}
-          className="w-full bg-[#161412] border border-white/10 rounded-2xl p-4 text-sm text-white focus:outline-none focus:border-[#F59E0B] transition-all resize-none placeholder:text-white/30"
-          autoFocus
-        />
+  const sheet = (
+    <div className="fixed inset-0 z-[10000] flex justify-center overflow-hidden pointer-events-none">
+      <button
+        type="button"
+        aria-label="Close"
+        className="absolute inset-0 bg-black/60 transition-opacity duration-300 pointer-events-auto"
+        onClick={onClose}
+      />
 
-        {/* Sync to Nostr Toggle & Vault Safety Gate */}
-        <div className="flex items-center justify-between p-4 rounded-2xl bg-[#161412] border border-white/5">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-xl border ${isNostrActive ? 'bg-[#F59E0B]/10 border-[#F59E0B]/30 text-[#F59E0B]' : 'bg-white/5 border-white/5 text-white/40'}`}>
-              <Globe size={18} />
+      <div
+        className={`fixed bg-[#161412] border-[#34322F] pointer-events-auto transition-all duration-300 flex flex-col z-[10000] ${
+          isExpanded
+            ? 'inset-0 h-[100dvh] max-h-[100dvh] w-full rounded-none border-0'
+            : 'inset-x-0 bottom-0 h-[60dvh] max-h-[60dvh] border-t rounded-t-[28px] w-full max-w-[720px] left-1/2 -translate-x-1/2'
+        }`}
+      >
+        <div className="p-5 pb-3 flex items-center justify-between border-b border-[#34322F] flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 rounded-xl bg-[#0A0908] border border-[#34322F] text-[#F59E0B] flex items-center justify-center">
+              <Sparkles className="w-5 h-5" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-bold text-white/90">Sync to Nostr Relays</span>
-              <span className="text-[11px] text-white/40">Broadcast post to global decentralized Nostr network.</span>
-            </div>
+            <h3 className="text-lg font-black font-clash text-white tracking-tight leading-tight">
+              Create moment
+            </h3>
           </div>
 
-          <div className="flex items-center gap-2">
-            {isVaultLocked && syncToNostr && (
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsExpanded((v) => !v)}
+              className="p-1.5 rounded-lg text-[#8E8A86] hover:text-[#F5F2ED] hover:bg-[#0A0908] transition-colors cursor-pointer"
+              aria-label={isExpanded ? 'Collapse' : 'Expand fullscreen'}
+            >
+              {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-[#8E8A86] hover:text-white hover:bg-[#0A0908] transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {!isExpanded ? (
+          <button
+            type="button"
+            onClick={() => setIsExpanded(true)}
+            className="flex justify-center py-1.5 w-full shrink-0"
+            aria-label="Expand drawer"
+          >
+            <span className="w-10 h-1 rounded-full bg-[#3D3A36]" />
+          </button>
+        ) : null}
+
+        <form
+          onSubmit={handlePublish}
+          className="flex-1 min-h-0 flex flex-col p-5 pt-3 gap-3 overflow-hidden"
+        >
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="What's happening?"
+            className={`w-full flex-1 min-h-[100px] bg-transparent border-none text-white text-[17px] leading-relaxed focus:outline-none resize-none placeholder:text-white/30 font-satoshi ${
+              isExpanded ? 'text-xl' : ''
+            }`}
+            autoFocus
+          />
+
+          {attachments.length > 0 ? (
+            <div className="flex flex-wrap gap-2 shrink-0">
+              {attachments.map((a) => (
+                <span
+                  key={a.id}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0A0908] border border-white/[0.06] text-[11px] font-bold text-white/70"
+                >
+                  {a.label}
+                  <button
+                    type="button"
+                    onClick={() => setAttachments((prev) => prev.filter((x) => x.id !== a.id))}
+                    className="text-white/40 hover:text-white"
+                    aria-label="Remove"
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {/* Sync to Nostr — preference row (LocalEngine); vault-gated */}
+          <div className="rounded-xl bg-[#0A0908] border border-white/[0.06] p-3 flex items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div
+                className={`p-2 rounded-lg border ${
+                  syncToNostr && !isVaultLocked
+                    ? 'bg-[#161412] border-[#F59E0B]/30 text-[#F59E0B]'
+                    : 'bg-[#161412] border-white/[0.06] text-white/40'
+                }`}
+              >
+                <Globe size={16} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-extrabold text-white truncate">Sync to Nostr</p>
+                {isVaultLocked ? (
+                  <p className="text-[10px] font-bold text-[#F59E0B]/90 flex items-center gap-1 mt-0.5">
+                    <Lock size={10} /> Unlock vault to sync to Nostr
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-white/40 mt-0.5">Also post to public relays</p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {isVaultLocked ? (
+                <button
+                  type="button"
+                  onClick={() => void unlockAndLoad()}
+                  className="px-2 py-1 rounded-lg bg-[#F59E0B]/10 border border-[#F59E0B]/30 text-[#F59E0B] text-[10px] font-bold"
+                >
+                  Unlock
+                </button>
+              ) : null}
               <button
                 type="button"
-                onClick={unlockAndLoad}
-                className="px-2.5 py-1 rounded-lg bg-[#F59E0B]/10 border border-[#F59E0B]/30 text-[#F59E0B] text-[10px] font-bold flex items-center gap-1 hover:bg-[#F59E0B]/20 transition-all"
-                title="Unlock vault to sign Nostr post"
-              >
-                <Lock size={12} /> Unlock Vault
-              </button>
-            )}
-
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={syncToNostr && !isVaultLocked}
+                role="switch"
+                aria-checked={syncToNostr}
                 disabled={isVaultLocked}
-                onChange={(e) => handleToggleSyncToNostr(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F59E0B] peer-disabled:opacity-50" />
-            </label>
+                onClick={() => {
+                  if (isVaultLocked) return;
+                  persistSync(!syncToNostr);
+                }}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                  syncToNostr ? 'bg-[#F59E0B]' : 'bg-white/10'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                    syncToNostr ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Submit Action */}
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={publishing || !content.trim()}
-            className="px-6 py-2.5 bg-[#F59E0B] hover:bg-amber-600 disabled:opacity-50 text-black font-extrabold text-sm rounded-xl transition-all shadow-lg flex items-center gap-2"
-          >
-            {publishing ? (
-              <span className="animate-spin w-4 h-4 border-2 border-black border-t-transparent rounded-full" />
-            ) : (
-              <Send size={16} />
-            )}
-            Publish Moment
-          </button>
-        </div>
-      </form>
+          <div className="flex items-center gap-2 pt-2 border-t border-[#34322F] flex-shrink-0">
+            <button
+              type="button"
+              onClick={handleAttach}
+              className="p-2.5 rounded-xl bg-[#0A0908] border border-white/[0.06] text-white/60 hover:text-[#F59E0B] hover:border-[#F59E0B]/30 transition-colors"
+              title="Attach object"
+              aria-label="Attach object"
+            >
+              <Paperclip size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => void toggleRecording()}
+              className={`p-2.5 rounded-xl border transition-colors ${
+                isRecording
+                  ? 'bg-red-500/15 border-red-500/30 text-red-400'
+                  : 'bg-[#0A0908] border-white/[0.06] text-white/60 hover:text-white'
+              }`}
+              title={isRecording ? 'Stop recording' : 'Voice note'}
+              aria-label="Voice note"
+            >
+              {isRecording ? (
+                <span className="flex items-center gap-1.5 text-[11px] font-bold font-mono">
+                  <Square size={14} className="fill-current" />
+                  {Math.floor(recordingDuration / 60)}:
+                  {(recordingDuration % 60 < 10 ? '0' : '') + (recordingDuration % 60)}
+                </span>
+              ) : (
+                <Mic size={18} />
+              )}
+            </button>
+
+            <div className="flex-1" />
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3 py-2 text-sm font-bold text-white/45 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={publishing || !canPost}
+              className="px-5 py-2.5 bg-[#F59E0B] hover:bg-amber-600 disabled:opacity-50 text-black font-extrabold text-sm rounded-xl transition-all flex items-center gap-2"
+            >
+              {publishing ? (
+                <span className="animate-spin w-4 h-4 border-2 border-black border-t-transparent rounded-full" />
+              ) : (
+                <Send size={16} />
+              )}
+              Post
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
+
+  return createPortal(sheet, document.body);
 }

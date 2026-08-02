@@ -35,6 +35,14 @@ import { UnifiedLeftSidebar } from '@/components/UnifiedLeftSidebar';
 
 // Lazy Components
 const UnifiedBottomDrawer = dynamic(() => import('./overlays/UnifiedBottomDrawer').then(m => m.UnifiedBottomDrawer), { ssr: false });
+const MomentComposerDrawer = dynamic(
+  () => import('./overlays/MomentComposerDrawer').then((m) => m.MomentComposerDrawer),
+  { ssr: false },
+);
+const ChatCreateDrawer = dynamic(
+  () => import('@/components/objects/ChatCreateDrawer').then((m) => m.ChatCreateDrawer),
+  { ssr: false },
+);
 const ProUpgradeDrawer = dynamic(() => import('./overlays/ProUpgradeDrawer').then(m => m.ProUpgradeDrawer), { ssr: false });
 const TaskDialog = dynamic(() => import('@/components/tasks/TaskDialog'), { ssr: false });
 const RightSidebar = dynamic(() => import('./layout/RightSidebar'), { ssr: false });
@@ -124,7 +132,13 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     [pathname],
   );
 
-const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/post/')), [pathname]);
+const isSpecificPostPage = useMemo(
+    () =>
+      Boolean(
+        pathname?.startsWith('/connect/post/') || pathname?.startsWith('/moment/'),
+      ),
+    [pathname],
+  );
   const isProjectDetailPage = useMemo(() => Boolean(pathname?.match(/^\/workspaces\/[^/]+$/)), [pathname]);
 
   const showLeftSidebar = useMemo(() => Boolean(
@@ -314,6 +328,12 @@ const isSpecificPostPage = useMemo(() => Boolean(pathname?.startsWith('/connect/
       {/* --- LAYER 2: OVERLAYS --- */}
       {/* Agentic / wallet / unified → NativeSidebarBridge; mobile details → Overlay/DynamicSidebar */}
       {unifiedDrawerActive === 'login' && <UnifiedBottomDrawer />}
+      {unifiedDrawerActive === 'moment-composer' && (
+        <MomentComposerDrawer onClose={() => closeUnified()} />
+      )}
+      {unifiedDrawerActive === 'new-chat' && (
+        <ChatCreateDrawer open onClose={() => closeUnified()} />
+      )}
       {showProUpgrade && <ProUpgradeDrawer />}
       {taskDialogOpen && <TaskDialog />}
       {secondarySidebar.isOpen && <RightSidebar />}

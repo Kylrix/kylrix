@@ -50,7 +50,7 @@ function buildPublicResourcePath(
     case 'call':
       return `/connect/call/${id}`;
     case 'moment':
-      return `/connect/post/${id}`;
+      return `/moment/${id}`;
     case 'agent_session':
       return `/agents/session/${id}`;
     case 'agent_conversation':

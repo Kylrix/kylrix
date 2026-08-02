@@ -75,11 +75,13 @@ export function DynamicSidebar() {
     typeName === 'CommObjectDetail' ||
     typeName === 'TaskDetails' ||
     typeName === 'EventDetails' ||
+    typeName === 'MomentObjectDetail' ||
     (content &&
       React.isValidElement(content) &&
       ((content.props as { note?: unknown })?.note !== undefined ||
         (content.props as { taskId?: unknown })?.taskId !== undefined ||
-        (content.props as { eventId?: unknown })?.eventId !== undefined));
+        (content.props as { eventId?: unknown })?.eventId !== undefined ||
+        (content.props as { momentId?: unknown })?.momentId !== undefined));
 
   const shouldHideHeader = options?.hideHeader || isObjectDetail;
   const isSelfContained =

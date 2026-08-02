@@ -2,8 +2,8 @@
 
 import { ChatList } from '@/components/chat/ChatList';
 import { useFAB } from '@/context/FABContext';
-import { MessageSquare, Phone, Hash, Plus, MessageCircle } from 'lucide-react';
-import { useCallback, useEffect, Suspense, useState } from 'react';
+import { Plus, MessageCircle } from 'lucide-react';
+import { useCallback, useEffect, useRef, Suspense, useState } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { ChatService } from '@/lib/services/chat';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -16,12 +16,13 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { FusedSecondarySidebar } from '@/components/layout/FusedSecondarySidebar';
 import { ConnectCommRail } from '@/components/connect/ConnectCommRail';
 import { CommObjectDetail } from '@/components/objects/CommObjectDetail';
+import { useOverlay } from '@/components/ui/OverlayContext';
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const media = window.matchMedia('(min-width: 768px)');
+    const media = window.matchMedia('(min-width: 900px)');
     const sync = () => setIsDesktop(media.matches);
     sync();
     media.addEventListener('change', sync);
@@ -138,7 +139,6 @@ function ChatHandler({ onResolved }: { onResolved: (id: string) => void }) {
 }
 
 function ConnectChatsBody() {
-  const router = useRouter();
   const isDesktop = useIsDesktop();
   const { selectedId, selectChat } = useSelectedChatId();
   const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
@@ -148,54 +148,53 @@ function ConnectChatsBody() {
 
   const { setConfiguration, resetConfiguration } = useFAB();
   const { open: openUnified } = useUnifiedDrawer();
+  const { openOverlay, closeOverlay } = useOverlay();
+
+  const openCreate = useCallback(() => {
+    openUnified('new-chat', {
+      mode: activeTab === 'public' ? 'thread' : 'secure',
+    });
+  }, [openUnified, activeTab]);
+
+  /** Mobile: fullscreen object detail overlay. Desktop: fused right pane via ?c=. */
+  const openChatDetail = useCallback(
+    (conversationId: string) => {
+      if (isDesktop) {
+        selectChat(conversationId);
+        return;
+      }
+      openOverlay(
+        <CommObjectDetail
+          conversationId={conversationId}
+          embedded
+          onClose={closeOverlay}
+        />,
+      );
+    },
+    [isDesktop, selectChat, openOverlay, closeOverlay],
+  );
+
+  const onResolved = useCallback(
+    (id: string) => {
+      openChatDetail(id);
+    },
+    [openChatDetail],
+  );
 
   useEffect(() => {
-    // FAB is mobile-only (UniversalFAB hides on desktop).
-    if (activeTab === 'public') {
-      setConfiguration({
-        isVisible: true,
-        mainColor: '#F59E0B',
-        mainIcon: <Plus size={32} strokeWidth={3} />,
-        onMainClick: () => openUnified('new-chat', { mode: 'thread' }),
-        actions: [
-          {
-            id: 'new-thread',
-            label: 'NEW THREAD',
-            icon: <Hash size={20} />,
-            onClick: () => openUnified('new-chat', { mode: 'thread' }),
-          },
-        ],
-      });
-    } else {
-      setConfiguration({
-        isVisible: true,
-        mainColor: '#F59E0B',
-        mainIcon: <Plus size={32} strokeWidth={3} />,
-        onMainClick: () => openUnified('new-chat', { mode: 'secure' }),
-        actions: [
-          {
-            id: 'secret-chat',
-            label: 'SECURE CHAT',
-            icon: <MessageSquare size={20} />,
-            onClick: () => openUnified('new-chat', { mode: 'secure' }),
-          },
-          {
-            id: 'channel',
-            label: 'NEW CHANNEL',
-            icon: <Plus size={20} />,
-            onClick: () => openUnified('new-channel'),
-          },
-          {
-            id: 'huddle',
-            label: 'START HUDDLE',
-            icon: <Phone size={20} />,
-            onClick: () => router.push('/connect/calls?start=1'),
-          },
-        ],
-      });
+    if (selectedId && isDesktop) {
+      setConfiguration({ isVisible: false });
+      return () => resetConfiguration();
     }
+
+    setConfiguration({
+      isVisible: !isDesktop,
+      mainColor: '#F59E0B',
+      mainIcon: <Plus size={28} strokeWidth={2.5} />,
+      onMainClick: openCreate,
+    });
     return () => resetConfiguration();
-  }, [activeTab, setConfiguration, resetConfiguration, router, openUnified]);
+  }, [selectedId, isDesktop, openCreate, setConfiguration, resetConfiguration]);
 
   useEffect(() => {
     const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
@@ -209,12 +208,32 @@ function ConnectChatsBody() {
     setActiveTab(isUnlocked ? 'secure' : 'public');
   }, [isUnlocked]);
 
+  // Mobile deep-link ?c= → overlay once (list stays; no page navigation)
+  const deepLinkHandled = useRef<string | null>(null);
+  useEffect(() => {
+    if (isDesktop || !selectedId) return;
+    if (deepLinkHandled.current === selectedId) return;
+    deepLinkHandled.current = selectedId;
+    const id = selectedId;
+    openOverlay(
+      <CommObjectDetail
+        conversationId={id}
+        embedded
+        onClose={() => {
+          closeOverlay();
+          deepLinkHandled.current = null;
+        }}
+      />,
+    );
+    selectChat(null);
+  }, [isDesktop, selectedId, openOverlay, closeOverlay, selectChat]);
+
   const railDensity = selectedId ? 'compact' : 'full';
 
   return (
     <div className="bg-[#000000] pointer-events-auto min-h-[calc(100dvh-96px)]">
       <Suspense fallback={null}>
-        <ChatHandler onResolved={selectChat} />
+        <ChatHandler onResolved={onResolved} />
       </Suspense>
 
       {isDesktop ? (
@@ -226,7 +245,7 @@ function ConnectChatsBody() {
               onSelect={selectChat}
             />
           </FusedSecondarySidebar>
-          <div className="relative flex-1 min-w-0 min-h-0 bg-[#0A0908] border-l border-white/5">
+          <div className="relative flex-1 min-w-0 min-h-0 bg-[#0A0908] border-l border-[#34322F]">
             {selectedId ? (
               <CommObjectDetail
                 conversationId={selectedId}
@@ -236,7 +255,7 @@ function ConnectChatsBody() {
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-[#161412] border border-[#34322F] flex items-center justify-center">
-                  <MessageCircle size={28} className="text-[#F59E0B]/80" />
+                  <MessageCircle size={28} className="text-[#F59E0B]" />
                 </div>
                 <h1 className="text-white font-black text-xl font-clash m-0">Select a chat</h1>
                 <p className="text-white/40 text-xs font-semibold max-w-xs m-0">
@@ -244,7 +263,7 @@ function ConnectChatsBody() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => openUnified('new-chat', { mode: 'secure' })}
+                  onClick={openCreate}
                   className="mt-2 h-10 px-4 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold inline-flex items-center gap-1.5"
                 >
                   <Plus size={14} strokeWidth={3} />
@@ -254,25 +273,20 @@ function ConnectChatsBody() {
             )}
           </div>
         </div>
-      ) : selectedId ? (
-        <div className="relative h-[calc(100dvh-96px)] min-h-0 w-full overflow-hidden">
-          <CommObjectDetail
-            conversationId={selectedId}
-            onClose={() => selectChat(null)}
-          />
-        </div>
       ) : (
-        <div className="flex flex-col w-full pt-2 pb-8 px-1">
-          <header className="mb-6">
-            <h1 className="text-2xl font-black font-clash text-white m-0">Chats</h1>
-            <p className="text-white/45 text-xs font-semibold mt-1">
-              Secure messages and public threads
+        <div className="flex flex-col w-full max-w-2xl mx-auto pt-3 pb-28 px-3 sm:px-4">
+          <header className="mb-5 px-1">
+            <h1 className="text-2xl font-black font-clash text-white m-0 tracking-tight">
+              Chats
+            </h1>
+            <p className="text-white/45 text-xs font-semibold mt-1 font-satoshi">
+              Messages and hangouts
             </p>
           </header>
           <ChatList
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            onOpenConversation={selectChat}
+            onOpenConversation={openChatDetail}
           />
         </div>
       )}

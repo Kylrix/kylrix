@@ -5,6 +5,7 @@ import { AppwriteService } from '@/lib/appwrite';
 import { account } from '@/lib/appwrite/client';
 import { useTheme } from '@/lib/theme-context';
 import Link from 'next/link';
+import { SyncToNostrSettings } from '@/components/settings/SyncToNostrSettings';
 
 interface PrefsData {
   language?: string;
@@ -214,6 +215,10 @@ export default function PreferencesManager({ onSave }: PreferencesManagerProps) 
             </div>
           </div>
         </div>
+
+        <div className="h-px bg-white/5 w-full" />
+
+        <SyncToNostrSettings />
 
         <div className="h-px bg-white/5 w-full" />
 

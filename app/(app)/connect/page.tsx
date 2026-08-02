@@ -47,17 +47,16 @@ function ConnectHomeContent() {
   }, [openUnified]);
 
   useEffect(() => {
-    if (isDesktop) {
-      setConfiguration({ isVisible: false });
-      return () => resetConfiguration();
-    }
-
     if (activeTab === 'mail') {
       setConfiguration({ isVisible: false });
       return () => resetConfiguration();
     }
 
     if (activeTab === 'chats') {
+      if (isDesktop) {
+        setConfiguration({ isVisible: false });
+        return () => resetConfiguration();
+      }
       setConfiguration({
         isVisible: true,
         mainColor: '#F59E0B',
@@ -84,6 +83,7 @@ function ConnectHomeContent() {
       return () => resetConfiguration();
     }
 
+    // Moments: bottom FAB on all viewports → expandable create sheet
     setConfiguration({
       isVisible: true,
       mainColor: '#F59E0B',

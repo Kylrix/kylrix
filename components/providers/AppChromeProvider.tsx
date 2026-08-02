@@ -50,7 +50,8 @@ export function AppChromeProvider({ children }: { children: React.ReactNode }) {
       pathname?.startsWith('/chat/') ||
       pathname?.startsWith('/connect/chats/') ||
       pathname?.startsWith('/post/') ||
-      pathname?.startsWith('/connect/post/')
+      pathname?.startsWith('/connect/post/') ||
+      pathname?.startsWith('/moment/')
       ? 'focus'
       : 'ambient';
     document.body.dataset.uiMood = mood;

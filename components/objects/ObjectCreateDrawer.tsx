@@ -6,6 +6,7 @@ import type { ObjectKind } from '@/lib/objects/types';
 import type { Notes } from '@/types/appwrite';
 import type { Task } from '@/types';
 import type { Event } from '@/types';
+import type { ChatCreateMode } from '@/components/objects/CreateChatComposer';
 
 const CreateNoteForm = dynamic(
   () => import('@/app/(app)/app/(app)/notes/CreateNoteForm'),
@@ -19,12 +20,18 @@ const CreateEventComposer = dynamic(
   () => import('@/components/objects/CreateEventComposer').then((m) => m.CreateEventComposer),
   { ssr: false },
 );
+const CreateChatComposer = dynamic(
+  () => import('@/components/objects/CreateChatComposer').then((m) => m.CreateChatComposer),
+  { ssr: false },
+);
 
 type HeightMode = 'partial' | 'full';
 
+export type CreateDrawerKind = ObjectKind | 'chat';
+
 type Props = {
   open: boolean;
-  kind: ObjectKind;
+  kind: CreateDrawerKind;
   onClose: () => void;
   /** Forms are full-only; others start at 60dvh and can expand. */
   defaultHeight?: HeightMode;
@@ -42,6 +49,9 @@ type Props = {
   /** @deprecated Prefer live composers; kept for transitional call sites. */
   onSubmit?: (draft: { kind: ObjectKind; title: string; body: string }) => void | Promise<void>;
   submitLabel?: string;
+  /** Chat / hangout composer */
+  chatInitialMode?: ChatCreateMode;
+  chatLegacyThread?: boolean;
 };
 
 /**
@@ -59,6 +69,8 @@ export function ObjectCreateDrawer({
   onEventCreated,
   onLiveEvent,
   onCommitEvent,
+  chatInitialMode = 'chat',
+  chatLegacyThread = false,
 }: Props) {
   const formOnlyFull = kind === 'form';
   const [heightMode, setHeightMode] = useState<HeightMode>(
@@ -178,6 +190,19 @@ export function ObjectCreateDrawer({
               isExpanded={isExpanded || isDesktop}
               onToggleExpand={toggleExpand}
               onClose={onClose}
+            />
+          ) : null}
+
+          {kind === 'chat' ? (
+            <CreateChatComposer
+              onClose={onClose}
+              onRegisterClose={(close) => {
+                composerCloseRef.current = close;
+              }}
+              isExpanded={isExpanded || isDesktop}
+              onToggleExpand={toggleExpand}
+              initialMode={chatInitialMode}
+              legacyThread={chatLegacyThread}
             />
           ) : null}
 

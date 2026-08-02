@@ -106,6 +106,9 @@ export function UnifiedBottomBar() {
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/app\/notes\/[^/]+$/));
   const isConnectCallDetail = Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/));
   const isSpecificChatPage = Boolean(pathname?.match(/^\/connect\/chat\/[^/]+$/));
+  const isConnectChatsSurface = Boolean(
+    pathname === '/connect/chats' || pathname?.startsWith('/connect/chats/'),
+  );
   const isSpecificPostPage = Boolean(pathname?.match(/^\/connect\/post\/[^/]+$/));
   const isSpecificProjectPage = Boolean(pathname?.match(/^\/workspaces\/[^/]+$/));
   const isPublicFormPage = Boolean(pathname?.match(/^\/form\/[^/]+$/));
@@ -118,6 +121,7 @@ export function UnifiedBottomBar() {
 
   if (
     isSpecificChatPage ||
+    isConnectChatsSurface ||
     isSpecificProjectPage ||
     isPublicFormPage ||
     isSpecificPostPage ||

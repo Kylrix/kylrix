@@ -47,6 +47,7 @@ import {
     Pin} from 'lucide-react';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
+import { ProfilePeekDrawer } from '@/components/profile/ProfilePeekDrawer';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import SudoModal from '../overlays/SudoModal';
 import { usePresence } from '../providers/PresenceProvider';
@@ -72,6 +73,7 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 import {
     chatConversationCacheKey,
     chatMessagesCacheKey,
+    sanitizeMessagesForRest,
 } from '@/lib/chat/local-chat-cache';
 import type { ChatMessage, ChatReaction, SenderProfile } from './chat-types';
 import { MessagesType } from './chat-types';
@@ -120,6 +122,7 @@ export const ChatWindow = ({
     const [messageAnchorEl, setMessageAnchorEl] = useState<{ el: HTMLElement, msg: ChatMessage } | null>(null);
     const [partnerProfile, setPartnerProfile] = useState<any | null>(null);
     const [partnerVerification, setPartnerVerification] = useState(() => getVerificationState(null));
+    const [profilePeekOpen, setProfilePeekOpen] = useState(false);
     const [conversationReadAt, setConversationReadAt] = useState(0);
     const [senderProfiles, setSenderProfiles] = useState<Record<string, SenderProfile>>({});
     const [messageReactions, setMessageReactions] = useState<Record<string, ChatReaction[]>>({});
@@ -344,7 +347,25 @@ export const ChatWindow = ({
                 chatMessagesCacheKey(conversationId),
             );
             if (cachedMessages?.length) {
-                startTransition(() => setMessages(cachedMessages));
+                let hydrated = cachedMessages;
+                try {
+                    if (ecosystemSecurity.status.isUnlocked && user?.$id) {
+                        const convForDecrypt = await ChatService.getConversationById(
+                            conversationId,
+                            user.$id,
+                        ).catch(() => null);
+                        if (convForDecrypt) {
+                            hydrated = (await ChatService.decryptMessageRows(
+                                cachedMessages,
+                                convForDecrypt,
+                                user.$id,
+                            )) as ChatMessage[];
+                        }
+                    }
+                } catch {
+                    /* show ciphertext placeholders until network */
+                }
+                startTransition(() => setMessages(hydrated));
                 setLoading(false);
             } else {
                 setLoading(true);
@@ -363,13 +384,16 @@ export const ChatWindow = ({
 
             // Filter by clearedAt if exists in settings
             let displayMessages = response.rows;
+            let atRest = (response as any).atRestRows || response.rows;
             if (user && conv.settings) {
                 try {
                     const decryptedSettings = await ecosystemSecurity.decrypt(conv.settings);
                     const settings = JSON.parse(decryptedSettings);
                     const myClearedAt = settings.clearedAt?.[user.$id];
                     if (myClearedAt) {
-                        displayMessages = displayMessages.filter((m: any) => new Date(m.createdAt || m.$createdAt) > new Date(myClearedAt));
+                        const cutoff = new Date(myClearedAt);
+                        displayMessages = displayMessages.filter((m: any) => new Date(m.createdAt || m.$createdAt) > cutoff);
+                        atRest = atRest.filter((m: any) => new Date(m.createdAt || m.$createdAt) > cutoff);
                         console.log('[ChatWindow] loadMessages: Filtered by clearedAt. Remaining:', displayMessages.length);
                     }
                 } catch (_e: unknown) { }
@@ -377,10 +401,15 @@ export const ChatWindow = ({
 
             // Reverse once for display order (bottom is newest)
             const ordered = displayMessages.reverse() as unknown as ChatMessage[];
+            const atRestOrdered = [...atRest].reverse();
             startTransition(() => {
                 setMessages(ordered);
             });
-            void LocalEngine.cacheSet(chatMessagesCacheKey(conversationId), ordered);
+            // Persist ciphertext only for encrypted chats — never decrypted plaintext at rest
+            void LocalEngine.cacheSet(
+                chatMessagesCacheKey(conversationId),
+                sanitizeMessagesForRest(atRestOrdered, Boolean(conv?.isEncrypted)),
+            );
             void loadReactions();
         } catch (error: unknown) {
             console.error('[ChatWindow] loadMessages failed:', error);
@@ -1158,16 +1187,37 @@ export const ChatWindow = ({
                         <ChevronLeft size={20} strokeWidth={2} />
                     </IconButton>
                     <Box
-                        onClick={(e: React.MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget)}
-                        sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+                        onClick={() => {
+                            if (conversation?.type === 'direct' && !isSelf) {
+                                setProfilePeekOpen(true);
+                                return;
+                            }
+                            // Groups / self — keep actions menu from header chrome via more button
+                        }}
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, cursor: conversation?.type === 'direct' && !isSelf ? 'pointer' : 'default', '&:hover': { opacity: conversation?.type === 'direct' && !isSelf ? 0.8 : 1 } }}
                     >
                         <IdentityAvatar 
                             userId={isSelf ? user?.$id : partnerId}
-                            fileId={conversation?.avatarUrl || conversation?.avatar || null}
+                            src={
+                                conversation?.avatarUrl?.startsWith?.('http')
+                                    ? conversation.avatarUrl
+                                    : null
+                            }
+                            fileId={
+                                conversation?.avatarUrl?.startsWith?.('http')
+                                    ? null
+                                    : (conversation?.avatar || conversation?.avatarUrl || null)
+                            }
                             alt={conversation?.name}
-                            fallback={isSelf ? 'B' : (conversation?.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'U')}
+                            fallback={
+                                (conversation?.name || user?.name || 'Y')
+                                    .replace(/\(You\)/gi, '')
+                                    .replace(/^@/, '')
+                                    .trim()
+                                    .charAt(0)
+                                    .toUpperCase() || 'Y'
+                            }
                             size={38}
-                            pro={isSelf}
                         />
                         <Box>
                             {conversation?.type === 'direct' && !isSelf ? (
@@ -1843,6 +1893,19 @@ export const ChatWindow = ({
                     </MenuItem>
                 )}
             </Menu>
+
+            <ProfilePeekDrawer
+                open={profilePeekOpen}
+                onClose={() => setProfilePeekOpen(false)}
+                userId={partnerId}
+                username={partnerProfile?.username}
+                seed={{
+                    displayName: partnerProfile?.displayName || conversation?.name,
+                    username: partnerProfile?.username,
+                    bio: partnerProfile?.bio,
+                    avatar: partnerProfile?.avatar || conversation?.avatarUrl,
+                }}
+            />
         </Box>
     );
 };

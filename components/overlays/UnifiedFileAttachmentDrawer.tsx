@@ -56,6 +56,8 @@ import { ProjectsService } from '@/lib/appwrite/projects';
 import { VaultService } from '@/lib/appwrite/vault';
 import { tasks, events } from '@/lib/kylrixflow';
 import { useSudo } from '@/context/SudoContext';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 const BUCKETS = [
   'general_storage',
@@ -101,6 +103,8 @@ export function UnifiedFileAttachmentDrawer() {
   const { isOpen, options, closeFileDrawer } = useUnifiedFileDrawer();
   const { user } = useAuth();
   const { promptSudo, isUnlocked } = useSudo();
+  const { openProUpgrade } = useProUpgrade();
+  const isPro = hasPaidKylrixPlan(user);
   const userId = user?.$id || 'guest';
   const { notes: localContextNotes } = useNotes();
 
@@ -424,6 +428,12 @@ export function UnifiedFileAttachmentDrawer() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!isPro) {
+      e.target.value = '';
+      openProUpgrade('File upload');
+      return;
+    }
 
     setUploading(true);
     try {
@@ -835,6 +845,22 @@ export function UnifiedFileAttachmentDrawer() {
                 <Loader2 className="w-8 h-8 animate-spin text-[#A855F7]" />
                 <p className="text-xs text-[#9B9691]">Uploading and caching to local media...</p>
               </div>
+            ) : !isPro ? (
+              <button
+                type="button"
+                onClick={() => openProUpgrade('File upload')}
+                className="flex flex-col items-center gap-3 cursor-pointer"
+              >
+                <div className="p-4 rounded-2xl bg-[#161412] border border-[#1C1A18] text-[#F59E0B]">
+                  <UploadCloud className="w-8 h-8" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-bold text-[#F5F2ED]">Upload is Pro</p>
+                  <p className="text-xs text-[#9B9691] mt-1">
+                    Attach existing objects for free — uploads need Pro
+                  </p>
+                </div>
+              </button>
             ) : (
               <label className="flex flex-col items-center gap-3 cursor-pointer">
                 <div className="p-4 rounded-2xl bg-[#161412] border border-[#1C1A18] text-[#A855F7]">

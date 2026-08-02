@@ -12,9 +12,10 @@ const ShareNoteDrawer = dynamic(() => import('./ShareNoteDrawer').then((m) => m.
 const DeleteNoteDrawer = dynamic(() => import('./DeleteNoteDrawer').then((m) => m.DeleteNoteDrawer), {
   ssr: false,
 });
-const NewChatDrawer = dynamic(() => import('./NewChatDrawer').then((m) => m.NewChatDrawer), {
-  ssr: false,
-});
+const ChatCreateDrawer = dynamic(
+  () => import('@/components/objects/ChatCreateDrawer').then((m) => m.ChatCreateDrawer),
+  { ssr: false },
+);
 const NewChannelDrawer = dynamic(() => import('./NewChannelDrawer').then((m) => m.NewChannelDrawer), {
   ssr: false,
 });
@@ -109,9 +110,14 @@ export function unifiedDrawerWidth(content: DrawerContent): number {
   }
 }
 
-/** Surfaces that stay as true modal overlays (auth). */
+/** Surfaces that stay as true modal overlays (auth + bottom-sheet composers). */
 export function isUnifiedOverlayOnly(content: DrawerContent): boolean {
-  return content === 'navbar' || content === 'login';
+  return (
+    content === 'navbar' ||
+    content === 'login' ||
+    content === 'moment-composer' ||
+    content === 'new-chat'
+  );
 }
 
 type Props = {
@@ -174,7 +180,14 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
         />
       );
     case 'new-chat':
-      return <NewChatDrawer isOpen onClose={onClose} mode={drawerData?.mode} />;
+      return (
+        <ChatCreateDrawer
+          open
+          onClose={onClose}
+          legacyMode={drawerData?.mode === 'thread' || drawerData?.mode === 'secure' ? drawerData.mode : undefined}
+          initialMode={drawerData?.mode === 'hangout' ? 'hangout' : 'chat'}
+        />
+      );
     case 'new-channel':
       return <NewChannelDrawer isOpen onClose={onClose} />;
     case 'secure-chat-setup':

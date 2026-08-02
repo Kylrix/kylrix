@@ -34,6 +34,9 @@ export default function UniversalFAB() {
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
   const isLandingPage = pathname === '/';
+  const isConnectChatsSurface = Boolean(
+    pathname === '/connect/chats' || pathname?.startsWith('/connect/chats/'),
+  );
 
   const isAppRoute = pathname && (
     isWorkspacesPath(pathname) ||
@@ -54,9 +57,16 @@ export default function UniversalFAB() {
   const mainColor = config.mainColor || '#6366F1';
   const onMainClick = config.onMainClick;
 
+  // Chats hide the bottom nav — sit FAB closer to the safe area like other no-nav screens.
+  const fabBottom = isLandingPage
+    ? FAB_BOTTOM.landing
+    : isConnectChatsSurface
+      ? 'calc(24px + env(safe-area-inset-bottom))'
+      : FAB_BOTTOM.app;
+
   const anchorSx = {
     position: 'fixed' as const,
-    bottom: isLandingPage ? FAB_BOTTOM.landing : (isDesktop ? 32 : FAB_BOTTOM.app),
+    bottom: fabBottom,
     right: { xs: 16, md: 32 },
     zIndex: 1505,
     display: 'flex',
@@ -75,19 +85,23 @@ export default function UniversalFAB() {
             onClick={onMainClick}
             sx={{
               ...childPointerEvents,
-              width: 64,
-              height: 64,
+              width: 56,
+              height: 56,
               bgcolor: mainColor,
               color: '#000',
-              borderRadius: '20px',
-              boxShadow: `0 10px 34px ${alpha(mainColor, 0.45)}`,
-              transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              borderRadius: '16px',
+              border: '1px solid rgba(0,0,0,0.12)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
               '&:hover': {
                 bgcolor: mainColor,
-                transform: 'translateY(-4px)',
-                boxShadow: `0 14px 42px ${alpha(mainColor, 0.52)}`}}}
+                transform: 'translateY(-2px)',
+                boxShadow: '0 10px 28px rgba(0,0,0,0.5)',
+              },
+              '&:active': { transform: 'scale(0.96)' },
+            }}
           >
-            {mainIcon || <Plus size={32} strokeWidth={2} />}
+            {mainIcon || <Plus size={26} strokeWidth={2.5} />}
           </Fab>
         </Zoom>
       </Box>

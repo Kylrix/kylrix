@@ -12,11 +12,6 @@ import { showIslandNotification } from '@/lib/island-notification';
 import { createGhostNoteChat, listGhostNoteChats, deleteGhostThread } from '@/lib/actions/client-ops';
 import { isValidX25519PublicKey, formatSecureChatStartError } from '@/lib/crypto/public-key';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { LocalEngine } from '@/lib/services/LocalEngine';
-import {
-    CHATS_LIST_CACHE_KEY,
-    THREADS_LIST_CACHE_KEY,
-} from '@/lib/chat/local-chat-cache';
 import { 
     Trash2, 
     ShieldCheck, 
@@ -29,7 +24,8 @@ import {
     StickyNote, 
     ExternalLink, 
     Link as LinkIcon, 
-    Sliders 
+    Sliders,
+    Pin,
 } from 'lucide-react';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar } from '../IdentityBadge';
@@ -40,8 +36,15 @@ import { useSudo } from '@/context/SudoContext';
 import { getConversationReadAt } from '@/lib/chat-read-state';
 import { useChatNotifications } from '../providers/ChatNotificationProvider';
 import ConversationActionsSheet from './ConversationActionsSheet';
+import { ProfilePeekDrawer } from '@/components/profile/ProfilePeekDrawer';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
-
+import { useResourcePins } from '@/context/ResourcePinContext';
+import {
+    CHATS_LIST_CACHE_KEY,
+    THREADS_LIST_CACHE_KEY,
+    sanitizeConversationListForRest,
+} from '@/lib/chat/local-chat-cache';
+import { LocalEngine } from '@/lib/services/LocalEngine';
 const alpha = (hexColor: string, opacity: number) => {
     let hex = hexColor.replace('#', '');
     if (hex.length === 3) {
@@ -69,22 +72,29 @@ const GlobalSearchAvatar = ({ u }: { u: any }) => {
 const SECURE_CACHE_KEY = 'kylrix_connect_cached_secure_v1';
 const THREADS_CACHE_KEY = 'kylrix_connect_cached_threads_v1';
 
-function readJsonCache<T>(key: string): T | null {
-    if (typeof window === 'undefined') return null;
+/** One-shot migrate legacy localStorage → LocalEngine, then drop localStorage. */
+function migrateLegacyChatListCache() {
+    if (typeof window === 'undefined') return;
     try {
-        const raw = localStorage.getItem(key);
-        return raw ? JSON.parse(raw) as T : null;
+        const secure = localStorage.getItem(SECURE_CACHE_KEY);
+        if (secure) {
+            const parsed = JSON.parse(secure);
+            if (Array.isArray(parsed) && parsed.length) {
+                void LocalEngine.cacheSet(CHATS_LIST_CACHE_KEY, sanitizeConversationListForRest(parsed));
+            }
+            localStorage.removeItem(SECURE_CACHE_KEY);
+        }
+        const threads = localStorage.getItem(THREADS_CACHE_KEY);
+        if (threads) {
+            const parsed = JSON.parse(threads);
+            if (Array.isArray(parsed) && parsed.length) {
+                void LocalEngine.cacheSet(THREADS_LIST_CACHE_KEY, parsed);
+            }
+            localStorage.removeItem(THREADS_CACHE_KEY);
+        }
     } catch {
-        return null;
+        /* ignore */
     }
-}
-
-function readSecureCache(): any[] {
-    return readJsonCache<any[]>(SECURE_CACHE_KEY) || [];
-}
-
-function readThreadsCache(): any[] {
-    return readJsonCache<any[]>(THREADS_CACHE_KEY) || [];
 }
 
 export const ChatList = ({ 
@@ -115,10 +125,9 @@ export const ChatList = ({
     const contextMenu = useContextMenu();
     const openMenu = contextMenu?.openMenu;
     const { open: openUnified } = useUnifiedDrawer();
-    const initialSecureCache = readSecureCache();
-    const initialThreadsCache = readThreadsCache();
-    const [conversations, setConversations] = useState<any[]>(() => initialSecureCache);
-    const [loading, setLoading] = useState(() => !skipSecureLoad && initialSecureCache.length === 0);
+    const { isPinned: isResourcePinned, togglePin, pinSets } = useResourcePins();
+    const [conversations, setConversations] = useState<any[]>([]);
+    const [loading, setLoading] = useState(() => !skipSecureLoad);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [_searching, setSearching] = useState(false);
@@ -128,7 +137,12 @@ export const ChatList = ({
         isUnlockedRef.current = isUnlocked;
     }, [isUnlocked]);
     const [selectedConversation, setSelectedConversation] = useState<any | null>(null);
-    const conversationsRef = React.useRef<any[]>(initialSecureCache);
+    const [peekProfile, setPeekProfile] = useState<{
+      userId?: string;
+      username?: string;
+      seed?: { displayName?: string; username?: string; avatar?: string };
+    } | null>(null);
+    const conversationsRef = React.useRef<any[]>([]);
     const loadRequestRef = React.useRef(0);
     const loadConversationsInflightRef = React.useRef<Promise<void> | null>(null);
     const reloadConversationsTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -145,8 +159,8 @@ export const ChatList = ({
     });
     const activeTab = propActiveTab || activeTabState;
 
-    const [ghostConversations, setGhostConversations] = useState<any[]>(() => initialThreadsCache);
-    const [loadingGhost, setLoadingGhost] = useState(() => !skipThreadsLoad && initialThreadsCache.length === 0);
+    const [ghostConversations, setGhostConversations] = useState<any[]>([]);
+    const [loadingGhost, setLoadingGhost] = useState(() => !skipThreadsLoad);
 
     const [isInitializing, setIsInitializing] = useState(false);
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
@@ -164,6 +178,56 @@ export const ChatList = ({
         }
         router.replace(`/connect/chats?c=${encodeURIComponent(conversationId)}`, { scroll: false });
     }, [onOpenConversation, router]);
+
+    const openAvatarPeek = useCallback((conv: any) => {
+        if (conv?.type === 'group') {
+            setSelectedConversation(conv);
+            return;
+        }
+        const otherId =
+            Array.isArray(conv?.participants) && user?.$id
+                ? conv.participants.find((p: string) => p !== user.$id)
+                : null;
+        setPeekProfile({
+            userId: otherId || conv?.otherUserId || (conv?.isSelf ? user?.$id : undefined),
+            username: conv?.username || conv?.otherUsername,
+            seed: {
+                displayName: conv?.name,
+                username: conv?.username || conv?.otherUsername,
+                avatar: conv?.avatarUrl || conv?.avatar,
+            },
+        });
+    }, [user?.$id]);
+
+    const sortConversations = useCallback((rows: any[]) => {
+        const pinned = pinSets.conversation;
+        return [...rows].sort((a, b) => {
+            const ap = pinned.has(a.$id) ? 1 : 0;
+            const bp = pinned.has(b.$id) ? 1 : 0;
+            if (ap !== bp) return bp - ap;
+            if (a.isSelf && !a.lastMessageAt) return -1;
+            if (b.isSelf && !b.lastMessageAt) return 1;
+            const timeA = new Date(a.lastMessageAt || a.createdAt).getTime();
+            const timeB = new Date(b.lastMessageAt || b.createdAt).getTime();
+            return timeB - timeA;
+        });
+    }, [pinSets.conversation]);
+
+    const handleTogglePinConversation = useCallback(async (conv: any) => {
+        if (!user?.$id || !conv?.$id) return;
+        try {
+            const next = await togglePin({
+                resourceType: 'conversation',
+                resourceId: conv.$id,
+                ownerId: user.$id,
+                rowIsPinned: false,
+                setOwnerRowPin: async () => {},
+            });
+            toast.success(next ? 'Pinned chat' : 'Unpinned chat');
+        } catch (err: any) {
+            toast.error(err?.message || 'Could not update pin');
+        }
+    }, [user?.$id, togglePin]);
 
     const handleItemClick = useCallback((event: React.MouseEvent) => {
         if (isInitializing) {
@@ -192,6 +256,13 @@ export const ChatList = ({
                     label: 'Open Secure Chat',
                     icon: <ExternalLink size={18} />,
                     onClick: () => openConversation(conv.$id)
+                },
+                {
+                    label: isResourcePinned('conversation', conv.$id, user?.$id, false)
+                        ? 'Unpin chat'
+                        : 'Pin chat',
+                    icon: <Pin size={18} />,
+                    onClick: () => void handleTogglePinConversation(conv),
                 },
                 {
                     label: 'Copy Connection Link',
@@ -234,7 +305,7 @@ export const ChatList = ({
             ]
             });
         }
-    }, [openMenu, router, openUnified]);
+    }, [openMenu, openUnified, openConversation, handleTogglePinConversation, isResourcePinned, user?.$id]);
 
     const handleGhostConversationRightClick = useCallback((event: React.MouseEvent, conv: any) => {
         event.preventDefault();
@@ -248,6 +319,13 @@ export const ChatList = ({
                     label: 'Open Discussion Thread',
                     icon: <ExternalLink size={18} />,
                     onClick: () => openConversation(conv.$id)
+                },
+                {
+                    label: isResourcePinned('conversation', conv.$id, user?.$id, false)
+                        ? 'Unpin chat'
+                        : 'Pin chat',
+                    icon: <Pin size={18} />,
+                    onClick: () => void handleTogglePinConversation(conv),
                 },
                 {
                     label: 'Copy Thread ID',
@@ -290,7 +368,7 @@ export const ChatList = ({
             ]
             });
         }
-    }, [openMenu, router, openUnified]);
+    }, [openMenu, openUnified, openConversation, handleTogglePinConversation, isResourcePinned, user?.$id]);
 
     const handleCancelRedirect = useCallback(() => {
         setShowCountdownDrawer(false);
@@ -332,52 +410,35 @@ export const ChatList = ({
         }
     }, [activeTab, hasMasterpass, hideTabs]);
 
-    // Active secure query 800ms grace timeout to show cache
+    // Instant paint from LocalEngine (RxDB) — migrate legacy localStorage once
     useEffect(() => {
-        if (!loading) return;
-        const timer = setTimeout(() => {
-            if (loading) {
-                try {
-                    const cachedSec = localStorage.getItem(SECURE_CACHE_KEY);
-                    if (cachedSec) {
-                        const parsed = JSON.parse(cachedSec);
-                        if (parsed.length > 0) {
-                            setConversations(parsed);
-                            conversationsRef.current = parsed;
-                            setIsInitializing(true);
-                            setLoading(false);
-                        }
-                    }
-                } catch (e) {
-                    console.warn('[ChatList] Secure caching fallback error:', e);
+        migrateLegacyChatListCache();
+        let cancelled = false;
+        void (async () => {
+            if (!skipSecureLoad) {
+                const cached = await LocalEngine.cacheGet<any[]>(CHATS_LIST_CACHE_KEY);
+                if (!cancelled && cached?.length) {
+                    startTransition(() => {
+                        setConversations(cached);
+                        conversationsRef.current = cached;
+                        setLoading(false);
+                    });
                 }
             }
-        }, 800);
-        return () => clearTimeout(timer);
-    }, [loading]);
-
-    // Active threads query 800ms grace timeout to show cache
-    useEffect(() => {
-        if (!loadingGhost) return;
-        const timer = setTimeout(() => {
-            if (loadingGhost) {
-                try {
-                    const cachedThr = localStorage.getItem(THREADS_CACHE_KEY);
-                    if (cachedThr) {
-                        const parsed = JSON.parse(cachedThr);
-                        if (parsed.length > 0) {
-                            setGhostConversations(parsed);
-                            setIsInitializing(true);
-                            setLoadingGhost(false);
-                        }
-                    }
-                } catch (e) {
-                    console.warn('[ChatList] Thread caching fallback error:', e);
+            if (!skipThreadsLoad) {
+                const cachedThr = await LocalEngine.cacheGet<any[]>(THREADS_LIST_CACHE_KEY);
+                if (!cancelled && cachedThr?.length) {
+                    startTransition(() => {
+                        setGhostConversations(cachedThr);
+                        setLoadingGhost(false);
+                    });
                 }
             }
-        }, 800);
-        return () => clearTimeout(timer);
-    }, [loadingGhost]);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [skipSecureLoad, skipThreadsLoad, startTransition]);
 
     useEffect(() => {
         if (propActiveTab) {
@@ -455,11 +516,13 @@ export const ChatList = ({
                     lastMessageAt: note.updatedAt || note.$createdAt};
             });
 
-            mapped.sort((a: any, b: any) => new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime());
+            mapped.sort((a: any, b: any) => {
+                const ap = pinSets.conversation.has(a.$id) ? 1 : 0;
+                const bp = pinSets.conversation.has(b.$id) ? 1 : 0;
+                if (ap !== bp) return bp - ap;
+                return new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime();
+            });
 
-            if (typeof window !== 'undefined') {
-                localStorage.setItem(THREADS_CACHE_KEY, JSON.stringify(mapped));
-            }
             void LocalEngine.cacheSet(THREADS_LIST_CACHE_KEY, mapped);
             startTransition(() => {
                 setGhostConversations(mapped);
@@ -492,10 +555,13 @@ export const ChatList = ({
                         avatarUrl};
                 }));
 
-                enriched.sort((a: any, b: any) => new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime());
-                if (typeof window !== 'undefined') {
-                    localStorage.setItem(THREADS_CACHE_KEY, JSON.stringify(enriched));
-                }
+                enriched.sort((a: any, b: any) => {
+                    const ap = pinSets.conversation.has(a.$id) ? 1 : 0;
+                    const bp = pinSets.conversation.has(b.$id) ? 1 : 0;
+                    if (ap !== bp) return bp - ap;
+                    return new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime();
+                });
+                void LocalEngine.cacheSet(THREADS_LIST_CACHE_KEY, enriched);
                 startTransition(() => {
                     setGhostConversations(enriched);
                 });
@@ -505,7 +571,21 @@ export const ChatList = ({
         } finally {
             setLoadingGhost(false);
         }
-    }, [user, startTransition, ghostConversations.length]);
+    }, [user, startTransition, ghostConversations.length, pinSets.conversation]);
+
+    // Keep pinned chats at the top when pin set changes
+    useEffect(() => {
+        setConversations((prev) => (prev.length ? sortConversations(prev) : prev));
+        setGhostConversations((prev) => {
+            if (!prev.length) return prev;
+            return [...prev].sort((a, b) => {
+                const ap = pinSets.conversation.has(a.$id) ? 1 : 0;
+                const bp = pinSets.conversation.has(b.$id) ? 1 : 0;
+                if (ap !== bp) return bp - ap;
+                return new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime();
+            });
+        });
+    }, [pinSets.conversation, sortConversations]);
 
     useEffect(() => {
         if (skipThreadsLoad || activeTab !== 'public') return;
@@ -844,19 +924,10 @@ export const ChatList = ({
                     lastMessageSenderId: previewSenderId};
             });
 
-            const sorted = baseRows.sort((a, b) => {
-                if (a.isSelf && !a.lastMessageAt) return -1;
-                if (b.isSelf && !b.lastMessageAt) return 1;
-                const timeA = new Date(a.lastMessageAt || a.createdAt).getTime();
-                const timeB = new Date(b.lastMessageAt || b.createdAt).getTime();
-                return timeB - timeA;
-            });
+            const sorted = sortConversations(baseRows);
 
             console.log('[ChatList] Base conversations count:', sorted.length);
-            if (typeof window !== 'undefined') {
-                localStorage.setItem(SECURE_CACHE_KEY, JSON.stringify(sorted));
-            }
-            void LocalEngine.cacheSet(CHATS_LIST_CACHE_KEY, sorted);
+            void LocalEngine.cacheSet(CHATS_LIST_CACHE_KEY, sanitizeConversationListForRest(sorted));
             startTransition(() => {
                 setConversations(sorted);
                 conversationsRef.current = sorted;
@@ -914,16 +985,8 @@ export const ChatList = ({
 
                 if (loadRequestRef.current !== requestId) return;
                 const enriched = settled.map((entry, index) => entry.status === 'fulfilled' ? entry.value : sorted[index]);
-                const next = enriched.sort((a, b) => {
-                    if (a.isSelf && !a.lastMessageAt) return -1;
-                    if (b.isSelf && !b.lastMessageAt) return 1;
-                    const timeA = new Date(a.lastMessageAt || a.createdAt).getTime();
-                    const timeB = new Date(b.lastMessageAt || b.createdAt).getTime();
-                    return timeB - timeA;
-                });
-                if (typeof window !== 'undefined') {
-                    localStorage.setItem(SECURE_CACHE_KEY, JSON.stringify(next));
-                }
+                const next = sortConversations(enriched);
+                void LocalEngine.cacheSet(CHATS_LIST_CACHE_KEY, sanitizeConversationListForRest(next));
                 startTransition(() => {
                     setConversations(next);
                     conversationsRef.current = next;
@@ -945,7 +1008,7 @@ export const ChatList = ({
                 loadConversationsInflightRef.current = null;
             }
         }
-    }, [user, startTransition, skipSecureLoad]);
+    }, [user, startTransition, skipSecureLoad, sortConversations]);
 
     const scheduleConversationsReload = React.useCallback((options?: { forceRefresh?: boolean }) => {
         if (skipSecureLoad) return;
@@ -1145,23 +1208,23 @@ export const ChatList = ({
         <div className="flex flex-col relative w-full">
             {/* Elegant Pill Tab Switcher */}
             {!hideTabs && (
-                <div className="bg-[#161412] rounded-2xl p-1 w-fit border border-white/5 mb-8 flex gap-1">
+                <div className="bg-[#161412] rounded-2xl p-1 w-fit border border-[#34322F] mb-6 flex gap-1">
                     <button
                         onClick={() => setActiveTab('secure')}
-                        className={`px-6 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
+                        className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-colors ${
                             activeTab === 'secure'
-                                ? 'bg-white/8 text-white'
-                                : 'text-white/50 hover:text-white hover:bg-white/4'
+                                ? 'bg-[#0A0908] text-white border border-white/[0.06]'
+                                : 'text-white/50 hover:text-white'
                         }`}
                     >
-                        Secure Chat
+                        Secure
                     </button>
                     <button
                         onClick={() => setActiveTab('public')}
-                        className={`px-6 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
+                        className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-colors ${
                             activeTab === 'public'
-                                ? 'bg-white/8 text-white'
-                                : 'text-white/50 hover:text-white hover:bg-white/4'
+                                ? 'bg-[#0A0908] text-white border border-white/[0.06]'
+                                : 'text-white/50 hover:text-white'
                         }`}
                     >
                         Threads
@@ -1267,8 +1330,8 @@ export const ChatList = ({
                                                 }
                                             }
                                         }}
-                                        className={`w-full flex items-center gap-4 px-5 py-4 rounded-3xl bg-[#161412] border border-[#1C1A18] hover:bg-[#1C1A18] hover:border-[#F59E0B]/20 hover:-translate-y-0.5 transition-all duration-300 ease-out text-left cursor-pointer ${
-                                            activePreviewConversationId === conv.$id ? 'border-[#F59E0B] -translate-y-0.5 shadow-[0_8px_10px_-8px_rgba(0,0,0,1)]' : 'shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9)]'
+                                        className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-[20px] bg-[#161412] border border-[#34322F] hover:bg-[#1C1A18] hover:border-[#3C3A38] transition-colors text-left cursor-pointer ${
+                                            activePreviewConversationId === conv.$id ? 'border-[#F59E0B]/50' : ''
                                         }`}
                                     >
                                         <div
@@ -1288,7 +1351,7 @@ export const ChatList = ({
                                                     });
                                                     return;
                                                 }
-                                                setSelectedConversation(conv);
+                                                openAvatarPeek(conv);
                                             }}
                                             onKeyDown={(event) => {
                                                 if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -1305,22 +1368,25 @@ export const ChatList = ({
                                                     });
                                                     return;
                                                 }
-                                                setSelectedConversation(conv);
+                                                openAvatarPeek(conv);
                                             }}
                                             className="flex-shrink-0 mr-1"
                                         >
                                             <IdentityAvatar
+                                                userId={conv.isSelf ? user?.$id : conv.otherUserId}
                                                 src={conv.avatarUrl || conv.avatar || null}
                                                 alt={conv.name}
-                                                fallback={conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'U'}
+                                                fallback={conv.name?.replace(/\(You\)/gi, '').replace(/^@/, '').trim().charAt(0).toUpperCase() || 'U'}
                                                 size={48}
-                                                pro={conv.isSelf}
                                                 status={conv.type === 'direct' && conv.otherUserId ? globalPresence?.[conv.otherUserId]?.state : undefined}
                                             />
                                         </div>
                                         <div className="flex-1 min-w-0 flex flex-col gap-1">
-                                            <span className={`font-black text-base font-clash tracking-tight truncate ${conv.isSelf ? 'text-[#F59E0B]' : 'text-white'}`}>
-                                                {conv.name || (conv.type === 'direct' ? conv.otherUserId : 'Group Chat')}
+                                            <span className={`font-black text-base font-clash tracking-tight truncate flex items-center gap-1.5 ${conv.isSelf ? 'text-[#F59E0B]' : 'text-white'}`}>
+                                                {isResourcePinned('conversation', conv.$id, user?.$id, false) ? (
+                                                    <Pin size={14} className="text-[#F59E0B] shrink-0 fill-[#F59E0B]" />
+                                                ) : null}
+                                                {conv.name || (conv.type === 'direct' ? conv.otherUserId : 'Hangout')}
                                             </span>
                                             <span className="text-[#9B9691] font-medium text-sm truncate flex items-center gap-1.5">
                                                 {(() => {
@@ -1407,7 +1473,22 @@ export const ChatList = ({
                                         }}
                                         className="w-full flex items-center gap-4 px-5 py-4 rounded-3xl bg-[#161412] border border-[#1C1A18] hover:bg-[#1C1A18] hover:border-[#F59E0B]/20 hover:-translate-y-0.5 transition-all duration-300 ease-out text-left cursor-pointer shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9)]"
                                     >
-                                        <div className="flex-shrink-0">
+                                        <div
+                                            className="flex-shrink-0"
+                                            role={!conv.linkedResourceType ? 'button' : undefined}
+                                            tabIndex={!conv.linkedResourceType ? 0 : undefined}
+                                            onClick={!conv.linkedResourceType ? (event) => {
+                                                event.preventDefault();
+                                                event.stopPropagation();
+                                                openAvatarPeek(conv);
+                                            } : undefined}
+                                            onKeyDown={!conv.linkedResourceType ? (event) => {
+                                                if (event.key !== 'Enter' && event.key !== ' ') return;
+                                                event.preventDefault();
+                                                event.stopPropagation();
+                                                openAvatarPeek(conv);
+                                            } : undefined}
+                                        >
                                             {conv.linkedResourceType ? (
                                                 <div 
                                                     className="w-11 h-11 rounded-2xl flex items-center justify-center border"
@@ -1455,6 +1536,9 @@ export const ChatList = ({
                                         </div>
                                         <div className="flex-1 min-w-0 flex flex-col gap-1">
                                             <div className="flex items-center gap-2">
+                                                {isResourcePinned('conversation', conv.$id, user?.$id, false) ? (
+                                                    <Pin size={14} className="text-[#F59E0B] shrink-0 fill-[#F59E0B]" />
+                                                ) : null}
                                                 <span className="font-black text-base font-clash tracking-tight text-white truncate">
                                                     {conv.name}
                                                 </span>
@@ -1520,6 +1604,14 @@ export const ChatList = ({
                 onClose={() => setSelectedConversation(null)}
                 onConversationUpdated={handleConversationUpdated}
                 onConversationDeleted={handleConversationDeleted}
+            />
+
+            <ProfilePeekDrawer
+                open={Boolean(peekProfile)}
+                onClose={() => setPeekProfile(null)}
+                userId={peekProfile?.userId}
+                username={peekProfile?.username}
+                seed={peekProfile?.seed}
             />
 
             {showCountdownDrawer ? (
