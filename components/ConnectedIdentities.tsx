@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, ReactElement } from 'react';
+import { useState, useEffect, useCallback, ReactElement } from 'react';
 import { account } from '@/lib/appwrite/client';
 import {
   Box,
@@ -14,36 +14,96 @@ import {
   IconButton} from '@/lib/openbricks/primitives';
 import { Delete as DeleteIcon } from '@/lib/openbricks/icons';
 import { Models } from 'appwrite';
-import { listOAuthAppInstalls } from '@/lib/actions/client-ops';
+import { getApp, type OauthApp } from '@/lib/oauth2/apps';
+import { AppWindow } from 'lucide-react';
 
 type Identity = Models.Identity;
 
+const OAUTH2_PREFIX = 'oauth2:';
+
+type ConnectedAppRow = {
+  identity: Identity;
+  appId: string;
+  app: OauthApp | null;
+};
+
+function isOAuth2Grant(identity: Identity): boolean {
+  return !!identity.provider?.startsWith(OAUTH2_PREFIX);
+}
+
 function ExternalAppsList() {
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<ConnectedAppRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<ConnectedAppRow | null>(null);
+  const [revoking, setRevoking] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const identityList = await account.listIdentities();
+      const grants = (identityList.identities || []).filter(isOAuth2Grant);
+      const connected = await Promise.all(
+        grants.map(async (identity) => {
+          const appId = identity.provider.slice(OAUTH2_PREFIX.length);
+          let app: OauthApp | null = null;
+          try {
+            app = await getApp(appId);
+          } catch {
+            app = null;
+          }
+          return { identity, appId, app };
+        })
+      );
+      setRows(connected);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not load apps');
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await listOAuthAppInstalls();
-        if (!cancelled && res?.success) setRows(res.data || []);
-      } catch {
-        if (!cancelled) setRows([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void load();
+  }, [load]);
+
+  const confirmRevoke = async () => {
+    if (!revokeTarget) return;
+    setRevoking(true);
+    try {
+      await account.deleteIdentity(revokeTarget.identity.$id);
+      setRows((prev) => prev.filter((r) => r.identity.$id !== revokeTarget.identity.$id));
+      setRevokeTarget(null);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not revoke access');
+    } finally {
+      setRevoking(false);
+    }
+  };
 
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
         <CircularProgress size={24} sx={{ color: '#6366F1' }} />
       </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert
+        severity="error"
+        sx={{
+          bgcolor: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.2)',
+          color: '#FCA5A5',
+          borderRadius: '10px',
+        }}
+      >
+        {error}
+      </Alert>
     );
   }
 
@@ -55,35 +115,187 @@ function ExternalAppsList() {
           border: '1px solid rgba(255,255,255,0.05)',
           borderRadius: '16px',
           p: 3,
-          textAlign: 'center'}}
+          textAlign: 'center',
+        }}
       >
         <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem' }}>
-          No external apps installed yet.
+          No apps have access to your Kylrix account yet.
         </Typography>
       </Box>
     );
   }
 
   return (
-    <Stack spacing={2}>
-      {rows.map((row) => (
-        <Box
-          key={row.$id}
-          sx={{
-            backgroundColor: '#0A0908',
-            border: '1px solid rgba(255,255,255,0.05)',
-            borderRadius: '16px',
-            p: 2}}
+    <>
+      <Stack spacing={2}>
+        {rows.map((row) => {
+          const name = row.app?.name || 'Unknown app';
+          const subtitle =
+            row.app?.tagline ||
+            (row.app?.enabled === false ? 'Disabled' : null) ||
+            row.appId;
+          return (
+            <Box
+              key={row.identity.$id}
+              sx={{
+                backgroundColor: '#0A0908',
+                border: '1px solid rgba(255,255,255,0.05)',
+                borderRadius: '16px',
+                p: 2,
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                gap: 2,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0, flex: 1 }}>
+                <Box
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                    color: '#A5B4FC',
+                  }}
+                >
+                  {row.app?.logoUri ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={row.app.logoUri}
+                      alt=""
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <AppWindow size={20} />
+                  )}
+                </Box>
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography
+                    sx={{
+                      fontSize: '0.95rem',
+                      fontWeight: 700,
+                      color: '#fff',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {name}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: '0.75rem',
+                      color: 'rgba(255,255,255,0.45)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {subtitle}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', mt: 0.5 }}>
+                    Allowed{' '}
+                    {new Date(row.identity.$createdAt).toLocaleString()}
+                  </Typography>
+                </Box>
+              </Box>
+              <Button
+                onClick={() => setRevokeTarget(row)}
+                sx={{
+                  flexShrink: 0,
+                  color: '#FCA5A5',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  fontWeight: 700,
+                  fontSize: '0.75rem',
+                  px: 1.5,
+                  py: 1,
+                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                  '&:hover': { backgroundColor: 'rgba(239, 68, 68, 0.15)' },
+                }}
+              >
+                Revoke
+              </Button>
+            </Box>
+          );
+        })}
+      </Stack>
+
+      {revokeTarget && (
+        <Drawer
+          anchor="bottom"
+          open={!!revokeTarget}
+          onClose={() => !revoking && setRevokeTarget(null)}
+          keepMounted={false}
+          disablePortal
+          PaperProps={{
+            sx: {
+              backgroundColor: '#161514',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderBottomLeftRadius: 0,
+              borderBottomRightRadius: 0,
+              borderTopLeftRadius: '20px',
+              borderTopRightRadius: '20px',
+            },
+          }}
         >
-          <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff' }}>
-            {row.appId}
-          </Typography>
-          <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
-            {row.status || 'active'}
-          </Typography>
-        </Box>
-      ))}
-    </Stack>
+          <Box sx={{ p: 3 }}>
+            <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: '#FFFFFF', mb: 1.5 }}>
+              Revoke access?
+            </Typography>
+            <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.6, mb: 3 }}>
+              <Typography component="span" sx={{ color: '#FFFFFF', fontWeight: 600 }}>
+                {revokeTarget.app?.name || 'This app'}
+              </Typography>{' '}
+              will lose access to your Kylrix account. You can allow it again later by signing in
+              through that app.
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
+              <Button
+                onClick={() => void confirmRevoke()}
+                disabled={revoking}
+                variant="contained"
+                fullWidth
+                sx={{
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  py: 1.5,
+                  '&:hover': { backgroundColor: '#DC2626' },
+                  '&:disabled': { backgroundColor: 'rgba(239, 68, 68, 0.5)' },
+                }}
+              >
+                {revoking ? 'Revoking…' : 'Revoke access'}
+              </Button>
+              <Button
+                onClick={() => setRevokeTarget(null)}
+                disabled={revoking}
+                fullWidth
+                sx={{
+                  color: '#FFFFFF',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  py: 1.5,
+                }}
+              >
+                Cancel
+              </Button>
+            </Box>
+          </Box>
+        </Drawer>
+      )}
+    </>
   );
 }
 
@@ -152,8 +364,10 @@ export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIde
       setLoading(true);
       setError(null);
       const identityList = await account.listIdentities();
-      setIdentities(identityList.identities || []);
-      onIdentitiesLoaded?.((identityList.identities || []).length);
+      // Sign-in providers only — OAuth app grants live under External apps.
+      const signIn = (identityList.identities || []).filter((i) => !isOAuth2Grant(i));
+      setIdentities(signIn);
+      onIdentitiesLoaded?.(signIn.length);
     } catch (err: unknown) {
       setError((err as Error).message);
     } finally {
@@ -248,7 +462,6 @@ export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIde
                 '&:hover': {
                   backgroundColor: '#1F1D1B'}}}
             >
-              {/* Content Section */}
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                   <Box
@@ -299,7 +512,6 @@ export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIde
                 </Box>
               </Box>
 
-              {/* Delete Button */}
               <IconButton
                 onClick={() => handleDeleteClick(identity)}
                 sx={{
@@ -330,81 +542,87 @@ export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIde
       <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mt: 5, mb: 2 }}>
         External apps
       </Typography>
+      <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', mb: 2 }}>
+        Apps you allowed to use Sign in with Kylrix. Revoke to cut off their access.
+      </Typography>
       <ExternalAppsList />
 
-      {/* Delete Confirmation Bottom Drawer */}
-      <Drawer
-        anchor="bottom"
-        open={deleteDrawerOpen}
-        onClose={() => setDeleteDrawerOpen(false)}
-        PaperProps={{
-          sx: {
-            backgroundColor: '#161514',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderBottomLeftRadius: 0,
-            borderBottomRightRadius: 0,
-            borderTopLeftRadius: '20px',
-            borderTopRightRadius: '20px'}}}
-      >
-        <Box sx={{ p: 3 }}>
-          <Box sx={{ mb: 3 }}>
-            <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: '#FFFFFF', mb: 1.5 }}>
-              Disconnect Identity
-            </Typography>
-            <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.6 }}>
-              Are you sure you want to disconnect{' '}
-              <Typography component="span" sx={{ color: '#FFFFFF', fontWeight: 600 }}>
-                {selectedIdentity && getProviderName(selectedIdentity.provider)}
+      {deleteDrawerOpen && (
+        <Drawer
+          anchor="bottom"
+          open={deleteDrawerOpen}
+          onClose={() => setDeleteDrawerOpen(false)}
+          keepMounted={false}
+          disablePortal
+          PaperProps={{
+            sx: {
+              backgroundColor: '#161514',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderBottomLeftRadius: 0,
+              borderBottomRightRadius: 0,
+              borderTopLeftRadius: '20px',
+              borderTopRightRadius: '20px'}}}
+        >
+          <Box sx={{ p: 3 }}>
+            <Box sx={{ mb: 3 }}>
+              <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: '#FFFFFF', mb: 1.5 }}>
+                Disconnect Identity
               </Typography>
-              ? You will no longer be able to login with this account.
-            </Typography>
-          </Box>
+              <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.6 }}>
+                Are you sure you want to disconnect{' '}
+                <Typography component="span" sx={{ color: '#FFFFFF', fontWeight: 600 }}>
+                  {selectedIdentity && getProviderName(selectedIdentity.provider)}
+                </Typography>
+                ? You will no longer be able to login with this account.
+              </Typography>
+            </Box>
 
-          <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
-            <Button
-              onClick={handleDeleteIdentity}
-              disabled={deleting}
-              variant="contained"
-              fullWidth
-              sx={{
-                backgroundColor: '#EF4444',
-                color: '#FFFFFF',
-                borderRadius: '10px',
-                textTransform: 'none',
-                fontWeight: 600,
-                py: 1.5,
-                fontSize: '1rem',
-                transition: 'all 0.2s ease-out',
-                '&:hover': {
-                  backgroundColor: '#DC2626'},
-                '&:disabled': {
-                  backgroundColor: 'rgba(239, 68, 68, 0.5)'}}}
-            >
-              {deleting ? 'Disconnecting...' : 'Disconnect'}
-            </Button>
-            <Button
-              onClick={() => setDeleteDrawerOpen(false)}
-              fullWidth
-              sx={{
-                color: '#FFFFFF',
-                borderColor: 'rgba(255, 255, 255, 0.2)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: '10px',
-                textTransform: 'none',
-                fontWeight: 600,
-                py: 1.5,
-                fontSize: '1rem',
-                backgroundColor: 'transparent',
-                transition: 'all 0.2s ease-out',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  borderColor: 'rgba(255, 255, 255, 0.3)'}}}
-            >
-              Cancel
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
+              <Button
+                onClick={handleDeleteIdentity}
+                disabled={deleting}
+                variant="contained"
+                fullWidth
+                sx={{
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  py: 1.5,
+                  fontSize: '1rem',
+                  transition: 'all 0.2s ease-out',
+                  '&:hover': {
+                    backgroundColor: '#DC2626'},
+                  '&:disabled': {
+                    backgroundColor: 'rgba(239, 68, 68, 0.5)'}}}
+              >
+                {deleting ? 'Disconnecting...' : 'Disconnect'}
+              </Button>
+              <Button
+                onClick={() => setDeleteDrawerOpen(false)}
+                fullWidth
+                sx={{
+                  color: '#FFFFFF',
+                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  py: 1.5,
+                  fontSize: '1rem',
+                  backgroundColor: 'transparent',
+                  transition: 'all 0.2s ease-out',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    borderColor: 'rgba(255, 255, 255, 0.3)'}}}
+              >
+                Cancel
+              </Button>
+            </Box>
           </Box>
-        </Box>
-      </Drawer>
+        </Drawer>
+      )}
     </Box>
   );
 }
