@@ -34,6 +34,9 @@ export const AppwriteService = {
   setMasterpassFlag: VaultService.setMasterpassFlag.bind(VaultService),
   hasMasterpass: VaultService.hasMasterpass.bind(VaultService),
   hasPasskey: VaultService.hasPasskey.bind(VaultService),
+  createSecurityLog: VaultService.createSecurityLog.bind(VaultService),
+  listSecurityLogs: VaultService.listSecurityLogs.bind(VaultService),
+  getSecurityLog: VaultService.getSecurityLog.bind(VaultService),
 
   // --- Vault & User State ---
   getUserDoc: VaultService.getUserDoc,

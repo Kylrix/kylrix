@@ -31,22 +31,21 @@ import {
     Phone,
     ChevronLeft,
     File as FileIcon,
-    Check,
-    CheckCheck,
     MoreVertical,
     Trash2,
     FileText,
     Key,
-    Clock,
     X,
     Reply,
     Copy,
     Coins,
     Zap,
-    Pin} from 'lucide-react';
+    Pin,
+    Lock,
+} from 'lucide-react';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
-import { ProfilePeekDrawer } from '@/components/profile/ProfilePeekDrawer';
+import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import SudoModal from '../overlays/SudoModal';
 import { usePresence } from '../providers/PresenceProvider';
@@ -73,11 +72,11 @@ import {
     chatConversationCacheKey,
     chatMessagesCacheKey,
     sanitizeMessagesForRest,
+    peekChatsListMemory,
 } from '@/lib/chat/local-chat-cache';
 import type { ChatMessage, ChatReaction, SenderProfile } from './chat-types';
 import { MessagesType } from './chat-types';
 import {
-    getMessageTimestamp,
     getClientReadSegments,
     dedupeReactionsByUser,
     sortReactionGroups,
@@ -85,6 +84,7 @@ import {
 } from './chat-message-utils';
 import { ChatDraftInput } from './ChatDraftInput';
 import { ChatMessageContent } from './ChatMessageContent';
+import { ProfilePeekDrawer } from '@/components/profile/ProfilePeekDrawer';
 
 export const ChatWindow = ({
     conversationId,
@@ -106,8 +106,14 @@ export const ChatWindow = ({
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
     const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [conversation, setConversation] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const [conversation, setConversation] = useState<any>(() => {
+        const fromList = peekChatsListMemory().find(
+            (c: any) => c.$id === conversationId || c.id === conversationId,
+        );
+        return fromList || null;
+    });
+    const [_loading, setLoading] = useState(false);
+    const [messagesLoading, setMessagesLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [attachment, setAttachment] = useState<File | null>(null);
     const [isRecording, setIsRecording] = useState(false);
@@ -342,32 +348,35 @@ export const ChatWindow = ({
         if (!conversationId) return;
         console.log('[ChatWindow] loadMessages start for:', conversationId);
         try {
+            // Paint ciphertext cache immediately — never block shell on decrypt / network
             const cachedMessages = await LocalEngine.cacheGet<ChatMessage[]>(
                 chatMessagesCacheKey(conversationId),
             );
             if (cachedMessages?.length) {
-                let hydrated = cachedMessages;
-                try {
-                    if (ecosystemSecurity.status.isUnlocked && user?.$id) {
-                        const convForDecrypt = await ChatService.getConversationById(
-                            conversationId,
-                            user.$id,
-                        ).catch(() => null);
-                        if (convForDecrypt) {
-                            hydrated = (await ChatService.decryptMessageRows(
+                startTransition(() => setMessages(cachedMessages));
+                setMessagesLoading(false);
+
+                if (ecosystemSecurity.status.isUnlocked && user?.$id) {
+                    void (async () => {
+                        try {
+                            const convForDecrypt = await ChatService.getConversationById(
+                                conversationId,
+                                user.$id,
+                            ).catch(() => null);
+                            if (!convForDecrypt) return;
+                            const hydrated = (await ChatService.decryptMessageRows(
                                 cachedMessages,
                                 convForDecrypt,
                                 user.$id,
                             )) as ChatMessage[];
+                            startTransition(() => setMessages(hydrated));
+                        } catch {
+                            /* keep ciphertext until network */
                         }
-                    }
-                } catch {
-                    /* show ciphertext placeholders until network */
+                    })();
                 }
-                startTransition(() => setMessages(hydrated));
-                setLoading(false);
             } else {
-                setLoading(true);
+                setMessagesLoading(true);
             }
 
             startTransition(() => setMessageReactions({}));
@@ -413,6 +422,7 @@ export const ChatWindow = ({
         } catch (error: unknown) {
             console.error('[ChatWindow] loadMessages failed:', error);
         } finally {
+            setMessagesLoading(false);
             setLoading(false);
         }
     }, [conversationId, loadReactions, user, startTransition]);
@@ -613,8 +623,14 @@ export const ChatWindow = ({
 
         if (initialLoadRef.current !== conversationId) {
             initialLoadRef.current = conversationId;
-            loadMessages();
-            loadConversation();
+            setMessages([]);
+            setMessagesLoading(true);
+            const fromList = peekChatsListMemory().find(
+                (c: any) => c.$id === conversationId || c.id === conversationId,
+            );
+            if (fromList) setConversation(fromList);
+            void loadMessages();
+            void loadConversation();
         }
         let unsub: any;
         const initRealtime = async () => {
@@ -937,8 +953,12 @@ export const ChatWindow = ({
 
             const sentMessage = await ChatService.sendMessage(conversationId, user.$id, text, type, actualAttachments, replyToId);
 
-            // Replace optimistic message with the real one to maintain state (readBy, etc)
-            const messageForState = { ...sentMessage, content: text } as unknown as ChatMessage;
+            // Replace optimistic message with the real one (green SyncStatusDot)
+            const messageForState = {
+                ...sentMessage,
+                content: text,
+                status: 'sent',
+            } as unknown as ChatMessage;
             startTransition(() => {
                 setMessages(prev => prev.map(m => m.$id === optimisticId ? messageForState : m));
             });
@@ -1141,23 +1161,7 @@ export const ChatWindow = ({
 
 
 
-    if (loading) return (
-        <Box sx={{ p: 2 }}>
-            <Stack spacing={1.5}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <></>
-                    <Box sx={{ flex: 1 }}>
-                        <></>
-                        <></>
-                    </Box>
-                </Box>
-                {[1, 2, 3, 4].map((i) => (
-                    <React.Fragment key={i} />
-                ))}
-            </Stack>
-        </Box>
-    );
-
+    // Always paint mural + header + composer. Never blank the shell waiting on messages.
     return (
         <Box sx={{
             bgcolor: '#0A0908',
@@ -1220,16 +1224,26 @@ export const ChatWindow = ({
                         />
                         <Box>
                             {conversation?.type === 'direct' && !isSelf ? (
-                                <IdentityName
-                                    verified={partnerVerification.verified}
-                                    sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', lineHeight: 1.1, color: '#fff', fontSize: '1rem' }}
-                                >
-                                    {conversation?.name || 'Loading...'}
-                                </IdentityName>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                    <IdentityName
+                                        verified={partnerVerification.verified}
+                                        sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', lineHeight: 1.1, color: '#fff', fontSize: '1rem' }}
+                                    >
+                                        {conversation?.name || 'Loading...'}
+                                    </IdentityName>
+                                    {conversation?.isEncrypted ? (
+                                        <Lock size={13} strokeWidth={2.5} color="#F59E0B" aria-label="Secure chat" />
+                                    ) : null}
+                                </Box>
                             ) : (
-                                <Typography variant="subtitle1" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', lineHeight: 1.1, color: isSelf ? '#6366F1' : '#fff', fontSize: '1rem' }}>
-                                    {conversation?.name || 'Loading...'}
-                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', lineHeight: 1.1, color: isSelf ? '#6366F1' : '#fff', fontSize: '1rem' }}>
+                                        {conversation?.name || 'Loading...'}
+                                    </Typography>
+                                    {conversation?.isEncrypted ? (
+                                        <Lock size={13} strokeWidth={2.5} color="#F59E0B" aria-label="Secure chat" />
+                                    ) : null}
+                                </Box>
                             )}
                             {conversation?.type === 'group' && (
                                 <Typography variant="caption" sx={{ color: '#9B9691', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.65rem', fontFamily: 'var(--font-mono)' }}>
@@ -1414,19 +1428,17 @@ export const ChatWindow = ({
                         </Button>
                     </Box>
                 )}
-                {loading ? (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, py: 1 }}>
-                        <Stack direction="row" spacing={1.5} alignItems="center">
-                            <></>
-                            <Box sx={{ flex: 1 }}>
-                                <></>
-                                <></>
-                            </Box>
-                        </Stack>
-                        {Array.from({ length: 5 }).map((_, _index) => (
-                            <></>
+                {messagesLoading && messages.length === 0 ? (
+                    <div className="flex flex-col gap-3 py-2 animate-pulse">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div
+                                key={i}
+                                className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}
+                            >
+                                <div className="h-12 w-[55%] rounded-2xl bg-white/[0.04] border border-white/[0.04]" />
+                            </div>
                         ))}
-                    </Box>
+                    </div>
                 ) : (
                     <>
                         {showFirstContactWarning && (
@@ -1570,14 +1582,15 @@ export const ChatWindow = ({
                                                 </span>
                                                 {isOutgoing && (
                                                     <span className="inline-flex items-center text-white/40">
-                                                        {String(msg.$id).startsWith('optimistic-') || (msg as any).status === 'sending' ? (
-                                                            <Clock size={11} strokeWidth={2.5} />
-                                                        ) : (msg as any).status === 'error' ? (
+                                                        {(msg as any).status === 'error' ? (
                                                             <span className="text-[10px] text-[#ff4d4d]">Failed</span>
-                                                        ) : getMessageTimestamp(msg) <= clientReadSegments.outgoingReadAt ? (
-                                                            <CheckCheck size={13} color="#F59E0B" strokeWidth={2.5} />
                                                         ) : (
-                                                            <Check size={13} strokeWidth={2.5} />
+                                                            <SyncStatusDot
+                                                                pending={
+                                                                    String(msg.$id).startsWith('optimistic-') ||
+                                                                    (msg as any).status === 'sending'
+                                                                }
+                                                            />
                                                         )}
                                                     </span>
                                                 )}

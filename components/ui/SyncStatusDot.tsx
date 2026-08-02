@@ -14,20 +14,26 @@ function useEnginePending(resourceId?: string | null) {
  * Amber/green from the sync engine pending queue only.
  * Same authority that flushes live copy → Appwrite (never UI theater).
  * Pass `resourceId` (e.g. goal:xxx) or legacy `noteId` (bare note id).
+ * Optional `pending` overrides the engine (e.g. chat optimistic send).
  */
 export function SyncStatusDot({
   noteId,
-  resourceId}: {
+  resourceId,
+  pending: pendingOverride,
+}: {
   noteId?: string | null;
   resourceId?: string | null;
+  /** When set, drives the dot directly (pulse amber / solid green). */
+  pending?: boolean | null;
 }) {
-  const pending = useEnginePending(resourceId ?? noteId);
+  const enginePending = useEnginePending(resourceId ?? noteId);
+  const pending = typeof pendingOverride === 'boolean' ? pendingOverride : enginePending;
 
   if (pending) {
     return (
       <span
         className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]"
-        title="Not synced"
+        title="Sending"
       />
     );
   }
@@ -35,7 +41,7 @@ export function SyncStatusDot({
   return (
     <span
       className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"
-      title="Synced"
+      title="Sent"
     />
   );
 }

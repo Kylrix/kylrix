@@ -11,18 +11,24 @@ import {
     useTheme,
     useMediaQuery
 } from '@/lib/openbricks/primitives';
-import { X, ShieldCheck, MessageSquare } from 'lucide-react';
+import { X, ShieldCheck, MessageSquare, Lock } from 'lucide-react';
 import { ChatService } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useSudo } from '@/context/SudoContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import toast from 'react-hot-toast';
 import UserSearch from '@/components/UserSearch';
 import { createGhostNoteChat, listGhostNoteChats } from '@/lib/actions/client-ops';
-import { isValidX25519PublicKey, formatSecureChatStartError } from '@/lib/crypto/public-key';
-import { UsersService } from '@/lib/services/users';
+import { formatSecureChatStartError } from '@/lib/crypto/public-key';
+import {
+    discoverRecipientSecureReady,
+    resolveChatChannelKind,
+} from '@/lib/chat/recipient-secure-ready';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { openCommObjectDetail } from '@/components/objects/CommObjectDetail';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 const DRAWER_SX = {
@@ -46,11 +52,14 @@ export function NewChatDrawer({
 }) {
     const { user } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
     const { requestSudo } = useSudo();
     const theme = useTheme();
     const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
     const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
     const { setIsDrawerOpen } = useDrawerState();
+    const { openOverlay, closeOverlay } = useOverlay();
+    const { openSidebar, closeSidebar } = useDynamicSidebar();
 
     const copy = useMemo(() => {
         if (mode === 'thread') {
@@ -63,43 +72,56 @@ export function NewChatDrawer({
         }
 
         return {
-            title: 'Secure Chat',
-            helper: 'Search for any user to start a secure chat.',
-            loading: 'Opening secure chat...',
-            success: 'Secure chat ready!',
-            errorPrefix: 'Failed to create secure chat'};
+            title: 'New chat',
+            helper: 'Secure when the other person has set it up.',
+            loading: 'Opening chat...',
+            success: 'Chat ready!',
+            errorPrefix: 'Failed to create chat'};
     }, [mode]);
+
+    const openConversation = useCallback(
+        (id: string, kind: 'chat' | 'thread' = 'chat') => {
+            onClose();
+            const onChatsPage = Boolean(pathname?.startsWith('/connect/chats'));
+            const desktop = typeof window !== 'undefined' && window.innerWidth >= 900;
+            if (desktop && onChatsPage) {
+                router.replace(`/connect/chats?c=${encodeURIComponent(id)}`, { scroll: false });
+                return;
+            }
+            openCommObjectDetail({
+                conversationId: id,
+                kind,
+                openSidebar,
+                openOverlay,
+                closeSidebar,
+                closeOverlay,
+            });
+        },
+        [onClose, pathname, router, openSidebar, openOverlay, closeSidebar, closeOverlay],
+    );
 
     const startChat = useCallback(async (targetUser: any) => {
         if (!user) return;
-        const targetUserId = targetUser.id || targetUser.$id;
+        const targetUserId = targetUser.id || targetUser.$id || targetUser.userId;
 
-        let recipientPublicKey =
-            typeof targetUser.publicKey === 'string' ? targetUser.publicKey : null;
+        toast.loading('Checking secure setup…', { id: 'ghost-init' });
 
-        if (mode === 'secure') {
+        const discovery = await discoverRecipientSecureReady(
+            targetUserId,
+            typeof targetUser.publicKey === 'string' ? targetUser.publicKey : null,
+        );
+
+        const channel = resolveChatChannelKind({
+            recipientReady: discovery.ready,
+            explicitThread: mode === 'thread',
+        });
+
+        if (channel === 'thread') {
             try {
-                const profile = await UsersService.getProfileById(targetUserId);
-                recipientPublicKey = profile?.publicKey || recipientPublicKey;
-            } catch (error) {
-                console.warn('[NewChatDrawer] Failed to refresh recipient profile:', error);
-            }
-        }
-
-        const recipientReadyForSecureChat = isValidX25519PublicKey(recipientPublicKey);
-        const useThreadFlow =
-            mode === 'thread' ||
-            !ecosystemSecurity.status.isUnlocked ||
-            !recipientReadyForSecureChat;
-
-        if (useThreadFlow) {
-            try {
-                if (mode === 'secure' && ecosystemSecurity.status.isUnlocked && !recipientReadyForSecureChat) {
+                if (mode !== 'thread' && !discovery.ready) {
                     toast(
-                        recipientPublicKey
-                            ? "This person hasn't finished secure chat setup yet. Starting a thread instead."
-                            : "This person hasn't set up secure chat yet. Starting a thread instead.",
-                        { id: 'ghost-init' }
+                        "This person hasn't set up secure chat yet. Starting a standard chat instead.",
+                        { id: 'ghost-init' },
                     );
                 } else {
                     toast.loading(copy.loading, { id: 'ghost-init' });
@@ -116,16 +138,14 @@ export function NewChatDrawer({
 
                 if (foundGhost) {
                     toast.dismiss('ghost-init');
-                    router.push(`/connect/chats?c=${foundGhost.$id}`);
-                    onClose();
+                    openConversation(foundGhost.$id, 'thread');
                     return;
                 }
 
-                const title = targetUser.displayName || targetUser.username || targetUser.title || (mode === 'thread' ? 'Thread' : 'Secure Chat');
+                const title = targetUser.displayName || targetUser.username || targetUser.title || (mode === 'thread' ? 'Thread' : 'Chat');
                 const newGhost = await createGhostNoteChat(title, [user.$id, targetUserId]);
                 toast.success(copy.success, { id: 'ghost-init' });
-                router.push(`/connect/chats?c=${newGhost.$id}`);
-                onClose();
+                openConversation(newGhost.$id, 'thread');
             } catch (error: any) {
                 console.error('Failed to create thread chat:', error);
                 toast.error(formatSecureChatStartError(error, mode), { id: 'ghost-init' });
@@ -133,32 +153,41 @@ export function NewChatDrawer({
             return;
         }
 
-        try {
-            const existing = await ChatService.getConversations(user.$id);
-            const found = existing.rows.find((c: any) =>
-                c.type === 'direct' && c.participants.includes(targetUserId)
-            );
-            if (found) {
-                router.push(`/connect/chats?c=${found.$id}`);
-                onClose();
-                return;
-            }
-        } catch {}
-
-        requestSudo({
-            onSuccess: async () => {
+        const openSecure = async () => {
+            try {
+                await ecosystemSecurity.ensureE2EIdentity(user.$id);
                 try {
-                    await ecosystemSecurity.ensureE2EIdentity(user.$id);
-                    const newConv = await ChatService.createConversation([user.$id, targetUserId], 'direct');
-                    toast.success(copy.success, { id: 'ghost-init' });
-                    router.push(`/connect/chats?c=${newConv.$id}`);
-                    onClose();
-                } catch (error: any) {
-                    toast.error(formatSecureChatStartError(error, mode), { id: 'ghost-init' });
-                }
+                    const existing = await ChatService.getConversations(user.$id);
+                    const found = existing.rows.find((c: any) =>
+                        c.type === 'direct' && c.participants.includes(targetUserId)
+                    );
+                    if (found) {
+                        toast.dismiss('ghost-init');
+                        openConversation(found.$id, 'chat');
+                        return;
+                    }
+                } catch {}
+
+                const newConv = await ChatService.createConversation([user.$id, targetUserId], 'direct');
+                toast.success(copy.success, { id: 'ghost-init' });
+                openConversation(newConv.$id, 'chat');
+            } catch (error: any) {
+                toast.error(formatSecureChatStartError(error, 'secure'), { id: 'ghost-init' });
             }
-        });
-    }, [user, router, onClose, requestSudo, mode, copy]);
+        };
+
+        if (!ecosystemSecurity.status.isUnlocked) {
+            toast.dismiss('ghost-init');
+            requestSudo({
+                onSuccess: () => {
+                    void openSecure();
+                },
+            });
+            return;
+        }
+
+        await openSecure();
+    }, [user, mode, copy, openConversation, requestSudo]);
 
     useEffect(() => {
         if (selectedUsers.length > 0) {
@@ -197,7 +226,7 @@ export function NewChatDrawer({
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                     <Stack direction="row" spacing={1.5} alignItems="center">
                         <Box sx={{ p: 1, borderRadius: '12px', bgcolor: alpha('#F59E0B', 0.1), color: '#F59E0B' }}>
-                            <MessageSquare size={20} />
+                            {mode === 'thread' ? <MessageSquare size={20} /> : <Lock size={20} />}
                         </Box>
                         <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>
                             {copy.title}

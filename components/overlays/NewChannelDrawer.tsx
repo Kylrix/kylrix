@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Drawer,
     Box,
@@ -15,18 +15,20 @@ import {
     useMediaQuery
 } from '@/lib/openbricks/primitives';
 import { X, Users } from 'lucide-react';
-import { UsersService } from '@/lib/services/users';
 import { ChatService } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useSudo } from '@/context/SudoContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import toast from 'react-hot-toast';
 import UserSearch from '@/components/UserSearch';
-import { isValidX25519PublicKey } from '@/lib/crypto/public-key';
+import { discoverRecipientSecureReady } from '@/lib/chat/recipient-secure-ready';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { openCommObjectDetail } from '@/components/objects/CommObjectDetail';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 const DRAWER_SX = {
@@ -43,6 +45,7 @@ const DRAWER_SX = {
 export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
     const { user } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
     const { requestSudo } = useSudo();
     const { openProUpgrade } = useProUpgrade();
     const { currentTier } = useSubscription();
@@ -51,6 +54,8 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
     const theme = useTheme();
     const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
     const { setIsDrawerOpen } = useDrawerState();
+    const { openOverlay, closeOverlay } = useOverlay();
+    const { openSidebar, closeSidebar } = useDynamicSidebar();
     const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
     const [channelName, setChannelName] = useState('');
     const [creating, setCreating] = useState(false);
@@ -60,6 +65,27 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
         setIsDrawerOpen(true);
         return () => setIsDrawerOpen(false);
     }, [isOpen, setIsDrawerOpen]);
+
+    const openConversation = useCallback(
+        (id: string) => {
+            onClose();
+            const onChatsPage = Boolean(pathname?.startsWith('/connect/chats'));
+            const desktop = typeof window !== 'undefined' && window.innerWidth >= 900;
+            if (desktop && onChatsPage) {
+                router.replace(`/connect/chats?c=${encodeURIComponent(id)}`, { scroll: false });
+                return;
+            }
+            openCommObjectDetail({
+                conversationId: id,
+                kind: 'chat',
+                openSidebar,
+                openOverlay,
+                closeSidebar,
+                closeOverlay,
+            });
+        },
+        [onClose, pathname, router, openSidebar, openOverlay, closeSidebar, closeOverlay],
+    );
 
     const handleCreateChannel = async () => {
         if (!user) return;
@@ -82,17 +108,26 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
                 try {
                     await ecosystemSecurity.ensureE2EIdentity(user.$id);
                     const participantIds = [user.$id, ...selectedUsers.map(u => u.id || u.$id)];
-                    
-                    // Final safety check: ensure all participants have public keys
-                    const profiles = await Promise.all(participantIds.map(id => UsersService.getProfileById(id)));
-                    const missingKey = profiles.find(p => !p?.publicKey);
-                    if (missingKey) {
-                        throw new Error(`${missingKey.displayName || 'A member'} is not ready for secure channels yet.`);
+
+                    const discoveries = await Promise.all(
+                        participantIds.map((id) => discoverRecipientSecureReady(id)),
+                    );
+                    const missing = discoveries.find((d) => d.userId !== user.$id && !d.ready);
+                    if (missing) {
+                        const label =
+                            missing.profile?.displayName ||
+                            missing.profile?.username ||
+                            'A member';
+                        throw new Error(`${label} hasn't set up secure chat yet.`);
                     }
 
-                    const newConv = await ChatService.createConversation(participantIds, 'group', channelName.trim());
-                    router.push(`/connect/chats?c=${newConv.$id}`);
-                    onClose();
+                    const newConv = await ChatService.createConversation(
+                        participantIds,
+                        'group',
+                        channelName.trim(),
+                    );
+                    toast.success('Hangout ready');
+                    openConversation(newConv.$id);
                 } catch (error: any) {
                     toast.error(`Failed: ${error.message}`);
                 } finally {
@@ -130,18 +165,18 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
                         <Box sx={{ p: 1, borderRadius: '12px', bgcolor: alpha('#F59E0B', 0.1), color: '#F59E0B' }}>
                             <Users size={20} />
                         </Box>
-                        <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>New Channel</Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>New Hangout</Typography>
                     </Stack>
                     <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.5)' }}><X size={20} /></IconButton>
                 </Box>
 
                 <Stack spacing={3}>
                     <Box>
-                        <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block', fontSize: '0.7rem' }}>Channel Identity</Typography>
+                        <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 1, display: 'block', fontSize: '0.7rem' }}>Hangout name</Typography>
                         <TextField
                             fullWidth
                             variant="outlined"
-                            placeholder="e.g. Alpha Squad"
+                            placeholder="e.g. Weekend crew"
                             value={channelName}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setChannelName(e.target.value)}
                             sx={{
@@ -159,19 +194,32 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
 
                     <Box>
                         <UserSearch 
-                            label="INVITE CHANNEL MEMBERS"
-                            placeholder="Search verified users..."
+                            label="ADD PEOPLE"
+                            placeholder="Search by name or @username"
                             selectedUsers={selectedUsers}
                             onSelect={(u) => {
-                                if (!isValidX25519PublicKey(u.publicKey)) {
-                                    toast.error(`${u.displayName || u.username} hasn't set up their secure identity correctly (invalid key).`);
-                                    return;
-                                }
-                                setSelectedUsers([...selectedUsers, u]);
+                                void (async () => {
+                                    const id = u.id || (u as any).$id;
+                                    const d = await discoverRecipientSecureReady(
+                                        id,
+                                        typeof u.publicKey === 'string' ? u.publicKey : null,
+                                    );
+                                    if (!d.ready) {
+                                        toast.error(
+                                            `${u.displayName || u.username} hasn't set up secure chat yet.`,
+                                        );
+                                        return;
+                                    }
+                                    setSelectedUsers((prev) =>
+                                        prev.some((x) => (x.id || (x as any).$id) === id)
+                                            ? prev
+                                            : [...prev, { ...u, publicKey: d.publicKey }],
+                                    );
+                                })();
                             }}
                             onRemove={(id) => setSelectedUsers(selectedUsers.filter(u => (u.id || u.$id) !== id))}
                             multiple={true}
-                            excludeIds={[user?.$id].filter(Boolean) as string[]}
+                            excludeIds={user?.$id ? [user.$id] : []}
                         />
                     </Box>
 
@@ -181,18 +229,17 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
                         disabled={creating || !channelName.trim() || selectedUsers.length === 0}
                         onClick={handleCreateChannel}
                         sx={{
-                            py: 1.75,
-                            borderRadius: '16px',
-                            fontWeight: 900,
+                            mt: 1,
+                            height: 48,
+                            borderRadius: '14px',
                             bgcolor: '#F59E0B',
                             color: '#000',
-                            textTransform: 'none',
-                            fontSize: '1rem',
-                            '&:hover': { bgcolor: alpha('#F59E0B', 0.8) },
-                            '&.ob-disabled': { bgcolor: alpha('#F59E0B', 0.2), color: alpha('#fff', 0.3) }
+                            fontWeight: 900,
+                            '&:hover': { bgcolor: '#eab308' },
+                            '&.Mui-disabled': { bgcolor: 'rgba(245,158,11,0.2)', color: 'rgba(0,0,0,0.4)' }
                         }}
                     >
-                        {creating ? <CircularProgress size={24} color="inherit" /> : 'Create Channel'}
+                        {creating ? <CircularProgress size={22} sx={{ color: '#000' }} /> : isTeams ? 'Create hangout' : 'Create hangout (Pro)'}
                     </Button>
                 </Stack>
             </Box>

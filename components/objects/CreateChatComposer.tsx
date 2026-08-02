@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp, MessageSquare, Users, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { ChevronDown, ChevronUp, Lock, MessageSquare, Users, X } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import UserSearch from '@/components/UserSearch';
 import { useAuth } from '@/lib/auth';
@@ -10,10 +10,16 @@ import { useSudo } from '@/context/SudoContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { ChatService } from '@/lib/services/chat';
-import { UsersService } from '@/lib/services/users';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { createGhostNoteChat, listGhostNoteChats } from '@/lib/actions/client-ops';
-import { isValidX25519PublicKey, formatSecureChatStartError } from '@/lib/crypto/public-key';
+import { formatSecureChatStartError } from '@/lib/crypto/public-key';
+import {
+  discoverRecipientSecureReady,
+  resolveChatChannelKind,
+} from '@/lib/chat/recipient-secure-ready';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { openCommObjectDetail } from '@/components/objects/CommObjectDetail';
 
 export type ChatCreateMode = 'chat' | 'hangout';
 
@@ -24,7 +30,7 @@ type Props = {
   onToggleExpand?: () => void;
   /** Seed mode — chat (1:1) default, hangout = multi-recipient group */
   initialMode?: ChatCreateMode;
-  /** Legacy unified-drawer thread mode maps to chat via ghost notes */
+  /** True only when user opened create from Threads (explicit thread intent) */
   legacyThread?: boolean;
 };
 
@@ -43,9 +49,12 @@ export function CreateChatComposer({
 }: Props) {
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const { requestSudo } = useSudo();
   const { openProUpgrade } = useProUpgrade();
   const { currentTier } = useSubscription();
+  const { openOverlay, closeOverlay } = useOverlay();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
   const isTeams =
     currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
 
@@ -62,39 +71,60 @@ export function CreateChatComposer({
     onRegisterClose?.(() => onClose());
   }, [onClose, onRegisterClose]);
 
+  /** Open fullscreen / sidebar chat detail — no dedicated chat page navigation. */
   const openConversation = useCallback(
-    (id: string) => {
-      router.push(`/connect/chats?c=${id}`);
+    (id: string, kind: 'chat' | 'thread' = 'chat') => {
       onClose();
+      const onChatsPage = Boolean(pathname?.startsWith('/connect/chats'));
+      const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
+
+      // Desktop chats already has a fused right pane — hydrate via ?c=
+      if (isDesktop && onChatsPage) {
+        router.replace(`/connect/chats?c=${encodeURIComponent(id)}`, { scroll: false });
+        return;
+      }
+
+      openCommObjectDetail({
+        conversationId: id,
+        kind,
+        openSidebar,
+        openOverlay,
+        closeSidebar,
+        closeOverlay,
+      });
     },
-    [router, onClose],
+    [onClose, pathname, router, openSidebar, openOverlay, closeSidebar, closeOverlay],
   );
 
   const startDirectChat = useCallback(
     async (targetUser: any) => {
       if (!user) return;
-      const targetUserId = targetUser.id || targetUser.$id;
-      let recipientPublicKey =
-        typeof targetUser.publicKey === 'string' ? targetUser.publicKey : null;
+      const targetUserId = targetUser.id || targetUser.$id || targetUser.userId;
 
-      try {
-        const profile = await UsersService.getProfileById(targetUserId);
-        recipientPublicKey = profile?.publicKey || recipientPublicKey;
-      } catch {
-        /* keep */
-      }
+      toast.loading('Checking secure setup…', { id: 'chat-create' });
 
-      const recipientReady = isValidX25519PublicKey(recipientPublicKey);
-      const useThreadFlow =
-        legacyThread || !ecosystemSecurity.status.isUnlocked || !recipientReady;
+      const discovery = await discoverRecipientSecureReady(
+        targetUserId,
+        typeof targetUser.publicKey === 'string' ? targetUser.publicKey : null,
+      );
 
-      if (useThreadFlow) {
+      const channel = resolveChatChannelKind({
+        recipientReady: discovery.ready,
+        explicitThread: legacyThread,
+      });
+
+      // Explicit thread OR recipient not secure-ready → thread
+      if (channel === 'thread') {
         try {
-          if (!legacyThread && ecosystemSecurity.status.isUnlocked && !recipientReady) {
-            toast("This person hasn't set up secure chat yet. Starting a thread instead.");
+          if (!legacyThread && !discovery.ready) {
+            toast(
+              "This person hasn't set up secure chat yet. Starting a standard chat instead.",
+              { id: 'chat-create' },
+            );
           } else {
             toast.loading('Opening chat…', { id: 'chat-create' });
           }
+
           const existingGhosts = await listGhostNoteChats();
           const foundGhost = existingGhosts.find((c: any) => {
             let metadataObj: any = {};
@@ -109,50 +139,67 @@ export function CreateChatComposer({
           });
           if (foundGhost) {
             toast.dismiss('chat-create');
-            openConversation(foundGhost.$id);
+            openConversation(foundGhost.$id, 'thread');
             return;
           }
           const title =
-            targetUser.displayName || targetUser.username || targetUser.title || 'Chat';
+            discovery.profile?.displayName ||
+            targetUser.displayName ||
+            targetUser.username ||
+            targetUser.title ||
+            'Chat';
           const newGhost = await createGhostNoteChat(title, [user.$id, targetUserId]);
           toast.success('Chat ready', { id: 'chat-create' });
-          openConversation(newGhost.$id);
+          openConversation(newGhost.$id, 'thread');
         } catch (error: any) {
-          toast.error(formatSecureChatStartError(error, legacyThread ? 'thread' : 'secure'), {
-            id: 'chat-create',
-          });
+          toast.error(formatSecureChatStartError(error, 'thread'), { id: 'chat-create' });
         }
         return;
       }
 
-      try {
-        const existing = await ChatService.getConversations(user.$id);
-        const found = existing.rows.find(
-          (c: any) => c.type === 'direct' && c.participants.includes(targetUserId),
-        );
-        if (found) {
-          openConversation(found.$id);
-          return;
+      // Secure path — recipient is ready. Unlock vault if needed; never fall back to thread.
+      const openSecure = async () => {
+        try {
+          await ecosystemSecurity.ensureE2EIdentity(user.$id);
+          try {
+            const existing = await ChatService.getConversations(user.$id);
+            const found = existing.rows.find(
+              (c: any) =>
+                c.type === 'direct' &&
+                Array.isArray(c.participants) &&
+                c.participants.includes(targetUserId),
+            );
+            if (found) {
+              toast.dismiss('chat-create');
+              openConversation(found.$id, 'chat');
+              return;
+            }
+          } catch {
+            /* create new */
+          }
+
+          const newConv = await ChatService.createConversation(
+            [user.$id, targetUserId],
+            'direct',
+          );
+          toast.success('Secure chat ready', { id: 'chat-create' });
+          openConversation(newConv.$id, 'chat');
+        } catch (error: any) {
+          toast.error(formatSecureChatStartError(error, 'secure'), { id: 'chat-create' });
         }
-      } catch {
-        /* create new */
+      };
+
+      if (!ecosystemSecurity.status.isUnlocked) {
+        toast.dismiss('chat-create');
+        requestSudo({
+          onSuccess: () => {
+            void openSecure();
+          },
+        });
+        return;
       }
 
-      requestSudo({
-        onSuccess: async () => {
-          try {
-            await ecosystemSecurity.ensureE2EIdentity(user.$id);
-            const newConv = await ChatService.createConversation(
-              [user.$id, targetUserId],
-              'direct',
-            );
-            toast.success('Chat ready');
-            openConversation(newConv.$id);
-          } catch (error: any) {
-            toast.error(formatSecureChatStartError(error, 'secure'));
-          }
-        },
-      });
+      await openSecure();
     },
     [user, legacyThread, openConversation, requestSudo],
   );
@@ -185,14 +232,17 @@ export function CreateChatComposer({
             user.$id,
             ...selectedUsers.map((u) => u.id || u.$id),
           ];
-          const profiles = await Promise.all(
-            participantIds.map((id) => UsersService.getProfileById(id)),
+          // Live discovery for every member — refuse hangout if anyone is not secure-ready
+          const discoveries = await Promise.all(
+            participantIds.map((id) => discoverRecipientSecureReady(id)),
           );
-          const missingKey = profiles.find((p) => !p?.publicKey);
-          if (missingKey) {
-            throw new Error(
-              `${missingKey.displayName || 'A member'} is not ready for secure hangouts yet.`,
-            );
+          const missing = discoveries.find((d) => d.userId !== user.$id && !d.ready);
+          if (missing) {
+            const label =
+              missing.profile?.displayName ||
+              missing.profile?.username ||
+              'A member';
+            throw new Error(`${label} hasn't set up secure chat yet.`);
           }
           const newConv = await ChatService.createConversation(
             participantIds,
@@ -200,7 +250,7 @@ export function CreateChatComposer({
             hangoutName.trim(),
           );
           toast.success('Hangout ready');
-          openConversation(newConv.$id);
+          openConversation(newConv.$id, 'chat');
         } catch (error: any) {
           toast.error(error?.message || 'Failed to create hangout');
         } finally {
@@ -237,8 +287,14 @@ export function CreateChatComposer({
           </div>
           <div className="min-w-0">
             <h3 className="text-lg font-black font-clash text-white tracking-tight truncate m-0">
-              {mode === 'hangout' ? 'New hangout' : 'New chat'}
+              {mode === 'hangout' ? 'New hangout' : legacyThread ? 'New thread' : 'New chat'}
             </h3>
+            {mode === 'chat' && !legacyThread ? (
+              <p className="text-[10px] font-bold uppercase tracking-wider text-white/35 m-0 mt-0.5 flex items-center gap-1">
+                <Lock size={10} className="text-[#F59E0B]" />
+                Secure when available
+              </p>
+            ) : null}
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -317,21 +373,28 @@ export function CreateChatComposer({
           selectedUsers={selectedUsers}
           onSelect={(u) => {
             if (mode === 'hangout') {
-              if (!isValidX25519PublicKey(u.publicKey)) {
-                toast.error(
-                  `${u.displayName || u.username} hasn't set up secure chat yet.`,
+              void (async () => {
+                const id = u.id || (u as any).$id;
+                const d = await discoverRecipientSecureReady(
+                  id,
+                  typeof u.publicKey === 'string' ? u.publicKey : null,
                 );
-                return;
-              }
-              if (selectedUsers.length >= HANGOUT_MAX) {
-                toast.error(`Up to ${HANGOUT_MAX} people besides you`);
-                return;
-              }
-              setSelectedUsers((prev) =>
-                prev.some((x) => (x.id || (x as any).$id) === (u.id || (u as any).$id))
-                  ? prev
-                  : [...prev, u],
-              );
+                if (!d.ready) {
+                  toast.error(
+                    `${u.displayName || u.username} hasn't set up secure chat yet.`,
+                  );
+                  return;
+                }
+                if (selectedUsers.length >= HANGOUT_MAX) {
+                  toast.error(`Up to ${HANGOUT_MAX} people besides you`);
+                  return;
+                }
+                setSelectedUsers((prev) =>
+                  prev.some((x) => (x.id || (x as any).$id) === id)
+                    ? prev
+                    : [...prev, { ...u, publicKey: d.publicKey }],
+                );
+              })();
               return;
             }
             setSelectedUsers([u]);

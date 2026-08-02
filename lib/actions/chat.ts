@@ -186,8 +186,9 @@ export async function getConversationsAction(payload: {
   const actor = await getActor(validatedJwt);
   
   if (!actor?.$id || actor.$id !== validatedUserId) {
-    console.warn('[getConversationsAction] Actor mismatch or not found. Returning empty list.');
-    return { total: 0, rows: [] };
+    // Never return an empty success — callers treat empty as "no chats" and may create duplicates.
+    console.warn('[getConversationsAction] Actor mismatch or not found.');
+    throw new Error('UNAUTHORIZED_CONVERSATIONS_LIST');
   }
 
   const tables = createSystemTablesDB();
@@ -197,11 +198,16 @@ export async function getConversationsAction(payload: {
 
   try {
     // 1. Fetch conversations from standard conversationMembers table
+    let memberQueryOk = true;
     const memberRows = await tables.listRows({
       databaseId: DB_ID,
       tableId: CONV_MEMBERS_TABLE,
       queries: [Query.equal('userId', validatedUserId), Query.limit(1000)]
-    }).catch(() => ({ total: 0, rows: [] }));
+    }).catch((err) => {
+      memberQueryOk = false;
+      console.warn('[getConversationsAction] conversationMembers query failed:', err?.message || err);
+      return { total: 0, rows: [] as any[] };
+    });
 
     const conversationIds = Array.from(new Set(
       (memberRows.rows || [])
@@ -215,20 +221,25 @@ export async function getConversationsAction(payload: {
           databaseId: DB_ID,
           tableId: CONV_TABLE,
           queries: [Query.equal('$id', conversationIds), Query.limit(Math.min(100, conversationIds.length))]
-      }).catch(() => ({ total: 0, rows: [] }));
+      });
       standardConversations = standardRes.rows || [];
     }
 
-    // 2. Fetch legacy conversations directly where participants list contains user ID
+    // 2. Participants query is authoritative for existence (incl. personal chat).
+    // Do not swallow failures into an empty list.
     const legacyRes = await tables.listRows({
       databaseId: DB_ID,
       tableId: CONV_TABLE,
       queries: [
-        Query.equal('participants', validatedUserId),
+        Query.contains('participants', validatedUserId),
         Query.limit(100)
       ]
-    }).catch(() => ({ total: 0, rows: [] }));
+    });
     const legacyConversations = legacyRes.rows || [];
+
+    // If members failed and we somehow got no legacy rows either, still return legacy success
+    // (participants probe succeeded — empty can be real).
+    void memberQueryOk;
 
     // 3. Combine and deduplicate
     const combinedMap = new Map<string, any>();

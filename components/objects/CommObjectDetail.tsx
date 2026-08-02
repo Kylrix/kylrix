@@ -45,11 +45,12 @@ export function CommObjectDetail({
     else router.push('/connect/chats');
   }, [onClose, router]);
 
-  // Hydrate huddle flag from local copy first — never block mural paint.
+  // Instant mural — never wait on getNote / network before painting ChatWindow.
+  // Huddle detection can flip later; default to chat shell for kind !== thread.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      if (kind === 'call') return;
+      if (kind === 'call' || kind === 'thread') return;
 
       try {
         const cached = await LocalEngine.cacheGet<{
@@ -59,14 +60,19 @@ export function CommObjectDetail({
         if (!cancelled && cached?.isHuddle) {
           setIsHuddle(true);
           setHuddleTitle(cached.title || title || 'Thread');
+          return;
         }
       } catch {
         /* ignore */
       }
 
+      // Soft probe — do not block UI; timeout so hung note fetch can't stall forever
       try {
-        const note = (await getNote(conversationId)) as any;
-        if (cancelled) return;
+        const note = (await Promise.race([
+          getNote(conversationId),
+          new Promise((resolve) => setTimeout(() => resolve(null), 2500)),
+        ])) as any;
+        if (cancelled || !note) return;
         if (note && (note.isChat || note.isThread || note.isGhost)) {
           setIsHuddle(true);
           setHuddleTitle(note.title || title || 'Thread');
@@ -81,7 +87,7 @@ export function CommObjectDetail({
           });
         }
       } catch {
-        /* keep current surface */
+        /* keep chat surface */
       }
     })();
     return () => {

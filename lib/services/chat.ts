@@ -38,10 +38,13 @@ const conversationPreviewCache = new Map<string, {
     lastMessageAt: string;
     lastMessageSenderId?: string | null;
 }>();
-const conversationsListCache = new Map<string, { rows: any[]; fetchedAt: number }>();
+const conversationsListCache = new Map<string, { rows: any[]; fetchedAt: number; authoritative: boolean }>();
 const CONVERSATIONS_LIST_TTL_MS = 5 * 60_000;
 
-let conversationsFetchInflight: { userId: string; promise: Promise<{ total: number; rows: any[] }> } | null = null;
+let conversationsFetchInflight: {
+    userId: string;
+    promise: Promise<{ total: number; rows: any[]; authoritative: boolean }>;
+} | null = null;
 const conversationRosterCache = new Map<string, any>();
 const conversationRosterListeners = new Set<(rows: any[]) => void>();
 
@@ -494,6 +497,7 @@ async function resolveConversationKey(
     messageCreatedAt?: string | null,
     auth?: { jwt?: string; cookie?: string },
     repairAttempted = false,
+    options?: { allowCreate?: boolean },
 ) {
     if (!conversation?.$id || !userId) return null;
 
@@ -545,8 +549,6 @@ async function resolveConversationKey(
         && conversation.participants.every((participantId: string) => participantId === userId);
 
     if (isSelfChat && ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity) {
-        // Retry lockbox once with identity ensured — NEVER mint a replacement key.
-        // Silent rekey orphans every prior ciphertext (gibberish on reload).
         try {
             await ecosystemSecurity.ensureE2EIdentity(userId);
             const retry = await fetchConversationKeyFromLockbox(conversation.$id, userId, userId);
@@ -557,6 +559,38 @@ async function resolveConversationKey(
         } catch (error) {
             console.warn('[ChatService] Self-chat lockbox retry failed:', error);
         }
+
+        // Send path only: seed a key when lockbox is empty. Decrypt path never mints
+        // (that orphaned prior ciphertext → gibberish on reload).
+        if (options?.allowCreate) {
+            const publicKey = await ecosystemSecurity.ensureE2EIdentity(userId);
+            if (!publicKey) return null;
+            const seededKey = await ecosystemSecurity.generateConversationKey();
+            try {
+                await syncLockboxRows([
+                    {
+                        resourceType: 'chat',
+                        resourceId: conversation.$id,
+                        grantee: userId,
+                        wrappedKey: await ecosystemSecurity.wrapKeyWithECDH(seededKey, publicKey),
+                        metadata: buildLockboxMetadata({
+                            wrappedBy: userId,
+                            wrappedByPublicKey: publicKey,
+                            senderPublicKey: publicKey,
+                            conversationId: conversation.$id,
+                            conversationType: 'direct',
+                            version: 't4',
+                            seededForSend: true,
+                        }),
+                    },
+                ], auth);
+            } catch (error) {
+                console.warn('[ChatService] Failed to write self-chat lockbox seed:', error);
+            }
+            cacheResolvedConversationKey(conversation.$id, seededKey);
+            return seededKey;
+        }
+
         console.warn(
             '[ChatService] Self-chat key missing for',
             conversation.$id,
@@ -578,7 +612,7 @@ async function resolveConversationKey(
 
           conversationKeyCache.delete(conversation.$id);
           ecosystemSecurity.clearConversationKey(conversation.$id);
-          return await resolveConversationKey(conversation, userId, messageCreatedAt, auth, true);
+          return await resolveConversationKey(conversation, userId, messageCreatedAt, auth, true, options);
         } catch (error) {
           console.warn('[ChatService] Conversation repair failed:', error);
         }
@@ -756,7 +790,7 @@ export const ChatService = {
 
     async getConversations(userId: string, options?: { forceRefresh?: boolean }) {
         if (!ecosystemSecurity.status.isUnlocked) {
-            return { total: 0, rows: [] as any[] };
+            return { total: 0, rows: [] as any[], authoritative: false };
         }
 
         const cached = conversationsListCache.get(userId);
@@ -765,7 +799,11 @@ export const ChatService = {
             !options?.forceRefresh &&
             Date.now() - cached.fetchedAt < CONVERSATIONS_LIST_TTL_MS
         ) {
-            return { total: cached.rows.length, rows: cached.rows };
+            return {
+                total: cached.rows.length,
+                rows: cached.rows,
+                authoritative: cached.authoritative,
+            };
         }
 
         if (conversationsFetchInflight?.userId === userId && !options?.forceRefresh) {
@@ -773,7 +811,14 @@ export const ChatService = {
         }
 
         const promise = this._fetchConversations(userId).then((result) => {
-            conversationsListCache.set(userId, { rows: result.rows, fetchedAt: Date.now() });
+            // Never cache a failed/non-authoritative empty result as truth.
+            if (result.authoritative) {
+                conversationsListCache.set(userId, {
+                    rows: result.rows,
+                    fetchedAt: Date.now(),
+                    authoritative: true,
+                });
+            }
             return result;
         }).finally(() => {
             if (conversationsFetchInflight?.userId === userId) {
@@ -789,19 +834,29 @@ export const ChatService = {
         console.log('[ChatService] getConversations for:', userId);
 
         let conversationRows: any[] = [];
+        let authoritative = false;
 
         try {
             const tokenRes = await account.createJWT().catch(() => null);
             const jwt = tokenRes?.jwt || undefined;
             const response = await getConversationsAction({ userId, jwt });
             conversationRows = response.rows || [];
+            authoritative = true;
         } catch (err) {
             console.error('[ChatService] getConversationsAction failed:', err);
-            const legacy = await tablesDB.listRows(DB_ID, CONV_TABLE, [
-                Query.equal('participants', userId),
-                Query.limit(100)
-            ]).catch(() => ({ rows: [] as any[] }));
-            conversationRows = legacy.rows || [];
+            // Fallback only if the participants query itself succeeds — never treat a failed query as empty.
+            try {
+                const legacy = await tablesDB.listRows(DB_ID, CONV_TABLE, [
+                    Query.contains('participants', userId),
+                    Query.limit(100),
+                ]);
+                conversationRows = legacy.rows || [];
+                authoritative = true;
+            } catch (legacyErr) {
+                console.error('[ChatService] Legacy conversations probe failed:', legacyErr);
+                conversationRows = [];
+                authoritative = false;
+            }
         }
 
         const memberRowsByConversation = new Map<string, string[]>();
@@ -836,8 +891,65 @@ export const ChatService = {
 
         return {
             total: rows.length,
-            rows
+            rows,
+            /** True only when a list query succeeded. Failed requests are not "empty". */
+            authoritative,
         };
+    },
+
+    isSelfChatConversation(conversation: any, userId: string): boolean {
+        if (!conversation || conversation.type !== 'direct') return false;
+        const participants = Array.isArray(conversation.participants)
+            ? conversation.participants.filter(Boolean)
+            : [];
+        if (participants.length !== 1 && participants.length !== 2) return false;
+        return participants.every((p: string) => p === userId);
+    },
+
+    /**
+     * Authoritative personal-chat probe.
+     * `verified: true` means the DB query succeeded (found or confirmed absent).
+     * `verified: false` means we could not tell — never create a self-chat in that case.
+     */
+    async findSelfConversation(userId: string): Promise<{
+        conversation: any | null;
+        verified: boolean;
+        error?: unknown;
+    }> {
+        try {
+            const res = await tablesDB.listRows(DB_ID, CONV_TABLE, [
+                Query.contains('participants', userId),
+                Query.equal('type', 'direct'),
+                Query.limit(100),
+            ]);
+            const found =
+                (res.rows || []).find((c: any) => this.isSelfChatConversation(c, userId)) || null;
+            return { conversation: found, verified: true };
+        } catch (error) {
+            console.warn('[ChatService] findSelfConversation probe failed:', error);
+            return { conversation: null, verified: false, error };
+        }
+    },
+
+    /**
+     * Ensure personal chat exists — only creates after a successful not-found probe.
+     */
+    async ensureSelfConversation(userId: string): Promise<{
+        conversation: any | null;
+        created: boolean;
+        skippedReason?: 'probe_failed' | 'exists';
+    }> {
+        const probe = await this.findSelfConversation(userId);
+        if (!probe.verified) {
+            return { conversation: null, created: false, skippedReason: 'probe_failed' };
+        }
+        if (probe.conversation) {
+            return { conversation: probe.conversation, created: false, skippedReason: 'exists' };
+        }
+
+        await ecosystemSecurity.ensureE2EIdentity(userId);
+        const created = await this.createConversation([userId], 'direct');
+        return { conversation: created, created: true };
     },
 
     async createConversation(participants: string[], type: 'direct' | 'group' = 'direct', name?: string) {
@@ -852,6 +964,18 @@ export const ChatService = {
         const creatorId = participants[0];
         const isSelf = type === 'direct' && participants.length === 1 && participants[0] === participants[participants.length - 1];
         const uniqueParticipants = isSelf ? [participants[0], participants[0]] : Array.from(new Set(participants));
+
+        // Personal chat: only proceed when a successful probe says it does not exist.
+        if (isSelf) {
+            const probe = await this.findSelfConversation(creatorId);
+            if (!probe.verified) {
+                throw new Error('Could not verify personal chat status. Try again.');
+            }
+            if (probe.conversation) {
+                console.log('[ChatService] Personal chat already exists:', probe.conversation.$id);
+                return probe.conversation;
+            }
+        }
 
         // GUARD: Enforce hangout (groups) limits based on tier
         if (type === 'group') {
@@ -1068,12 +1192,43 @@ export const ChatService = {
             conversation = null;
         }
 
-        if (conversation?.participants?.length && !conversation.participants.includes(senderId)) {
+        if (!conversation) {
+            throw new Error('Conversation not found');
+        }
+
+        const participants = Array.isArray(conversation.participants)
+            ? conversation.participants.filter(Boolean)
+            : [];
+        if (participants.length && !participants.includes(senderId)) {
             throw new Error('You are not a participant in this conversation');
         }
 
+        // Treat single-user / duplicate-self participant rows as self-chat for key seeding
+        const looksSelf =
+            conversation.type === 'direct' &&
+            participants.length > 0 &&
+            participants.every((p: string) => p === senderId);
+        if (looksSelf && !participants.includes(senderId)) {
+            conversation = { ...conversation, participants: [senderId, senderId] };
+        } else if (looksSelf) {
+            conversation = { ...conversation, participants };
+        }
+
         if ((type === 'text' || type === 'attachment') && conversation?.isEncrypted && ecosystemSecurity.status.isUnlocked) {
-            const convKey = conversation ? await resolveConversationKey(conversation, senderId, null, permissionSyncAuth) : null;
+            let convKey = await resolveConversationKey(conversation, senderId, null, permissionSyncAuth, false, {
+                allowCreate: true,
+            });
+            // Last resort for encrypted DMs we own: seed key so send isn't bricked
+            if (!convKey && conversation.creatorId === senderId && conversation.type === 'direct') {
+                convKey = await resolveConversationKey(
+                    { ...conversation, participants: participants.length ? participants : [senderId, senderId] },
+                    senderId,
+                    null,
+                    permissionSyncAuth,
+                    false,
+                    { allowCreate: true },
+                );
+            }
             if (!convKey) throw new Error('Conversation key not available');
             finalContent = await ecosystemSecurity.encryptWithKey(content, convKey);
             cacheResolvedConversationKey(conversationId, convKey);

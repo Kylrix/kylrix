@@ -3,15 +3,21 @@
 import React, { useEffect, useState, useCallback, useTransition } from 'react';
 import { ChatService, rememberConversationRoster } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';
-import { useRouter } from 'next/navigation';
 import { UsersService } from '@/lib/services/users';
 import { tablesDB, realtime  } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { usePresence } from '../providers/PresenceProvider';
 import { showIslandNotification } from '@/lib/island-notification';
 import { createGhostNoteChat, listGhostNoteChats, deleteGhostThread } from '@/lib/actions/client-ops';
-import { isValidX25519PublicKey, formatSecureChatStartError } from '@/lib/crypto/public-key';
+import { formatSecureChatStartError } from '@/lib/crypto/public-key';
+import {
+    discoverRecipientSecureReady,
+    resolveChatChannelKind,
+} from '@/lib/chat/recipient-secure-ready';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { openCommObjectDetail } from '@/components/objects/CommObjectDetail';
 import { 
     Trash2, 
     ShieldCheck, 
@@ -117,16 +123,17 @@ export const ChatList = ({
     /** Desktop secure panel — skip ghost thread fetch. */
     skipThreadsLoad?: boolean;
     /** Prefer in-page selection over route navigation. */
-    onOpenConversation?: (conversationId: string) => void;
+    onOpenConversation?: (conversationId: string, kind?: 'chat' | 'thread') => void;
 }) => {
     const { user } = useAuth();
     const { unreadConversations } = useChatNotifications();
     const { globalPresence } = usePresence();
-    const router = useRouter();
     const { requestSudo } = useSudo();
     const contextMenu = useContextMenu();
     const openMenu = contextMenu?.openMenu;
     const { open: openUnified } = useUnifiedDrawer();
+    const { openOverlay, closeOverlay } = useOverlay();
+    const { openSidebar, closeSidebar } = useDynamicSidebar();
     const { isPinned: isResourcePinned, togglePin, pinSets } = useResourcePins();
     const initialChats = peekChatsListMemory();
     const initialThreads = peekThreadsListMemory();
@@ -176,13 +183,24 @@ export const ChatList = ({
         if (onTabChange) onTabChange(tab);
     }, [onTabChange]);
 
-    const openConversation = useCallback((conversationId: string) => {
-        if (onOpenConversation) {
-            onOpenConversation(conversationId);
-            return;
-        }
-        router.replace(`/connect/chats?c=${encodeURIComponent(conversationId)}`, { scroll: false });
-    }, [onOpenConversation, router]);
+    const openConversation = useCallback(
+        (conversationId: string, kind: 'chat' | 'thread' = 'chat') => {
+            if (onOpenConversation) {
+                onOpenConversation(conversationId, kind);
+                return;
+            }
+            // No dedicated chat page — open fullscreen / sidebar detail in place
+            openCommObjectDetail({
+                conversationId,
+                kind,
+                openSidebar,
+                openOverlay,
+                closeSidebar,
+                closeOverlay,
+            });
+        },
+        [onOpenConversation, openSidebar, openOverlay, closeSidebar, closeOverlay],
+    );
 
     const openAvatarPeek = useCallback((conv: any) => {
         if (conv?.type === 'group') {
@@ -261,7 +279,7 @@ export const ChatList = ({
                 {
                     label: 'Open Secure Chat',
                     icon: <ExternalLink size={18} />,
-                    onClick: () => openConversation(conv.$id)
+                    onClick: () => openConversation(conv.$id, 'chat')
                 },
                 {
                     label: isResourcePinned('conversation', conv.$id, user?.$id, false)
@@ -324,7 +342,7 @@ export const ChatList = ({
                 {
                     label: 'Open Discussion Thread',
                     icon: <ExternalLink size={18} />,
-                    onClick: () => openConversation(conv.$id)
+                    onClick: () => openConversation(conv.$id, 'thread')
                 },
                 {
                     label: isResourcePinned('conversation', conv.$id, user?.$id, false)
@@ -717,86 +735,119 @@ export const ChatList = ({
 
     const startChat = async (targetUser: any) => {
         if (!user) return;
-        const targetUserId = targetUser.userId || targetUser.$id;
+        const targetUserId = targetUser.userId || targetUser.$id || targetUser.id;
 
-        let recipientPublicKey =
-            typeof targetUser.publicKey === 'string' ? targetUser.publicKey : null;
+        toast.loading('Checking secure setup…', { id: 'ghost-init' });
 
-        if (activeTab === 'secure') {
+        // Always live-fetch profile — search cards often omit publicKey and caused false threads.
+        const discovery = await discoverRecipientSecureReady(
+            targetUserId,
+            typeof targetUser.publicKey === 'string' ? targetUser.publicKey : null,
+        );
+
+        const channel = resolveChatChannelKind({
+            recipientReady: discovery.ready,
+            explicitThread: activeTab === 'public',
+        });
+
+        if (channel === 'thread') {
             try {
-                const profile = await UsersService.getProfileById(targetUserId);
-                recipientPublicKey = profile?.publicKey || recipientPublicKey;
-            } catch (error) {
-                console.warn('[ChatList] Failed to refresh recipient profile:', error);
-            }
-        }
-
-        const recipientReadyForSecureChat = isValidX25519PublicKey(recipientPublicKey);
-
-        // If vault is locked, recipient isn't secure-ready, or we're on Threads, use a thread.
-        if (!isUnlocked || !recipientReadyForSecureChat || activeTab === 'public') {
-            try {
-                if (activeTab === 'secure' && isUnlocked && !recipientReadyForSecureChat) {
+                if (activeTab !== 'public' && !discovery.ready) {
                     toast(
-                        recipientPublicKey
-                            ? "This person hasn't finished secure chat setup yet. Starting a thread instead."
-                            : "This person hasn't set up secure chat yet. Starting a thread instead.",
-                        { id: 'ghost-init' }
+                        "This person hasn't set up secure chat yet. Starting a standard chat instead.",
+                        { id: 'ghost-init' },
                     );
                 } else {
-                    toast.loading('Initializing thread...', { id: 'ghost-init' });
+                    toast.loading('Opening chat…', { id: 'ghost-init' });
                 }
+
                 const existingGhosts = await listGhostNoteChats();
                 const foundGhost = existingGhosts.find((c: any) => {
                     let metadataObj: any = {};
                     try {
-                        metadataObj = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata || {});
-                    } catch {}
+                        metadataObj =
+                            typeof c.metadata === 'string' ? JSON.parse(c.metadata) : c.metadata || {};
+                    } catch {
+                        /* ignore */
+                    }
                     const participants = c.collaborators || metadataObj.participants || [];
                     return participants.includes(targetUserId);
                 });
 
                 if (foundGhost) {
                     toast.dismiss('ghost-init');
-                    openConversation(foundGhost.$id);
+                    openConversation(foundGhost.$id, 'thread');
                     return;
                 }
 
-                const title = targetUser.displayName || targetUser.username || 'Huddle';
+                const title =
+                    discovery.profile?.displayName ||
+                    targetUser.displayName ||
+                    targetUser.username ||
+                    'Chat';
                 const newGhost = await createGhostNoteChat(title, [user.$id, targetUserId]);
-                toast.success('Huddle thread ready!', { id: 'ghost-init' });
-                openConversation(newGhost.$id);
+                toast.success('Chat ready', { id: 'ghost-init' });
+                openConversation(newGhost.$id, 'thread');
             } catch (error: any) {
                 console.error('Failed to create thread:', error);
-                toast.error(formatSecureChatStartError(error, activeTab === 'public' ? 'thread' : 'secure'), { id: 'ghost-init' });
+                toast.error(formatSecureChatStartError(error, 'thread'), { id: 'ghost-init' });
             }
             return;
         }
 
-        // Check for existing conversation locally
-        const found = conversations.find((c: any) =>
-            c.type === 'direct' && c.participants?.includes(targetUserId)
-        );
-
-        if (found) {
-            openConversation(found.$id);
-            return;
-        }
-
-        // If not found, ensure Sudo is unlocked before creating
-        requestSudo({
-            onSuccess: async () => {
-                try {
-                    await ecosystemSecurity.ensureE2EIdentity(user.$id);
-                    const participants = [user.$id, targetUserId];
-                    const newConv = await ChatService.createConversation(participants, 'direct');
-                    openConversation(newConv.$id);
-                } catch (error: any) {
-                    console.error('Failed to create chat:', error);
-                    toast.error(formatSecureChatStartError(error, 'secure'));
+        // Secure default — recipient is ready. Unlock if needed; never fall back to thread.
+        const openSecure = async () => {
+            try {
+                await ecosystemSecurity.ensureE2EIdentity(user.$id);
+                const found = conversations.find(
+                    (c: any) =>
+                        c.type === 'direct' && c.participants?.includes(targetUserId),
+                );
+                if (found) {
+                    toast.dismiss('ghost-init');
+                    openConversation(found.$id, 'chat');
+                    return;
                 }
+                try {
+                    const existing = await ChatService.getConversations(user.$id);
+                    const remote = existing.rows.find(
+                        (c: any) =>
+                            c.type === 'direct' &&
+                            Array.isArray(c.participants) &&
+                            c.participants.includes(targetUserId),
+                    );
+                    if (remote) {
+                        toast.dismiss('ghost-init');
+                        openConversation(remote.$id, 'chat');
+                        return;
+                    }
+                } catch {
+                    /* create new */
+                }
+
+                const newConv = await ChatService.createConversation(
+                    [user.$id, targetUserId],
+                    'direct',
+                );
+                toast.success('Secure chat ready', { id: 'ghost-init' });
+                openConversation(newConv.$id, 'chat');
+            } catch (error: any) {
+                console.error('Failed to create chat:', error);
+                toast.error(formatSecureChatStartError(error, 'secure'), { id: 'ghost-init' });
             }
-        });
+        };
+
+        if (!isUnlocked) {
+            toast.dismiss('ghost-init');
+            requestSudo({
+                onSuccess: () => {
+                    void openSecure();
+                },
+            });
+            return;
+        }
+
+        await openSecure();
     };
 
     const handleConversationUpdated = useCallback((updatedConversation: any) => {
@@ -869,15 +920,13 @@ export const ChatList = ({
                 forceRefresh: options?.forceRefresh,
             });
             let rows = [...response.rows];
+            const listAuthoritative = (response as { authoritative?: boolean }).authoritative !== false;
 
             const hasEncrypted = rows.some(c => c.isEncrypted);
             if (hasEncrypted && !ecosystemSecurity.status.isUnlocked) return;
 
             // Bridge: Detect and deduplicate self-chats, then ensure one exists
-            const isSelfChat = (c: any) =>
-                c.type === 'direct' &&
-                c.participants && (c.participants.length === 1 || c.participants.length === 2) &&
-                c.participants.every((p: string) => p === user!.$id);
+            const isSelfChat = (c: any) => ChatService.isSelfChatConversation(c, user!.$id);
 
             const allSelfChats = rows.filter(isSelfChat);
             console.log('[ChatList] Self chats found:', allSelfChats.length);
@@ -912,26 +961,41 @@ export const ChatList = ({
 
             const selfChat = rows.find(isSelfChat);
 
-            if (!selfChat) {
-                console.log('[ChatList] Self chat not found, auto-initializing...');
+            // Only auto-create when a dedicated probe succeeds and confirms absence.
+            // A failed / non-authoritative list must never be treated as "does not exist".
+            if (!selfChat && listAuthoritative) {
+                console.log('[ChatList] No personal chat in list — verifying with dedicated probe…');
                 void (async () => {
                     try {
-                        await ecosystemSecurity.ensureE2EIdentity(user!.$id);
-                        const newSelfChat = await ChatService.createConversation([user!.$id], 'direct');
-                        console.log('[ChatList] Self chat created:', newSelfChat.$id);
-                        if (loadRequestRef.current !== requestId) return;
+                        const result = await ChatService.ensureSelfConversation(user!.$id);
+                        if (result.skippedReason === 'probe_failed') {
+                            console.warn('[ChatList] Personal chat probe failed; skipping auto-create');
+                            return;
+                        }
+                        if (!result.conversation || loadRequestRef.current !== requestId) return;
+                        console.log(
+                            result.created
+                                ? '[ChatList] Personal chat created:'
+                                : '[ChatList] Personal chat recovered:',
+                            result.conversation.$id,
+                        );
                         startTransition(() => {
                             setConversations((current) => {
-                                if (current.some((conv) => conv.$id === newSelfChat.$id)) return current;
-                                const next = [newSelfChat, ...current];
+                                if (current.some((conv) => conv.$id === result.conversation!.$id)) {
+                                    return current;
+                                }
+                                const next = [result.conversation!, ...current];
                                 conversationsRef.current = next;
+                                void writeChatsListLocal(next);
                                 return next;
                             });
                         });
                     } catch (e: unknown) {
-                        console.error('[ChatList] Failed to auto-create self chat', e);
+                        console.error('[ChatList] Failed to ensure personal chat', e);
                     }
                 })();
+            } else if (!selfChat && !listAuthoritative) {
+                console.warn('[ChatList] Conversation list not authoritative; skipping personal chat auto-create');
             }
 
             const baseRows = rows.map((conv: any) => {
@@ -1430,7 +1494,7 @@ export const ChatList = ({
                                         onClick={(e: React.MouseEvent) => {
                                             handleItemClick(e);
                                             if (!isInitializing) {
-                                                openConversation(conv.$id);
+                                                openConversation(conv.$id, 'chat');
                                             }
                                         }}
                                         onContextMenu={(e) => handleConversationRightClick(e, conv)}
@@ -1438,7 +1502,7 @@ export const ChatList = ({
                                             if (e.key === 'Enter' || e.key === ' ') {
                                                 e.preventDefault();
                                                 if (!isInitializing) {
-                                                    openConversation(conv.$id);
+                                                    openConversation(conv.$id, 'chat');
                                                 }
                                             }
                                         }}
@@ -1571,7 +1635,7 @@ export const ChatList = ({
                                         onClick={(e: React.MouseEvent) => {
                                             handleItemClick(e);
                                             if (!isInitializing) {
-                                                openConversation(conv.$id);
+                                                openConversation(conv.$id, 'thread');
                                             }
                                         }}
                                         onContextMenu={(e) => handleGhostConversationRightClick(e, conv)}
@@ -1579,7 +1643,7 @@ export const ChatList = ({
                                             if (e.key === 'Enter' || e.key === ' ') {
                                                 e.preventDefault();
                                                 if (!isInitializing) {
-                                                    openConversation(conv.$id);
+                                                    openConversation(conv.$id, 'thread');
                                                 }
                                             }
                                         }}

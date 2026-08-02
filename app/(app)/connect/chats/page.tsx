@@ -158,7 +158,7 @@ function ConnectChatsBody() {
 
   /** Mobile: fullscreen object detail overlay. Desktop: fused right pane via ?c=. */
   const openChatDetail = useCallback(
-    (conversationId: string) => {
+    (conversationId: string, kind: 'chat' | 'thread' = 'chat') => {
       if (isDesktop) {
         selectChat(conversationId);
         return;
@@ -166,6 +166,7 @@ function ConnectChatsBody() {
       openOverlay(
         <CommObjectDetail
           conversationId={conversationId}
+          kind={kind}
           embedded
           onClose={closeOverlay}
         />,
