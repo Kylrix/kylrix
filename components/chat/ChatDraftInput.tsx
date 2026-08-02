@@ -50,41 +50,50 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
                     onClick={attachmentDisabled ? onUpgradeRequested : onAttach}
                     aria-disabled={attachmentDisabled}
                     sx={{
-                        color: attachmentDisabled ? 'rgba(255,255,255,0.32)' : '#9B9691',
-                        width: 44,
-                        height: 44,
+                        color: attachmentDisabled ? 'rgba(255,255,255,0.25)' : '#9B9691',
+                        width: 42,
+                        height: 42,
                         flexShrink: 0,
-                        bgcolor: '#161412',
-                        border: '1px solid #1C1A18',
+                        bgcolor: '#0A0908',
+                        borderRadius: '14px',
+                        border: '1px solid #34322F',
+                        transition: 'all 0.15s ease',
                         '&:hover': {
-                            bgcolor: '#1C1A18',
-                            borderColor: attachmentDisabled ? '#1C1A18' : '#F59E0B',
-                            color: attachmentDisabled ? '#9B9691' : '#fff',
-                            cursor: attachmentDisabled ? 'not-allowed' : 'pointer'}}}
+                            bgcolor: '#161412',
+                            borderColor: attachmentDisabled ? '#34322F' : '#6366F1',
+                            color: attachmentDisabled ? '#9B9691' : '#FFFFFF',
+                            cursor: attachmentDisabled ? 'not-allowed' : 'pointer'
+                        }
+                    }}
                 >
-                    <PlusCircle size={20} strokeWidth={2} />
+                    <PlusCircle size={18} strokeWidth={2} />
                 </IconButton>
 
                 <IconButton
                     onClick={onToggleRecording}
                     sx={{
-                        color: isRecording ? '#ff4d4d' : '#9B9691',
-                        width: 44,
-                        height: 44,
+                        color: isRecording ? '#EF4444' : '#9B9691',
+                        width: 42,
+                        height: 42,
                         flexShrink: 0,
-                        bgcolor: '#161412',
-                        border: '1px solid #1C1A18',
+                        bgcolor: isRecording ? 'rgba(239, 68, 68, 0.1)' : '#0A0908',
+                        borderRadius: '14px',
+                        border: '1px solid',
+                        borderColor: isRecording ? '#EF4444' : '#34322F',
+                        transition: 'all 0.15s ease',
                         '&:hover': {
-                            bgcolor: '#1C1A18',
-                            borderColor: '#F59E0B',
-                            color: '#fff'}}}
+                            bgcolor: isRecording ? 'rgba(239, 68, 68, 0.15)' : '#161412',
+                            borderColor: isRecording ? '#EF4444' : '#6366F1',
+                            color: isRecording ? '#EF4444' : '#FFFFFF'
+                        }
+                    }}
                 >
-                    {isRecording ? <Square size={18} fill="#ff4d4d" /> : <Mic size={20} strokeWidth={2} />}
+                    {isRecording ? <Square size={16} fill="#EF4444" /> : <Mic size={18} strokeWidth={2} />}
                 </IconButton>
 
                 <Box sx={{ flex: 1, position: 'relative' }}>
                     {typingUsers.length > 0 && (
-                        <Box sx={{ position: 'absolute', top: -20, left: 16 }}>
+                        <Box sx={{ position: 'absolute', top: -20, left: 12 }}>
                             <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#9B9691', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                 {typingUsers.length === 1 ? 'someone' : `${typingUsers.length} people`} is typing...
                             </Typography>
@@ -182,17 +191,19 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
                             disableUnderline: true,
                             sx: {
                                 px: 2,
-                                py: 1.5,
-                                bgcolor: '#161412',
-                                borderRadius: '18px',
-                                border: '1px solid #1C1A18',
-                                color: '#fff',
-                                fontWeight: 600,
+                                py: 1.25,
+                                bgcolor: '#0A0908',
+                                borderRadius: '14px',
+                                border: '1px solid #34322F',
+                                color: '#F5F3EF',
+                                fontWeight: 500,
                                 fontFamily: 'var(--font-satoshi)',
-                                fontSize: '0.95rem',
+                                fontSize: '0.9rem',
+                                transition: 'all 0.15s ease',
                                 '&:focus-within': {
                                     borderColor: '#6366F1',
-                                    bgcolor: '#1C1A18'}
+                                    bgcolor: '#0B0A09'
+                                }
                             }
                         }}
                     />
@@ -210,21 +221,27 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
                     disabled={!draft.trim() && !attachment && !isRecording}
                     onClick={submitDraft}
                     sx={{
-                        color: (draft.trim() || attachment) ? '#6366F1' : 'rgba(255,255,255,0.1)',
-                        width: 44,
-                        height: 44,
+                        color: (draft.trim() || attachment) ? '#FFFFFF' : 'rgba(255,255,255,0.15)',
+                        width: 42,
+                        height: 42,
                         flexShrink: 0,
-                        bgcolor: (draft.trim() || attachment) ? '#161412' : 'transparent',
+                        bgcolor: (draft.trim() || attachment) ? '#6366F1' : '#0A0908',
+                        borderRadius: '14px',
                         border: '1px solid',
-                        borderColor: (draft.trim() || attachment) ? '#1C1A18' : 'transparent',
+                        borderColor: (draft.trim() || attachment) ? '#6366F1' : '#34322F',
+                        transition: 'all 0.15s ease',
                         '&:hover': {
-                            bgcolor: '#1C1A18',
-                            borderColor: '#6366F1'},
+                            bgcolor: (draft.trim() || attachment) ? '#4F46E5' : '#161412',
+                            borderColor: (draft.trim() || attachment) ? '#4F46E5' : '#6366F1'
+                        },
                         '&.ob-disabled': {
-                            color: 'rgba(255,255,255,0.05)'}
+                            color: 'rgba(255,255,255,0.08)',
+                            bgcolor: '#0A0908',
+                            borderColor: '#34322F'
+                        }
                     }}
                 >
-                    {sending ? <RefreshCw className="animate-spin" size={20} /> : <Send size={20} strokeWidth={2.5} />}
+                    {sending ? <RefreshCw className="animate-spin" size={18} /> : <Send size={18} strokeWidth={2.5} />}
                 </IconButton>
             </Box>
         </>

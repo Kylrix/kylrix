@@ -1389,7 +1389,7 @@ export const ChatWindow = ({
             </Drawer>
 
             {/* Messages Area */}
-            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, pb: 'calc(100px + env(safe-area-inset-bottom))', pt: 'calc(80px + env(safe-area-inset-top))', position: 'relative', zIndex: 2 }}>
+            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: { xs: 2.5, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 2, pb: 'calc(110px + env(safe-area-inset-bottom))', pt: 'calc(84px + env(safe-area-inset-top))', position: 'relative', zIndex: 2 }}>
                 {!isUnlocked && conversation?.isEncrypted && (
                     <Box sx={{ p: 2.5, mb: 2, bgcolor: '#161412', borderRadius: '24px', border: '1px solid #1C1A18', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', textAlign: 'center' }}>
                         <Typography variant="body2" sx={{ mb: 2, fontWeight: 800, color: '#6366F1', fontFamily: 'var(--font-clash)', fontSize: '1rem' }}>
@@ -1472,16 +1472,16 @@ export const ChatWindow = ({
                                 >
                                     <Stack
                                         direction={isOutgoing ? 'row-reverse' : 'row'}
-                                        spacing={1}
+                                        spacing={1.25}
                                         alignItems="flex-end"
-                                        sx={{ width: '100%', maxWidth: '80%' }}
+                                        sx={{ width: '100%', maxWidth: { xs: '88%', sm: '80%' } }}
                                     >
                                         <IdentityAvatar
                                             userId={msg.senderId}
                                             fileId={senderProfile?.avatar || null}
                                             alt={senderName}
                                             fallback={senderName.slice(0, 1).toUpperCase()}
-                                            size={30}
+                                            size={32}
                                             borderRadius="50%"
                                         />
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0, flex: '0 1 auto', alignItems: isOutgoing ? 'flex-end' : 'flex-start' }}>
@@ -1506,24 +1506,24 @@ export const ChatWindow = ({
                                                 onContextMenu={(e: React.MouseEvent) => handleMessageContextMenu(e, msg)}
                                                 sx={{
                                                     p: 1.5,
-                                                    px: 2.25,
+                                                    px: 2,
                                                     width: 'fit-content',
                                                     maxWidth: '100%',
                                                     alignSelf: isOutgoing ? 'flex-end' : 'flex-start',
-                                                    borderRadius: isOutgoing ? '20px 4px 20px 20px' : '4px 20px 20px 20px',
-                                                    bgcolor: isOutgoing ? '#161412' : '#161412', // Standardized Opaque Deep Ash
+                                                    borderRadius: isOutgoing ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                                                    bgcolor: isOutgoing ? '#1C1A18' : '#161412',
                                                     backgroundImage: 'none',
-                                                    border: '1px solid #23211F',
-                                                    borderRight: isOutgoing ? '3px solid #6366F1' : '1px solid #23211F',
-                                                    borderLeft: !isOutgoing ? '3px solid #34322F' : '1px solid #23211F',
+                                                    border: '1px solid #34322F',
+                                                    borderRight: isOutgoing ? '3px solid #6366F1' : '1px solid #34322F',
+                                                    borderLeft: !isOutgoing ? '3px solid #34322F' : '1px solid #34322F',
                                                     color: isOutgoing ? '#FFFFFF' : '#F5F2ED',
-                                                    boxShadow: '0 4px 12px -4px rgba(0,0,0,0.8)',
+                                                    boxShadow: '0 4px 12px -4px rgba(0,0,0,0.6)',
                                                     position: 'relative',
                                                     zIndex: 2,
-                                                    transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                                                    transition: 'all 0.2s ease',
                                                     '&:hover': {
                                                         transform: 'translateY(-1px)',
-                                                        boxShadow: '0 6px 16px -4px rgba(0,0,0,0.9)'}
+                                                        boxShadow: '0 6px 16px -4px rgba(0,0,0,0.8)'}
                                                 }}
                                             >
                                                 {msg.isPinned && (
@@ -1729,13 +1729,13 @@ export const ChatWindow = ({
                 bottom: 0, 
                 left: 0, 
                 right: 0, 
-                px: { xs: 1.5, md: 2 },
-                pb: 'max(1rem, env(safe-area-inset-bottom))', 
-                pt: 1.5,
+                px: { xs: 2, sm: 3 },
+                pb: 'max(1.25rem, env(safe-area-inset-bottom))', 
+                pt: 1.75,
                 bgcolor: '#161412', 
-                borderTop: '1px solid #1C1A18',
+                borderTop: '1px solid #34322F',
                 borderRadius: '24px 24px 0 0',
-                boxShadow: '0 -4px 24px rgba(0,0,0,0.6)',
+                boxShadow: '0 -8px 32px rgba(0,0,0,0.8)',
                 zIndex: 20 
             }}>
                 {replyingTo && (
