@@ -51,7 +51,11 @@ import {
   attachObjectSecure,
   detachObjectByRelationSecure,
   getObjectsByParentSecure,
-  approveProjectJoinRequestSecure} from './secure-ops';
+  approveProjectJoinRequestSecure,
+  getOrCreateThreadSecure,
+  listThreadMessagesSecure,
+  postThreadMessageSecure,
+} from './secure-ops';
 import { PublicResourceType } from '@/lib/share/resource-types';
 
 // Helper to fetch JWT securely from client-side SDK
@@ -317,6 +321,35 @@ export async function createGhostNoteForResource(
 export async function initGoalDiscussion(taskId: string) {
   const jwt = await getJwt();
   return initGoalDiscussionSecure(taskId, jwt);
+}
+
+export async function getOrCreateThread(data: {
+  parentKind: string;
+  parentId: string;
+  channel?: string;
+  title?: string;
+  isPublic?: boolean;
+  legacyNoteId?: string | null;
+}) {
+  const jwt = await getJwt();
+  return getOrCreateThreadSecure({ ...data, jwt });
+}
+
+export async function listThreadMessages(
+  threadId: string,
+  opts?: { limit?: number; rootMessageId?: string; topLevelOnly?: boolean },
+) {
+  const jwt = await getJwt();
+  return listThreadMessagesSecure(threadId, opts, jwt);
+}
+
+export async function postThreadMessage(data: {
+  threadId: string;
+  content: string;
+  parentMessageId?: string | null;
+}) {
+  const jwt = await getJwt();
+  return postThreadMessageSecure({ ...data, jwt });
 }
 
 export async function promoteGhostResourceThreadToStory(resourceId: string, resourceType: string) {

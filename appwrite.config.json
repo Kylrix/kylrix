@@ -2216,6 +2216,15 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "primaryThreadId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -2297,6 +2306,17 @@
                     "status": "available",
                     "columns": [
                         "isDeleted"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_notes_primary_thread",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "primaryThreadId"
                     ],
                     "orders": [
                         "ASC"
@@ -6963,6 +6983,15 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "primaryThreadId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -7039,6 +7068,17 @@
                     ],
                     "orders": [
                         "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_projects_primary_thread",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "primaryThreadId"
+                    ],
+                    "orders": [
                         "ASC"
                     ]
                 }
@@ -8338,6 +8378,15 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "primaryThreadId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -8410,6 +8459,17 @@
                     "status": "available",
                     "columns": [
                         "isDeleted"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_tasks_primary_thread",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "primaryThreadId"
                     ],
                     "orders": [
                         "ASC"
@@ -11970,6 +12030,528 @@
                     "status": "available",
                     "columns": [
                         "expiresAt"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "threads",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "threads",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "scopeKey",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "parentKind",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "parentId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "channel",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "ownerId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "title",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "active",
+                    "format": "enum",
+                    "elements": [
+                        "active",
+                        "archived"
+                    ]
+                },
+                {
+                    "key": "messageCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "lastMessageAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "lastMessagePreview",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "lastMessageUserId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "isEncrypted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "legacyNoteId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "metadata",
+                    "type": "mediumtext",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_threads_scope_uq",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "scopeKey"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_threads_parent",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "parentKind",
+                        "parentId",
+                        "channel"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_threads_owner_updated",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerId",
+                        "updatedAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_threads_parent_last",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "parentKind",
+                        "parentId",
+                        "lastMessageAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_threads_legacy",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "legacyNoteId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "thread_messages",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "thread_messages",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "threadId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "parentMessageId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "rootMessageId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "content",
+                    "type": "mediumtext",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "contentType",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "isEncrypted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "isVoice",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "isDeleted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "replyCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "metadata",
+                    "type": "mediumtext",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_tm_thread_created",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "threadId",
+                        "createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_tm_thread_parent_created",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "threadId",
+                        "parentMessageId",
+                        "createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_tm_thread_root_created",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "threadId",
+                        "rootMessageId",
+                        "createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_tm_user_created",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "thread_reactions",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "thread_reactions",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "messageId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "threadId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "emoji",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_tr_msg_user_emoji_uq",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "messageId",
+                        "userId",
+                        "emoji"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_tr_thread_message",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "threadId",
+                        "messageId"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_tr_message",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "messageId"
                     ],
                     "orders": [
                         "ASC"

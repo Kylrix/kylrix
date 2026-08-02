@@ -24,12 +24,10 @@ export BASE="${KYLRIX_API_BASE:-http://localhost:3005/api/v1}"
 | Ideas (notes) | Full CRUD | ✅ |
 | Goals | Full CRUD | ✅ |
 | Workspaces | Full CRUD | ✅ |
-| Workspace discussion | GET/POST `/workspaces/:id/thread` | ✅ via threads |
-| Events / Forms | Full CRUD | ✅ |
-| Flows list + install | ✅ | Builtin installs may also live client-side |
+| Threads | `POST /threads` ensure · messages CRUD | ✅ Unique scopeKey substrate |
+| Workspace discussion | GET/POST `/workspaces/:id/thread` | ✅ via ThreadService |
 | Feeds | GET `/feeds?source=ecosystem\|nostr\|all` | ✅ |
 | Moments | List/get/create + comments | ✅ Internal comments; Nostr view-only |
-| Threads | List/get/messages + reply | ✅ Unencrypted (ghost/chat/discussion) |
 | Chats | List/get/messages; POST if unencrypted | ❌ E2EE send needs unlocked vault |
 | Vault | List metadata | ❌ No secret plaintext without master unlock |
 | Agents + harness mirror | List/get/delete + mirror append | ✅ |

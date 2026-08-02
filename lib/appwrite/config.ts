@@ -54,7 +54,11 @@ export const APPWRITE_CONFIG = {
             NOTE_TAGS: 'resource_tags',
             BLOGPOSTS: '67ff065a003e2bb950f7',
             WALLET_MAP: 'walletMap',
-            NOTE_REVISIONS: 'note_revisions'
+            NOTE_REVISIONS: 'note_revisions',
+            /** Canonical discussion substrate (not ghost notes) */
+            THREADS: 'threads',
+            THREAD_MESSAGES: 'thread_messages',
+            THREAD_REACTIONS: 'thread_reactions',
         },
         KYLRIXNOTE: {
             PROFILES: 'profiles',

@@ -1529,10 +1529,6 @@ export async function initGoalDiscussionSecure(taskId: string, jwt?: string) {
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
   const tables = createSystemTablesDB();
-  const now = new Date().toISOString();
-  const discussionNoteId = ID.unique();
-
-  // 1. Fetch goal to verify ownership/access
   const goal = await tables.getRow<any>(
     APPWRITE_CONFIG.DATABASES.FLOW,
     APPWRITE_CONFIG.TABLES.FLOW.TASKS,
@@ -1540,42 +1536,35 @@ export async function initGoalDiscussionSecure(taskId: string, jwt?: string) {
   );
   if (!goal) throw new Error('Goal not found');
 
-  // 2. Create the persistent discussion note
-  // Mark as isDiscussion and ensure it's NOT a ghost/thread to keep it hidden but persistent
-  await tables.createRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-    rowId: discussionNoteId,
-    data: {
-      title: `Goal Discussion: ${goal.title}`,
-      content: '',
-      format: 'markdown',
-      isPublic: false,
-      userId: actor.$id,
-      createdAt: now,
-      updatedAt: now,
-      creatorId: actor.$id,
-      resourceId: taskId,
-      resourceType: 'goal',
-      isDiscussion: true,
-      isGhost: false, // Persistent
-      isThread: false, // Hide from standard notes list filters
-    },
-    permissions: [
-      Permission.read(Role.user(actor.$id)),
-      Permission.update(Role.user(actor.$id)),
-    ]});
+  const { ThreadService } = await import('@/lib/services/threads');
 
-  // 3. Update the goal with the discussion link
+  if (goal.primaryThreadId) {
+    return { discussionId: goal.primaryThreadId, threadId: goal.primaryThreadId, created: false };
+  }
+
+  const { thread, created } = await ThreadService.getOrCreate({
+    parentKind: 'goal',
+    parentId: taskId,
+    channel: ThreadService.CHANNEL_DISCUSS,
+    ownerId: actor.$id,
+    title: `Goal discussion: ${goal.title || taskId}`,
+    legacyNoteId: goal.discussionId || null,
+  });
+
+  // Keep discussionId for older UI that still reads it — point at canonical thread
+  const now = new Date().toISOString();
   await tables.updateRow({
     databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
     tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
     rowId: taskId,
     data: {
-      discussionId: discussionNoteId,
-      updatedAt: now}});
+      primaryThreadId: thread.id,
+      discussionId: goal.discussionId || thread.id,
+      updatedAt: now,
+    },
+  }).catch(() => null);
 
-  return { discussionId: discussionNoteId };
+  return { discussionId: thread.id, threadId: thread.id, created };
 }
 
 export async function approveProjectJoinRequestSecure(projectId: string, targetUserId: string, permissionLevel: 'admin' | 'editor' | 'viewer' = 'viewer', jwt?: string) {

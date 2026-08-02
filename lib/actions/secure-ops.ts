@@ -34,6 +34,12 @@ import {
   listTagsSecure} from './secure-ops/notes';
 
 import {
+  getOrCreateThreadSecure,
+  listThreadMessagesSecure,
+  postThreadMessageSecure,
+} from './secure-ops/threads';
+
+import {
   getPublicGoalDataSecure,
   createAccountEventSecure,
   listProjectsWithCollaborationsSecure,
@@ -183,6 +189,9 @@ export {
   removeEventManagerSecure,
   convertResponseToGoalSecure,
   initGoalDiscussionSecure,
+  getOrCreateThreadSecure,
+  listThreadMessagesSecure,
+  postThreadMessageSecure,
   approveProjectJoinRequestSecure,
   addCallCohostSecureAction,
   endCallSecureAction,

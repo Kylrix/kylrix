@@ -28,8 +28,11 @@ Base: `http://localhost:3005/api/v1` · prod `https://www.kylrix.space/api/v1`
 | GET/POST | `/moments` | moments:read / moments:write |
 | GET | `/moments/:id` | moments:read (ecosystem or `nostr_<hex>`) |
 | GET/POST | `/moments/:id/comments` | moments:read / moments:write (internal only for POST) |
-| GET | `/threads`, `/threads/:id`, `/threads/:id/messages` | chats:read |
+| POST | `/threads` | chats:write (ensure unique parentKind+parentId+channel) |
+| GET | `/threads?parentKind=&parentId=` | chats:read |
+| GET | `/threads/:id`, `/threads/:id/messages` | chats:read |
 | POST | `/threads/:id/messages` | chats:write |
+| POST | `/notes/:id/discussion`, `/goals/:id/discussion` | chats:write |
 | GET | `/chats`, `/chats/:id`, `/chats/:id/messages` | chats:read |
 | POST | `/chats/:id/messages` | chats:write (unencrypted only) |
 | GET | `/vault` | vault:read (metadata only) |

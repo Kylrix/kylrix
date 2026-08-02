@@ -131,18 +131,43 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
     }
   }
 
-  // Threads (unencrypted note/chat/discussion comments — full read + reply)
-  if (a === 'threads' && !b && method === 'GET') {
-    return jsonOk(await ApiResources.listThreads(actor, limit()));
+  // Threads (canonical threads + thread_messages tables)
+  if (a === 'threads' && !b) {
+    if (method === 'GET') {
+      const parentKind = req.nextUrl.searchParams.get('parentKind') || undefined;
+      const parentId = req.nextUrl.searchParams.get('parentId') || undefined;
+      return jsonOk(
+        await ApiResources.listThreads(actor, limit(), { parentKind, parentId }),
+      );
+    }
+    if (method === 'POST') {
+      return jsonOk(await ApiResources.ensureThread(actor, await readBody(req)));
+    }
   }
   if (a === 'threads' && b && !c && method === 'GET') {
     return jsonOk(await ApiResources.getThread(actor, b));
   }
   if (a === 'threads' && b && c === 'messages' && !d) {
-    if (method === 'GET') return jsonOk(await ApiResources.listThreadMessages(actor, b, limit()));
+    if (method === 'GET') {
+      return jsonOk(
+        await ApiResources.listThreadMessages(actor, b, limit(), {
+          rootMessageId: req.nextUrl.searchParams.get('rootMessageId') || undefined,
+          parentMessageId: req.nextUrl.searchParams.get('parentMessageId') || undefined,
+          topLevelOnly: req.nextUrl.searchParams.get('topLevel') === '1',
+        }),
+      );
+    }
     if (method === 'POST') {
       return jsonOk(await ApiResources.createThreadMessage(actor, b, await readBody(req)));
     }
+  }
+
+  // Idea / goal discussion ensure shortcuts
+  if (a === 'notes' && b && c === 'discussion' && !d && method === 'POST') {
+    return jsonOk(await ApiResources.ensureNoteDiscussion(actor, b));
+  }
+  if (a === 'goals' && b && c === 'discussion' && !d && method === 'POST') {
+    return jsonOk(await ApiResources.ensureGoalDiscussion(actor, b));
   }
 
   // Agents

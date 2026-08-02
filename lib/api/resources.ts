@@ -71,82 +71,6 @@ function shapeMoment(r: any) {
   };
 }
 
-function shapeThread(r: any) {
-  return {
-    id: r.$id,
-    title: r.title || 'Thread',
-    isChat: !!r.isChat,
-    isThread: !!r.isThread,
-    isDiscussion: !!r.isDiscussion,
-    isGhost: !!r.isGhost,
-    resourceId: r.resourceId || null,
-    resourceType: r.resourceType || null,
-    creatorId: r.creatorId || r.userId || null,
-    updatedAt: r.$updatedAt || r.updatedAt || null,
-    createdAt: r.$createdAt || r.createdAt || null,
-    encrypted: false,
-  };
-}
-
-function parseCommentText(raw: unknown): string {
-  const s = String(raw ?? '');
-  if (!s) return '';
-  try {
-    const parsed = JSON.parse(s);
-    if (parsed && typeof parsed === 'object') {
-      if (typeof parsed.text === 'string') return parsed.text;
-      if (typeof parsed.content === 'string') return parsed.content;
-    }
-  } catch {
-    /* plain text */
-  }
-  return s;
-}
-
-function shapeThreadMessage(r: any) {
-  return {
-    id: r.$id,
-    threadId: r.noteId,
-    userId: r.userId || null,
-    content: parseCommentText(r.content),
-    rawContent: r.content ?? null,
-    parentCommentId: r.parentCommentId || null,
-    isVoice: !!r.isVoice,
-    isEncrypted: !!r.isEncrypted,
-    createdAt: r.$createdAt || r.createdAt || null,
-  };
-}
-
-async function assertThreadAccess(actor: ApiActor, id: string) {
-  const tables = createSystemTablesDB();
-  const row = (await tables
-    .getRow({ databaseId: DB, tableId: NOTES, rowId: id })
-    .catch(() => null)) as any;
-  if (!row) notFound('Thread not found');
-
-  const isThreadLike = !!(row.isThread || row.isChat || row.isDiscussion || row.isGhost);
-  if (!isThreadLike) notFound('Thread not found');
-
-  if (row.userId === actor.userId || row.creatorId === actor.userId) return row;
-  const collabs = Array.isArray(row.collaborators) ? row.collaborators : [];
-  if (collabs.includes(actor.userId)) return row;
-
-  const collabRes = await tables
-    .listRows({
-      databaseId: FLOW_DB,
-      tableId: APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators',
-      queries: [
-        Query.equal('resourceId', id),
-        Query.equal('userId', actor.userId),
-        Query.limit(1),
-      ],
-    })
-    .catch(() => ({ rows: [] as any[] }));
-  if ((collabRes.rows || []).length) return row;
-
-  notFound('Thread not found');
-}
-
 async function assertOwnedNote(tables: ReturnType<typeof createSystemTablesDB>, actor: ApiActor, id: string) {
   const row = (await tables
     .getRow({ databaseId: DB, tableId: NOTES, rowId: id })
@@ -1331,141 +1255,85 @@ export const ApiResources = {
     return shapeMoment(row);
   },
 
-  async listThreads(actor: ApiActor, limit = 25) {
+  async listThreads(
+    actor: ApiActor,
+    limit = 25,
+    opts?: { parentKind?: string; parentId?: string },
+  ) {
     requireScope(actor, 'chats:read');
-    const tables = createSystemTablesDB();
-    const actorId = actor.userId;
-
-    const collabRes = await tables
-      .listRows({
-        databaseId: FLOW_DB,
-        tableId: APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators',
-        queries: [Query.equal('userId', actorId), Query.limit(500)],
-      })
-      .catch(() => ({ rows: [] as any[] }));
-    const collabIds = (collabRes.rows || [])
-      .map((r: any) => r.resourceId)
-      .filter(Boolean);
-
-    const authOr = [
-      Query.equal('creatorId', actorId),
-      Query.equal('userId', actorId),
-    ];
-    if (collabIds.length) authOr.push(Query.equal('$id', collabIds.slice(0, 100)));
-
-    const res = await tables
-      .listRows({
-        databaseId: DB,
-        tableId: NOTES,
-        queries: [
-          Query.equal('isThread', true),
-          Query.or(authOr),
-          Query.limit(Math.min(100, Math.max(1, limit))),
-        ] as any,
-      })
-      .catch(() => ({ rows: [] as any[] }));
-
-    // Also include isChat / isDiscussion owned by user (workspace discussions)
-    const disc = await tables
-      .listRows({
-        databaseId: DB,
-        tableId: NOTES,
-        queries: [
-          Query.equal('isDiscussion', true),
-          Query.or([Query.equal('creatorId', actorId), Query.equal('userId', actorId)]),
-          Query.limit(Math.min(50, Math.max(1, limit))),
-        ] as any,
-      })
-      .catch(() => ({ rows: [] as any[] }));
-
-    const byId = new Map<string, any>();
-    for (const r of [...(res.rows || []), ...(disc.rows || [])]) {
-      byId.set(r.$id, r);
+    const { ThreadService } = await import('@/lib/services/threads');
+    if (opts?.parentKind && opts?.parentId) {
+      return ThreadService.listForParent(opts.parentKind, opts.parentId, limit);
     }
-    return Array.from(byId.values())
-      .sort(
-        (a, b) =>
-          new Date(b.updatedAt || b.$updatedAt || 0).getTime() -
-          new Date(a.updatedAt || a.$updatedAt || 0).getTime(),
-      )
-      .slice(0, Math.min(100, Math.max(1, limit)))
-      .map(shapeThread);
+    return ThreadService.listForOwner(actor.userId, limit);
+  },
+
+  async ensureThread(actor: ApiActor, body: Record<string, unknown>) {
+    requireScope(actor, 'chats:write');
+    const parentKind = String(body.parentKind || '').trim();
+    const parentId = String(body.parentId || '').trim();
+    if (!parentKind || !parentId) badRequest('parentKind and parentId required');
+    const { ThreadService } = await import('@/lib/services/threads');
+    const result = await ThreadService.getOrCreate({
+      parentKind,
+      parentId,
+      channel: body.channel != null ? String(body.channel) : undefined,
+      ownerId: actor.userId,
+      title: body.title != null ? String(body.title) : undefined,
+      isPublic: body.isPublic === true,
+      legacyNoteId: body.legacyNoteId != null ? String(body.legacyNoteId) : null,
+    });
+    return result;
   },
 
   async getThread(actor: ApiActor, id: string) {
     requireScope(actor, 'chats:read');
-    const row = await assertThreadAccess(actor, id);
-    return shapeThread(row);
+    const { ThreadService } = await import('@/lib/services/threads');
+    const thread = await ThreadService.getById(id);
+    if (!thread) notFound('Thread not found');
+    if (thread.ownerId !== actor.userId && !thread.isPublic) notFound('Thread not found');
+    return thread;
   },
 
-  async listThreadMessages(actor: ApiActor, threadId: string, limit = 50) {
+  async listThreadMessages(
+    actor: ApiActor,
+    threadId: string,
+    limit = 50,
+    opts?: { rootMessageId?: string; parentMessageId?: string; topLevelOnly?: boolean },
+  ) {
     requireScope(actor, 'chats:read');
-    await assertThreadAccess(actor, threadId);
-    const tables = createSystemTablesDB();
-    const commentsTable = APPWRITE_CONFIG.TABLES.NOTE.COMMENTS || 'comments';
-    const res = await tables.listRows({
-      databaseId: DB,
-      tableId: commentsTable,
-      queries: [
-        Query.equal('noteId', threadId),
-        Query.orderAsc('$createdAt'),
-        Query.limit(Math.min(200, Math.max(1, limit))),
-      ],
+    await this.getThread(actor, threadId);
+    const { ThreadService } = await import('@/lib/services/threads');
+    return ThreadService.listMessages(threadId, {
+      limit,
+      rootMessageId: opts?.rootMessageId,
+      parentMessageId: opts?.parentMessageId,
+      topLevelOnly: opts?.topLevelOnly,
+      includeLegacyComments: true,
     });
-    return res.rows.map(shapeThreadMessage);
   },
 
   async createThreadMessage(actor: ApiActor, threadId: string, body: Record<string, unknown>) {
     requireScope(actor, 'chats:write');
-    await assertThreadAccess(actor, threadId);
+    await this.getThread(actor, threadId);
     const text = String(body.content ?? body.text ?? '').trim();
     if (!text) badRequest('content required');
-    const parentCommentId =
-      body.parentCommentId != null ? String(body.parentCommentId) : null;
-
-    // Match huddle / workspace discussion payload shape
-    const stored =
-      body.raw === true
-        ? text
-        : JSON.stringify({ text, type: 'text', ...(body.sendToGeneral ? { sendToGeneral: true } : {}) });
-
-    const tables = createSystemTablesDB();
-    const commentsTable = APPWRITE_CONFIG.TABLES.NOTE.COMMENTS || 'comments';
-    const now = new Date().toISOString();
-    const row = await tables.createRow({
-      databaseId: DB,
-      tableId: commentsTable,
-      rowId: ID.unique(),
-      data: {
-        noteId: threadId,
-        content: stored,
-        userId: actor.userId,
-        createdAt: now,
-        parentCommentId,
-        metadata: body.metadata != null ? String(body.metadata) : null,
-        isVoice: false,
-        isEncrypted: false,
-        isPublic: false,
-        isGuest: false,
-      },
-      permissions: [
-        Permission.read(Role.user(actor.userId)),
-        Permission.update(Role.user(actor.userId)),
-        Permission.delete(Role.user(actor.userId)),
-      ],
+    const { ThreadService } = await import('@/lib/services/threads');
+    return ThreadService.postMessage({
+      threadId,
+      userId: actor.userId,
+      content: text,
+      parentMessageId:
+        body.parentMessageId != null
+          ? String(body.parentMessageId)
+          : body.parentCommentId != null
+            ? String(body.parentCommentId)
+            : null,
+      contentType: body.contentType != null ? String(body.contentType) : 'text',
+      metadata: body.metadata != null ? String(body.metadata) : null,
+      isVoice: body.isVoice === true,
+      isEncrypted: body.isEncrypted === true,
     });
-
-    // Bump thread updatedAt for progress sorting
-    await tables
-      .updateRow({
-        databaseId: DB,
-        tableId: NOTES,
-        rowId: threadId,
-        data: { updatedAt: now },
-      })
-      .catch(() => null);
-
-    return shapeThreadMessage(row);
   },
 
   async getWorkspaceThread(actor: ApiActor, workspaceId: string) {
@@ -1476,29 +1344,51 @@ export const ApiResources = {
       .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: workspaceId })
       .catch(() => null)) as any;
     if (!project) notFound('Workspace not found');
-    // Owner always; otherwise proceed if discussion note is accessible
-    if (project.ownerId !== actor.userId) {
-      /* collab path validated via assertThreadAccess below */
-    }
-    let meta: any = {};
+
+    const { ThreadService } = await import('@/lib/services/threads');
+    let legacyNoteId: string | null = null;
     try {
-      meta = JSON.parse(project.metadata || '{}');
+      const meta = JSON.parse(project.metadata || '{}');
+      legacyNoteId = meta.discussionNoteId || null;
     } catch {
-      meta = {};
+      legacyNoteId = null;
     }
-    const discussionNoteId = meta.discussionNoteId as string | undefined;
-    if (!discussionNoteId) {
-      return {
-        workspaceId,
-        title: project.title || null,
-        threadId: null,
-        messages: [],
-        hint: 'No discussion thread on this workspace yet',
-      };
+
+    const { thread, created } = await ThreadService.getOrCreate({
+      parentKind: 'workspace',
+      parentId: workspaceId,
+      channel: ThreadService.CHANNEL_GENERAL,
+      ownerId: project.ownerId || actor.userId,
+      title: `${project.title || 'Workspace'} discussion`,
+      legacyNoteId: project.primaryThreadId ? null : legacyNoteId,
+    });
+
+    // Prefer stamped primaryThreadId; adopt legacy if present
+    if (legacyNoteId && !thread.legacyNoteId) {
+      await ThreadService.adoptLegacyNote({
+        parentKind: 'workspace',
+        parentId: workspaceId,
+        ownerId: project.ownerId || actor.userId,
+        legacyNoteId,
+        title: `${project.title || 'Workspace'} discussion`,
+      });
     }
-    const thread = await this.getThread(actor, discussionNoteId);
-    const messages = await this.listThreadMessages(actor, discussionNoteId, 100);
-    return { workspaceId, threadId: discussionNoteId, thread, messages };
+
+    const fresh = (await ThreadService.getById(thread.id)) || thread;
+    if (fresh.ownerId !== actor.userId && project.ownerId !== actor.userId && !fresh.isPublic) {
+      notFound('Thread not found');
+    }
+    const messages = await ThreadService.listMessages(fresh.id, {
+      limit: 100,
+      includeLegacyComments: true,
+    });
+    return {
+      workspaceId,
+      threadId: fresh.id,
+      thread: fresh,
+      messages,
+      created,
+    };
   },
 
   async replyWorkspaceThread(
@@ -1508,26 +1398,36 @@ export const ApiResources = {
   ) {
     requireScope(actor, 'chats:write');
     requireScope(actor, 'workspaces:read');
-    const tables = createSystemTablesDB();
-    const project = (await tables
-      .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: workspaceId })
-      .catch(() => null)) as any;
-    if (!project || project.ownerId !== actor.userId) {
-      // Allow collaborators via getWorkspace ownership check fails for collabs —
-      // fall through if discussion note is accessible
-      if (!project) notFound('Workspace not found');
-    }
-    let meta: any = {};
-    try {
-      meta = JSON.parse(project.metadata || '{}');
-    } catch {
-      meta = {};
-    }
-    const discussionNoteId = meta.discussionNoteId as string | undefined;
-    if (!discussionNoteId) badRequest('Workspace has no discussion thread');
-    return this.createThreadMessage(actor, discussionNoteId, {
-      ...body,
-      sendToGeneral: true,
+    const pack = await this.getWorkspaceThread(actor, workspaceId);
+    if (!pack.threadId) badRequest('Workspace has no discussion thread');
+    return this.createThreadMessage(actor, pack.threadId, body);
+  },
+
+  async ensureNoteDiscussion(actor: ApiActor, noteId: string) {
+    requireScope(actor, 'chats:write');
+    requireScope(actor, 'notes:read');
+    await assertOwnedNote(createSystemTablesDB(), actor, noteId);
+    const { ThreadService } = await import('@/lib/services/threads');
+    return ThreadService.getOrCreate({
+      parentKind: 'note',
+      parentId: noteId,
+      channel: ThreadService.CHANNEL_DISCUSS,
+      ownerId: actor.userId,
+      title: 'Discussion',
+    });
+  },
+
+  async ensureGoalDiscussion(actor: ApiActor, goalId: string) {
+    requireScope(actor, 'chats:write');
+    requireScope(actor, 'goals:read');
+    await assertOwnedGoal(createSystemTablesDB(), actor, goalId);
+    const { ThreadService } = await import('@/lib/services/threads');
+    return ThreadService.getOrCreate({
+      parentKind: 'goal',
+      parentId: goalId,
+      channel: ThreadService.CHANNEL_DISCUSS,
+      ownerId: actor.userId,
+      title: 'Goal discussion',
     });
   },
 

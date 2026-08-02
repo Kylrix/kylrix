@@ -276,4 +276,5 @@ appwrite tables-db create-index \
 - Official CLI reference (overwritable): `appwrite-cli`
 - Official TS patterns (overwritable): `appwrite-typescript`
 - Flow install/review punches: `flow.schema-install-review`
+- Threads substrate: `system.threads`
 - Single DB / Table-Row terms: root `AGENTS.md`
