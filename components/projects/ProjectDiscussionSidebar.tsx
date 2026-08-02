@@ -23,18 +23,14 @@ import {
   CircularProgress} from '@/lib/openbricks/primitives';
 import { useToast } from '@/components/ui/Toast';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { Projects } from '@/types/appwrite';
-import { Query, AppwriteService } from '@/lib/appwrite';
+import { AppwriteService } from '@/lib/appwrite';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import {
-  createComment,
-  listComments,
   createReaction,
   deleteReaction,
-  listReactions} from '@/lib/appwrite/note';
+} from '@/lib/appwrite/note';
 import { TargetType } from '@/types/appwrite';
-import { client } from '@/lib/appwrite/client';
 import { VoiceMessage } from '@/components/chat/VoiceMessage';
 import { StorageService } from '@/lib/services/storage';
 import MuralPattern from '@/components/chat/MuralPattern';
@@ -42,6 +38,11 @@ import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { ThreadsRegistry } from '@/lib/services/ThreadsRegistry';
+import {
+  getOrCreateThread,
+  listThreadMessages,
+  postThreadMessage,
+} from '@/lib/actions/client-ops';
 
 interface ProjectDiscussionSidebarProps {
   project: Projects;
@@ -205,7 +206,14 @@ export function ProjectDiscussionSidebar({
     }
   }, [project.metadata]);
 
-  const chatNoteId = metadata.discussionNoteId as string | undefined;
+  const [threadId, setThreadId] = useState<string | null>(
+    () =>
+      (project as any).primaryThreadId ||
+      metadata.discussionThreadId ||
+      metadata.discussionNoteId ||
+      null
+  );
+  const chatNoteId = threadId; // legacy name used through UI for empty-state checks
   const messageEndRef = useRef<HTMLDivElement>(null);
 
   const draftText = activeThreadParent ? threadInputText : inputText;
@@ -313,29 +321,11 @@ export function ProjectDiscussionSidebar({
   }, []);
 
   const loadHuddleMessages = useCallback(async () => {
-    if (!chatNoteId) return;
+    if (!threadId) return;
     try {
-      const res = await listComments(chatNoteId);
-      const commentReactions: Record<string, any[]> = {};
-      try {
-        const commentIds = res.rows.map((r: any) => r.$id);
-        if (commentIds.length > 0) {
-          const reactionsRes = await listReactions([
-            Query.equal('targetType', 'comment'),
-            Query.equal('targetId', commentIds),
-            Query.limit(500),
-          ]);
-          reactionsRes.rows.forEach((react: any) => {
-            if (!commentReactions[react.targetId]) commentReactions[react.targetId] = [];
-            commentReactions[react.targetId].push(react);
-          });
-        }
-      } catch (e) {
-        console.warn('Failed to load reactions:', e);
-      }
-
+      const rows = await listThreadMessages(threadId, { limit: 200 });
       const msgs = await Promise.all(
-        res.rows.map(async (doc: any) => {
+        rows.map(async (doc: any) => {
           let senderName = 'Collaborator';
           let senderAvatar: string | null = null;
           if (doc.userId === user?.$id) {
@@ -353,44 +343,63 @@ export function ProjectDiscussionSidebar({
             }
           }
           return {
-            id: doc.$id,
+            id: doc.id,
             senderId: doc.userId,
             senderName,
             senderAvatar,
-            content: doc.content,
-            timestamp: new Date(doc.createdAt).getTime(),
-            parentCommentId: doc.parentCommentId || null,
-            reactions: commentReactions[doc.$id] || []} satisfies DiscussionMessage;
+            content: doc.content || '',
+            timestamp: new Date(doc.createdAt || Date.now()).getTime(),
+            parentCommentId: doc.parentMessageId || null,
+            reactions: [] as any[],
+          } satisfies DiscussionMessage;
         })
       );
       msgs.sort((a, b) => a.timestamp - b.timestamp);
       setMessages(msgs);
+      await ThreadsRegistry.cacheDiscussionMessages(threadId, msgs);
     } catch (err) {
-      console.error('Failed to load huddle comments:', err);
+      console.error('Failed to load discussion messages:', err);
     } finally {
       setLoading(false);
     }
-  }, [chatNoteId, user]);
+  }, [threadId, user]);
 
   useEffect(() => {
-    if (!chatNoteId) return;
-    let active = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        const legacyNoteId =
+          metadata.discussionNoteId &&
+          metadata.discussionNoteId !== (project as any).primaryThreadId &&
+          metadata.discussionNoteId !== metadata.discussionThreadId
+            ? String(metadata.discussionNoteId)
+            : null;
+        const res = await getOrCreateThread({
+          parentKind: 'workspace',
+          parentId: project.$id,
+          channel: 'general',
+          title: `${project.title} Discussion`,
+          legacyNoteId,
+        });
+        const id = (res as any)?.thread?.id || (res as any)?.id;
+        if (!cancelled && id) setThreadId(id);
+      } catch (e) {
+        console.error('Failed to ensure workspace thread:', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [project.$id, project.title, metadata.discussionNoteId, metadata.discussionThreadId]);
+
+  useEffect(() => {
+    if (!threadId) return;
     setLoading(true);
     loadHuddleMessages();
-    const unsubscribe = client.subscribe(
-      [
-        `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.comments.documents`,
-        `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.reactions.documents`,
-      ],
-      () => {
-        if (active) loadHuddleMessages();
-      }
-    );
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, [chatNoteId, loadHuddleMessages]);
+    // Poll lightly until realtime lands on thread_messages
+    const t = setInterval(() => loadHuddleMessages(), 8000);
+    return () => clearInterval(t);
+  }, [threadId, loadHuddleMessages]);
 
   const handleReact = async (msgId: string, emoji: string) => {
     if (!user) return;
@@ -414,20 +423,16 @@ export function ProjectDiscussionSidebar({
 
   const submitMessage = async () => {
     const text = draftText.trim();
-    if (!text || sending || !chatNoteId) return false;
+    if (!text || sending || !threadId) return false;
     setSending(true);
     try {
-      if (activeThreadParent) {
-        await createComment(
-          chatNoteId,
-          JSON.stringify({ text, type: 'text', sendToGeneral: sendToGeneralChecked }),
-          activeThreadParent.id
-        );
-        setThreadInputText('');
-      } else {
-        await createComment(chatNoteId, JSON.stringify({ text, type: 'text', sendToGeneral: true }));
-        setInputText('');
-      }
+      await postThreadMessage({
+        threadId,
+        content: text,
+        parentMessageId: activeThreadParent?.id || null,
+      });
+      if (activeThreadParent) setThreadInputText('');
+      else setInputText('');
       await loadHuddleMessages();
       return true;
     } catch (err) {
@@ -474,11 +479,11 @@ export function ProjectDiscussionSidebar({
         setSending(true);
         try {
           const uploaded = await StorageService.uploadFile(audioFile, 'voice');
-          if (chatNoteId) {
-            await createComment(
-              chatNoteId,
-              JSON.stringify({ text: 'Voice Note', type: 'voice', voiceFileId: uploaded.$id, sendToGeneral: true })
-            );
+          if (threadId) {
+            await postThreadMessage({
+              threadId,
+              content: JSON.stringify({ text: 'Voice Note', type: 'voice', voiceFileId: uploaded.$id }),
+            });
             await loadHuddleMessages();
           }
         } catch (error) {
@@ -501,7 +506,13 @@ export function ProjectDiscussionSidebar({
   const handleInitHuddle = async () => {
     setLoading(true);
     try {
-      await ThreadsRegistry.getOrCreateThreadForObject(project.$id, 'project', `${project.title} Discussion`, chatNoteId);
+      const id = await ThreadsRegistry.getOrCreateThreadForObject(
+        project.$id,
+        'project',
+        `${project.title} Discussion`,
+        threadId || undefined,
+      );
+      if (id) setThreadId(id);
       fetchProjectData();
     } catch (err) {
       console.error('Failed to initialize huddle thread:', err);
@@ -766,7 +777,7 @@ export function ProjectDiscussionSidebar({
                 Start project discussion
               </Typography>
               <Typography component="span" sx={{ display: 'block', color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', lineHeight: 1.6, mb: 2.5 }}>
-                Spin up a team huddle for this project. Messages auto-clean after 7 days.
+                Start a team discussion for this workspace. It stays off your Ideas list.
               </Typography>
               <Button
                 variant="contained"

@@ -27,8 +27,7 @@ import { events as eventApi, eventGuests as guestApi } from '@/lib/kylrixflow';
 import { Event } from '@/types/kylrixflow';
 import { formatTime } from '@/lib/time-util';
 import { Query } from 'appwrite';
-import { createGhostNoteForResource, promoteGhostResourceThreadToStory } from '@/lib/actions/client-ops';
-import { createComment, listComments, getNote } from '@/lib/appwrite/note';
+import { createGhostNoteForResource, promoteGhostResourceThreadToStory, getOrCreateThread, findThread, listThreadMessages, postThreadMessage } from '@/lib/actions/client-ops';
 import { client } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { useToast } from '@/components/ui/Toast';
@@ -139,6 +138,7 @@ export default function EventPage() {
   const [huddleMessages, setHuddleMessages] = useState<any[]>([]);
   const [huddleLoading, setHuddleLoading] = useState(false);
   const [huddleSending, setHuddleSending] = useState(false);
+  const [threadId, setThreadId] = useState<string | null>(null);
   const [isHuddleInit, setIsHuddleInit] = useState(false);
   const [huddleTimeRemaining, setHuddleTimeRemaining] = useState('');
   const [inputText, setInputText] = useState('');
@@ -151,23 +151,14 @@ export default function EventPage() {
 
     const checkHuddle = async () => {
       try {
-        const note = await getNote(eventId);
+        const existing = await findThread({ parentKind: 'event', parentId: eventId, channel: 'discuss' });
         if (!active) return;
-        if (note && note.metadata) {
+        if (existing?.id) {
+          setThreadId(existing.id);
           setIsHuddleInit(true);
-          const noteMeta = JSON.parse(note.metadata);
-          const expiresAt = new Date(noteMeta.expiresAt).getTime();
-          const updateTimer = () => {
-            const diff = expiresAt - Date.now();
-            if (diff <= 0) {
-              setHuddleTimeRemaining('Expired');
-            } else {
-              const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-              const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-              setHuddleTimeRemaining(`${days}d ${hours}h remaining`);
-            }
-          };
-          updateTimer();
+          setHuddleTimeRemaining('');
+        } else {
+          setIsHuddleInit(false);
         }
       } catch (_err) {
         if (active) setIsHuddleInit(false);
@@ -186,7 +177,15 @@ export default function EventPage() {
 
     const loadHuddleComments = async () => {
       try {
-        const res = await listComments(eventId);
+        let tid = threadId;
+        if (!tid) {
+          const ensured = await getOrCreateThread({ parentKind: 'event', parentId: eventId, channel: 'discuss' });
+          tid = (ensured as any)?.thread?.id || null;
+          if (tid) setThreadId(tid);
+        }
+        if (!tid) return;
+        const rows = await listThreadMessages(tid, { limit: 200 });
+        const res = { rows: rows.map((r: any) => ({ ...r, $id: r.id, createdAt: r.createdAt })) };
         if (!active) return;
         const msgs = await Promise.all(
           res.rows.map(async (doc: any) => {
@@ -263,9 +262,10 @@ export default function EventPage() {
     if (!event) return;
     setHuddleLoading(true);
     try {
-      await createGhostNoteForResource(eventId, 'event', `${event.title} Discussion`);
+      const res = await createGhostNoteForResource(eventId, 'event', `${event.title} Discussion`);
+      setThreadId((res as any)?.$id || (res as any)?.primaryThreadId || null);
       setIsHuddleInit(true);
-      showSuccess('Event discussion huddle initialized!');
+      showSuccess('Event discussion ready');
     } catch (err) {
       console.error('Failed to init huddle:', err);
       showError('Failed to initialize huddle.');
@@ -280,8 +280,28 @@ export default function EventPage() {
     if (!isAuthenticated) { openIDMWindow(); return; }
     setHuddleSending(true);
     try {
-      await createComment(eventId, inputText.trim());
+      let tid = threadId;
+      if (!tid) {
+        const ensured = await getOrCreateThread({
+          parentKind: 'event',
+          parentId: eventId,
+          channel: 'discuss',
+          title: `${event?.title || 'Event'} Discussion`,
+        });
+        tid = (ensured as any)?.thread?.id || null;
+        setThreadId(tid);
+      }
+      if (!tid) throw new Error('No discussion thread');
+      await postThreadMessage({ threadId: tid, content: inputText.trim() });
       setInputText('');
+      const rows = await listThreadMessages(tid, { limit: 200 });
+      setHuddleMessages(rows.map((doc: any) => ({
+        id: doc.id,
+        senderId: doc.userId,
+        senderName: user?.name || 'You',
+        content: doc.content,
+        timestamp: new Date(doc.createdAt || Date.now()).getTime(),
+      })).sort((a: any, b: any) => a.timestamp - b.timestamp));
     } catch (err) {
       console.error('Failed to send comment:', err);
       showError('Failed to send message.');

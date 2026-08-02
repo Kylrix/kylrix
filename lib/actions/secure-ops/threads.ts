@@ -26,6 +26,22 @@ export async function getOrCreateThreadSecure(data: {
   });
 }
 
+export async function findThreadSecure(data: {
+  parentKind: string;
+  parentId: string;
+  channel?: string;
+  jwt?: string;
+}) {
+  const actor = await getActor(data.jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+  const scopeKey = ThreadService.buildScopeKey(
+    data.parentKind,
+    data.parentId,
+    data.channel || ThreadService.CHANNEL_GENERAL,
+  );
+  return ThreadService.findByScopeKey(scopeKey);
+}
+
 export async function listThreadMessagesSecure(
   threadId: string,
   opts?: { limit?: number; rootMessageId?: string; topLevelOnly?: boolean },

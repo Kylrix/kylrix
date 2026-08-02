@@ -52,3 +52,5 @@ Ghost `isThread` / `isChat` notes + `comments` remain readable when `threads.leg
 - Add more `isThread` / `isDiscussion` / `isChat` flags on notes
 - Create a second thread for the same `(parentKind, parentId, channel)`
 - Use Appwrite CLI for row CRUD (schema only)
+- Let discussion shells appear in Ideas — enforce `isGhostNote` + `ideaListExclusionQueries()` on every note list path
+- Call `createGhostNoteForProject` / `ForResource` expecting a note row — they now return canonical thread ids only

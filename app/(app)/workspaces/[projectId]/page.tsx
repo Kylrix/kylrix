@@ -333,9 +333,15 @@ export default function ProjectDetailPage() {
     }
   }, [project?.metadata]);
 
+  const hasDiscussion = !!(
+    (project as any)?.primaryThreadId ||
+    metadata.discussionThreadId ||
+    metadata.discussionNoteId
+  );
+
   const handleDiscussionClick = async () => {
     if (!project) return;
-    if (metadata.discussionNoteId) {
+    if (hasDiscussion) {
       openSidebar(
         <ProjectDiscussionSidebar
           project={project}
@@ -348,8 +354,9 @@ export default function ProjectDetailPage() {
     } else {
       setInitializingHuddle(true);
       try {
+        // Canonical thread — does NOT create a shell idea/note
         await createGhostNoteForProject(project.$id, `${project.title} Discussion`);
-        showSuccess('Huddle Discussion spun up successfully!');
+        showSuccess('Discussion ready');
         await fetchProjectData();
         openSidebar(
           <ProjectDiscussionSidebar
@@ -949,9 +956,9 @@ export default function ProjectDetailPage() {
                     onClick={handleDiscussionClick}
                     disabled={initializingHuddle}
                     style={{
-                        backgroundColor: metadata.discussionNoteId ? 'rgba(129,140,248,0.15)' : '#161412',
-                        color: metadata.discussionNoteId ? '#818CF8' : 'rgba(255,255,255,0.6)',
-                        borderColor: metadata.discussionNoteId ? 'rgba(129,140,248,0.3)' : 'rgba(255,255,255,0.06)'
+                        backgroundColor: hasDiscussion ? 'rgba(129,140,248,0.15)' : '#161412',
+                        color: hasDiscussion ? '#818CF8' : 'rgba(255,255,255,0.6)',
+                        borderColor: hasDiscussion ? 'rgba(129,140,248,0.3)' : 'rgba(255,255,255,0.06)'
                     }}
                     className="w-11 h-11 rounded-[14px] flex items-center justify-center border hover:bg-white/5 transition-all relative flex-shrink-0"
                 >
@@ -960,7 +967,7 @@ export default function ProjectDetailPage() {
                     ) : (
                         <MessageSquare size={20} />
                     )}
-                    {metadata.discussionNoteId && (
+                    {hasDiscussion && (
                         <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#818CF8] border-2 border-[#0A0908]" />
                     )}
                 </button>
@@ -1750,10 +1757,10 @@ export default function ProjectDetailPage() {
             )}
             {activeTabMenuIndex === 6 && (
               <button
-                disabled={!metadata.discussionNoteId}
+                disabled={!hasDiscussion}
                 onClick={async () => {
                   setTabMenuAnchorEl(null);
-                  if (metadata.discussionNoteId) {
+                  if (metadata.discussionNoteId || metadata.discussionThreadId || (project as any)?.primaryThreadId) {
                     if (window.confirm("Are you sure you want to wipe this entire discussion? All messages and replies will be permanently deleted.")) {
                       setInitializingHuddle(true);
                       try {

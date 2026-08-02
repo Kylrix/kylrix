@@ -105,16 +105,18 @@ export const ApiResources = {
   async listNotes(actor: ApiActor, limit = 25) {
     requireScope(actor, 'notes:read');
     const tables = createSystemTablesDB();
+    const { isGhostNote, ideaListExclusionQueries } = await import('@/lib/appwrite/note');
     const res = await tables.listRows({
       databaseId: DB,
       tableId: NOTES,
       queries: [
         Query.equal('userId', actor.userId),
+        ...ideaListExclusionQueries(),
         Query.orderDesc('$updatedAt'),
         Query.limit(Math.min(100, Math.max(1, limit))),
       ],
     });
-    return res.rows.map(shapeNote);
+    return res.rows.filter((r: any) => !isGhostNote(r)).map(shapeNote);
   },
 
   async getNote(actor: ApiActor, id: string) {

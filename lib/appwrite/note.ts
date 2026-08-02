@@ -157,6 +157,11 @@ export function cleanRowData<T>(data: Partial<T>): Record<string, unknown> {
   return result;
 }
 
+/**
+ * True for notes that must NEVER appear in the Ideas list.
+ * Covers ghost / thread / chat / discussion shells (flag columns + metadata),
+ * and object-linked empty shells that historically leaked when flags were missing.
+ */
 export function isGhostNote(note: any): boolean {
   if (!note) return false;
   // 1. Direct Column Check (Ghost, Thread, Chat, Discussion)
@@ -171,11 +176,38 @@ export function isGhostNote(note: any): boolean {
         if (parsed.isGhost || parsed.isThread || parsed.isChat || parsed.isDiscussion) {
           return true;
         }
+        // Linked discussion carrier spun for another object
+        if (parsed.linkedResourceType && parsed.linkedResourceId) {
+          return true;
+        }
       }
     } catch {}
   }
-  // 3. Userless Fallback (Ghost notes used to use null/empty userId)
+  // 3. Object-linked shell (resourceType set to a host object, empty body)
+  const rt = String(note.resourceType || '').toLowerCase();
+  const SHELL_HOSTS = new Set(['project', 'workspace', 'goal', 'task', 'chat', 'call', 'event', 'form']);
+  if (rt && SHELL_HOSTS.has(rt) && note.resourceId) {
+    const content = String(note.content ?? '').trim();
+    if (!content) return true;
+  }
+  // 4. Userless Fallback (Ghost notes used to use null/empty userId)
   return !note.userId;
+}
+
+/** Alias — use at every Ideas / note discovery surface. */
+export const isIdeaListExcludedNote = isGhostNote;
+
+/**
+ * Appwrite query fragments that shrink discussion shells before client filter.
+ * Safe additive filters; still apply isGhostNote client-side (null flags).
+ */
+export function ideaListExclusionQueries(): any[] {
+  return [
+    Query.notEqual('isGhost', true),
+    Query.notEqual('isThread', true),
+    Query.notEqual('isChat', true),
+    Query.notEqual('isDiscussion', true),
+  ];
 }
 
 function hydrateVirtualAttributes(doc: any): any {
@@ -677,6 +709,7 @@ export async function listNotes(queries: any[] = [], limit: number = 100, option
 
     const finalQueries = [
       ...queries,
+      ...(!options.includeGhosts ? ideaListExclusionQueries() : []),
       Query.limit(limit),
       Query.orderDesc('$createdAt')
     ];
@@ -1524,6 +1557,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
 
   const finalQueries: any[] = [
     ...baseQueries,
+    ...(!includeGhosts ? ideaListExclusionQueries() : []),
     Query.limit(limit),
     Query.orderDesc('$createdAt')];
   if (cursor) finalQueries.push(Query.cursorAfter(cursor));

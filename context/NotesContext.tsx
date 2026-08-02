@@ -389,7 +389,9 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           userId: user?.$id});
 
         const mergedBatch = mergeFetchedNotesWithLocalDrafts(
-          (res?.rows || []).map((note: Notes) => normalizeVisibility(note)).filter((n: any) => !deletedIds.has(n.$id)),
+          (res?.rows || [])
+            .map((note: Notes) => normalizeVisibility(note))
+            .filter((n: any) => !deletedIds.has(n.$id) && !isGhostNote(n)),
           notesRef.current,
           liveEditGuardsRef.current,
           deletedIds,

@@ -31,11 +31,20 @@ This tab aggregates two distinct categories:
 1.  **Owned Public**: The user's own notes where `isPublic === true`. (Fetch: `listPublicNotesByUser(userId)`)
 2.  **Explicit Shared Public**: Notes owned by others where `isPublic === true` AND the user is an **explicit collaborator** in `$permissions`. (Fetch: `getSharedNotes()` result where `isPublic === true`)
 
+## 3. Discussion / thread shells (STRICT)
+
+Discussions live in `threads` / `thread_messages` — **never** as Ideas.
+
+Any note that is a ghost/thread/chat/discussion shell (or empty `resourceType` host shell) must be excluded from Ideas via `isGhostNote` / `isIdeaListExcludedNote` and `ideaListExclusionQueries()`.
+
+Do **not** create new `isThread` / `isGhost` notes for object discussions. Use `ThreadService.getOrCreate`.
+
 ## Summary Table
 
 | UI Surface | Owner | Public Status | Permission Requirement |
 | :--- | :--- | :--- | :--- |
-| **Notes UI** | Me | Any | Owner |
+| **Notes UI** | Me | Any | Owner — **no** ghost/thread/discussion shells |
 | **Shared > Private** | Others | Private | Explicitly named in `$permissions` |
 | **Shared > Public** | Me | Public | Owner |
 | **Shared > Public** | Others | Public | Explicitly named in `$permissions` |
+| **Object discussions** | — | — | `threads` table only |

@@ -24,9 +24,12 @@ import {
 } from 'lucide-react';
 import {
   initGoalDiscussion,
-  getResourceCollaborators} from '@/lib/actions/client-ops';
+  getResourceCollaborators,
+  listThreadMessages,
+  postThreadMessage,
+  getOrCreateThread,
+} from '@/lib/actions/client-ops';
 import { toLocalDateInputString } from '@/lib/utils';
-import { createComment, listComments } from '@/lib/appwrite/note';
 import { formatNoteCreatedDate } from '@/lib/date-utils';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -181,20 +184,32 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const [huddleSending, setHuddleSending] = useState(false);
   const huddleMessageEndRef = React.useRef<HTMLDivElement>(null);
 
-  const discussionNoteId = task?.discussionId;
+  const discussionNoteId = (task as any)?.primaryThreadId || task?.discussionId;
 
-  // Load comments and subscribe to Appwrite comments
+  // Load canonical thread messages (legacy discussionId notes bridged via ThreadService)
   React.useEffect(() => {
-    if (!discussionNoteId) return;
+    if (!discussionNoteId && !task?.id) return;
     let active = true;
     setHuddleLoading(true);
 
     const loadDiscussionComments = async () => {
       try {
-        const res = await listComments(discussionNoteId);
+        let threadId = (task as any)?.primaryThreadId as string | undefined;
+        if (!threadId && task?.id) {
+          const ensured = await getOrCreateThread({
+            parentKind: 'goal',
+            parentId: task.id,
+            channel: 'discuss',
+            title: `Goal discussion: ${task.title || task.id}`,
+            legacyNoteId: task.discussionId || null,
+          });
+          threadId = (ensured as any)?.thread?.id;
+        }
+        if (!threadId || !active) return;
+        const rows = await listThreadMessages(threadId, { limit: 200 });
         if (!active) return;
         const msgs = await Promise.all(
-          res.rows.map(async (row: any) => {
+          rows.map(async (row: any) => {
             let senderName = 'Collaborator';
             let senderAvatar: string | null = null;
             if (user && row.userId === user.$id) {
@@ -209,12 +224,12 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               } catch {}
             }
             return {
-              id: row.$id,
+              id: row.id,
               senderId: row.userId,
               senderName,
               senderAvatar,
               content: row.content,
-              timestamp: new Date(row.createdAt).getTime()};
+              timestamp: new Date(row.createdAt || Date.now()).getTime()};
           })
         );
 
@@ -228,48 +243,12 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
     };
 
     loadDiscussionComments();
-
-    const unsubscribe = client.subscribe(
-      `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.comments.documents`,
-      async (response: any) => {
-        if (!active) return;
-        const events = response.events;
-        const payload = response.payload;
-
-        if (events.some((e: string) => e.includes('.create')) && payload.noteId === discussionNoteId) {
-          let senderName = 'Collaborator';
-          let senderAvatar: string | null = null;
-          if (user && payload.userId === user.$id) {
-            senderName = user.name || 'You';
-          } else {
-            try {
-              const profile = await AppwriteService.getProfile(payload.userId);
-              if (profile) {
-                senderName = profile.name || 'Collaborator';
-                senderAvatar = profile.avatar || profile.profilePicId || null;
-              }
-            } catch {}
-          }
-          const msg = {
-            id: payload.$id,
-            senderId: payload.userId,
-            senderName,
-            senderAvatar,
-            content: payload.content,
-            timestamp: new Date(payload.createdAt).getTime()};
-          setHuddleMessages(prev => {
-            if (prev.some(m => m.id === msg.id)) return prev;
-            return [...prev, msg].sort((a, b) => a.timestamp - b.timestamp);
-          });
-        }
-      }
-    );
-
+    const poll = setInterval(loadDiscussionComments, 8000);
     return () => {
       active = false;
-      unsubscribe();
+      clearInterval(poll);
     };
-  }, [discussionNoteId, user]);
+  }, [discussionNoteId, task?.id, task?.discussionId, task?.title, user, (task as any)?.primaryThreadId]);
 
   React.useEffect(() => {
     huddleMessageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -280,7 +259,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
     setHuddleLoading(true);
     try {
       await initGoalDiscussion(task.id);
-      showSuccess('Goal discussion initialized!');
+      showSuccess('Goal discussion ready');
     } catch (err) {
       console.error('Failed to init discussion:', err);
       showError('Failed to initialize discussion.');
@@ -291,15 +270,37 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim() || huddleSending || !discussionNoteId) return;
+    if (!newComment.trim() || huddleSending) return;
     if (!isPaid) {
       openProUpgrade('Discussions');
       return;
     }
     setHuddleSending(true);
     try {
-      await createComment(discussionNoteId, newComment.trim());
+      let threadId = (task as any)?.primaryThreadId || discussionNoteId;
+      if (!threadId && task?.id) {
+        const ensured = await getOrCreateThread({
+          parentKind: 'goal',
+          parentId: task.id,
+          channel: 'discuss',
+          title: `Goal discussion: ${task.title || task.id}`,
+        });
+        threadId = (ensured as any)?.thread?.id;
+      }
+      if (!threadId) throw new Error('No discussion thread');
+      await postThreadMessage({ threadId, content: newComment.trim() });
       setNewComment('');
+      const rows = await listThreadMessages(threadId, { limit: 200 });
+      setHuddleMessages(
+        rows.map((row: any) => ({
+          id: row.id,
+          senderId: row.userId,
+          senderName: user?.name || 'You',
+          senderAvatar: null,
+          content: row.content,
+          timestamp: new Date(row.createdAt || Date.now()).getTime(),
+        })).sort((a: any, b: any) => a.timestamp - b.timestamp)
+      );
     } catch (err) {
       console.error('Failed to send comment:', err);
       showError('Failed to send message.');

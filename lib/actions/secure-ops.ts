@@ -35,6 +35,7 @@ import {
 
 import {
   getOrCreateThreadSecure,
+  findThreadSecure,
   listThreadMessagesSecure,
   postThreadMessageSecure,
 } from './secure-ops/threads';
@@ -190,6 +191,7 @@ export {
   convertResponseToGoalSecure,
   initGoalDiscussionSecure,
   getOrCreateThreadSecure,
+  findThreadSecure,
   listThreadMessagesSecure,
   postThreadMessageSecure,
   approveProjectJoinRequestSecure,

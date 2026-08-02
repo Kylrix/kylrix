@@ -53,6 +53,7 @@ import {
   getObjectsByParentSecure,
   approveProjectJoinRequestSecure,
   getOrCreateThreadSecure,
+  findThreadSecure,
   listThreadMessagesSecure,
   postThreadMessageSecure,
 } from './secure-ops';
@@ -333,6 +334,15 @@ export async function getOrCreateThread(data: {
 }) {
   const jwt = await getJwt();
   return getOrCreateThreadSecure({ ...data, jwt });
+}
+
+export async function findThread(data: {
+  parentKind: string;
+  parentId: string;
+  channel?: string;
+}) {
+  const jwt = await getJwt();
+  return findThreadSecure({ ...data, jwt });
 }
 
 export async function listThreadMessages(

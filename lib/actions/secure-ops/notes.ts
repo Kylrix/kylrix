@@ -1031,17 +1031,7 @@ export async function createGhostNoteForProjectSecure(projectId: string, title?:
     throw new Error('Unauthorized');
   }
 
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  const metadata = JSON.stringify({
-    isGhost: true,
-    linkedResourceType: 'project',
-    linkedResourceId: projectId,
-    expiresAt: expiresAt,
-    version: 'v2'});
-
   const tables = createSystemTablesDB();
-  
-  // Fetch parent project to mirror permissions
   const project = await tables.getRow({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
@@ -1052,52 +1042,55 @@ export async function createGhostNoteForProjectSecure(projectId: string, title?:
       throw new Error('Project not found');
   }
 
-  // Derive permissions from the parent project
-  const projectPermissions = project.$permissions || [];
-  // We want to extract all 'read' roles from the parent project to mirror them on the thread
-  const authorizedReadRoles = projectPermissions
-      .filter((p: string) => p.startsWith('read('))
-      .map((p: string) => p.substring(5, p.length - 1));
-
-  // Build strict permissions: No read("any")!
-  const threadPermissions = authorizedReadRoles.map(role => `read(${role})`);
-
-  const result = await tables.createRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-    rowId: ID.unique(),
-    data: {
-      title: title || 'Project Discussion',
-      content: '',
-      format: 'markdown',
-      isPublic: false,
-      userId: project.ownerId,
-      creatorId: project.ownerId,
-      resourceId: projectId,
-      resourceType: 'project',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      metadata,
-      isGhost: true,
-      isThread: true},
-    permissions: threadPermissions});
-
-  // Update parent project metadata with discussionNoteId
   let projMeta: any = {};
   try {
-    projMeta = JSON.parse(project.metadata || '{}');
+    projMeta = JSON.parse((project as any).metadata || '{}');
   } catch {}
-  projMeta.discussionNoteId = result.$id;
+
+  // Prefer existing canonical thread; never spin a new shell note into Ideas.
+  const { ThreadService } = await import('@/lib/services/threads');
+  const legacyNoteId =
+    projMeta.discussionNoteId && projMeta.discussionNoteId !== (project as any).primaryThreadId
+      ? String(projMeta.discussionNoteId)
+      : null;
+
+  const { thread, created } = await ThreadService.getOrCreate({
+    parentKind: 'workspace',
+    parentId: projectId,
+    channel: ThreadService.CHANNEL_GENERAL,
+    ownerId: (project as any).ownerId || actor.$id,
+    title: title || `${(project as any).title || 'Workspace'} discussion`,
+    legacyNoteId,
+  });
+
+  projMeta.discussionThreadId = thread.id;
+  // Keep discussionNoteId only for true legacy note shells (message bridge).
+  if (legacyNoteId) projMeta.discussionNoteId = legacyNoteId;
+  else delete projMeta.discussionNoteId;
+
   await tables.updateRow({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
     rowId: projectId,
     data: {
-      metadata: JSON.stringify(projMeta)
+      primaryThreadId: thread.id,
+      metadata: JSON.stringify(projMeta),
+      updatedAt: new Date().toISOString(),
     }
   });
 
-  return JSON.parse(JSON.stringify(result));
+  // Back-compat shape for callers expecting a note-like {$id}
+  return JSON.parse(JSON.stringify({
+    $id: thread.id,
+    title: thread.title,
+    isGhost: false,
+    isThread: false,
+    resourceType: 'project',
+    resourceId: projectId,
+    primaryThreadId: thread.id,
+    created,
+    _canonicalThread: true,
+  }));
 }
 
 export async function createGhostNoteForResourceSecure(
@@ -1111,46 +1104,37 @@ export async function createGhostNoteForResourceSecure(
     throw new Error('Unauthorized');
   }
 
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  const metadata = JSON.stringify({
-    isGhost: true,
-    linkedResourceType: resourceType,
-    linkedResourceId: resourceId,
-    expiresAt: expiresAt,
-    version: 'v2'});
+  const { ThreadService } = await import('@/lib/services/threads');
+  const kindMap: Record<string, string> = {
+    task: 'goal',
+    project: 'workspace',
+    event: 'event',
+    form: 'form',
+    tag: 'object',
+  };
+  const parentKind = kindMap[resourceType] || 'object';
+  const channel =
+    parentKind === 'workspace' ? ThreadService.CHANNEL_GENERAL : ThreadService.CHANNEL_DISCUSS;
 
-  const tables = createSystemTablesDB();
-  
-  // Try to delete any existing Ghost Note for this resource to avoid duplicates
-  try {
-    await tables.deleteRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-      tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-      rowId: resourceId
-    });
-  } catch {}
+  const { thread, created } = await ThreadService.getOrCreate({
+    parentKind,
+    parentId: resourceId,
+    channel,
+    ownerId: actor.$id,
+    title: title || 'Discussion',
+  });
 
-  const result = await tables.createRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-    rowId: resourceId, // RowId matches the resourceId directly!
-    data: {
-      title: title || `Discussion Thread`,
-      content: '',
-      format: 'markdown',
-      isPublic: false,
-      userId: actor.$id,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      creatorId: actor.$id,
-      resourceId: resourceId,
-      resourceType: resourceType,
-      metadata,
-      isGhost: true,
-      isThread: true},
-    permissions: [Permission.read(Role.user(actor.$id))]});
-
-  return JSON.parse(JSON.stringify(result));
+  return JSON.parse(JSON.stringify({
+    $id: thread.id,
+    title: thread.title,
+    isGhost: false,
+    isThread: false,
+    resourceType,
+    resourceId,
+    primaryThreadId: thread.id,
+    created,
+    _canonicalThread: true,
+  }));
 }
 
 export async function createGhostNoteChatSecure(data: {
