@@ -35,7 +35,8 @@ export async function fetchNostrEngagement(
     replyCount: {} as Record<string, number>,
     likeCount: {} as Record<string, number>,
   };
-  if (!ids.length || typeof window === 'undefined') return empty;
+  // Node 22+ and browsers both expose WebSocket; allow server-side PAT API reads.
+  if (!ids.length || typeof WebSocket === 'undefined') return empty;
 
   const repliesByRoot: Record<string, NostrEvent[]> = {};
   const reactionsByRoot: Record<string, NostrEvent[]> = {};

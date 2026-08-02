@@ -55,6 +55,98 @@ function shapeGoal(r: any) {
   };
 }
 
+function shapeMoment(r: any) {
+  return {
+    id: r.$id,
+    source: 'ecosystem' as const,
+    caption: r.caption || null,
+    content: r.caption || null,
+    type: r.type || null,
+    momentKind: r.momentKind || null,
+    sourceId: r.sourceId || null,
+    fileId: r.fileId || null,
+    userId: r.userId || null,
+    createdAt: r.$createdAt || r.createdAt || null,
+    isPublic: !!r.isPublic,
+  };
+}
+
+function shapeThread(r: any) {
+  return {
+    id: r.$id,
+    title: r.title || 'Thread',
+    isChat: !!r.isChat,
+    isThread: !!r.isThread,
+    isDiscussion: !!r.isDiscussion,
+    isGhost: !!r.isGhost,
+    resourceId: r.resourceId || null,
+    resourceType: r.resourceType || null,
+    creatorId: r.creatorId || r.userId || null,
+    updatedAt: r.$updatedAt || r.updatedAt || null,
+    createdAt: r.$createdAt || r.createdAt || null,
+    encrypted: false,
+  };
+}
+
+function parseCommentText(raw: unknown): string {
+  const s = String(raw ?? '');
+  if (!s) return '';
+  try {
+    const parsed = JSON.parse(s);
+    if (parsed && typeof parsed === 'object') {
+      if (typeof parsed.text === 'string') return parsed.text;
+      if (typeof parsed.content === 'string') return parsed.content;
+    }
+  } catch {
+    /* plain text */
+  }
+  return s;
+}
+
+function shapeThreadMessage(r: any) {
+  return {
+    id: r.$id,
+    threadId: r.noteId,
+    userId: r.userId || null,
+    content: parseCommentText(r.content),
+    rawContent: r.content ?? null,
+    parentCommentId: r.parentCommentId || null,
+    isVoice: !!r.isVoice,
+    isEncrypted: !!r.isEncrypted,
+    createdAt: r.$createdAt || r.createdAt || null,
+  };
+}
+
+async function assertThreadAccess(actor: ApiActor, id: string) {
+  const tables = createSystemTablesDB();
+  const row = (await tables
+    .getRow({ databaseId: DB, tableId: NOTES, rowId: id })
+    .catch(() => null)) as any;
+  if (!row) notFound('Thread not found');
+
+  const isThreadLike = !!(row.isThread || row.isChat || row.isDiscussion || row.isGhost);
+  if (!isThreadLike) notFound('Thread not found');
+
+  if (row.userId === actor.userId || row.creatorId === actor.userId) return row;
+  const collabs = Array.isArray(row.collaborators) ? row.collaborators : [];
+  if (collabs.includes(actor.userId)) return row;
+
+  const collabRes = await tables
+    .listRows({
+      databaseId: FLOW_DB,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators',
+      queries: [
+        Query.equal('resourceId', id),
+        Query.equal('userId', actor.userId),
+        Query.limit(1),
+      ],
+    })
+    .catch(() => ({ rows: [] as any[] }));
+  if ((collabRes.rows || []).length) return row;
+
+  notFound('Thread not found');
+}
+
 async function assertOwnedNote(tables: ReturnType<typeof createSystemTablesDB>, actor: ApiActor, id: string) {
   const row = (await tables
     .getRow({ databaseId: DB, tableId: NOTES, rowId: id })
@@ -609,7 +701,7 @@ export const ApiResources = {
 
   async listChatMessages(actor: ApiActor, conversationId: string, limit = 50) {
     requireScope(actor, 'chats:read');
-    await this.getChat(actor, conversationId);
+    const chat = await this.getChat(actor, conversationId);
     const tables = createSystemTablesDB();
     const msgTable = APPWRITE_CONFIG.TABLES.CONNECT?.MESSAGES || 'messages';
     const res = await tables.listRows({
@@ -621,16 +713,64 @@ export const ApiResources = {
         Query.limit(Math.min(200, Math.max(1, limit))),
       ],
     });
-    // Ciphertext / metadata only — PAT cannot unlock E2EE vaults
-    return res.rows.map((r: any) => ({
-      id: r.$id,
-      conversationId: r.conversationId,
-      senderId: r.senderId || null,
-      createdAt: r.$createdAt || r.createdAt || null,
-      isEncrypted: r.isEncrypted !== false,
-      hasCiphertext: !!(r.content || r.ciphertext || r.body),
-      contentPreview: r.isEncrypted === false ? (r.content || r.body || null) : null,
-    }));
+    // E2EE: metadata only. Unencrypted / thread-style: full plaintext.
+    return res.rows.map((r: any) => {
+      const encrypted = r.isEncrypted !== false && chat.isEncrypted;
+      const plaintext = r.content || r.body || null;
+      return {
+        id: r.$id,
+        conversationId: r.conversationId,
+        senderId: r.senderId || null,
+        createdAt: r.$createdAt || r.createdAt || null,
+        isEncrypted: encrypted,
+        hasCiphertext: !!(r.content || r.ciphertext || r.body),
+        content: encrypted ? null : plaintext,
+        contentPreview: encrypted ? null : plaintext,
+      };
+    });
+  },
+
+  async sendChatMessage(actor: ApiActor, conversationId: string, body: Record<string, unknown>) {
+    requireScope(actor, 'chats:write');
+    const chat = await this.getChat(actor, conversationId);
+    if (chat.isEncrypted) {
+      const err = new Error(
+        'Encrypted chats cannot be sent via PAT — unlock vault in the app. Use /threads for unencrypted threads.',
+      );
+      (err as any).status = 400;
+      (err as any).code = 'e2ee_required';
+      throw err;
+    }
+    const content = String(body.content ?? body.text ?? '').trim();
+    if (!content) badRequest('content required');
+    const tables = createSystemTablesDB();
+    const msgTable = APPWRITE_CONFIG.TABLES.CONNECT?.MESSAGES || 'messages';
+    const now = new Date().toISOString();
+    const row = await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: msgTable,
+      rowId: ID.unique(),
+      data: {
+        conversationId,
+        senderId: actor.userId,
+        content,
+        isEncrypted: false,
+        createdAt: now,
+      },
+      permissions: [
+        Permission.read(Role.user(actor.userId)),
+        Permission.update(Role.user(actor.userId)),
+        Permission.delete(Role.user(actor.userId)),
+      ],
+    });
+    return {
+      id: (row as any).$id,
+      conversationId,
+      senderId: actor.userId,
+      content,
+      isEncrypted: false,
+      createdAt: now,
+    };
   },
 
   async createWorkspace(actor: ApiActor, body: Record<string, unknown>) {
@@ -949,26 +1089,446 @@ export const ApiResources = {
     }));
   },
 
-  async listMoments(actor: ApiActor, limit = 25) {
+  async listMoments(actor: ApiActor, limit = 25, opts?: { mine?: boolean }) {
     requireScope(actor, 'moments:read');
+    const tables = createSystemTablesDB();
+    const momentsTable = APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS || 'moments';
+    const queries: any[] = [
+      Query.orderDesc('$createdAt'),
+      Query.limit(Math.min(100, Math.max(1, limit))),
+    ];
+    if (opts?.mine) {
+      queries.unshift(Query.equal('userId', actor.userId));
+    } else {
+      // Public feed posts (exclude reply noise when possible)
+      queries.unshift(Query.equal('isPublic', true));
+    }
+    const res = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+      tableId: momentsTable,
+      queries,
+    });
+    return res.rows
+      .filter((r: any) => {
+        if (opts?.mine) return true;
+        const kind = String(r.momentKind || '').toLowerCase();
+        return !kind || kind === 'post' || kind === 'quote' || kind === 'pulse';
+      })
+      .map((r: any) => shapeMoment(r));
+  },
+
+  async listFeed(
+    actor: ApiActor,
+    limit = 25,
+    opts?: { source?: 'ecosystem' | 'nostr' | 'all' },
+  ) {
+    requireScope(actor, 'moments:read');
+    const source = opts?.source || 'all';
+    const lim = Math.min(50, Math.max(1, limit));
+    const items: any[] = [];
+
+    if (source === 'ecosystem' || source === 'all') {
+      const eco = await this.listMoments(actor, lim, { mine: false });
+      items.push(...eco.map((m: any) => ({ ...m, feedSource: 'ecosystem' })));
+    }
+
+    if (source === 'nostr' || source === 'all') {
+      try {
+        const { fetchNostrFeed } = await import('@/lib/nostr/server-query');
+        const events = await fetchNostrFeed(lim);
+        for (const e of events) {
+          items.push({
+            id: `nostr_${e.id}`,
+            source: 'nostr',
+            feedSource: 'nostr',
+            content: e.content || '',
+            caption: e.content || '',
+            pubkey: e.pubkey,
+            createdAt: new Date(e.created_at * 1000).toISOString(),
+            momentKind: 'post',
+            isPublic: true,
+          });
+        }
+      } catch (e) {
+        console.warn('[ApiResources.listFeed] nostr feed failed', e);
+      }
+    }
+
+    items.sort(
+      (a, b) =>
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+    );
+    return items.slice(0, lim);
+  },
+
+  async getMoment(actor: ApiActor, rawId: string) {
+    requireScope(actor, 'moments:read');
+    const { parseMomentRouteId } = await import('@/lib/connect/moment-engagement');
+    const { source, id } = parseMomentRouteId(rawId);
+
+    if (source === 'nostr') {
+      const { fetchNostrEventById, fetchNostrReplies } = await import(
+        '@/lib/nostr/server-query'
+      );
+      const [event, eng] = await Promise.all([
+        fetchNostrEventById(id),
+        fetchNostrReplies(id),
+      ]);
+      if (!event) notFound('Moment not found');
+      return {
+        id: `nostr_${event.id}`,
+        source: 'nostr' as const,
+        content: event.content || '',
+        caption: event.content || '',
+        pubkey: event.pubkey,
+        createdAt: new Date(event.created_at * 1000).toISOString(),
+        momentKind: 'post',
+        isPublic: true,
+        stats: {
+          likes: eng.likeCount,
+          replies: eng.replies.length,
+        },
+        canCommentViaApi: false,
+      };
+    }
+
+    const tables = createSystemTablesDB();
+    const row = (await tables
+      .getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+        tableId: APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS || 'moments',
+        rowId: id,
+      })
+      .catch(() => null)) as any;
+    if (!row) notFound('Moment not found');
+    // Public moments OR own
+    if (!row.isPublic && row.userId !== actor.userId) notFound('Moment not found');
+    return { ...shapeMoment(row), canCommentViaApi: true };
+  },
+
+  async listMomentComments(actor: ApiActor, rawId: string, limit = 50) {
+    requireScope(actor, 'moments:read');
+    const { parseMomentRouteId } = await import('@/lib/connect/moment-engagement');
+    const { source, id } = parseMomentRouteId(rawId);
+    const lim = Math.min(100, Math.max(1, limit));
+
+    if (source === 'nostr') {
+      const { fetchNostrReplies } = await import('@/lib/nostr/server-query');
+      const eng = await fetchNostrReplies(id);
+      return eng.replies.slice(0, lim).map((e) => ({
+        id: e.id,
+        source: 'nostr' as const,
+        content: e.content || '',
+        authorPubkey: e.pubkey,
+        createdAt: new Date(e.created_at * 1000).toISOString(),
+      }));
+    }
+
+    await this.getMoment(actor, id);
     const tables = createSystemTablesDB();
     const res = await tables.listRows({
       databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
       tableId: APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS || 'moments',
       queries: [
-        Query.equal('userId', actor.userId),
+        Query.equal('sourceId', id),
+        Query.equal('momentKind', 'reply'),
         Query.orderDesc('$createdAt'),
-        Query.limit(Math.min(100, Math.max(1, limit))),
+        Query.limit(lim),
       ],
     });
     return res.rows.map((r: any) => ({
       id: r.$id,
-      type: r.type || null,
-      caption: r.caption || null,
-      fileId: r.fileId || null,
+      source: 'ecosystem' as const,
+      content: r.caption || '',
+      userId: r.userId || null,
       createdAt: r.$createdAt || r.createdAt || null,
-      isPublic: !!r.isPublic,
     }));
+  },
+
+  async createMomentComment(actor: ApiActor, rawId: string, body: Record<string, unknown>) {
+    requireScope(actor, 'moments:write');
+    const { parseMomentRouteId } = await import('@/lib/connect/moment-engagement');
+    const { source, id } = parseMomentRouteId(rawId);
+    if (source === 'nostr') {
+      const err = new Error(
+        'Nostr comments need an unlocked vault key — use the app. Internal moments support PAT comments.',
+      );
+      (err as any).status = 400;
+      (err as any).code = 'nostr_vault_required';
+      throw err;
+    }
+    const content = String(body.content ?? body.text ?? body.caption ?? '').trim();
+    if (!content) badRequest('content required');
+    await this.getMoment(actor, id);
+
+    const tables = createSystemTablesDB();
+    const now = new Date().toISOString();
+    const metadata = JSON.stringify({ type: 'reply', sourceId: id });
+    const row = await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+      tableId: APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS || 'moments',
+      rowId: ID.unique(),
+      data: {
+        userId: actor.userId,
+        caption: content,
+        type: 'image',
+        momentKind: 'reply',
+        sourceId: id,
+        searchTitle: content.slice(0, 255),
+        fileId: metadata,
+        isPublic: true,
+        isGuest: true,
+        createdAt: now,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      },
+      permissions: [
+        Permission.read(Role.user(actor.userId)),
+        Permission.read(Role.any()),
+        Permission.update(Role.user(actor.userId)),
+        Permission.delete(Role.user(actor.userId)),
+      ],
+    });
+    return {
+      id: (row as any).$id,
+      source: 'ecosystem' as const,
+      content,
+      userId: actor.userId,
+      createdAt: now,
+    };
+  },
+
+  async createMoment(actor: ApiActor, body: Record<string, unknown>) {
+    requireScope(actor, 'moments:write');
+    const content = String(body.content ?? body.caption ?? body.text ?? '').trim();
+    if (!content) badRequest('content required');
+    const tables = createSystemTablesDB();
+    const now = new Date().toISOString();
+    const metadata = JSON.stringify({ type: 'post' });
+    const row = await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+      tableId: APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS || 'moments',
+      rowId: ID.unique(),
+      data: {
+        userId: actor.userId,
+        caption: content,
+        type: 'image',
+        momentKind: 'post',
+        sourceId: null,
+        searchTitle: content.slice(0, 255),
+        fileId: metadata,
+        isPublic: body.isPublic !== false,
+        isGuest: body.isPublic !== false,
+        createdAt: now,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      },
+      permissions: [
+        Permission.read(Role.user(actor.userId)),
+        ...(body.isPublic !== false ? [Permission.read(Role.any())] : []),
+        Permission.update(Role.user(actor.userId)),
+        Permission.delete(Role.user(actor.userId)),
+      ],
+    });
+    return shapeMoment(row);
+  },
+
+  async listThreads(actor: ApiActor, limit = 25) {
+    requireScope(actor, 'chats:read');
+    const tables = createSystemTablesDB();
+    const actorId = actor.userId;
+
+    const collabRes = await tables
+      .listRows({
+        databaseId: FLOW_DB,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators',
+        queries: [Query.equal('userId', actorId), Query.limit(500)],
+      })
+      .catch(() => ({ rows: [] as any[] }));
+    const collabIds = (collabRes.rows || [])
+      .map((r: any) => r.resourceId)
+      .filter(Boolean);
+
+    const authOr = [
+      Query.equal('creatorId', actorId),
+      Query.equal('userId', actorId),
+    ];
+    if (collabIds.length) authOr.push(Query.equal('$id', collabIds.slice(0, 100)));
+
+    const res = await tables
+      .listRows({
+        databaseId: DB,
+        tableId: NOTES,
+        queries: [
+          Query.equal('isThread', true),
+          Query.or(authOr),
+          Query.limit(Math.min(100, Math.max(1, limit))),
+        ] as any,
+      })
+      .catch(() => ({ rows: [] as any[] }));
+
+    // Also include isChat / isDiscussion owned by user (workspace discussions)
+    const disc = await tables
+      .listRows({
+        databaseId: DB,
+        tableId: NOTES,
+        queries: [
+          Query.equal('isDiscussion', true),
+          Query.or([Query.equal('creatorId', actorId), Query.equal('userId', actorId)]),
+          Query.limit(Math.min(50, Math.max(1, limit))),
+        ] as any,
+      })
+      .catch(() => ({ rows: [] as any[] }));
+
+    const byId = new Map<string, any>();
+    for (const r of [...(res.rows || []), ...(disc.rows || [])]) {
+      byId.set(r.$id, r);
+    }
+    return Array.from(byId.values())
+      .sort(
+        (a, b) =>
+          new Date(b.updatedAt || b.$updatedAt || 0).getTime() -
+          new Date(a.updatedAt || a.$updatedAt || 0).getTime(),
+      )
+      .slice(0, Math.min(100, Math.max(1, limit)))
+      .map(shapeThread);
+  },
+
+  async getThread(actor: ApiActor, id: string) {
+    requireScope(actor, 'chats:read');
+    const row = await assertThreadAccess(actor, id);
+    return shapeThread(row);
+  },
+
+  async listThreadMessages(actor: ApiActor, threadId: string, limit = 50) {
+    requireScope(actor, 'chats:read');
+    await assertThreadAccess(actor, threadId);
+    const tables = createSystemTablesDB();
+    const commentsTable = APPWRITE_CONFIG.TABLES.NOTE.COMMENTS || 'comments';
+    const res = await tables.listRows({
+      databaseId: DB,
+      tableId: commentsTable,
+      queries: [
+        Query.equal('noteId', threadId),
+        Query.orderAsc('$createdAt'),
+        Query.limit(Math.min(200, Math.max(1, limit))),
+      ],
+    });
+    return res.rows.map(shapeThreadMessage);
+  },
+
+  async createThreadMessage(actor: ApiActor, threadId: string, body: Record<string, unknown>) {
+    requireScope(actor, 'chats:write');
+    await assertThreadAccess(actor, threadId);
+    const text = String(body.content ?? body.text ?? '').trim();
+    if (!text) badRequest('content required');
+    const parentCommentId =
+      body.parentCommentId != null ? String(body.parentCommentId) : null;
+
+    // Match huddle / workspace discussion payload shape
+    const stored =
+      body.raw === true
+        ? text
+        : JSON.stringify({ text, type: 'text', ...(body.sendToGeneral ? { sendToGeneral: true } : {}) });
+
+    const tables = createSystemTablesDB();
+    const commentsTable = APPWRITE_CONFIG.TABLES.NOTE.COMMENTS || 'comments';
+    const now = new Date().toISOString();
+    const row = await tables.createRow({
+      databaseId: DB,
+      tableId: commentsTable,
+      rowId: ID.unique(),
+      data: {
+        noteId: threadId,
+        content: stored,
+        userId: actor.userId,
+        createdAt: now,
+        parentCommentId,
+        metadata: body.metadata != null ? String(body.metadata) : null,
+        isVoice: false,
+        isEncrypted: false,
+        isPublic: false,
+        isGuest: false,
+      },
+      permissions: [
+        Permission.read(Role.user(actor.userId)),
+        Permission.update(Role.user(actor.userId)),
+        Permission.delete(Role.user(actor.userId)),
+      ],
+    });
+
+    // Bump thread updatedAt for progress sorting
+    await tables
+      .updateRow({
+        databaseId: DB,
+        tableId: NOTES,
+        rowId: threadId,
+        data: { updatedAt: now },
+      })
+      .catch(() => null);
+
+    return shapeThreadMessage(row);
+  },
+
+  async getWorkspaceThread(actor: ApiActor, workspaceId: string) {
+    requireScope(actor, 'chats:read');
+    requireScope(actor, 'workspaces:read');
+    const tables = createSystemTablesDB();
+    const project = (await tables
+      .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: workspaceId })
+      .catch(() => null)) as any;
+    if (!project) notFound('Workspace not found');
+    // Owner always; otherwise proceed if discussion note is accessible
+    if (project.ownerId !== actor.userId) {
+      /* collab path validated via assertThreadAccess below */
+    }
+    let meta: any = {};
+    try {
+      meta = JSON.parse(project.metadata || '{}');
+    } catch {
+      meta = {};
+    }
+    const discussionNoteId = meta.discussionNoteId as string | undefined;
+    if (!discussionNoteId) {
+      return {
+        workspaceId,
+        title: project.title || null,
+        threadId: null,
+        messages: [],
+        hint: 'No discussion thread on this workspace yet',
+      };
+    }
+    const thread = await this.getThread(actor, discussionNoteId);
+    const messages = await this.listThreadMessages(actor, discussionNoteId, 100);
+    return { workspaceId, threadId: discussionNoteId, thread, messages };
+  },
+
+  async replyWorkspaceThread(
+    actor: ApiActor,
+    workspaceId: string,
+    body: Record<string, unknown>,
+  ) {
+    requireScope(actor, 'chats:write');
+    requireScope(actor, 'workspaces:read');
+    const tables = createSystemTablesDB();
+    const project = (await tables
+      .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: workspaceId })
+      .catch(() => null)) as any;
+    if (!project || project.ownerId !== actor.userId) {
+      // Allow collaborators via getWorkspace ownership check fails for collabs —
+      // fall through if discussion note is accessible
+      if (!project) notFound('Workspace not found');
+    }
+    let meta: any = {};
+    try {
+      meta = JSON.parse(project.metadata || '{}');
+    } catch {
+      meta = {};
+    }
+    const discussionNoteId = meta.discussionNoteId as string | undefined;
+    if (!discussionNoteId) badRequest('Workspace has no discussion thread');
+    return this.createThreadMessage(actor, discussionNoteId, {
+      ...body,
+      sendToGeneral: true,
+    });
   },
 
   async listTags(actor: ApiActor, limit = 50) {

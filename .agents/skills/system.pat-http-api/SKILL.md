@@ -42,11 +42,12 @@ Verify: lookup `tokenPrefix` → compare hash → status/expiry → rate limit �
 ## Public HTTP surface
 
 Self-service (any valid PAT): `GET /token`, `GET|PATCH /token/scopes`, `POST /token/scopes/grant`.
-Also: workspaces, chats, agents/harness, events, forms, pats.
 
-## Public HTTP surface
+REST resources: notes, goals, workspaces (+ `/thread`), events, forms, flows/install,
+feeds, moments (+ comments), threads (plaintext), chats (E2EE meta / plaintext send when open),
+vault metadata, tags, objects, agents/harness. **No** `/tools/execute` (410).
 
-REST CRUD only (`/me`, `/notes`, `/goals`, `/flows`). **No** `/tools/execute` (410). Tools remain in-process for the app, not PAT HTTP.
+Intentional gaps: E2EE send, Nostr signing, vault secrets, WebRTC.
 
 ## Limits
 

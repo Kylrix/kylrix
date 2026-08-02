@@ -117,15 +117,32 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
     if (method === 'DELETE') return jsonOk(await ApiResources.deleteForm(actor, b));
   }
 
-  // Chats
+  // Chats (E2EE metadata; plaintext send only when unencrypted)
   if (a === 'chats' && !b && method === 'GET') {
     return jsonOk(await ApiResources.listChats(actor, limit()));
   }
   if (a === 'chats' && b && !c && method === 'GET') {
     return jsonOk(await ApiResources.getChat(actor, b));
   }
-  if (a === 'chats' && b && c === 'messages' && !d && method === 'GET') {
-    return jsonOk(await ApiResources.listChatMessages(actor, b, limit()));
+  if (a === 'chats' && b && c === 'messages' && !d) {
+    if (method === 'GET') return jsonOk(await ApiResources.listChatMessages(actor, b, limit()));
+    if (method === 'POST') {
+      return jsonOk(await ApiResources.sendChatMessage(actor, b, await readBody(req)));
+    }
+  }
+
+  // Threads (unencrypted note/chat/discussion comments — full read + reply)
+  if (a === 'threads' && !b && method === 'GET') {
+    return jsonOk(await ApiResources.listThreads(actor, limit()));
+  }
+  if (a === 'threads' && b && !c && method === 'GET') {
+    return jsonOk(await ApiResources.getThread(actor, b));
+  }
+  if (a === 'threads' && b && c === 'messages' && !d) {
+    if (method === 'GET') return jsonOk(await ApiResources.listThreadMessages(actor, b, limit()));
+    if (method === 'POST') {
+      return jsonOk(await ApiResources.createThreadMessage(actor, b, await readBody(req)));
+    }
   }
 
   // Agents
@@ -151,10 +168,54 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
     return jsonOk(await ApiResources.listVaultItems(actor, limit()));
   }
 
-  // Moments / tags / objects
-  if (a === 'moments' && !b && method === 'GET') {
-    return jsonOk(await ApiResources.listMoments(actor, limit()));
+  // Feeds
+  if (a === 'feeds' && !b && method === 'GET') {
+    const source = (req.nextUrl.searchParams.get('source') || 'all') as
+      | 'ecosystem'
+      | 'nostr'
+      | 'all';
+    return jsonOk(await ApiResources.listFeed(actor, limit(), { source }));
   }
+
+  // Moments (internal + nostr view; comments on internal)
+  if (a === 'moments' && !b) {
+    if (method === 'GET') {
+      const mine = req.nextUrl.searchParams.get('mine') === '1';
+      return jsonOk(await ApiResources.listMoments(actor, limit(), { mine }));
+    }
+    if (method === 'POST') {
+      return jsonOk(await ApiResources.createMoment(actor, await readBody(req)));
+    }
+  }
+  if (a === 'moments' && b && !c && method === 'GET') {
+    return jsonOk(await ApiResources.getMoment(actor, b));
+  }
+  if (a === 'moments' && b && c === 'comments' && !d) {
+    if (method === 'GET') {
+      return jsonOk(await ApiResources.listMomentComments(actor, b, limit()));
+    }
+    if (method === 'POST') {
+      return jsonOk(await ApiResources.createMomentComment(actor, b, await readBody(req)));
+    }
+  }
+
+  // Workspace discussion thread shortcut
+  if ((a === 'workspaces' || a === 'projects') && b && c === 'thread' && !d) {
+    if (method === 'GET') return jsonOk(await ApiResources.getWorkspaceThread(actor, b));
+    if (method === 'POST') {
+      return jsonOk(await ApiResources.replyWorkspaceThread(actor, b, await readBody(req)));
+    }
+  }
+  if ((a === 'workspaces' || a === 'projects') && b && c === 'thread' && d === 'messages') {
+    if (method === 'GET') {
+      const pack = await ApiResources.getWorkspaceThread(actor, b);
+      return jsonOk((pack as any).messages || []);
+    }
+    if (method === 'POST') {
+      return jsonOk(await ApiResources.replyWorkspaceThread(actor, b, await readBody(req)));
+    }
+  }
+
   if (a === 'tags' && !b && method === 'GET') {
     return jsonOk(await ApiResources.listTags(actor, limit()));
   }
