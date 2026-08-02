@@ -115,6 +115,48 @@ const ENDPOINTS = [
     summary: 'List flows owned by the token user.',
     query: 'limit (1–100, default 25)',
   },
+  {
+    method: 'GET',
+    path: '/workspaces',
+    scope: 'workspaces:read',
+    summary: 'List workspaces (projects) you own. Alias: /projects.',
+    query: 'limit (1–100, default 25)',
+  },
+  {
+    method: 'GET',
+    path: '/chats',
+    scope: 'chats:read',
+    summary: 'List chat conversations you participate in.',
+    query: 'limit (1–100, default 25)',
+  },
+  {
+    method: 'GET',
+    path: '/agents/sessions',
+    scope: 'agents:read',
+    summary: 'List agent sessions. Query harness=… for mirror sessions.',
+    query: 'limit, harness',
+  },
+  {
+    method: 'POST',
+    path: '/agents/harness',
+    scope: 'agents:harness + agents:write',
+    summary: 'Create a CLI mirror session. Body: { harness, title? }.',
+    query: null,
+  },
+  {
+    method: 'POST',
+    path: '/agents/sessions/:id/mirror',
+    scope: 'agents:harness + agents:write',
+    summary: 'Append a read-only mirror turn. Body: { role?, content?, toolCalls? }.',
+    query: null,
+  },
+  {
+    method: 'GET',
+    path: '/pats',
+    scope: 'pats:read',
+    summary: 'List your personal access tokens (secrets never returned).',
+    query: null,
+  },
 ] as const;
 
 const ERRORS = [
