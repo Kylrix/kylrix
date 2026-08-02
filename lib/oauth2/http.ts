@@ -48,6 +48,9 @@ function toOAuth2Error(err: unknown): OAuth2HttpError {
 /**
  * Session-authenticated Appwrite REST call via the shared Web SDK client.
  * Uses the same cookie-fallback + credentials path as TablesDB CRUD (not a bare fetch).
+ *
+ * Apps create/update must use multipart so arrays become `redirectUris[]` —
+ * Appwrite's Apps API ignores JSON arrays for redirects (authorize then 400s).
  */
 export async function appwriteSessionFetch<T = unknown>(
   method: string,
@@ -55,6 +58,8 @@ export async function appwriteSessionFetch<T = unknown>(
   opts?: {
     body?: Record<string, unknown>;
     query?: Record<string, string | string[] | undefined | null>;
+    /** Default json. Use multipart for Apps writes that include redirect URI arrays. */
+    encode?: 'json' | 'multipart';
   }
 ): Promise<T> {
   try {
@@ -66,7 +71,7 @@ export async function appwriteSessionFetch<T = unknown>(
     const url = new URL(`${endpoint}${path.startsWith('/') ? path : `/${path}`}`);
     const upper = method.toUpperCase();
 
-    // GET: queries go as params (SDK flattens). POST/PUT/PATCH/DELETE: JSON body.
+    // GET: queries go as params (SDK flattens). POST/PUT/PATCH/DELETE: body.
     if (upper === 'GET') {
       const params: Record<string, unknown> = {};
       if (opts?.query) {
@@ -78,9 +83,10 @@ export async function appwriteSessionFetch<T = unknown>(
       return (await (client as any).call('get', url, { accept: 'application/json' }, params)) as T;
     }
 
+    const encode = opts?.encode || 'json';
     const headers: Record<string, string> = {
-      'content-type': 'application/json',
       accept: 'application/json',
+      'content-type': encode === 'multipart' ? 'multipart/form-data' : 'application/json',
     };
     const params = cleanParams(opts?.body);
 

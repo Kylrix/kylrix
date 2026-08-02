@@ -314,8 +314,15 @@ export function DevelopersTab() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-white truncate">{app.name}</p>
                   <p className="text-[11px] text-white/40 font-mono truncate">
-                    {app.$id} · {app.type === 'public' ? 'public (PKCE)' : 'server (secret)'}
+                    {app.$id} · {app.type === 'public' ? 'public (PKCE)' : 'server (secret)'} ·{' '}
+                    {(app.redirectUris || []).length} redirect
+                    {(app.redirectUris || []).length === 1 ? '' : 's'}
                   </p>
+                  {(app.redirectUris || []).length === 0 ? (
+                    <p className="text-[11px] text-amber-300/90 mt-0.5">
+                      No redirect URLs saved — Manage → add one or authorize will fail
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">

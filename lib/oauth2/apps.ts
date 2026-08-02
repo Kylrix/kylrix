@@ -75,18 +75,33 @@ export async function createApp(params: {
   postLogoutRedirectUris?: string[];
   deviceFlow?: boolean;
 }): Promise<OauthApp> {
-  // Create with the minimal required fields first (Appwrite Apps create).
+  // Create with name + redirects + type in one shot (docs shape).
+  // Multipart encodes redirectUris as redirectUris[] — required for Apps API.
   const created = await appwriteSessionFetch<OauthApp>('POST', '/apps', {
+    encode: 'multipart',
     body: {
       appId: ID.unique(),
       name: params.name,
       redirectUris: params.redirectUris,
+      type: params.type || 'confidential',
+      ...(params.description ? { description: params.description } : {}),
+      ...(params.logoUri ? { logoUri: params.logoUri } : {}),
+      ...(params.tagline ? { tagline: params.tagline } : {}),
+      ...(params.privacyPolicyUrl ? { privacyPolicyUrl: params.privacyPolicyUrl } : {}),
+      ...(params.termsUrl ? { termsUrl: params.termsUrl } : {}),
+      ...(params.postLogoutRedirectUris
+        ? { postLogoutRedirectUris: params.postLogoutRedirectUris }
+        : {}),
+      deviceFlow: params.deviceFlow ?? false,
+      enabled: true,
     },
   });
 
-  // Always PUT redirects + type after create. Create can accept redirects in the
-  // body while still returning an empty list; silent update failures caused
-  // "Invalid redirect URI" at authorize time.
+  const saved = created.redirectUris || [];
+  const missing = params.redirectUris.filter((u) => !saved.includes(u));
+  if (missing.length === 0) return created;
+
+  // Retry via update if create dropped redirects.
   const updated = await updateApp(created.$id, {
     name: params.name,
     redirectUris: params.redirectUris,
@@ -101,11 +116,11 @@ export async function createApp(params: {
     enabled: true,
   });
 
-  const saved = updated.redirectUris || [];
-  const missing = params.redirectUris.filter((u) => !saved.includes(u));
-  if (missing.length > 0) {
+  const saved2 = updated.redirectUris || [];
+  const missing2 = params.redirectUris.filter((u) => !saved2.includes(u));
+  if (missing2.length > 0) {
     throw new Error(
-      `App created, but redirect URL(s) did not save: ${missing.join(', ')}. Open Manage and add them.`
+      `App created, but redirect URL(s) did not save: ${missing2.join(', ')}. Open Manage and add them.`
     );
   }
 
@@ -129,6 +144,7 @@ export async function updateApp(
   }
 ): Promise<OauthApp> {
   return appwriteSessionFetch<OauthApp>('PUT', `/apps/${encodeURIComponent(appId)}`, {
+    encode: 'multipart',
     body: {
       name: params.name,
       redirectUris: params.redirectUris,
