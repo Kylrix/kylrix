@@ -84,36 +84,32 @@ export async function createApp(params: {
     },
   });
 
-  const needsUpdate =
-    params.type ||
-    params.description ||
-    params.logoUri ||
-    params.tagline ||
-    params.privacyPolicyUrl ||
-    params.termsUrl ||
-    params.postLogoutRedirectUris ||
-    params.deviceFlow != null;
+  // Always PUT redirects + type after create. Create can accept redirects in the
+  // body while still returning an empty list; silent update failures caused
+  // "Invalid redirect URI" at authorize time.
+  const updated = await updateApp(created.$id, {
+    name: params.name,
+    redirectUris: params.redirectUris,
+    type: params.type || 'confidential',
+    description: params.description,
+    logoUri: params.logoUri,
+    tagline: params.tagline,
+    privacyPolicyUrl: params.privacyPolicyUrl,
+    termsUrl: params.termsUrl,
+    postLogoutRedirectUris: params.postLogoutRedirectUris,
+    deviceFlow: params.deviceFlow ?? false,
+    enabled: true,
+  });
 
-  if (!needsUpdate) return created;
-
-  try {
-    return await updateApp(created.$id, {
-      name: params.name,
-      redirectUris: params.redirectUris,
-      type: params.type || 'confidential',
-      description: params.description,
-      logoUri: params.logoUri,
-      tagline: params.tagline,
-      privacyPolicyUrl: params.privacyPolicyUrl,
-      termsUrl: params.termsUrl,
-      postLogoutRedirectUris: params.postLogoutRedirectUris,
-      deviceFlow: params.deviceFlow ?? false,
-      enabled: true,
-    });
-  } catch {
-    // App exists even if branding update fails — return create result.
-    return created;
+  const saved = updated.redirectUris || [];
+  const missing = params.redirectUris.filter((u) => !saved.includes(u));
+  if (missing.length > 0) {
+    throw new Error(
+      `App created, but redirect URL(s) did not save: ${missing.join(', ')}. Open Manage and add them.`
+    );
   }
+
+  return updated;
 }
 
 export async function updateApp(

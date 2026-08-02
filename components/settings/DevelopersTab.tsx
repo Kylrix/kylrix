@@ -10,14 +10,10 @@ import {
 } from '@/lib/api/public';
 import { listPats, revokePat } from '@/lib/actions/client-ops';
 import { account } from '@/lib/appwrite/client';
-import {
-  deleteApp,
-  deleteAppTokens,
-  listMyApps,
-  type OauthApp,
-} from '@/lib/oauth2/apps';
+import { listMyApps, type OauthApp } from '@/lib/oauth2/apps';
 import { CreatePatDrawer } from '@/components/settings/CreatePatDrawer';
 import { CreateOAuthAppDrawer } from '@/components/settings/CreateOAuthAppDrawer';
+import { ManageOAuthAppDrawer } from '@/components/settings/ManageOAuthAppDrawer';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 type PatItem = {
@@ -108,6 +104,7 @@ export function DevelopersTab() {
   const [loadingApps, setLoadingApps] = useState(true);
   const [patDrawerOpen, setPatDrawerOpen] = useState(false);
   const [oauthDrawerOpen, setOauthDrawerOpen] = useState(false);
+  const [manageAppId, setManageAppId] = useState<string | null>(null);
 
   const refreshPats = useCallback(async () => {
     setLoadingPats(true);
@@ -156,15 +153,6 @@ export function DevelopersTab() {
     }
   };
 
-  const copy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success('Copied');
-    } catch {
-      toast.success(text);
-    }
-  };
-
   const confirmRevokePat = (pat: PatItem) => {
     openDrawer('delete-confirm', {
       title: `Revoke “${pat.name}”?`,
@@ -176,35 +164,6 @@ export function DevelopersTab() {
         await revokePat(pat.id);
         toast.success('Token revoked');
         await refreshPats();
-      },
-    });
-  };
-
-  const confirmRevokeAppSessions = (app: OauthApp) => {
-    openDrawer('delete-confirm', {
-      title: `Sign everyone out of “${app.name}”?`,
-      description:
-        'Revokes every access and refresh token issued to this app. Users must approve access again the next time they sign in.',
-      confirmLabel: 'Sign everyone out',
-      resourceName: app.name,
-      onConfirm: async () => {
-        await deleteAppTokens(app.$id);
-        toast.success('All sessions for this app were revoked');
-      },
-    });
-  };
-
-  const confirmDeleteApp = (app: OauthApp) => {
-    openDrawer('delete-confirm', {
-      title: `Delete “${app.name}”?`,
-      description:
-        'Deletes this OAuth app and invalidates every token it has issued. This cannot be undone.',
-      confirmLabel: 'Delete app',
-      resourceName: app.name,
-      onConfirm: async () => {
-        await deleteApp(app.$id);
-        toast.success('App deleted');
-        await refreshApps();
       },
     });
   };
@@ -362,24 +321,10 @@ export function DevelopersTab() {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => void copy(app.$id)}
-                  className="px-3 py-2 rounded-xl text-[11px] font-extrabold bg-[#161412] border border-white/[0.08] text-white/80 cursor-pointer"
+                  onClick={() => setManageAppId(app.$id)}
+                  className="px-3 py-2 rounded-xl text-[11px] font-extrabold bg-[#6366F1] text-white cursor-pointer"
                 >
-                  Copy client ID
-                </button>
-                <button
-                  type="button"
-                  onClick={() => confirmRevokeAppSessions(app)}
-                  className="px-3 py-2 rounded-xl text-[11px] font-extrabold bg-[#161412] border border-amber-500/25 text-amber-200/90 cursor-pointer"
-                >
-                  Sign everyone out
-                </button>
-                <button
-                  type="button"
-                  onClick={() => confirmDeleteApp(app)}
-                  className="px-3 py-2 rounded-xl text-[11px] font-extrabold bg-[#161412] border border-red-500/25 text-red-300 cursor-pointer"
-                >
-                  Delete app
+                  Manage
                 </button>
               </div>
             </div>
@@ -422,6 +367,14 @@ export function DevelopersTab() {
           open={oauthDrawerOpen}
           onClose={() => setOauthDrawerOpen(false)}
           onCreated={() => void refreshApps()}
+        />
+      )}
+      {manageAppId && (
+        <ManageOAuthAppDrawer
+          open={!!manageAppId}
+          appId={manageAppId}
+          onClose={() => setManageAppId(null)}
+          onChanged={() => void refreshApps()}
         />
       )}
     </div>
