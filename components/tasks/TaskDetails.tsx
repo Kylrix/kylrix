@@ -40,7 +40,6 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
 import { useTask } from '@/context/TaskContext';
 import { useAI } from '@/hooks/useAI';
-import { client } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { usePresence } from '@/components/providers/PresenceProvider';
 import { useToast } from '@/components/ui/Toast';

@@ -181,7 +181,7 @@ export function ProjectDiscussionSidebar({
 
   const [activeThreadParent, setActiveThreadParent] = useState<DiscussionMessage | null>(null);
   const [threadInputText, setThreadInputText] = useState('');
-  const [sendToGeneralChecked] = useState(true);
+  const [_sendToGeneralChecked] = useState(true);
 
   const [mentionAnchorEl, setMentionAnchorEl] = useState<HTMLElement | null>(null);
   const [mentionQuery, setMentionQuery] = useState('');

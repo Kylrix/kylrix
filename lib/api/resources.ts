@@ -1100,7 +1100,7 @@ export const ApiResources = {
         fetchNostrEventById(id),
         fetchNostrReplies(id),
       ]);
-      if (!event) notFound('Moment not found');
+      if (!event) return notFound('Moment not found');
       return {
         id: `nostr_${event.id}`,
         source: 'nostr' as const,
@@ -1292,8 +1292,8 @@ export const ApiResources = {
     requireScope(actor, 'chats:read');
     const { ThreadService } = await import('@/lib/services/threads');
     const thread = await ThreadService.getById(id);
-    if (!thread) notFound('Thread not found');
-    if (thread.ownerId !== actor.userId && !thread.isPublic) notFound('Thread not found');
+    if (!thread) return notFound('Thread not found');
+    if (thread.ownerId !== actor.userId && !thread.isPublic) return notFound('Thread not found');
     return thread;
   },
 
