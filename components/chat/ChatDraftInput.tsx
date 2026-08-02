@@ -1,250 +1,233 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { Box, Typography, TextField, IconButton } from '@/lib/openbricks/primitives';
-import { Send, PlusCircle, Mic, Square, File as FileIcon, RefreshCw } from 'lucide-react';
+import React, { useState, useRef, useCallback } from 'react';
+import { Paperclip, Mic, Square, Send, Loader2, X } from 'lucide-react';
 import { PresenceService } from '@/lib/services/presence';
 import { toast } from 'react-hot-toast';
 
+type Props = {
+  attachment: File | null;
+  sending: boolean;
+  isRecording: boolean;
+  enableMentions?: boolean;
+  mentionTargets?: Array<{ id: string; label: string; token: string }>;
+  onAttach: (event: React.MouseEvent<HTMLElement>) => void;
+  attachmentDisabled?: boolean;
+  onUpgradeRequested: () => void;
+  onSend: (text: string) => Promise<boolean>;
+  onToggleRecording: () => void;
+  onClearAttachment?: () => void;
+  typingUsers: string[];
+  conversationId: string;
+  typingTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
+};
+
+/**
+ * OpenBricks chat composer — single seamless bar (Telegram/Discord feel).
+ * Icons sit inside one surface; no boxy chrome buttons.
+ */
 export const ChatDraftInput = React.memo(function ChatDraftInput({
-    attachment,
-    sending,
-    isRecording,
-    attachmentDisabled = false,
-    onAttach,
-    onUpgradeRequested,
-    onSend,
-    onToggleRecording,
-    typingUsers,
-    conversationId,
-    typingTimeoutRef}: {
-    attachment: File | null;
-    sending: boolean;
-    isRecording: boolean;
-    enableMentions?: boolean;
-    mentionTargets?: Array<{ id: string; label: string; token: string }>;
-    onAttach: (event: React.MouseEvent<HTMLElement>) => void;
-    attachmentDisabled?: boolean;
-    onUpgradeRequested: () => void;
-    onSend: (text: string) => Promise<boolean>;
-    onToggleRecording: () => void;
-    typingUsers: string[];
-    conversationId: string;
-    typingTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
-}) {
-    const [draft, setDraft] = useState('');
-    const [_mentionAnchorEl, _setMentionAnchorEl] = useState<null | HTMLElement>(null);
-    const textRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  attachment,
+  sending,
+  isRecording,
+  onAttach,
+  attachmentDisabled = false,
+  onUpgradeRequested,
+  onSend,
+  onToggleRecording,
+  onClearAttachment,
+  typingUsers,
+  conversationId,
+  typingTimeoutRef,
+}: Props) {
+  const [draft, setDraft] = useState('');
+  const textRef = useRef<HTMLTextAreaElement | null>(null);
 
-    const submitDraft = React.useCallback(async () => {
-        const didSend = await onSend(draft);
-        if (didSend) setDraft('');
-    }, [draft, onSend]);
+  const canSend = Boolean(draft.trim() || attachment) && !sending;
 
+  const submitDraft = useCallback(async () => {
+    if (!canSend && !isRecording) return;
+    const didSend = await onSend(draft);
+    if (didSend) setDraft('');
+  }, [canSend, isRecording, draft, onSend]);
 
-    return (
-        <>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                <IconButton
-                    size="small"
-                    onClick={attachmentDisabled ? onUpgradeRequested : onAttach}
-                    aria-disabled={attachmentDisabled}
-                    sx={{
-                        color: attachmentDisabled ? 'rgba(255,255,255,0.25)' : '#9B9691',
-                        width: 42,
-                        height: 42,
-                        flexShrink: 0,
-                        bgcolor: '#0A0908',
-                        borderRadius: '14px',
-                        border: '1px solid #34322F',
-                        transition: 'all 0.15s ease',
-                        '&:hover': {
-                            bgcolor: '#161412',
-                            borderColor: attachmentDisabled ? '#34322F' : '#6366F1',
-                            color: attachmentDisabled ? '#9B9691' : '#FFFFFF',
-                            cursor: attachmentDisabled ? 'not-allowed' : 'pointer'
-                        }
-                    }}
-                >
-                    <PlusCircle size={18} strokeWidth={2} />
-                </IconButton>
+  const resize = useCallback(() => {
+    const el = textRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+  }, []);
 
-                <IconButton
-                    onClick={onToggleRecording}
-                    sx={{
-                        color: isRecording ? '#EF4444' : '#9B9691',
-                        width: 42,
-                        height: 42,
-                        flexShrink: 0,
-                        bgcolor: isRecording ? 'rgba(239, 68, 68, 0.1)' : '#0A0908',
-                        borderRadius: '14px',
-                        border: '1px solid',
-                        borderColor: isRecording ? '#EF4444' : '#34322F',
-                        transition: 'all 0.15s ease',
-                        '&:hover': {
-                            bgcolor: isRecording ? 'rgba(239, 68, 68, 0.15)' : '#161412',
-                            borderColor: isRecording ? '#EF4444' : '#6366F1',
-                            color: isRecording ? '#EF4444' : '#FFFFFF'
-                        }
-                    }}
-                >
-                    {isRecording ? <Square size={16} fill="#EF4444" /> : <Mic size={18} strokeWidth={2} />}
-                </IconButton>
+  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setDraft(e.target.value);
+    resize();
 
-                <Box sx={{ flex: 1, position: 'relative' }}>
-                    {typingUsers.length > 0 && (
-                        <Box sx={{ position: 'absolute', top: -20, left: 12 }}>
-                            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#9B9691', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                {typingUsers.length === 1 ? 'someone' : `${typingUsers.length} people`} is typing...
-                            </Typography>
-                        </Box>
-                    )}
-                    <TextField
+    if (!conversationId) return;
+    PresenceService.broadcastState(PresenceService.getChatChannel(conversationId), {
+      state: 'online',
+      activity: 'typing',
+    });
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      PresenceService.broadcastState(PresenceService.getChatChannel(conversationId), {
+        state: 'online',
+        activity: 'viewing',
+      });
+    }, 3000);
+  };
 
-                        fullWidth
-                        multiline
-                        maxRows={4}
-                        placeholder="Type a message..."
-                        value={draft}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                            setDraft(e.target.value);
-                            
-                            // Broadcast typing status
-                            if (conversationId) {
-                                PresenceService.broadcastState(
-                                    PresenceService.getChatChannel(conversationId),
-                                    { state: 'online', activity: 'typing' }
-                                );
+  const onKeyDown = async (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'g' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      const val = draft.trim();
+      if (!val) {
+        toast.error('Type a message first to secure it.');
+        return;
+      }
+      setDraft('Securing message...');
+      try {
+        const { AppwriteService } = await import('@/lib/appwrite');
+        const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+        const ghostSecret =
+          typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `${Date.now()}-send`;
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const titleEnc = await encryptGhostData('Secure Note');
+        const contentEnc = await encryptGhostData(val, titleEnc.key);
+        const note = await AppwriteService.createSendGhostObject({
+          title: titleEnc.encrypted,
+          content: contentEnc.encrypted,
+          format: 'markdown',
+          ghostSecret,
+          expiresAt,
+          isEncrypted: true,
+          sendObject: { kind: 'note' },
+        });
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        const url = `${origin}/idea/${note.$id}/${titleEnc.key}`;
+        try {
+          const existing = JSON.parse(localStorage.getItem('kylrix_send_sparks') || '[]');
+          localStorage.setItem(
+            'kylrix_send_sparks',
+            JSON.stringify([
+              { id: note.$id, kind: 'note', title: 'Secure Note', url, expiresAt },
+              ...existing,
+            ]),
+          );
+        } catch {
+          /* ignore */
+        }
+        setDraft(url);
+        toast.success('Message secured');
+      } catch (err) {
+        console.error('Failed to secure message:', err);
+        setDraft(val);
+        toast.error('Failed to secure message.');
+      }
+      return;
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      void submitDraft();
+    }
+  };
 
-                                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-                                typingTimeoutRef.current = setTimeout(() => {
-                                    PresenceService.broadcastState(
-                                        PresenceService.getChatChannel(conversationId),
-                                        { state: 'online', activity: 'viewing' }
-                                    );
-                                }, 3000);
-                            }
-                        }}
-                        onKeyDown={async (e: React.KeyboardEvent) => {
-                            if (e.key === 'g' && (e.ctrlKey || e.metaKey)) {
-                                e.preventDefault();
-                                const val = draft.trim();
-                                if (!val) {
-                                    toast.error('Type a message first to secure it.');
-                                    return;
-                                }
-                                setDraft('Securing message payload...');
-                                try {
-                                    const { AppwriteService } = await import('@/lib/appwrite');
-                                    const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
-                                    
-                                    const ghostSecret = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-send`;
-                                    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days standard
-                                    
-                                    const titleEnc = await encryptGhostData('Secure Note');
-                                    const contentEnc = await encryptGhostData(val, titleEnc.key);
-                                    
-                                    const note = await AppwriteService.createSendGhostObject({
-                                        title: titleEnc.encrypted,
-                                        content: contentEnc.encrypted,
-                                        format: 'markdown',
-                                        ghostSecret,
-                                        expiresAt,
-                                        isEncrypted: true,
-                                        sendObject: { kind: 'note' }
-                                    });
-                                    
-                                    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-                                    const url = `${origin}/idea/${note.$id}/${titleEnc.key}`;
-                                    
-                                    // Cache in localStorage stash
-                                    try {
-                                        const existing = JSON.parse(localStorage.getItem('kylrix_send_sparks') || '[]');
-                                        const newSpark = {
-                                            id: note.$id,
-                                            kind: 'note',
-                                            title: 'Secure Note',
-                                            url,
-                                            expiresAt};
-                                        localStorage.setItem('kylrix_send_sparks', JSON.stringify([newSpark, ...existing]));
-                                    } catch (err) {
-                                        console.warn('Failed to cache spark:', err);
-                                    }
-                                    
-                                    setDraft(url);
-                                    toast.success('Message secured as Zero-Knowledge Ghost Note!');
-                                } catch (err) {
-                                    console.error('Failed to secure message:', err);
-                                    setDraft(val);
-                                    toast.error('Failed to secure message.');
-                                }
-                                return;
-                            }
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                submitDraft();
-                            }
-                        }}
-                        inputRef={textRef}
-                        variant="standard"
-                        InputProps={{
-                            disableUnderline: true,
-                            sx: {
-                                px: 2,
-                                py: 1.25,
-                                bgcolor: '#0A0908',
-                                borderRadius: '14px',
-                                border: '1px solid #34322F',
-                                color: '#F5F3EF',
-                                fontWeight: 500,
-                                fontFamily: 'var(--font-satoshi)',
-                                fontSize: '0.9rem',
-                                transition: 'all 0.15s ease',
-                                '&:focus-within': {
-                                    borderColor: '#6366F1',
-                                    bgcolor: '#0B0A09'
-                                }
-                            }
-                        }}
-                    />
-                    {attachment && (
-                        <Box sx={{ position: 'absolute', top: -36, left: 0, right: 0, px: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
-                            <Box sx={{ px: 1.2, py: 0.5, borderRadius: '8px', bgcolor: '#6366F1', color: '#fff', display: 'flex', alignItems: 'center', gap: 0.75, fontSize: '0.75rem', fontWeight: 800 }}>
-                                <FileIcon size={12} strokeWidth={2.5} />
-                                {attachment.name.slice(0, 16)}...
-                            </Box>
-                        </Box>
-                    )}
-                </Box>
+  const typingLabel =
+    typingUsers.length === 0
+      ? null
+      : typingUsers.length === 1
+        ? 'Someone is typing…'
+        : `${typingUsers.length} people typing…`;
 
-                <IconButton
-                    disabled={!draft.trim() && !attachment && !isRecording}
-                    onClick={submitDraft}
-                    sx={{
-                        color: (draft.trim() || attachment) ? '#FFFFFF' : 'rgba(255,255,255,0.15)',
-                        width: 42,
-                        height: 42,
-                        flexShrink: 0,
-                        bgcolor: (draft.trim() || attachment) ? '#6366F1' : '#0A0908',
-                        borderRadius: '14px',
-                        border: '1px solid',
-                        borderColor: (draft.trim() || attachment) ? '#6366F1' : '#34322F',
-                        transition: 'all 0.15s ease',
-                        '&:hover': {
-                            bgcolor: (draft.trim() || attachment) ? '#4F46E5' : '#161412',
-                            borderColor: (draft.trim() || attachment) ? '#4F46E5' : '#6366F1'
-                        },
-                        '&.ob-disabled': {
-                            color: 'rgba(255,255,255,0.08)',
-                            bgcolor: '#0A0908',
-                            borderColor: '#34322F'
-                        }
-                    }}
-                >
-                    {sending ? <RefreshCw className="animate-spin" size={18} /> : <Send size={18} strokeWidth={2.5} />}
-                </IconButton>
-            </Box>
-        </>
-    );
+  return (
+    <div className="w-full flex flex-col gap-1.5">
+      {typingLabel ? (
+        <p className="m-0 px-3 text-[10px] font-bold uppercase tracking-wider text-white/35 font-mono">
+          {typingLabel}
+        </p>
+      ) : null}
+
+      {attachment ? (
+        <div className="mx-1 flex items-center gap-2 rounded-xl bg-[#0A0908] border border-white/[0.06] px-3 py-2">
+          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-white/80 font-satoshi">
+            {attachment.name}
+          </span>
+          {onClearAttachment ? (
+            <button
+              type="button"
+              onClick={onClearAttachment}
+              className="shrink-0 p-1 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06]"
+              aria-label="Remove attachment"
+            >
+              <X size={14} />
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div
+        className={`flex items-end gap-0.5 rounded-[22px] bg-[#161412] border border-white/[0.06] pl-1.5 pr-1.5 py-1.5 transition-[border-color] focus-within:border-[#F59E0B]/45 ${
+          isRecording ? 'border-[#EF4444]/50' : ''
+        }`}
+      >
+        <button
+          type="button"
+          onClick={attachmentDisabled ? onUpgradeRequested : onAttach}
+          aria-label="Attach"
+          title={attachmentDisabled ? 'Upgrade to attach' : 'Attach'}
+          className={`shrink-0 w-9 h-9 mb-0.5 rounded-full inline-flex items-center justify-center transition-colors ${
+            attachmentDisabled
+              ? 'text-white/20 cursor-not-allowed'
+              : 'text-white/45 hover:text-white hover:bg-white/[0.06]'
+          }`}
+        >
+          <Paperclip size={18} strokeWidth={2} />
+        </button>
+
+        <textarea
+          ref={textRef}
+          rows={1}
+          value={draft}
+          onChange={onChange}
+          onKeyDown={onKeyDown}
+          placeholder={isRecording ? 'Recording…' : 'Message'}
+          disabled={isRecording}
+          className="flex-1 min-w-0 max-h-[120px] resize-none bg-transparent border-0 outline-none shadow-none ring-0 focus:ring-0 focus:outline-none text-[0.9375rem] leading-[1.45] text-white font-satoshi font-medium placeholder:text-white/30 py-2 px-1.5 disabled:opacity-50"
+          style={{ height: 'auto' }}
+        />
+
+        <button
+          type="button"
+          onClick={onToggleRecording}
+          aria-label={isRecording ? 'Stop recording' : 'Voice note'}
+          className={`shrink-0 w-9 h-9 mb-0.5 rounded-full inline-flex items-center justify-center transition-colors ${
+            isRecording
+              ? 'text-[#EF4444] bg-[#EF4444]/15 hover:bg-[#EF4444]/25'
+              : 'text-white/45 hover:text-white hover:bg-white/[0.06]'
+          }`}
+        >
+          {isRecording ? <Square size={14} fill="currentColor" /> : <Mic size={18} strokeWidth={2} />}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => void submitDraft()}
+          disabled={!canSend}
+          aria-label="Send"
+          className={`shrink-0 w-9 h-9 mb-0.5 rounded-full inline-flex items-center justify-center transition-colors ${
+            canSend
+              ? 'bg-[#F59E0B] text-black hover:bg-[#FBBF24]'
+              : 'text-white/20'
+          }`}
+        >
+          {sending ? (
+            <Loader2 size={16} className="animate-spin" strokeWidth={2.5} />
+          ) : (
+            <Send size={16} strokeWidth={2.5} className={canSend ? 'translate-x-[1px]' : ''} />
+          )}
+        </button>
+      </div>
+    </div>
+  );
 });
-

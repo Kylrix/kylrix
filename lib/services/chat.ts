@@ -18,7 +18,9 @@ import {
     clearConversationFootprintAction,
     deleteConversationFullyAction,
     nuclearWipeConversationAction,
-    getConversationsAction} from '@/lib/actions/chat';
+    getConversationsAction,
+} from '@/lib/actions/chat';
+import { LocalEngine } from '@/lib/services/LocalEngine';
 
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
@@ -37,7 +39,8 @@ const conversationPreviewCache = new Map<string, {
     lastMessageSenderId?: string | null;
 }>();
 const conversationsListCache = new Map<string, { rows: any[]; fetchedAt: number }>();
-const CONVERSATIONS_LIST_TTL_MS = 60_000;
+const CONVERSATIONS_LIST_TTL_MS = 5 * 60_000;
+
 let conversationsFetchInflight: { userId: string; promise: Promise<{ total: number; rows: any[] }> } | null = null;
 const conversationRosterCache = new Map<string, any>();
 const conversationRosterListeners = new Set<(rows: any[]) => void>();
@@ -183,7 +186,7 @@ const normalizeConversationRow = async (conversation: any) => {
     };
 };
 
-const getMessagePreview = async (message: any, conversationId: string) => {
+const _getMessagePreview = async (message: any, conversationId: string) => {
     if (!message) return '';
     if (message.type && message.type !== 'text' && message.type !== 'attachment') {
         return `[${message.type}]`;
@@ -381,17 +384,77 @@ async function unwrapKeyMapping(row: any, fallbackUserId?: string) {
         metadata = {};
     }
 
-    const wrappedByPublicKey = metadata.senderPublicKey
-        || metadata.wrappedByPublicKey
-        || (metadata.wrappedBy ? await fetchProfilePublicKey(metadata.wrappedBy) : null)
-        || (fallbackUserId ? await fetchProfilePublicKey(fallbackUserId) : null);
+    const candidates: string[] = [];
+    const push = (v: unknown) => {
+        if (typeof v === 'string' && v.trim() && !candidates.includes(v)) candidates.push(v);
+    };
 
-    if (!wrappedByPublicKey) {
-        return null;
+    push(metadata.senderPublicKey);
+    push(metadata.wrappedByPublicKey);
+    if (metadata.wrappedBy) {
+        push(await fetchProfilePublicKey(metadata.wrappedBy));
+    }
+    if (fallbackUserId) {
+        push(await fetchProfilePublicKey(fallbackUserId));
+    }
+    // Self-chat / same-device: prefer live identity pubkey over stale profile row
+    try {
+        push(await ecosystemSecurity.exportIdentityPublicKey());
+    } catch {
+        /* ignore */
     }
 
-    const key = await ecosystemSecurity.unwrapKeyWithECDH(row.wrappedKey, wrappedByPublicKey);
-    return key || null;
+    for (const pub of candidates) {
+        const key = await ecosystemSecurity.unwrapKeyWithECDHFlexible(row.wrappedKey, pub);
+        if (key) return key;
+    }
+    return null;
+}
+
+function conversationKeyLocalId(conversationId: string) {
+    return `f_chat_conv_key_${conversationId}`;
+}
+
+async function persistConversationKeyLocal(conversationId: string, key: CryptoKey) {
+    if (!conversationId || !ecosystemSecurity.status.isUnlocked) return;
+    try {
+        const raw = new Uint8Array(await crypto.subtle.exportKey('raw', key));
+        let binary = '';
+        raw.forEach((b) => {
+            binary += String.fromCharCode(b);
+        });
+        const sealed = await ecosystemSecurity.encrypt(btoa(binary));
+        await LocalEngine.cacheSet(conversationKeyLocalId(conversationId), sealed);
+    } catch (error) {
+        console.warn('[ChatService] Failed to persist conversation key locally:', error);
+    }
+}
+
+async function loadConversationKeyLocal(conversationId: string): Promise<CryptoKey | null> {
+    if (!conversationId || !ecosystemSecurity.status.isUnlocked) return null;
+    try {
+        const sealed = await LocalEngine.cacheGet<string>(conversationKeyLocalId(conversationId));
+        if (!sealed || typeof sealed !== 'string') return null;
+        const b64 = await ecosystemSecurity.decrypt(sealed);
+        const binary = atob(b64);
+        const raw = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) raw[i] = binary.charCodeAt(i);
+        return await crypto.subtle.importKey(
+            'raw',
+            raw,
+            { name: 'AES-GCM', length: 256 },
+            true,
+            ['encrypt', 'decrypt'],
+        );
+    } catch {
+        return null;
+    }
+}
+
+function cacheResolvedConversationKey(conversationId: string, key: CryptoKey) {
+    conversationKeyCache.set(conversationId, key);
+    ecosystemSecurity.setConversationKey(conversationId, key);
+    void persistConversationKeyLocal(conversationId, key);
 }
 
 async function fetchConversationKeyFromLockbox(conversationId: string, userId: string, creatorId?: string) {
@@ -443,26 +506,35 @@ async function resolveConversationKey(
         }
     }
 
-    const cached = conversationKeyCache.get(conversation.$id);
+    const cached = conversationKeyCache.get(conversation.$id) || ecosystemSecurity.getConversationKey(conversation.$id);
     if (cached && !messageCreatedAt) {
         return cached;
+    }
+
+    if (!messageCreatedAt) {
+        const localKey = await loadConversationKeyLocal(conversation.$id);
+        if (localKey) {
+            conversationKeyCache.set(conversation.$id, localKey);
+            ecosystemSecurity.setConversationKey(conversation.$id, localKey);
+            return localKey;
+        }
     }
 
     if (conversation.type === 'group' && String(conversation.encryptionVersion || '').toUpperCase() === 'T4') {
         const epochKey = await fetchEpochKeyForConversation(conversation.$id, userId, messageCreatedAt);
         if (epochKey) {
             if (!messageCreatedAt) {
-                conversationKeyCache.set(conversation.$id, epochKey);
+                cacheResolvedConversationKey(conversation.$id, epochKey);
             }
             return epochKey;
         }
         // Fallback to direct chat mapping for base metadata decryption
     }
 
-    const directKey = await fetchConversationKeyFromLockbox(conversation.$id, userId, conversation.creatorId);
+    const directKey = await fetchConversationKeyFromLockbox(conversation.$id, userId, conversation.creatorId || userId);
     if (directKey) {
         if (!messageCreatedAt) {
-            conversationKeyCache.set(conversation.$id, directKey);
+            cacheResolvedConversationKey(conversation.$id, directKey);
         }
         return directKey;
     }
@@ -473,33 +545,27 @@ async function resolveConversationKey(
         && conversation.participants.every((participantId: string) => participantId === userId);
 
     if (isSelfChat && ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity) {
-        const publicKey = await ecosystemSecurity.ensureE2EIdentity(userId);
-        if (!publicKey) return null;
-
-        const rebuiltKey = await ecosystemSecurity.generateConversationKey();
-
-        ecosystemSecurity.setConversationKey(conversation.$id, rebuiltKey);
-        conversationKeyCache.set(conversation.$id, rebuiltKey);
-
-        await syncLockboxRows([
-            {
-                resourceType: 'chat',
-                resourceId: conversation.$id,
-                grantee: userId,
-                wrappedKey: await ecosystemSecurity.wrapKeyWithECDH(rebuiltKey, publicKey),
-                metadata: buildLockboxMetadata({
-                    wrappedBy: userId,
-                    wrappedByPublicKey: publicKey,
-                    conversationId: conversation.$id,
-                    conversationType: 'direct',
-                    version: 't4',
-                    repaired: true}),
-            }]);
-
-        return rebuiltKey;
+        // Retry lockbox once with identity ensured — NEVER mint a replacement key.
+        // Silent rekey orphans every prior ciphertext (gibberish on reload).
+        try {
+            await ecosystemSecurity.ensureE2EIdentity(userId);
+            const retry = await fetchConversationKeyFromLockbox(conversation.$id, userId, userId);
+            if (retry) {
+                if (!messageCreatedAt) cacheResolvedConversationKey(conversation.$id, retry);
+                return retry;
+            }
+        } catch (error) {
+            console.warn('[ChatService] Self-chat lockbox retry failed:', error);
+        }
+        console.warn(
+            '[ChatService] Self-chat key missing for',
+            conversation.$id,
+            '— refusing silent rekey to protect existing messages',
+        );
+        return null;
     }
 
-    if (!repairAttempted) {
+    if (!repairAttempted && !isSelfChat) {
         try {
           const repairResult = await callConversationRepairApi({
             userId,
@@ -745,47 +811,22 @@ export const ChatService = {
             }
         }
 
-        const previewConversationIds = conversationRows.map((conversation: any) => conversation.$id).filter(Boolean);
-        // Skip bulk message scrape — list paints from LocalEngine; previews hydrate via realtime / memory.
-        const needsPreviewHydration = false;
-        const latestMessageByConversation = new Map<string, any>();
-
-        if (needsPreviewHydration && previewConversationIds.length > 0) {
-            const recentMessagesResult = await tablesDB.listRows(DB_ID, MSG_TABLE, [
-                Query.equal('conversationId', previewConversationIds),
-                Query.orderDesc('createdAt'),
-                Query.limit(Math.min(1000, previewConversationIds.length * 20))
-            ]).catch(() => ({ rows: [] as any[] }));
-
-            for (const message of recentMessagesResult.rows || []) {
-                if (message?.conversationId && !latestMessageByConversation.has(message.conversationId)) {
-                    latestMessageByConversation.set(message.conversationId, message);
-                }
-            }
-        }
-
-        const rows = await Promise.all(conversationRows.map(async (conversation: any) => {
+        const rows = conversationRows.map((conversation: any) => {
             const participants = memberRowsByConversation.get(conversation.$id) || conversation.participants || [];
             const normalizedConversation = {
                 ...conversation,
                 participants: Array.from(new Set((participants || []).filter(Boolean)))
             };
             const cachedPreview = getConversationPreviewCache(conversation.$id);
-            const latestMessage = latestMessageByConversation.get(conversation.$id);
-            const hydratedConversation = latestMessage ? {
-                ...normalizedConversation,
-                lastMessageAt: getMessageActivityAt(latestMessage) || normalizedConversation.lastMessageAt,
-                lastMessageText: await getMessagePreview(latestMessage, conversation.$id)
-            } : normalizedConversation;
-
-            const hydratedAt = new Date(getConversationActivityAt(hydratedConversation) || 0).getTime();
+            const hydratedAt = new Date(getConversationActivityAt(normalizedConversation) || 0).getTime();
             const cachedAt = cachedPreview ? new Date(cachedPreview.lastMessageAt || 0).getTime() : -1;
-            const withCache = cachedPreview && (cachedAt >= hydratedAt || !hydratedConversation.lastMessageText) ? {
-                ...hydratedConversation,
-                ...cachedPreview} : hydratedConversation;
-
-            return this._decryptConversation(withCache, userId);
-        }));
+            // List path: NEVER decrypt here — resolveConversationKey per row is what made Secure take minutes.
+            // Names/avatars come from identity cache in ChatList; ciphertext previews stay until opened.
+            if (cachedPreview && (cachedAt >= hydratedAt || !normalizedConversation.lastMessageText)) {
+                return { ...normalizedConversation, ...cachedPreview };
+            }
+            return normalizedConversation;
+        });
 
         rows.sort((a: any, b: any) => {
             const timeA = new Date(getConversationActivityAt(a) || 0).getTime();
@@ -935,10 +976,9 @@ export const ChatService = {
             })
         ));
 
-        // Cache the local key for this session
+        // Cache the local key for this session + LocalEngine (survives reload)
         if (convKey) {
-            ecosystemSecurity.setConversationKey(newConv.$id, convKey);
-            conversationKeyCache.set(newConv.$id, convKey);
+            cacheResolvedConversationKey(newConv.$id, convKey);
             try {
                 const creatorPublicKey = ecosystemSecurity.status.hasIdentity
                     ? await ecosystemSecurity.ensureE2EIdentity(creatorId)
@@ -1036,6 +1076,7 @@ export const ChatService = {
             const convKey = conversation ? await resolveConversationKey(conversation, senderId, null, permissionSyncAuth) : null;
             if (!convKey) throw new Error('Conversation key not available');
             finalContent = await ecosystemSecurity.encryptWithKey(content, convKey);
+            cacheResolvedConversationKey(conversationId, convKey);
         }
 
         const message = await callMessageCreateApi({

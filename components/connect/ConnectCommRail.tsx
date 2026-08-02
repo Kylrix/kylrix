@@ -6,15 +6,19 @@ import { Hash, MessageSquare, Plus, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { ChatService } from '@/lib/services/chat';
 import { listGhostNoteChats } from '@/lib/actions/client-ops';
-import { LocalEngine } from '@/lib/services/LocalEngine';
 import {
-  CHATS_LIST_CACHE_KEY,
-  THREADS_LIST_CACHE_KEY,
+  peekChatsListMemory,
+  peekThreadsListMemory,
+  readChatsListLocal,
+  readThreadsListLocal,
+  writeChatsListLocal,
+  writeThreadsListLocal,
 } from '@/lib/chat/local-chat-cache';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useSudo } from '@/context/SudoContext';
+import { getCachedIdentityById } from '@/lib/identity-cache';
 
 type RailMode = 'compact' | 'full';
 type RailTab = 'secure' | 'public';
@@ -35,13 +39,26 @@ type RailItem = {
 };
 
 function mapSecure(rows: any[]): RailItem[] {
-  return (rows || []).map((c) => ({
-    id: c.$id || c.id,
-    name: c.name || c.title || 'Chat',
-    avatar: c.avatarUrl || c.avatar || null,
-    kind: 'secure' as const,
-    subtitle: c.lastMessageText || c.lastMessage || '',
-  }));
+  return (rows || []).map((c) => {
+    const otherId =
+      c.otherUserId ||
+      (Array.isArray(c.participants)
+        ? c.participants.find((p: string) => p && p !== c._viewerId)
+        : null);
+    const cached = otherId ? getCachedIdentityById(otherId) : null;
+    return {
+      id: c.$id || c.id,
+      name:
+        c.name ||
+        cached?.displayName ||
+        cached?.username ||
+        c.title ||
+        'Chat',
+      avatar: c.avatarUrl || c.avatar || cached?.avatar || null,
+      kind: 'secure' as const,
+      subtitle: c.lastMessageText || c.lastMessage || '',
+    };
+  });
 }
 
 function mapThreads(rows: any[]): RailItem[] {
@@ -66,9 +83,11 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
   const [tab, setTab] = useState<RailTab>(
     ecosystemSecurity.status.isUnlocked ? 'secure' : 'public',
   );
-  const [secure, setSecure] = useState<RailItem[]>([]);
-  const [threads, setThreads] = useState<RailItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [secure, setSecure] = useState<RailItem[]>(() => mapSecure(peekChatsListMemory()));
+  const [threads, setThreads] = useState<RailItem[]>(() => mapThreads(peekThreadsListMemory()));
+  const [loading, setLoading] = useState(
+    () => peekChatsListMemory().length === 0 && peekThreadsListMemory().length === 0,
+  );
   const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
   const [needsMasterPass, setNeedsMasterPass] = useState(false);
 
@@ -114,16 +133,20 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
     let cancelled = false;
     (async () => {
       if (!user?.$id) return;
-      const cachedSecure =
-        (await LocalEngine.cacheGet<any[]>(CHATS_LIST_CACHE_KEY)) || [];
-      const cachedThreads =
-        (await LocalEngine.cacheGet<any[]>(THREADS_LIST_CACHE_KEY)) || [];
+
+      const [cachedSecure, cachedThreads] = await Promise.all([
+        readChatsListLocal(),
+        readThreadsListLocal(),
+      ]);
       if (!cancelled) {
         if (cachedSecure.length) {
           setSecure(mapSecure(cachedSecure));
           setLoading(false);
         }
-        if (cachedThreads.length) setThreads(mapThreads(cachedThreads));
+        if (cachedThreads.length) {
+          setThreads(mapThreads(cachedThreads));
+          setLoading(false);
+        }
       }
 
       try {
@@ -131,17 +154,35 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
           ChatService.getConversations(user.$id).catch(() => ({ rows: [] as any[] })),
           listGhostNoteChats().catch(() => [] as any[]),
         ]);
-        const secureRows = (secureRes as any)?.rows || [];
+        const secureRows = ((secureRes as any)?.rows || []).map((c: any) => ({
+          ...c,
+          _viewerId: user.$id,
+        }));
         const threadRows = Array.isArray(ghostRows) ? ghostRows : [];
+
+        // Merge prior local names/avatars so raw server rows don't blank the rail
+        const prevSecure = cachedSecure.length ? cachedSecure : peekChatsListMemory();
+        const prevById = new Map(prevSecure.map((c: any) => [c.$id || c.id, c]));
+        const mergedSecure = secureRows.map((row: any) => {
+          const prev = prevById.get(row.$id);
+          if (!prev) return row;
+          return {
+            ...row,
+            name: row.name && !String(row.name).startsWith('@') ? row.name : prev.name || row.name,
+            avatarUrl: row.avatarUrl || prev.avatarUrl || prev.avatar || null,
+            isSelf: row.isSelf || prev.isSelf,
+            otherUserId: row.otherUserId || prev.otherUserId,
+            lastMessageText: row.lastMessageText || prev.lastMessageText,
+          };
+        });
+
         if (!cancelled) {
-          setSecure(mapSecure(secureRows));
+          setSecure(mapSecure(mergedSecure));
           setThreads(mapThreads(threadRows));
           setLoading(false);
         }
-        void LocalEngine.cacheSet(CHATS_LIST_CACHE_KEY, secureRows);
-        if (threadRows.length) {
-          void LocalEngine.cacheSet(THREADS_LIST_CACHE_KEY, threadRows);
-        }
+        writeChatsListLocal(mergedSecure);
+        if (threadRows.length) writeThreadsListLocal(threadRows);
       } catch {
         if (!cancelled) setLoading(false);
       }

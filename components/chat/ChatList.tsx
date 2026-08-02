@@ -477,12 +477,26 @@ export const ChatList = ({
 
     const loadGhostConversations = React.useCallback(async (options?: { silent?: boolean }) => {
         if (!user) return;
-        const hasCachedRows =
-            ghostConversationsRef.current.length > 0 || peekThreadsListMemory().length > 0;
+
+        if (ghostConversationsRef.current.length === 0) {
+            const local = peekThreadsListMemory();
+            if (local.length) {
+                ghostConversationsRef.current = local;
+                startTransition(() => setGhostConversations(local));
+            } else {
+                const disk = await readThreadsListLocal();
+                if (disk.length) {
+                    ghostConversationsRef.current = disk;
+                    startTransition(() => setGhostConversations(disk));
+                }
+            }
+        }
+
+        const hasCachedRows = ghostConversationsRef.current.length > 0;
+        setLoadingGhost(false);
         if (!options?.silent && !hasCachedRows) {
+            // Soft empty-state spinner only when truly nothing local
             setLoadingGhost(true);
-        } else {
-            setLoadingGhost(false);
         }
         try {
             const results = await listGhostNoteChats();
@@ -546,40 +560,60 @@ export const ChatList = ({
             setLoadingGhost(false);
 
             void (async () => {
-                const enriched = await Promise.all(mapped.map(async (entry: any) => {
-                    const otherId = entry.otherUserId;
-                    if (!otherId || entry.linkedResourceType) return entry;
+                const missing = mapped.filter(
+                    (entry: any) => entry.otherUserId && !entry.linkedResourceType && (!entry.avatarUrl || String(entry.name || '').startsWith('@')),
+                );
+                if (!missing.length) return;
 
-                    const identity = await resolveIdentityById(otherId, () => UsersService.getProfileById(otherId));
-                    if (!identity) return entry;
-
-                    let avatarUrl = entry.avatarUrl;
-                    if (!avatarUrl && identity.avatar?.startsWith?.('http')) {
-                        avatarUrl = identity.avatar;
-                    } else if (!avatarUrl && identity.avatar) {
-                        try {
-                            avatarUrl = await fetchProfilePreview(identity.avatar, 64, 64) as unknown as string;
-                        } catch {
-                            avatarUrl = null;
+                const enrichedBits = await Promise.all(
+                    missing.slice(0, 24).map(async (entry: any) => {
+                        const identity = await resolveIdentityById(entry.otherUserId, () =>
+                            UsersService.getProfileById(entry.otherUserId),
+                        );
+                        if (!identity) return null;
+                        let avatarUrl = entry.avatarUrl;
+                        if (!avatarUrl && identity.avatar?.startsWith?.('http')) {
+                            avatarUrl = identity.avatar;
+                        } else if (!avatarUrl && identity.avatar) {
+                            try {
+                                avatarUrl = (await fetchProfilePreview(identity.avatar, 64, 64)) as unknown as string;
+                            } catch {
+                                avatarUrl = null;
+                            }
                         }
-                    }
+                        seedIdentityCache({ ...identity, avatar: identity.avatar || avatarUrl });
+                        return {
+                            id: entry.$id,
+                            patch: {
+                                name: identity.displayName || identity.username || entry.name,
+                                avatarUrl,
+                            },
+                        };
+                    }),
+                );
 
-                    seedIdentityCache({ ...identity, avatar: identity.avatar || avatarUrl });
-                    return {
-                        ...entry,
-                        name: identity.displayName || identity.username || entry.name,
-                        avatarUrl};
-                }));
+                const patches = new Map<string, any>();
+                for (const bit of enrichedBits) {
+                    if (bit?.id) patches.set(bit.id, bit.patch);
+                }
+                if (!patches.size) return;
 
-                enriched.sort((a: any, b: any) => {
-                    const ap = pinSets.conversation.has(a.$id) ? 1 : 0;
-                    const bp = pinSets.conversation.has(b.$id) ? 1 : 0;
-                    if (ap !== bp) return bp - ap;
-                    return new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime();
-                });
-                writeThreadsListLocal(enriched);
                 startTransition(() => {
-                    setGhostConversations(enriched);
+                    setGhostConversations((prev) => {
+                        const next = [...prev]
+                            .map((c) => (patches.has(c.$id) ? { ...c, ...patches.get(c.$id) } : c))
+                            .sort((a: any, b: any) => {
+                                const ap = pinSets.conversation.has(a.$id) ? 1 : 0;
+                                const bp = pinSets.conversation.has(b.$id) ? 1 : 0;
+                                if (ap !== bp) return bp - ap;
+                                return (
+                                    new Date(b.lastMessageAt || 0).getTime() -
+                                    new Date(a.lastMessageAt || 0).getTime()
+                                );
+                            });
+                        writeThreadsListLocal(next);
+                        return next;
+                    });
                 });
             })();
         } catch (error) {
@@ -813,16 +847,27 @@ export const ChatList = ({
                 return;
             }
 
-            const hasCachedRows =
-                conversationsRef.current.length > 0 || peekChatsListMemory().length > 0;
-            if (!options?.silent && !hasCachedRows) {
-                setLoading(true);
-            } else {
-                setLoading(false);
+            // Always prefer local paint before any network
+            if (conversationsRef.current.length === 0) {
+                const local = peekChatsListMemory();
+                if (local.length) {
+                    conversationsRef.current = local;
+                    startTransition(() => setConversations(local));
+                } else {
+                    const disk = await readChatsListLocal();
+                    if (disk.length && loadRequestRef.current === requestId) {
+                        conversationsRef.current = disk;
+                        startTransition(() => setConversations(disk));
+                    }
+                }
             }
 
+            // Never block the tab on network — local copy is the list SoT for paint
+            setLoading(false);
+
             const response = await ChatService.getConversations(user!.$id, {
-                forceRefresh: options?.forceRefresh});
+                forceRefresh: options?.forceRefresh,
+            });
             let rows = [...response.rows];
 
             const hasEncrypted = rows.some(c => c.isEncrypted);
@@ -965,15 +1010,20 @@ export const ChatList = ({
             setIsInitializing(false);
             setLoading(false);
 
+            // Background identity enrich — never block list paint; only fill missing rows
             void (async () => {
-                const settled = await Promise.allSettled(sorted.map(async (conv: any) => {
-                    if (conv.type !== 'direct') return conv;
+                const missing = sorted.filter((conv: any) => {
+                    if (conv.type !== 'direct') return false;
+                    if (conv.isSelf) return !conv.avatarUrl;
+                    return !conv.avatarUrl || String(conv.name || '').startsWith('@');
+                });
+                if (!missing.length) return;
 
+                const settled = await Promise.allSettled(missing.slice(0, 24).map(async (conv: any) => {
                     const isActuallySelf = conv.isSelf || (conv.participants && (conv.participants.length === 1 || conv.participants.length === 2) && conv.participants.every((p: string) => p === user!.$id));
                     if (isActuallySelf) {
                         const myProfile = await UsersService.getProfileById(user!.$id);
-                        if (!myProfile) return conv;
-
+                        if (!myProfile) return null;
                         let avatarUrl = null;
                         if (myProfile.avatar?.startsWith?.('http')) {
                             avatarUrl = myProfile.avatar;
@@ -984,18 +1034,19 @@ export const ChatList = ({
                         }
                         seedIdentityCache({ ...myProfile, avatar: myProfile.avatar || avatarUrl });
                         return {
-                            ...conv,
-                            name: `${myProfile.displayName || myProfile.username || user!.name || 'You'} (You)`,
-                            avatarUrl
+                            id: conv.$id,
+                            patch: {
+                                name: `${myProfile.displayName || myProfile.username || user!.name || 'You'} (You)`,
+                                avatarUrl,
+                                isSelf: true,
+                            },
                         };
                     }
 
                     const otherId = conv.otherUserId || conv.participants?.find((p: string) => p !== user!.$id);
-                    if (!otherId) return conv;
-
+                    if (!otherId) return null;
                     const profile = await UsersService.getProfileById(otherId);
-                    if (!profile) return conv;
-
+                    if (!profile) return null;
                     let avatarUrl = null;
                     if (profile.avatar?.startsWith?.('http')) {
                         avatarUrl = profile.avatar;
@@ -1006,20 +1057,33 @@ export const ChatList = ({
                     }
                     seedIdentityCache({ ...profile, avatar: profile.avatar || avatarUrl });
                     return {
-                        ...conv,
-                        otherUserId: otherId,
-                        name: profile.displayName || profile.username || `@${otherId.slice(0, 7)}`,
-                        avatarUrl
+                        id: conv.$id,
+                        patch: {
+                            otherUserId: otherId,
+                            name: profile.displayName || profile.username || `@${otherId.slice(0, 7)}`,
+                            avatarUrl,
+                        },
                     };
                 }));
 
                 if (loadRequestRef.current !== requestId) return;
-                const enriched = settled.map((entry, index) => entry.status === 'fulfilled' ? entry.value : sorted[index]);
-                const next = sortConversations(enriched);
-                writeChatsListLocal(next);
+                const patches = new Map<string, any>();
+                for (const entry of settled) {
+                    if (entry.status === 'fulfilled' && entry.value?.id) {
+                        patches.set(entry.value.id, entry.value.patch);
+                    }
+                }
+                if (!patches.size) return;
+
                 startTransition(() => {
-                    setConversations(next);
-                    conversationsRef.current = next;
+                    setConversations((prev) => {
+                        const next = sortConversations(
+                            prev.map((c) => (patches.has(c.$id) ? { ...c, ...patches.get(c.$id) } : c)),
+                        );
+                        conversationsRef.current = next;
+                        writeChatsListLocal(next);
+                        return next;
+                    });
                 });
                 setIsInitializing(false);
             })();
@@ -1227,6 +1291,7 @@ export const ChatList = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: tab enter, not every ghost length change
     }, [user, activeTab, skipThreadsLoad, loadGhostConversations]);
 
+    // Soft skeletons only when there is zero local copy — never hide a painted list
     if (loading && conversations.length === 0 && activeTab === 'secure' && !skipSecureLoad) return (
         <div className="p-4 space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -1445,7 +1510,7 @@ export const ChatList = ({
                                                         : null;
                                                     const resolvedPreview = livePreviewByConversation[conv.$id]?.lastMessageText || memoryText || conv.lastMessageText || 'No messages yet';
 
-                                                    return (conv.isEncrypted && !isUnlocked && isLikelyEncrypted(resolvedPreview)) ? (
+                                                    return (conv.isEncrypted && isLikelyEncrypted(resolvedPreview)) ? (
                                                         <span className="flex items-center gap-1">
                                                             <Lock size={12} className="text-[#9B9691]" />
                                                             <span>Secured Payload</span>

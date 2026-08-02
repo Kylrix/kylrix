@@ -13,7 +13,6 @@ import { formatTime } from '@/lib/time-util';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import {
     Box,
-    Paper,
     Typography,
     IconButton,
     Button,
@@ -1389,7 +1388,7 @@ export const ChatWindow = ({
             </Drawer>
 
             {/* Messages Area */}
-            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: { xs: 2.5, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 2, pb: 'calc(110px + env(safe-area-inset-bottom))', pt: 'calc(84px + env(safe-area-inset-top))', position: 'relative', zIndex: 2 }}>
+            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: { xs: 2.5, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 2, pb: 'calc(128px + env(safe-area-inset-bottom))', pt: 'calc(84px + env(safe-area-inset-top))', position: 'relative', zIndex: 2 }}>
                 {!isUnlocked && conversation?.isEncrypted && (
                     <Box sx={{ p: 2.5, mb: 2, bgcolor: '#161412', borderRadius: '24px', border: '1px solid #1C1A18', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', textAlign: 'center' }}>
                         <Typography variant="body2" sx={{ mb: 2, fontWeight: 800, color: '#6366F1', fontFamily: 'var(--font-clash)', fontSize: '1rem' }}>
@@ -1459,203 +1458,133 @@ export const ChatWindow = ({
                                 : senderProfile?.displayName || senderProfile?.username || (conversation?.type === 'direct' ? conversation?.name || 'Partner' : `@${String(msg.senderId || '').slice(0, 7)}`);
 
                             return (
-                                <Box
+                                <div
                                     id={`msg-${msg.$id}`}
-                                    className="chat-message-bubble"
-                                    sx={{
-                                        width: '100%',
-                                        display: 'flex',
-                                        justifyContent: isOutgoing ? 'flex-end' : 'flex-start',
-                                        position: 'relative',
-                                        zIndex: 2
-                                    }}
+                                    className="chat-message-bubble w-full flex relative z-[2]"
+                                    style={{ justifyContent: isOutgoing ? 'flex-end' : 'flex-start' }}
                                 >
-                                    <Stack
-                                        direction={isOutgoing ? 'row-reverse' : 'row'}
-                                        spacing={1.25}
-                                        alignItems="flex-end"
-                                        sx={{ width: '100%', maxWidth: { xs: '88%', sm: '80%' } }}
+                                    <div
+                                        className={`flex items-end gap-2.5 w-full max-w-[88%] sm:max-w-[80%] ${
+                                            isOutgoing ? 'flex-row-reverse' : 'flex-row'
+                                        }`}
                                     >
-                                        <IdentityAvatar
-                                            userId={msg.senderId}
-                                            fileId={senderProfile?.avatar || null}
-                                            alt={senderName}
-                                            fallback={senderName.slice(0, 1).toUpperCase()}
-                                            size={32}
-                                            borderRadius="50%"
-                                        />
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0, flex: '0 1 auto', alignItems: isOutgoing ? 'flex-end' : 'flex-start' }}>
+                                        <div className="shrink-0 mb-0.5">
+                                            <IdentityAvatar
+                                                userId={msg.senderId}
+                                                fileId={senderProfile?.avatar || null}
+                                                alt={senderName}
+                                                fallback={senderName.slice(0, 1).toUpperCase()}
+                                                size={30}
+                                                borderRadius="50%"
+                                            />
+                                        </div>
+                                        <div
+                                            className={`min-w-0 flex-1 flex flex-col gap-1 ${
+                                                isOutgoing ? 'items-end' : 'items-start'
+                                            }`}
+                                        >
                                             {!isOutgoing && (
-                                                <IdentityName
-                                                    verified={senderVerification.verified}
-                                                    sx={{
-                                                        fontSize: '0.72rem',
-                                                        fontWeight: 800,
-                                                        color: '#9B9691', // Muted Gray metadata
-                                                        pl: 0.5,
-                                                        mb: 0.25,
-                                                        fontFamily: 'var(--font-mono)',
-                                                        textTransform: 'uppercase',
-                                                        letterSpacing: '0.05em'
-                                                    }}
-                                                >
+                                                <span className="px-1 text-[11px] font-bold text-white/40 font-mono tracking-wide">
                                                     {senderName}
-                                                </IdentityName>
+                                                    {senderVerification.verified ? ' ✓' : ''}
+                                                </span>
                                             )}
-                                            <Paper
+                                            <div
+                                                role="button"
+                                                tabIndex={0}
                                                 onContextMenu={(e: React.MouseEvent) => handleMessageContextMenu(e, msg)}
-                                                sx={{
-                                                    p: 1.5,
-                                                    px: 2,
-                                                    width: 'fit-content',
-                                                    maxWidth: '100%',
-                                                    alignSelf: isOutgoing ? 'flex-end' : 'flex-start',
-                                                    borderRadius: isOutgoing ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                                                    bgcolor: isOutgoing ? '#1C1A18' : '#161412',
-                                                    backgroundImage: 'none',
-                                                    border: '1px solid #34322F',
-                                                    borderRight: isOutgoing ? '3px solid #6366F1' : '1px solid #34322F',
-                                                    borderLeft: !isOutgoing ? '3px solid #34322F' : '1px solid #34322F',
-                                                    color: isOutgoing ? '#FFFFFF' : '#F5F2ED',
-                                                    boxShadow: '0 4px 12px -4px rgba(0,0,0,0.6)',
-                                                    position: 'relative',
-                                                    zIndex: 2,
-                                                    transition: 'all 0.2s ease',
-                                                    '&:hover': {
-                                                        transform: 'translateY(-1px)',
-                                                        boxShadow: '0 6px 16px -4px rgba(0,0,0,0.8)'}
-                                                }}
+                                                className={`relative w-fit max-w-full rounded-[18px] px-3.5 py-2.5 text-left ${
+                                                    isOutgoing
+                                                        ? 'bg-[#161412] border border-white/[0.06] rounded-br-md'
+                                                        : 'bg-[#161412] border border-white/[0.06] rounded-bl-md'
+                                                }`}
                                             >
-                                                {msg.isPinned && (
-                                                    <Box sx={{ 
-                                                        position: 'absolute', 
-                                                        top: -8, 
-                                                        right: isOutgoing ? 'auto' : -8, 
-                                                        left: isOutgoing ? -8 : 'auto', 
-                                                        bgcolor: '#161412', 
-                                                        borderRadius: '50%', 
-                                                        p: 0.5, 
-                                                        border: '1px solid #F59E0B', 
-                                                        boxShadow: '0 0 10px rgba(245, 158, 11, 0.3)', 
-                                                        zIndex: 10,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center'
-                                                    }}>
-                                                        <Pin size={10} fill="#F59E0B" color="#F59E0B" style={{ transform: 'rotate(45deg)' }} />
-                                                    </Box>
-                                                )}
+                                                {msg.isPinned ? (
+                                                    <span className="inline-flex items-center gap-1 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-[#F59E0B]">
+                                                        <Pin size={10} fill="#F59E0B" color="#F59E0B" />
+                                                        Pinned
+                                                    </span>
+                                                ) : null}
                                                 {msg.replyTo && (
-                                                    <Box
+                                                    <button
+                                                        type="button"
                                                         onClick={() => {
                                                             const el = document.getElementById(`msg-${msg.replyTo}`);
                                                             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                                         }}
-                                                        sx={{
-                                                            mb: 1,
-                                                            p: 1,
-                                                            bgcolor: '#161514',
-                                                            borderRadius: '8px',
-                                                            borderLeft: '3px solid',
-                                                            borderColor: 'primary.main',
-                                                            cursor: 'pointer',
-                                                            opacity: 0.8,
-                                                            boxShadow: '0 0 0 1px rgba(255,255,255,0.04)',
-                                                            '&:hover': { opacity: 1, bgcolor: '#161514' }
-                                                        }}
+                                                        className="mb-2 w-full text-left rounded-xl bg-[#0A0908] border border-white/[0.04] border-l-[3px] border-l-[#F59E0B] px-2.5 py-1.5"
                                                     >
-                                                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', display: 'block', mb: 0.5 }}>
+                                                        <span className="block text-[11px] font-extrabold text-[#F59E0B] mb-0.5">
                                                             {messages.find(m => m.$id === msg.replyTo)?.senderId === user?.$id ? 'You' : (conversation?.name || 'Partner')}
-                                                        </Typography>
-                                                        <Typography variant="caption" sx={{
-                                                            display: '-webkit-box',
-                                                            WebkitLineClamp: 2,
-                                                            WebkitBoxOrient: 'vertical',
-                                                            overflow: 'hidden',
-                                                            fontSize: '0.75rem',
-                                                            lineHeight: 1.2
-                                                        }}>
+                                                        </span>
+                                                        <span className="block text-xs text-white/50 line-clamp-2 leading-[1.35] font-satoshi">
                                                             {messages.find(m => m.$id === msg.replyTo)?.content || 'Original message'}
-                                                        </Typography>
-                                                    </Box>
+                                                        </span>
+                                                    </button>
                                                 )}
-                                                <ChatMessageContent
-                                                    msg={msg}
-                                                    isUnlocked={isUnlocked}
-                                                    conversationId={conversationId}
-                                                    onDecrypted={(id, decrypted) =>
-                                                        setMessages((prev) =>
-                                                            prev.map((m) =>
-                                                                (m.$id || m.id) === id ? { ...m, content: decrypted } : m
+                                                <div className="min-w-0 [overflow-wrap:anywhere] text-[0.9375rem] leading-[1.45] font-satoshi font-medium text-[#F5F2ED]">
+                                                    <ChatMessageContent
+                                                        msg={msg}
+                                                        isUnlocked={isUnlocked}
+                                                        conversationId={conversationId}
+                                                        onDecrypted={(id, decrypted) =>
+                                                            setMessages((prev) =>
+                                                                prev.map((m) =>
+                                                                    (m.$id || m.id) === id ? { ...m, content: decrypted } : m
+                                                                )
                                                             )
-                                                        )
-                                                    }
-                                                />
-                                            </Paper>
+                                                        }
+                                                    />
+                                                </div>
+                                            </div>
                                             {(() => {
                                                 const reactionGroups = sortReactionGroups(reactionsByMessageId[msg.$id] || [], user?.$id).slice(0, 3);
                                                 if (!reactionGroups.length) return null;
 
                                                 return (
-                                                    <Box
-                                                        sx={{
-                                                            display: 'flex',
-                                                            flexWrap: 'wrap',
-                                                            gap: 0.75,
-                                                            alignSelf: isOutgoing ? 'flex-end' : 'flex-start',
-                                                            maxWidth: '100%',
-                                                            mt: 0.5,
-                                                            px: 0.5}}
+                                                    <div
+                                                        className={`flex flex-wrap gap-1.5 px-1 ${
+                                                            isOutgoing ? 'justify-end' : 'justify-start'
+                                                        }`}
                                                     >
                                                         {reactionGroups.map((reaction) => (
-                                                            <Box
+                                                            <button
                                                                 key={reaction.emoji}
-                                                                component="button"
                                                                 type="button"
                                                                 onClick={(e: React.MouseEvent<HTMLButtonElement>) => openReactionPopover(e, msg.$id)}
-                                                                sx={{
-                                                                    p: 0,
-                                                                    m: 0,
-                                                                    border: 0,
-                                                                    background: 'transparent',
-                                                                    color: 'inherit',
-                                                                    cursor: 'pointer',
-                                                                    fontSize: '1rem',
-                                                                    lineHeight: 1,
-                                                                    opacity: reaction.reactedBySelf ? 1 : 0.95,
-                                                                    '&:hover': {
-                                                                        opacity: 1,
-                                                                        transform: 'translateY(-1px)'}}}
+                                                                className="text-base leading-none opacity-95 hover:opacity-100"
                                                             >
                                                                 {reaction.emoji}
-                                                            </Box>
+                                                            </button>
                                                         ))}
-                                                    </Box>
+                                                    </div>
                                                 );
                                             })()}
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, alignSelf: isOutgoing ? 'flex-end' : 'flex-start', px: 0.5, position: 'relative', zIndex: 2 }}>
-                                                <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 1, color: 'rgba(255,255,255,0.72)', fontWeight: 700 }}>
+                                            <div
+                                                className={`flex items-center gap-1 px-1 ${
+                                                    isOutgoing ? 'flex-row-reverse' : 'flex-row'
+                                                }`}
+                                            >
+                                                <span className="text-[10px] font-semibold text-white/40 tabular-nums">
                                                     {formatTime(new Date(msg.$createdAt || Date.now()), { hour: 'numeric', minute: '2-digit', hour12: true })}
-                                                </Typography>
+                                                </span>
                                                 {isOutgoing && (
-                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                    <span className="inline-flex items-center text-white/40">
                                                         {String(msg.$id).startsWith('optimistic-') || (msg as any).status === 'sending' ? (
-                                                            <Box sx={{ opacity: 1, display: 'flex', color: 'rgba(255,255,255,0.72)' }}><Clock size={11} strokeWidth={2.5} /></Box>
+                                                            <Clock size={11} strokeWidth={2.5} />
                                                         ) : (msg as any).status === 'error' ? (
-                                                            <Typography variant="caption" sx={{ color: '#ff4d4d', fontSize: '10px', opacity: 1 }}>Failed</Typography>
+                                                            <span className="text-[10px] text-[#ff4d4d]">Failed</span>
+                                                        ) : getMessageTimestamp(msg) <= clientReadSegments.outgoingReadAt ? (
+                                                            <CheckCheck size={13} color="#F59E0B" strokeWidth={2.5} />
                                                         ) : (
-                                                            getMessageTimestamp(msg) <= clientReadSegments.outgoingReadAt ? (
-                                                                <CheckCheck size={13} color="var(--color-primary)" strokeWidth={2.5} style={{ opacity: 1 }} />
-                                                            ) : (
-                                                                <Check size={13} strokeWidth={2.5} style={{ opacity: 1, color: 'rgba(255,255,255,0.72)' }} />
-                                                            )
+                                                            <Check size={13} strokeWidth={2.5} />
                                                         )}
-                                                    </Box>
+                                                    </span>
                                                 )}
-                                            </Box>
-                                        </Box>
-                                    </Stack>
-                                </Box>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             );
                         })()}
                         </React.Fragment>
@@ -1723,51 +1652,29 @@ export const ChatWindow = ({
                 </Stack>
             </Popover>
 
-            {/* Input Area (Bottom Drawer style) */}
-            <Box sx={{ 
-                position: 'absolute', 
-                bottom: 0, 
-                left: 0, 
-                right: 0, 
-                px: { xs: 2, sm: 3 },
-                pb: 'max(1.25rem, env(safe-area-inset-bottom))', 
-                pt: 1.75,
-                bgcolor: '#161412', 
-                borderTop: '1px solid #34322F',
-                borderRadius: '24px 24px 0 0',
-                boxShadow: '0 -8px 32px rgba(0,0,0,0.8)',
-                zIndex: 20 
-            }}>
+            {/* Input Area — fixed to chat shell bottom */}
+            <div className="absolute bottom-0 left-0 right-0 z-20 px-3 sm:px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-[#0A0908] border-t border-white/[0.06]">
                 {replyingTo && (
-                    <Box sx={{ 
-                        mb: 1.5, 
-                        p: 1.5, 
-                        bgcolor: '#0A0908', 
-                        borderLeft: '4px solid #F59E0B',
-                        borderRadius: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        border: '1px solid #1C1A18'}}>
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography variant="caption" sx={{ fontWeight: 900, color: '#F59E0B', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'var(--font-mono)' }}>
+                    <div className="mb-2 flex items-center gap-2 rounded-2xl bg-[#161412] border border-white/[0.06] border-l-4 border-l-[#F59E0B] px-3 py-2.5">
+                        <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#F59E0B] font-mono">
                                 Replying to {replyingTo.senderId === user?.$id ? 'yourself' : (conversation?.name || 'Partner')}
-                            </Typography>
-                            <Typography variant="body2" noWrap sx={{ color: '#9B9691', fontSize: '0.85rem', fontWeight: 500 }}>
+                            </span>
+                            <span className="text-sm text-white/50 font-satoshi truncate">
                                 {replyingTo.content}
-                            </Typography>
-                        </Box>
-                        <IconButton size="small" onClick={() => setReplyingTo(null)} sx={{ ml: 1, color: '#9B9691' }}>
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setReplyingTo(null)}
+                            className="shrink-0 p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/[0.06]"
+                            aria-label="Cancel reply"
+                        >
                             <X size={16} />
-                        </IconButton>
-                    </Box>
+                        </button>
+                    </div>
                 )}
-                <Box sx={{
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    gap: 0.75,
-                    position: 'relative',
-                    zIndex: 2}}>
+                <div className="relative z-[2]">
                     <input type="file" hidden ref={fileInputRef} onChange={onFileChange} />
 
                     <Menu
@@ -1816,16 +1723,16 @@ export const ChatWindow = ({
                                 }
                             });
                         }}
+                        onClearAttachment={() => setAttachment(null)}
                         onUpgradeRequested={() => showUpgradeIsland('attach files/images/videos')}
                         onSend={handleSend}
                         onToggleRecording={toggleRecording}
                         typingUsers={typingUsers}
                         conversationId={conversationId}
                         typingTimeoutRef={typingTimeoutRef}
-                        />
-                        </Box>
-
-            </Box>
+                    />
+                </div>
+            </div>
 
             <NoteSelectorModal
                 open={noteModalOpen}

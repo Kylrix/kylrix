@@ -825,12 +825,12 @@ class EcosystemSecurity {
     return this.encodeBase64(combined);
   }
 
-  async unwrapKeyWithECDH(wrappedKeyBase64: string, ownerPublicKeyBase64: string): Promise<CryptoKey> {
+  async unwrapKeyWithECDH(wrappedKeyBase64: string, ownerPublicKeyBase64: string, ivSize: number = EcosystemSecurity.IV_SIZE): Promise<CryptoKey> {
     const sharedKey = await this.deriveSharedSecret(ownerPublicKeyBase64);
     const combined = this.decodeBase64(wrappedKeyBase64);
 
-    const iv = combined.slice(0, EcosystemSecurity.IV_SIZE);
-    const ciphertext = combined.slice(EcosystemSecurity.IV_SIZE);
+    const iv = combined.slice(0, ivSize);
+    const ciphertext = combined.slice(ivSize);
 
     const rawKey = await crypto.subtle.decrypt(
         { name: "AES-GCM", iv },
@@ -845,6 +845,21 @@ class EcosystemSecurity {
         true,
         ["encrypt", "decrypt"]
     );
+  }
+
+  /** Try standard 16-byte IV, then legacy 12-byte IV. */
+  async unwrapKeyWithECDHFlexible(
+    wrappedKeyBase64: string,
+    ownerPublicKeyBase64: string,
+  ): Promise<CryptoKey | null> {
+    for (const ivSize of [EcosystemSecurity.IV_SIZE, 12]) {
+      try {
+        return await this.unwrapKeyWithECDH(wrappedKeyBase64, ownerPublicKeyBase64, ivSize);
+      } catch {
+        /* try next */
+      }
+    }
+    return null;
   }
 
   async encryptBinaryWithKey(data: Uint8Array, key: CryptoKey): Promise<string> {
