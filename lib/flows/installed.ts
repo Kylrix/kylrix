@@ -28,11 +28,17 @@ export function isFlowInstalled(id: string): boolean {
 export function installFlowLocal(id: string): string[] {
   const next = [...read(), id];
   write(next);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('kylrix:flows-changed', { detail: { id, action: 'install' } }));
+  }
   return [...new Set(next)];
 }
 
 export function uninstallFlowLocal(id: string): string[] {
   const next = read().filter((x) => x !== id);
   write(next);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('kylrix:flows-changed', { detail: { id, action: 'uninstall' } }));
+  }
   return next;
 }

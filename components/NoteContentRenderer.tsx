@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
 import {
   FileText,
   File as FileIcon,
@@ -13,7 +11,11 @@ import {
   Shield} from 'lucide-react';
 import { Box, Typography, alpha } from '@/lib/openbricks/primitives';
 import { isEphemeralComposeNoteId } from '@/lib/notes/compose-draft-registry';
-import { preProcessMarkdown } from '@/lib/markdown';
+import {
+  defaultMathModeContext,
+  isMathModeFlowInstalled,
+  renderMarkdownHtml,
+} from '@/lib/markdown';
 import { VoiceNotePlayer } from '@/components/LinkRenderer';
 import { parseObjectBlocks, type SecondaryObjectPayload } from '@/lib/note-object-secondary';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -30,10 +32,6 @@ import {
   linkHostname,
   resolveAttachmentVisualKind,
   type AttachmentVisualKind} from '@/lib/note-object-visual';
-
-marked.setOptions({
-  gfm: true,
-  breaks: true});
 
 interface NoteContentRendererProps {
   content?: string | null;
@@ -52,6 +50,18 @@ function NoteContentRenderer({
   format = 'text',
   emptyFallback = <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'rgba(255, 255, 255, 0.3)' }}>This note is empty.</Typography>,
   primaryNoteId}: NoteContentRendererProps) {
+  const [mathOn, setMathOn] = useState(false);
+  useEffect(() => {
+    const sync = () => setMathOn(isMathModeFlowInstalled());
+    sync();
+    window.addEventListener('kylrix:flows-changed', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('kylrix:flows-changed', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
+
   const objectBlocks = useMemo(() => {
     const blocks = parseObjectBlocks(content || '');
     if (!blocks.length) return [{ type: 'text' as const, content: (content || '').trim() }];
@@ -108,13 +118,15 @@ function NoteContentRenderer({
           </Box>
         );
       }
-      const processed = preProcessMarkdown(part);
-      const rawHtml = marked.parse(processed) as string;
-      const sanitizedHtml = typeof window !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
+      const sanitizedHtml = renderMarkdownHtml(
+        part,
+        defaultMathModeContext(mathOn),
+      );
       return (
         <Box
           key={`${keyPrefix}-text-${index}`}
           component="div"
+          className={mathOn ? 'kylrix-math-mode' : undefined}
           dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
           sx={{ display: 'inline' }}
         />

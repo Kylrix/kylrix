@@ -52,6 +52,25 @@ export const BUILTIN_FLOWS: DiscoverFlow[] = [
     publisher: KYLRIX_PUBLISHER,
     source: 'builtin',
   },
+  {
+    id: 'kylrix-math-mode',
+    name: 'Math Mode',
+    description:
+      'Write math, solve equations, and plot charts right in your notes. Install this flow to turn it on.',
+    niche: 'workspace',
+    steps: [
+      { actionId: 'markdown.transform', timestamp: '', importance: 'high' },
+      { actionId: 'markdown.math.render', timestamp: '', importance: 'high' },
+      { actionId: 'math.solve', timestamp: '', importance: 'high' },
+      { actionId: 'markdown.chart.render', timestamp: '', importance: 'high' },
+      { actionId: 'objects.idea.create', timestamp: '', importance: 'high' },
+    ],
+    isPublic: true,
+    isAnonymized: true,
+    createdAt: '2026-08-02T00:00:00.000Z',
+    publisher: KYLRIX_PUBLISHER,
+    source: 'builtin',
+  },
 ];
 
 export function getBuiltinFlow(id: string): DiscoverFlow | null {

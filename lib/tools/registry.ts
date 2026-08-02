@@ -28,7 +28,9 @@ interface EcosystemToolDefinition {
     | 'storage'
     | 'github'
     | 'wallet'
-    | 'developer';
+    | 'developer'
+    | 'markdown'
+    | 'math';
   action: 'create' | 'read' | 'update' | 'delete' | 'search' | 'custom';
   name: string;
   description: string;
@@ -609,6 +611,104 @@ function registerCoreTools() {
         userId: context.userId,
       });
       return { success: true };
+    },
+  });
+
+  // --- Markdown / Math Mode layers (flows + agent tools) ---
+  toolRegistry.register({
+    id: 'markdown.transform',
+    domain: 'markdown',
+    action: 'custom',
+    name: 'Transform markdown',
+    description: 'Run the markdown post-process pipeline (math, charts, optional html preview).',
+    parameters: {
+      content: { type: 'string', description: 'Markdown source', required: true },
+      math: { type: 'boolean', description: 'Enable math layers' },
+      charts: { type: 'boolean', description: 'Enable chart/graph layers' },
+      htmlPreview: { type: 'boolean', description: 'Enable html-preview fences (off by default)' },
+    },
+    execute: async (params) => {
+      const { renderMarkdownHtml } = await import('@/lib/markdown/render');
+      const html = renderMarkdownHtml(String(params.content || ''), {
+        features: {
+          math: params.math !== false,
+          charts: params.charts !== false,
+          htmlPreview: !!params.htmlPreview,
+        },
+      });
+      return { success: true, data: { html } };
+    },
+  });
+
+  toolRegistry.register({
+    id: 'markdown.math.render',
+    domain: 'markdown',
+    action: 'custom',
+    name: 'Render math',
+    description: 'Render LaTeX / TeX to HTML with KaTeX.',
+    parameters: {
+      tex: { type: 'string', description: 'TeX source', required: true },
+      display: { type: 'boolean', description: 'Display (block) mode' },
+    },
+    execute: async (params) => {
+      const { renderKatex } = await import('@/lib/markdown/math');
+      const html = renderKatex(String(params.tex || ''), !!params.display);
+      return { success: true, data: { html } };
+    },
+  });
+
+  toolRegistry.register({
+    id: 'math.solve',
+    domain: 'math',
+    action: 'custom',
+    name: 'Solve equation',
+    description: 'Solve a simple equation or evaluate an expression.',
+    parameters: {
+      equation: { type: 'string', description: 'e.g. 2x + 5 = 15', required: true },
+    },
+    execute: async (params) => {
+      const { solveEquation } = await import('@/lib/markdown/expr');
+      const result = solveEquation(String(params.equation || ''));
+      if (!result.ok) return { success: false, error: result.error };
+      return { success: true, data: result };
+    },
+  });
+
+  toolRegistry.register({
+    id: 'markdown.chart.render',
+    domain: 'markdown',
+    action: 'custom',
+    name: 'Render chart or graph',
+    description: 'Render a chart or function graph block to SVG.',
+    parameters: {
+      kind: { type: 'string', description: 'chart | graph', required: true },
+      body: { type: 'string', description: 'Block body (key: value lines)', required: true },
+    },
+    execute: async (params) => {
+      const { renderChartSvg, renderGraphSvg } = await import('@/lib/markdown/charts');
+      const kind = String(params.kind || 'chart').toLowerCase();
+      const body = String(params.body || '');
+      const html = kind === 'graph' ? renderGraphSvg(body) : renderChartSvg(body);
+      return { success: true, data: { html } };
+    },
+  });
+
+  toolRegistry.register({
+    id: 'markdown.html.preview',
+    domain: 'markdown',
+    action: 'custom',
+    name: 'HTML preview block',
+    description:
+      'Render a sandboxed html-preview fence. For future in-note plugins — keep off in public notes.',
+    parameters: {
+      content: { type: 'string', description: 'Markdown with ```html-preview fences', required: true },
+    },
+    execute: async (params) => {
+      const { renderMarkdownHtml } = await import('@/lib/markdown/render');
+      const html = renderMarkdownHtml(String(params.content || ''), {
+        features: { math: false, charts: false, htmlPreview: true },
+      });
+      return { success: true, data: { html } };
     },
   });
 }

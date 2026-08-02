@@ -59,5 +59,3 @@ export function preProcessMarkdown(md?: string): string {
 
   return parts.join('');
 }
-
-

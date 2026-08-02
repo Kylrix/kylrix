@@ -263,7 +263,11 @@ export default function FlowsPage() {
         return;
       }
       setInstalledIds(installFlowLocal(id));
-      toast.success(res.created ? 'Installed' : 'Already installed');
+      if (id === 'kylrix-math-mode') {
+        toast.success('Math Mode on — try $E=mc^2$, ```solve, ```chart, or ```graph in a note');
+      } else {
+        toast.success(res.created ? 'Installed' : 'Already installed');
+      }
     } catch (err: any) {
       toast.error(err?.message || 'Install failed');
     }
