@@ -1,50 +1,81 @@
 'use client';
 
-import { useState, useEffect, useCallback, ReactElement } from 'react';
-import { account } from '@/lib/appwrite/client';
-import {
-  Box,
-  Typography,
-  Button,
-  Alert,
-  AlertTitle,
-  CircularProgress,
-  Stack,
-  Drawer,
-  IconButton} from '@/lib/openbricks/primitives';
-import { Delete as DeleteIcon } from '@/lib/openbricks/icons';
-import { Models } from 'appwrite';
-import { getApp, type OauthApp } from '@/lib/oauth2/apps';
+import { useCallback, useEffect, useState } from 'react';
+import { OAuthProvider } from 'appwrite';
 import { AppWindow } from 'lucide-react';
+import { account } from '@/lib/appwrite/client';
+import { getApp, type OauthApp } from '@/lib/oauth2/apps';
+import { clearStatelessSessions } from '@/lib/utils';
 
-type Identity = Models.Identity;
+/** Project-level Auth OAuth providers enabled for Kylrix sign-in (not Sign in with Kylrix). */
+export const PROJECT_SIGN_IN_PROVIDERS: {
+  id: OAuthProvider;
+  key: string;
+  name: string;
+}[] = [
+  { id: OAuthProvider.Google, key: 'google', name: 'Google' },
+  { id: OAuthProvider.Github, key: 'github', name: 'GitHub' },
+];
 
 const OAUTH2_PREFIX = 'oauth2:';
 
-type ConnectedAppRow = {
+type Identity = {
+  $id: string;
+  $createdAt: string;
+  provider: string;
+  providerEmail?: string;
+  providerUid?: string;
+};
+
+type ExternalRow = {
   identity: Identity;
   appId: string;
   app: OauthApp | null;
 };
 
-function isOAuth2Grant(identity: Identity): boolean {
-  return !!identity.provider?.startsWith(OAUTH2_PREFIX);
+function ProviderMark({ name }: { name: string }) {
+  if (name === 'Google') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+      </svg>
+    );
+  }
+  if (name === 'GitHub') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <path
+          fillRule="evenodd"
+          d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+          clipRule="evenodd"
+        />
+      </svg>
+    );
+  }
+  return <AppWindow size={18} />;
 }
 
-function ExternalAppsList() {
-  const [rows, setRows] = useState<ConnectedAppRow[]>([]);
+export default function ConnectedIdentities() {
+  const [identities, setIdentities] = useState<Identity[]>([]);
+  const [externals, setExternals] = useState<ExternalRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [revokeTarget, setRevokeTarget] = useState<ConnectedAppRow | null>(null);
-  const [revoking, setRevoking] = useState(false);
 
-  const load = useCallback(async () => {
+  const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const identityList = await account.listIdentities();
-      const grants = (identityList.identities || []).filter(isOAuth2Grant);
-      const connected = await Promise.all(
+      const list = await account.listIdentities();
+      const all = (list.identities || []) as Identity[];
+      const signIn = all.filter((i) => !i.provider?.startsWith(OAUTH2_PREFIX));
+      const grants = all.filter((i) => i.provider?.startsWith(OAUTH2_PREFIX));
+      setIdentities(signIn);
+
+      const rows = await Promise.all(
         grants.map(async (identity) => {
           const appId = identity.provider.slice(OAUTH2_PREFIX.length);
           let app: OauthApp | null = null;
@@ -56,573 +87,180 @@ function ExternalAppsList() {
           return { identity, appId, app };
         })
       );
-      setRows(connected);
+      setExternals(rows);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Could not load apps');
-      setRows([]);
+      setError(err instanceof Error ? err.message : 'Could not load');
+      setIdentities([]);
+      setExternals([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void refresh();
+  }, [refresh]);
 
-  const confirmRevoke = async () => {
-    if (!revokeTarget) return;
-    setRevoking(true);
+  const identityFor = (key: string) =>
+    identities.find((i) => i.provider?.toLowerCase() === key.toLowerCase());
+
+  const linkProvider = async (provider: OAuthProvider) => {
+    setBusyId(provider);
+    setError(null);
     try {
-      await account.deleteIdentity(revokeTarget.identity.$id);
-      setRows((prev) => prev.filter((r) => r.identity.$id !== revokeTarget.identity.$id));
-      setRevokeTarget(null);
+      clearStatelessSessions();
+      const success = `${window.location.origin}/settings?tab=identities`;
+      const failure = `${window.location.origin}/settings?tab=identities&error=oauth_failed`;
+      await account.createOAuth2Session(provider, success, failure);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Could not revoke access');
+      setError(err instanceof Error ? err.message : 'Link failed');
+      setBusyId(null);
+    }
+  };
+
+  const unlinkProvider = async (identityId: string) => {
+    setBusyId(identityId);
+    setError(null);
+    try {
+      await account.deleteIdentity(identityId);
+      setIdentities((prev) => prev.filter((i) => i.$id !== identityId));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unlink failed');
     } finally {
-      setRevoking(false);
+      setBusyId(null);
+    }
+  };
+
+  const revokeExternal = async (identityId: string) => {
+    setBusyId(identityId);
+    setError(null);
+    try {
+      await account.deleteIdentity(identityId);
+      setExternals((prev) => prev.filter((r) => r.identity.$id !== identityId));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Revoke failed');
+    } finally {
+      setBusyId(null);
     }
   };
 
   if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-        <CircularProgress size={24} sx={{ color: '#6366F1' }} />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert
-        severity="error"
-        sx={{
-          bgcolor: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid rgba(239, 68, 68, 0.2)',
-          color: '#FCA5A5',
-          borderRadius: '10px',
-        }}
-      >
-        {error}
-      </Alert>
-    );
-  }
-
-  if (rows.length === 0) {
-    return (
-      <Box
-        sx={{
-          backgroundColor: '#0A0908',
-          border: '1px solid rgba(255,255,255,0.05)',
-          borderRadius: '16px',
-          p: 3,
-          textAlign: 'center',
-        }}
-      >
-        <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem' }}>
-          No apps have access to your Kylrix account yet.
-        </Typography>
-      </Box>
-    );
+    return <p className="text-sm text-white/40 font-satoshi py-6">Loading…</p>;
   }
 
   return (
-    <>
-      <Stack spacing={2}>
-        {rows.map((row) => {
-          const name = row.app?.name || 'Unknown app';
-          const subtitle =
-            row.app?.tagline ||
-            (row.app?.enabled === false ? 'Disabled' : null) ||
-            row.appId;
-          return (
-            <Box
-              key={row.identity.$id}
-              sx={{
-                backgroundColor: '#0A0908',
-                border: '1px solid rgba(255,255,255,0.05)',
-                borderRadius: '16px',
-                p: 2,
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                gap: 2,
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0, flex: 1 }}>
-                <Box
-                  sx={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: '12px',
-                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    flexShrink: 0,
-                    color: '#A5B4FC',
-                  }}
-                >
-                  {row.app?.logoUri ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={row.app.logoUri}
-                      alt=""
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <AppWindow size={20} />
-                  )}
-                </Box>
-                <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Typography
-                    sx={{
-                      fontSize: '0.95rem',
-                      fontWeight: 700,
-                      color: '#fff',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {name}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: '0.75rem',
-                      color: 'rgba(255,255,255,0.45)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {subtitle}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', mt: 0.5 }}>
-                    Allowed{' '}
-                    {new Date(row.identity.$createdAt).toLocaleString()}
-                  </Typography>
-                </Box>
-              </Box>
-              <Button
-                onClick={() => setRevokeTarget(row)}
-                sx={{
-                  flexShrink: 0,
-                  color: '#FCA5A5',
-                  border: '1px solid rgba(239, 68, 68, 0.25)',
-                  borderRadius: '10px',
-                  textTransform: 'none',
-                  fontWeight: 700,
-                  fontSize: '0.75rem',
-                  px: 1.5,
-                  py: 1,
-                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                  '&:hover': { backgroundColor: 'rgba(239, 68, 68, 0.15)' },
-                }}
-              >
-                Revoke
-              </Button>
-            </Box>
-          );
-        })}
-      </Stack>
-
-      {revokeTarget && (
-        <Drawer
-          anchor="bottom"
-          open={!!revokeTarget}
-          onClose={() => !revoking && setRevokeTarget(null)}
-          keepMounted={false}
-          disablePortal
-          PaperProps={{
-            sx: {
-              backgroundColor: '#161514',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderBottomLeftRadius: 0,
-              borderBottomRightRadius: 0,
-              borderTopLeftRadius: '20px',
-              borderTopRightRadius: '20px',
-            },
-          }}
-        >
-          <Box sx={{ p: 3 }}>
-            <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: '#FFFFFF', mb: 1.5 }}>
-              Revoke access?
-            </Typography>
-            <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.6, mb: 3 }}>
-              <Typography component="span" sx={{ color: '#FFFFFF', fontWeight: 600 }}>
-                {revokeTarget.app?.name || 'This app'}
-              </Typography>{' '}
-              will lose access to your Kylrix account. You can allow it again later by signing in
-              through that app.
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
-              <Button
-                onClick={() => void confirmRevoke()}
-                disabled={revoking}
-                variant="contained"
-                fullWidth
-                sx={{
-                  backgroundColor: '#EF4444',
-                  color: '#FFFFFF',
-                  borderRadius: '10px',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  py: 1.5,
-                  '&:hover': { backgroundColor: '#DC2626' },
-                  '&:disabled': { backgroundColor: 'rgba(239, 68, 68, 0.5)' },
-                }}
-              >
-                {revoking ? 'Revoking…' : 'Revoke access'}
-              </Button>
-              <Button
-                onClick={() => setRevokeTarget(null)}
-                disabled={revoking}
-                fullWidth
-                sx={{
-                  color: '#FFFFFF',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '10px',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  py: 1.5,
-                }}
-              >
-                Cancel
-              </Button>
-            </Box>
-          </Box>
-        </Drawer>
-      )}
-    </>
-  );
-}
-
-interface ConnectedIdentitiesProps {
-  onIdentitiesLoaded?: (count: number) => void;
-}
-
-const PROVIDER_LOGOS: Record<string, string> = {
-  google: '🔵',
-  github: '⚫',
-  facebook: '👍',
-  apple: '🍎',
-  discord: '💜',
-  twitter: '🐦',
-  microsoft: '💻',
-  linkedin: '💼',
-  amazon: '🛒',
-  reddit: '🔴',
-  twitch: '💬',
-  spotify: '🎵'};
-
-const PROVIDER_ICONS: Record<string, ReactElement> = {
-  google: (
-    <svg width="24" height="24" viewBox="0 0 24 24">
-      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-    </svg>
-  ),
-  github: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-      <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
-    </svg>
-  )};
-
-const PROVIDER_NAMES: Record<string, string> = {
-  google: 'Google',
-  github: 'GitHub',
-  facebook: 'Facebook',
-  apple: 'Apple',
-  discord: 'Discord',
-  twitter: 'Twitter/X',
-  microsoft: 'Microsoft',
-  linkedin: 'LinkedIn',
-  amazon: 'Amazon',
-  reddit: 'Reddit',
-  twitch: 'Twitch',
-  spotify: 'Spotify'};
-
-export default function ConnectedIdentities({ onIdentitiesLoaded }: ConnectedIdentitiesProps) {
-  const [loading, setLoading] = useState(true);
-  const [identities, setIdentities] = useState<Identity[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [deleteDrawerOpen, setDeleteDrawerOpen] = useState(false);
-  const [selectedIdentity, setSelectedIdentity] = useState<Identity | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  useEffect(() => {
-    loadIdentities();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadIdentities = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const identityList = await account.listIdentities();
-      // Sign-in providers only — OAuth app grants live under External apps.
-      const signIn = (identityList.identities || []).filter((i) => !isOAuth2Grant(i));
-      setIdentities(signIn);
-      onIdentitiesLoaded?.(signIn.length);
-    } catch (err: unknown) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteClick = (identity: Identity) => {
-    setSelectedIdentity(identity);
-    setDeleteDrawerOpen(true);
-  };
-
-  const handleDeleteIdentity = async () => {
-    if (!selectedIdentity) return;
-    try {
-      setDeleting(true);
-      setError(null);
-      await account.deleteIdentity(selectedIdentity.$id);
-      setIdentities(identities.filter((i) => i.$id !== selectedIdentity.$id));
-      setDeleteDrawerOpen(false);
-      setSelectedIdentity(null);
-    } catch (err: unknown) {
-      setError((err as Error).message);
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const getProviderLogo = (provider: string): ReactElement | string => {
-    if (provider === 'google' || provider === 'github') {
-      return PROVIDER_ICONS[provider] || PROVIDER_LOGOS[provider] || '🔗';
-    }
-    return PROVIDER_LOGOS[provider] || '🔗';
-  };
-
-  const getProviderName = (provider: string): string => {
-    return PROVIDER_NAMES[provider] || provider;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
-
-  if (loading && identities.length === 0) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-        <CircularProgress size={40} sx={{ color: '#6366F1' }} />
-      </Box>
-    );
-  }
-
-  return (
-    <Box>
-      <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mb: 2 }}>
-        Sign-in methods
-      </Typography>
-      {error && (
-        <Alert severity="error" sx={{ mb: 3, bgcolor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#FCA5A5', borderRadius: '10px' }}>
-          <AlertTitle sx={{ fontWeight: 700 }}>Error</AlertTitle>
+    <div className="space-y-5 font-satoshi">
+      {error ? (
+        <p className="text-sm text-red-300 rounded-2xl border border-red-500/25 bg-red-500/10 px-3.5 py-2.5">
           {error}
-        </Alert>
-      )}
+        </p>
+      ) : null}
 
-      {identities.length === 0 ? (
-        <Box
-          sx={{
-            backgroundColor: '#0A0908',
-            border: '1px solid rgba(255,255,255,0.05)',
-            borderRadius: '16px',
-            p: 4,
-            textAlign: 'center'}}
-        >
-          <Typography sx={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.95rem' }}>
-            No sign-in methods linked yet.
-          </Typography>
-        </Box>
-      ) : (
-        <Stack spacing={4}>
-          {identities.map((identity) => (
-            <Box
-              key={identity.$id}
-              sx={{
-                backgroundColor: '#161514',
-                borderRadius: '12px',
-                p: 2,
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                gap: 2,
-                overflow: 'hidden',
-                transition: 'all 0.2s ease-out',
-                '&:hover': {
-                  backgroundColor: '#1F1D1B'}}}
-            >
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 44,
-                      height: 44,
-                      borderRadius: '10px',
-                      backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                      fontSize: '1.5rem',
-                      color: '#FFFFFF',
-                      flexShrink: 0,
-                      '& svg': { width: 24, height: 24 }}}
+      {/* Project Auth OAuth providers (Google / GitHub) — not Sign in with Kylrix */}
+      <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-4 space-y-3">
+        <div>
+          <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">
+            Sign-in methods
+          </h3>
+          <p className="text-[11px] text-white/35 mt-0.5">
+            Ways to sign into Kylrix
+          </p>
+        </div>
+        <div className="space-y-2">
+          {PROJECT_SIGN_IN_PROVIDERS.map((p) => {
+            const linked = identityFor(p.key);
+            const busy = busyId === p.id || busyId === linked?.$id;
+            return (
+              <div
+                key={p.key}
+                className="flex items-center gap-3 rounded-2xl bg-[#0A0908] border border-white/[0.05] px-3.5 py-3"
+              >
+                <div className="w-9 h-9 rounded-xl bg-[#161412] border border-white/[0.06] flex items-center justify-center text-white shrink-0">
+                  <ProviderMark name={p.name} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-white truncate">{p.name}</p>
+                  <p className="text-[11px] text-white/40 truncate">
+                    {linked
+                      ? linked.providerEmail || linked.providerUid || 'Connected'
+                      : 'Not connected'}
+                  </p>
+                </div>
+                {linked ? (
+                  <button
+                    type="button"
+                    disabled={!!busy}
+                    onClick={() => void unlinkProvider(linked.$id)}
+                    className="px-3 py-1.5 rounded-xl text-[11px] font-extrabold border border-red-500/25 text-red-300 cursor-pointer disabled:opacity-40"
                   >
-                    {getProviderLogo(identity.provider)}
-                  </Box>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {getProviderName(identity.provider)}
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {identity.providerEmail || identity.providerUid}
-                    </Typography>
-                  </Box>
-                </Box>
+                    {busy ? '…' : 'Disconnect'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={!!busy}
+                    onClick={() => void linkProvider(p.id)}
+                    className="px-3 py-1.5 rounded-xl text-[11px] font-extrabold bg-[#6366F1] text-white cursor-pointer disabled:opacity-40"
+                  >
+                    {busy ? '…' : 'Connect'}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
-                <Box sx={{ display: 'flex', gap: 4, mt: 2.5, flexWrap: 'wrap' }}>
-                  <Box>
-                    <Typography sx={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Connected
-                    </Typography>
-                    <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.7)', fontWeight: 500, mt: 0.5 }}>
-                      {formatDate(identity.$createdAt)}
-                    </Typography>
-                  </Box>
-                  {identity.providerAccessTokenExpiry && (
-                    <Box>
-                      <Typography sx={{ fontSize: '0.65rem', color: 'rgba(255, 255, 255, 0.4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Token Expires
-                      </Typography>
-                      <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255, 255, 255, 0.7)', fontWeight: 500, mt: 0.5 }}>
-                        {formatDate(identity.providerAccessTokenExpiry)}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              </Box>
+      {/* Sign in with Kylrix — third-party OAuth2 server clients */}
+      <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-4 space-y-3">
+        <div>
+          <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">
+            External apps
+          </h3>
+          <p className="text-[11px] text-white/35 mt-0.5">
+            Apps using Sign in with Kylrix
+          </p>
+        </div>
 
-              <IconButton
-                onClick={() => handleDeleteClick(identity)}
-                sx={{
-                  width: 40,
-                  height: 40,
-                  padding: 0,
-                  margin: 0,
-                  flexShrink: 0,
-                  color: '#EF4444',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                  border: '1px solid rgba(239, 68, 68, 0.2)',
-                  transition: 'all 0.2s ease-out',
-                  '&:hover': {
-                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                    borderColor: 'rgba(239, 68, 68, 0.4)'},
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'}}
-              >
-                <DeleteIcon sx={{ fontSize: 20 }} />
-              </IconButton>
-            </Box>
-          ))}
-        </Stack>
-      )}
-
-      <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em', mt: 5, mb: 2 }}>
-        External apps
-      </Typography>
-      <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', mb: 2 }}>
-        Apps you allowed to use Sign in with Kylrix. Revoke to cut off their access.
-      </Typography>
-      <ExternalAppsList />
-
-      {deleteDrawerOpen && (
-        <Drawer
-          anchor="bottom"
-          open={deleteDrawerOpen}
-          onClose={() => setDeleteDrawerOpen(false)}
-          keepMounted={false}
-          disablePortal
-          PaperProps={{
-            sx: {
-              backgroundColor: '#161514',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderBottomLeftRadius: 0,
-              borderBottomRightRadius: 0,
-              borderTopLeftRadius: '20px',
-              borderTopRightRadius: '20px'}}}
-        >
-          <Box sx={{ p: 3 }}>
-            <Box sx={{ mb: 3 }}>
-              <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, color: '#FFFFFF', mb: 1.5 }}>
-                Disconnect Identity
-              </Typography>
-              <Typography sx={{ color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.6 }}>
-                Are you sure you want to disconnect{' '}
-                <Typography component="span" sx={{ color: '#FFFFFF', fontWeight: 600 }}>
-                  {selectedIdentity && getProviderName(selectedIdentity.provider)}
-                </Typography>
-                ? You will no longer be able to login with this account.
-              </Typography>
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
-              <Button
-                onClick={handleDeleteIdentity}
-                disabled={deleting}
-                variant="contained"
-                fullWidth
-                sx={{
-                  backgroundColor: '#EF4444',
-                  color: '#FFFFFF',
-                  borderRadius: '10px',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  py: 1.5,
-                  fontSize: '1rem',
-                  transition: 'all 0.2s ease-out',
-                  '&:hover': {
-                    backgroundColor: '#DC2626'},
-                  '&:disabled': {
-                    backgroundColor: 'rgba(239, 68, 68, 0.5)'}}}
-              >
-                {deleting ? 'Disconnecting...' : 'Disconnect'}
-              </Button>
-              <Button
-                onClick={() => setDeleteDrawerOpen(false)}
-                fullWidth
-                sx={{
-                  color: '#FFFFFF',
-                  borderColor: 'rgba(255, 255, 255, 0.2)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '10px',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  py: 1.5,
-                  fontSize: '1rem',
-                  backgroundColor: 'transparent',
-                  transition: 'all 0.2s ease-out',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    borderColor: 'rgba(255, 255, 255, 0.3)'}}}
-              >
-                Cancel
-              </Button>
-            </Box>
-          </Box>
-        </Drawer>
-      )}
-    </Box>
+        {externals.length === 0 ? (
+          <p className="text-[12px] text-white/40 px-1 py-2">None yet</p>
+        ) : (
+          <div className="space-y-2">
+            {externals.map((row) => {
+              const busy = busyId === row.identity.$id;
+              return (
+                <div
+                  key={row.identity.$id}
+                  className="flex items-center gap-3 rounded-2xl bg-[#0A0908] border border-white/[0.05] px-3.5 py-3"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-[#161412] border border-white/[0.06] flex items-center justify-center text-[#A5B4FC] shrink-0 overflow-hidden">
+                    {row.app?.logoUri ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={row.app.logoUri} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <AppWindow size={16} />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white truncate">
+                      {row.app?.name || 'Unknown app'}
+                    </p>
+                    <p className="text-[11px] text-white/40 font-mono truncate">{row.appId}</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void revokeExternal(row.identity.$id)}
+                    className="px-3 py-1.5 rounded-xl text-[11px] font-extrabold border border-red-500/25 text-red-300 cursor-pointer disabled:opacity-40"
+                  >
+                    {busy ? '…' : 'Revoke'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

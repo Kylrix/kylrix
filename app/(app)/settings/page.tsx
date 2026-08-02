@@ -884,9 +884,7 @@ function SettingsPageInner() {
                         <h2 className="text-xl font-black font-clash text-white tracking-tight">
                             Connected Apps
                         </h2>
-                        <div className="bg-[#161412] border border-white/5 rounded-[32px] p-6 md:p-10">
-                            <ConnectedIdentities />
-                        </div>
+                        <ConnectedIdentities />
                     </div>
                 )}
 
