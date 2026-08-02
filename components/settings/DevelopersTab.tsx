@@ -1,14 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import {
-  Copy,
-  KeyRound,
-  Trash2,
-  BookOpen,
-  AppWindow,
-  Plus,
-} from 'lucide-react';
+import { Copy, KeyRound, BookOpen, AppWindow, Plus } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import {
@@ -25,6 +18,7 @@ import {
 } from '@/lib/oauth2/apps';
 import { CreatePatDrawer } from '@/components/settings/CreatePatDrawer';
 import { CreateOAuthAppDrawer } from '@/components/settings/CreateOAuthAppDrawer';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 type PatItem = {
   id: string;
@@ -106,6 +100,7 @@ function SkillRow({
 }
 
 export function DevelopersTab() {
+  const { open: openDrawer } = useUnifiedDrawer();
   const [developerMode, setDeveloperMode] = useState(false);
   const [pats, setPats] = useState<PatItem[]>([]);
   const [apps, setApps] = useState<OauthApp[]>([]);
@@ -170,33 +165,48 @@ export function DevelopersTab() {
     }
   };
 
-  const handleRevokePat = async (id: string) => {
-    try {
-      await revokePat(id);
-      toast.success('Revoked');
-      await refreshPats();
-    } catch (err: any) {
-      toast.error(err?.message || 'Revoke failed');
-    }
+  const confirmRevokePat = (pat: PatItem) => {
+    openDrawer('delete-confirm', {
+      title: `Revoke “${pat.name}”?`,
+      description:
+        'This personal access token will stop working immediately. Anything using it will lose access.',
+      confirmLabel: 'Revoke token',
+      resourceName: pat.name,
+      onConfirm: async () => {
+        await revokePat(pat.id);
+        toast.success('Token revoked');
+        await refreshPats();
+      },
+    });
   };
 
-  const handleDeleteApp = async (appId: string) => {
-    try {
-      await deleteApp(appId);
-      toast.success('App deleted');
-      await refreshApps();
-    } catch (err: any) {
-      toast.error(err?.message || 'Delete failed');
-    }
+  const confirmRevokeAppSessions = (app: OauthApp) => {
+    openDrawer('delete-confirm', {
+      title: `Sign everyone out of “${app.name}”?`,
+      description:
+        'Revokes every access and refresh token issued to this app. Users must approve access again the next time they sign in.',
+      confirmLabel: 'Sign everyone out',
+      resourceName: app.name,
+      onConfirm: async () => {
+        await deleteAppTokens(app.$id);
+        toast.success('All sessions for this app were revoked');
+      },
+    });
   };
 
-  const handleRevokeAppTokens = async (appId: string) => {
-    try {
-      await deleteAppTokens(appId);
-      toast.success('All tokens revoked');
-    } catch (err: any) {
-      toast.error(err?.message || 'Revoke failed');
-    }
+  const confirmDeleteApp = (app: OauthApp) => {
+    openDrawer('delete-confirm', {
+      title: `Delete “${app.name}”?`,
+      description:
+        'Deletes this OAuth app and invalidates every token it has issued. This cannot be undone.',
+      confirmLabel: 'Delete app',
+      resourceName: app.name,
+      onConfirm: async () => {
+        await deleteApp(app.$id);
+        toast.success('App deleted');
+        await refreshApps();
+      },
+    });
   };
 
   const activePats = pats.filter((p) => p.status === 'active').length;
@@ -263,27 +273,30 @@ export function DevelopersTab() {
           pats.map((pat) => (
             <div
               key={pat.id}
-              className="flex items-center gap-3 rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5"
+              className="flex flex-col gap-2.5 rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5"
             >
-              <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-[#6366F1] shrink-0">
-                <KeyRound size={16} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-white truncate">{pat.name}</p>
-                <p className="text-[11px] text-white/40 font-mono truncate">
-                  kyl_pat_{pat.tokenPrefix}_… · {pat.status}
-                  {pat.scopes?.length ? ` · ${pat.scopes.length} perms` : ''}
-                </p>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-[#6366F1] shrink-0">
+                  <KeyRound size={16} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-white truncate">{pat.name}</p>
+                  <p className="text-[11px] text-white/40 font-mono truncate">
+                    kyl_pat_{pat.tokenPrefix}_… · {pat.status}
+                    {pat.scopes?.length ? ` · ${pat.scopes.length} perms` : ''}
+                  </p>
+                </div>
               </div>
               {pat.status === 'active' && (
-                <button
-                  type="button"
-                  title="Revoke"
-                  onClick={() => void handleRevokePat(pat.id)}
-                  className="p-2 rounded-lg bg-[#161412] border border-red-500/20 text-red-400 cursor-pointer shrink-0"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => confirmRevokePat(pat)}
+                    className="px-3 py-2 rounded-xl text-[11px] font-extrabold bg-[#161412] border border-red-500/25 text-red-300 cursor-pointer"
+                  >
+                    Revoke token
+                  </button>
+                </div>
               )}
             </div>
           ))
@@ -328,46 +341,47 @@ export function DevelopersTab() {
           apps.map((app) => (
             <div
               key={app.$id}
-              className="flex items-center gap-3 rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5"
+              className="flex flex-col gap-2.5 rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5"
             >
-              <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-[#6366F1] shrink-0 overflow-hidden">
-                {app.logoUri ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={app.logoUri} alt="" className="h-4 w-4 object-cover rounded" />
-                ) : (
-                  <AppWindow size={16} />
-                )}
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-[#6366F1] shrink-0 overflow-hidden">
+                  {app.logoUri ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={app.logoUri} alt="" className="h-4 w-4 object-cover rounded" />
+                  ) : (
+                    <AppWindow size={16} />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-white truncate">{app.name}</p>
+                  <p className="text-[11px] text-white/40 font-mono truncate">
+                    {app.$id} · {app.type === 'public' ? 'public (PKCE)' : 'server (secret)'}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-white truncate">{app.name}</p>
-                <p className="text-[11px] text-white/40 font-mono truncate">
-                  {app.$id} · {app.type || 'confidential'}
-                </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void copy(app.$id)}
+                  className="px-3 py-2 rounded-xl text-[11px] font-extrabold bg-[#161412] border border-white/[0.08] text-white/80 cursor-pointer"
+                >
+                  Copy client ID
+                </button>
+                <button
+                  type="button"
+                  onClick={() => confirmRevokeAppSessions(app)}
+                  className="px-3 py-2 rounded-xl text-[11px] font-extrabold bg-[#161412] border border-amber-500/25 text-amber-200/90 cursor-pointer"
+                >
+                  Sign everyone out
+                </button>
+                <button
+                  type="button"
+                  onClick={() => confirmDeleteApp(app)}
+                  className="px-3 py-2 rounded-xl text-[11px] font-extrabold bg-[#161412] border border-red-500/25 text-red-300 cursor-pointer"
+                >
+                  Delete app
+                </button>
               </div>
-              <button
-                type="button"
-                title="Copy client id"
-                onClick={() => void copy(app.$id)}
-                className="p-2 rounded-lg bg-[#161412] border border-white/[0.08] text-white/70 cursor-pointer shrink-0"
-              >
-                <Copy size={14} />
-              </button>
-              <button
-                type="button"
-                title="Revoke all tokens"
-                onClick={() => void handleRevokeAppTokens(app.$id)}
-                className="p-2 rounded-lg bg-[#161412] border border-white/[0.08] text-amber-300/80 cursor-pointer shrink-0"
-              >
-                <KeyRound size={14} />
-              </button>
-              <button
-                type="button"
-                title="Delete app"
-                onClick={() => void handleDeleteApp(app.$id)}
-                className="p-2 rounded-lg bg-[#161412] border border-red-500/20 text-red-400 cursor-pointer shrink-0"
-              >
-                <Trash2 size={14} />
-              </button>
             </div>
           ))
         )}
