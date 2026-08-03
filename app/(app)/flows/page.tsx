@@ -36,6 +36,8 @@ import { installFlow } from '@/lib/actions/client-ops';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import toast from 'react-hot-toast';
 
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+
 type Tab = 'discover' | 'installed';
 
 function communityPublisher(wf: WorkflowChain & { metadata?: unknown }): FlowPublisher {
@@ -96,6 +98,7 @@ export default function FlowsPage() {
   const { setConfiguration, resetConfiguration } = useFAB();
   const native = useNativeSidebarApiOptional();
   const { openOverlay, closeOverlay } = useOverlay();
+  const { open: openUnified, close: closeUnified } = useUnifiedDrawer();
   const {
     isRecording,
     startRecording,
