@@ -10,6 +10,7 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 import { addHours } from '@/lib/time-util';
 import type { Event } from '@/types';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
+import { useEvents } from '@/context/EventsContext';
 
 type Props = {
   onClose?: () => void;
