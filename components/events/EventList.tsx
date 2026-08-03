@@ -16,12 +16,8 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useFAB } from '@/context/FABContext';
 import EventDetails from './EventDetails';
-import { LocalEngine } from '@/lib/services/LocalEngine';
 import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { autonomicSyncEngine } from '@/lib/services/sync-engine';
-
-import { mergeServerPageWithLocalCopy } from '@/lib/sync/local-copy-sync';
 
 function mapRemoteEvent(doc: any): Event {
   const start = doc.startTime ? new Date(doc.startTime) : new Date();
@@ -145,11 +141,10 @@ export default function EventList() {
         // Do NOT call ack on failure — leaves dot AMBER so UI never lies about failed sync
       }
     },
-    [activeWorkspace?.isPersonal, replaceDraftEventId, userId],
+    [activeWorkspace, replaceDraftEventId, userId],
   );
 
   const visibleEvents = useMemo(() => {
-    const now = Date.now();
     let list = events;
     if (activeWorkspace?.isPersonal !== false) {
       list = list.filter((e) => isDefaultWorkspaceObject(e as any));
@@ -157,7 +152,7 @@ export default function EventList() {
     if (tabValue === 1) {
       list = list.filter((e) => {
         const t = new Date(e.startTime).getTime();
-        return !Number.isNaN(t) && t < now;
+        return !Number.isNaN(t) && t < Date.parse(new Date().toISOString());
       });
     } else if (tabValue === 2 && userId) {
       list = list.filter((e) => e.creatorId === userId);

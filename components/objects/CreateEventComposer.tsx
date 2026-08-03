@@ -22,6 +22,8 @@ type Props = {
   /** Fired once on Check/Enter close when the draft has content. */
   onCommitEvent?: (event: Event & { visibility?: string; autoCreateCall?: boolean }) => void | Promise<void>;
   onEventCreated?: (event: Event) => void;
+  onCancel?: () => void;
+  initialData?: any;
 };
 
 function toLocalInputValue(date: Date | null): string {
@@ -44,8 +46,8 @@ export function CreateEventComposer({
   onEventCreated,
   onLiveEvent,
   onCommitEvent,
-  onCancel,
-  initialData,
+  onCancel: _onCancel,
+  initialData: _initialData,
 }: Props) {
   const { user } = useAuth();
   const { pushLiveEvent } = useEvents();

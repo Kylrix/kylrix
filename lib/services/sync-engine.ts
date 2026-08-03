@@ -66,6 +66,7 @@ async function flushEventPending(
   if (!activeUserId) return;
 
   const { events: eventApi } = await import('@/lib/kylrixflow');
+  const flushRevision = queuedRevision || new Date().toISOString();
 
   try {
     const startTimeStr = safeIsoString(payload.startTime);
@@ -278,7 +279,7 @@ if (typeof window !== 'undefined') {
   absorbSessionStorageQueue();
   void hydratePendingQueue();
 
-  const handleUserActivity = (e: Event) => {
+  const handleUserActivity = (e: globalThis.Event) => {
     const now = Date.now();
     if (e.type === 'keydown' || e.type === 'input') {
       const delta = now - lastKeystrokeTime;

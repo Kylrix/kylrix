@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Calendar, Clock, MapPin, Share2, Video, ExternalLink, Edit3, Globe, Lock, ChevronDown, Check, Users, UserCheck } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, Share2, Video, ExternalLink, Edit3, Globe, Lock, ChevronDown, Check, Users } from 'lucide-react';
 import { formatTime } from '@/lib/time-util';
 import { useLayout } from '@/context/LayoutContext';
 import { exportToICS } from '@/lib/utils/export';
@@ -157,7 +157,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
             };
 
             const localTime = Math.max(parseTs(prevLocal.updatedAt), parseTs(prevLocal.$updatedAt), parseTs(prevLocal.createdAt));
-            const remoteTime = Math.max(parseTs(remoteData.updatedAt), parseTs(remoteData.$updatedAt), parseTs(remoteData.createdAt));
+            const remoteTime = Math.max(parseTs((remoteData as any).updatedAt), parseTs(remoteData.$updatedAt), parseTs(remoteData.$createdAt));
 
             // Timestamp comparison: newer wins!
             if (remoteTime > localTime) {

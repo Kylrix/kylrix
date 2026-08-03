@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar, Clock, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
-import { addHours, formatTime } from '@/lib/time-util';
+import { addHours } from '@/lib/time-util';
 
 type Props = {
   open: boolean;

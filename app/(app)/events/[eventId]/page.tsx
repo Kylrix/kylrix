@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
 import EventDetails from '@/components/events/EventDetails';
 import { MultiSectionContainer } from '@/context/SectionContext';
 

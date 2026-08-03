@@ -43,8 +43,9 @@ export default async function Image({
       if (event.location?.trim()) {
         locationText = event.location.trim();
       }
-      if (event.creatorId) {
-        const owner = await resolveOwnerForOg(event.creatorId);
+      const ownerId = event.userId || (event as any).creatorId;
+      if (ownerId) {
+        const owner = await resolveOwnerForOg(ownerId);
         ownerName = owner.ownerName;
         ownerAvatarDataUrl = owner.ownerAvatarDataUrl;
       }
