@@ -12,6 +12,7 @@ import {
   getNotePermissions,
 } from '@/lib/appwrite/note';
 import { createNoteCreationService } from '@/lib/sdk';
+import { WorkflowDbService } from '@/lib/services/workflows';
 
 const DB = APPWRITE_CONFIG.DATABASES.NOTE;
 const NOTES = APPWRITE_CONFIG.TABLES.NOTE?.NOTES || APPWRITE_CONFIG.TABLES.NOTES;
