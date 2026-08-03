@@ -84,66 +84,77 @@ export const FlowReviewService = {
     }
 
     const pii = detectFlowPii(wf);
+    const hasNetwork = pii.hits.some((h) => h.hint.includes('network'));
+    const hasDeceptive = pii.hits.some((h) => h.hint.includes('Deceptive') || h.hint.includes('Secret'));
+    const isRisky = pii.hasPii || hasNetwork || hasDeceptive || tier !== 'general';
+
     const findings = {
       piiHits: pii.hits,
       toolTierMax: tier,
       stepCount: wf.steps?.length || 0,
       scannedAt: new Date().toISOString(),
-      gate: 'agentic-publish-v1',
+      gate: 'agentic-publish-v2',
+      reasons: pii.hits.map((h) => `${h.field}: ${h.hint}`),
     };
-
-    await WorkflowDbService.setReviewStatus(params.flowId, 'pending');
 
     const review = await this.createPending({
       flowId: params.flowId,
       actorId: params.actorId,
       toolTierMax: tier,
       findings,
-      piiSummary: pii.hasPii
-        ? pii.hits
-            .slice(0, 8)
-            .map((h) => `${h.field}:${h.hint}`)
-            .join('; ')
+      piiSummary: pii.hits.length > 0
+        ? pii.hits.slice(0, 8).map((h) => `${h.field}:${h.hint}`).join('; ')
         : null,
     });
 
-    // Narrow auto-approve: general tier + no PII only.
-    // Fine/system or PII → stays pending for agentic investigation.
-    const canAuto = tier === 'general' && !pii.hasPii;
+    const tables = createSystemTablesDB();
 
-    if (canAuto) {
-      const tables = createSystemTablesDB();
+    if (isRisky) {
+      const verdict = hasNetwork || hasDeceptive ? 'blocked' : 'rejected';
       await tables.updateRow({
         databaseId: DATABASE_ID,
         tableId: TABLE_ID,
         rowId: review.$id,
         data: {
-          verdict: 'approved',
+          verdict,
           updatedAt: new Date().toISOString(),
-          findings: JSON.stringify({ ...findings, autoApproved: true }),
+          findings: JSON.stringify({ ...findings, autoApproved: false, verdictReason: 'Security policy violation' }),
         },
       });
-      await WorkflowDbService.setPublishState(params.flowId, {
-        isPublic: true,
-        isGuest: true,
-        actorId: params.actorId,
-        reviewStatus: 'approved',
-      });
+      await WorkflowDbService.setReviewStatus(params.flowId, verdict);
       return {
         reviewId: review.$id,
-        verdict: 'approved' as FlowReviewVerdict,
+        verdict: verdict as FlowReviewVerdict,
         needsAgent: false,
         pii,
-        isPublic: true,
+        isPublic: false,
+        error: `Publish rejected: ${pii.hits.map((h) => h.hint).join(', ') || 'Security policy violation'}`,
       };
     }
 
+    // Clean flow -> Instant approval
+    await tables.updateRow({
+      databaseId: DATABASE_ID,
+      tableId: TABLE_ID,
+      rowId: review.$id,
+      data: {
+        verdict: 'approved',
+        updatedAt: new Date().toISOString(),
+        findings: JSON.stringify({ ...findings, autoApproved: true }),
+      },
+    });
+    await WorkflowDbService.setPublishState(params.flowId, {
+      isPublic: true,
+      isGuest: true,
+      actorId: params.actorId,
+      reviewStatus: 'approved',
+    });
     return {
       reviewId: review.$id,
-      verdict: 'pending' as FlowReviewVerdict,
-      needsAgent: true,
+      verdict: 'approved' as FlowReviewVerdict,
+      needsAgent: false,
       pii,
-      isPublic: false,
+      isPublic: true,
     };
   },
 };

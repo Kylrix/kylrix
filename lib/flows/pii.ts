@@ -12,6 +12,8 @@ const IPV4_RE = /\b(?:\d{1,3}\.){3}\d{1,3}\b/;
 const SECRETISH_RE =
   /\b(?:password|passwd|secret|api[_-]?key|token|bearer|ssn|credit[_\s-]?card)\b/i;
 const LONG_DIGIT_RE = /\b\d{12,}\b/;
+const NETWORK_RE = /\b(?:https?:\/\/|ftp:\/\/|wss?:\/\/|curl|fetch|axios|http\.get|http\.post|net\/http|socket)\b/i;
+const DECEPTIVE_RE = /\b(?:verify account|claim reward|unauthorized access|urgent action|password reset|login prompt|update billing|phishing|malware|backdoor|exfiltrate)\b/i;
 
 function scanText(field: string, text: string | null | undefined, hits: FlowPiiHit[]) {
   if (!text || !String(text).trim()) return;
@@ -22,6 +24,8 @@ function scanText(field: string, text: string | null | undefined, hits: FlowPiiH
   if (IPV4_RE.test(value)) hits.push({ field, hint: 'IP address' });
   if (SECRETISH_RE.test(value)) hits.push({ field, hint: 'Secret-like wording' });
   if (LONG_DIGIT_RE.test(value)) hits.push({ field, hint: 'Long number sequence' });
+  if (NETWORK_RE.test(value)) hits.push({ field, hint: 'External network request detected' });
+  if (DECEPTIVE_RE.test(value)) hits.push({ field, hint: 'Deceptive or suspicious language' });
 }
 
 function scanSteps(steps: WorkflowStep[], hits: FlowPiiHit[]) {

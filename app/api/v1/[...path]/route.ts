@@ -69,6 +69,14 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
   // Flows
   if (a === 'flows' && !b) {
     if (method === 'GET') return jsonOk(await ApiResources.listFlows(actor, limit()));
+    if (method === 'POST') return jsonOk(await ApiResources.createFlow(actor, await readBody(req)));
+  }
+  if (a === 'flows' && b && !c && b !== 'installs' && b !== 'install') {
+    if (method === 'GET') return jsonOk(await ApiResources.getFlow(actor, b));
+    if (method === 'DELETE') return jsonOk(await ApiResources.deleteFlow(actor, b));
+  }
+  if (a === 'flows' && b && c === 'publish' && method === 'POST') {
+    return jsonOk(await ApiResources.publishFlow(actor, b, await readBody(req)));
   }
   if (a === 'flows' && b === 'installs' && !c) {
     if (method === 'GET') return jsonOk(await ApiResources.listFlowInstalls(actor));

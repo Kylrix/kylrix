@@ -46,7 +46,7 @@ curl -sS -X POST "$BASE/token/scopes/grant" \
 
 `/me` · `/token` · `/token/scopes` · `/token/scopes/grant` · `/pats`  
 `/notes` · `/goals` · `/workspaces` · `/workspaces/:id/thread` · `/events` · `/forms`  
-`/flows` · `/flows/install` · `/flows/installs`  
+`/flows` (GET/POST) · `/flows/:id` (GET/DELETE) · `/flows/:id/publish` (POST) · `/flows/install` · `/flows/installs`  
 `/feeds` · `/moments` · `/moments/:id` · `/moments/:id/comments`  
 `/threads` · `/threads/:id` · `/threads/:id/messages`  
 `/chats` · `/chats/:id` · `/chats/:id/messages`  

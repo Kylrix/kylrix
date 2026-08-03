@@ -112,6 +112,16 @@ export async function publishFlowAction(
       confirmAware: true,
       jwt: opts.jwt,
     });
+
+    if (res.verdict === 'rejected' || res.verdict === 'blocked') {
+      return {
+        success: false,
+        error: (res as any).error || `Publish rejected due to ${res.verdict} security status`,
+        verdict: res.verdict,
+        pii: res.pii,
+      };
+    }
+
     return {
       success: true,
       isPublic: !!res.isPublic,

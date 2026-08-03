@@ -298,10 +298,58 @@ export const ApiResources = {
     return res.rows.map((r: any) => ({
       id: r.workflowId || r.$id,
       name: r.name,
+      description: r.description,
       isPublic: !!r.isPublic,
+      steps: typeof r.steps === 'string' ? JSON.parse(r.steps) : r.steps,
       installCount: r.installCount ?? 0,
       reviewStatus: r.reviewStatus || null,
+      version: r.version ?? 0,
+      contentHash: r.contentHash || null,
     }));
+  },
+
+  async createFlow(actor: ApiActor, body: Record<string, unknown>) {
+    requireScope(actor, 'flows:write');
+    const name = String(body?.name || '').trim();
+    if (!name) badRequest('name required');
+    const id = String(body?.id || `flow_${Date.now()}`);
+    const steps = Array.isArray(body?.steps) ? body.steps : [];
+    const wf = {
+      id,
+      name,
+      description: String(body?.description || ''),
+      niche: (body?.niche as any) || 'workspace',
+      steps,
+      isPublic: false,
+      isAnonymized: false,
+      createdAt: new Date().toISOString(),
+    };
+    await WorkflowDbService.saveWorkflow(wf, actor.userId);
+    return await this.getFlow(actor, id);
+  },
+
+  async getFlow(actor: ApiActor, id: string) {
+    requireScope(actor, 'flows:read');
+    const wf = await WorkflowDbService.getByWorkflowId(id);
+    if (!wf) badRequest('Flow not found');
+    return wf;
+  },
+
+  async publishFlow(actor: ApiActor, id: string, body: Record<string, unknown>) {
+    requireScope(actor, 'flows:write');
+    const { publishFlowAction } = await import('@/lib/actions/workflows');
+    const res = await publishFlowAction(id, {
+      confirmAware: body.confirmAware !== false,
+    });
+    return res;
+  },
+
+  async deleteFlow(actor: ApiActor, id: string) {
+    requireScope(actor, 'flows:write');
+    const wf = await WorkflowDbService.getByWorkflowId(id);
+    if (!wf) badRequest('Flow not found');
+    await WorkflowDbService.deleteWorkflow(id);
+    return { id, deleted: true };
   },
 
   // ─── Token self-service (rescue hatch — no extra scope required) ───
