@@ -39,7 +39,7 @@ export function DeleteConfirmDrawer() {
   };
 
   return (
-    <div className="p-6 md:p-8 text-white font-satoshi flex flex-col gap-6 relative select-none">
+    <div className="p-6 md:p-8 text-white font-satoshi flex flex-col gap-6 relative select-none max-h-[60vh] overflow-y-auto scrollbar-thin">
       {/* Red Spotlight Ambient Gradient */}
       <div 
         className="absolute top-0 left-0 right-0 h-36 pointer-events-none opacity-20"
