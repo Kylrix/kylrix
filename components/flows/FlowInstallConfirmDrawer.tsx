@@ -117,18 +117,8 @@ export function FlowInstallConfirmDrawer({ flow, onConfirm, onClose }: FlowInsta
         className="relative w-full max-w-[720px] pointer-events-auto flex flex-col bg-[#161412] border border-[#34322F] border-b-0 rounded-t-[24px] overflow-hidden shadow-[0_-12px_36px_rgba(0,0,0,0.5)]"
         style={{ maxHeight: '60dvh' }}
       >
-        {/* Drag pill */}
-        <button
-          type="button"
-          className="flex justify-center py-1.5 w-full shrink-0 border-b border-[#34322F]"
-          onClick={onClose}
-          aria-label="Close drawer"
-        >
-          <span className="w-10 h-1 rounded-full bg-[#3D3A36]" />
-        </button>
-
         {/* Content */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-6 pt-4 flex flex-col gap-4 scrollbar-thin">
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-6 pt-5 flex flex-col gap-4 scrollbar-thin">
           {/* Header */}
           <div className="flex justify-between items-center shrink-0">
             <div className="flex items-center gap-3">

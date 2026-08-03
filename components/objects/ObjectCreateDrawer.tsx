@@ -147,18 +147,6 @@ export function ObjectCreateDrawer({
         }
         style={isDesktop ? { height: '100dvh' } : { height: maxHeight, maxHeight }}
       >
-        {!isDesktop ? (
-          <button
-            type="button"
-            onClick={toggleExpand}
-            disabled={formOnlyFull}
-            className="flex justify-center py-1.5 w-full shrink-0 border-b border-[#34322F]"
-            aria-label={isExpanded ? 'Collapse drawer' : 'Expand drawer'}
-          >
-            <span className="w-10 h-1 rounded-full bg-[#3D3A36]" />
-          </button>
-        ) : null}
-
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {kind === 'note' ? (
             <CreateNoteForm

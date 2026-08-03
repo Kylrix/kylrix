@@ -70,15 +70,7 @@ export default function ProjectSettingsDrawer({
             : 'bottom-0 left-0 right-0 max-h-[90dvh] h-auto border-t rounded-t-[28px] max-w-[720px] mx-auto'
         }`}
       >
-        {/* Mobile Drag Handle */}
-        {!isDesktop && (
-          <div 
-            className="flex justify-center py-3 cursor-pointer select-none"
-            onClick={onClose}
-          >
-            <div className="w-10 h-1 rounded bg-[#3D3A36]" />
-          </div>
-        )}
+
 
         {/* Spotlight Ambient Glow */}
         {isDesktop && (

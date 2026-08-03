@@ -55,19 +55,7 @@ export function AgenticDrawer() {
         style={{
           boxShadow: '0 -12px 36px rgba(0,0,0,0.5), 0 16px 48px rgba(0,0,0,0.7)'}}
       >
-        {!isDesktop && !isFullscreen && (
-          <div className="flex justify-center items-center gap-3 py-2.5 flex-shrink-0 select-none border-b border-white/5">
-            <div className="w-10 h-1 rounded bg-[#3D3A36]" />
-            <button
-              type="button"
-              onClick={() => setIsExpanded((v) => !v)}
-              aria-label={isExpanded ? 'Scale down' : 'Scale up'}
-              className="p-1 text-white/40 hover:text-white transition"
-            >
-              {isExpanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-            </button>
-          </div>
-        )}
+
 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <AgenticPanelContent onClose={handleClose} isDesktop={isDesktop} />

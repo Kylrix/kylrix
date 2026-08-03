@@ -179,16 +179,7 @@ export function ProfilePeekDrawer({
             : 'inset-x-0 bottom-0 h-auto max-h-[70dvh] border-t rounded-t-[28px] w-full max-w-[720px] left-1/2 -translate-x-1/2'
         }`}
       >
-        <button
-          type="button"
-          onClick={toggleExpand}
-          className="flex justify-center py-2 w-full shrink-0"
-          aria-label="Open full profile"
-        >
-          <span className="w-10 h-1 rounded-full bg-[#3D3A36]" />
-        </button>
-
-        <div className="flex items-center justify-between px-5 pb-2 shrink-0">
+        <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">
           <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-mono m-0">
             Profile
           </p>

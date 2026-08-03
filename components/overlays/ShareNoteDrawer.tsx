@@ -579,16 +579,6 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
             : 'bottom-0 left-0 right-0 max-h-[90dvh] h-auto border-t rounded-t-[28px] max-w-[720px] mx-auto'
         }`}
       >
-        {/* Mobile Drag Handle */}
-        {!isDesktop && (
-          <div 
-            className="flex justify-center py-3 cursor-pointer select-none"
-            onClick={onClose}
-          >
-            <div className="w-10 h-1 rounded bg-[#3D3A36]" />
-          </div>
-        )}
-
         {/* Header */}
         <div className="p-6 pb-4 flex items-center justify-between border-b border-[#1C1A18] shrink-0">
           <div className="flex items-center gap-3">
@@ -643,16 +633,6 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
                 : 'bottom-0 left-0 right-0 max-h-[80dvh] h-auto border-t rounded-t-[24px] max-w-[720px] mx-auto'
             }`}
           >
-            {/* Mobile Drag Handle */}
-            {!isDesktop && (
-              <div 
-                className="flex justify-center py-3 cursor-pointer select-none"
-                onClick={() => setIsPermissionDrawerOpen(false)}
-              >
-                <div className="w-10 h-1 rounded bg-[#3D3A36]" />
-              </div>
-            )}
-
             <div className="p-6">
               <h3 className="font-extrabold text-lg text-white font-clash tracking-tight mb-4">
                 Assign Access Level

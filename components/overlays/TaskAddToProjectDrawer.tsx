@@ -144,11 +144,7 @@ export function TaskAddToProjectDrawer({
             : 'bottom-0 left-0 right-0 max-h-[85dvh] h-auto border-t rounded-t-[28px] max-w-[720px] mx-auto w-full'
         }`}
       >
-        {!isDesktop && (
-          <div className="flex justify-center py-3 cursor-pointer select-none shrink-0" onClick={onClose}>
-            <div className="w-10 h-1 rounded bg-[#3D3A36]" />
-          </div>
-        )}
+
 
         <div className="px-5 pt-5 pb-4 border-b border-[#1C1A18] shrink-0">
           <div className="flex items-start justify-between gap-3">

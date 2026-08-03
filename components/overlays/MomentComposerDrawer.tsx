@@ -291,16 +291,7 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
           </div>
         </div>
 
-        {!isExpanded ? (
-          <button
-            type="button"
-            onClick={() => setIsExpanded(true)}
-            className="flex justify-center py-1.5 w-full shrink-0"
-            aria-label="Expand drawer"
-          >
-            <span className="w-10 h-1 rounded-full bg-[#3D3A36]" />
-          </button>
-        ) : null}
+
 
         <form
           onSubmit={handlePublish}
