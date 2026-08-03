@@ -226,7 +226,23 @@ export default function FlowsPage() {
           source: 'community',
           installed: true,
         });
+        return;
       }
+
+      // Installed remote flow not yet in discover list
+      byId.set(id, {
+        id,
+        name: id,
+        description: 'Installed Flow',
+        niche: 'workspace',
+        steps: [],
+        isPublic: true,
+        isAnonymized: true,
+        createdAt: new Date().toISOString(),
+        publisher: { handle: '@community', verified: 'ecosystem' },
+        source: 'community',
+        installed: true,
+      });
     });
 
     return Array.from(byId.values());
