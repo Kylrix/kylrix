@@ -244,16 +244,16 @@ export function CreateEventComposer({
           <button
             type="button"
             onClick={handleClose}
-            disabled={!canCommit && Boolean(content.trim() || title.trim())}
-            className="p-1.5 rounded-lg text-[#10B981] hover:bg-[#10B981]/10 border border-transparent hover:border-[#10B981]/10 transition-all font-bold shrink-0 disabled:opacity-40"
+            className="px-3 py-1.5 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] hover:bg-[#22C55E]/25 transition-all font-extrabold text-xs shrink-0 flex items-center gap-1.5"
             title="Save and Close"
           >
-            <Check className="w-3.5 h-3.5" />
+            <Check className="w-3.5 h-3.5" strokeWidth={3} />
+            <span>Save</span>
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 min-h-0 scrollbar-thin overscroll-contain">
+      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2.5 min-h-0 scrollbar-thin overscroll-contain">
         {(content.trim().length >= 5 || isTitleManuallyEdited) && (
           <input
             type="text"
@@ -282,7 +282,7 @@ export function CreateEventComposer({
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey && !isExpanded && !isPastedRef.current) {
               e.preventDefault();
-              if (canCommit || !(content.trim() || title.trim())) handleClose();
+              handleClose();
             }
           }}
           placeholder="Write your event..."
@@ -291,7 +291,7 @@ export function CreateEventComposer({
         />
       </div>
 
-      <div className="px-2.5 py-1.5 border-t border-white/5 bg-[#161412] flex flex-col gap-2 shrink-0">
+      <div className="p-3 border-t border-white/5 bg-[#161412] flex flex-col gap-2.5 shrink-0">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-white/40">
             Start
@@ -331,40 +331,50 @@ export function CreateEventComposer({
             className="flex-1 rounded-lg border border-white/5 bg-black/40 px-2 py-1.5 text-white text-xs font-satoshi normal-case tracking-normal"
           />
         </label>
-        <div className="flex flex-wrap gap-1.5">
-          {(['private', 'public'] as const).map((v) => (
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <div className="flex flex-wrap gap-1.5">
+            {(['private', 'public'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => {
+                  setVisibility(v);
+                  void pushLive(buildLive(content, title));
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black font-mono uppercase tracking-wider border transition-colors ${
+                  visibility === v
+                    ? 'border-[#22C55E]/40 bg-[#22C55E]/15 text-[#22C55E]'
+                    : 'border-white/10 bg-white/[0.03] text-white/45'
+                }`}
+              >
+                {v}
+              </button>
+            ))}
             <button
-              key={v}
               type="button"
               onClick={() => {
-                setVisibility(v);
+                setAutoCreateCall((v) => !v);
                 void pushLive(buildLive(content, title));
               }}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-black font-mono uppercase tracking-wider border transition-colors ${
-                visibility === v
-                  ? 'border-[#22C55E]/40 bg-[#22C55E]/15 text-[#22C55E]'
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black font-mono uppercase tracking-wider border transition-colors ${
+                autoCreateCall
+                  ? 'border-[#6366F1]/40 bg-[#6366F1]/15 text-[#6366F1]'
                   : 'border-white/10 bg-white/[0.03] text-white/45'
               }`}
             >
-              {v}
+              <Video className="w-3 h-3" />
+              Call
             </button>
-          ))}
+          </div>
+
           <button
             type="button"
-            onClick={() => {
-              setAutoCreateCall((v) => !v);
-              void pushLive(buildLive(content, title));
-            }}
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black font-mono uppercase tracking-wider border transition-colors ${
-              autoCreateCall
-                ? 'border-[#6366F1]/40 bg-[#6366F1]/15 text-[#6366F1]'
-                : 'border-white/10 bg-white/[0.03] text-white/45'
-            }`}
+            onClick={handleClose}
+            className="px-4 py-2 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-black font-extrabold text-xs font-mono uppercase tracking-wider transition-all shadow-[0_4px_12px_rgba(34,197,94,0.25)] cursor-pointer flex items-center gap-1.5 shrink-0"
           >
-            <Video className="w-3 h-3" />
-            Call
+            <Check className="w-4 h-4" strokeWidth={3} />
+            <span>Create Event</span>
           </button>
-        </div>
       </div>
     </div>
   );

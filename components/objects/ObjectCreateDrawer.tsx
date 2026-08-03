@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import type { ObjectKind } from '@/lib/objects/types';
 import type { Notes } from '@/types/appwrite';
@@ -75,6 +76,7 @@ export function ObjectCreateDrawer({
   chatLegacyThread = false,
 }: Props) {
   const { setIsDrawerOpen } = useDrawerState();
+  const [mounted, setMounted] = useState(false);
   const formOnlyFull = kind === 'form';
   const [heightMode, setHeightMode] = useState<HeightMode>(
     formOnlyFull ? 'full' : defaultHeight || 'partial',
@@ -82,6 +84,10 @@ export function ObjectCreateDrawer({
   const [isExpanded, setIsExpanded] = useState(formOnlyFull || defaultHeight === 'full');
   const [isDesktop, setIsDesktop] = useState(false);
   const composerCloseRef = React.useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setIsDrawerOpen(open);
@@ -125,30 +131,26 @@ export function ObjectCreateDrawer({
     });
   }, [formOnlyFull, isDesktop]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const isFull = heightMode === 'full' || formOnlyFull;
   const maxHeight = isDesktop || isFull ? '100dvh' : '60dvh';
 
-  return (
-    <div
-      className={`fixed inset-0 z-[1500] flex pointer-events-none ${
-        isDesktop ? 'items-stretch justify-end' : 'items-end justify-center'
-      }`}
-    >
-      <button
-        type="button"
-        aria-label="Close"
-        className="absolute inset-0 bg-black/55 pointer-events-auto"
+  const drawerContent = (
+    <div className="fixed inset-0 z-[14000] flex pointer-events-auto overflow-hidden">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/75 transition-opacity duration-200 pointer-events-auto"
         onClick={requestClose}
       />
+      {/* Panel */}
       <div
         className={
           isDesktop
-            ? 'w-full max-w-[480px] h-full pointer-events-auto flex flex-col bg-[#161412] border-l border-[#34322F] overflow-hidden shadow-[-12px_0_36px_rgba(0,0,0,0.5)]'
+            ? 'fixed top-0 right-0 h-[100dvh] w-full max-w-[480px] bg-[#161412] border-l border-[#34322F] shadow-[-12px_0_36px_rgba(0,0,0,0.5)] z-[14001] pointer-events-auto flex flex-col overflow-hidden'
             : isFull
-              ? 'w-full h-full pointer-events-auto flex flex-col bg-[#161412] border-0 rounded-none overflow-hidden fixed inset-0 shadow-none'
-              : 'w-full max-w-[720px] pointer-events-auto flex flex-col bg-[#161412] border border-[#34322F] border-b-0 rounded-t-[24px] overflow-hidden fixed bottom-0 left-1/2 -translate-x-1/2 shadow-[0_-12px_36px_rgba(0,0,0,0.5)]'
+              ? 'fixed inset-0 h-[100dvh] max-h-[100dvh] w-full bg-[#161412] border-0 rounded-none shadow-none z-[14001] pointer-events-auto flex flex-col overflow-hidden'
+              : 'fixed bottom-0 left-1/2 -translate-x-1/2 h-[60dvh] max-h-[60dvh] w-full max-w-[720px] bg-[#161412] border border-[#34322F] border-b-0 rounded-t-[24px] shadow-[0_-12px_36px_rgba(0,0,0,0.5)] z-[14001] pointer-events-auto flex flex-col overflow-hidden'
         }
         style={{ height: maxHeight, maxHeight }}
       >
@@ -211,9 +213,10 @@ export function ObjectCreateDrawer({
             <div className="p-4 text-sm text-white/50 font-satoshi">
               Forms use the full-height builder. Open create form from Forms.
             </div>
-          ) : null}
         </div>
       </div>
     </div>
   );
+
+  return createPortal(drawerContent, document.body);
 }
