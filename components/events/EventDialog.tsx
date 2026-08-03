@@ -232,7 +232,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
             ? 'inset-0 h-[100dvh] max-h-[100dvh] w-full rounded-none border-0'
             : isMobile
               ? 'inset-x-0 bottom-0 h-[60dvh] border-t rounded-t-[28px]'
-              : 'inset-y-0 top-[88px] right-0 left-auto w-full max-w-[600px] h-[calc(100dvh-88px)] border-l rounded-none'
+              : 'inset-y-0 top-0 right-0 left-auto w-full max-w-[600px] h-[100dvh] border-l rounded-none'
         }`}
       >
         {/* Header */}

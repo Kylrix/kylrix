@@ -121,11 +121,8 @@ export function ObjectCreateDrawer({
 
   if (!open) return null;
 
-  const maxHeight = isDesktop
-    ? '100dvh'
-    : heightMode === 'full' || formOnlyFull
-      ? '96dvh'
-      : '60dvh';
+  const isFull = heightMode === 'full' || formOnlyFull;
+  const maxHeight = isDesktop || isFull ? '100dvh' : '60dvh';
 
   return (
     <div
@@ -143,9 +140,11 @@ export function ObjectCreateDrawer({
         className={
           isDesktop
             ? 'w-full max-w-[480px] h-full pointer-events-auto flex flex-col bg-[#161412] border-l border-[#34322F] overflow-hidden shadow-[-12px_0_36px_rgba(0,0,0,0.5)]'
-            : 'w-full max-w-[720px] pointer-events-auto flex flex-col bg-[#161412] border border-[#34322F] border-b-0 rounded-t-[24px] overflow-hidden fixed bottom-0 left-1/2 -translate-x-1/2 shadow-[0_-12px_36px_rgba(0,0,0,0.5)]'
+            : isFull
+              ? 'w-full h-full pointer-events-auto flex flex-col bg-[#161412] border-0 rounded-none overflow-hidden fixed inset-0 shadow-none'
+              : 'w-full max-w-[720px] pointer-events-auto flex flex-col bg-[#161412] border border-[#34322F] border-b-0 rounded-t-[24px] overflow-hidden fixed bottom-0 left-1/2 -translate-x-1/2 shadow-[0_-12px_36px_rgba(0,0,0,0.5)]'
         }
-        style={isDesktop ? { height: '100dvh' } : { height: maxHeight, maxHeight }}
+        style={{ height: maxHeight, maxHeight }}
       >
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {kind === 'note' ? (
