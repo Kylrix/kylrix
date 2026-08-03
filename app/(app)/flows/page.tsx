@@ -36,7 +36,7 @@ import { installFlow } from '@/lib/actions/client-ops';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import toast from 'react-hot-toast';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
-
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import {
   FlowInstallConfirmDrawer,
   isFlowConfirmPromptEnabled,
@@ -102,7 +102,14 @@ export default function FlowsPage() {
   const { setConfiguration, resetConfiguration } = useFAB();
   const native = useNativeSidebarApiOptional();
   const { openOverlay, closeOverlay } = useOverlay();
+  const { setIsDrawerOpen } = useDrawerState();
   const [confirmFlow, setConfirmFlow] = useState<DiscoverFlow | null>(null);
+
+  // Signal the bottom navbar to hide when the confirm drawer is open
+  useEffect(() => {
+    setIsDrawerOpen(!!confirmFlow);
+    return () => setIsDrawerOpen(false);
+  }, [confirmFlow, setIsDrawerOpen]);
   const {
     isRecording,
     startRecording,
