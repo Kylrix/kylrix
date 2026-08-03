@@ -1215,9 +1215,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       }
       void persistGoalsLocalCopy(state.userId, updatedList);
       if (options?.pending !== false) {
-        // markPending schedules a coalesced demand flush — do not call runCycle() here
-        // (that bypassed coalesce and raced the busy-loop).
+        // markPending schedules a coalesced demand flush; nudge() triggers the scheduled flush
         autonomicSyncEngine.markPending(goalPendingKey(stamped.id), stamped.updatedAt.toISOString(), stamped);
+        autonomicSyncEngine.nudge();
       }
     },
     [setCachedData, state.userId],
