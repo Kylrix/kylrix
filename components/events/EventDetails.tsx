@@ -30,9 +30,17 @@ interface EventDetailsProps {
   initialData?: AppwriteEvent | LocalEvent | any;
   onBack?: () => void;
   onClose?: () => void;
+  hideViewPageButton?: boolean;
 }
 
-export default function EventDetails({ eventId, initialData, onBack, onClose }: EventDetailsProps) {
+function parseEventDate(val: any): Date {
+  if (!val) return new Date();
+  if (val instanceof Date && !Number.isNaN(val.getTime())) return val;
+  const t = typeof val === 'number' ? val : Date.parse(String(val));
+  return Number.isFinite(t) ? new Date(t) : new Date();
+}
+
+export default function EventDetails({ eventId, initialData, onBack, onClose, hideViewPageButton }: EventDetailsProps) {
   const { pushLiveEvent } = useEvents();
   const { closeSecondarySidebar } = useLayout();
   const { closeOverlay } = useOverlay();
@@ -300,8 +308,8 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
     );
   }
 
-  const startDate = new Date(event.startTime);
-  const endDate = new Date(event.endTime);
+  const startDate = parseEventDate(event.startTime);
+  const endDate = parseEventDate(event.endTime);
   const eventIdValue = getId(event);
   const coverImage = getCoverImage(event);
   const visibility = getVisibility(event);
@@ -554,15 +562,17 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
 
         {/* Actions */}
         <div className="mt-auto flex flex-col gap-3 pt-4 border-t border-[#34322F]">
-          <a
-            href={`/events/${eventIdValue}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-3 px-4 rounded-[14px] bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-sm text-center font-satoshi transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <span>View Event Page</span>
-            <ExternalLink className="w-4 h-4" />
-          </a>
+          {!hideViewPageButton && (
+            <a
+              href={`/events/${eventIdValue}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-3 px-4 rounded-[14px] bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-sm text-center font-satoshi transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>View Event Page</span>
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          )}
           <button
             type="button"
             onClick={() => {
