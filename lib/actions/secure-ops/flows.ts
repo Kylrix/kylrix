@@ -68,13 +68,18 @@ export async function requestFlowPublishSecure(params: {
   flowId: string;
   confirmAware: boolean;
   jwt?: string;
+  actorId?: string;
 }) {
-  const actor = await getActor(params.jwt);
-  if (!actor?.$id) throw new Error('Unauthorized');
+  let userId = params.actorId;
+  if (!userId) {
+    const actor = await getActor(params.jwt);
+    userId = actor?.$id;
+  }
+  if (!userId) throw new Error('Unauthorized');
 
   const result = await FlowReviewService.requestPublishReview({
     flowId: String(params.flowId || '').trim(),
-    actorId: actor.$id,
+    actorId: userId,
     confirmAware: !!params.confirmAware,
   });
 

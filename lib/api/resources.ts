@@ -338,10 +338,20 @@ export const ApiResources = {
 
   async publishFlow(actor: ApiActor, id: string, body: Record<string, unknown>) {
     requireScope(actor, 'flows:write');
-    const { publishFlowAction } = await import('@/lib/actions/workflows');
-    const res = await publishFlowAction(id, {
+    const { requestFlowPublishSecure } = await import('@/lib/actions/secure-ops/flows');
+    const res = await requestFlowPublishSecure({
+      flowId: id,
       confirmAware: body.confirmAware !== false,
+      actorId: actor.userId,
     });
+    if (res.verdict === 'rejected' || res.verdict === 'blocked') {
+      return {
+        success: false,
+        error: (res as any).error || `Publish rejected due to ${res.verdict} security status`,
+        verdict: res.verdict,
+        pii: res.pii,
+      };
+    }
     return res;
   },
 
