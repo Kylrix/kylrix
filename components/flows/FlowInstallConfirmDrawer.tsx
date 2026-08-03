@@ -95,7 +95,7 @@ export function FlowInstallConfirmDrawer({ flow, onConfirm, onClose, isAlreadyIn
   }, [flow.id]);
 
   return (
-    <div className="p-6 md:p-8 text-white font-satoshi flex flex-col gap-6 relative select-none max-h-[70vh] overflow-y-auto scrollbar-thin">
+    <div className="p-6 md:p-8 text-white font-satoshi flex flex-col gap-6 relative select-none max-h-[60vh] overflow-y-auto scrollbar-thin">
       <div className="flex justify-between items-center relative z-10 shrink-0">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-[#A855F7]/10 border border-[#A855F7]/20 text-[#A855F7]">
