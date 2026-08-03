@@ -1155,7 +1155,10 @@ export async function createEventSecure(data: any, jwt?: string) {
 
   const sanitizedData = sanitizeEventData({
     ...data,
-    userId: actor.$id});
+    isPublic: data.isPublic !== undefined ? Boolean(data.isPublic) : true,
+    isGuest: data.isGuest !== undefined ? Boolean(data.isGuest) : true,
+    userId: actor.$id,
+  });
 
   const event = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,

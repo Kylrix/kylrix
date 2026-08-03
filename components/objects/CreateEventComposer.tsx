@@ -52,7 +52,7 @@ export function CreateEventComposer({
   const [startTime, setStartTime] = useState(() => toLocalInputValue(new Date()));
   const [endTime, setEndTime] = useState(() => toLocalInputValue(addHours(new Date(), 1)));
   const [location, setLocation] = useState('');
-  const [visibility, setVisibility] = useState<'public' | 'private'>('private');
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [autoCreateCall, setAutoCreateCall] = useState(false);
   const [resolvedId, setResolvedId] = useState<string | undefined>();
   const [localExpanded, setLocalExpanded] = useState(false);
@@ -165,7 +165,8 @@ export function CreateEventComposer({
         url: '',
         coverImage: '',
         attendees: [],
-        isPublic: meta.visibility === 'public',
+        isPublic: meta.visibility !== 'private',
+        isGuest: true,
         isPinned: false,
         creatorId: ownerId,
         createdAt: new Date(),
