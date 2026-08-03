@@ -52,16 +52,37 @@ export function FlowDetailDrawer({
   flow,
   publisher,
   isOwner = true,
-  isInstalled = false,
+  isInstalled: initialInstalled = false,
   onClose,
   onChanged,
   onInstall,
   onUninstall,
 }: Props) {
   const [local, setLocal] = useState(flow);
+  const [installed, setInstalled] = useState(!!initialInstalled);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [aware, setAware] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const { isFlowInstalled, pullAndSyncUserFlowInstalls } = await import('@/lib/flows/installed');
+        if (isFlowInstalled(flow.id)) {
+          if (active) setInstalled(true);
+          return;
+        }
+        const synced = await pullAndSyncUserFlowInstalls();
+        if (active) setInstalled(synced.includes(flow.id));
+      } catch {}
+    })();
+    return () => { active = false; };
+  }, [flow.id]);
+
+  useEffect(() => {
+    setLocal(flow);
+  }, [flow]);
 
   const pii = useMemo(() => detectFlowPii(local), [local]);
   const shareUrl = buildPublicResourceUrl('flow', local.id);
@@ -159,10 +180,10 @@ export function FlowDetailDrawer({
             <div>
               <h3 className="text-sm font-bold text-white">Flow Status</h3>
               <p className="text-[11px] text-white/40">
-                {isInstalled ? 'Installed on this device' : 'Available for installation'}
+                {installed ? 'Installed on this device' : 'Available for installation'}
               </p>
             </div>
-            {isInstalled ? (
+            {installed ? (
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg flex items-center gap-1">
                   <Check size={12} /> Installed

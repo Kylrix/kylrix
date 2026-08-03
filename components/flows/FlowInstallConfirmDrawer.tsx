@@ -65,10 +65,34 @@ export interface FlowInstallConfirmDrawerProps {
   flow: DiscoverFlow;
   onConfirm: () => void;
   onClose: () => void;
+  isAlreadyInstalled?: boolean;
 }
 
-export function FlowInstallConfirmDrawer({ flow, onConfirm, onClose }: FlowInstallConfirmDrawerProps) {
+export function FlowInstallConfirmDrawer({ flow, onConfirm, onClose, isAlreadyInstalled: initialInstalled }: FlowInstallConfirmDrawerProps) {
   const { level, capabilities } = analyzeFlowCapabilities(flow.steps || []);
+  const [installed, setInstalled] = React.useState(!!initialInstalled);
+  const [checking, setChecking] = React.useState(true);
+
+  React.useEffect(() => {
+    let active = true;
+    void (async () => {
+      try {
+        const { isFlowInstalled, pullAndSyncUserFlowInstalls } = await import('@/lib/flows/installed');
+        if (isFlowInstalled(flow.id)) {
+          if (active) { setInstalled(true); setChecking(false); }
+          return;
+        }
+        const synced = await pullAndSyncUserFlowInstalls();
+        if (active) {
+          setInstalled(synced.includes(flow.id));
+          setChecking(false);
+        }
+      } catch {
+        if (active) setChecking(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [flow.id]);
 
   return (
     <div className="p-6 md:p-8 text-white font-satoshi flex flex-col gap-6 relative select-none max-h-[70vh] overflow-y-auto scrollbar-thin">
@@ -79,7 +103,7 @@ export function FlowInstallConfirmDrawer({ flow, onConfirm, onClose }: FlowInsta
           </div>
           <div>
             <h3 className="font-extrabold text-lg text-white font-clash tracking-tight">
-              Install Flow
+              {installed ? 'Flow Installed' : 'Install Flow'}
             </h3>
             <p className="text-[10px] text-white/45 font-bold uppercase tracking-wider font-clash mt-0.5">
               Capability Review
@@ -98,11 +122,15 @@ export function FlowInstallConfirmDrawer({ flow, onConfirm, onClose }: FlowInsta
       <div className="rounded-2xl bg-[#0A0908] border border-white/[0.06] p-4 flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <span className="font-clash font-extrabold text-base text-white">{flow.name}</span>
-          {flow.publisher?.verified && (
+          {installed ? (
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+              <Check size={12} /> Installed
+            </span>
+          ) : flow.publisher?.verified ? (
             <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
               <BadgeCheck size={12} /> Verified
             </span>
-          )}
+          ) : null}
         </div>
         <p className="text-xs text-white/50 leading-relaxed font-satoshi">
           {flow.description || 'No description provided.'}
@@ -137,23 +165,31 @@ export function FlowInstallConfirmDrawer({ flow, onConfirm, onClose }: FlowInsta
       )}
 
       <div className="flex flex-col gap-3 mt-2">
-        <button
-          type="button"
-          onClick={() => {
-            onConfirm();
-            onClose();
-          }}
-          className="w-full py-3.5 rounded-xl font-extrabold text-sm bg-[#A855F7] hover:bg-[#9333EA] text-white cursor-pointer transition shadow-[0_4px_14px_rgba(168,85,247,0.3)] flex items-center justify-center gap-2"
-        >
-          <Download size={16} />
-          <span>Confirm & Install</span>
-        </button>
+        {installed ? (
+          <div className="w-full py-3.5 rounded-xl font-extrabold text-sm bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 flex items-center justify-center gap-2">
+            <Check size={16} />
+            <span>Already Installed</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            disabled={checking}
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className="w-full py-3.5 rounded-xl font-extrabold text-sm bg-[#A855F7] hover:bg-[#9333EA] disabled:opacity-50 text-white cursor-pointer transition shadow-[0_4px_14px_rgba(168,85,247,0.3)] flex items-center justify-center gap-2"
+          >
+            <Download size={16} />
+            <span>{checking ? 'Checking Status...' : 'Confirm & Install'}</span>
+          </button>
+        )}
         <button
           type="button"
           onClick={onClose}
           className="w-full py-3 rounded-xl font-bold text-xs text-white/45 hover:text-white transition hover:bg-white/5"
         >
-          Cancel
+          Close
         </button>
       </div>
     </div>
