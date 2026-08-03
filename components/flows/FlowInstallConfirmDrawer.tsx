@@ -103,7 +103,7 @@ export function FlowInstallConfirmDrawer({ flow, onConfirm, onClose }: FlowInsta
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[1400] flex items-end justify-center pointer-events-auto">
+    <div className="fixed inset-0 z-[1500] flex items-end justify-center pointer-events-auto">
       {/* Backdrop */}
       <button
         type="button"

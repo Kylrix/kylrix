@@ -235,7 +235,7 @@ export const FlowInstallService = {
       queries: [
         Query.equal('installerId', installerId),
         Query.equal('status', 'active'),
-        Query.orderDesc('$createdAt'),
+        Query.orderDesc('createdAt'),
         Query.limit(200),
       ],
     });
