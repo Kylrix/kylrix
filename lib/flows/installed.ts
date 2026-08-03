@@ -1,20 +1,30 @@
+import { listMyFlowInstallsSecure } from '@/lib/actions/secure-ops/flows';
+
 const KEY = 'kylrix_installed_flows';
+let inMemoryInstalledIds: string[] | null = null;
 
 function read(): string[] {
+  if (inMemoryInstalledIds) return inMemoryInstalledIds;
   if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.map(String) : [];
+    const ids = Array.isArray(parsed) ? parsed.map(String) : [];
+    inMemoryInstalledIds = ids;
+    return ids;
   } catch {
     return [];
   }
 }
 
 function write(ids: string[]) {
+  const unique = [...new Set(ids)];
+  inMemoryInstalledIds = unique;
   if (typeof window === 'undefined') return;
-  localStorage.setItem(KEY, JSON.stringify([...new Set(ids)]));
+  try {
+    localStorage.setItem(KEY, JSON.stringify(unique));
+  } catch {}
 }
 
 export function listInstalledFlowIds(): string[] {
@@ -41,4 +51,29 @@ export function uninstallFlowLocal(id: string): string[] {
     window.dispatchEvent(new CustomEvent('kylrix:flows-changed', { detail: { id, action: 'uninstall' } }));
   }
   return next;
+}
+
+export function syncInstalledFlowsFromRemote(remoteFlowIds: string[]): string[] {
+  const current = read();
+  const merged = [...new Set([...current, ...remoteFlowIds])];
+  write(merged);
+  if (typeof window !== 'undefined' && merged.length !== current.length) {
+    window.dispatchEvent(new CustomEvent('kylrix:flows-changed', { detail: { action: 'sync' } }));
+  }
+  return merged;
+}
+
+export async function pullAndSyncUserFlowInstalls(): Promise<string[]> {
+  try {
+    const res = await listMyFlowInstallsSecure();
+    if (res.success && Array.isArray(res.data)) {
+      const activeIds = res.data
+        .filter((row: any) => row.status === 'active')
+        .map((row: any) => String(row.flowId));
+      return syncInstalledFlowsFromRemote(activeIds);
+    }
+  } catch {
+    // quiet fallback to local storage
+  }
+  return read();
 }

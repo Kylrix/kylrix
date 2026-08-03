@@ -33,6 +33,8 @@ import {
   resolveAttachmentVisualKind,
   type AttachmentVisualKind} from '@/lib/note-object-visual';
 
+import { useLocalContext } from '@/lib/context-engine';
+
 interface NoteContentRendererProps {
   content?: string | null;
   format?: string | null;
@@ -50,17 +52,10 @@ function NoteContentRenderer({
   format = 'text',
   emptyFallback = <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'rgba(255, 255, 255, 0.3)' }}>This note is empty.</Typography>,
   primaryNoteId}: NoteContentRendererProps) {
-  const [mathOn, setMathOn] = useState(false);
-  useEffect(() => {
-    const sync = () => setMathOn(isMathModeFlowInstalled());
-    sync();
-    window.addEventListener('kylrix:flows-changed', sync);
-    window.addEventListener('storage', sync);
-    return () => {
-      window.removeEventListener('kylrix:flows-changed', sync);
-      window.removeEventListener('storage', sync);
-    };
-  }, []);
+  const { installedFlows } = useLocalContext();
+  const mathOn = useMemo(() => {
+    return installedFlows.some((f) => f.id === 'kylrix-math-mode') || isMathModeFlowInstalled();
+  }, [installedFlows]);
 
   const objectBlocks = useMemo(() => {
     const blocks = parseObjectBlocks(content || '');

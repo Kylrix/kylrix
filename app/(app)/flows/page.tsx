@@ -112,10 +112,24 @@ export default function FlowsPage() {
 
   useEffect(() => {
     setInstalledIds(listInstalledFlowIds());
+    void (async () => {
+      const { pullAndSyncUserFlowInstalls } = await import('@/lib/flows/installed');
+      const synced = await pullAndSyncUserFlowInstalls();
+      setInstalledIds(synced);
+    })();
+
+    const handleFlowsChanged = () => {
+      setInstalledIds(listInstalledFlowIds());
+    };
+    window.addEventListener('kylrix:flows-changed', handleFlowsChanged);
+
     const check = () => setIsDesktop(window.innerWidth >= 1024);
     check();
     window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+    return () => {
+      window.removeEventListener('kylrix:flows-changed', handleFlowsChanged);
+      window.removeEventListener('resize', check);
+    };
   }, []);
 
   useEffect(() => {

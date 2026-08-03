@@ -53,14 +53,17 @@ interface LocalContextType {
   dismissSuggestion: (id: string) => void;
   compileContextForAI: () => CompiledLocalContext;
   
-  // Workflow Recording Engine
+  // Workflow Engine States
   isRecording: boolean;
   currentWorkflow: WorkflowStep[];
   savedWorkflows: Record<string, WorkflowChain>;
+  installedFlows: DiscoverFlow[];
   startRecording: () => void;
   stopRecording: (name: string, description: string, niche: TelemetryNiche) => WorkflowChain | null;
   clearSavedWorkflows: () => void;
   updateWorkflow: (workflowId: string, updated: WorkflowChain) => void;
+  getFlowsForNiche: (niche: TelemetryNiche | 'workspace' | 'productivity' | 'security' | 'connect') => DiscoverFlow[];
+  refreshInstalledFlows: () => Promise<void>;
 }
 
 const LocalContext = createContext<LocalContextType | undefined>(undefined);
@@ -468,6 +471,66 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
     };
   }, [events, currentWorkflow]);
 
+  const [installedFlowIds, setInstalledFlowIds] = useState<string[]>([]);
+
+  const refreshInstalledFlows = useCallback(async () => {
+    try {
+      const { pullAndSyncUserFlowInstalls, listInstalledFlowIds } = await import('@/lib/flows/installed');
+      setInstalledFlowIds(listInstalledFlowIds());
+      const synced = await pullAndSyncUserFlowInstalls();
+      setInstalledFlowIds(synced);
+    } catch {
+      // quiet fallback
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshInstalledFlows();
+    const handleChanged = () => {
+      void refreshInstalledFlows();
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('kylrix:flows-changed', handleChanged);
+    }
+    const interval = setInterval(() => {
+      void refreshInstalledFlows();
+    }, 15000);
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('kylrix:flows-changed', handleChanged);
+      }
+      clearInterval(interval);
+    };
+  }, [refreshInstalledFlows]);
+
+  const installedFlows = useMemo(() => {
+    const { BUILTIN_FLOWS } = require('@/lib/flows/builtins');
+    const builtins: DiscoverFlow[] = BUILTIN_FLOWS;
+    const userSaved = Object.values(savedWorkflows).map((wf) => ({
+      id: wf.id,
+      name: wf.name,
+      description: wf.description || '',
+      niche: (wf.niche || 'workspace') as TelemetryNiche,
+      steps: wf.steps || [],
+      isPublic: false,
+      isAnonymized: true,
+      createdAt: new Date().toISOString(),
+      publisher: { handle: '@you', verified: 'ecosystem' as const },
+      source: 'local' as const,
+    }));
+
+    const all = [...builtins, ...userSaved];
+    return all.filter((f) => installedFlowIds.includes(f.id));
+  }, [installedFlowIds, savedWorkflows]);
+
+  const getFlowsForNiche = useCallback((nicheFilter: TelemetryNiche | 'workspace' | 'productivity' | 'security' | 'connect') => {
+    return installedFlows.filter((flow) => {
+      if (!flow.niche || flow.niche === 'workspace') return true; // general flows apply to all
+      return flow.niche === nicheFilter;
+    });
+  }, [installedFlows]);
+
   return (
     <LocalContext.Provider
       value={{
@@ -479,10 +542,13 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
         isRecording,
         currentWorkflow,
         savedWorkflows,
+        installedFlows,
         startRecording,
         stopRecording,
         clearSavedWorkflows,
-        updateWorkflow
+        updateWorkflow,
+        getFlowsForNiche,
+        refreshInstalledFlows,
       }}
     >
       {children}
