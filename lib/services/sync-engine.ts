@@ -599,10 +599,23 @@ export const autonomicSyncEngine = {
   },
 
   /**
-   * Signal-driven freshness pull when an object detail is opened.
+   * Signal-driven freshness pull when an object detail or surface is opened.
    * Background engine fetch — zero UI overhead. Replaces local copy only if un-pending and remote differs.
    */
-  requestObjectFreshness(kind: 'note' | 'goal' | 'workspace', id: string, onRefreshed?: (item: any) => void) {
+  requestObjectFreshness(kind: 'note' | 'goal' | 'workspace' | 'flows', id?: string, onRefreshed?: (item: any) => void) {
+    if (kind === 'flows') {
+      void (async () => {
+        try {
+          const { pullAndSyncUserFlowInstalls } = await import('@/lib/flows/installed');
+          const synced = await pullAndSyncUserFlowInstalls();
+          if (onRefreshed) onRefreshed(synced);
+        } catch {
+          // Quiet background freshness failure
+        }
+      })();
+      return;
+    }
+
     const targetId = String(id || '').trim();
     if (!targetId || targetId.startsWith('live-') || targetId.startsWith('ghost-')) return;
     if (this.isPending(targetId)) return;

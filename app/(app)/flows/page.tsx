@@ -35,7 +35,7 @@ import {
 import { installFlow } from '@/lib/actions/client-ops';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import toast from 'react-hot-toast';
-
+import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 type Tab = 'discover' | 'installed';
@@ -115,11 +115,9 @@ export default function FlowsPage() {
 
   useEffect(() => {
     setInstalledIds(listInstalledFlowIds());
-    void (async () => {
-      const { pullAndSyncUserFlowInstalls } = await import('@/lib/flows/installed');
-      const synced = await pullAndSyncUserFlowInstalls();
+    autonomicSyncEngine.requestObjectFreshness('flows', undefined, (synced) => {
       setInstalledIds(synced);
-    })();
+    });
 
     const handleFlowsChanged = () => {
       setInstalledIds(listInstalledFlowIds());
