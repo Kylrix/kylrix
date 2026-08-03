@@ -25,6 +25,8 @@ const CreateChatComposer = dynamic(
   { ssr: false },
 );
 
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
+
 type HeightMode = 'partial' | 'full';
 
 export type CreateDrawerKind = ObjectKind | 'chat';
@@ -72,6 +74,7 @@ export function ObjectCreateDrawer({
   chatInitialMode = 'chat',
   chatLegacyThread = false,
 }: Props) {
+  const { setIsDrawerOpen } = useDrawerState();
   const formOnlyFull = kind === 'form';
   const [heightMode, setHeightMode] = useState<HeightMode>(
     formOnlyFull ? 'full' : defaultHeight || 'partial',
@@ -79,6 +82,11 @@ export function ObjectCreateDrawer({
   const [isExpanded, setIsExpanded] = useState(formOnlyFull || defaultHeight === 'full');
   const [isDesktop, setIsDesktop] = useState(false);
   const composerCloseRef = React.useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    setIsDrawerOpen(open);
+    return () => setIsDrawerOpen(false);
+  }, [open, setIsDrawerOpen]);
 
   useEffect(() => {
     const check = () => setIsDesktop(window.innerWidth >= 768);
@@ -121,7 +129,7 @@ export function ObjectCreateDrawer({
 
   return (
     <div
-      className={`fixed inset-0 z-[1400] flex pointer-events-none ${
+      className={`fixed inset-0 z-[1500] flex pointer-events-none ${
         isDesktop ? 'items-stretch justify-end' : 'items-end justify-center'
       }`}
     >
