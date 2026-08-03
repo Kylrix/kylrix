@@ -84,3 +84,16 @@ export async function requestFlowPublishSecure(params: {
     shareUrl: buildPublicResourceUrl('flow', params.flowId),
   };
 }
+
+/**
+ * Check all installed flows for updates (hash comparison).
+ * Builtins (kylrix-*) are skipped — their logic ships with the bundle.
+ * Returns a map of flowId → { steps, version, contentHash } for flows
+ * that had a stale installedHash and were auto-updated.
+ */
+export async function checkFlowUpdatesSecure(jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+  const updates = await FlowInstallService.checkAndApplyUpdates(actor.$id);
+  return { success: true, updates };
+}

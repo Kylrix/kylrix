@@ -21,6 +21,9 @@ export type FlowInstallRow = {
   scopeType: FlowScopeType;
   grants: string | null;
   status: 'active' | 'revoked';
+  installedHash: string | null;
+  pinnedVersion: number | null;
+  autoUpdate: boolean;
   createdAt?: string | null;
   updatedAt?: string | null;
 };
@@ -59,6 +62,7 @@ export const FlowInstallService = {
     scope: FlowScopeInput;
     grants?: Record<string, unknown> | null;
     bindObject?: boolean;
+    contentHash?: string | null;
   }): Promise<{
     install: FlowInstallRow;
     created: boolean;
@@ -120,6 +124,8 @@ export const FlowInstallService = {
           scopeType,
           grants: serializeGrants(params.grants),
           status: 'active',
+          installedHash: params.contentHash ?? null,
+          autoUpdate: true,
           createdAt: now,
           updatedAt: now,
         },
@@ -260,5 +266,55 @@ export const FlowInstallService = {
 
     // Do not decrement installCount (lifetime installs). Revoke only.
     return { success: true };
+  },
+
+  /**
+   * For each active install with autoUpdate=true, compare installedHash to the
+   * workflow's current contentHash. If stale, pull the new steps and stamp the
+   * install row with the new hash.
+   *
+   * Returns a map of flowId → { steps, version } for flows that were updated.
+   * Builtins (kylrix-* ids) are skipped — their logic lives in the app bundle.
+   */
+  async checkAndApplyUpdates(installerId: string): Promise<
+    Record<string, { steps: unknown[]; version: number; contentHash: string }>
+  > {
+    const tables = createSystemTablesDB();
+    const installs = await this.listForInstaller(installerId);
+    const updates: Record<string, { steps: unknown[]; version: number; contentHash: string }> = {};
+
+    await Promise.all(
+      installs
+        .filter((row) => !row.flowId.startsWith('kylrix-') && row.autoUpdate !== false)
+        .map(async (row) => {
+          try {
+            const wf = await WorkflowDbService.getByWorkflowId(row.flowId);
+            if (!wf || !wf.contentHash) return;
+            if (wf.contentHash === row.installedHash) return; // up to date
+
+            // Stamp the install row with the new hash
+            await tables.updateRow({
+              databaseId: DATABASE_ID,
+              tableId: INSTALLS_TABLE,
+              rowId: row.$id,
+              data: {
+                installedHash: wf.contentHash,
+                pinnedVersion: wf.version ?? 0,
+                updatedAt: new Date().toISOString(),
+              },
+            });
+
+            updates[row.flowId] = {
+              steps: wf.steps,
+              version: wf.version ?? 0,
+              contentHash: wf.contentHash,
+            };
+          } catch {
+            // Quiet per-flow failure — don't block others
+          }
+        })
+    );
+
+    return updates;
   },
 };

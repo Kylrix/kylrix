@@ -2,9 +2,16 @@ import { ID, Query } from 'node-appwrite';
 import { createSystemTablesDB } from '@/lib/appwrite-admin';
 import { WorkflowChain } from '@/lib/workflow-engine';
 import { TelemetryNiche } from '@/lib/context-engine';
+import crypto from 'crypto';
 
 const DATABASE_ID = 'passwordManagerDb';
 const TABLE_ID = 'workflows';
+
+/** Deterministic SHA-256 of the canonical steps JSON. Server-only. */
+function computeContentHash(steps: unknown[]): string {
+  const canonical = JSON.stringify(steps ?? []);
+  return crypto.createHash('sha256').update(canonical).digest('hex').slice(0, 64);
+}
 
 export const WorkflowDbService = {
   /**
@@ -19,6 +26,8 @@ export const WorkflowDbService = {
         toolTierMax?: string;
         publisherHandle?: string;
       };
+      const stepsArr = Array.isArray(wf.steps) ? wf.steps : [];
+      const newHash = computeContentHash(stepsArr);
       const payload: Record<string, unknown> = {
         workflowId: wf.id,
         name: wf.name,
@@ -26,7 +35,8 @@ export const WorkflowDbService = {
         niche: wf.niche,
         isPublic: wf.isPublic,
         isAnonymized: wf.isAnonymized,
-        steps: JSON.stringify(wf.steps),
+        steps: JSON.stringify(stepsArr),
+        contentHash: newHash,
         metadata: JSON.stringify({
           originalCreatedAt: wf.createdAt,
           savedAt: new Date().toISOString()
@@ -37,13 +47,11 @@ export const WorkflowDbService = {
       if (extra.toolTierMax) payload.toolTierMax = extra.toolTierMax;
       if (extra.publisherHandle) payload.publisherHandle = extra.publisherHandle;
 
-      // Set user as document owner if provided
       const permissions = userId ? [
         `read("user:${userId}")`,
         `write("user:${userId}")`
       ] : undefined;
 
-      // Check if document already exists
       const existing = await tables.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLE_ID,
@@ -51,8 +59,12 @@ export const WorkflowDbService = {
       });
 
       if (existing.rows.length > 0) {
-        const row = existing.rows[0];
-        // Never clobber denormalized installCount / review fields on ordinary save
+        const row = existing.rows[0] as any;
+        const oldHash = row.contentHash as string | null;
+        // Only bump version when steps actually changed
+        if (oldHash !== newHash) {
+          payload.version = Math.max(0, Number(row.version ?? 0)) + 1;
+        }
         await tables.updateRow({
           databaseId: DATABASE_ID,
           tableId: TABLE_ID,
@@ -68,6 +80,7 @@ export const WorkflowDbService = {
           rowId: ID.unique(),
           data: {
             ...payload,
+            version: 0,
             installCount: 0,
             reviewStatus: 'draft',
             verifiedKind: 'none',
@@ -199,6 +212,8 @@ export const WorkflowDbService = {
     reviewStatus?: string;
     publisherHandle?: string | null;
     verifiedKind?: string;
+    version?: number;
+    contentHash?: string | null;
   } {
     let steps = [];
     try {
@@ -225,6 +240,8 @@ export const WorkflowDbService = {
       reviewStatus: row.reviewStatus || 'draft',
       publisherHandle: row.publisherHandle ?? null,
       verifiedKind: row.verifiedKind || 'none',
+      version: typeof row.version === 'number' ? row.version : 0,
+      contentHash: row.contentHash ?? null,
     };
   },
 

@@ -2055,6 +2055,8 @@ export type WorkflowsCreate = {
     "reviewStatus"?: WorkflowsReviewStatus;
     "publisherHandle"?: string | null;
     "verifiedKind"?: WorkflowsVerifiedKind;
+    "version"?: number;
+    "contentHash"?: string | null;
 }
 
 export type Workflows = Models.Row & {
@@ -2074,6 +2076,8 @@ export type Workflows = Models.Row & {
     "reviewStatus"?: WorkflowsReviewStatus;
     "publisherHandle"?: string | null;
     "verifiedKind"?: WorkflowsVerifiedKind;
+    "version"?: number;
+    "contentHash"?: string | null;
 }
 
 export type ObjectsCreate = {
@@ -2297,6 +2301,9 @@ export type FlowInstallsCreate = {
     "status"?: FlowInstallsStatus;
     "createdAt"?: string | null;
     "updatedAt"?: string | null;
+    "pinnedVersion"?: number | null;
+    "autoUpdate"?: boolean;
+    "installedHash"?: string | null;
 }
 
 export type FlowInstalls = Models.Row & {
@@ -2308,6 +2315,9 @@ export type FlowInstalls = Models.Row & {
     "status"?: FlowInstallsStatus;
     "createdAt"?: string | null;
     "updatedAt"?: string | null;
+    "pinnedVersion"?: number | null;
+    "autoUpdate"?: boolean;
+    "installedHash"?: string | null;
 }
 
 export type FlowReviewsCreate = {
@@ -4619,6 +4629,8 @@ export type DatabaseTableMap = {
         "reviewStatus"?: WorkflowsReviewStatus;
         "publisherHandle"?: string | null;
         "verifiedKind"?: WorkflowsVerifiedKind;
+        "version"?: number;
+        "contentHash"?: string | null;
       }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Workflows>;
       get: (id: string) => Promise<Workflows>;
       update: (id: string, data: Partial<{
@@ -4638,6 +4650,8 @@ export type DatabaseTableMap = {
         "reviewStatus"?: WorkflowsReviewStatus;
         "publisherHandle"?: string | null;
         "verifiedKind"?: WorkflowsVerifiedKind;
+        "version"?: number;
+        "contentHash"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Workflows>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Workflows>>(field: K, value: QueryableFieldValue<Workflows, K>) => string; notEqual: <K extends QueryableKeys<Workflows>>(field: K, value: QueryableFieldValue<Workflows, K>) => string; lessThan: <K extends QueryableKeys<Workflows>>(field: K, value: QueryableFieldValue<Workflows, K>) => string; lessThanEqual: <K extends QueryableKeys<Workflows>>(field: K, value: QueryableFieldValue<Workflows, K>) => string; greaterThan: <K extends QueryableKeys<Workflows>>(field: K, value: QueryableFieldValue<Workflows, K>) => string; greaterThanEqual: <K extends QueryableKeys<Workflows>>(field: K, value: QueryableFieldValue<Workflows, K>) => string; contains: <K extends QueryableKeys<Workflows>>(field: K, value: QueryableFieldValue<Workflows, K>) => string; search: <K extends QueryableKeys<Workflows>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Workflows>>(field: K) => string; isNotNull: <K extends QueryableKeys<Workflows>>(field: K) => string; startsWith: <K extends QueryableKeys<Workflows>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Workflows>>(field: K, value: string) => string; between: <K extends QueryableKeys<Workflows>>(field: K, start: QueryableFieldValue<Workflows, K>, end: QueryableFieldValue<Workflows, K>) => string; select: <K extends keyof Workflows>(fields: K[]) => string; orderAsc: <K extends keyof Workflows>(field: K) => string; orderDesc: <K extends keyof Workflows>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Workflows[] }>;
@@ -4894,6 +4908,9 @@ export type DatabaseTableMap = {
         "status"?: FlowInstallsStatus;
         "createdAt"?: string | null;
         "updatedAt"?: string | null;
+        "pinnedVersion"?: number | null;
+        "autoUpdate"?: boolean;
+        "installedHash"?: string | null;
       }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<FlowInstalls>;
       get: (id: string) => Promise<FlowInstalls>;
       update: (id: string, data: Partial<{
@@ -4905,6 +4922,9 @@ export type DatabaseTableMap = {
         "status"?: FlowInstallsStatus;
         "createdAt"?: string | null;
         "updatedAt"?: string | null;
+        "pinnedVersion"?: number | null;
+        "autoUpdate"?: boolean;
+        "installedHash"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<FlowInstalls>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<FlowInstalls>>(field: K, value: QueryableFieldValue<FlowInstalls, K>) => string; notEqual: <K extends QueryableKeys<FlowInstalls>>(field: K, value: QueryableFieldValue<FlowInstalls, K>) => string; lessThan: <K extends QueryableKeys<FlowInstalls>>(field: K, value: QueryableFieldValue<FlowInstalls, K>) => string; lessThanEqual: <K extends QueryableKeys<FlowInstalls>>(field: K, value: QueryableFieldValue<FlowInstalls, K>) => string; greaterThan: <K extends QueryableKeys<FlowInstalls>>(field: K, value: QueryableFieldValue<FlowInstalls, K>) => string; greaterThanEqual: <K extends QueryableKeys<FlowInstalls>>(field: K, value: QueryableFieldValue<FlowInstalls, K>) => string; contains: <K extends QueryableKeys<FlowInstalls>>(field: K, value: QueryableFieldValue<FlowInstalls, K>) => string; search: <K extends QueryableKeys<FlowInstalls>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<FlowInstalls>>(field: K) => string; isNotNull: <K extends QueryableKeys<FlowInstalls>>(field: K) => string; startsWith: <K extends QueryableKeys<FlowInstalls>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<FlowInstalls>>(field: K, value: string) => string; between: <K extends QueryableKeys<FlowInstalls>>(field: K, start: QueryableFieldValue<FlowInstalls, K>, end: QueryableFieldValue<FlowInstalls, K>) => string; select: <K extends keyof FlowInstalls>(fields: K[]) => string; orderAsc: <K extends keyof FlowInstalls>(field: K) => string; orderDesc: <K extends keyof FlowInstalls>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: FlowInstalls[] }>;

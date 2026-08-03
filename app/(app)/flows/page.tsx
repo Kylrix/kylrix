@@ -63,10 +63,12 @@ function FlowRow({
   flow,
   trailing,
   onOpen,
+  recentlyUpdated,
 }: {
   flow: DiscoverFlow;
   trailing?: React.ReactNode;
   onOpen: () => void;
+  recentlyUpdated?: boolean;
 }) {
   return (
     <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] overflow-hidden">
@@ -80,7 +82,14 @@ function FlowRow({
             <Layers size={16} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-white truncate">{flow.name}</p>
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="text-sm font-bold text-white truncate">{flow.name}</p>
+              {recentlyUpdated && (
+                <span className="shrink-0 text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 animate-pulse">
+                  Updated
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
               <span className="text-[11px] font-bold text-white/40 truncate">
                 {flow.publisher.handle}
@@ -121,6 +130,7 @@ export default function FlowsPage() {
 
   const [tab, setTab] = useState<Tab>('discover');
   const [installedIds, setInstalledIds] = useState<string[]>([]);
+  const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<string>>(new Set());
   const [community, setCommunity] = useState<WorkflowChain[]>([]);
   const [isDesktop, setIsDesktop] = useState(false);
 
@@ -135,11 +145,27 @@ export default function FlowsPage() {
     };
     window.addEventListener('kylrix:flows-changed', handleFlowsChanged);
 
+    const handleFlowsUpdated = (e: Event) => {
+      const ids = Object.keys((e as CustomEvent).detail?.updates ?? {});
+      if (!ids.length) return;
+      setRecentlyUpdatedIds((prev) => new Set([...prev, ...ids]));
+      // Auto-clear badges after 8 s
+      setTimeout(() => {
+        setRecentlyUpdatedIds((prev) => {
+          const next = new Set(prev);
+          ids.forEach((id) => next.delete(id));
+          return next;
+        });
+      }, 8000);
+    };
+    window.addEventListener('kylrix:flows-updated', handleFlowsUpdated);
+
     const check = () => setIsDesktop(window.innerWidth >= 1024);
     check();
     window.addEventListener('resize', check);
     return () => {
       window.removeEventListener('kylrix:flows-changed', handleFlowsChanged);
+      window.removeEventListener('kylrix:flows-updated', handleFlowsUpdated);
       window.removeEventListener('resize', check);
     };
   }, []);
@@ -452,6 +478,7 @@ export default function FlowsPage() {
                   key={flow.id}
                   flow={flow}
                   onOpen={() => openDetail(flow, isOwner)}
+                  recentlyUpdated={recentlyUpdatedIds.has(flow.id)}
                   trailing={
                     <div className="flex items-center gap-1.5 shrink-0">
                       {tab === 'discover' && !installed && (

@@ -609,6 +609,17 @@ export const autonomicSyncEngine = {
           const { pullAndSyncUserFlowInstalls } = await import('@/lib/flows/installed');
           const synced = await pullAndSyncUserFlowInstalls();
           if (onRefreshed) onRefreshed(synced);
+
+          // Background: check for community flow step updates
+          const { checkFlowUpdatesSecure } = await import('@/lib/actions/secure-ops/flows');
+          const result = await checkFlowUpdatesSecure().catch(() => null);
+          if (result?.success && Object.keys(result.updates ?? {}).length > 0) {
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('kylrix:flows-updated', {
+                detail: { updates: result.updates },
+              }));
+            }
+          }
         } catch {
           // Quiet background freshness failure
         }
