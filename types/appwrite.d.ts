@@ -289,6 +289,11 @@ export enum OauthConsentRequestsStatus {
     EXPIRED = "expired"
 }
 
+export enum ThreadsStatus {
+    ACTIVE = "active",
+    ARCHIVED = "archived"
+}
+
 export type SecurityLogs = Models.Row & {
     userId: string;
     eventType: string;
@@ -496,6 +501,7 @@ export type Notes = Models.Row & {
     article: boolean | null;
     isTrash: boolean;
     isWorkspace: boolean;
+    primaryThreadId: string | null;
 }
 
 export type Comments = Models.Row & {
@@ -917,6 +923,7 @@ export type Projects = Models.Row & {
     isGuest: boolean | null;
     isPinned: boolean | null;
     isTrash: boolean;
+    primaryThreadId: string | null;
 }
 
 export type ProjectObjects = Models.Row & {
@@ -1048,6 +1055,7 @@ export type Tasks = Models.Row & {
     isEncrypted: boolean;
     dek: string | null;
     isWorkspace: boolean;
+    primaryThreadId: string | null;
 }
 
 export type Forms = Models.Row & {
@@ -1248,6 +1256,7 @@ export type AgenticSessions = Models.Row & {
     isPublic: boolean;
     isGuest: boolean;
     isPinned: boolean;
+    harness: string | null;
 }
 
 export type Swept = Models.Row & {
@@ -1390,4 +1399,51 @@ export type OauthConsentRequests = Models.Row & {
     createdAt: string | null;
     expiresAt: string | null;
     decidedAt: string | null;
+}
+
+export type Threads = Models.Row & {
+    scopeKey: string;
+    parentKind: string;
+    parentId: string;
+    channel: string;
+    ownerId: string;
+    title: string | null;
+    status: ThreadsStatus;
+    messageCount: number;
+    lastMessageAt: string | null;
+    lastMessagePreview: string | null;
+    lastMessageUserId: string | null;
+    isEncrypted: boolean;
+    isPublic: boolean;
+    isGuest: boolean;
+    legacyNoteId: string | null;
+    metadata: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
+export type ThreadMessages = Models.Row & {
+    threadId: string;
+    userId: string;
+    parentMessageId: string | null;
+    rootMessageId: string | null;
+    content: string;
+    contentType: string | null;
+    isEncrypted: boolean;
+    isVoice: boolean;
+    isPublic: boolean;
+    isGuest: boolean;
+    isDeleted: boolean;
+    replyCount: number;
+    metadata: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
+export type ThreadReactions = Models.Row & {
+    messageId: string;
+    threadId: string;
+    userId: string;
+    emoji: string;
+    createdAt: string | null;
 }

@@ -57,7 +57,7 @@ export function syncInstalledFlowsFromRemote(remoteFlowIds: string[]): string[] 
   const current = read();
   const merged = [...new Set([...current, ...remoteFlowIds])];
   write(merged);
-  if (typeof window !== 'undefined' && merged.length !== current.length) {
+  if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('kylrix:flows-changed', { detail: { action: 'sync' } }));
   }
   return merged;
