@@ -34,6 +34,8 @@ function toLocalInputValue(date: Date | null): string {
  * Event create composer — idea-style seamless content + live local copy.
  * Persist remote on close via parent `onEventCreated` / EventList handler.
  */
+import { EventDateTimePickerDrawer } from '@/components/events/drawers/EventDateTimePickerDrawer';
+
 export function CreateEventComposer({
   onClose,
   onRegisterClose,
@@ -50,6 +52,7 @@ export function CreateEventComposer({
   const ownerId = user?.$id || 'guest';
   const cacheKey = 'f_events_list';
 
+  const [isDateDrawerOpen, setIsDateDrawerOpen] = useState(false);
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
   const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(false);
@@ -340,33 +343,26 @@ export function CreateEventComposer({
       </div>
 
       <div className="p-3 border-t border-white/5 bg-[#161412] flex flex-col gap-2.5 shrink-0">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-white/40">
-            Start
-            <input
-              type="datetime-local"
-              value={startTime}
-              onChange={(e) => {
-                setStartTime(e.target.value);
-                if (e.target.value) setEndTime(toLocalInputValue(addHours(new Date(e.target.value), 1)));
-                void pushLive(buildLive(content, title));
-              }}
-              className="rounded-lg border border-white/5 bg-black/40 px-2 py-1.5 text-white text-xs font-satoshi normal-case tracking-normal"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-[10px] font-mono uppercase tracking-wider text-white/40">
-            End
-            <input
-              type="datetime-local"
-              value={endTime}
-              onChange={(e) => {
-                setEndTime(e.target.value);
-                void pushLive(buildLive(content, title));
-              }}
-              className="rounded-lg border border-white/5 bg-black/40 px-2 py-1.5 text-white text-xs font-satoshi normal-case tracking-normal"
-            />
-          </label>
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsDateDrawerOpen(true)}
+          className="w-full p-2.5 rounded-xl border border-white/10 bg-black/40 hover:bg-black/60 transition-all flex items-center justify-between text-left cursor-pointer group select-none"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-[#6366F1]/15 text-[#6366F1]">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-extrabold text-white font-satoshi">
+                {startTime ? new Date(startTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'Select Event Schedule'}
+              </span>
+              <span className="text-[10px] text-white/50 font-mono">
+                {startTime ? `${new Date(startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Tap to pick date & time'}
+              </span>
+            </div>
+          </div>
+          <ChevronDown className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
+        </button>
         <label className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-white/40">
           <MapPin className="w-3.5 h-3.5" />
           <input
@@ -425,6 +421,20 @@ export function CreateEventComposer({
           </button>
         </div>
       </div>
+
+      <EventDateTimePickerDrawer
+        open={isDateDrawerOpen}
+        onClose={() => setIsDateDrawerOpen(false)}
+        startTime={startTime ? new Date(startTime) : new Date()}
+        endTime={endTime ? new Date(endTime) : addHours(new Date(), 1)}
+        onApply={(newStart, newEnd) => {
+          const sStr = toLocalInputValue(newStart);
+          const eStr = toLocalInputValue(newEnd);
+          setStartTime(sStr);
+          setEndTime(eStr);
+          void pushLive(buildLive(content, title));
+        }}
+      />
     </div>
   );
 }

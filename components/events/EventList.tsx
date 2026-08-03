@@ -136,33 +136,18 @@ export default function EventList() {
         );
 
         const created = mapRemoteEvent(newDoc);
-        // Replace ephemeral live id with remote id in the list
-        setEvents((prev) => [
-          created,
-          ...prev.filter((e) => e.id !== eventData.id && e.id !== created.id),
-        ]);
+        // Propagate confirmed remote event to context (pending: false -> green dot)
+        pushLiveEvent(created, { pending: false });
         autonomicSyncEngine.ack(`event:${eventData.id}`);
         autonomicSyncEngine.ack(`event:${created.id}`);
-
-        const cacheKey = `f_user_events_${userId || 'guest'}`;
-        try {
-          const current = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
-          const next = [
-            created,
-            ...current.filter((e: any) => (e.id || e.$id) !== eventData.id && (e.id || e.$id) !== created.id),
-          ];
-          await LocalEngine.cacheSet(cacheKey, next);
-          await LocalEngine.cacheSet('f_events_list', next);
-        } catch {
-          /* optional */
-        }
       } catch (error: unknown) {
         console.error('Failed to create event', error);
-        toast.error('Could not save event');
+        toast.error('Could not save event to database');
         committedIdsRef.current.delete(eventData.id);
+        // Do NOT call ack on failure — leaves dot AMBER so UI never lies about failed sync
       }
     },
-    [activeWorkspace?.isPersonal, userId],
+    [activeWorkspace?.isPersonal, pushLiveEvent, userId],
   );
 
   const visibleEvents = useMemo(() => {

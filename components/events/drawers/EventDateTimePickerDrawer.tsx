@@ -217,7 +217,7 @@ export function EventDateTimePickerDrawer({ open, onClose, startTime, endTime, o
                   type="time"
                   value={startStr}
                   onChange={(e) => setStartStr(e.target.value)}
-                  className="rounded-xl border border-white/10 bg-black/60 px-3 py-2.5 text-white text-sm font-bold font-satoshi focus:border-[#6366F1] focus:outline-none transition-all"
+                  className="rounded-xl border border-white/10 bg-black/60 px-3 py-2.5 text-white text-sm font-bold font-satoshi focus:border-[#6366F1] focus:outline-none transition-all cursor-pointer"
                 />
               </label>
 
@@ -227,9 +227,43 @@ export function EventDateTimePickerDrawer({ open, onClose, startTime, endTime, o
                   type="time"
                   value={endStr}
                   onChange={(e) => setEndStr(e.target.value)}
-                  className="rounded-xl border border-white/10 bg-black/60 px-3 py-2.5 text-white text-sm font-bold font-satoshi focus:border-[#6366F1] focus:outline-none transition-all"
+                  className="rounded-xl border border-white/10 bg-black/60 px-3 py-2.5 text-white text-sm font-bold font-satoshi focus:border-[#6366F1] focus:outline-none transition-all cursor-pointer"
                 />
               </label>
+            </div>
+
+            {/* Quick Ecosystem Time Slot Pills */}
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-white/40">Quick Time Slots</span>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: '09:00 AM', start: '09:00', end: '10:00' },
+                  { label: '11:00 AM', start: '11:00', end: '12:00' },
+                  { label: '02:00 PM', start: '14:00', end: '15:00' },
+                  { label: '04:00 PM', start: '16:00', end: '17:00' },
+                  { label: '06:00 PM', start: '18:00', end: '19:00' },
+                  { label: '08:00 PM', start: '20:00', end: '21:00' },
+                ].map((slot) => {
+                  const isActive = startStr === slot.start && endStr === slot.end;
+                  return (
+                    <button
+                      key={slot.label}
+                      type="button"
+                      onClick={() => {
+                        setStartStr(slot.start);
+                        setEndStr(slot.end);
+                      }}
+                      className={`py-2 px-2.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border ${
+                        isActive
+                          ? 'bg-[#6366F1] text-white border-[#6366F1] shadow-[0_2px_8px_rgba(99,102,241,0.3)] scale-105'
+                          : 'bg-black/40 text-white/70 border-white/10 hover:border-white/20 hover:text-white'
+                      }`}
+                    >
+                      {slot.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="flex items-center gap-2 pt-2">

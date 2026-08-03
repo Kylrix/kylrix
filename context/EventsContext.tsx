@@ -7,27 +7,38 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { mergeServerPageWithLocalCopy } from '@/lib/sync/local-copy-sync';
 
+function safeDate(val: any): Date {
+  if (!val) return new Date();
+  if (val instanceof Date && !Number.isNaN(val.getTime())) return val;
+  const t = typeof val === 'number' ? val : Date.parse(String(val));
+  return Number.isFinite(t) ? new Date(t) : new Date();
+}
+
+function safeIsoString(val: any): string {
+  return safeDate(val).toISOString();
+}
+
 function mapRemoteEvent(doc: any): Event {
-  const start = doc.startTime ? new Date(doc.startTime) : new Date();
-  const end = doc.endTime ? new Date(doc.endTime) : start;
+  const start = safeDate(doc.startTime);
+  const end = safeDate(doc.endTime);
   return {
     id: doc.$id || doc.id,
     $id: doc.$id || doc.id,
-    title: doc.title,
-    description: doc.description,
-    startTime: Number.isNaN(start.getTime()) ? new Date() : start,
-    endTime: Number.isNaN(end.getTime()) ? start : end,
-    location: doc.location,
+    title: doc.title || '',
+    description: doc.description || '',
+    startTime: start,
+    endTime: end,
+    location: doc.location || '',
     url: doc.meetingUrl || doc.url || '',
     coverImage: doc.coverImageId || doc.coverImage || '',
     attendees: [],
     isPublic: doc.visibility === 'public' || Boolean(doc.isPublic),
     isPinned: Boolean(doc.isPinned),
     creatorId: doc.userId || doc.creatorId || '',
-    createdAt: new Date(doc.$createdAt || doc.createdAt || Date.now()),
-    updatedAt: new Date(doc.$updatedAt || doc.updatedAt || Date.now()),
-    $createdAt: typeof doc.$createdAt === 'string' ? doc.$createdAt : new Date(doc.createdAt || Date.now()).toISOString(),
-    $updatedAt: typeof doc.$updatedAt === 'string' ? doc.$updatedAt : new Date(doc.updatedAt || Date.now()).toISOString(),
+    createdAt: safeDate(doc.$createdAt || doc.createdAt),
+    updatedAt: safeDate(doc.$updatedAt || doc.updatedAt),
+    $createdAt: safeIsoString(doc.$createdAt || doc.createdAt),
+    $updatedAt: safeIsoString(doc.$updatedAt || doc.updatedAt),
     isWorkspace: Boolean(doc.isWorkspace),
   } as Event;
 }
