@@ -1513,6 +1513,7 @@ export async function verifySignedAttachmentURL(params: { noteId: string; ownerI
 export interface ListNotesPaginatedOptions {
   limit?: number;
   cursor?: string | null;
+  sinceUpdatedAt?: string | null;
   userId?: string; // override current user (admin/future use)
   queries?: any[]; // additional custom queries (overrides userId logic if provided)
   hydrateTags?: boolean; // default true
@@ -1524,6 +1525,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
   const {
     limit = 50,
     cursor = null,
+    sinceUpdatedAt = null,
     userId,
     queries,
     hydrateTags = true,
@@ -1559,7 +1561,8 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     ...baseQueries,
     ...(!includeGhosts ? ideaListExclusionQueries() : []),
     Query.limit(limit),
-    Query.orderDesc('$createdAt')];
+    Query.orderDesc('$updatedAt')];
+  if (sinceUpdatedAt) finalQueries.push(Query.greaterThan('$updatedAt', sinceUpdatedAt));
   if (cursor) finalQueries.push(Query.cursorAfter(cursor));
 
   let res: any;
