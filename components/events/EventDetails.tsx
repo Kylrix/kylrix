@@ -119,7 +119,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
     autonomicSyncEngine.markPending(resourceId, new Date().toISOString(), nextEvent);
 
     try {
-      const cacheKey = `f_user_events_guest`;
+      const cacheKey = 'f_events_list';
       const current = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
       const nextList = [nextEvent, ...current.filter((e: any) => (e.id || e.$id) !== targetId)];
       await LocalEngine.cacheSet(cacheKey, nextList);
@@ -269,10 +269,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
             onClick={() => setIsDateTimeDrawerOpen(true)}
             className="flex flex-col gap-1.5 cursor-pointer group p-2.5 -mx-2.5 rounded-xl hover:bg-white/[0.03] transition-all border border-transparent hover:border-white/10"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold tracking-wider text-indigo-400 uppercase">When</span>
-              <span className="text-[10px] text-white/40 font-mono opacity-0 group-hover:opacity-100 transition-opacity">Click to edit date & time</span>
-            </div>
+            <span className="text-[10px] font-mono font-bold tracking-wider text-indigo-400 uppercase">When</span>
             <div className="flex items-start gap-3">
               <div className="p-2 bg-white/5 border border-white/10 rounded-xl text-indigo-400 flex-shrink-0 group-hover:border-indigo-500/40 transition-colors">
                 <Calendar className="w-4 h-4" />
@@ -296,10 +293,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
             onClick={() => setIsLocationDrawerOpen(true)}
             className="flex flex-col gap-1.5 cursor-pointer group p-2.5 -mx-2.5 rounded-xl hover:bg-white/[0.03] transition-all border border-transparent hover:border-white/10"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono font-bold tracking-wider text-emerald-400 uppercase">Where</span>
-              <span className="text-[10px] text-white/40 font-mono opacity-0 group-hover:opacity-100 transition-opacity">Click to edit location</span>
-            </div>
+            <span className="text-[10px] font-mono font-bold tracking-wider text-emerald-400 uppercase">Where</span>
             <div className="flex items-start gap-3">
               <div className="p-2 bg-white/5 border border-white/10 rounded-xl text-emerald-400 flex-shrink-0 group-hover:border-emerald-500/40 transition-colors">
                 <MapPin className="w-4 h-4" />
@@ -350,8 +344,8 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
 
         {/* Description / About */}
         <div className="flex flex-col gap-2">
+          <span className="text-[10px] font-mono font-bold tracking-wider text-[#8E8A86] uppercase">About</span>
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono font-bold tracking-wider text-[#8E8A86] uppercase">About</span>
             {!isEditingAbout && (
               <button
                 type="button"
@@ -462,6 +456,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
         onClose={() => setIsLocationDrawerOpen(false)}
         location={event.location || ''}
         meetingUrl={meetingUrl || ''}
+        eventTitle={event.title}
         onApply={(newLoc, newUrl) => {
           void pushEventUpdate({
             location: newLoc,

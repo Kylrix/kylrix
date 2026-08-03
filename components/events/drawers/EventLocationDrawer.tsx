@@ -6,20 +6,24 @@ import { MapPin, Video, Link2, Check, X, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 import { hasEffectivePaidAccess } from '@/lib/utils';
 
+import { CallService } from '@/lib/services/call';
+
 type Props = {
   open: boolean;
   onClose: () => void;
   location: string;
   meetingUrl: string;
+  eventTitle?: string;
   onApply: (location: string, meetingUrl: string, autoCreateCall?: boolean) => void;
 };
 
-export function EventLocationDrawer({ open, onClose, location: initialLocation, meetingUrl: initialMeetingUrl, onApply }: Props) {
+export function EventLocationDrawer({ open, onClose, location: initialLocation, meetingUrl: initialMeetingUrl, eventTitle, onApply }: Props) {
   const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [location, setLocation] = useState(initialLocation);
   const [meetingUrl, setMeetingUrl] = useState(initialMeetingUrl);
   const [useKylrixCall, setUseKylrixCall] = useState(false);
+  const [isProcessingCall, setIsProcessingCall] = useState(false);
 
   const isPro = user ? hasEffectivePaidAccess(user) : false;
 
@@ -35,13 +39,51 @@ export function EventLocationDrawer({ open, onClose, location: initialLocation, 
     }
   }, [open, initialLocation, initialMeetingUrl]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setIsProcessingCall(true);
     let finalUrl = meetingUrl.trim();
-    if (useKylrixCall && isPro && !finalUrl) {
-      finalUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/connect/call/evt_${Date.now()}`;
+    const existingCallMatch = initialMeetingUrl?.match(/\/connect\/call\/([^/?#]+)/);
+    const existingCallId = existingCallMatch ? existingCallMatch[1] : null;
+
+    try {
+      if (useKylrixCall && isPro) {
+        if (existingCallId) {
+          // Reuse existing call ID — never spin up duplicate calls for the same event
+          finalUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/connect/call/${existingCallId}`;
+        } else {
+          // Spin up new tracked Huddle / Call
+          const callObj = await CallService.createCallLink(
+            user?.$id || 'guest',
+            'video',
+            undefined,
+            eventTitle ? `Huddle: ${eventTitle}` : 'Event Huddle',
+            undefined,
+            120,
+            undefined,
+            true
+          );
+          const callId = callObj?.$id || callObj?.id;
+          if (callId) {
+            finalUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/connect/call/${callId}`;
+          }
+        }
+      } else if (!useKylrixCall && existingCallId) {
+        // User removed the Huddle object — instantly delete call item from database
+        await CallService.cleanupLink(existingCallId);
+        if (finalUrl.includes('/connect/call/')) {
+          finalUrl = '';
+        }
+      }
+
+      onApply(location.trim(), finalUrl, useKylrixCall);
+      onClose();
+    } catch (err) {
+      console.error('Failed to update event huddle/location:', err);
+      onApply(location.trim(), finalUrl, useKylrixCall);
+      onClose();
+    } finally {
+      setIsProcessingCall(false);
     }
-    onApply(location.trim(), finalUrl, useKylrixCall);
-    onClose();
   };
 
   if (!open || !mounted) return null;
@@ -145,10 +187,11 @@ export function EventLocationDrawer({ open, onClose, location: initialLocation, 
           <button
             type="button"
             onClick={handleSave}
-            className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-extrabold text-xs font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_12px_rgba(16,185,129,0.25)] mt-2"
+            disabled={isProcessingCall}
+            className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-extrabold text-xs font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_12px_rgba(16,185,129,0.25)] mt-2 disabled:opacity-50"
           >
             <Check className="w-4 h-4" strokeWidth={3} />
-            <span>Apply Location & Meeting</span>
+            <span>{isProcessingCall ? 'Updating Huddle...' : 'Apply Location & Meeting'}</span>
           </button>
         </div>
       </div>

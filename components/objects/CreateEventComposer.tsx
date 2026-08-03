@@ -44,7 +44,7 @@ export function CreateEventComposer({
 }: Props) {
   const { user } = useAuth();
   const ownerId = user?.$id || 'guest';
-  const cacheKey = `f_user_events_${ownerId}`;
+  const cacheKey = 'f_events_list';
 
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
