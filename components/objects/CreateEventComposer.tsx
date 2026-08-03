@@ -83,6 +83,51 @@ export function CreateEventComposer({
   }, []);
 
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem('kylrix:draft:event');
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft.content) setContent(draft.content);
+        if (draft.title) {
+          setTitle(draft.title);
+          setIsTitleManuallyEdited(true);
+        }
+        if (draft.startTime) setStartTime(draft.startTime);
+        if (draft.endTime) setEndTime(draft.endTime);
+        if (draft.location) setLocation(draft.location);
+        if (draft.visibility) setVisibility(draft.visibility);
+        if (draft.autoCreateCall !== undefined) setAutoCreateCall(draft.autoCreateCall);
+        if (draft.id) {
+          setResolvedId(draft.id);
+          liveIdRef.current = draft.id;
+        }
+      }
+    } catch {
+      /* quiet */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!content.trim() && !title.trim()) return;
+    const draft = {
+      id: liveIdRef.current || resolvedId,
+      content,
+      title,
+      startTime,
+      endTime,
+      location,
+      visibility,
+      autoCreateCall,
+    };
+    try {
+      localStorage.setItem('kylrix:draft:event', JSON.stringify(draft));
+      void LocalEngine.cacheSet(`f_draft_event_${ownerId}`, draft);
+    } catch {
+      /* quiet */
+    }
+  }, [content, title, startTime, endTime, location, visibility, autoCreateCall, resolvedId, ownerId]);
+
+  useEffect(() => {
     if (isTitleManuallyEdited) return;
     const generated = buildAutoTitleFromContent(content);
     setTitle(content.trim() ? generated : '');
@@ -169,7 +214,13 @@ export function CreateEventComposer({
     const id = liveIdRef.current || resolvedId;
     const hasContent = Boolean(content.trim() || title.trim());
     const meta = pendingMetaRef.current;
-    const hasSchedule = Boolean(meta.startTime && meta.endTime);
+
+    try {
+      localStorage.removeItem('kylrix:draft:event');
+      void LocalEngine.cacheSet(`f_draft_event_${ownerId}`, null);
+    } catch {
+      /* quiet */
+    }
 
     if (!hasContent && id) {
       autonomicSyncEngine.ack(`event:${id}`);
@@ -184,7 +235,7 @@ export function CreateEventComposer({
           /* optional */
         }
       })();
-    } else if (hasContent && hasSchedule) {
+    } else if (hasContent) {
       const event = buildLive(content, title);
       void pushLive(event);
       const enriched = {
@@ -200,7 +251,7 @@ export function CreateEventComposer({
         .catch(() => {});
     }
     onClose?.();
-  }, [buildLive, cacheKey, content, onClose, onCommitEvent, pushLive, resolvedId, title]);
+  }, [buildLive, cacheKey, content, onClose, onCommitEvent, ownerId, pushLive, resolvedId, title]);
 
   useEffect(() => {
     onRegisterClose?.(handleClose);
