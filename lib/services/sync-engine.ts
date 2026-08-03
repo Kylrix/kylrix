@@ -15,7 +15,75 @@ import { markNotePersistedRemote, markComposePersisted, markComposeDraft } from 
 import { updateNote, createNote } from '@/lib/actions/client-ops';
 import { getNotePublicState } from '@/lib/appwrite';
 import { pickNoteAutosavePayload } from '@/lib/appwrite/note';
-import { getLiveNoteForSync, getLiveGoalForSync } from '@/lib/sync/pending-sync-bridge';
+import { getLiveNoteForSync, getLiveGoalForSync, getLiveEventForSync } from '@/lib/sync/pending-sync-bridge';
+import type { Event } from '@/types';
+
+async function flushEventPending(
+  pendingKey: string,
+  eventId: string,
+  queuedRevision: string,
+  db: Awaited<ReturnType<typeof import('@/lib/webrtc/RxDBManager').getRxDB>> | null,
+  activeUserId: string | null
+) {
+  let payload: Event | null =
+    pendingPayloads.get(pendingKey) ||
+    pendingPayloads.get(eventId) ||
+    getLiveEventForSync(eventId);
+
+  if (!payload && db) {
+    try {
+      const doc = await db.cache.findOne(`event_${eventId}`).exec();
+      payload = (doc?.data as Event) || null;
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (!payload) {
+    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
+    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
+    return;
+  }
+
+  if (!activeUserId) return;
+
+  const { events: eventApi } = await import('@/lib/kylrixflow');
+  const flushRevision = queuedRevision || new Date().toISOString();
+
+  try {
+    const startTimeStr = typeof payload.startTime === 'string' ? payload.startTime : payload.startTime?.toISOString();
+    const endTimeStr = typeof payload.endTime === 'string' ? payload.endTime : payload.endTime?.toISOString();
+    await eventApi.update(eventId, {
+      title: payload.title,
+      description: payload.description,
+      startTime: startTimeStr,
+      endTime: endTimeStr,
+      location: payload.location,
+      meetingUrl: (payload as any).meetingUrl || payload.url,
+      visibility: (payload as any).visibility || (payload.isPublic !== false ? 'public' : 'private'),
+      isPublic: payload.isPublic !== false,
+      isGuest: payload.isGuest !== false,
+    } as any);
+
+    failedSyncAttempts.delete(pendingKey);
+    failedSyncAttempts.delete(eventId);
+    autonomicSyncEngine.ack(pendingKey, flushRevision);
+    autonomicSyncEngine.ack(eventId, flushRevision);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('kylrix:sync-complete', {
+          detail: { eventId, revision: flushRevision, kind: 'event' },
+        })
+      );
+    }
+  } catch (err: any) {
+    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
+    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
+    throw err;
+  }
+}
 import { parseGoalPendingKey, goalPendingKey } from '@/lib/sync/goal-keys';
 import { pickGoalAutosavePayload } from '@/lib/goals/pick-goal-autosave-payload';
 import type { Notes } from '@/types/appwrite';
@@ -763,9 +831,7 @@ export const autonomicSyncEngine = {
       const db = await getRxDB().catch(() => null);
 
       const tasksToFlush = pendingIds.filter((pendingId) => {
-        // Event/form/tag use dedicated commit paths until typed flush lands.
         if (
-          pendingId.startsWith('event:') ||
           pendingId.startsWith('form:') ||
           pendingId.startsWith('tag:')
         ) {
@@ -809,7 +875,10 @@ export const autonomicSyncEngine = {
                   }
                 }
               }
-              if (goalId) {
+              if (pendingId.startsWith('event:')) {
+                const eventId = pendingId.replace(/^event:/, '');
+                await flushEventPending(pendingId, eventId, queuedRevision, db, activeUserId);
+              } else if (goalId) {
                 await flushGoalPending(pendingId, goalId, queuedRevision, db, activeUserId);
               } else {
                 await flushNotePending(pendingId, queuedRevision, db, activeUserId);
@@ -827,10 +896,9 @@ export const autonomicSyncEngine = {
       console.error('[SyncEngine] Autonomic sync error:', error);
     } finally {
       isSyncing = false;
-      // Demand-only retry: if flushable note/goal work remains, back off. Never spin at 0ms.
+      // Demand-only retry: if flushable work remains, back off. Never spin at 0ms.
       const hasFlushable = Array.from(pendingById.keys()).some(
         (id) =>
-          !id.startsWith('event:') &&
           !id.startsWith('form:') &&
           !id.startsWith('tag:'),
       );

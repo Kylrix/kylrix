@@ -61,9 +61,20 @@ const EventsContext = createContext<EventsContextType>({
   refetchEvents: async () => {},
 });
 
+import { registerLiveEventGetter } from '@/lib/sync/pending-sync-bridge';
+
 export function EventsProvider({ children }: { children: ReactNode }) {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    registerLiveEventGetter((id) => {
+      return events.find((e) => e.id === id || (e as any).$id === id) || null;
+    });
+    return () => {
+      registerLiveEventGetter(null);
+    };
+  }, [events]);
 
   const loadEvents = useCallback(async () => {
     try {
