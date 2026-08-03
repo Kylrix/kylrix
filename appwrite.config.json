@@ -11059,6 +11059,19 @@
                         "ASC",
                         "ASC"
                     ]
+                },
+                {
+                    "key": "idx_installer_created",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "installerId",
+                        "createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
                 }
             ]
         },
