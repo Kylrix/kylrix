@@ -45,7 +45,7 @@ Related substrate only: `rxdb-appwrite-sync` (IndexedDB/RxDB mechanics). **Do no
 1. **Local Copy as Single Source of Truth**: The UI talks **only** to the **live/local copy** for content (context list + RxDB/cache).
 2. **Forward-Reactive Sync Engine**: All CRUD operations mutate the local copy instantly (`pushLiveNote` / `pushLiveGoal`), call `markPending`, and schedule a **coalesced demand flush** (~450ms). No spine/fixed-interval Appwrite polling. Retry uses exponential backoff only when unpaid work remains.
 3. **`optimisticEngine`**: Pre-fetches and speculatively queries remote database data in the background while serving instant 0ms local copy results to the UI.
-4. **`interpolationEngine`**: Merges background server responses into the local copy. Key rule: If an item has un-flushed local changes (`autonomicSyncEngine.isPending(id)`), the local copy strictly wins to prevent overwriting user edits.
+4. **`interpolationEngine`**: Merges background server responses into the local copy. Key rule: If an item has un-flushed local changes (`autonomicSyncEngine.isPending(id)`), the local copy strictly wins to prevent overwriting user edits. When no unflushed changes exist, timestamp comparison (`updatedAt` / `$updatedAt`) determines the winner — the newer timestamp strictly overwrites the older one, regardless of whether local or remote is newer.
 5. **Amber/green** talks **only** to the **sync engine pending queue** (same authority that flushes).
 6. **Appwrite feeds and confirms** — never owns a `pendingSync` / dirty column.
 7. Works for **signed-in and guest / no-account** users: RxDB + engine queue are device-local; guest payloads stay local until claimed, but the **same** pending/live contracts apply.

@@ -57,24 +57,70 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
   const [aboutInput, setAboutInput] = useState('');
 
   useEffect(() => {
+    let isMounted = true;
     const fetchEvent = async () => {
-      if (initialData) return;
-      
+      let currentLocal: any = initialData;
+
+      // 1. Try local copy first (0ms instantaneous load)
+      if (!currentLocal && eventId) {
+        try {
+          const list = (await LocalEngine.cacheGet<any[]>('f_events_list')) || [];
+          currentLocal = list.find((e: any) => (e.$id || e.id) === eventId);
+          if (currentLocal && isMounted) {
+            setEvent(currentLocal);
+            setLoading(false);
+          }
+        } catch {
+          /* quiet */
+        }
+      }
+
+      if (!eventId) return;
+
+      // 2. Fetch remote data and perform timestamp / pending merge
       try {
-        setLoading(true);
-        const data = await eventApi.get(eventId);
-        setEvent(data);
+        const remoteData = await eventApi.get(eventId);
+        if (remoteData && isMounted) {
+          setEvent((prevLocal: any) => {
+            if (!prevLocal) return remoteData;
+
+            const resourceId = `event:${eventId}`;
+            const isPending = autonomicSyncEngine.isPending(resourceId);
+            if (isPending) {
+              // Local copy has unflushed edits — local copy strictly wins!
+              return prevLocal;
+            }
+
+            const parseTs = (val?: string | Date | null) => {
+              if (!val) return 0;
+              const t = typeof val === 'string' ? Date.parse(val) : val.getTime();
+              return Number.isFinite(t) ? t : 0;
+            };
+
+            const localTime = Math.max(parseTs(prevLocal.updatedAt), parseTs(prevLocal.$updatedAt), parseTs(prevLocal.createdAt));
+            const remoteTime = Math.max(parseTs(remoteData.updatedAt), parseTs(remoteData.$updatedAt), parseTs(remoteData.createdAt));
+
+            // Timestamp comparison: newer wins!
+            if (remoteTime > localTime) {
+              return remoteData;
+            }
+            return prevLocal;
+          });
+        }
       } catch (_err: unknown) {
         console.error('Failed to fetch event details', _err);
-        setError('Failed to load event');
+        if (!currentLocal && isMounted) {
+          setError('Failed to load event');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
-    if (eventId) {
-        fetchEvent();
-    }
+    void fetchEvent();
+    return () => {
+      isMounted = false;
+    };
   }, [eventId, initialData]);
 
   useEffect(() => {

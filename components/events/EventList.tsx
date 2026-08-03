@@ -21,11 +21,14 @@ import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 
+import { mergeServerPageWithLocalCopy } from '@/lib/sync/local-copy-sync';
+
 function mapRemoteEvent(doc: any): Event {
   const start = doc.startTime ? new Date(doc.startTime) : new Date();
   const end = doc.endTime ? new Date(doc.endTime) : start;
   return {
     id: doc.$id || doc.id,
+    $id: doc.$id || doc.id,
     title: doc.title,
     description: doc.description,
     startTime: Number.isNaN(start.getTime()) ? new Date() : start,
@@ -39,6 +42,8 @@ function mapRemoteEvent(doc: any): Event {
     creatorId: doc.userId || doc.creatorId || '',
     createdAt: new Date(doc.$createdAt || doc.createdAt || Date.now()),
     updatedAt: new Date(doc.$updatedAt || doc.updatedAt || Date.now()),
+    $createdAt: typeof doc.$createdAt === 'string' ? doc.$createdAt : new Date(doc.createdAt || Date.now()).toISOString(),
+    $updatedAt: typeof doc.$updatedAt === 'string' ? doc.$updatedAt : new Date(doc.updatedAt || Date.now()).toISOString(),
     isWorkspace: Boolean(doc.isWorkspace),
   } as Event;
 }
@@ -99,26 +104,27 @@ export default function EventList() {
           setIsLoading(false);
         }
 
+        let remoteItems: any[] = [];
         try {
           const res = await eventApi.list();
-          items = res?.rows || (Array.isArray(res) ? res : []);
+          remoteItems = res?.rows || (Array.isArray(res) ? res : []);
         } catch {
-          // keep local rows — attach drawer uses the same fallback order
-          if (items.length === 0) {
-            try {
-              items = (await db.events.find().exec()).map((d: any) => d.toJSON());
-            } catch {
-              items = [];
-            }
-            if (items.length === 0) {
-              items = (await LocalEngine.cacheGet<any[]>('f_events_list')) || [];
-            }
-          }
+          /* keep local rows */
         }
 
         if (isCancelled) return;
-        if (items.length > 0) {
-          setEvents(items.map(mapRemoteEvent));
+
+        const mappedLocal = items.map(mapRemoteEvent);
+        if (remoteItems.length > 0) {
+          const mappedRemote = remoteItems.map(mapRemoteEvent);
+          const merged = mergeServerPageWithLocalCopy<any>({
+            serverBatch: mappedRemote,
+            localNotes: mappedLocal,
+          });
+          setEvents(merged);
+          void LocalEngine.cacheSet('f_events_list', merged);
+        } else if (items.length > 0) {
+          setEvents(mappedLocal);
           void LocalEngine.cacheSet('f_events_list', items);
         }
       } catch (error: unknown) {
