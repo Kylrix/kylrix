@@ -224,6 +224,12 @@ export function NoteDetailSidebar({
   const [tags, setTags] = useState(liveNote.tags?.join(', ') || '');
   const [isPublic, _setIsPublic] = useState(getNotePublicState(liveNote));
 
+  useEffect(() => {
+    setTitle(liveNote.title || '');
+    setContent(liveNote.content || '');
+    setTags(liveNote.tags?.join(', ') || '');
+  }, [liveNote.$id, liveNote.tags]);
+
   /**
    * Direct Funnel to Local Copy: Any edit in detail immediately updates NotesContext live copy & triggers sync cycle.
    */
@@ -1527,9 +1533,11 @@ export function NoteDetailSidebar({
         anchor="bottom"
         open={isTagSelectorOpen}
         onClose={() => setIsTagSelectorOpen(false)}
+        disablePortal={false}
+        keepMounted={false}
         ModalProps={{ keepMounted: false, disableScrollLock: false }}
         sx={{
-          zIndex: 2000,
+          zIndex: 11000,
           '& .ob-drawer-panel': {
             bgcolor: '#161412',
             borderTopLeftRadius: '24px',
