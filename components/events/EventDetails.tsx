@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Calendar, Clock, MapPin, Share2, Video, ExternalLink, Edit3, Globe, Lock, ChevronDown, Check } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, Share2, Video, ExternalLink, Edit3, Globe, Lock, ChevronDown, Check, Users, UserCheck } from 'lucide-react';
 import { formatTime } from '@/lib/time-util';
 import { useLayout } from '@/context/LayoutContext';
 import { exportToICS } from '@/lib/utils/export';
-import { events as eventApi } from '@/lib/kylrixflow';
+import { events as eventApi, eventGuests as guestApi } from '@/lib/kylrixflow';
 import { generateEventPattern } from '@/utils/patternGenerator';
 import { Event as AppwriteEvent } from '@/types/kylrixflow';
 import { Event as LocalEvent } from '@/types';
@@ -19,6 +19,8 @@ import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { EventDateTimePickerDrawer } from './drawers/EventDateTimePickerDrawer';
 import { EventLocationDrawer } from './drawers/EventLocationDrawer';
 import { EventVisibilityDrawer } from './drawers/EventVisibilityDrawer';
+import { useAuth } from '@/context/auth/AuthContext';
+import { Query } from 'appwrite';
 import toast from 'react-hot-toast';
 
 import { useEvents } from '@/context/EventsContext';
@@ -50,6 +52,12 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
   const [error, setError] = useState<string | null>(null);
   const [organizer, setOrganizer] = useState<any>(null);
 
+  const { user, isAuthenticated, openIDMWindow } = useAuth();
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [guestId, setGuestId] = useState<string | null>(null);
+  const [registering, setRegistering] = useState(false);
+  const [attendees, setAttendees] = useState<any[]>([]);
+
   // Drawer & Inline Editing State
   const [isDateTimeDrawerOpen, setIsDateTimeDrawerOpen] = useState(false);
   const [isLocationDrawerOpen, setIsLocationDrawerOpen] = useState(false);
@@ -58,6 +66,41 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
   const [titleInput, setTitleInput] = useState('');
   const [isEditingAbout, setIsEditingAbout] = useState(false);
   const [aboutInput, setAboutInput] = useState('');
+
+  useEffect(() => {
+    if (!user || !eventId) return;
+    const checkRegistration = async () => {
+      try {
+        const guests = await guestApi.list([
+          Query.equal('eventId', eventId),
+          Query.equal('userId', user.$id),
+        ]);
+        if (guests.total > 0) {
+          setIsRegistered(true);
+          setGuestId(guests.rows[0].$id);
+        } else {
+          setIsRegistered(false);
+          setGuestId(null);
+        }
+      } catch {
+        /* quiet */
+      }
+    };
+    checkRegistration();
+  }, [user, eventId]);
+
+  useEffect(() => {
+    if (!eventId) return;
+    const fetchAttendees = async () => {
+      try {
+        const guests = await guestApi.list([Query.equal('eventId', eventId)]);
+        setAttendees(guests.rows);
+      } catch {
+        /* quiet */
+      }
+    };
+    fetchAttendees();
+  }, [eventId, isRegistered]);
 
   useEffect(() => {
     let isMounted = true;
@@ -174,6 +217,51 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
       console.error('Failed to sync event update remotely:', err);
     }
   }, [event, pushLiveEvent]);
+
+  const handleRegister = async () => {
+    if (!isAuthenticated) {
+      openIDMWindow();
+      return;
+    }
+    if (!user || !event) return;
+    const targetId = getId(event);
+    try {
+      setRegistering(true);
+      const newGuest = await guestApi.create({
+        eventId: targetId,
+        userId: user.$id,
+        email: user.email,
+        status: 'accepted',
+        role: 'attendee',
+      });
+      setIsRegistered(true);
+      setGuestId(newGuest.$id);
+      const currentCount = Number((event as any).attendeeCount) || 0;
+      void pushEventUpdate({ attendeeCount: currentCount + 1 });
+      toast.success('Successfully registered for event!');
+    } catch {
+      toast.error('Failed to register');
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const handleCancelRegistration = async () => {
+    if (!guestId || !event) return;
+    try {
+      setRegistering(true);
+      await guestApi.delete(guestId);
+      setIsRegistered(false);
+      setGuestId(null);
+      const currentCount = Number((event as any).attendeeCount) || 1;
+      void pushEventUpdate({ attendeeCount: Math.max(0, currentCount - 1) });
+      toast.success('Registration cancelled');
+    } catch {
+      toast.error('Failed to cancel registration');
+    } finally {
+      setRegistering(false);
+    }
+  };
 
   const handleTitleSubmit = () => {
     setIsEditingTitle(false);
@@ -300,6 +388,35 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
             <SyncStatusDot resourceId={`event:${eventIdValue}`} />
             <SyncStatusLabel resourceId={`event:${eventIdValue}`} />
           </div>
+        </div>
+
+        {/* Seamless RSVP Registration Banner */}
+        <div className="p-4 rounded-[20px] bg-[#0A0908] border border-white/[0.04] flex items-center justify-between gap-3 shadow-[0_4px_16px_rgba(0,0,0,0.4)]">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2.5 rounded-xl bg-[#6366F1]/15 border border-[#6366F1]/30 text-[#6366F1] shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-bold text-white leading-tight truncate">
+                {isRegistered ? 'You are attending this event!' : 'RSVP to confirm attendance'}
+              </span>
+              <span className="text-[10px] text-[#8E8A86] font-mono mt-0.5">
+                {(event as any).attendeeCount || attendees.length} confirmed {((event as any).attendeeCount || attendees.length) === 1 ? 'guest' : 'guests'}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={isRegistered ? handleCancelRegistration : handleRegister}
+            disabled={registering}
+            className={`px-4 py-2 rounded-xl text-xs font-mono font-extrabold transition-all cursor-pointer shrink-0 shadow-md ${
+              isRegistered
+                ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30'
+                : 'bg-[#6366F1] hover:bg-[#4F46E5] text-white shadow-[0_4px_12px_rgba(99,102,241,0.3)]'
+            }`}
+          >
+            {registering ? '...' : isRegistered ? 'Cancel RSVP' : 'Register'}
+          </button>
         </div>
 
         {/* Date & Time / Location (Card) */}

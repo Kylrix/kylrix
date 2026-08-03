@@ -7957,6 +7957,15 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "attendeeCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 9223372036854775807
                 }
             ],
             "indexes": [
