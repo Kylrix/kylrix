@@ -29,45 +29,60 @@ type Tok =
 
 function tokenize(input: string): Tok[] {
   const s = input.replace(/\s+/g, '');
-  const out: Tok[] = [];
+  const raw: Tok[] = [];
   let i = 0;
   while (i < s.length) {
     const c = s[i];
     if (/[0-9.]/.test(c)) {
       let j = i + 1;
       while (j < s.length && /[0-9.]/.test(s[j])) j++;
-      out.push({ t: 'num', v: Number(s.slice(i, j)) });
+      raw.push({ t: 'num', v: Number(s.slice(i, j)) });
       i = j;
       continue;
     }
     if (/[a-zA-Z_]/.test(c)) {
       let j = i + 1;
       while (j < s.length && /[a-zA-Z0-9_]/.test(s[j])) j++;
-      out.push({ t: 'id', v: s.slice(i, j).toLowerCase() });
+      raw.push({ t: 'id', v: s.slice(i, j).toLowerCase() });
       i = j;
       continue;
     }
     if ('+-*/^'.includes(c)) {
-      out.push({ t: 'op', v: c });
+      raw.push({ t: 'op', v: c });
       i++;
       continue;
     }
     if (c === '(') {
-      out.push({ t: 'lp' });
+      raw.push({ t: 'lp' });
       i++;
       continue;
     }
     if (c === ')') {
-      out.push({ t: 'rp' });
+      raw.push({ t: 'rp' });
       i++;
       continue;
     }
     if (c === ',') {
-      out.push({ t: 'comma' });
+      raw.push({ t: 'comma' });
       i++;
       continue;
     }
     throw new Error(`Unexpected "${c}"`);
+  }
+
+  // Insert implicit * for juxtaposition: 2x → 2*x, 2(…) → 2*(…), x( → x*(, )x → )*x
+  const out: Tok[] = [];
+  for (let k = 0; k < raw.length; k++) {
+    out.push(raw[k]);
+    const cur = raw[k];
+    const nxt = raw[k + 1];
+    if (!nxt) continue;
+    const curIsVal = cur.t === 'num' || cur.t === 'rp' || (cur.t === 'id' && !(cur.v in FUNCS));
+    const nxtIsVal = nxt.t === 'num' || nxt.t === 'lp' || (nxt.t === 'id' && !(nxt.v in FUNCS));
+    const nxtIsFunc = nxt.t === 'id' && nxt.v in FUNCS;
+    if (curIsVal && (nxtIsVal || nxtIsFunc)) {
+      out.push({ t: 'op', v: '*' });
+    }
   }
   return out;
 }
