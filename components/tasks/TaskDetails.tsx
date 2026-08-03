@@ -253,6 +253,14 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
     huddleMessageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [huddleMessages]);
 
+  React.useEffect(() => {
+    if (task?.id) {
+      autonomicSyncEngine.requestObjectFreshness('goal', task.id, (refreshedGoal) => {
+        pushLiveGoal(refreshedGoal, { pending: false });
+      });
+    }
+  }, [task?.id, pushLiveGoal]);
+
   const handleInitDiscussion = async () => {
     if (!task) return;
     setHuddleLoading(true);

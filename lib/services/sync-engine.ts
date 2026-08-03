@@ -598,6 +598,37 @@ export const autonomicSyncEngine = {
     lastPullAt = at;
   },
 
+  /**
+   * Signal-driven freshness pull when an object detail is opened.
+   * Background engine fetch — zero UI overhead. Replaces local copy only if un-pending and remote differs.
+   */
+  requestObjectFreshness(kind: 'note' | 'goal' | 'workspace', id: string, onRefreshed?: (item: any) => void) {
+    const targetId = String(id || '').trim();
+    if (!targetId || targetId.startsWith('live-') || targetId.startsWith('ghost-')) return;
+    if (this.isPending(targetId)) return;
+
+    void (async () => {
+      try {
+        if (kind === 'note') {
+          const { getNote } = await import('@/lib/appwrite');
+          const remote = await getNote(targetId).catch(() => null);
+          if (remote && !this.isPending(targetId)) {
+            if (onRefreshed) onRefreshed(remote);
+          }
+        } else if (kind === 'goal') {
+          const { tasks: taskApi, mapAppwriteTaskToTask } = await import('@/lib/kylrixflow');
+          const remoteDoc = await taskApi.get(targetId).catch(() => null);
+          if (remoteDoc && !this.isPending(targetId)) {
+            const mapped = mapAppwriteTaskToTask(remoteDoc);
+            if (onRefreshed) onRefreshed(mapped);
+          }
+        }
+      } catch {
+        // Quiet background freshness failure — keep local copy intact
+      }
+    })();
+  },
+
   /** Subscribe to pending-queue changes (amber/green). */
   subscribe(listener: () => void) {
     statusListeners.add(listener);

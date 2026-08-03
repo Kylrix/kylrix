@@ -196,8 +196,11 @@ export function NoteDetailSidebar({
   useEffect(() => {
     if (liveNote?.$id) {
       void refreshEcosystemTags();
+      autonomicSyncEngine.requestObjectFreshness('note', liveNote.$id, (refreshed) => {
+        updateLocalAndParentNote(refreshed);
+      });
     }
-  }, [liveNote?.$id, refreshEcosystemTags]);
+  }, [liveNote?.$id, refreshEcosystemTags, updateLocalAndParentNote]);
   
   const noteMeta = useMemo(() => {
     try {
