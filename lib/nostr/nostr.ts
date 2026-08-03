@@ -56,13 +56,17 @@ export class NostrRelayPool {
     this.urls = urls;
   }
 
+  private reconnectCounts: Map<string, number> = new Map();
+  private maxReconnectAttempts = 3;
+
   public connect() {
+    if (typeof WebSocket === 'undefined') return;
     for (const url of this.urls) {
       if (this.sockets.has(url)) continue;
       try {
         const ws = new WebSocket(url);
         ws.onopen = () => {
-          console.log(`Connected to relay: ${url}`);
+          this.reconnectCounts.set(url, 0);
           // Resubscribe on reconnect
           for (const [subId, filters] of this.subscriptions.entries()) {
             ws.send(JSON.stringify(["REQ", subId, ...filters]));
@@ -80,21 +84,24 @@ export class NostrRelayPool {
               }
             }
           } catch (e) {
-            console.error("Error processing message from relay:", e);
+            // Ignore malformed relay frame
           }
         };
         ws.onerror = () => {
-          console.warn(`WebSocket connection failed or was rate-limited on ${url}`);
+          // Silent catch to prevent dev console spam / unhandled socket errors
         };
         ws.onclose = () => {
-          console.log(`Disconnected from relay: ${url}`);
           this.sockets.delete(url);
-          // Try to reconnect in 5s
-          setTimeout(() => this.connect(), 5000);
+          const currentCount = this.reconnectCounts.get(url) || 0;
+          if (currentCount < this.maxReconnectAttempts) {
+            this.reconnectCounts.set(url, currentCount + 1);
+            const delay = Math.min(15000, 3000 * Math.pow(2, currentCount));
+            setTimeout(() => this.connect(), delay);
+          }
         };
         this.sockets.set(url, ws);
-      } catch (e) {
-        console.error(`Failed to connect to ${url}:`, e);
+      } catch {
+        // Socket instantiation error ignored gracefully
       }
     }
   }
