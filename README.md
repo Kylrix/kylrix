@@ -39,7 +39,7 @@ Details on security, sync, and internals: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Screenshots
 
-Replace placeholders with real captures. Use the route path as the alt text.
+Kylrix product demos and screenshots
 
 <div align="center">
   <table>
