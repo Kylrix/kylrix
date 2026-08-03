@@ -40,4 +40,24 @@ Base: `http://localhost:3005/api/v1` · prod `https://www.kylrix.space/api/v1`
 | GET/DELETE | `/agents/sessions`, `/agents/sessions/:id` | agents:* |
 | POST | `/agents/harness`, `/agents/sessions/:id/mirror` | agents:harness |
 
+## Rate Limits (Rolling 1m / 24h)
+
+| Tier | Short Window (1 Min Rolling) | Long Window (24 Hour Rolling) |
+| --- | --- | --- |
+| **Free** | 10 req / min | 100 req / day |
+| **Pro** | 50 req / min | 500 req / day |
+| **Teams** | 100 req / min | 1,000 req / day |
+
+Request payload constraint: Max ~256 KB per request.
+
+HTTP 429 response structure:
+```json
+{
+  "error": "rate_limit_exceeded",
+  "message": "You have exceeded your rolling 1-minute limit of 10 requests.",
+  "type": "per_minute",
+  "reset_at": 1722676643
+}
+```
+
 Intentional gaps: E2EE chat send, Nostr comment/like (needs vault key), vault secret plaintext, WebRTC calls.

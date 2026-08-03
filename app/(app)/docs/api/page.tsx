@@ -281,27 +281,39 @@ curl -sS -X POST \\
           </ul>
         </section>
 
-        <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-2">
+        <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-3">
           <h2 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">
             Rate limits
           </h2>
-          <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
             <div className="rounded-xl bg-[#0A0908] border border-white/[0.05] p-3">
               <p className="text-[10px] font-extrabold uppercase tracking-wider text-white/35">
                 Free
               </p>
-              <p className="text-white/70 mt-1">20 / min · 200 / hour</p>
+              <p className="text-white/70 mt-1 font-mono text-xs">10 / min · 100 / day</p>
             </div>
             <div className="rounded-xl bg-[#0A0908] border border-white/[0.05] p-3">
               <p className="text-[10px] font-extrabold uppercase tracking-wider text-white/35">
-                Pro / Teams
+                Pro
               </p>
-              <p className="text-white/70 mt-1">120 / min · 5000 / hour</p>
+              <p className="text-white/70 mt-1 font-mono text-xs">50 / min · 500 / day</p>
+            </div>
+            <div className="rounded-xl bg-[#0A0908] border border-white/[0.05] p-3">
+              <p className="text-[10px] font-extrabold uppercase tracking-wider text-white/35">
+                Teams
+              </p>
+              <p className="text-white/70 mt-1 font-mono text-xs">100 / min · 1,000 / day</p>
             </div>
           </div>
           <p className="text-xs text-white/40 pt-1">
-            Limits apply per token and per account. Body max ≈ 256 KB.
+            Enforced over 1-minute and 24-hour rolling windows per token and per account. Request payload capped at ~256 KB. Response headers:
           </p>
+          <CodeBlock>{`X-RateLimit-Limit-Minute: 10
+X-RateLimit-Remaining-Minute: 7
+X-RateLimit-Limit-Day: 100
+X-RateLimit-Remaining-Day: 84
+X-RateLimit-Reset-Minute: 1722676643
+X-RateLimit-Reset-Day: 1722763043`}</CodeBlock>
         </section>
 
         <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-2">
@@ -312,11 +324,20 @@ curl -sS -X POST \\
             {ERRORS.map((e) => (
               <li key={`${e.status}-${e.code}`} className="flex gap-3">
                 <span className="font-mono text-white/80 w-8 shrink-0">{e.status}</span>
-                <code className="text-[#A5B4FC] w-28 shrink-0">{e.code}</code>
+                <code className="text-[#A5B4FC] w-36 shrink-0">{e.code}</code>
                 <span>{e.meaning}</span>
               </li>
             ))}
           </ul>
+          <div className="pt-2">
+            <p className="text-xs text-white/40 mb-1">When rate-limited (HTTP 429):</p>
+            <CodeBlock>{`{
+  "error": "rate_limit_exceeded",
+  "message": "You have exceeded your rolling 1-minute limit of 10 requests.",
+  "type": "per_minute",
+  "reset_at": 1722676643
+}`}</CodeBlock>
+          </div>
         </section>
 
         <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-2">

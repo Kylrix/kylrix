@@ -49,10 +49,12 @@ vault metadata, tags, objects, agents/harness. **No** `/tools/execute` (410).
 
 Intentional gaps: E2EE send, Nostr signing, vault secrets, WebRTC.
 
-## Limits
+## Limits (Rolling 1m / 24h)
 
-- Free: 20/min, 200/hour
-- Pro/Teams: 120/min, 5000/hour
+- **Free**: 10 req / min · 100 req / day
+- **Pro**: 50 req / min · 500 req / day
+- **Teams**: 100 req / min · 1,000 req / day
+- **Payload cap**: ~256 KB per request
 
 ## Surfaces
 
