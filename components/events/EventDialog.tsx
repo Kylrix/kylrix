@@ -76,7 +76,13 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
 
   useEffect(() => {
     setIsDrawerOpen(open);
-    return () => setIsDrawerOpen(false);
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      setIsDrawerOpen(false);
+      document.body.style.overflow = '';
+    };
   }, [open, setIsDrawerOpen]);
 
   // Load draft when dialog opens

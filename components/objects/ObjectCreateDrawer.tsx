@@ -85,7 +85,13 @@ export function ObjectCreateDrawer({
 
   useEffect(() => {
     setIsDrawerOpen(open);
-    return () => setIsDrawerOpen(false);
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      setIsDrawerOpen(false);
+      document.body.style.overflow = '';
+    };
   }, [open, setIsDrawerOpen]);
 
   useEffect(() => {
@@ -146,7 +152,7 @@ export function ObjectCreateDrawer({
         }
         style={{ height: maxHeight, maxHeight }}
       >
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col overscroll-contain">
           {kind === 'note' ? (
             <CreateNoteForm
               initialContent={initialContent}

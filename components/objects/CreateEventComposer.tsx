@@ -253,7 +253,7 @@ export function CreateEventComposer({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 min-h-0 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 min-h-0 scrollbar-thin overscroll-contain">
         {(content.trim().length >= 5 || isTitleManuallyEdited) && (
           <input
             type="text"
