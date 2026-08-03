@@ -30,9 +30,9 @@ export default function EventPage() {
           </span>
         </div>
 
-        {/* Direct Event Details Component Mirror */}
-        <div className="flex-1 max-w-4xl w-full mx-auto p-4 md:p-6 overflow-hidden flex flex-col min-h-0">
-          <div className="flex-1 rounded-[28px] border border-[#34322F] bg-[#161412] overflow-hidden shadow-2xl flex flex-col min-h-0">
+        {/* Direct Event Details Component Mirror — Full width, thin margins */}
+        <div className="flex-1 w-full p-1 sm:p-3 overflow-hidden flex flex-col min-h-0">
+          <div className="flex-1 rounded-xl sm:rounded-[24px] border border-[#34322F] bg-[#161412] overflow-hidden shadow-2xl flex flex-col min-h-0">
             <EventDetails
               eventId={eventId}
               onBack={() => router.push('/events')}

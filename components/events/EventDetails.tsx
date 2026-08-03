@@ -331,7 +331,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-5 flex flex-col gap-4 scrollbar-thin">
         {/* Header Title info */}
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-2">
