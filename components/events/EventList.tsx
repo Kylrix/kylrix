@@ -233,9 +233,7 @@ export default function EventList() {
             <div key={event.id}>
               <EventObjectRow
                 event={event}
-                onDelete={() =>
-                  setEvents((prev) => prev.filter((e) => e.id !== event.id))
-                }
+                onDelete={() => removeEvent(event.id)}
                 onClick={() => {
                   if (isDesktop) {
                     openSidebar(
