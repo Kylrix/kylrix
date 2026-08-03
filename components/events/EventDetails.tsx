@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, MapPin, Share2, Video, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { X, Calendar, Clock, MapPin, Share2, Video, ExternalLink, Edit3, Globe, Lock, ChevronDown, Check } from 'lucide-react';
 import { formatTime } from '@/lib/time-util';
 import { useLayout } from '@/context/LayoutContext';
 import { exportToICS } from '@/lib/utils/export';
@@ -14,6 +14,11 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useSection } from '@/context/SectionContext';
 import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
+import { LocalEngine } from '@/lib/services/LocalEngine';
+import { autonomicSyncEngine } from '@/lib/services/sync-engine';
+import { EventDateTimePickerDrawer } from './drawers/EventDateTimePickerDrawer';
+import { EventLocationDrawer } from './drawers/EventLocationDrawer';
+import { EventVisibilityDrawer } from './drawers/EventVisibilityDrawer';
 import toast from 'react-hot-toast';
 
 interface EventDetailsProps {
@@ -42,6 +47,15 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
   const [error, setError] = useState<string | null>(null);
   const [organizer, setOrganizer] = useState<any>(null);
 
+  // Drawer & Inline Editing State
+  const [isDateTimeDrawerOpen, setIsDateTimeDrawerOpen] = useState(false);
+  const [isLocationDrawerOpen, setIsLocationDrawerOpen] = useState(false);
+  const [isVisibilityDrawerOpen, setIsVisibilityDrawerOpen] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState('');
+  const [isEditingAbout, setIsEditingAbout] = useState(false);
+  const [aboutInput, setAboutInput] = useState('');
+
   useEffect(() => {
     const fetchEvent = async () => {
       if (initialData) return;
@@ -65,6 +79,8 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
 
   useEffect(() => {
     if (event) {
+      setTitleInput(event.title || '');
+      setAboutInput(event.description || '');
       const fetchOrganizer = async () => {
         const userId = (event as any).userId || (event as any).creatorId;
         if (!userId) return;
@@ -83,10 +99,55 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
   }, [event]);
 
   // Helper to normalize event data access
-  const getId = (evt: any) => evt?.$id || evt?.id;
+  const getId = (evt: any) => evt?.$id || evt?.id || eventId;
   const getCoverImage = (evt: any) => evt?.coverImageId || evt?.coverImage;
-  const getVisibility = (evt: any) => evt?.visibility || (evt?.isPublic ? 'Public' : 'Private');
+  const getVisibility = (evt: any) => evt?.visibility || (evt?.isPublic !== false ? 'Public' : 'Private');
   const getMeetingUrl = (evt: any) => evt?.meetingUrl || evt?.url;
+
+  const pushEventUpdate = useCallback(async (updatedFields: Record<string, any>) => {
+    if (!event) return;
+    const targetId = getId(event);
+    const resourceId = `event:${targetId}`;
+
+    const nextEvent: any = {
+      ...event,
+      ...updatedFields,
+      updatedAt: new Date(),
+    };
+
+    setEvent(nextEvent);
+    autonomicSyncEngine.markPending(resourceId, new Date().toISOString(), nextEvent);
+
+    try {
+      const cacheKey = `f_user_events_guest`;
+      const current = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
+      const nextList = [nextEvent, ...current.filter((e: any) => (e.id || e.$id) !== targetId)];
+      await LocalEngine.cacheSet(cacheKey, nextList);
+    } catch {
+      /* quiet */
+    }
+
+    try {
+      await eventApi.update(targetId, updatedFields as any);
+      autonomicSyncEngine.ack(resourceId);
+    } catch (err) {
+      console.error('Failed to sync event update remotely:', err);
+    }
+  }, [event]);
+
+  const handleTitleSubmit = () => {
+    setIsEditingTitle(false);
+    if (titleInput.trim() && titleInput.trim() !== event?.title) {
+      void pushEventUpdate({ title: titleInput.trim() });
+    }
+  };
+
+  const handleAboutSubmit = () => {
+    setIsEditingAbout(false);
+    if (aboutInput.trim() !== event?.description) {
+      void pushEventUpdate({ description: aboutInput.trim() });
+    }
+  };
 
   if (loading) {
     return (
@@ -117,6 +178,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
   const coverImage = getCoverImage(event);
   const visibility = getVisibility(event);
   const meetingUrl = getMeetingUrl(event);
+  const isPublic = (event as any).isPublic !== false && visibility !== 'Private';
   
   const coverStyle = coverImage
     ? { backgroundImage: `url(${coverImage})` }
@@ -144,32 +206,75 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
       <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 scrollbar-thin">
         {/* Header Title info */}
         <div>
-          <div className="flex flex-wrap gap-2 mb-2">
-            <span className="px-2.5 py-0.5 rounded-lg bg-[#1C1A18] border border-[#34322F] text-white text-[11px] font-bold font-satoshi capitalize">
-              {visibility}
-            </span>
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <button
+              type="button"
+              onClick={() => setIsVisibilityDrawerOpen(true)}
+              className="px-2.5 py-1 rounded-lg bg-[#1C1A18] hover:bg-[#242220] border border-[#34322F] hover:border-emerald-500/50 text-white text-[11px] font-bold font-satoshi capitalize transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              {isPublic ? <Globe className="w-3 h-3 text-emerald-400" /> : <Lock className="w-3 h-3 text-purple-400" />}
+              <span>{visibility}</span>
+              <ChevronDown className="w-3 h-3 text-white/40" />
+            </button>
             {(event as any).status === 'cancelled' && (
               <span className="px-2.5 py-0.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-[11px] font-mono font-bold uppercase">
                 Cancelled
               </span>
             )}
           </div>
-          <h2 className="text-xl font-black font-clash text-white tracking-tight leading-snug">
-            {event.title}
-          </h2>
+
+          {isEditingTitle ? (
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="text"
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
+                onBlur={handleTitleSubmit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleTitleSubmit();
+                }}
+                autoFocus
+                className="w-full bg-black/60 text-white border border-emerald-500 rounded-xl px-3 py-1.5 text-xl font-black font-clash focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleTitleSubmit}
+                className="p-2 rounded-xl bg-emerald-500 text-black font-bold shrink-0"
+              >
+                <Check className="w-4 h-4" strokeWidth={3} />
+              </button>
+            </div>
+          ) : (
+            <div 
+              onClick={() => setIsEditingTitle(true)}
+              className="group flex items-start justify-between gap-2 cursor-pointer rounded-xl p-1 -ml-1 hover:bg-white/[0.03] transition-all"
+            >
+              <h2 className="text-xl font-black font-clash text-white tracking-tight leading-snug">
+                {event.title}
+              </h2>
+              <Edit3 className="w-4 h-4 text-white/30 group-hover:text-emerald-400 transition-colors shrink-0 mt-1" />
+            </div>
+          )}
+
           <div className="flex items-center gap-2 mt-1.5 shrink-0">
-            <SyncStatusDot resourceId={eventIdValue} />
-            <SyncStatusLabel resourceId={eventIdValue} />
+            <SyncStatusDot resourceId={`event:${eventIdValue}`} />
+            <SyncStatusLabel resourceId={`event:${eventIdValue}`} />
           </div>
         </div>
 
         {/* Date & Time / Location (Card) */}
         <div className="p-4 rounded-[20px] bg-[#0A0908] border border-white/[0.04] shadow-[0_8px_24px_rgba(0,0,0,0.5)] flex flex-col gap-4">
           {/* When */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-mono font-bold tracking-wider text-indigo-400 uppercase">When</span>
+          <div 
+            onClick={() => setIsDateTimeDrawerOpen(true)}
+            className="flex flex-col gap-1.5 cursor-pointer group p-2.5 -mx-2.5 rounded-xl hover:bg-white/[0.03] transition-all border border-transparent hover:border-white/10"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold tracking-wider text-indigo-400 uppercase">When</span>
+              <span className="text-[10px] text-white/40 font-mono opacity-0 group-hover:opacity-100 transition-opacity">Click to edit date & time</span>
+            </div>
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-white/5 border border-white/10 rounded-xl text-indigo-400 flex-shrink-0">
+              <div className="p-2 bg-white/5 border border-white/10 rounded-xl text-indigo-400 flex-shrink-0 group-hover:border-indigo-500/40 transition-colors">
                 <Calendar className="w-4 h-4" />
               </div>
               <div className="flex flex-col min-w-0">
@@ -187,10 +292,16 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
           <div className="h-px bg-white/[0.04] w-full" />
 
           {/* Where */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-mono font-bold tracking-wider text-indigo-400 uppercase">Where</span>
+          <div 
+            onClick={() => setIsLocationDrawerOpen(true)}
+            className="flex flex-col gap-1.5 cursor-pointer group p-2.5 -mx-2.5 rounded-xl hover:bg-white/[0.03] transition-all border border-transparent hover:border-white/10"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold tracking-wider text-emerald-400 uppercase">Where</span>
+              <span className="text-[10px] text-white/40 font-mono opacity-0 group-hover:opacity-100 transition-opacity">Click to edit location</span>
+            </div>
             <div className="flex items-start gap-3">
-              <div className="p-2 bg-white/5 border border-white/10 rounded-xl text-indigo-400 flex-shrink-0">
+              <div className="p-2 bg-white/5 border border-white/10 rounded-xl text-emerald-400 flex-shrink-0 group-hover:border-emerald-500/40 transition-colors">
                 <MapPin className="w-4 h-4" />
               </div>
               <div className="flex flex-col min-w-0 flex-1">
@@ -202,6 +313,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
                     href={meetingUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     className="mt-2 inline-flex items-center justify-center gap-2 px-3.5 py-1.5 text-xs font-bold font-satoshi text-white bg-[#1C1A18] hover:bg-[#242220] border border-[#34322F] hover:border-[#6366F1] rounded-[8px] transition-all w-fit cursor-pointer"
                   >
                     <Video className="w-3.5 h-3.5 text-[#6366F1]" />
@@ -236,12 +348,57 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
           </div>
         )}
 
-        {/* Description */}
+        {/* Description / About */}
         <div className="flex flex-col gap-2">
-          <span className="text-[10px] font-mono font-bold tracking-wider text-[#8E8A86] uppercase">About</span>
-          <div className="p-4 rounded-[20px] bg-[#0A0908] border border-white/[0.04] text-sm leading-relaxed text-[#C1BEBA] font-satoshi whitespace-pre-line break-words">
-            {event.description || 'No description provided.'}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono font-bold tracking-wider text-[#8E8A86] uppercase">About</span>
+            {!isEditingAbout && (
+              <button
+                type="button"
+                onClick={() => setIsEditingAbout(true)}
+                className="text-[10px] font-mono text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <Edit3 className="w-3 h-3" />
+                <span>Edit</span>
+              </button>
+            )}
           </div>
+
+          {isEditingAbout ? (
+            <div className="flex flex-col gap-2">
+              <textarea
+                rows={4}
+                value={aboutInput}
+                onChange={(e) => setAboutInput(e.target.value)}
+                autoFocus
+                className="w-full p-3 rounded-2xl bg-black/60 border border-emerald-500 text-sm leading-relaxed text-[#C1BEBA] font-satoshi focus:outline-none resize-none"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingAbout(false)}
+                  className="px-3 py-1.5 rounded-xl bg-white/5 text-white/70 text-xs font-bold font-mono"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAboutSubmit}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-500 text-black font-bold text-xs font-mono flex items-center gap-1"
+                >
+                  <Check className="w-3.5 h-3.5" strokeWidth={3} />
+                  <span>Save About</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div 
+              onClick={() => setIsEditingAbout(true)}
+              className="p-4 rounded-[20px] bg-[#0A0908] border border-white/[0.04] hover:border-white/10 transition-all text-sm leading-relaxed text-[#C1BEBA] font-satoshi whitespace-pre-line break-words cursor-pointer"
+            >
+              {event.description || 'No description provided. Click to add details.'}
+            </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -284,6 +441,50 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
           </button>
         </div>
       </div>
+
+      {/* Drawers */}
+      <EventDateTimePickerDrawer
+        open={isDateTimeDrawerOpen}
+        onClose={() => setIsDateTimeDrawerOpen(false)}
+        startTime={startDate}
+        endTime={endDate}
+        onApply={(newStart, newEnd) => {
+          void pushEventUpdate({
+            startTime: newStart,
+            endTime: newEnd,
+          });
+          toast.success('Event schedule updated!');
+        }}
+      />
+
+      <EventLocationDrawer
+        open={isLocationDrawerOpen}
+        onClose={() => setIsLocationDrawerOpen(false)}
+        location={event.location || ''}
+        meetingUrl={meetingUrl || ''}
+        onApply={(newLoc, newUrl) => {
+          void pushEventUpdate({
+            location: newLoc,
+            meetingUrl: newUrl,
+            url: newUrl,
+          });
+          toast.success('Location & meeting link updated!');
+        }}
+      />
+
+      <EventVisibilityDrawer
+        open={isVisibilityDrawerOpen}
+        onClose={() => setIsVisibilityDrawerOpen(false)}
+        isPublic={isPublic}
+        onApply={(nextIsPublic) => {
+          void pushEventUpdate({
+            isPublic: nextIsPublic,
+            isGuest: nextIsPublic,
+            visibility: nextIsPublic ? 'Public' : 'Private',
+          });
+          toast.success(nextIsPublic ? 'Event is now Public' : 'Event is now Private');
+        }}
+      />
     </div>
   );
 }
