@@ -15,8 +15,19 @@ export async function generateMetadata({
         description: 'This event is private or does not exist.'};
     }
 
-    const title = `${event.title} | Shared Event`;
-    const description = event.description || `Date: ${new Date(event.startTime || '').toLocaleString()}`;
+    const eventTitle = event.title?.trim() || 'Scheduled Event';
+    const dateFormatted = event.startTime ? new Date(event.startTime).toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }) : '';
+    const locSnippet = event.location ? ` · ${event.location}` : '';
+    const descSnippet = event.description?.trim() ? `${event.description.trim().slice(0, 140)}... ` : '';
+
+    const title = `${eventTitle} | Kylrix Event`;
+    const description = `${descSnippet}${dateFormatted}${locSnippet}`;
     const previewImage = `/events/${eventId}/opengraph-image?v=${encodeURIComponent(
       event.$updatedAt || eventId
     )}`;
@@ -33,17 +44,22 @@ export async function generateMetadata({
             url: previewImage,
             width: 1200,
             height: 630,
-            alt: title},
-        ]},
+            alt: title,
+          },
+        ],
+      },
       twitter: {
         card: 'summary_large_image',
         title,
         description,
-        images: [previewImage]}};
+        images: [previewImage],
+      },
+    };
   } catch (_e) {
     return {
-      title: 'Shared Event | Kylrix Flow',
-      description: 'Collaborate on events, scheduling, and high-velocity command centers.'};
+      title: 'Scheduled Event | Kylrix',
+      description: 'Coordinate scheduled events, RSVPs, and live moments on Kylrix.',
+    };
   }
 }
 
