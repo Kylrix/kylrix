@@ -83,7 +83,7 @@ export class NostrRelayPool {
                 }
               }
             }
-          } catch (e) {
+          } catch {
             // Ignore malformed relay frame
           }
         };

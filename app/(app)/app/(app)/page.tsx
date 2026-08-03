@@ -80,8 +80,8 @@ export default function NotesPage() {
     refetchNotes,
     isPinned,
     pinnedIds,
-    hasMore,
-    loadMore
+    hasMore: _hasMore,
+    loadMore: _loadMore
   } = useNotes();
   const { promptSudo } = useSudo();
   const { openOverlay, closeOverlay } = useOverlay();
