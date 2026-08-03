@@ -37,6 +37,10 @@ import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import toast from 'react-hot-toast';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import {
+  FlowInstallConfirmDrawer,
+  isFlowConfirmPromptEnabled,
+} from '@/components/flows/FlowInstallConfirmDrawer';
 
 type Tab = 'discover' | 'installed';
 
