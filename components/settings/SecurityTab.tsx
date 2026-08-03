@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { RememberUnlockSettings } from '@/components/settings/RememberUnlockSettings';
 import { UnlockOnDemandSettings } from '@/components/settings/UnlockOnDemandSettings';
+import { FlowInstallSecuritySettings } from '@/components/settings/FlowInstallSecuritySettings';
 import { formatDateWithFallback } from '@/lib/date-utils';
 
 type PasskeyEntry = {
@@ -212,6 +213,8 @@ export function SecurityTab({
       <UnlockOnDemandSettings />
 
       <RememberUnlockSettings />
+
+      <FlowInstallSecuritySettings />
 
       <Section
         title="2FA"

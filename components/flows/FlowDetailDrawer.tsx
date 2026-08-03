@@ -35,20 +35,28 @@ export function VerifiedMark({ kind }: { kind: FlowVerifyKind }) {
   );
 }
 
+import { Download, Check, Trash2 } from 'lucide-react';
+
 type Props = {
   flow: WorkflowChain;
   publisher?: FlowPublisher;
   isOwner?: boolean;
+  isInstalled?: boolean;
   onClose: () => void;
   onChanged?: (flow: WorkflowChain) => void;
+  onInstall?: () => void;
+  onUninstall?: () => void;
 };
 
 export function FlowDetailDrawer({
   flow,
   publisher,
   isOwner = true,
+  isInstalled = false,
   onClose,
   onChanged,
+  onInstall,
+  onUninstall,
 }: Props) {
   const [local, setLocal] = useState(flow);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -145,6 +153,43 @@ export function FlowDetailDrawer({
         {local.description ? (
           <p className="text-sm text-white/50">{local.description}</p>
         ) : null}
+
+        <section className="rounded-[18px] bg-[#0A0908] border border-white/[0.05] p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-white">Flow Status</h3>
+              <p className="text-[11px] text-white/40">
+                {isInstalled ? 'Installed on this device' : 'Available for installation'}
+              </p>
+            </div>
+            {isInstalled ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                  <Check size={12} /> Installed
+                </span>
+                {onUninstall && (
+                  <button
+                    type="button"
+                    onClick={onUninstall}
+                    className="p-1.5 rounded-lg bg-[#161412] border border-red-500/20 text-red-400 hover:bg-red-500/10 cursor-pointer"
+                    title="Remove Flow"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={onInstall}
+                className="py-2 px-4 rounded-xl font-extrabold text-xs bg-[#A855F7] hover:bg-[#9333EA] text-white cursor-pointer transition shadow-[0_2px_10px_rgba(168,85,247,0.3)] flex items-center gap-1.5"
+              >
+                <Download size={14} />
+                <span>Install Flow</span>
+              </button>
+            )}
+          </div>
+        </section>
 
         <section className="rounded-[18px] bg-[#0A0908] border border-white/[0.05] p-4 space-y-3">
           <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/45">

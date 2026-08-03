@@ -234,14 +234,34 @@ export default function FlowsPage() {
     closeOverlay();
   }, [native, closeOverlay]);
 
+  const triggerInstallWithConfirmation = useCallback((flow: DiscoverFlow) => {
+    if (!isFlowConfirmPromptEnabled()) {
+      void handleInstall(flow.id);
+      return;
+    }
+    openUnified('custom', {
+      content: (
+        <FlowInstallConfirmDrawer
+          flow={flow}
+          onConfirm={() => void handleInstall(flow.id)}
+          onClose={() => closeUnified()}
+        />
+      ),
+    });
+  }, [openUnified, closeUnified]);
+
   const openDetail = useCallback(
     (flow: DiscoverFlow, isOwner: boolean) => {
+      const isInst = installedIds.includes(flow.id) || isOwner;
       const panel = (
         <FlowDetailDrawer
           flow={flow}
           publisher={flow.publisher}
           isOwner={isOwner}
+          isInstalled={isInst}
           onClose={closeDetail}
+          onInstall={() => triggerInstallWithConfirmation(flow)}
+          onUninstall={() => void handleUninstall(flow)}
           onChanged={(next) => {
             updateWorkflow(next.id, next);
             if (next.isPublic) {
@@ -266,7 +286,7 @@ export default function FlowsPage() {
         openOverlay(panel);
       }
     },
-    [isDesktop, native, openOverlay, closeDetail, updateWorkflow]
+    [isDesktop, native, openOverlay, closeDetail, updateWorkflow, installedIds, triggerInstallWithConfirmation]
   );
 
   const handleInstall = async (id: string) => {
@@ -417,7 +437,7 @@ export default function FlowsPage() {
                         <button
                           type="button"
                           title="Install"
-                          onClick={() => void handleInstall(flow.id)}
+                          onClick={() => triggerInstallWithConfirmation(flow)}
                           className="p-2 rounded-lg bg-[#161412] border border-white/[0.06] text-[#A855F7] hover:bg-[#1C1A18] cursor-pointer"
                         >
                           <Download size={14} />
