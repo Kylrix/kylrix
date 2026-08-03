@@ -228,12 +228,19 @@ export function CreateGoalComposer({
           ref={contentRef}
           rows={isExpanded ? 12 : 6}
           value={content}
-          onPaste={() => {
+          onPaste={(e) => {
             isPastedRef.current = true;
             if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
             pasteTimerRef.current = setTimeout(() => {
               isPastedRef.current = false;
             }, 2000);
+            const pastedText = e.clipboardData.getData('text');
+            if (pastedText) {
+              setTimeout(() => {
+                const updated = contentRef.current?.value || content;
+                handleContentChange(updated);
+              }, 10);
+            }
           }}
           onChange={(e) => handleContentChange(e.target.value)}
           onKeyDown={(e) => {

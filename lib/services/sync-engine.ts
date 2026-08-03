@@ -378,10 +378,8 @@ async function flushGoalPending(
   }
 
   const dataPayload = pickGoalAutosavePayload(payload);
-  if (!String(dataPayload.title || '').trim() && !String(dataPayload.description || '').trim()) {
-    console.warn(`[SyncEngine] Dropping empty pending goal: ${goalId}`);
-    autonomicSyncEngine.ack(pendingKey, queuedRevision);
-    return;
+  if (!String(dataPayload.title || '').trim()) {
+    dataPayload.title = String(dataPayload.description || '').trim().slice(0, 32) || 'Untitled Goal';
   }
 
   const flushRevision = goalRevisionOf(payload) || queuedRevision;
@@ -519,10 +517,8 @@ async function flushNotePending(
     isPublic: getNotePublicState(payload),
     isGuest: !!payload.isGuest};
 
-  if (!String(dataPayload.content || '').trim() && !String(dataPayload.title || '').trim()) {
-    console.warn(`[SyncEngine] Dropping empty pending note: ${noteId}`);
-    autonomicSyncEngine.ack(noteId, queuedRevision);
-    return;
+  if (!String(dataPayload.title || '').trim()) {
+    dataPayload.title = String(dataPayload.content || '').trim().slice(0, 32) || 'Untitled Note';
   }
 
   const flushRevision = revisionOf(payload) || queuedRevision;

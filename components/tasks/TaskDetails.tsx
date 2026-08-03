@@ -313,6 +313,13 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const [_isGeneratingSubtasks,] = useState(false);
 
 
+  React.useEffect(() => {
+    if (task) {
+      if (!isEditingTitle) setEditTitle(task.title || '');
+      if (!isEditingDescription) setEditDescription(task.description || '');
+    }
+  }, [task?.id, task?.title, task?.description, isEditingTitle, isEditingDescription]);
+
   const handleStartEditTitle = () => {
     const currentTask = task;
     if (!currentTask) return;
