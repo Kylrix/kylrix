@@ -1,107 +1,63 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import {
-  Box,
-  Typography,
-  Button,
-  AvatarGroup,
-  Paper,
-  Container,
-  
-  useTheme,
-  TextField,
-  CircularProgress,
-  Stack,
-  IconButton,
-  Chip} from '@/lib/openbricks/primitives';
-import {
-  ContentCopy as ContentCopyIcon} from '@/lib/openbricks/icons';
+  Calendar,
+  Clock,
+  MapPin,
+  Share2,
+  Video,
+  Globe,
+  Lock,
+  ArrowLeft,
+  Check,
+  Users,
+  Send,
+  Sparkles,
+  UserCheck,
+  UserPlus,
+  MessageSquare,
+  FileText,
+  Copy,
+} from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { getResourceCollaboratorsSecure } from '@/lib/actions/secure-ops';
 import { account } from '@/lib/appwrite/client';
-import { useCallback } from 'react';
 import { events as eventApi, eventGuests as guestApi } from '@/lib/kylrixflow';
-import { Event } from '@/types/kylrixflow';
+import type { Event as AppwriteEvent } from '@/types/kylrixflow';
 import { formatTime } from '@/lib/time-util';
 import { Query } from 'appwrite';
-import { createGhostNoteForResource, promoteGhostResourceThreadToStory, getOrCreateThread, findThread, listThreadMessages, postThreadMessage } from '@/lib/actions/client-ops';
+import {
+  createGhostNoteForResource,
+  promoteGhostResourceThreadToStory,
+  getOrCreateThread,
+  findThread,
+  listThreadMessages,
+  postThreadMessage,
+} from '@/lib/actions/client-ops';
 import { client } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { useToast } from '@/components/ui/Toast';
 import { AppwriteService } from '@/lib/appwrite';
-import { Clock, FileText, Globe, Send } from 'lucide-react';
 import { generateEventPattern } from '@/utils/patternGenerator';
-import { fetchProfilePreview } from '@/lib/profile-preview';
-import { IdentityAvatar, computeIdentityFlags } from '@/components/common/IdentityBadge';
+import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { MultiSectionContainer } from '@/context/SectionContext';
-
-function AttendeeAvatar({ guest}: { guest: any, theme: any }) {
-  const [url, setUrl] = useState<string | null>(null);
-  const [identity, setIdentity] = useState<{ verified: boolean; pro: boolean }>({ verified: false, pro: false });
-  const searchKey = guest.username || guest.displayName || guest.email || guest.userId;
-
-  useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      try {
-        const { searchGlobalUsers } = await import('@/lib/ecosystem/identity');
-        const users = searchKey ? await searchGlobalUsers(searchKey, 1) : [];
-        if (users.length > 0) {
-          const user = users[0] as any;
-          setIdentity(computeIdentityFlags({
-            createdAt: user.$createdAt || user.createdAt || null,
-            lastUsernameEdit: user.last_username_edit || null,
-            profilePicId: user.profilePicId || user.avatar || null,
-            username: user.username || null,
-            bio: user.bio || null,
-            tier: user.tier || null,
-            publicKey: user.publicKey || null}));
-        }
-        const fileId = users[0]?.profilePicId || users[0]?.avatar || guest.profilePicId || guest.avatar || null;
-        if (users.length > 0 && fileId) {
-          const preview = await fetchProfilePreview(fileId, 64, 64);
-          if (mounted) setUrl(preview);
-        }
-      } catch { }
-    };
-    load();
-    return () => { mounted = false; };
-  }, [searchKey, guest.profilePicId, guest.avatar]);
-
-  return (
-    <IdentityAvatar
-      src={url || undefined}
-      alt={guest.email}
-      fallback={guest.email?.charAt(0).toUpperCase() || 'U'}
-      verified={identity.verified}
-      pro={identity.pro}
-      size={40}
-    />
-  );
-}
+import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
+import { exportToICS } from '@/lib/utils/export';
+import toast from 'react-hot-toast';
 
 export default function EventPage() {
   const { eventId } = useParams<{ eventId: string }>();
-  const theme = useTheme();
+  const router = useRouter();
   const { user, isAuthenticated, openIDMWindow } = useAuth();
+  const { showSuccess, showError } = useToast();
 
-  const [rawEvent, setRawEvent] = useState<Event | null>(null);
+  const [event, setEvent] = useState<AppwriteEvent | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const event = rawEvent || (loading ? {
-    $id: eventId as string,
-    title: 'Loading Event...',
-    startTime: new Date().toISOString(),
-    endTime: new Date(Date.now() + 3600000).toISOString(),
-    location: 'Loading address...',
-    description: 'Fetching event details...',
-    coverImageId: '',
-    $createdAt: new Date().toISOString(),
-    $updatedAt: new Date().toISOString()} as any : null);
   const [error, setError] = useState<string | null>(null);
+
   const [isRegistered, setIsRegistered] = useState(false);
   const [guestId, setGuestId] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
@@ -111,21 +67,30 @@ export default function EventPage() {
   const [organizers, setOrganizers] = useState<any[]>([]);
   const [loadingOrganizers, setLoadingOrganizers] = useState(false);
 
+  // Huddle Discussion State
+  const [huddleMessages, setHuddleMessages] = useState<any[]>([]);
+  const [huddleLoading, setHuddleLoading] = useState(false);
+  const [huddleSending, setHuddleSending] = useState(false);
+  const [threadId, setThreadId] = useState<string | null>(null);
+  const [isHuddleInit, setIsHuddleInit] = useState(false);
+  const [inputText, setInputText] = useState('');
+  const huddleMessageEndRef = useRef<HTMLDivElement>(null);
+
   const fetchOrganizers = useCallback(async () => {
     if (!eventId) return;
     setLoadingOrganizers(true);
     try {
-        const { jwt } = await account.createJWT();
-        const { collaborators } = await getResourceCollaboratorsSecure({
-            resourceId: eventId as string,
-            resourceType: 'event',
-            jwt
-        });
-        setOrganizers(collaborators || []);
+      const { jwt } = await account.createJWT();
+      const { collaborators } = await getResourceCollaboratorsSecure({
+        resourceId: eventId,
+        resourceType: 'event',
+        jwt,
+      });
+      setOrganizers(collaborators || []);
     } catch (orgErr) {
-        console.error('Failed to fetch event organizers:', orgErr);
-    } finally {
-        setLoadingOrganizers(false);
+      console.error('Failed to fetch event organizers:', orgErr);
+    } fontally {
+      setLoadingOrganizers(false);
     }
   }, [eventId]);
 
@@ -133,18 +98,68 @@ export default function EventPage() {
     fetchOrganizers();
   }, [fetchOrganizers]);
 
-  // Huddle Discussion State & Effects
-  const { showSuccess, showError } = useToast();
-  const [huddleMessages, setHuddleMessages] = useState<any[]>([]);
-  const [huddleLoading, setHuddleLoading] = useState(false);
-  const [huddleSending, setHuddleSending] = useState(false);
-  const [threadId, setThreadId] = useState<string | null>(null);
-  const [isHuddleInit, setIsHuddleInit] = useState(false);
-  const [huddleTimeRemaining, setHuddleTimeRemaining] = useState('');
-  const [inputText, setInputText] = useState('');
-  const huddleMessageEndRef = React.useRef<HTMLDivElement>(null);
+  // Fetch event details
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        setLoading(true);
+        const eventData = await eventApi.get(eventId);
+        if (eventData.visibility === 'private' && (!user || eventData.userId !== user.$id)) {
+          setError('This event is private.');
+          return;
+        }
+        setEvent(eventData);
+      } catch (err: any) {
+        if (err?.code === 401 || err?.code === 404) {
+          setError('This event is private or does not exist.');
+        } else {
+          setError('Event not found or failed to load.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (eventId) fetchEvent();
+  }, [eventId, user]);
 
-  // Check if Huddle is initialized
+  // Check registration status
+  useEffect(() => {
+    const checkRegistration = async () => {
+      if (!user || !eventId) return;
+      try {
+        const guests = await guestApi.list([
+          Query.equal('eventId', eventId),
+          Query.equal('userId', user.$id),
+        ]);
+        if (guests.total > 0) {
+          setIsRegistered(true);
+          setGuestId(guests.rows[0].$id);
+        } else {
+          setIsRegistered(false);
+          setGuestId(null);
+        }
+      } catch {
+        /* quiet */
+      }
+    };
+    checkRegistration();
+  }, [user, eventId]);
+
+  // Fetch attendees
+  useEffect(() => {
+    const fetchAttendees = async () => {
+      if (!eventId) return;
+      try {
+        const guests = await guestApi.list([Query.equal('eventId', eventId)]);
+        setAttendees(guests.rows);
+      } catch {
+        /* quiet */
+      }
+    };
+    fetchAttendees();
+  }, [eventId, isRegistered]);
+
+  // Huddle check
   useEffect(() => {
     if (!eventId) return;
     let active = true;
@@ -156,20 +171,21 @@ export default function EventPage() {
         if (existing?.id) {
           setThreadId(existing.id);
           setIsHuddleInit(true);
-          setHuddleTimeRemaining('');
         } else {
           setIsHuddleInit(false);
         }
-      } catch (_err) {
+      } catch {
         if (active) setIsHuddleInit(false);
       }
     };
 
     checkHuddle();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [eventId]);
 
-  // Load comments and subscribe
+  // Load Huddle comments
   useEffect(() => {
     if (!eventId || !isHuddleInit) return;
     let active = true;
@@ -185,10 +201,10 @@ export default function EventPage() {
         }
         if (!tid) return;
         const rows = await listThreadMessages(tid, { limit: 200 });
-        const res = { rows: rows.map((r: any) => ({ ...r, $id: r.id, createdAt: r.createdAt })) };
         if (!active) return;
+
         const msgs = await Promise.all(
-          res.rows.map(async (doc: any) => {
+          rows.map(async (doc: any) => {
             let senderName = 'Attendee';
             if (user && doc.userId === user.$id) {
               senderName = user.name || 'You';
@@ -196,17 +212,20 @@ export default function EventPage() {
               try {
                 const profile = await AppwriteService.getProfile(doc.userId);
                 if (profile) senderName = profile.name || 'Attendee';
-              } catch {}
+              } catch {
+                /* quiet */
+              }
             }
             return {
-              id: doc.$id,
+              id: doc.id || doc.$id,
               senderId: doc.userId,
               senderName,
               content: doc.content,
-              timestamp: new Date(doc.createdAt).getTime()};
-          })
+              timestamp: new Date(doc.createdAt || Date.now()).getTime(),
+            };
+          }),
         );
-        msgs.sort((a: any, b: any) => a.timestamp - b.timestamp);
+        msgs.sort((a, b) => a.timestamp - b.timestamp);
         setHuddleMessages(msgs);
       } catch (err) {
         console.error('Failed to load huddle comments:', err);
@@ -221,10 +240,10 @@ export default function EventPage() {
       `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.tables.comments.rows`,
       async (response: any) => {
         if (!active) return;
-        const events = response.events;
+        const eventsList = response.events;
         const payload = response.payload;
 
-        if (events.some((e: string) => e.includes('.create')) && payload.noteId === eventId) {
+        if (eventsList.some((e: string) => e.includes('.create')) && payload.noteId === eventId) {
           let senderName = 'Attendee';
           if (user && payload.userId === user.$id) {
             senderName = user.name || 'You';
@@ -232,31 +251,79 @@ export default function EventPage() {
             try {
               const profile = await AppwriteService.getProfile(payload.userId);
               if (profile) senderName = profile.name || 'Attendee';
-            } catch {}
+            } catch {
+              /* quiet */
+            }
           }
           const msg = {
             id: payload.$id,
             senderId: payload.userId,
             senderName,
             content: payload.content,
-            timestamp: new Date(payload.createdAt).getTime()};
-          setHuddleMessages(prev => {
-            if (prev.some(m => m.id === msg.id)) return prev;
+            timestamp: new Date(payload.createdAt).getTime(),
+          };
+          setHuddleMessages((prev) => {
+            if (prev.some((m) => m.id === msg.id)) return prev;
             return [...prev, msg].sort((a, b) => a.timestamp - b.timestamp);
           });
         }
-      }
+      },
     );
 
     return () => {
       active = false;
       unsubscribe();
     };
-  }, [eventId, isHuddleInit, user]);
+  }, [eventId, isHuddleInit, threadId, user]);
 
   useEffect(() => {
     huddleMessageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [huddleMessages]);
+
+  const handleRegister = async () => {
+    if (!isAuthenticated) {
+      openIDMWindow();
+      return;
+    }
+    if (!user || !event) return;
+    try {
+      setRegistering(true);
+      const newGuest = await guestApi.create({
+        eventId: event.$id,
+        userId: user.$id,
+        email: user.email,
+        status: 'accepted',
+        role: 'attendee',
+      });
+      setIsRegistered(true);
+      setGuestId(newGuest.$id);
+      toast.success('Successfully registered for event!');
+    } catch {
+      toast.error('Failed to register');
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const handleCancelRegistration = async () => {
+    if (!guestId) return;
+    try {
+      setRegistering(true);
+      await guestApi.delete(guestId);
+      setIsRegistered(false);
+      setGuestId(null);
+      toast.success('Registration cancelled');
+    } catch {
+      toast.error('Failed to cancel registration');
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast.success('Event share link copied to clipboard');
+  };
 
   const handleInitHuddle = async () => {
     if (!event) return;
@@ -265,7 +332,7 @@ export default function EventPage() {
       const res = await createGhostNoteForResource(eventId, 'event', `${event.title} Discussion`);
       setThreadId((res as any)?.$id || (res as any)?.primaryThreadId || null);
       setIsHuddleInit(true);
-      showSuccess('Event discussion ready');
+      showSuccess('Event discussion thread created!');
     } catch (err) {
       console.error('Failed to init huddle:', err);
       showError('Failed to initialize huddle.');
@@ -277,7 +344,10 @@ export default function EventPage() {
   const handleSendHuddleMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || huddleSending) return;
-    if (!isAuthenticated) { openIDMWindow(); return; }
+    if (!isAuthenticated) {
+      openIDMWindow();
+      return;
+    }
     setHuddleSending(true);
     try {
       let tid = threadId;
@@ -295,13 +365,17 @@ export default function EventPage() {
       await postThreadMessage({ threadId: tid, content: inputText.trim() });
       setInputText('');
       const rows = await listThreadMessages(tid, { limit: 200 });
-      setHuddleMessages(rows.map((doc: any) => ({
-        id: doc.id,
-        senderId: doc.userId,
-        senderName: user?.name || 'You',
-        content: doc.content,
-        timestamp: new Date(doc.createdAt || Date.now()).getTime(),
-      })).sort((a: any, b: any) => a.timestamp - b.timestamp));
+      setHuddleMessages(
+        rows
+          .map((doc: any) => ({
+            id: doc.id,
+            senderId: doc.userId,
+            senderName: user?.name || 'You',
+            content: doc.content,
+            timestamp: new Date(doc.createdAt || Date.now()).getTime(),
+          }))
+          .sort((a: any, b: any) => a.timestamp - b.timestamp),
+      );
     } catch (err) {
       console.error('Failed to send comment:', err);
       showError('Failed to send message.');
@@ -325,417 +399,419 @@ export default function EventPage() {
     }
   };
 
-  // Fetch event details
-  useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        setLoading(true);
-        const eventData = await eventApi.get(eventId);
-        if (eventData.visibility === 'private' && (!user || eventData.userId !== user.$id)) {
-          setError('This event is private.');
-          return;
-        }
-        setRawEvent(eventData);
-      } catch (err: any) {
-        if (err?.code === 401 || err?.code === 404) {
-          setError('This event is private or does not exist.');
-        } else {
-          setError('Event not found or failed to load.');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (eventId) fetchEvent();
-  }, [eventId, user]);
-
-  // Check registration status
-  useEffect(() => {
-    const checkRegistration = async () => {
-      if (!user || !eventId) return;
-      try {
-        const guests = await guestApi.list([
-          Query.equal('eventId', eventId),
-          Query.equal('userId', user.$id)]);
-        if (guests.total > 0) {
-          setIsRegistered(true);
-          setGuestId(guests.rows[0].$id);
-        } else {
-          setIsRegistered(false);
-          setGuestId(null);
-        }
-      } catch { }
-    };
-    checkRegistration();
-  }, [user, eventId]);
-
-  // Fetch all attendees
-  useEffect(() => {
-    const fetchAttendees = async () => {
-      if (!eventId) return;
-      try {
-        const guests = await guestApi.list([Query.equal('eventId', eventId)]);
-        setAttendees(guests.rows);
-      } catch { }
-    };
-    fetchAttendees();
-  }, [eventId, isRegistered]);
-
-  const handleRegister = async () => {
-    if (!isAuthenticated) { openIDMWindow(); return; }
-    if (!user || !event) return;
-    try {
-      setRegistering(true);
-      const newGuest = await guestApi.create({
-        eventId: event.$id,
-        userId: user.$id,
-        email: user.email,
-        status: 'accepted',
-        role: 'attendee'});
-      setIsRegistered(true);
-      setGuestId(newGuest.$id);
-    } catch { } finally { setRegistering(false); }
-  };
-
-  const handleCancelRegistration = async () => {
-    if (!guestId) return;
-    try {
-      setRegistering(true);
-      await guestApi.delete(guestId);
-      setIsRegistered(false);
-      setGuestId(null);
-    } catch { } finally { setRegistering(false); }
-  };
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-  };
-
-  if (!loading && (error || !event)) {
+  if (loading) {
     return (
-      <Box sx={{ minHeight: '100vh', bgcolor: '#000000', display: 'grid', placeItems: 'center', p: 4 }}>
-        <Typography variant="h4" sx={{ color: 'white', fontFamily: 'var(--font-clash)', fontWeight: 900 }}>{error || "Event not found"}</Typography>
-      </Box>
+      <div className="min-h-screen bg-[#0A0908] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#6366F1]" />
+          <span className="text-xs font-mono font-bold text-white/50">Loading event details...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !event) {
+    return (
+      <div className="min-h-screen bg-[#0A0908] flex items-center justify-center p-4">
+        <div className="max-w-md w-full p-8 rounded-[28px] bg-[#161412] border border-[#34322F] text-center flex flex-col items-center gap-4">
+          <div className="p-3 rounded-2xl bg-red-500/10 text-red-400 border border-red-500/20">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold font-clash text-white">{error || 'Event not found'}</h2>
+          <p className="text-xs text-[#8E8A86] font-satoshi">
+            This event might be private, deleted, or accessible only by authorized invitees.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push('/events')}
+            className="mt-2 px-5 py-2.5 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-xs font-mono uppercase tracking-wider transition-all cursor-pointer"
+          >
+            Back to Events
+          </button>
+        </div>
+      </div>
     );
   }
 
   const startDate = new Date(event.startTime);
   const endDate = new Date(event.endTime);
-  const coverStyle = event.coverImageId
-    ? { backgroundImage: `url(${event.coverImageId})` }
+  const isPublic = event.visibility === 'public' || Boolean(event.isPublic);
+  const coverImage = event.coverImageId || (event as any).coverImage;
+  const meetingUrl = event.meetingUrl || (event as any).url;
+  const coverStyle = coverImage
+    ? { backgroundImage: `url(${coverImage})` }
     : { background: generateEventPattern(event.$id + event.title) };
 
   return (
-    <Box sx={{ minHeight: '100vh', pb: 8, bgcolor: '#000000', p: { xs: 2, md: 4 } }}>
+    <div className="min-h-screen bg-[#0A0908] text-white font-satoshi pb-16 selection:bg-[#6366F1]/30">
       <MultiSectionContainer panels={['note', 'huddles', 'goals']} contextId={eventId}>
-      <Container maxWidth="md" sx={{ px: { xs: 0, sm: 2 } }}>
-        <Paper sx={{ overflow: 'hidden', borderRadius: { xs: 0, sm: '28px' }, mb: 4, bgcolor: '#161412', border: '1px solid #34322F', backgroundImage: 'none' }}>
-          {loading ? (
-            <></>
-          ) : (
-            <Box sx={{ height: { xs: 250, md: 350 }, position: 'relative', backgroundSize: 'cover', ...coverStyle }}>
-              <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
-                <Button 
-                  variant="contained" 
-                  onClick={handleCopyLink}
-                  sx={{
-                    bgcolor: '#000000',
-                    color: 'white',
-                    border: '1px solid #34322F',
-                    minWidth: 'auto',
-                    p: 1.25,
-                    borderRadius: '12px',
-                    '&:hover': { bgcolor: '#1C1A18' }
-                  }}
+        {/* Cover Header */}
+        <div className="relative w-full h-[260px] md:h-[360px] overflow-hidden">
+          <div
+            className="w-full h-full bg-cover bg-center transition-all duration-500"
+            style={coverStyle}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0A0908] via-[#0A0908]/40 to-black/60" />
+
+          {/* Top Bar Navigation */}
+          <div className="absolute top-4 inset-x-4 max-w-5xl mx-auto flex items-center justify-between z-10">
+            <button
+              type="button"
+              onClick={() => router.push('/events')}
+              className="p-2.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-white/80 hover:text-white hover:bg-black/80 transition-all flex items-center gap-2 text-xs font-mono font-bold cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Events</span>
+            </button>
+
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-white text-xs font-bold font-mono capitalize flex items-center gap-1.5">
+                {isPublic ? (
+                  <Globe className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <Lock className="w-3.5 h-3.5 text-purple-400" />
+                )}
+                <span>{isPublic ? 'Public Event' : 'Private'}</span>
+              </span>
+
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="p-2.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-white/80 hover:text-white hover:bg-black/80 transition-all flex items-center justify-center cursor-pointer"
+                title="Share Event"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Container */}
+        <div className="max-w-4xl mx-auto px-4 -mt-20 relative z-20 flex flex-col gap-8">
+          {/* Main Card Hero */}
+          <div className="p-6 md:p-8 rounded-[28px] bg-[#161412] border border-[#34322F] shadow-2xl flex flex-col gap-6 backdrop-blur-md">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2 text-xs text-[#8E8A86] font-mono">
+                  <SyncStatusDot resourceId={`event:${event.$id}`} />
+                  <SyncStatusLabel resourceId={`event:${event.$id}`} />
+                </div>
+                <span className="px-3 py-1 rounded-full bg-[#6366F1]/10 border border-[#6366F1]/20 text-[#818CF8] text-xs font-mono font-bold">
+                  {attendees.length} {attendees.length === 1 ? 'Attendee' : 'Attendees'}
+                </span>
+              </div>
+
+              <h1 className="text-3xl md:text-5xl font-black font-clash text-white tracking-tight leading-tight">
+                {event.title}
+              </h1>
+
+              {/* Host Badge */}
+              <div className="flex items-center gap-3 pt-2">
+                <IdentityAvatar userId={event.userId} size={40} />
+                <div className="flex flex-col">
+                  <span className="text-xs font-mono uppercase tracking-wider text-[#8E8A86]">Hosted by</span>
+                  <span className="text-sm font-bold text-white">Event Organizer</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick RSVP Banner Action */}
+            <div className="p-4 rounded-2xl bg-[#1C1A18] border border-[#34322F] flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-[#6366F1]/10 text-[#6366F1] border border-[#6366F1]/20 shrink-0">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-white">
+                    {isRegistered ? 'You are attending this event!' : 'RSVP to confirm your attendance'}
+                  </span>
+                  <span className="text-xs text-[#8E8A86] font-mono">
+                    {isRegistered
+                      ? 'Registration confirmed. See schedule details below.'
+                      : 'Join other guests in the event schedule.'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={isRegistered ? handleCancelRegistration : handleRegister}
+                disabled={registering}
+                className={`w-full sm:w-auto px-6 py-3 rounded-xl font-mono font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shrink-0 ${
+                  isRegistered
+                    ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30'
+                    : 'bg-[#6366F1] hover:bg-[#4F46E5] text-white shadow-[0_4px_12px_rgba(99,102,241,0.3)]'
+                }`}
+              >
+                {registering ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                ) : isRegistered ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Cancel RSVP</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4" />
+                    <span>Register Now</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Details Grid: When & Where */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* When Card */}
+            <div className="p-6 rounded-[28px] bg-[#161412] border border-[#34322F] flex flex-col gap-4">
+              <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#818CF8] flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#6366F1]" />
+                  Schedule (When)
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    exportToICS({
+                      title: event.title,
+                      description: event.description,
+                      startTime: event.startTime,
+                      endTime: event.endTime,
+                      location: event.location,
+                    })
+                  }
+                  className="text-[10px] font-mono font-bold text-white/50 hover:text-white transition-colors"
                 >
-                  <ContentCopyIcon fontSize="small" />
-                </Button>
-              </Box>
-            </Box>
-          )}
+                  + Add to Calendar
+                </button>
+              </div>
 
-          <Box sx={{ p: { xs: 3, md: 5 } }}>
-            {loading ? (
-              <></>
-            ) : (
-              <Typography variant="h3" fontWeight={900} gutterBottom sx={{ fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', color: 'white', fontSize: { xs: '2rem', md: '3rem' } }}>{event.title}</Typography>
-            )}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-lg font-extrabold text-white">
+                  {formatTime(startDate, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                </span>
+                <div className="flex items-center gap-2 text-xs text-[#8E8A86] font-mono">
+                  <Clock className="w-3.5 h-3.5 text-[#818CF8]" />
+                  <span>
+                    {formatTime(startDate, { hour: 'numeric', minute: '2-digit', hour12: true })} -{' '}
+                    {formatTime(endDate, { hour: 'numeric', minute: '2-digit', hour12: true })}
+                  </span>
+                </div>
+              </div>
+            </div>
 
-            {loading ? (
-              <></>
-            ) : (
-              <Paper sx={{ p: 3, mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#1C1A18', border: '1px solid #34322F', borderRadius: '16px', backgroundImage: 'none' }}>
-                <Box>
-                  <Typography variant="subtitle1" fontWeight={700} sx={{ color: 'white', fontFamily: 'var(--font-satoshi)' }}>{formatTime(startDate, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</Typography>
-                  <Typography variant="body2" sx={{ color: '#8E8A86', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }}>{formatTime(startDate, { hour: 'numeric', minute: '2-digit', hour12: true })} - {formatTime(endDate, { hour: 'numeric', minute: '2-digit', hour12: true })}</Typography>
-                </Box>
-                <Button 
-                  variant="contained" 
-                  onClick={isRegistered ? handleCancelRegistration : handleRegister} 
-                  disabled={registering}
-                  sx={{
-                    bgcolor: '#6366F1',
-                    color: 'white',
-                    fontWeight: 800,
-                    borderRadius: '12px',
-                    px: 3,
-                    py: 1.25,
-                    fontFamily: 'var(--font-satoshi)',
-                    textTransform: 'none',
-                    '&:hover': { bgcolor: '#4F46E5' }
-                  }}
-                >
-                  {registering ? '...' : isRegistered ? 'Cancel' : 'Register'}
-                </Button>
-              </Paper>
-            )}
+            {/* Where Card */}
+            <div className="p-6 rounded-[28px] bg-[#161412] border border-[#34322F] flex flex-col gap-4">
+              <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-emerald-500" />
+                  Location (Where)
+                </span>
+              </div>
 
-            {loading ? (
-              <Box sx={{ mb: 4 }}>
-                <></>
-                <></>
-                <></>
-              </Box>
-            ) : (
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h6" fontWeight={700} gutterBottom sx={{ color: '#8E8A86', fontFamily: 'var(--font-satoshi)', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.85rem' }}>About</Typography>
-                <Typography variant="body1" sx={{ color: '#C1BEBA', fontFamily: 'var(--font-satoshi)', lineHeight: 1.6 }}>{event.description}</Typography>
-              </Box>
-            )}
+              <div className="flex flex-col gap-2">
+                <span className="text-base font-bold text-white leading-snug">
+                  {event.location || 'Online / Remote Event'}
+                </span>
+                {meetingUrl && (
+                  <a
+                    href={meetingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 text-xs font-mono font-extrabold text-white bg-[#6366F1] hover:bg-[#4F46E5] rounded-xl transition-all w-fit cursor-pointer shadow-[0_4px_12px_rgba(99,102,241,0.25)]"
+                  >
+                    <Video className="w-4 h-4" />
+                    <span>Join Huddle Meeting</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
 
-            <Box sx={{ mb: 4 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" fontWeight={700} sx={{ color: '#8E8A86', fontFamily: 'var(--font-satoshi)', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.85rem' }}>Organizers</Typography>
-                {!loading && user && event.userId === user.$id && (
-                  <Button 
-                    size="small"
-                    onClick={() => openUnified('share-note', {
-                      resourceId: eventId as string,
-                      resourceType: 'event',
-                      resourceTitle: event.title,
-                      onShared: () => fetchOrganizers()
-                    })}
-                    sx={{ color: '#F59E0B', fontWeight: 800, fontSize: '0.75rem', fontFamily: 'var(--font-satoshi)', textTransform: 'none', '&:hover': { textDecoration: 'underline' } }}
+          {/* About Event */}
+          <div className="p-6 md:p-8 rounded-[28px] bg-[#161412] border border-[#34322F] flex flex-col gap-4">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#8E8A86]">
+              About Event
+            </span>
+            <div className="text-sm md:text-base leading-relaxed text-[#C1BEBA] font-satoshi whitespace-pre-line break-words">
+              {event.description || 'No detailed description provided for this event.'}
+            </div>
+          </div>
+
+          {/* Organizers & Attendees Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Organizers */}
+            <div className="p-6 rounded-[28px] bg-[#161412] border border-[#34322F] flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#8E8A86]">
+                  Organizers
+                </span>
+                {user && event.userId === user.$id && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openUnified('share-note', {
+                        resourceId: eventId,
+                        resourceType: 'event',
+                        resourceTitle: event.title,
+                        onShared: () => fetchOrganizers(),
+                      })
+                    }
+                    className="text-[10px] font-mono text-[#F59E0B] hover:underline font-bold"
                   >
                     + Manage Organizers
-                  </Button>
+                  </button>
                 )}
-              </Box>
-              
-              {loading ? (
-                <></>
-              ) : loadingOrganizers ? (
-                <CircularProgress size={16} sx={{ color: '#F59E0B' }} />
+              </div>
+
+              {loadingOrganizers ? (
+                <div className="flex items-center gap-2 text-xs text-[#8E8A86]">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#F59E0B]" />
+                  <span>Loading organizers...</span>
+                </div>
               ) : organizers.length === 0 ? (
-                <Typography variant="body2" sx={{ color: '#8E8A86', fontFamily: 'var(--font-satoshi)', fontStyle: 'italic' }}>
-                  No co-organizers added yet.
-                </Typography>
+                <span className="text-xs text-[#8E8A86] italic font-mono">Hosted by event creator</span>
               ) : (
-                <Stack direction="row" spacing={1.5} flexWrap="wrap" sx={{ gap: 1.5 }}>
+                <div className="flex flex-wrap gap-2">
                   {organizers.map((org) => (
-                    <Chip
+                    <div
                       key={org.$id || org.userId}
-                      avatar={
-                        <IdentityAvatar
-                          fileId={org.avatar || null}
-                          alt={org.displayName || org.username}
-                          fallback={(org.displayName || org.username || 'O').charAt(0).toUpperCase()}
-                          size={24}
-                        />
-                      }
-                      label={`${org.displayName || org.username} (${org.permissionLevel || 'Viewer'})`}
-                      onClick={() => {
-                        if (user && event.userId === user.$id) {
-                          openUnified('share-note', {
-                            resourceId: eventId as string,
-                            resourceType: 'event',
-                            resourceTitle: event.title,
-                            initialCollaborator: org,
-                            onShared: () => fetchOrganizers()
-                          });
-                        }
-                      }}
-                      sx={{ 
-                        bgcolor: '#1C1A18', 
-                        border: '1px solid #34322F',
-                        color: 'white',
-                        fontWeight: 700,
-                        fontFamily: 'var(--font-satoshi)',
-                        fontSize: '0.75rem',
-                        '&:hover': { bgcolor: '#242220', borderColor: '#6366F1' }
-                      }}
-                    />
-                  ))}
-                </Stack>
-              )}
-            </Box>
-
-            <Box>
-              <Typography variant="h6" fontWeight={700} sx={{ mb: 2, color: '#8E8A86', fontFamily: 'var(--font-satoshi)', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.85rem' }}>Attendees</Typography>
-              <AvatarGroup max={6} sx={{ justifyContent: 'flex-start' }}>
-                {attendees.map((attendee) => (
-                  <AttendeeAvatar key={attendee.$id} guest={attendee} theme={theme} />
-                ))}
-              </AvatarGroup>
-            </Box>
-          </Box>
-        </Paper>
-
-        {/* Public Huddle Discussion Thread */}
-        <Paper sx={{ mt: 4, display: 'flex', flexDirection: 'column', height: 500, bgcolor: '#161412', borderRadius: '28px', border: '1px solid #34322F', overflow: 'hidden', position: 'relative', backgroundImage: 'none' }}>
-          {/* Mode Control & Toolbar */}
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 2.25, borderBottom: '1px solid #34322F', bgcolor: '#1C1A18' }}>
-            <Typography variant="body2" sx={{ fontWeight: 900, color: 'white', fontFamily: 'var(--font-clash)', letterSpacing: '-0.01em' }}>Public Huddle Thread</Typography>
-            {isHuddleInit && huddleTimeRemaining && (
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Stack direction="row" spacing={0.75} alignItems="center" sx={{ color: '#F59E0B' }}>
-                  <Clock size={14} style={{ color: '#F59E0B' }} />
-                  <Typography variant="caption" sx={{ fontWeight: 800, fontFamily: 'var(--font-satoshi)' }}>{huddleTimeRemaining}</Typography>
-                </Stack>
-                {/* Save Story button - only event owner can promote */}
-                {user && event.userId === user.$id && (
-                  <Button
-                    size="small"
-                    startIcon={<FileText size={14} />}
-                    onClick={handleSaveHuddleAsStory}
-                    sx={{
-                      bgcolor: '#1C1A18',
-                      border: '1px solid #34322F',
-                      color: '#EC4899',
-                      fontWeight: 800,
-                      fontSize: '0.75rem',
-                      px: 2,
-                      py: 0.75,
-                      borderRadius: '8px',
-                      textTransform: 'none',
-                      fontFamily: 'var(--font-satoshi)',
-                      '&:hover': { bgcolor: '#242220', borderColor: '#EC4899' }
-                    }}
-                  >
-                    Save Story
-                  </Button>
-                )}
-              </Stack>
-            )}
-          </Stack>
-
-          {/* Main Viewport */}
-          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-            {huddleLoading && (
-              <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', bgcolor: '#161412', zIndex: 2 }}>
-                <CircularProgress size={28} sx={{ color: '#6366F1' }} />
-              </Box>
-            )}
-
-            {!isHuddleInit ? (
-              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, textAlign: 'center' }}>
-                <Box sx={{ width: 56, height: 56, borderRadius: '16px', display: 'grid', placeItems: 'center', bgcolor: '#1C1A18', color: '#6366F1', border: '1px solid #34322F', mb: 2.5 }}>
-                  <Globe size={26} style={{ color: '#6366F1' }} />
-                </Box>
-                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', mb: 1, fontFamily: 'var(--font-clash)' }}>Initialize Event Discussion</Typography>
-                <Typography variant="caption" sx={{ color: '#8E8A86', maxWidth: 360, lineHeight: 1.5, mb: 3, fontFamily: 'var(--font-satoshi)' }}>
-                  Start a temporary public huddle chat thread for this event. Registered attendees and guests can read and post. Ephemeral chat automatically purges in 7 days.
-                </Typography>
-                <Button 
-                  onClick={handleInitHuddle}
-                  sx={{ bgcolor: '#6366F1', color: '#fff', fontWeight: 800, fontSize: '0.8rem', py: 1.25, px: 3, borderRadius: '12px', textTransform: 'none', fontFamily: 'var(--font-satoshi)', '&:hover': { bgcolor: '#4F46E5' } }}
-                >
-                  Start Huddle
-                </Button>
-              </Box>
-            ) : (
-              <>
-                <Box sx={{ flex: 1, overflowY: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {huddleMessages.length === 0 ? (
-                    <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Typography variant="caption" sx={{ fontStyle: 'italic', color: '#8E8A86', fontFamily: 'var(--font-satoshi)' }}>No messages yet. Start the event huddle!</Typography>
-                    </Box>
-                  ) : (
-                    huddleMessages.map((msg) => {
-                      const isSelf = user && msg.senderId === user.$id;
-                      return (
-                        <Box key={msg.id} sx={{ alignSelf: isSelf ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
-                          <Typography variant="caption" sx={{ color: '#8E8A86', fontWeight: 800, display: 'block', mb: 0.5, textAlign: isSelf ? 'right' : 'left', fontFamily: 'var(--font-satoshi)' }}>
-                            {msg.senderName}
-                          </Typography>
-                          <Paper 
-                            elevation={0}
-                            sx={{
-                              p: 1.75,
-                              borderRadius: '16px',
-                              borderTopRightRadius: isSelf ? 0 : '16px',
-                              borderTopLeftRadius: isSelf ? '16px' : 0,
-                              bgcolor: isSelf ? '#6366F1' : '#1C1A18',
-                              border: isSelf ? 'none' : '1px solid #34322F',
-                              color: '#fff',
-                              boxShadow: 'none',
-                              backgroundImage: 'none'
-                            }}
-                          >
-                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.5, wordBreak: 'break-word', fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }}>
-                              {msg.content}
-                            </Typography>
-                          </Paper>
-                          <Typography variant="caption" sx={{ color: '#5E5B58', fontSize: '0.65rem', display: 'block', mt: 0.5, textAlign: isSelf ? 'right' : 'left', fontFamily: 'var(--font-mono)' }}>
-                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </Typography>
-                        </Box>
-                      );
-                    })
-                  )}
-                  <div ref={huddleMessageEndRef} />
-                </Box>
-
-                {/* Input Form */}
-                <Box component="form" onSubmit={handleSendHuddleMessage} sx={{ p: 2.25, borderTop: '1px solid #34322F', bgcolor: '#1C1A18' }}>
-                  <Stack direction="row" spacing={1.5}>
-                    <TextField
-                      fullWidth
-                      size="small"
-                      value={inputText}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setInputText(e.target.value)}
-                      placeholder={isAuthenticated ? "Type huddle message (auto-cleans in 7 days)..." : "Sign in to send messages..."}
-                      disabled={!isAuthenticated}
-                      variant="standard"
-                      InputProps={{
-                        disableUnderline: true,
-                        sx: {
-                          bgcolor: '#000000',
-                          borderRadius: '12px',
-                          color: 'white',
-                          px: 2,
-                          py: 1,
-                          fontWeight: 600,
-                          fontSize: '0.85rem',
-                          fontFamily: 'var(--font-satoshi)',
-                          border: '1px solid #34322F',
-                          '&:hover': { borderColor: '#6366F1' }
-                        }
-                      }}
-                    />
-                    <IconButton 
-                      type="submit"
-                      disabled={!inputText.trim() || huddleSending || !isAuthenticated}
-                      sx={{
-                        bgcolor: '#6366F1',
-                        color: '#fff',
-                        borderRadius: '12px',
-                        width: 40,
-                        height: 40,
-                        '&:hover': { bgcolor: '#4F46E5' },
-                        '&.ob-disabled': { bgcolor: '#1C1A18', color: '#5E5B58' }
-                      }}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#1C1A18] border border-[#34322F] text-white text-xs font-bold font-satoshi"
                     >
-                      <Send size={16} style={{ color: '#fff' }} />
-                    </IconButton>
-                  </Stack>
-                </Box>
-              </>
+                      <IdentityAvatar userId={org.userId} size={20} />
+                      <span>{org.displayName || org.username}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Attendees */}
+            <div className="p-6 rounded-[28px] bg-[#161412] border border-[#34322F] flex flex-col gap-4">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#8E8A86]">
+                Confirmed Attendees ({attendees.length})
+              </span>
+              {attendees.length === 0 ? (
+                <span className="text-xs text-[#8E8A86] italic font-mono">No attendees registered yet. Be the first!</span>
+              ) : (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {attendees.slice(0, 10).map((att) => (
+                    <div key={att.$id || att.userId} className="relative group">
+                      <IdentityAvatar userId={att.userId} size={36} />
+                    </div>
+                  ))}
+                  {attendees.length > 10 && (
+                    <div className="w-9 h-9 rounded-full bg-[#1C1A18] border border-[#34322F] flex items-center justify-center text-xs font-bold font-mono text-white/70">
+                      +{attendees.length - 10}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Public Huddle Discussion Thread */}
+          <div className="rounded-[28px] bg-[#161412] border border-[#34322F] overflow-hidden flex flex-col h-[480px]">
+            {/* Thread Header */}
+            <div className="p-4 bg-[#1C1A18] border-b border-[#34322F] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-[#6366F1]" />
+                <span className="font-clash font-extrabold text-sm text-white">Public Huddle Thread</span>
+              </div>
+              {isHuddleInit && user && event.userId === user.$id && (
+                <button
+                  type="button"
+                  onClick={handleSaveHuddleAsStory}
+                  className="px-3 py-1 rounded-lg bg-pink-500/10 border border-pink-500/20 text-pink-400 hover:bg-pink-500/20 text-xs font-mono font-bold transition-all flex items-center gap-1.5"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Save Story</span>
+                </button>
+              )}
+            </div>
+
+            {/* Viewport */}
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 min-h-0 relative scrollbar-thin">
+              {huddleLoading && (
+                <div className="absolute inset-0 bg-[#161412]/80 backdrop-blur-sm flex items-center justify-center z-10">
+                  <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-[#6366F1]" />
+                </div>
+              )}
+
+              {!isHuddleInit ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-6 gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-[#1C1A18] border border-[#34322F] flex items-center justify-center text-[#6366F1]">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-clash font-extrabold text-base text-white">Event Discussion Thread</h3>
+                  <p className="text-xs text-[#8E8A86] max-w-sm font-satoshi">
+                    Start a public chat thread for attendees to coordinate, share updates, and discuss event details.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleInitHuddle}
+                    className="mt-1 px-5 py-2.5 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-mono font-extrabold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg"
+                  >
+                    Start Huddle Discussion
+                  </button>
+                </div>
+              ) : huddleMessages.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center text-xs text-[#8E8A86] font-mono italic">
+                  No messages yet. Be the first to start the conversation!
+                </div>
+              ) : (
+                huddleMessages.map((msg) => {
+                  const isSelf = user && msg.senderId === user.$id;
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex flex-col max-w-[80%] ${isSelf ? 'align-self-end self-end items-end' : 'align-self-start self-start items-start'}`}
+                    >
+                      <span className="text-[10px] font-mono font-bold text-[#8E8A86] mb-1 px-1">
+                        {msg.senderName}
+                      </span>
+                      <div
+                        className={`p-3 rounded-2xl text-xs font-satoshi leading-relaxed break-words ${
+                          isSelf
+                            ? 'bg-[#6366F1] text-white rounded-tr-none'
+                            : 'bg-[#1C1A18] border border-[#34322F] text-white rounded-tl-none'
+                        }`}
+                      >
+                        {msg.content}
+                      </div>
+                      <span className="text-[9px] font-mono text-[#5E5B58] mt-1 px-1">
+                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={huddleMessageEndRef} />
+            </div>
+
+            {/* Input Form */}
+            {isHuddleInit && (
+              <form onSubmit={handleSendHuddleMessage} className="p-3 bg-[#1C1A18] border-t border-[#34322F] flex items-center gap-2">
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder={isAuthenticated ? 'Type message in event huddle...' : 'Sign in to post messages...'}
+                  disabled={!isAuthenticated}
+                  className="flex-1 bg-[#0A0908] border border-[#34322F] focus:border-[#6366F1] rounded-xl px-4 py-2 text-xs text-white font-satoshi focus:outline-none transition-all"
+                />
+                <button
+                  type="submit"
+                  disabled={!inputText.trim() || huddleSending || !isAuthenticated}
+                  className="p-2.5 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] disabled:opacity-40 text-white transition-all cursor-pointer shrink-0"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </form>
             )}
-          </Box>
-        </Paper>
-      </Container>
+          </div>
+        </div>
       </MultiSectionContainer>
-    </Box>
+    </div>
   );
 }
