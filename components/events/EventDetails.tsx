@@ -209,17 +209,42 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
     const targetId = getId(event);
     const resourceId = `event:${targetId}`;
 
+    const formattedLocal: any = { ...updatedFields };
+    if (updatedFields.startTime) {
+      formattedLocal.startTime = typeof updatedFields.startTime === 'string'
+        ? parseEventDate(updatedFields.startTime)
+        : updatedFields.startTime;
+    }
+    if (updatedFields.endTime) {
+      formattedLocal.endTime = typeof updatedFields.endTime === 'string'
+        ? parseEventDate(updatedFields.endTime)
+        : updatedFields.endTime;
+    }
+
     const nextEvent: any = {
       ...event,
-      ...updatedFields,
+      ...formattedLocal,
       updatedAt: new Date(),
+      $updatedAt: new Date().toISOString(),
     };
 
     setEvent(nextEvent);
     pushLiveEvent(nextEvent);
 
+    const payloadToSend: any = { ...updatedFields };
+    if (updatedFields.startTime) {
+      payloadToSend.startTime = updatedFields.startTime instanceof Date
+        ? updatedFields.startTime.toISOString()
+        : String(updatedFields.startTime);
+    }
+    if (updatedFields.endTime) {
+      payloadToSend.endTime = updatedFields.endTime instanceof Date
+        ? updatedFields.endTime.toISOString()
+        : String(updatedFields.endTime);
+    }
+
     try {
-      await eventApi.update(targetId, updatedFields as any);
+      await eventApi.update(targetId, payloadToSend);
       autonomicSyncEngine.ack(resourceId);
     } catch (err) {
       console.error('Failed to sync event update remotely:', err);

@@ -880,11 +880,21 @@ export function sanitizeEventData(data: any) {
     'keepPermission',
     'source',
     'isWorkspace',
+    'attendeeCount',
   ];
   const sanitized: any = {};
   for (const key of allowedKeys) {
     if (key in data) {
-      sanitized[key] = data[key];
+      let val = data[key];
+      if ((key === 'startTime' || key === 'endTime') && val) {
+        if (val instanceof Date) {
+          val = val.toISOString();
+        } else if (typeof val === 'string' && val.trim()) {
+          const t = Date.parse(val);
+          if (Number.isFinite(t)) val = new Date(t).toISOString();
+        }
+      }
+      sanitized[key] = val;
     }
   }
   return sanitized;

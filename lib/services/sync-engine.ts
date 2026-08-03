@@ -18,6 +18,13 @@ import { pickNoteAutosavePayload } from '@/lib/appwrite/note';
 import { getLiveNoteForSync, getLiveGoalForSync, getLiveEventForSync } from '@/lib/sync/pending-sync-bridge';
 import type { Event } from '@/types';
 
+function safeIsoString(val: any): string {
+  if (!val) return new Date().toISOString();
+  if (val instanceof Date) return Number.isNaN(val.getTime()) ? new Date().toISOString() : val.toISOString();
+  const t = typeof val === 'number' ? val : Date.parse(String(val));
+  return Number.isFinite(t) ? new Date(t).toISOString() : new Date().toISOString();
+}
+
 async function flushEventPending(
   pendingKey: string,
   eventId: string,
@@ -49,11 +56,10 @@ async function flushEventPending(
   if (!activeUserId) return;
 
   const { events: eventApi } = await import('@/lib/kylrixflow');
-  const flushRevision = queuedRevision || new Date().toISOString();
 
   try {
-    const startTimeStr = typeof payload.startTime === 'string' ? payload.startTime : payload.startTime?.toISOString();
-    const endTimeStr = typeof payload.endTime === 'string' ? payload.endTime : payload.endTime?.toISOString();
+    const startTimeStr = safeIsoString(payload.startTime);
+    const endTimeStr = safeIsoString(payload.endTime);
     await eventApi.update(eventId, {
       title: payload.title,
       description: payload.description,
@@ -64,6 +70,7 @@ async function flushEventPending(
       visibility: (payload as any).visibility || (payload.isPublic !== false ? 'public' : 'private'),
       isPublic: payload.isPublic !== false,
       isGuest: payload.isGuest !== false,
+      attendeeCount: (payload as any).attendeeCount,
     } as any);
 
     failedSyncAttempts.delete(pendingKey);
@@ -111,8 +118,8 @@ let isSyncing = false;
 let flushQueuedDuringSync = false;
 let persistWriteChain: Promise<void> = Promise.resolve();
 
-/** Coalesce keystroke/CRUD bursts — never tight-loop the network. */
-const FLUSH_COALESCE_MS = 450;
+/** Coalesce keystroke/CRUD bursts — ultra fast 150ms demand flush. */
+const FLUSH_COALESCE_MS = 150;
 const RETRY_BASE_MS = 2_000;
 const RETRY_MAX_MS = 60_000;
 
