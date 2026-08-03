@@ -41,8 +41,11 @@ export function CreateEventComposer({
   onEventCreated,
   onLiveEvent,
   onCommitEvent,
+  onCancel,
+  initialData,
 }: Props) {
   const { user } = useAuth();
+  const { pushLiveEvent } = useEvents();
   const ownerId = user?.$id || 'guest';
   const cacheKey = 'f_events_list';
 
@@ -186,19 +189,12 @@ export function CreateEventComposer({
       };
       onLiveEvent?.(enriched);
       onEventCreated?.(event);
+      pushLiveEvent(event);
       if (!announcedRef.current && (event.title?.trim() || event.description?.trim())) {
         announcedRef.current = true;
       }
-      try {
-        const current = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
-        const next = [event, ...current.filter((e: any) => (e.id || e.$id) !== event.id)];
-        await LocalEngine.cacheSet(cacheKey, next);
-      } catch {
-        /* optional */
-      }
-      // Events commit remotely via onCommitEvent — do not enqueue note flush with event: keys.
     },
-    [cacheKey, onEventCreated, onLiveEvent],
+    [onEventCreated, onLiveEvent, pushLiveEvent],
   );
 
   const handleContentChange = useCallback(

@@ -48,10 +48,11 @@ function mapRemoteEvent(doc: any): Event {
   } as Event;
 }
 
+import { useEvents } from '@/context/EventsContext';
+
 export default function EventList() {
   const [tabValue, setTabValue] = useState(0);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { events, isLoading, pushLiveEvent, removeEvent } = useEvents();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { userId } = useTask();
   const { openSidebar } = useDynamicSidebar();
@@ -80,69 +81,9 @@ export default function EventList() {
     return () => resetConfiguration();
   }, [setConfiguration, resetConfiguration, isAuthenticated, openIDMWindow]);
 
-  useEffect(() => {
-    let isCancelled = false;
-
-    // Same path as UnifiedFileAttachmentDrawer events tab:
-    // RxDB → LocalEngine `f_events_list` → events.list() live refresh.
-    const loadEvents = async () => {
-      try {
-        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-        const db = await getRxDB();
-        let items: any[] = [];
-
-        try {
-          items = (await db.events.find().exec()).map((d: any) => d.toJSON());
-        } catch {
-          items = [];
-        }
-        if (items.length === 0) {
-          items = (await LocalEngine.cacheGet<any[]>('f_events_list')) || [];
-        }
-        if (!isCancelled && items.length > 0) {
-          setEvents(items.map(mapRemoteEvent));
-          setIsLoading(false);
-        }
-
-        let remoteItems: any[] = [];
-        try {
-          const res = await eventApi.list();
-          remoteItems = res?.rows || (Array.isArray(res) ? res : []);
-        } catch {
-          /* keep local rows */
-        }
-
-        if (isCancelled) return;
-
-        const mappedLocal = items.map(mapRemoteEvent);
-        if (remoteItems.length > 0) {
-          const mappedRemote = remoteItems.map(mapRemoteEvent);
-          const merged = mergeServerPageWithLocalCopy<any>({
-            serverBatch: mappedRemote,
-            localNotes: mappedLocal,
-          });
-          setEvents(merged);
-          void LocalEngine.cacheSet('f_events_list', merged);
-        } else if (items.length > 0) {
-          setEvents(mappedLocal);
-          void LocalEngine.cacheSet('f_events_list', items);
-        }
-      } catch (error: unknown) {
-        console.error('Failed to load events', error);
-      } finally {
-        if (!isCancelled) setIsLoading(false);
-      }
-    };
-
-    void loadEvents();
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
-
   const upsertLocal = useCallback((event: Event) => {
-    setEvents((prev) => [event, ...prev.filter((e) => e.id !== event.id)]);
-  }, []);
+    pushLiveEvent(event);
+  }, [pushLiveEvent]);
 
   const handleCommitEvent = useCallback(
     async (eventData: Event & { visibility?: string; autoCreateCall?: boolean }) => {

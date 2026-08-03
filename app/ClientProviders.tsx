@@ -51,6 +51,7 @@ function ComposeProviders({ providers, children }: ComposeProvidersProps) {
 
 import { SecurityProvider } from '@/context/SecurityContext';
 import { UnifiedFileDrawerProvider } from '@/context/UnifiedFileDrawerContext';
+import { EventsProvider } from '@/context/EventsContext';
 
 /**
  * Tier 1: Root Providers
@@ -78,6 +79,7 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   ResourcePinProvider,
   WorkspaceProvider,
   NotesProvider,
+  EventsProvider,
   TaskProvider,
   OverlayProvider,
   DynamicSidebarProvider,

@@ -21,6 +21,8 @@ import { EventLocationDrawer } from './drawers/EventLocationDrawer';
 import { EventVisibilityDrawer } from './drawers/EventVisibilityDrawer';
 import toast from 'react-hot-toast';
 
+import { useEvents } from '@/context/EventsContext';
+
 interface EventDetailsProps {
   eventId: string;
   initialData?: AppwriteEvent | LocalEvent | any;
@@ -29,6 +31,7 @@ interface EventDetailsProps {
 }
 
 export default function EventDetails({ eventId, initialData, onBack, onClose }: EventDetailsProps) {
+  const { pushLiveEvent } = useEvents();
   const { closeSecondarySidebar } = useLayout();
   const { closeOverlay } = useOverlay();
   const { closeSidebar } = useDynamicSidebar();
@@ -162,16 +165,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
     };
 
     setEvent(nextEvent);
-    autonomicSyncEngine.markPending(resourceId, new Date().toISOString(), nextEvent);
-
-    try {
-      const cacheKey = 'f_events_list';
-      const current = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
-      const nextList = [nextEvent, ...current.filter((e: any) => (e.id || e.$id) !== targetId)];
-      await LocalEngine.cacheSet(cacheKey, nextList);
-    } catch {
-      /* quiet */
-    }
+    pushLiveEvent(nextEvent);
 
     try {
       await eventApi.update(targetId, updatedFields as any);
@@ -179,7 +173,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
     } catch (err) {
       console.error('Failed to sync event update remotely:', err);
     }
-  }, [event]);
+  }, [event, pushLiveEvent]);
 
   const handleTitleSubmit = () => {
     setIsEditingTitle(false);
