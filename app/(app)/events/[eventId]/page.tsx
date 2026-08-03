@@ -89,7 +89,7 @@ export default function EventPage() {
       setOrganizers(collaborators || []);
     } catch (orgErr) {
       console.error('Failed to fetch event organizers:', orgErr);
-    } fontally {
+    } finally {
       setLoadingOrganizers(false);
     }
   }, [eventId]);
