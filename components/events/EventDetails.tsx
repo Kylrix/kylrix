@@ -145,9 +145,14 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
               return prevLocal;
             }
 
-            const parseTs = (val?: string | Date | null) => {
+            const parseTs = (val?: any) => {
               if (!val) return 0;
-              const t = typeof val === 'string' ? Date.parse(val) : val.getTime();
+              if (typeof val?.getTime === 'function') {
+                const t = val.getTime();
+                return Number.isFinite(t) ? t : 0;
+              }
+              if (typeof val === 'number') return Number.isFinite(val) ? val : 0;
+              const t = Date.parse(String(val));
               return Number.isFinite(t) ? t : 0;
             };
 

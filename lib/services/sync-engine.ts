@@ -20,8 +20,18 @@ import type { Event } from '@/types';
 
 function safeIsoString(val: any): string {
   if (!val) return new Date().toISOString();
-  if (val instanceof Date) return Number.isNaN(val.getTime()) ? new Date().toISOString() : val.toISOString();
-  const t = typeof val === 'number' ? val : Date.parse(String(val));
+  if (typeof val?.toISOString === 'function') {
+    try {
+      const iso = val.toISOString();
+      if (iso && iso !== 'Invalid Date') return iso;
+    } catch {
+      /* quiet */
+    }
+  }
+  if (typeof val === 'number') {
+    return Number.isFinite(val) ? new Date(val).toISOString() : new Date().toISOString();
+  }
+  const t = Date.parse(String(val));
   return Number.isFinite(t) ? new Date(t).toISOString() : new Date().toISOString();
 }
 
