@@ -9,6 +9,7 @@ import {
   getNegationActionId 
 } from './workflow-engine';
 import { isFlowPath, isWorkspacesPath, isGoalsSurfacePath } from '@/lib/routing/app-paths';
+import type { DiscoverFlow } from '@/lib/flows/types';
 
 export type TelemetryNiche = 
   | 'workspace'      // Notes, Sheets, Document management
@@ -517,7 +518,7 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
       isAnonymized: true,
       createdAt: new Date().toISOString(),
       publisher: { handle: '@you', verified: 'ecosystem' as const },
-      source: 'local' as const,
+      source: 'yours' as const,
     }));
 
     const all = [...builtins, ...userSaved];

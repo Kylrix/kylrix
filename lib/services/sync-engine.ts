@@ -640,7 +640,8 @@ export const autonomicSyncEngine = {
             if (onRefreshed) onRefreshed(remote);
           }
         } else if (kind === 'goal') {
-          const { tasks: taskApi, mapAppwriteTaskToTask } = await import('@/lib/kylrixflow');
+          const { tasks: taskApi } = await import('@/lib/kylrixflow');
+          const { mapAppwriteTaskToTask } = await import('@/context/TaskContext');
           const remoteDoc = await taskApi.get(targetId).catch(() => null);
           if (remoteDoc && !this.isPending(targetId)) {
             const mapped = mapAppwriteTaskToTask(remoteDoc);

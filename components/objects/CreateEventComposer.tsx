@@ -208,7 +208,6 @@ export function CreateEventComposer({
   }, [handleClose, onRegisterClose]);
 
   const resourceId = resolvedId ? `event:${resolvedId}` : null;
-  const canCommit = Boolean((content.trim() || title.trim()) && startTime && endTime);
 
   return (
     <div
@@ -375,6 +374,7 @@ export function CreateEventComposer({
             <Check className="w-4 h-4" strokeWidth={3} />
             <span>Create Event</span>
           </button>
+        </div>
       </div>
     </div>
   );

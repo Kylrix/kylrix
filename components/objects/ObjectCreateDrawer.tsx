@@ -213,6 +213,7 @@ export function ObjectCreateDrawer({
             <div className="p-4 text-sm text-white/50 font-satoshi">
               Forms use the full-height builder. Open create form from Forms.
             </div>
+          ) : null}
         </div>
       </div>
     </div>

@@ -132,7 +132,7 @@ async function persistGoalsLocalCopy(userId: string | null | undefined, tasks: T
   }
 }
 
-const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
+export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
   const raw = doc as any;
   // Extract project ID from tags if present (format: "project:ID")
   const projectTag = raw.tags?.find((t: string) => t.startsWith('project:'));

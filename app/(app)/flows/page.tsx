@@ -288,13 +288,43 @@ export default function FlowsPage() {
     closeOverlay();
   }, [native, closeOverlay]);
 
+  const handleInstall = useCallback(async (id: string) => {
+    try {
+      const res = await installFlow({ flowId: id, scope: { type: 'user' } });
+      if (!res?.success) {
+        toast.error('Install failed');
+        return;
+      }
+      setInstalledIds(installFlowLocal(id));
+      if (id === 'kylrix-math-mode') {
+        toast.success('Math Mode on — try $E=mc^2$, ```solve, ```chart, or ```graph in a note');
+      } else {
+        toast.success(res.created ? 'Installed' : 'Already installed');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Install failed');
+    }
+  }, []);
+
+  const handleUninstall = useCallback(async (flow: DiscoverFlow) => {
+    if (flow.source === 'yours') {
+      await deleteWorkflowAction(flow.id);
+      const nextSaved = { ...savedWorkflows };
+      delete nextSaved[flow.id];
+      clearSavedWorkflows();
+      Object.values(nextSaved).forEach((wf) => updateWorkflow(wf.id, wf));
+    }
+    setInstalledIds(uninstallFlowLocal(flow.id));
+    toast.success('Removed');
+  }, [savedWorkflows, updateWorkflow, clearSavedWorkflows]);
+
   const triggerInstallWithConfirmation = useCallback((flow: DiscoverFlow) => {
     if (!isFlowConfirmPromptEnabled()) {
       void handleInstall(flow.id);
       return;
     }
     setConfirmFlow(flow);
-  }, []);
+  }, [handleInstall]);
 
   const openDetail = useCallback(
     (flow: DiscoverFlow, isOwner: boolean) => {
@@ -332,38 +362,8 @@ export default function FlowsPage() {
         openOverlay(panel);
       }
     },
-    [isDesktop, native, openOverlay, closeDetail, updateWorkflow, installedIds, triggerInstallWithConfirmation]
+    [isDesktop, native, openOverlay, closeDetail, updateWorkflow, installedIds, triggerInstallWithConfirmation, handleUninstall]
   );
-
-  const handleInstall = async (id: string) => {
-    try {
-      const res = await installFlow({ flowId: id, scope: { type: 'user' } });
-      if (!res?.success) {
-        toast.error('Install failed');
-        return;
-      }
-      setInstalledIds(installFlowLocal(id));
-      if (id === 'kylrix-math-mode') {
-        toast.success('Math Mode on — try $E=mc^2$, ```solve, ```chart, or ```graph in a note');
-      } else {
-        toast.success(res.created ? 'Installed' : 'Already installed');
-      }
-    } catch (err: any) {
-      toast.error(err?.message || 'Install failed');
-    }
-  };
-
-  const handleUninstall = async (flow: DiscoverFlow) => {
-    if (flow.source === 'yours') {
-      await deleteWorkflowAction(flow.id);
-      const nextSaved = { ...savedWorkflows };
-      delete nextSaved[flow.id];
-      clearSavedWorkflows();
-      Object.values(nextSaved).forEach((wf) => updateWorkflow(wf.id, wf));
-    }
-    setInstalledIds(uninstallFlowLocal(flow.id));
-    toast.success('Removed');
-  };
 
   const handleShareCopy = async (id: string) => {
     const url = buildPublicResourceUrl('flow', id);

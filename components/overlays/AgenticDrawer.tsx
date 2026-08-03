@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+
 
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { AgenticPanelContent } from './AgenticPanelContent';

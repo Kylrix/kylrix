@@ -114,13 +114,7 @@ export function ProfilePeekDrawer({
     if (handle) router.push(`/u/${handle}`);
   }, [profile?.username, username, onClose, router]);
 
-  const toggleExpand = useCallback(() => {
-    if (expanded) {
-      setExpanded(false);
-      return;
-    }
-    goFullProfile();
-  }, [expanded, goFullProfile]);
+
 
   if (!mounted || !open) return null;
 

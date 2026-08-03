@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Layers, ShieldAlert, BadgeCheck, Check, X, Download } from 'lucide-react';
+import { ShieldAlert, BadgeCheck, Check, X, Download } from 'lucide-react';
 import type { DiscoverFlow } from '@/lib/flows/types';
 
 export function isFlowConfirmPromptEnabled(): boolean {
