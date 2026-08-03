@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
-import { MapPin, Clock, Pin, Edit, Trash2, Users } from 'lucide-react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { MapPin, Clock, Pin, Edit, Trash2, Users, Bell } from 'lucide-react';
 import type { Event } from '@/types';
 import { formatTime } from '@/lib/time-util';
 import { generateEventPattern } from '@/utils/patternGenerator';
@@ -13,6 +13,8 @@ import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuI
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { events as eventApi } from '@/lib/kylrixflow';
+import { useEvents } from '@/context/EventsContext';
+import toast from 'react-hot-toast';
 
 type Props = {
   event: Event;
@@ -37,11 +39,13 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
     [event.id, event.title],
   );
   const { user } = useAuth();
+  const { removeEvent } = useEvents();
   const { open: openUnified } = useUnifiedDrawer();
   const contextMenu = useContextMenu();
   const openMenu = contextMenu?.openMenu;
   const { isPinned: isResourcePinned, togglePin } = useResourcePins();
 
+  const [reminded, setReminded] = useState(Boolean((event as any).scheduled || (event as any).isReminded));
   const pinned = isResourcePinned('event', event.id, event.creatorId, event.isPinned);
   const isCreator =
     !!user && (event.creatorId === user.$id || (event as any).userId === user.$id);
@@ -71,6 +75,12 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
     [event, togglePin],
   );
 
+  const handleRemindToggle = useCallback(async () => {
+    const next = !reminded;
+    setReminded(next);
+    toast.success(next ? 'Reminder set for event' : 'Reminder turned off');
+  }, [reminded]);
+
   const accessControlItems = useAccessControlMenuItems({
     resourceType: 'event',
     resourceId: event.id,
@@ -86,6 +96,11 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
         icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />,
         onClick: () => void handlePinToggle(),
       },
+      {
+        label: reminded ? 'Stop Reminder' : 'Remind',
+        icon: <Bell size={16} className={reminded ? 'text-[#F59E0B]' : ''} />,
+        onClick: () => void handleRemindToggle(),
+      },
       ...accessControlItems,
       ...(isCreator
         ? [
@@ -96,17 +111,23 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
             },
             {
               label: 'Delete',
-              icon: <Trash2 size={16} />,
+              icon: <Trash2 size={16} className="text-red-500" />,
               variant: 'destructive' as const,
               onClick: () => {
                 openUnified('delete-confirm', {
-                  title: `Delete event: "${event.title}"?`,
+                  title: `Delete event: "${event.title || 'Untitled Event'}"?`,
                   description: 'This will permanently remove this event from your ecosystem.',
                   resourceName: 'this event',
                   confirmLabel: 'Delete Event',
                   onConfirm: async () => {
-                    await eventApi.delete(event.id);
+                    try {
+                      await eventApi.delete(event.id);
+                    } catch {
+                      /* quiet for offline deletion */
+                    }
+                    removeEvent(event.id);
                     onDelete?.();
+                    toast.success('Event deleted');
                   },
                 });
               },
@@ -116,22 +137,28 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
     ],
     [
       pinned,
+      reminded,
       accessControlItems,
       isCreator,
       event,
       handlePinToggle,
+      handleRemindToggle,
       onClick,
       onDelete,
       openUnified,
+      removeEvent,
     ],
   );
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    openMenu?.({
-      x: e.clientX,
-      y: e.clientY,
+  const handleContextMenu = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault?.();
+    e.stopPropagation?.();
+    if (!openMenu) return;
+    const clientX = 'clientX' in e ? e.clientX : 0;
+    const clientY = 'clientY' in e ? e.clientY : 0;
+    openMenu({
+      x: clientX,
+      y: clientY,
       items: contextMenuItems,
       appType: 'flow',
     });

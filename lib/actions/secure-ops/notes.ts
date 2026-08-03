@@ -921,7 +921,8 @@ export async function deleteNoteSecure(noteId: string, jwt?: string) {
 
   const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
   if (!isValidAppwriteRowId(noteId)) {
-    throw new Error('This idea has not been saved yet.');
+    // Offline-only / ephemeral draft item — local deletion is clean success
+    return { success: true, offline: true };
   }
 
   const tables = createSystemTablesDB();

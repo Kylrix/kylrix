@@ -1225,6 +1225,12 @@ export async function deleteEventSecure(eventId: string, jwt?: string) {
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
+  const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
+  if (!isValidAppwriteRowId(eventId)) {
+    // Offline-only / ephemeral draft event (not synced to Appwrite yet) — local delete is clean success
+    return { success: true, offline: true };
+  }
+
   const isAllowed = await verifyEventPermission(eventId, actor.$id, 'admin');
   if (!isAllowed) {
     throw new Error('Forbidden: Insufficient permissions to delete this event');
