@@ -47,6 +47,7 @@ interface EventsContextType {
   events: Event[];
   isLoading: boolean;
   pushLiveEvent: (event: Event, options?: { pending?: boolean }) => void;
+  replaceDraftEventId: (draftId: string, savedEvent: Event) => void;
   removeEvent: (eventId: string) => void;
   refetchEvents: () => Promise<void>;
 }
@@ -55,6 +56,7 @@ const EventsContext = createContext<EventsContextType>({
   events: [],
   isLoading: true,
   pushLiveEvent: () => {},
+  replaceDraftEventId: () => {},
   removeEvent: () => {},
   refetchEvents: async () => {},
 });
@@ -128,7 +130,11 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     });
 
     setEvents((prev) => {
-      const nextList = [normalized, ...prev.filter((e) => (e.id || (e as any).$id) !== eventId)];
+      const filtered = prev.filter((e) => {
+        const eId = e.id || (e as any).$id;
+        return eId !== eventId && eId !== (event as any).$id && e.id !== event.id;
+      });
+      const nextList = [normalized, ...filtered];
       void LocalEngine.cacheSet('f_events_list', nextList);
       return nextList;
     });
@@ -137,6 +143,32 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     if (options?.pending !== false) {
       autonomicSyncEngine.markPending(resourceId, new Date().toISOString(), normalized);
     }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('kylrix:event-updated', { detail: normalized }));
+    }
+  }, []);
+
+  const replaceDraftEventId = useCallback((draftId: string, savedEvent: Event) => {
+    const savedId = savedEvent.id || (savedEvent as any).$id;
+    const normalized = mapRemoteEvent({
+      ...savedEvent,
+      updatedAt: new Date(),
+      $updatedAt: new Date().toISOString(),
+    });
+
+    setEvents((prev) => {
+      const filtered = prev.filter((e) => {
+        const id = e.id || (e as any).$id;
+        return id !== draftId && id !== savedId;
+      });
+      const nextList = [normalized, ...filtered];
+      void LocalEngine.cacheSet('f_events_list', nextList);
+      return nextList;
+    });
+
+    autonomicSyncEngine.ack(`event:${draftId}`);
+    autonomicSyncEngine.ack(`event:${savedId}`);
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('kylrix:event-updated', { detail: normalized }));
@@ -160,6 +192,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
         events,
         isLoading,
         pushLiveEvent,
+        replaceDraftEventId,
         removeEvent,
         refetchEvents: loadEvents,
       }}

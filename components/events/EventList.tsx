@@ -52,7 +52,7 @@ import { useEvents } from '@/context/EventsContext';
 
 export default function EventList() {
   const [tabValue, setTabValue] = useState(0);
-  const { events, isLoading, pushLiveEvent, removeEvent } = useEvents();
+  const { events, isLoading, pushLiveEvent, replaceDraftEventId, removeEvent } = useEvents();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { userId } = useTask();
   const { openSidebar } = useDynamicSidebar();
@@ -136,10 +136,8 @@ export default function EventList() {
         );
 
         const created = mapRemoteEvent(newDoc);
-        // Propagate confirmed remote event to context (pending: false -> green dot)
-        pushLiveEvent(created, { pending: false });
-        autonomicSyncEngine.ack(`event:${eventData.id}`);
-        autonomicSyncEngine.ack(`event:${created.id}`);
+        // Replace ephemeral draft ID with confirmed remote Appwrite ID (pending: false -> green dot)
+        replaceDraftEventId(eventData.id, created);
       } catch (error: unknown) {
         console.error('Failed to create event', error);
         toast.error('Could not save event to database');
@@ -147,7 +145,7 @@ export default function EventList() {
         // Do NOT call ack on failure — leaves dot AMBER so UI never lies about failed sync
       }
     },
-    [activeWorkspace?.isPersonal, pushLiveEvent, userId],
+    [activeWorkspace?.isPersonal, replaceDraftEventId, userId],
   );
 
   const visibleEvents = useMemo(() => {
