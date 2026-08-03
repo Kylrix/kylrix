@@ -36,7 +36,7 @@ import { installFlow } from '@/lib/actions/client-ops';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import toast from 'react-hot-toast';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
-import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+
 import {
   FlowInstallConfirmDrawer,
   isFlowConfirmPromptEnabled,
@@ -102,7 +102,7 @@ export default function FlowsPage() {
   const { setConfiguration, resetConfiguration } = useFAB();
   const native = useNativeSidebarApiOptional();
   const { openOverlay, closeOverlay } = useOverlay();
-  const { open: openUnified, close: closeUnified } = useUnifiedDrawer();
+  const [confirmFlow, setConfirmFlow] = useState<DiscoverFlow | null>(null);
   const {
     isRecording,
     startRecording,
@@ -260,16 +260,8 @@ export default function FlowsPage() {
       void handleInstall(flow.id);
       return;
     }
-    openUnified('custom', {
-      content: (
-        <FlowInstallConfirmDrawer
-          flow={flow}
-          onConfirm={() => void handleInstall(flow.id)}
-          onClose={() => closeUnified()}
-        />
-      ),
-    });
-  }, [openUnified, closeUnified]);
+    setConfirmFlow(flow);
+  }, []);
 
   const openDetail = useCallback(
     (flow: DiscoverFlow, isOwner: boolean) => {
@@ -353,6 +345,7 @@ export default function FlowsPage() {
   const list = tab === 'discover' ? discoverList : installedList;
 
   return (
+    <>
     <div className="flex-1 min-h-screen pointer-events-auto font-satoshi text-white">
       <div className="w-full max-w-[880px] mx-auto p-4 md:p-8 space-y-5">
         <div className="flex items-end justify-between gap-4">
@@ -493,5 +486,14 @@ export default function FlowsPage() {
         </section>
       </div>
     </div>
+
+    {confirmFlow && (
+      <FlowInstallConfirmDrawer
+        flow={confirmFlow}
+        onConfirm={() => void handleInstall(confirmFlow.id)}
+        onClose={() => setConfirmFlow(null)}
+      />
+    )}
+    </>
   );
 }

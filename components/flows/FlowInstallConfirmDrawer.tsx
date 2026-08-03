@@ -65,14 +65,15 @@ export interface FlowInstallConfirmDrawerProps {
   flow: DiscoverFlow;
   onConfirm: () => void;
   onClose: () => void;
-  isAlreadyInstalled?: boolean;
 }
 
-export function FlowInstallConfirmDrawer({ flow, onConfirm, onClose, isAlreadyInstalled: initialInstalled }: FlowInstallConfirmDrawerProps) {
+/** Self-contained bottom-sheet confirm drawer. Renders its own backdrop and shell. */
+export function FlowInstallConfirmDrawer({ flow, onConfirm, onClose }: FlowInstallConfirmDrawerProps) {
   const { level, capabilities } = analyzeFlowCapabilities(flow.steps || []);
-  const [installed, setInstalled] = React.useState(!!initialInstalled);
+  const [installed, setInstalled] = React.useState(false);
   const [checking, setChecking] = React.useState(true);
 
+  // Live status check on mount
   React.useEffect(() => {
     let active = true;
     void (async () => {
@@ -94,108 +95,141 @@ export function FlowInstallConfirmDrawer({ flow, onConfirm, onClose, isAlreadyIn
     return () => { active = false; };
   }, [flow.id]);
 
+  // Close on Escape
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
   return (
-    <div className="w-full flex flex-col bg-[#161412] text-white font-satoshi max-h-[60vh] overflow-hidden select-none">
-      <div className="flex justify-center py-2 shrink-0 border-b border-white/[0.06]">
-        <span className="w-10 h-1 rounded-full bg-white/20" />
-      </div>
+    <div className="fixed inset-0 z-[1400] flex items-end justify-center pointer-events-auto">
+      {/* Backdrop */}
+      <button
+        type="button"
+        aria-label="Close"
+        className="absolute inset-0 bg-black/60"
+        onClick={onClose}
+      />
 
-      <div className="p-5 md:p-6 overflow-y-auto flex flex-col gap-5 scrollbar-thin">
-        <div className="flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#A855F7]/10 border border-[#A855F7]/20 text-[#A855F7]">
-              <Download size={20} />
-            </div>
-            <div>
-              <h3 className="font-extrabold text-lg text-white font-clash tracking-tight">
-                {installed ? 'Flow Installed' : 'Install Flow'}
-              </h3>
-              <p className="text-[10px] text-white/45 font-bold uppercase tracking-wider font-clash mt-0.5">
-                Capability Review
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 text-white/50 hover:text-white transition rounded-lg hover:bg-white/5 border border-white/5 cursor-pointer"
-          >
-            <X size={18} />
-          </button>
-        </div>
+      {/* Sheet */}
+      <div
+        className="relative w-full max-w-[720px] pointer-events-auto flex flex-col bg-[#161412] border border-[#34322F] border-b-0 rounded-t-[24px] overflow-hidden shadow-[0_-12px_36px_rgba(0,0,0,0.5)]"
+        style={{ maxHeight: '60dvh' }}
+      >
+        {/* Drag pill */}
+        <button
+          type="button"
+          className="flex justify-center py-1.5 w-full shrink-0 border-b border-[#34322F]"
+          onClick={onClose}
+          aria-label="Close drawer"
+        >
+          <span className="w-10 h-1 rounded-full bg-[#3D3A36]" />
+        </button>
 
-        <div className="rounded-2xl bg-[#0A0908] border border-white/[0.06] p-4 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="font-clash font-extrabold text-base text-white">{flow.name}</span>
-            {installed ? (
-              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <Check size={12} /> Installed
-              </span>
-            ) : flow.publisher?.verified ? (
-              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <BadgeCheck size={12} /> Verified
-              </span>
-            ) : null}
-          </div>
-          <p className="text-xs text-white/50 leading-relaxed font-satoshi">
-            {flow.description || 'No description provided.'}
-          </p>
-          <div className="flex items-center gap-2 mt-1 text-[11px] text-white/35 font-mono">
-            <span>By {flow.publisher?.handle || '@user'}</span>
-            <span>· {flow.steps.length} step(s)</span>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2.5">
-          <span className="text-[10px] font-black text-white/40 tracking-wider uppercase font-clash">
-            Permissions & Capabilities
-          </span>
-          <div className="space-y-2">
-            {capabilities.map((cap, idx) => (
-              <div key={idx} className="flex items-start gap-2.5 text-xs text-white/80 bg-[#0A0908] p-3 rounded-xl border border-white/[0.05]">
-                <Check size={14} className="text-emerald-400 shrink-0 mt-0.5" />
-                <span>{cap}</span>
+        {/* Content */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-6 pt-4 flex flex-col gap-4 scrollbar-thin">
+          {/* Header */}
+          <div className="flex justify-between items-center shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-[#A855F7]/10 border border-[#A855F7]/20 text-[#A855F7]">
+                <Download size={18} />
               </div>
-            ))}
-          </div>
-        </div>
-
-        {level === 'elevated' && (
-          <div className="flex items-start gap-2.5 bg-amber-500/10 border border-amber-500/20 p-3.5 rounded-xl text-amber-300 text-xs">
-            <ShieldAlert size={16} className="shrink-0 mt-0.5 text-amber-400" />
-            <span>
-              This flow contains elevated automated steps. Review step definitions if installing from untrusted creators.
-            </span>
-          </div>
-        )}
-
-        <div className="flex flex-col gap-2.5 pt-2">
-          {installed ? (
-            <div className="w-full py-3 rounded-xl font-extrabold text-sm bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 flex items-center justify-center gap-2">
-              <Check size={16} />
-              <span>Already Installed</span>
+              <div>
+                <h3 className="font-extrabold text-base text-white tracking-tight">
+                  {installed ? 'Flow Installed' : 'Install Flow'}
+                </h3>
+                <p className="text-[10px] text-white/40 font-bold uppercase tracking-wider mt-0.5">
+                  Capability Review
+                </p>
+              </div>
             </div>
-          ) : (
             <button
               type="button"
-              disabled={checking}
-              onClick={() => {
-                onConfirm();
-                onClose();
-              }}
-              className="w-full py-3 rounded-xl font-extrabold text-sm bg-[#A855F7] hover:bg-[#9333EA] disabled:opacity-50 text-white cursor-pointer transition flex items-center justify-center gap-2"
+              onClick={onClose}
+              className="p-1.5 text-white/40 hover:text-white transition rounded-lg hover:bg-white/5 border border-white/5 cursor-pointer"
             >
-              <Download size={16} />
-              <span>{checking ? 'Checking Status...' : 'Confirm & Install'}</span>
+              <X size={16} />
             </button>
+          </div>
+
+          {/* Flow info card */}
+          <div className="rounded-2xl bg-[#0A0908] border border-white/[0.06] p-4 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-sm text-white">{flow.name}</span>
+              {installed ? (
+                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Check size={11} /> Installed
+                </span>
+              ) : flow.publisher?.verified ? (
+                <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <BadgeCheck size={11} /> Verified
+                </span>
+              ) : null}
+            </div>
+            <p className="text-xs text-white/50 leading-relaxed">
+              {flow.description || 'No description provided.'}
+            </p>
+            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-white/30 font-mono">
+              <span>By {flow.publisher?.handle || '@user'}</span>
+              <span>· {flow.steps.length} step(s)</span>
+            </div>
+          </div>
+
+          {/* Capabilities */}
+          <div className="flex flex-col gap-2">
+            <span className="text-[10px] font-black text-white/40 tracking-wider uppercase">
+              Permissions &amp; Capabilities
+            </span>
+            <div className="space-y-1.5">
+              {capabilities.map((cap, idx) => (
+                <div key={idx} className="flex items-start gap-2.5 text-xs text-white/75 bg-[#0A0908] p-3 rounded-xl border border-white/[0.05]">
+                  <Check size={13} className="text-emerald-400 shrink-0 mt-0.5" />
+                  <span>{cap}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Elevated warning */}
+          {level === 'elevated' && (
+            <div className="flex items-start gap-2.5 bg-amber-500/10 border border-amber-500/20 p-3.5 rounded-xl text-amber-300 text-xs">
+              <ShieldAlert size={15} className="shrink-0 mt-0.5 text-amber-400" />
+              <span>
+                This flow contains elevated automated steps. Review step definitions if installing from untrusted creators.
+              </span>
+            </div>
           )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full py-2.5 rounded-xl font-bold text-xs text-white/45 hover:text-white transition hover:bg-white/5 cursor-pointer"
-          >
-            Close
-          </button>
+
+          {/* CTA */}
+          <div className="flex flex-col gap-2 pt-1">
+            {installed ? (
+              <div className="w-full py-3 rounded-xl font-extrabold text-sm bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 flex items-center justify-center gap-2">
+                <Check size={15} />
+                <span>Already Installed</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={checking}
+                onClick={() => {
+                  onConfirm();
+                  onClose();
+                }}
+                className="w-full py-3 rounded-xl font-extrabold text-sm bg-[#A855F7] hover:bg-[#9333EA] disabled:opacity-50 text-white cursor-pointer transition flex items-center justify-center gap-2"
+              >
+                <Download size={15} />
+                <span>{checking ? 'Checking...' : 'Confirm & Install'}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full py-2.5 rounded-xl font-bold text-xs text-white/40 hover:text-white transition hover:bg-white/5 cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     </div>
