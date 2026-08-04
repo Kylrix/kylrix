@@ -134,72 +134,7 @@ export function ObjectCreateDrawer({
 
   const { openSidebar } = useDynamicSidebar();
 
-  useEffect(() => {
-    if (!open || !mounted || !isDesktop) return;
-    const body = (
-      <div className="h-full min-h-0 flex flex-col bg-[#161412] overflow-hidden">
-        {kind === 'note' ? (
-          <CreateNoteForm
-            initialContent={initialContent}
-            onNoteCreated={(note) => {
-              onNoteCreated?.(note);
-            }}
-            onRegisterClose={(close) => {
-              composerCloseRef.current = close;
-            }}
-            isExpanded={true}
-            onToggleExpand={toggleExpand}
-            onClose={onClose}
-          />
-        ) : null}
-
-        {kind === 'goal' ? (
-          <CreateGoalComposer
-            onGoalCreated={onGoalCreated}
-            onRegisterClose={(close) => {
-              composerCloseRef.current = close;
-            }}
-            isExpanded={true}
-            onToggleExpand={toggleExpand}
-            onClose={onClose}
-          />
-        ) : null}
-
-        {kind === 'event' ? (
-          <CreateEventComposer
-            onEventCreated={onEventCreated}
-            onLiveEvent={onLiveEvent}
-            onCommitEvent={onCommitEvent}
-            onRegisterClose={(close) => {
-              composerCloseRef.current = close;
-            }}
-            isExpanded={true}
-            onToggleExpand={toggleExpand}
-            onClose={onClose}
-          />
-        ) : null}
-
-        {kind === 'chat' ? (
-          <CreateChatComposer
-            onClose={onClose}
-            onRegisterClose={(close) => {
-              composerCloseRef.current = close;
-            }}
-            isExpanded={true}
-            onToggleExpand={toggleExpand}
-            initialMode={chatInitialMode}
-            legacyThread={chatLegacyThread}
-          />
-        ) : null}
-      </div>
-    );
-
-    openSidebar(body, `create-${kind}`, { hideHeader: true });
-  }, [
-    open,
-    mounted,
-    isDesktop,
-    kind,
+  const propsRef = React.useRef({
     initialContent,
     onNoteCreated,
     onGoalCreated,
@@ -209,9 +144,99 @@ export function ObjectCreateDrawer({
     onClose,
     chatInitialMode,
     chatLegacyThread,
-    openSidebar,
     toggleExpand,
-  ]);
+  });
+
+  useEffect(() => {
+    propsRef.current = {
+      initialContent,
+      onNoteCreated,
+      onGoalCreated,
+      onEventCreated,
+      onLiveEvent,
+      onCommitEvent,
+      onClose,
+      chatInitialMode,
+      chatLegacyThread,
+      toggleExpand,
+    };
+  });
+
+  useEffect(() => {
+    if (!open || !mounted || !isDesktop) return;
+    const {
+      initialContent: initContent,
+      onNoteCreated: onNoteC,
+      onGoalCreated: onGoalC,
+      onEventCreated: onEventC,
+      onLiveEvent: onLiveE,
+      onCommitEvent: onCommitE,
+      onClose: onC,
+      chatInitialMode: chatMode,
+      chatLegacyThread: chatThread,
+      toggleExpand: toggleExp,
+    } = propsRef.current;
+
+    const body = (
+      <div className="h-full min-h-0 flex flex-col bg-[#161412] overflow-hidden">
+        {kind === 'note' ? (
+          <CreateNoteForm
+            initialContent={initContent}
+            onNoteCreated={(note) => {
+              onNoteC?.(note);
+            }}
+            onRegisterClose={(close) => {
+              composerCloseRef.current = close;
+            }}
+            isExpanded={true}
+            onToggleExpand={toggleExp}
+            onClose={onC}
+          />
+        ) : null}
+
+        {kind === 'goal' ? (
+          <CreateGoalComposer
+            onGoalCreated={onGoalC}
+            onRegisterClose={(close) => {
+              composerCloseRef.current = close;
+            }}
+            isExpanded={true}
+            onToggleExpand={toggleExp}
+            onClose={onC}
+          />
+        ) : null}
+
+        {kind === 'event' ? (
+          <CreateEventComposer
+            onEventCreated={onEventC}
+            onLiveEvent={onLiveE}
+            onCommitEvent={onCommitE}
+            onRegisterClose={(close) => {
+              composerCloseRef.current = close;
+            }}
+            isExpanded={true}
+            onToggleExpand={toggleExp}
+            onClose={onC}
+          />
+        ) : null}
+
+        {kind === 'chat' ? (
+          <CreateChatComposer
+            onClose={onC}
+            onRegisterClose={(close) => {
+              composerCloseRef.current = close;
+            }}
+            isExpanded={true}
+            onToggleExpand={toggleExp}
+            initialMode={chatMode}
+            legacyThread={chatThread}
+          />
+        ) : null}
+      </div>
+    );
+
+    openSidebar(body, `create-${kind}`, { hideHeader: true });
+  }, [open, mounted, isDesktop, kind, openSidebar]);
 
   if (!open || !mounted || isDesktop) return null;
 
