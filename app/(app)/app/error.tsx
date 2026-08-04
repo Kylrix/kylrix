@@ -9,7 +9,7 @@ const ACCENT = '#6366F1';
 const SURFACE = '#000000';
 const EDGE = '#34322F';
 
-export default function Error({
+export default function AppRouteError({
   error,
   reset}: {
   error: Error & { digest?: string };

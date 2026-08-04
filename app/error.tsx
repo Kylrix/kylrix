@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import RuntimeErrorDrawer from '@/components/errors/RuntimeErrorDrawer';
 import { submitRuntimeErrorFeedback } from '@/lib/errors/runtime-feedback';
 
-export default function Error({
+export default function RouteError({
   error,
   reset}: {
   error: Error & { digest?: string };
