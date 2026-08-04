@@ -211,12 +211,8 @@ export function CreateGoalComposer({
         pushLiveGoal(task);
         autonomicSyncEngine.nudge();
       }
-      if (!announcedRef.current && (task.title?.trim() || task.description?.trim())) {
-        announcedRef.current = true;
-        onGoalCreated?.(task);
-      }
     },
-    [onGoalCreated, pushLiveGoal],
+    [pushLiveGoal],
   );
 
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -266,11 +262,16 @@ export function CreateGoalComposer({
       }
       autonomicSyncEngine.ack(goalPendingKey(id));
     } else if (hasContent) {
-      pushLive(buildLive(content, title, priority, dueDate));
+      const task = buildLive(content, title, priority, dueDate);
+      pushLiveGoal(task);
       autonomicSyncEngine.nudge();
+      if (!announcedRef.current) {
+        announcedRef.current = true;
+        onGoalCreated?.(task);
+      }
     }
     onClose?.();
-  }, [buildLive, content, deleteTask, draftKey, dueDate, onClose, priority, pushLive, resolvedId, setCachedData, title]);
+  }, [buildLive, content, deleteTask, draftKey, dueDate, onClose, onGoalCreated, priority, pushLiveGoal, resolvedId, setCachedData, title]);
 
   useEffect(() => {
     return () => {
