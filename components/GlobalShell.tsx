@@ -45,6 +45,7 @@ const ChatCreateDrawer = dynamic(
 );
 const ProUpgradeDrawer = dynamic(() => import('./overlays/ProUpgradeDrawer').then(m => m.ProUpgradeDrawer), { ssr: false });
 const TaskDialog = dynamic(() => import('@/components/tasks/TaskDialog'), { ssr: false });
+const NoteDrawer = dynamic(() => import('@/components/overlays/NoteDrawer').then(m => m.NoteDrawer), { ssr: false });
 const RightSidebar = dynamic(() => import('./layout/RightSidebar'), { ssr: false });
 const AccountHealthDrawers = dynamic(() => import('./onboarding/AccountHealthDrawers').then(m => m.AccountHealthDrawers), { ssr: false });
 const UnifiedFileAttachmentDrawer = dynamic(() => import('./overlays/UnifiedFileAttachmentDrawer').then(m => m.UnifiedFileAttachmentDrawer), { ssr: false });
@@ -336,6 +337,7 @@ const isSpecificPostPage = useMemo(
       )}
       {showProUpgrade && <ProUpgradeDrawer />}
       {taskDialogOpen && <TaskDialog />}
+      {unifiedDrawerActive === 'note' && <NoteDrawer />}
       {secondarySidebar.isOpen && <RightSidebar />}
       <AccountHealthDrawers />
       <UnifiedFileAttachmentDrawer />

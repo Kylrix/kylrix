@@ -256,10 +256,11 @@ export default function NotesPage() {
     return decrypted.filter(
       (n: any) =>
         n.projectId === pid ||
-        n.isWorkspace ||
+        (n.isWorkspace && n.projectId === pid) ||
         (n.tags && n.tags.some((t: string) => t.includes(pid)))
     );
   }, [allNotes, activeWorkspace, user?.$id]);
+
 
   const pinnedNotes = useMemo(() => {
     if (searchParams.get('query')) return [];

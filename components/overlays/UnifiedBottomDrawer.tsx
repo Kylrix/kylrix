@@ -14,7 +14,7 @@ import {
 export function UnifiedBottomDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
 
-  if (!activeContent || (activeContent as string) === 'navbar') return null;
+  if (!activeContent || (activeContent as string) === 'navbar' || (activeContent as string) === 'note') return null;
 
   const content = (
     <UnifiedDrawerBody
