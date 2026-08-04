@@ -499,6 +499,22 @@ async function flushGoalPending(
           userId: creatorId},
         permissions,
       );
+
+      const targetProjectId = (payload as any)?.projectId;
+      const isWs = (payload as any)?.isWorkspace;
+      if (targetProjectId && targetProjectId !== activeUserId && isWs) {
+        try {
+          const { attachObjectToProject } = await import('@/lib/projects/object-attachment');
+          await attachObjectToProject({
+            projectId: targetProjectId,
+            entityKind: 'goal',
+            entityId: goalId,
+          });
+          console.log(`[SyncEngine] Attached new goal ${goalId} to project_objects for ${targetProjectId}`);
+        } catch (attachErr) {
+          console.warn('[SyncEngine] Failed to attach goal to project_objects on initial sync:', attachErr);
+        }
+      }
       try {
         const { taskCollaborators } = await import('@/lib/kylrixflow');
         for (const assigneeId of assignees) {
@@ -620,6 +636,23 @@ async function flushNotePending(
       syncedNote = await createNote({
         ...dataPayload,
         $id: noteId});
+
+      // On initial creation sync, if item belongs to a custom workspace, guarantee project_objects registration
+      const targetProjectId = (payload as any)?.projectId;
+      const isWs = (payload as any)?.isWorkspace;
+      if (targetProjectId && targetProjectId !== activeUserId && isWs) {
+        try {
+          const { attachObjectToProject } = await import('@/lib/projects/object-attachment');
+          await attachObjectToProject({
+            projectId: targetProjectId,
+            entityKind: 'note',
+            entityId: noteId,
+          });
+          console.log(`[SyncEngine] Attached new note ${noteId} to project_objects for ${targetProjectId}`);
+        } catch (attachErr) {
+          console.warn('[SyncEngine] Failed to attach note to project_objects on initial sync:', attachErr);
+        }
+      }
     } else {
       throw err;
     }
