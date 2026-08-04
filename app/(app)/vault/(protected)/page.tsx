@@ -21,7 +21,7 @@ import { useSudo } from '@/context/SudoContext';
 import { useFAB } from '@/context/FABContext';
 import { MultiSectionContainer, useSection } from '@/context/SectionContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
-import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, RefreshCw, Lock } from 'lucide-react';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { TOTPPageContent } from './totp/page';
 
