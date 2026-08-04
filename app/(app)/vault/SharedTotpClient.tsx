@@ -220,6 +220,8 @@ export default function SharedTotpClient({ totpId, keySegments, rawTotp }: Share
     return () => { cancelled = true; };
   }, [totpId, keySegments, startLive]);
 
+  const [copiedTitle, setCopiedTitle] = useState(false);
+
   const copyCode = useCallback(async () => {
     if (!code) return;
     try {
@@ -228,6 +230,15 @@ export default function SharedTotpClient({ totpId, keySegments, rawTotp }: Share
       setTimeout(() => setCopied(false), 2000);
     } catch { /**/ }
   }, [code]);
+
+  const copyTitle = useCallback(async () => {
+    if (!state.label) return;
+    try {
+      await navigator.clipboard.writeText(state.label);
+      setCopiedTitle(true);
+      setTimeout(() => setCopiedTitle(false), 2000);
+    } catch { /**/ }
+  }, [state.label]);
 
   if (state.kind === 'loading') {
     return (
@@ -265,7 +276,17 @@ export default function SharedTotpClient({ totpId, keySegments, rawTotp }: Share
         <div className="stc-header">
           <Shield size={18} strokeWidth={1.5} className="stc-shield" />
           <div>
-            <h1 className="stc-label">{state.label}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h1 className="stc-label">{state.label}</h1>
+              <button 
+                type="button" 
+                onClick={copyTitle} 
+                title="Copy title" 
+                style={{ background: 'none', border: 'none', color: '#9B9691', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', padding: '2px' }}
+              >
+                {copiedTitle ? <CheckCircle2 size={14} style={{ color: '#10B981' }} /> : <Copy size={14} />}
+              </button>
+            </div>
             {state.isTemp && (
               <span className="stc-temp-badge">Temporary · Expires soon</span>
             )}

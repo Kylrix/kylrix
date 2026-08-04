@@ -188,7 +188,12 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
             )}
           </div>
           <div className="svc-title-block">
-            <h1 className="svc-name">{credential.name}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h1 className="svc-name">{credential.name}</h1>
+              <button className="svc-btn icon-btn" onClick={() => copyToClipboard(credential.name!, 'title')} title="Copy title">
+                {copied === 'title' ? <CheckCircle2 size={14} className="copied" /> : <Copy size={14} />}
+              </button>
+            </div>
             <span className="svc-badge">
               <Globe size={11} />
               Shared Password
