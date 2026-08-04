@@ -339,7 +339,7 @@ export function filterNoteData(data: Record<string, any>): Record<string, any> {
     'extensions', 'collaborators', 'metadata', 'attachments', 'format',
     'isGhost', 'isThread', 'isPinned', 'creatorId', 'isChat', 'resourceId',
     'resourceType', 'isEncrypted', 'isPass', 'isTask', 'isFile', 'isTotp',
-    'isDiscussion', 'source', 'keepPermission', 'crdt', 'dek', 'isDeleted'
+    'isDiscussion', 'isWorkspace', 'source', 'keepPermission', 'crdt', 'dek', 'isDeleted'
   ];
   
   const filtered: Record<string, any> = {};
