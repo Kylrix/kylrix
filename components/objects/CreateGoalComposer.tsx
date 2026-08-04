@@ -17,6 +17,8 @@ import {
   EventDateTimePickerDrawer,
 } from '@/components/events/drawers/EventDateTimePickerDrawer';
 
+import { useDataNexus } from '@/context/DataNexusContext';
+
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low'];
 
 type Props = {
@@ -26,6 +28,7 @@ type Props = {
   onToggleExpand?: () => void;
   onGoalCreated?: (task: Task) => void;
   initialContent?: {
+    id?: string;
     title?: string;
     content?: string;
     priority?: Priority;
@@ -49,6 +52,8 @@ export function CreateGoalComposer({
   const { user } = useAuth();
   const ownerId = user?.$id || userId || 'guest';
   const { openSidebar } = useDynamicSidebar();
+  const { getCachedData, setCachedData } = useDataNexus();
+  const draftKey = `kylrix_goal_compose_draft_${ownerId}`;
 
   const [content, setContent] = useState(initialContent?.content || '');
   const [title, setTitle] = useState(initialContent?.title || '');
@@ -57,6 +62,7 @@ export function CreateGoalComposer({
   const [dueDate, setDueDate] = useState(initialContent?.dueDate || '');
   const [showMobileDatePicker, setShowMobileDatePicker] = useState(false);
   const [resolvedId, setResolvedId] = useState<string | undefined>(initialContent?.id);
+  const [draftHydrated, setDraftHydrated] = useState(false);
   const [localExpanded, setLocalExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const isExpanded = controlledExpanded !== undefined ? controlledExpanded : localExpanded;
@@ -73,6 +79,34 @@ export function CreateGoalComposer({
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  // Hydrate draft memory from LocalEngine on mount
+  useEffect(() => {
+    if (draftHydrated) return;
+    const cachedDraft = getCachedData<{
+      id?: string;
+      title?: string;
+      content?: string;
+      priority?: Priority;
+      dueDate?: string;
+    }>(draftKey);
+
+    if (cachedDraft && (cachedDraft.content || cachedDraft.title || cachedDraft.dueDate)) {
+      const targetId = initialContent?.id || cachedDraft.id;
+      if (targetId) {
+        liveIdRef.current = targetId;
+        setResolvedId(targetId);
+      }
+      if (initialContent?.content === undefined && cachedDraft.content) setContent(cachedDraft.content);
+      if (initialContent?.title === undefined && cachedDraft.title) {
+        setTitle(cachedDraft.title);
+        setIsTitleManuallyEdited(true);
+      }
+      if (initialContent?.priority === undefined && cachedDraft.priority) setPriority(cachedDraft.priority);
+      if (initialContent?.dueDate === undefined && cachedDraft.dueDate) setDueDate(cachedDraft.dueDate);
+    }
+    setDraftHydrated(true);
+  }, [draftHydrated, draftKey, getCachedData, initialContent]);
 
   useEffect(() => {
     if (initialContent?.id) {
@@ -93,6 +127,22 @@ export function CreateGoalComposer({
       setPriority(initialContent.priority);
     }
   }, [initialContent?.id, initialContent?.dueDate, initialContent?.content, initialContent?.title, initialContent?.priority]);
+
+  // Save active draft into LocalEngine
+  useEffect(() => {
+    if (!draftHydrated) return;
+    const activeId = liveIdRef.current || resolvedId;
+    const hasDraft = Boolean(content.trim() || title.trim() || dueDate.trim());
+    if (hasDraft) {
+      setCachedData(draftKey, {
+        id: activeId,
+        title,
+        content,
+        priority,
+        dueDate,
+      });
+    }
+  }, [content, title, priority, dueDate, resolvedId, draftKey, setCachedData, draftHydrated]);
 
   useEffect(() => {
     if (isTitleManuallyEdited) return;
@@ -209,6 +259,7 @@ export function CreateGoalComposer({
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     const id = liveIdRef.current || resolvedId;
     const hasContent = Boolean(content.trim() || title.trim());
+    setCachedData(draftKey, null);
     if (!hasContent && id) {
       if (typeof deleteTask === 'function') {
         void deleteTask(id);
@@ -219,7 +270,7 @@ export function CreateGoalComposer({
       autonomicSyncEngine.nudge();
     }
     onClose?.();
-  }, [buildLive, content, deleteTask, dueDate, onClose, priority, pushLive, resolvedId, title]);
+  }, [buildLive, content, deleteTask, draftKey, dueDate, onClose, priority, pushLive, resolvedId, setCachedData, title]);
 
   useEffect(() => {
     return () => {
