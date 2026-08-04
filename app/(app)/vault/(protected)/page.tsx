@@ -184,11 +184,23 @@ function DashboardPageContent() {
       void hydrateVaultData();
     };
 
+    const handleVaultChange = async () => {
+      try {
+        const { VaultService } = await import('@/lib/appwrite/vault-service');
+        VaultService.clearVaultCaches();
+      } catch {}
+      void loadAllCredentials(true);
+    };
+
     window.addEventListener('online', handleOnline);
+    window.addEventListener('vault-unlocked', handleVaultChange);
+    window.addEventListener('vault-locked', handleVaultChange);
     return () => {
       window.removeEventListener('online', handleOnline);
+      window.removeEventListener('vault-unlocked', handleVaultChange);
+      window.removeEventListener('vault-locked', handleVaultChange);
     };
-  }, [hydrateVaultData]);
+  }, [hydrateVaultData, loadAllCredentials]);
 
   // Effects
   useEffect(() => {

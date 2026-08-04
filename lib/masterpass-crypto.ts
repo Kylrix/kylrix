@@ -815,4 +815,22 @@ export const decryptField = async (encryptedValue: string): Promise<string> => {
   return masterPassCrypto.decryptData(encryptedValue) as Promise<string>;
 };
 
+export function looksEncrypted(val?: string | null): boolean {
+  if (!val || typeof val !== 'string') return false;
+  const v = val.trim();
+  if (
+    v.startsWith('aes-gcm:') ||
+    v.startsWith('{"iv"') ||
+    v.startsWith('{"ct"') ||
+    v.includes('::') ||
+    v.startsWith('[DECRYPTION_')
+  ) {
+    return true;
+  }
+  if (v.length > 20 && (/^[A-Za-z0-9+/=]+$/.test(v) || /^[A-Fa-f0-9:]+$/.test(v))) {
+    return true;
+  }
+  return false;
+}
+
 // Add utility function for reset

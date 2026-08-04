@@ -107,6 +107,27 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   }, [searchParams, router, requireUnlock]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleVaultChange = async () => {
+      try {
+        const { VaultService } = await import('@/lib/appwrite/vault-service');
+        VaultService.clearVaultCaches();
+      } catch {}
+      if (user?.$id) {
+        listTotpSecrets(user.$id).then(setTotpCodes).catch(() => {});
+      }
+    };
+
+    window.addEventListener('vault-unlocked', handleVaultChange);
+    window.addEventListener('vault-locked', handleVaultChange);
+    return () => {
+      window.removeEventListener('vault-unlocked', handleVaultChange);
+      window.removeEventListener('vault-locked', handleVaultChange);
+    };
+  }, [user?.$id]);
+
+  useEffect(() => {
     if (!user?.$id) return;
     if (!isVaultUnlocked() && !unlockOnDemand) return;
 

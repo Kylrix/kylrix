@@ -1255,6 +1255,11 @@ export class VaultService {
       rows: decryptedRows};
   }
 
+  static clearVaultCaches() {
+    this.credentialsListCache.clear();
+    this.credentialsListInflight.clear();
+  }
+
   /**
    * Fetches ALL credentials for a user, handling pagination automatically.
    * Use this for operations that require the full dataset, like search or export.
@@ -1291,7 +1296,10 @@ export class VaultService {
               doc,
               "credentials") as unknown as Credentials));
 
-      this.credentialsListCache.set(cacheKey, rows);
+      const { masterPassCrypto } = await import("../masterpass-crypto");
+      if (masterPassCrypto.isVaultUnlocked()) {
+        this.credentialsListCache.set(cacheKey, rows);
+      }
       return rows;
     })().finally(() => {
       this.credentialsListInflight.delete(cacheKey);

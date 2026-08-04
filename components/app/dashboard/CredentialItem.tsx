@@ -6,6 +6,7 @@ import { useResourcePins } from '@/context/ResourcePinContext';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuItems';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
+import { looksEncrypted } from '@/lib/masterpass-crypto';
 
 export default function CredentialItem({
   credential,
@@ -204,7 +205,7 @@ export default function CredentialItem({
         <div className="flex items-center gap-1.5 min-w-0">
           {pinned && <Pin className="w-3.5 h-3.5 text-[#F59E0B] shrink-0 fill-[#F59E0B]" />}
           <span className="font-black text-white leading-tight font-clash text-base truncate">
-            {credential.name && (credential.name.startsWith('{"iv"') || credential.name.startsWith('{"ct"') || (credential.name.includes('::') && credential.name.length > 20))
+            {looksEncrypted(credential.name)
               ? 'Encrypted Secret'
               : credential.name}
           </span>
@@ -214,7 +215,7 @@ export default function CredentialItem({
           className="text-[#9B9691] font-medium text-[0.85rem] leading-[1.35] font-satoshi truncate transition-[filter] duration-300"
           style={{ filter: isBlurEnabled ? 'blur(4.5px)' : 'none' }}
         >
-          {credential.username && (credential.username.startsWith('{"iv"') || credential.username.startsWith('{"ct"') || (credential.username.includes('::') && credential.username.length > 20))
+          {looksEncrypted(credential.username)
             ? '••••••••'
             : credential.username}
         </span>
