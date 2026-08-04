@@ -254,9 +254,45 @@ export default function NotesPage() {
   const customWorkspaceId = isCustomWorkspace ? activeWorkspace?.id : null;
   const { rows: workspaceProjectObjects } = useProjectObjects(customWorkspaceId, 'note');
 
+  // State to hold extra notes fetched directly by entityId from project_objects
+  const [extraWorkspaceNotes, setExtraWorkspaceNotes] = useState<Notes[]>([]);
+
+  useEffect(() => {
+    if (!isCustomWorkspace || !workspaceProjectObjects.length) {
+      setExtraWorkspaceNotes([]);
+      return;
+    }
+
+    const safeNotes = Array.isArray(allNotes) ? allNotes : [];
+    const knownIds = new Set(safeNotes.map((n) => n.$id));
+    const missingIds = workspaceProjectObjects
+      .map((po) => po.entityId)
+      .filter((id): id is string => Boolean(id) && !knownIds.has(id));
+
+    if (!missingIds.length) return;
+
+    let mounted = true;
+    import('@/lib/appwrite/note').then(({ listNotes }) => {
+      import('appwrite').then(({ Query }) => {
+        listNotes([Query.equal('$id', missingIds)], 100)
+          .then((res) => {
+            if (mounted && res?.rows?.length) {
+              setExtraWorkspaceNotes(res.rows as Notes[]);
+            }
+          })
+          .catch(() => {});
+      });
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [isCustomWorkspace, workspaceProjectObjects, allNotes]);
+
   const visibleNotes = useMemo(() => {
     const safeNotes = Array.isArray(allNotes) ? allNotes : [];
-    const decrypted = safeNotes.filter((n) => !isClientEncryptedNote(n));
+    const combinedNotes = [...safeNotes, ...extraWorkspaceNotes];
+    const decrypted = combinedNotes.filter((n) => !isClientEncryptedNote(n));
 
     if (!activeWorkspace || activeWorkspace.isPersonal) {
       return decrypted.filter(isDefaultWorkspaceObject);
@@ -272,7 +308,7 @@ export default function NotesPage() {
       // Fallback: local draft not yet written to project_objects but has projectId in metadata
       n.projectId === pid
     );
-  }, [allNotes, activeWorkspace, workspaceProjectObjects]);
+  }, [allNotes, extraWorkspaceNotes, activeWorkspace, workspaceProjectObjects]);
 
 
 
