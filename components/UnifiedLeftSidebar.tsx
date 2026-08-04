@@ -268,7 +268,6 @@ export function UnifiedLeftSidebar() {
                       onClick={() => {
                         setActiveWorkspaceId(w.id);
                         setWorkspaceMenuOpen(false);
-                        router.push('/app');
                       }}
                       sx={{
                         display: 'flex',

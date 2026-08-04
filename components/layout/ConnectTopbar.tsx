@@ -1832,7 +1832,6 @@ export default function ConnectTopbar({
               onClick={() => {
                 setActiveWorkspaceId(w.id);
                 handleCloseAll();
-                router.push('/app');
               }}
               sx={{
                 width: '100%',
