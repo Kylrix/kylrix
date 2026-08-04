@@ -990,14 +990,22 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   }, [applyNotePin]);
 
   const sortedNotes = useMemo(() => {
-    const scoped =
-      activeWorkspace?.isPersonal !== false
-        ? notes.filter(isDefaultWorkspaceObject)
-        : notes;
+    let scoped = notes;
+    if (!activeWorkspace || activeWorkspace.isPersonal) {
+      scoped = notes.filter(isDefaultWorkspaceObject);
+    } else {
+      const pid = activeWorkspace.id;
+      scoped = notes.filter(
+        (n: any) =>
+          n.projectId === pid ||
+          n.isWorkspace ||
+          (n.tags && n.tags.some((t: string) => t.includes(pid)))
+      );
+    }
     return sortPinnedThenCreatedAt(scoped, (row) =>
       isResourcePinned('note', row.$id, noteOwnerId(row), row.isPinned),
     );
-  }, [notes, isResourcePinned, noteOwnerId, activeWorkspace?.isPersonal]);
+  }, [notes, isResourcePinned, noteOwnerId, activeWorkspace]);
 
   /**
    * Memoize the context value so consumers (note list, sidebar, search, etc.) don't

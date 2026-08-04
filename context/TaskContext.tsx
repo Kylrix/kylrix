@@ -1726,8 +1726,11 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   // Computed values
   const getFilteredTasks = useCallback(() => {
     let sourceTasks = state.tasks;
-    if (activeWorkspace?.isPersonal !== false) {
+    if (!activeWorkspace || activeWorkspace.isPersonal) {
       sourceTasks = sourceTasks.filter(isDefaultWorkspaceObject);
+    } else {
+      const pid = activeWorkspace.id;
+      sourceTasks = sourceTasks.filter((t) => t.projectId === pid || t.isWorkspace);
     }
     if (state.userId && state.userId !== 'guest') {
       const activeId = state.userId;
