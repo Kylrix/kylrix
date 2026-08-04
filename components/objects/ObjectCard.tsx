@@ -118,7 +118,7 @@ export function ObjectCard({
       onTouchMove={clearLongPress}
       onTouchCancel={clearLongPress}
       className={[
-        'w-full text-left overflow-hidden cursor-pointer select-none relative',
+        'w-full text-left overflow-hidden cursor-pointer select-none relative min-w-[260px] sm:min-w-[280px]',
         isTask
           ? [
               'rounded-2xl bg-[#12110F] border border-[#2A2826]',
