@@ -35,10 +35,12 @@ export function WorkspaceTab() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Form states
-  const [title, setTitle] = useState('');
-  const [summary, setSummary] = useState('');
-  const [visibility, setVisibility] = useState<'private' | 'public'>('private');
+  // Form states initialized optimistically from activeWorkspace
+  const [title, setTitle] = useState(activeWorkspace?.name || '');
+  const [summary, setSummary] = useState(activeWorkspace?.summary || '');
+  const [visibility, setVisibility] = useState<'private' | 'public'>(
+    activeWorkspace?.isPublic ? 'public' : 'private'
+  );
   const [status, setStatus] = useState<'active' | 'archived'>('active');
 
   // Collaborators / Members
@@ -185,21 +187,16 @@ export function WorkspaceTab() {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6366F1]" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       {/* Overview & Metadata */}
       <div className="p-6 md:p-8 rounded-3xl bg-[#161412] border border-[#1C1A18]">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-black text-white font-clash">Workspace Settings</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-black text-white font-clash">Workspace Settings</h2>
+              {loading && <RefreshCw size={14} className="animate-spin text-[#6366F1]" />}
+            </div>
             <p className="text-xs text-[#9B9691]">Manage details and visibility for &quot;{activeWorkspace.name}&quot;</p>
           </div>
           <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
