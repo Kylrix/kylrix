@@ -415,7 +415,7 @@ export default function CredentialDialog({
     <div className="fixed inset-0 z-50 flex justify-end items-end md:items-stretch overflow-hidden">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
+        className="absolute inset-0 bg-black/80 transition-opacity duration-300 animate-in fade-in"
         onClick={handleClose}
       />
       

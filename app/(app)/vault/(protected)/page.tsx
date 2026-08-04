@@ -647,7 +647,7 @@ function DashboardPageContent() {
 
       {/* Custom Tailwind Delete Modal */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
           <div className="w-full max-w-md p-6 rounded-[32px] bg-[#161412] border border-[#1C1A18] shadow-[0_40px_80px_rgba(0,0,0,0.6)] animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-2xl font-black font-clash text-[#FF453A] mb-4">
               Delete Secret

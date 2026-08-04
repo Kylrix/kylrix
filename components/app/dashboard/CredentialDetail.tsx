@@ -281,7 +281,7 @@ export default function CredentialDetail({
   const content = (
     <div className={`h-full flex flex-col ${inline ? 'bg-transparent' : 'bg-[#161412]'} w-full min-h-0 text-[#F5F2ED]`}>
       {/* Header Bar matching TaskDetails / NoteDetailSidebar */}
-      <div className="px-5 py-4 flex flex-col gap-3 border-b border-[#2C2A28] shrink-0 bg-[#161412]/95 backdrop-blur-md">
+      <div className="px-5 py-4 flex flex-col gap-3 border-b border-[#2C2A28] shrink-0 bg-[#161412]">
         {/* Row 1: Back/Close & Action Buttons */}
         <div className="flex items-center justify-between min-w-0">
           <div className="flex items-center gap-2">
@@ -573,7 +573,7 @@ export default function CredentialDetail({
     <div className="fixed inset-0 z-50 flex justify-end overflow-hidden">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/70 backdrop-blur-md transition-opacity duration-300 animate-in fade-in"
+        className="absolute inset-0 bg-black/80 transition-opacity duration-300 animate-in fade-in"
         onClick={onClose}
       />
       
