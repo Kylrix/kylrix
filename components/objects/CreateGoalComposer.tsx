@@ -141,6 +141,11 @@ export function CreateGoalComposer({
       const generated = isTitleManuallyEdited ? title : buildAutoTitleFromContent(next);
       if (!isTitleManuallyEdited) setTitle(generated);
       pushLive(buildLive(next, generated));
+
+      if (contentRef.current) {
+        contentRef.current.style.height = 'auto';
+        contentRef.current.style.height = `${Math.max(76, Math.min(contentRef.current.scrollHeight, 360))}px`;
+      }
     },
     [buildLive, isTitleManuallyEdited, pushLive, title],
   );
@@ -232,12 +237,13 @@ export function CreateGoalComposer({
         </div>
 
         {/* Description Input */}
-        <div className="flex-1 min-h-[180px] flex flex-col gap-1">
+        <div className="shrink-0 flex flex-col gap-1">
           <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-white/35">
             Description & Milestones
           </label>
           <textarea
             ref={contentRef}
+            rows={3}
             value={content}
             onPaste={(e) => {
               isPastedRef.current = true;
@@ -262,7 +268,8 @@ export function CreateGoalComposer({
             }}
             placeholder="Break down your goal, steps, or notes..."
             autoFocus
-            className="w-full flex-1 h-full min-h-[180px] resize-none bg-[#100F0E] text-white placeholder-white/25 border border-white/10 focus:border-[#A855F7]/40 rounded-2xl p-3.5 text-sm leading-relaxed focus:outline-none transition-all scrollbar-thin font-satoshi"
+            style={{ minHeight: '76px', height: '76px' }}
+            className="w-full resize-none bg-[#100F0E] text-white placeholder-white/25 border border-white/10 focus:border-[#A855F7]/40 rounded-2xl p-3.5 text-sm leading-relaxed focus:outline-none transition-all scrollbar-thin font-satoshi"
           />
         </div>
 
