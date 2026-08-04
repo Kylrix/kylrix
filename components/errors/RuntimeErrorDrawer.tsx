@@ -41,7 +41,13 @@ export default function RuntimeErrorDrawer({
             <p className="text-xs text-neutral-400">{description}</p>
             <div className="max-h-28 overflow-y-auto bg-neutral-950 p-2.5 rounded border border-neutral-800/40">
               <p className="font-mono text-xs text-neutral-500 break-all leading-relaxed">
-                {error.message || 'Unknown error.'}
+                {(() => {
+                  try {
+                    return typeof error?.message === 'string' ? error.message : String(error || 'Unknown error.');
+                  } catch {
+                    return 'Unknown error.';
+                  }
+                })()}
               </p>
             </div>
           </div>
