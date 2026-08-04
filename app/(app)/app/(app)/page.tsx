@@ -52,6 +52,7 @@ import { useLayout } from '@/context/LayoutContext';
 import { useToast } from '@/components/ui/Toast';
 import { TaggedResourcesTabs } from '@/components/share/TaggedResourcesTabs';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { useProjectObjects } from '@/hooks/useProjectObjects';
 
 // Client-side persistence cache to resist reload flicker
 
@@ -246,20 +247,32 @@ export default function NotesPage() {
 
   const { activeWorkspace } = useWorkspace();
 
+  const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
+  const customWorkspaceId = isCustomWorkspace ? activeWorkspace?.id : null;
+  const { rows: workspaceProjectObjects } = useProjectObjects(customWorkspaceId, 'note');
+
   const visibleNotes = useMemo(() => {
     const safeNotes = Array.isArray(allNotes) ? allNotes : [];
     const decrypted = safeNotes.filter((n) => !isClientEncryptedNote(n));
-    if (!activeWorkspace || activeWorkspace.isPersonal || activeWorkspace.id === user?.$id) {
+
+    if (!isCustomWorkspace || !activeWorkspace) {
       return decrypted.filter((n: any) => !n.isWorkspace && !n.projectId);
     }
+
+    const linkedEntityIds = new Set(
+      (workspaceProjectObjects || []).map((po: any) => po.entityId || po.id).filter(Boolean)
+    );
+
     const pid = activeWorkspace.id;
     return decrypted.filter(
       (n: any) =>
+        linkedEntityIds.has(n.$id) ||
         n.projectId === pid ||
         (n.isWorkspace && (n.projectId === pid || !n.projectId)) ||
         (n.tags && n.tags.some((t: string) => t.includes(pid)))
     );
-  }, [allNotes, activeWorkspace, user?.$id]);
+  }, [allNotes, activeWorkspace, isCustomWorkspace, workspaceProjectObjects]);
+
 
 
 
