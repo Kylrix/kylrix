@@ -695,7 +695,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
           <div className="flex justify-center py-24 max-w-3xl">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
           </div>
-        ) : totpCodes.length === 0 ? (
+        ) : scopedTotpCodes.length === 0 ? (
           <div className="p-24 text-center rounded-[32px] bg-[#161412] border border-dashed border-[#1C1A18] max-w-3xl">
             <Shield className="h-16 w-16 mx-auto mb-6 text-white/5" />
             <h2 className="text-xl font-black text-white mb-2 font-clash">

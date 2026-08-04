@@ -560,14 +560,22 @@ function DashboardPageContent() {
                           <CredentialItem key={`skeleton-${i}`} credential={{ $id: `skeleton-${i}`, name: 'Loading...', username: '', type: 'password' } as any} onCopy={() => {}} onEdit={() => {}} onDelete={() => {}} />
                         ))}
                       </div>
-                    ) : allCredentials.length === 0 ? (
-                      <div className="p-24 text-center rounded-[32px] bg-[#161412] border border-dashed border-[#1C1A18]">
+                    ) : sortedCredentials.length === 0 ? (
+                      <div className="p-16 text-center rounded-[32px] bg-[#161412] border border-dashed border-[#1C1A18] flex flex-col items-center justify-center">
+                        <Lock className="h-12 w-12 text-white/10 mb-4" />
                         <h2 className="text-xl font-black text-white mb-2 font-clash">
                           No Secrets Found
                         </h2>
-                        <p className="text-[#9B9691] max-w-xs mx-auto">
-                          Your secure vault is ready for its first secret.
+                        <p className="text-[#9B9691] max-w-xs mx-auto mb-6 text-sm">
+                          Your secure vault is empty. Store passwords, logins, or cards safely.
                         </p>
+                        <button
+                          onClick={handleAdd}
+                          className="inline-flex items-center gap-2 px-6 h-12 bg-[#10B981] hover:bg-[#059669] text-black font-black rounded-2xl transition-colors"
+                        >
+                          <Plus size={18} />
+                          Add Secret
+                        </button>
                       </div>
                     ) : (
                       <>
