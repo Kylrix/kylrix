@@ -51,6 +51,11 @@ export function projectObjectsCacheKey(projectId: string): string {
   return `project_objects_${projectId}`;
 }
 
+/** Cache key for a filtered slice: all objects of a given entityKind inside a project. */
+export function projectObjectsKindCacheKey(projectId: string, entityKind: string): string {
+  return `project_objects_${projectId}_kind_${entityKind}`;
+}
+
 export function projectMetaCacheKey(projectId: string): string {
   return `project_meta_${projectId}`;
 }

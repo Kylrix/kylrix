@@ -32,16 +32,23 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { getCachedDataAsync, fetchOptimized } = useDataNexus();
   const userId = user?.$id || 'guest';
-  const userName = user?.name || user?.email?.split('@')[0] || 'My';
+  // Derive a clean display name for the personal workspace label.
+  // Avoid "My's Workspace" — if name contains an apostrophe already or is absent,
+  // we use the raw name but strip a trailing "'s" to prevent double-possessive.
+  const rawName = (user?.name || user?.email?.split('@')[0] || '').trim();
+  // Build title: "<Name>'s Workspace" when we have a real name, otherwise plain "Personal Workspace"
+  const personalWorkspaceTitle = rawName
+    ? `${rawName}'s Workspace`
+    : 'Personal Workspace';
 
   const personalWorkspace = useMemo<WorkspaceItem>(
     () => ({
       id: userId,
-      title: `${userName}'s Workspace`,
+      title: personalWorkspaceTitle,
       ownerId: userId,
       isPersonal: true,
     }),
-    [userId, userName]
+    [userId, personalWorkspaceTitle]
   );
 
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string>(userId);

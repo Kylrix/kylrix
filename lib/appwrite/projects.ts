@@ -164,17 +164,89 @@ export const ProjectsService = {
   },
 
   async listProjectObjects(projectId: string) {
-    return (databases as any).listRows(
+    const result = await (databases as any).listRows(
       DATABASE_ID,
       PROJECT_OBJECTS_COLLECTION_ID,
       [Query.equal('projectId', projectId)]
     );
+    // Warm the local copy for offline / workspace-switch reads
+    if (typeof window !== 'undefined' && result?.rows?.length) {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const { projectObjectsCacheKey, projectObjectsKindCacheKey } = await import('@/lib/projects/projects-cache');
+        void LocalEngine.cacheSet(projectObjectsCacheKey(projectId), result.rows);
+        // Partition by kind so kind-specific reads hit cache immediately
+        const byKind: Record<string, any[]> = {};
+        for (const row of result.rows) {
+          const k = row.entityKind as string;
+          if (k) { (byKind[k] = byKind[k] || []).push(row); }
+        }
+        for (const [kind, rows] of Object.entries(byKind)) {
+          void LocalEngine.cacheSet(projectObjectsKindCacheKey(projectId, kind), rows);
+        }
+      } catch {}
+    }
+    return result;
   },
+
+  /**
+   * Fetch project_objects filtered by entityKind (e.g. 'note', 'goal', 'credential').
+   * The unique index (projectId, entityKind, entityId) covers this query efficiently.
+   * Results are written to LocalEngine so subsequent calls resolve instantly from cache.
+   */
+  async listProjectObjectsByKind(projectId: string, entityKind: string) {
+    const { projectObjectsKindCacheKey } = await import('@/lib/projects/projects-cache');
+    const cacheKey = projectObjectsKindCacheKey(projectId, entityKind);
+
+    // 1. Serve from local copy immediately (background refresh below)
+    if (typeof window !== 'undefined') {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cached = await LocalEngine.cacheGet<any[]>(cacheKey);
+        if (cached && cached.length > 0) {
+          // Fire background refresh to keep local copy warm
+          (databases as any)
+            .listRows(DATABASE_ID, PROJECT_OBJECTS_COLLECTION_ID, [
+              Query.equal('projectId', projectId),
+              Query.equal('entityKind', entityKind),
+            ])
+            .then(async (remote: any) => {
+              if (remote?.rows?.length) {
+                await LocalEngine.cacheSet(cacheKey, remote.rows);
+              }
+            })
+            .catch(() => {});
+          return { rows: cached };
+        }
+      } catch {}
+    }
+
+    // 2. No local copy — fetch remote and persist
+    const result = await (databases as any).listRows(
+      DATABASE_ID,
+      PROJECT_OBJECTS_COLLECTION_ID,
+      [
+        Query.equal('projectId', projectId),
+        Query.equal('entityKind', entityKind),
+      ],
+    );
+
+    if (typeof window !== 'undefined' && result?.rows?.length) {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        void LocalEngine.cacheSet(cacheKey, result.rows);
+      } catch {}
+    }
+
+    return result;
+  },
+
 
   async addObjectToProject(projectId: string, entityKind: string, entityId: string, role?: string, metadata?: any) {
     clearSessionProjectDetail(projectId);
     void invalidateCache(`project_detail_${projectId}`);
     void invalidateCache(`project_objects_${projectId}`);
+    void invalidateCache(`project_objects_${projectId}_kind_${entityKind}`);
     void invalidateCache(`project_entities_${projectId}_*`);
     void invalidateCache(`project_tagged_${projectId}_*`);
     if (typeof window !== 'undefined') {
