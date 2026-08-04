@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ID } from 'appwrite';
-import { Calendar, Check, ChevronDown, ChevronUp, Target } from 'lucide-react';
+import { ArrowLeft, Calendar, Check, ChevronDown, ChevronUp, Target } from 'lucide-react';
 import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
 import { useTask } from '@/context/TaskContext';
 import { useAuth } from '@/lib/auth';
@@ -263,14 +263,22 @@ export function CreateGoalComposer({
       className="w-full h-full min-h-0 flex flex-col bg-[#161412] text-white overscroll-contain"
     >
       {/* Header */}
-      <div className="px-4 py-3 flex items-center justify-between border-b border-white/5 sticky top-0 z-20 bg-[#161412] shrink-0">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center bg-[#A855F7]/10 border border-[#A855F7]/25 text-[#A855F7] shrink-0">
-            <Target className="w-4 h-4" />
+      <div className="px-3 py-2.5 flex items-center justify-between border-b border-white/5 sticky top-0 z-20 bg-[#161412] shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="p-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all shrink-0 cursor-pointer"
+            title="Back / Close"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div className="w-7 h-7 rounded-xl flex items-center justify-center bg-[#A855F7]/10 border border-[#A855F7]/25 text-[#A855F7] shrink-0">
+            <Target className="w-3.5 h-3.5" />
           </div>
           <div className="min-w-0 flex flex-col">
             <span className="font-extrabold text-sm font-clash tracking-tight text-white leading-tight">
-              Create New Goal
+              Create Goal
             </span>
             <div className="flex items-center gap-1.5 mt-0.5 select-none">
               <SyncStatusDot resourceId={resourceId} />
