@@ -48,7 +48,7 @@ export function CreateGoalComposer({
   const { pushLiveGoal, selectedProjectId, userId, deleteTask } = useTask();
   const { user } = useAuth();
   const ownerId = user?.$id || userId || 'guest';
-  const { swapSidebar } = useDynamicSidebar();
+  const { openSidebar } = useDynamicSidebar();
 
   const [content, setContent] = useState(initialContent?.content || '');
   const [title, setTitle] = useState(initialContent?.title || '');
@@ -195,41 +195,44 @@ export function CreateGoalComposer({
     };
 
     if (isDesktopWindow) {
-      swapSidebar(
+      openSidebar(
         <EventDateTimePickerSurface
           inline
           startTime={initialStart}
           endTime={initialEnd}
           onApply={(start) => {
             const dateStr = applyDate(start);
-            swapSidebar(
+            openSidebar(
               <CreateGoalComposer
                 onClose={onClose}
                 onGoalCreated={onGoalCreated}
                 isExpanded={controlledExpanded}
                 initialContent={{ title, content, priority, dueDate: dateStr }}
               />,
-              { key: 'create-goal', hideHeader: true }
+              'create-goal',
+              { hideHeader: true }
             );
           }}
           onClose={() => {
-            swapSidebar(
+            openSidebar(
               <CreateGoalComposer
                 onClose={onClose}
                 onGoalCreated={onGoalCreated}
                 isExpanded={controlledExpanded}
                 initialContent={{ title, content, priority, dueDate }}
               />,
-              { key: 'create-goal', hideHeader: true }
+              'create-goal',
+              { hideHeader: true }
             );
           }}
         />,
-        { key: 'date-picker', hideHeader: true }
+        'date-picker',
+        { hideHeader: true }
       );
     } else {
       setShowMobileDatePicker(true);
     }
-  }, [dueDate, content, title, priority, buildLive, pushLive, swapSidebar, onClose, onGoalCreated, controlledExpanded]);
+  }, [dueDate, content, title, priority, buildLive, pushLive, openSidebar, onClose, onGoalCreated, controlledExpanded]);
 
   useEffect(() => {
     onRegisterClose?.(handleClose);
