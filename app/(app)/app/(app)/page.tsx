@@ -361,11 +361,15 @@ export default function NotesPage() {
   const handleManualRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
+      if (activeWorkspace && !activeWorkspace.isPersonal) {
+        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        await ProjectsService.listProjectObjectsByKind(activeWorkspace.id, 'note');
+      }
       await refetchNotes();
     } finally {
       setTimeout(() => setIsRefreshing(false), 600);
     }
-  }, [refetchNotes]);
+  }, [refetchNotes, activeWorkspace]);
 
   useEffect(() => {
     const openCreateNote = typeof window !== 'undefined' ? sessionStorage.getItem('open-create-note') : null;

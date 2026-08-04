@@ -608,11 +608,17 @@ export default function CreateNoteForm({
       userId: user?.$id || '',
       isPublic,
       isGuest,
+      projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : undefined,
+      isWorkspace: Boolean(activeWorkspace && !activeWorkspace.isPersonal),
       ...(composerKind === 'project' ? { kind: 'project' as const } : {}),
       $createdAt: now,
       $updatedAt: now,
       updatedAt: now,
     } as unknown as Notes;
+
+    if (activeWorkspace && !activeWorkspace.isPersonal && id) {
+      void attachEntityToActiveWorkspace('note', id);
+    }
 
     pushLiveNote(shell);
     setCachedData(`note_${id}`, shell);
@@ -745,15 +751,17 @@ export default function CreateNoteForm({
       format: 'text',
       isPublic,
       isGuest,
+      projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : undefined,
+      isWorkspace: Boolean(activeWorkspace && !activeWorkspace.isPersonal),
       userId: user?.$id || '',
       $createdAt: new Date().toISOString(),
       $updatedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    } as Notes;
+    } as unknown as Notes;
 
     pushLiveNote(draftNote);
     setCachedData(`note_${draftId}`, draftNote);
-  }, [title, content, tags, resolvedNoteId, isPublic, isGuest, user?.$id, isTitleManuallyEdited, pushLiveNote, registerComposeSession, setCachedData]);
+  }, [title, content, tags, resolvedNoteId, isPublic, isGuest, user?.$id, isTitleManuallyEdited, pushLiveNote, registerComposeSession, setCachedData, activeWorkspace]);
 
   useEffect(() => {
     return () => {
@@ -1159,6 +1167,14 @@ export default function CreateNoteForm({
         {/* Header */}
         <div className="px-2 py-1.5 flex items-center justify-between border-b border-white/5 sticky top-0 z-20 bg-[#161412]/95 shrink-0">
           <div className="flex items-center gap-1.5 min-w-0">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="p-1.5 rounded-xl text-white/50 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/10 transition-all shrink-0 cursor-pointer"
+              title="Back / Close"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
             <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-pink-500/10 border border-pink-500/20 text-pink-500 shrink-0 animate-in fade-in zoom-in-90 duration-200">
               <FileText className="w-3.5 h-3.5 animate-in fade-in duration-200" />
             </div>
