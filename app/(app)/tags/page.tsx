@@ -27,14 +27,18 @@ import {
 } from 'lucide-react';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 
+import { TagNotesListSidebar } from '@/components/ui/TagNotesListSidebar';
+import { useContextMenu } from '@/components/ui/ContextMenuContext';
+
 export default function TagsPage() {
   const { user, isAuthenticated, openIDMWindow } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
   const {} = useFAB();
   const { } = useSection();
-  const { openSidebar } = useDynamicSidebar();
-  const { openSecondarySidebar } = useLayout();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { openSecondarySidebar, isDesktop } = useLayout();
   const { openOverlay, closeOverlay } = useOverlay();
+  const contextMenu = useContextMenu();
   const { showError } = useToast();
   const router = useRouter();
   
@@ -173,6 +177,63 @@ export default function TagsPage() {
     });
   };
 
+  const handleTagClick = useCallback(
+    (tag: Tags) => {
+      setSelectedTag(tag);
+      if (isDesktop) {
+        openSidebar(
+          <TagNotesListSidebar
+            tag={tag}
+            onBack={() => closeSidebar()}
+            onNoteUpdate={() => fetchTags(false)}
+            onNoteDelete={() => fetchTags(false)}
+          />,
+          tag.$id,
+          { hideHeader: true },
+        );
+      } else {
+        openOverlay(
+          <TagNotesListSidebar
+            tag={tag}
+            onBack={() => closeOverlay()}
+            onNoteUpdate={() => fetchTags(false)}
+            onNoteDelete={() => fetchTags(false)}
+          />,
+        );
+      }
+    },
+    [isDesktop, openSidebar, closeSidebar, openOverlay, closeOverlay, fetchTags],
+  );
+
+  const handleTagContextMenu = useCallback(
+    (e: React.MouseEvent, tag: Tags) => {
+      e.preventDefault();
+      e.stopPropagation();
+      contextMenu?.openMenu({
+        x: e.clientX,
+        y: e.clientY,
+        items: [
+          {
+            label: `Tag: #${tag.name}`,
+            onClick: () => handleTagClick(tag),
+          },
+          {
+            label: 'Edit Tag',
+            icon: <EditIcon size={16} />,
+            onClick: () => handleEdit(tag),
+          },
+          {
+            label: 'Delete Tag',
+            icon: <TrashIcon size={16} className="text-red-500" />,
+            variant: 'destructive',
+            onClick: () => handleDelete(tag),
+          },
+        ],
+      });
+    },
+    [contextMenu, handleTagClick],
+  );
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#0A0908] flex items-center justify-center">
@@ -259,7 +320,8 @@ export default function TagsPage() {
                   {tags.map((tag) => (
                     <div
                       key={tag.$id}
-                      onClick={() => setSelectedTag(tag)}
+                      onClick={() => handleTagClick(tag)}
+                      onContextMenu={(e) => handleTagContextMenu(e, tag)}
                       className="p-6 rounded-[32px] bg-[#161412] border border-white/5 shadow-2xl hover:border-white/10 hover:bg-[#1C1A18] hover:translate-y-[-2px] transition-all duration-300 ease-out cursor-pointer flex flex-col justify-between min-h-[196px] group min-w-[260px] sm:min-w-[280px] overflow-hidden max-w-full"
                     >
                       <div className="min-w-0 max-w-full overflow-hidden">
