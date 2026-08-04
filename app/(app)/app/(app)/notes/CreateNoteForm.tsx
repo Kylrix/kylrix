@@ -399,7 +399,7 @@ export default function CreateNoteForm({
       $createdAt: new Date().toISOString(),
       $updatedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    } as Notes;
+    } as unknown as Notes;
 
     pushLiveNote(draftNote);
     setCachedData(`note_${draftId}`, draftNote);

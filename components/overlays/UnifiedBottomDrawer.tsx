@@ -4,7 +4,6 @@ import React from 'react';
 import { Drawer, Box } from '@/lib/openbricks/primitives';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import {
-  isUnifiedOverlayOnly,
   UnifiedDrawerBody,
 } from '@/components/overlays/UnifiedDrawerBody';
 
@@ -15,7 +14,7 @@ import {
 export function UnifiedBottomDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
 
-  if (activeContent === 'navbar') return null;
+  if (!activeContent || (activeContent as string) === 'navbar') return null;
 
   const content = (
     <UnifiedDrawerBody
@@ -28,7 +27,7 @@ export function UnifiedBottomDrawer() {
   return (
     <Drawer
       anchor="bottom"
-      open={activeContent !== 'navbar'}
+      open={Boolean(activeContent && (activeContent as string) !== 'navbar')}
       onClose={close}
       ModalProps={{ keepMounted: false, disablePortal: true }}
       PaperProps={{

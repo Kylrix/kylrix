@@ -44,7 +44,7 @@ export function UnifiedLeftSidebar() {
   const { isOpen: _isCallLauncherOpen } = useCallLauncher();
   const { isOpen: _isOverlayOpen } = useOverlay();
   const { isCollapsed } = useSidebar();
-  const { user, updatePreferences } = useAuth();
+  const { user: _user, updatePreferences } = useAuth();
   const { activeWorkspace, workspaces, setActiveWorkspaceId } = useWorkspace();
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = React.useState(false);
   const workspaceSectionRef = React.useRef<HTMLDivElement | null>(null);

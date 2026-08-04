@@ -205,7 +205,7 @@ export function CreateGoalComposer({
         isGuest: false,
       };
     },
-    [dueDate, ensureId, isTitleManuallyEdited, ownerId, priority, selectedProjectId, title],
+    [activeWorkspace, dueDate, ensureId, isTitleManuallyEdited, ownerId, priority, selectedProjectId, title],
   );
 
   const pushLive = useCallback(
@@ -280,7 +280,7 @@ export function CreateGoalComposer({
       onClose();
     }
     closeSidebar();
-  }, [buildLive, closeSidebar, content, deleteTask, draftKey, dueDate, onClose, onGoalCreated, priority, pushLiveGoal, resolvedId, setCachedData, title]);
+  }, [activeWorkspace, attachEntityToActiveWorkspace, buildLive, closeSidebar, content, deleteTask, draftKey, dueDate, onClose, onGoalCreated, priority, pushLiveGoal, resolvedId, setCachedData, title]);
 
   useEffect(() => {
     return () => {
