@@ -936,6 +936,12 @@ export default function NotesPage() {
                 >
                   Forms
                 </button>
+                <button
+                  onClick={() => router.push('/tags')}
+                  className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
+                >
+                  Tags
+                </button>
               </div>
 
               {activeTab === 'notes' ? mainNotesContent : tagsGridContent}
@@ -961,6 +967,12 @@ export default function NotesPage() {
                   className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
                 >
                   Forms
+                </button>
+                <button
+                  onClick={() => router.push('/tags')}
+                  className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
+                >
+                  Tags
                 </button>
               </div>
 
