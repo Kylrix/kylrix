@@ -85,13 +85,27 @@ export function useProjectObjects(
           },
           PROJECT_OBJECTS_TTL,
         );
-        if (mountedRef.current) {
-          // Merge: keep local items that the remote doesn't know about yet (pending creates)
+        if (mountedRef.current && remote) {
           setRows((prev) => {
-            if (!remote || remote.length === 0) return prev;
-            const remoteIds = new Set(remote.map((r: ProjectObjects) => r.$id));
-            const localOnly = prev.filter((r) => !remoteIds.has(r.$id));
-            return [...remote, ...localOnly];
+            const byId = new Map<string, ProjectObjects>();
+            // Load existing local rows first
+            prev.forEach((r) => {
+              const key = r.$id || r.entityId || (r as any).id;
+              if (key) byId.set(key, r);
+            });
+            // Merge remote rows
+            remote.forEach((r: ProjectObjects) => {
+              const key = r.$id || r.entityId || (r as any).id;
+              if (key) byId.set(key, r);
+            });
+            const merged = Array.from(byId.values());
+            // Persist merged set to LocalEngine
+            if (typeof window !== 'undefined' && merged.length > 0) {
+              import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+                void LocalEngine.cacheSet(cacheKey, merged);
+              }).catch(() => {});
+            }
+            return merged;
           });
         }
       } catch (err) {
