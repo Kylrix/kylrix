@@ -262,7 +262,6 @@ export default function NotesPage() {
     return decrypted.filter(
       (n: any) =>
         n.projectId === pid ||
-        n.isWorkspace ||
         (n.tags && Array.isArray(n.tags) && n.tags.some((t: string) => typeof t === 'string' && t.includes(pid)))
     );
   }, [allNotes, activeWorkspace]);

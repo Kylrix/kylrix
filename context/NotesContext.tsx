@@ -142,11 +142,14 @@ function normalizeVisibility(note: Notes): Notes {
       return {};
     }
   })();
+  // Prefer the real DB projectId; fall back to metadata only for local drafts
+  const projectId = note.projectId || meta.projectId || undefined;
   return {
     ...note,
     isPublic: getNotePublicState(note),
-    projectId: note.projectId || meta.projectId || undefined,
-    isWorkspace: note.isWorkspace ?? meta.isWorkspace ?? Boolean(note.projectId || meta.projectId),
+    projectId,
+    // isWorkspace is true only when there is a real projectId — not speculatively
+    isWorkspace: Boolean(projectId),
   };
 }
 
