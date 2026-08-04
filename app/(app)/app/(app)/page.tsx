@@ -51,6 +51,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useLayout } from '@/context/LayoutContext';
 import { useToast } from '@/components/ui/Toast';
 import { TaggedResourcesTabs } from '@/components/share/TaggedResourcesTabs';
+import { useWorkspace } from '@/context/WorkspaceContext';
 
 // Client-side persistence cache to resist reload flicker
 
@@ -243,10 +244,16 @@ export default function NotesPage() {
     };
   }, [setCachedData, user?.$id]);
 
+  const { activeWorkspace } = useWorkspace();
+
   const visibleNotes = useMemo(() => {
     const safeNotes = Array.isArray(allNotes) ? allNotes : [];
-    return safeNotes.filter((n) => !isClientEncryptedNote(n));
-  }, [allNotes]);
+    const decrypted = safeNotes.filter((n) => !isClientEncryptedNote(n));
+    if (!activeWorkspace || activeWorkspace.isPersonal || activeWorkspace.id === user?.$id) {
+      return decrypted.filter((n: any) => !n.isWorkspace);
+    }
+    return decrypted.filter((n: any) => n.projectId === activeWorkspace.id || (n.tags && n.tags.some((t: string) => t.includes(activeWorkspace.id))));
+  }, [allNotes, activeWorkspace, user?.$id]);
 
   const pinnedNotes = useMemo(() => {
     if (searchParams.get('query')) return [];

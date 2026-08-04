@@ -23,6 +23,7 @@ interface WorkspaceContextType {
   refreshWorkspaces: () => Promise<void>;
   createWorkspace: (title: string, summary?: string) => Promise<WorkspaceItem | null>;
   attachEntityToActiveWorkspace: (entityKind: string, entityId: string) => Promise<void>;
+  setEntityPersonalWorkspaceState: (entityKind: string, entityId: string, inPersonal: boolean) => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -211,6 +212,37 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     [activeWorkspace, userId]
   );
 
+  const setEntityPersonalWorkspaceState = useCallback(
+    async (entityKind: string, entityId: string, inPersonal: boolean) => {
+      try {
+        const { databases } = await import('@/lib/appwrite/client');
+        const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+        const tableByKind: Record<string, string> = {
+          note: APPWRITE_CONFIG.TABLES.NOTES,
+          idea: APPWRITE_CONFIG.TABLES.NOTES,
+          goal: APPWRITE_CONFIG.TABLES.TASKS,
+          task: APPWRITE_CONFIG.TABLES.TASKS,
+          form: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+          event: APPWRITE_CONFIG.TABLES.EVENTS,
+          credential: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+          totp: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
+        };
+        const tableId = tableByKind[entityKind];
+        if (tableId) {
+          await databases.updateRow(
+            APPWRITE_CONFIG.DATABASE_ID,
+            tableId,
+            entityId,
+            { isWorkspace: !inPersonal },
+          );
+        }
+      } catch (err) {
+        console.warn(`[WorkspaceContext] Failed to update isWorkspace flag for ${entityKind} ${entityId}:`, err);
+      }
+    },
+    []
+  );
+
   const value = useMemo(
     () => ({
       activeWorkspace,
@@ -219,7 +251,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setActiveWorkspaceId,
       refreshWorkspaces,
       createWorkspace,
-      attachEntityToActiveWorkspace}),
+      attachEntityToActiveWorkspace,
+      setEntityPersonalWorkspaceState,
+    }),
     [
       activeWorkspace,
       workspaces,
@@ -228,6 +262,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       refreshWorkspaces,
       createWorkspace,
       attachEntityToActiveWorkspace,
+      setEntityPersonalWorkspaceState,
     ]
   );
 
@@ -249,6 +284,7 @@ const fallbackWorkspaceContext: WorkspaceContextType = {
   refreshWorkspaces: async () => {},
   createWorkspace: async () => null,
   attachEntityToActiveWorkspace: async () => {},
+  setEntityPersonalWorkspaceState: async () => {},
 };
 
 export function useWorkspace() {
