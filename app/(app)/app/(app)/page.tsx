@@ -52,7 +52,8 @@ import { useLayout } from '@/context/LayoutContext';
 import { useToast } from '@/components/ui/Toast';
 import { TaggedResourcesTabs } from '@/components/share/TaggedResourcesTabs';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { useProjectObjects } from '@/hooks/useProjectObjects';
+import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
+
 
 // Client-side persistence cache to resist reload flicker
 
@@ -255,46 +256,19 @@ export default function NotesPage() {
     const safeNotes = Array.isArray(allNotes) ? allNotes : [];
     const decrypted = safeNotes.filter((n) => !isClientEncryptedNote(n));
 
-    if (!isCustomWorkspace || !activeWorkspace) {
-      // Personal Workspace: show all user notes that are not tagged as workspace-specific
-      return decrypted.filter((n: any) => !n.isWorkspace && !n.projectId);
+    if (!activeWorkspace || activeWorkspace.isPersonal) {
+      return decrypted.filter(isDefaultWorkspaceObject);
     }
 
-    // Custom Workspace:
     const pid = activeWorkspace.id;
-    const notesById = new Map<string, Notes>();
-    decrypted.forEach((n) => notesById.set(n.$id, n));
-
-    const workspaceNotes: Notes[] = [];
-    const seenIds = new Set<string>();
-
-    // 1. Items from project_objects mapping table
-    (workspaceProjectObjects || []).forEach((po: any) => {
-      const entityId = po.entityId || po.id;
-      if (!entityId || seenIds.has(entityId)) return;
-      const noteDoc = notesById.get(entityId);
-      if (noteDoc) {
-        seenIds.add(entityId);
-        workspaceNotes.push(noteDoc);
-      }
-    });
-
-
-    // 2. Direct workspace items in NotesContext
-    decrypted.forEach((n: any) => {
-      if (seenIds.has(n.$id)) return;
-      if (
+    return decrypted.filter(
+      (n: any) =>
         n.projectId === pid ||
         n.isWorkspace ||
         (n.tags && Array.isArray(n.tags) && n.tags.some((t: string) => typeof t === 'string' && t.includes(pid)))
-      ) {
-        workspaceNotes.push(n);
-        seenIds.add(n.$id);
-      }
-    });
+    );
+  }, [allNotes, activeWorkspace]);
 
-    return workspaceNotes;
-  }, [allNotes, activeWorkspace, isCustomWorkspace, workspaceProjectObjects, user?.$id]);
 
 
 
