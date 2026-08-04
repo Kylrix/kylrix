@@ -220,32 +220,24 @@ export function UnifiedLeftSidebar() {
             </Box>
           </Tooltip>
 
-          {/* Pitch-black overlay dropdown — does not push nav / Discord */}
+          {/* Inline workspaces accordion list — pushes core nav items down */}
           {workspaceMenuOpen && !isCollapsed && (
-            <>
-              <Box
-                onClick={() => setWorkspaceMenuOpen(false)}
-                sx={{ position: 'fixed', inset: 0, zIndex: 20 }}
-              />
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: 'calc(100% + 6px)',
-                  left: 0,
-                  right: 0,
-                  zIndex: 30,
-                  p: 1,
-                  borderRadius: '16px',
-                  bgcolor: '#000000',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 0.5,
-                  boxShadow: '0 12px 32px rgba(0,0,0,0.75)',
-                  maxHeight: 'min(320px, 40vh)',
-                  overflowY: 'auto',
-                }}
-              >
+            <Box
+              sx={{
+                mt: 1,
+                mb: 1.5,
+                p: 1,
+                borderRadius: '16px',
+                bgcolor: '#0A0908',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 0.5,
+                maxHeight: 'min(280px, 35vh)',
+                overflowY: 'auto',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
                 <Box sx={{ px: 1, py: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '0.68rem', fontWeight: 800, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Workspaces
@@ -313,7 +305,6 @@ export function UnifiedLeftSidebar() {
                   );
                 })}
               </Box>
-            </>
           )}
         </Box>
 
