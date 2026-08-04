@@ -17,6 +17,9 @@ import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { useMemo, useCallback } from 'react';
 import SudoModal from '@/components/overlays/SudoModal';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
+import { useProjectObjects } from '@/hooks/useProjectObjects';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +30,20 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   const { user, needsMasterPassword, isVaultUnlocked, isVaultBlurEnabled } = useAppwriteVault();
   const { setConfiguration, resetConfiguration } = useFAB();
   
+  const { activeWorkspace } = useWorkspace();
+  const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
+  const customWorkspaceId = isCustomWorkspace ? activeWorkspace?.id : null;
+  const { rows: workspaceProjectObjects } = useProjectObjects(customWorkspaceId, 'totp');
+
+  const scopedTotpCodes = useMemo(() => {
+    if (!activeWorkspace || activeWorkspace.isPersonal) {
+      return totpCodes.filter(isDefaultWorkspaceObject);
+    }
+    const registeredIds = new Set(workspaceProjectObjects.map((po) => po.entityId).filter(Boolean));
+    const pid = activeWorkspace.id;
+    return totpCodes.filter((t: any) => registeredIds.has(t.$id) || t.projectId === pid);
+  }, [totpCodes, activeWorkspace, workspaceProjectObjects]);
+
   // Master password modal — only auto-open when unlock-on-demand is off
   const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(false);
   
@@ -697,7 +714,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
           </div>
         ) : (
           <div className="flex flex-col gap-3.5 max-w-3xl">
-            {[...totpCodes]
+            {scopedTotpCodes
               .filter((totp) => {
                 const q = search.trim().toLowerCase();
                 if (!q) return true;

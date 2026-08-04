@@ -10,6 +10,7 @@ import {
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
+import { useProjectObjects } from '@/hooks/useProjectObjects';
 import toast from 'react-hot-toast';
 import CredentialItem from '@/components/app/dashboard/CredentialItem';
 import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
@@ -353,15 +354,25 @@ function DashboardPageContent() {
     void hydrateVaultData();
   }, [hydrateVaultData]);
 
+  const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
+  const customWorkspaceId = isCustomWorkspace ? activeWorkspace?.id : null;
+  const { rows: workspaceProjectObjects } = useProjectObjects(customWorkspaceId, 'credential');
+
   const sortedCredentials = useMemo(() => {
-    const scoped =
-      activeWorkspace?.isPersonal !== false
-        ? allCredentials.filter(isDefaultWorkspaceObject)
-        : allCredentials;
+    let scoped = allCredentials;
+    if (!activeWorkspace || activeWorkspace.isPersonal) {
+      scoped = allCredentials.filter(isDefaultWorkspaceObject);
+    } else {
+      const registeredIds = new Set(workspaceProjectObjects.map((po) => po.entityId).filter(Boolean));
+      const pid = activeWorkspace.id;
+      scoped = allCredentials.filter(
+        (c: any) => registeredIds.has(c.$id) || c.projectId === pid
+      );
+    }
     return [...scoped].sort((a, b) => {
       return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
     });
-  }, [allCredentials, activeWorkspace?.isPersonal]);
+  }, [allCredentials, activeWorkspace, workspaceProjectObjects]);
 
   const pinnedCredentials = useMemo(
     () =>
