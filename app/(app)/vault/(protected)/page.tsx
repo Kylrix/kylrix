@@ -108,29 +108,20 @@ function DashboardPageContent() {
       const open = () => {
         setSelectedCredential(cred);
         if (isDesktop) {
-          openSidebar(
-            <CredentialDetail
-              credential={cred}
-              onClose={() => closeSidebar()}
-              isMobile={false}
-              inline
-            />,
-            cred.$id,
-            { hideHeader: true },
-          );
+          setActiveDetail({ type: 'secret', id: cred.$id, data: cred });
         } else {
           openOverlay(
             <CredentialDetail
               credential={cred}
               onClose={() => closeOverlay()}
               isMobile
-            />,
+            />
           );
         }
       };
       requireUnlock(open);
     },
-    [isDesktop, openSidebar, closeSidebar, openOverlay, closeOverlay, requireUnlock],
+    [isDesktop, setActiveDetail, openOverlay, closeOverlay, requireUnlock],
   );
 
   const handleEdit = (cred: Credentials) => {

@@ -641,14 +641,16 @@ export function MultiSectionContainer({ children, panels}: MultiSectionContainer
   const pathname = usePathname();
   const { getLayoutForRoute, activeDetail, setActiveDetail } = useSection();
 
-  // Note / goal / event / secret → true fullscreen overlay (not a 320px side column)
+  // Desktop (>=768px) embeds details in native right sidebar column below topbar.
+  // Mobile (<768px) uses full-screen drawer overlay.
   const isFullScreenDetail = useMemo(() => {
-    const t = activeDetail?.type;
-    return t === 'secret' || t === 'note' || t === 'goal' || t === 'event';
-  }, [activeDetail?.type]);
+    if (!activeDetail) return false;
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return true;
+    }
+    return false;
+  }, [activeDetail]);
 
-  // Side-rail panels no longer render widget chrome — only an inline detail host.
-  // Don't reserve empty 320px+ columns; let page content use the full width.
   const showSideRail = Boolean(activeDetail && !isFullScreenDetail);
 
   const layout = useMemo(() => {
