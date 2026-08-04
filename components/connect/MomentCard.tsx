@@ -156,7 +156,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
           open();
         }
       }}
-      className="w-full max-w-full min-w-0 text-left rounded-[22px] bg-[#161412] border border-[#34322F] hover:border-[#3C3A38] hover:bg-[#1C1A18] transition-colors cursor-pointer focus:outline-none focus-visible:border-[#F59E0B]/40 overflow-hidden"
+      className="w-full max-w-full min-w-[280px] sm:min-w-[320px] h-full flex flex-col justify-between text-left rounded-[22px] bg-[#161412] border border-[#34322F] hover:border-[#3C3A38] hover:bg-[#1C1A18] transition-all duration-200 hover:-translate-y-px cursor-pointer focus:outline-none focus-visible:border-[#F59E0B]/40 overflow-hidden"
     >
       <div className="flex gap-3 p-4 min-w-0 max-w-full">
         <div
