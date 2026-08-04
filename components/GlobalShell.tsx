@@ -327,7 +327,7 @@ const isSpecificPostPage = useMemo(
 
       {/* --- LAYER 2: OVERLAYS --- */}
       {/* Agentic / wallet / unified → NativeSidebarBridge; mobile details → Overlay/DynamicSidebar */}
-      {unifiedDrawerActive === 'login' && <UnifiedBottomDrawer />}
+      {unifiedDrawerActive !== 'navbar' && <UnifiedBottomDrawer />}
       {unifiedDrawerActive === 'moment-composer' && (
         <MomentComposerDrawer onClose={() => closeUnified()} />
       )}

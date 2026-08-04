@@ -16,7 +16,6 @@ export function UnifiedBottomDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
 
   if (activeContent === 'navbar') return null;
-  if (!isUnifiedOverlayOnly(activeContent)) return null;
 
   const content = (
     <UnifiedDrawerBody
@@ -29,7 +28,7 @@ export function UnifiedBottomDrawer() {
   return (
     <Drawer
       anchor="bottom"
-      open={activeContent === 'login'}
+      open={activeContent !== 'navbar'}
       onClose={close}
       ModalProps={{ keepMounted: false, disablePortal: true }}
       PaperProps={{
