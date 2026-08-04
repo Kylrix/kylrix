@@ -135,11 +135,21 @@ const NotesContext = createContext<NotesContextType>({
 });
 
 function normalizeVisibility(note: Notes): Notes {
+  const meta = (() => {
+    try {
+      return typeof note.metadata === 'string' ? JSON.parse(note.metadata) : (note.metadata || {});
+    } catch {
+      return {};
+    }
+  })();
   return {
     ...note,
-    isPublic: getNotePublicState(note)
+    isPublic: getNotePublicState(note),
+    projectId: note.projectId || meta.projectId || undefined,
+    isWorkspace: note.isWorkspace ?? meta.isWorkspace ?? Boolean(note.projectId || meta.projectId),
   };
 }
+
 
 async function getGhostNotes(): Promise<Notes[]> {
   if (typeof window === 'undefined') return [];

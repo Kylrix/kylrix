@@ -250,16 +250,17 @@ export default function NotesPage() {
     const safeNotes = Array.isArray(allNotes) ? allNotes : [];
     const decrypted = safeNotes.filter((n) => !isClientEncryptedNote(n));
     if (!activeWorkspace || activeWorkspace.isPersonal || activeWorkspace.id === user?.$id) {
-      return decrypted.filter((n: any) => !n.isWorkspace);
+      return decrypted.filter((n: any) => !n.isWorkspace && !n.projectId);
     }
     const pid = activeWorkspace.id;
     return decrypted.filter(
       (n: any) =>
         n.projectId === pid ||
-        (n.isWorkspace && n.projectId === pid) ||
+        (n.isWorkspace && (n.projectId === pid || !n.projectId)) ||
         (n.tags && n.tags.some((t: string) => t.includes(pid)))
     );
   }, [allNotes, activeWorkspace, user?.$id]);
+
 
 
   const pinnedNotes = useMemo(() => {
