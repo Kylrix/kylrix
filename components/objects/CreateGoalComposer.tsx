@@ -75,6 +75,22 @@ export function CreateGoalComposer({
   }, []);
 
   useEffect(() => {
+    if (initialContent?.dueDate !== undefined) {
+      setDueDate(initialContent.dueDate);
+    }
+    if (initialContent?.content !== undefined) {
+      setContent(initialContent.content);
+    }
+    if (initialContent?.title !== undefined) {
+      setTitle(initialContent.title);
+      if (initialContent.title) setIsTitleManuallyEdited(true);
+    }
+    if (initialContent?.priority !== undefined) {
+      setPriority(initialContent.priority);
+    }
+  }, [initialContent?.dueDate, initialContent?.content, initialContent?.title, initialContent?.priority]);
+
+  useEffect(() => {
     if (isTitleManuallyEdited) return;
     const generated = buildAutoTitleFromContent(content);
     setTitle(content.trim() ? generated : '');

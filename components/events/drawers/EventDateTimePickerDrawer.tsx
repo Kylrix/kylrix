@@ -34,12 +34,14 @@ export function EventDateTimePickerSurface({
   const [endStr, setEndStr] = useState(() => toTimeString(endTime));
 
   useEffect(() => {
-    setSelectedDate(new Date(startTime));
-    setViewMonth(new Date(startTime));
-    setStartStr(toTimeString(startTime));
-    setEndStr(toTimeString(endTime));
+    const s = startTime ? new Date(startTime) : new Date();
+    const e = endTime ? new Date(endTime) : new Date(Date.now() + 3600000);
+    setSelectedDate(s);
+    setViewMonth(s);
+    setStartStr(toTimeString(s));
+    setEndStr(toTimeString(e));
     setStep('date');
-  }, [startTime, endTime]);
+  }, []);
 
   const daysInMonth = useMemo(() => {
     const year = viewMonth.getFullYear();
@@ -179,15 +181,26 @@ export function EventDateTimePickerSurface({
               })}
             </div>
 
-            {/* Next Step Button */}
-            <button
-              type="button"
-              onClick={() => setStep('time')}
-              className="w-full py-3 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-extrabold text-xs font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_12px_rgba(99,102,241,0.25)] mt-2"
-            >
-              <span>Next: Set Time</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            {/* Next Step & Quick Apply Buttons */}
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <button
+                type="button"
+                onClick={handleSave}
+                className="py-3 rounded-xl bg-[#10B981] hover:bg-[#059669] text-black font-extrabold text-xs font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_4px_12px_rgba(16,185,129,0.25)]"
+              >
+                <Check className="w-4 h-4" strokeWidth={3} />
+                <span>Apply Date</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStep('time')}
+                className="py-3 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-extrabold text-xs font-mono uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_4px_12px_rgba(99,102,241,0.25)]"
+              >
+                <span>Set Time</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-5">
