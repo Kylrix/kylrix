@@ -157,10 +157,15 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
             const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
             const db = await getRxDB().catch(() => null);
             if (db) {
-              await db.cache.upsert({
-                id: cacheKey,
-                data: secretsResult.value as any,
-                timestamp: Date.now()}).catch(() => {});
+              const { listRawTotpSecrets } = await import('@/lib/appwrite/vault-actions');
+              const rawEncrypted = await listRawTotpSecrets(user.$id).catch(() => null);
+              if (rawEncrypted) {
+                await db.cache.upsert({
+                  id: cacheKey,
+                  data: rawEncrypted as any,
+                  timestamp: Date.now()
+                }).catch(() => {});
+              }
             }
           } catch {}
         } else {

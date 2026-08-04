@@ -1258,6 +1258,52 @@ export class VaultService {
   static clearVaultCaches() {
     this.credentialsListCache.clear();
     this.credentialsListInflight.clear();
+    this.totpSecretsCache.clear();
+    this.totpSecretsInflight.clear();
+  }
+
+  /**
+   * Fetches raw encrypted credential rows (never decrypted).
+   * Safe for local persistence (RxDB / IndexedDB).
+   */
+  static async listRawCredentials(
+    userId: string,
+    queries: string[] = []): Promise<Credentials[]> {
+    this.ensureRuntimeSecurityHooks();
+    const resourceIds = await this.getCollaboratedResourceIds(userId, 'secret');
+    const filterQueries = buildCredentialOwnerFilterQueries(userId, resourceIds);
+    const mergedRows = sortMergedRows(
+      await listRowsMergedAcrossFilters(
+        APPWRITE_COLLECTION_CREDENTIALS_ID,
+        filterQueries,
+        queries),
+      queries);
+    return mergedRows as unknown as Credentials[];
+  }
+
+  /**
+   * Fetches raw encrypted TOTP secret rows (never decrypted).
+   * Safe for local persistence (RxDB / IndexedDB).
+   */
+  static async listRawTOTPSecrets(
+    userId: string,
+    queries: string[] = []): Promise<TotpSecrets[]> {
+    this.ensureRuntimeSecurityHooks();
+    const resourceIds = await this.getCollaboratedResourceIds(userId, 'totp');
+    let filterQuery;
+    if (resourceIds.length > 0) {
+      filterQuery = Query.or([
+        Query.equal("userId", userId),
+        Query.equal("$id", resourceIds)
+      ]);
+    } else {
+      filterQuery = Query.equal("userId", userId);
+    }
+    const response = await appwriteDatabases.listRows(
+      APPWRITE_DATABASE_ID,
+      APPWRITE_COLLECTION_TOTPSECRETS_ID,
+      [filterQuery, ...queries]);
+    return response.rows as unknown as TotpSecrets[];
   }
 
   /**

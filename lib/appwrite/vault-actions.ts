@@ -200,6 +200,18 @@ export async function listAllCredentials(
   return await VaultService.listAllCredentials(userId, queries);
 }
 
+export async function listRawCredentials(
+  userId: string,
+  queries: string[] = []): Promise<Credentials[]> {
+  return await VaultService.listRawCredentials(userId, queries);
+}
+
+export async function listRawTotpSecrets(
+  userId: string,
+  queries: string[] = []) {
+  return await VaultService.listRawTOTPSecrets(userId, queries);
+}
+
 /**
  * Create a new credential (encrypted).
  */

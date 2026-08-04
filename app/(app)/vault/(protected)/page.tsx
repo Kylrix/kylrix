@@ -167,10 +167,15 @@ function DashboardPageContent() {
         const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
         const db = await getRxDB().catch(() => null);
         if (db) {
-          await db.cache.upsert({
-            id: cacheKey,
-            data: credentials as any,
-            timestamp: Date.now()}).catch(() => {});
+          const { listRawCredentials } = await import('@/lib/appwrite/vault-actions');
+          const rawEncrypted = await listRawCredentials(user.$id).catch(() => null);
+          if (rawEncrypted) {
+            await db.cache.upsert({
+              id: cacheKey,
+              data: rawEncrypted as any,
+              timestamp: Date.now()
+            }).catch(() => {});
+          }
         }
       } catch {}
     } catch (error: unknown) {
