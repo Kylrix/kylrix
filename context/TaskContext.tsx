@@ -1731,13 +1731,13 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
     if (state.userId && state.userId !== 'guest') {
       const activeId = state.userId;
-      sourceTasks = state.tasks.filter((t) =>
+      sourceTasks = sourceTasks.filter((t) =>
         !t.userId || t.userId === 'guest' || t.userId === activeId ||
         !t.creatorId || t.creatorId === 'guest' || t.creatorId === activeId ||
         (Boolean(activeId) && Array.isArray(t.assigneeIds) && t.assigneeIds.includes(activeId!))
       );
     } else {
-      sourceTasks = state.tasks.filter((t) =>
+      sourceTasks = sourceTasks.filter((t) =>
         !t.userId || t.userId === 'guest' || !t.creatorId || t.creatorId === 'guest'
       );
     }
