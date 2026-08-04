@@ -20,9 +20,10 @@ interface ContextMenuProps {
   onCloseAction: () => void;
   items: ContextMenuItem[];
   appType?: KylrixApp;
+  title?: string;
 }
 
-export function ContextMenuPanel({ onCloseAction, items }: { onCloseAction: () => void; items: ContextMenuItem[]; appType?: KylrixApp }) {
+export function ContextMenuPanel({ onCloseAction, items, title }: { onCloseAction: () => void; items: ContextMenuItem[]; appType?: KylrixApp; title?: string }) {
   const [menuStack, setMenuStack] = useState<ContextMenuItem[][]>([items]);
   const currentItems = menuStack[menuStack.length - 1];
   const isSubmenu = menuStack.length > 1;
@@ -67,15 +68,22 @@ export function ContextMenuPanel({ onCloseAction, items }: { onCloseAction: () =
       onClick={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <div className="flex items-center justify-between shrink-0 mb-1 border-b border-white/5 pb-3">
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#9B9691]">Actions</p>
-        <button
-          type="button"
-          onClick={onCloseAction}
-          className="text-xs font-bold text-[#9B9691] hover:text-white px-2 py-1 rounded-lg hover:bg-white/5 cursor-pointer"
-        >
-          Close
-        </button>
+      <div className="flex flex-col gap-1.5 shrink-0 mb-1 border-b border-white/5 pb-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#9B9691]">Actions</p>
+          <button
+            type="button"
+            onClick={onCloseAction}
+            className="text-xs font-bold text-[#9B9691] hover:text-white px-2 py-1 rounded-lg hover:bg-white/5 cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
+        {title ? (
+          <h4 className="text-sm font-extrabold text-white truncate max-w-full font-clash leading-tight">
+            {title}
+          </h4>
+        ) : null}
       </div>
 
       {isSubmenu && (
@@ -123,7 +131,7 @@ export function ContextMenuPanel({ onCloseAction, items }: { onCloseAction: () =
   );
 }
 
-export function ContextMenu({ onCloseAction, items, appType }: ContextMenuProps) {
+export function ContextMenu({ onCloseAction, items, appType, title }: ContextMenuProps) {
   if (typeof window === 'undefined') return null;
 
   return createPortal(
@@ -139,7 +147,7 @@ export function ContextMenu({ onCloseAction, items, appType }: ContextMenuProps)
         onContextMenu={(e) => e.preventDefault()}
       >
         <div className="w-10 h-1 bg-[#34322F] rounded-full mx-auto shrink-0 mb-1" />
-        <ContextMenuPanel onCloseAction={onCloseAction} items={items} appType={appType} />
+        <ContextMenuPanel onCloseAction={onCloseAction} items={items} appType={appType} title={title} />
       </div>
     </>,
     document.body

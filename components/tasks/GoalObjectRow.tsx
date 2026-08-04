@@ -327,6 +327,7 @@ export default function GoalObjectRow({ task }: Props) {
         y: clientY,
         items: contextMenuItems,
         appType: 'flow',
+        title: locked ? 'Locked Goal' : (task.title || 'Untitled Goal'),
       });
     },
     [contextMenuItems, openMenu],

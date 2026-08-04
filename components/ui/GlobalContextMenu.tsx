@@ -21,7 +21,7 @@ export const GlobalContextMenu: React.FC = () => {
   const { state, closeMenu } = context;
   return (
     <Suspense fallback={null}>
-      <ContextMenu x={state.x} y={state.y} items={state.items} onCloseAction={closeMenu} appType={state.appType} />
+      <ContextMenu x={state.x} y={state.y} items={state.items} onCloseAction={closeMenu} appType={state.appType} title={state.title} />
     </Suspense>
   );
 };

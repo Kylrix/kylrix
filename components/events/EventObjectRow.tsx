@@ -161,6 +161,7 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
       y: clientY,
       items: contextMenuItems,
       appType: 'flow',
+      title: event.title || 'Untitled Event',
     });
   };
 

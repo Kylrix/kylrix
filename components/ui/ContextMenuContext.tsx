@@ -35,6 +35,7 @@ interface MenuState {
   y: number;
   items: ContextMenuItem[];
   appType?: KylrixApp;
+  title?: string;
 }
 
 interface ContextMenuContextType {
@@ -71,7 +72,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
     const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
     if (isDesktop) {
       openSidebar(
-        <ContextMenuPanel items={s.items} onCloseAction={closeMenu} appType={s.appType} />,
+        <ContextMenuPanel items={s.items} onCloseAction={closeMenu} appType={s.appType} title={s.title} />,
         'context-menu',
         { hideHeader: true }
       );

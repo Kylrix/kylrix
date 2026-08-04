@@ -275,7 +275,8 @@ export const ChatList = ({
                 x: event.clientX,
                 y: event.clientY,
                 appType: 'connect',
-            items: [
+                title: conv.name || conv.title || 'Chat',
+                items: [
                 {
                     label: 'Open Secure Chat',
                     icon: <ExternalLink size={18} />,
