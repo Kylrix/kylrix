@@ -18,6 +18,7 @@ import {
 } from '@/components/events/drawers/EventDateTimePickerDrawer';
 
 import { useDataNexus } from '@/context/DataNexusContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
 
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low'];
 
@@ -50,6 +51,7 @@ export function CreateGoalComposer({
 }: Props) {
   const { pushLiveGoal, selectedProjectId, userId, deleteTask } = useTask();
   const { user } = useAuth();
+  const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const ownerId = user?.$id || userId || 'guest';
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { getCachedData, setCachedData } = useDataNexus();
@@ -180,7 +182,8 @@ export function CreateGoalComposer({
         description: nextContent,
         priority: nextPriority || priority,
         status: 'todo',
-        projectId: selectedProjectId || 'inbox',
+        projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : (selectedProjectId || 'inbox'),
+        isWorkspace: Boolean(activeWorkspace && !activeWorkspace.isPersonal),
         labels: [],
         linkedNotes: [],
         subtasks: [],
@@ -265,6 +268,9 @@ export function CreateGoalComposer({
       const task = buildLive(content, title, priority, dueDate);
       pushLiveGoal(task);
       autonomicSyncEngine.nudge();
+      if (activeWorkspace && !activeWorkspace.isPersonal && id) {
+        void attachEntityToActiveWorkspace('goal', id);
+      }
       if (!announcedRef.current) {
         announcedRef.current = true;
         onGoalCreated?.(task);

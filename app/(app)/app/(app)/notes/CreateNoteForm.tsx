@@ -34,6 +34,7 @@ import { serializeObjectBlock, parseObjectBlocks } from '@/lib/note-object-secon
 import type { ParsedObjectBlock } from '@/lib/note-object-secondary';
 import { useNotes } from '@/context/NotesContext';
 import { useDataNexus } from '@/context/DataNexusContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useSudo } from '@/context/SudoContext';
 import { useSection } from '@/context/SectionContext';
@@ -89,6 +90,7 @@ export default function CreateNoteForm({
   const router = useRouter();
   const { open: openUnified } = useUnifiedDrawer();
   const { user } = useAuth();
+  const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const { openProUpgrade } = useProUpgrade();
   const { openFileDrawer } = useUnifiedFileDrawer();
 
@@ -391,6 +393,8 @@ export default function CreateNoteForm({
       format: 'text',
       isPublic,
       isGuest,
+      projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : undefined,
+      isWorkspace: Boolean(activeWorkspace && !activeWorkspace.isPersonal),
       userId: user?.$id || '',
       $createdAt: new Date().toISOString(),
       $updatedAt: new Date().toISOString(),
@@ -954,6 +958,9 @@ export default function CreateNoteForm({
           title: generatedTitle,
         })) as Notes;
         markNotePersistedRemote(saved.$id);
+        if (saved?.$id && activeWorkspace && !activeWorkspace.isPersonal) {
+          void attachEntityToActiveWorkspace('note', saved.$id);
+        }
         migrateDraftId(saved.$id, ephemeralId);
         if (typeof window !== 'undefined') {
           localStorage.removeItem('kylrix:draft:note');

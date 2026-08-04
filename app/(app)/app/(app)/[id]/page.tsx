@@ -1,14 +1,26 @@
-import { redirect } from 'next/navigation';
+'use client';
 
-/** Legacy /app/[id] → canonical /idea/[id] */
-export default async function LegacyAppNoteRedirect({
-  params,
-  searchParams}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ key?: string }>;
-}) {
-  const { id } = await params;
-  const { key } = await searchParams;
-  const query = key ? `/${encodeURIComponent(key)}` : '';
-  redirect(`/idea/${id}${query}`);
+import React, { useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { useAuth } from '@/context/auth/AuthContext';
+import NotesPage from '../page';
+
+export default function AppWorkspacePage() {
+  const params = useParams();
+  const router = useRouter();
+  const { user } = useAuth();
+  const { setActiveWorkspaceId } = useWorkspace();
+  const targetId = (params?.id as string) || '';
+
+  useEffect(() => {
+    if (!targetId) return;
+    if (user?.$id && targetId === user.$id) {
+      router.replace('/app');
+      return;
+    }
+    setActiveWorkspaceId(targetId);
+  }, [targetId, user?.$id, setActiveWorkspaceId, router]);
+
+  return <NotesPage />;
 }

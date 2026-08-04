@@ -237,6 +237,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         y: clientY,
         items: contextMenuItems,
         appType: 'note',
+        title: note.title || 'Untitled Idea',
       });
     }
   };

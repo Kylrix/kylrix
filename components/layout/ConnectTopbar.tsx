@@ -1835,7 +1835,7 @@ export default function ConnectTopbar({
                 if (w.isPersonal || w.id === user?.$id) {
                   router.push('/app');
                 } else {
-                  router.push(`/workspaces/${w.id}`);
+                  router.push(`/app/${w.id}`);
                 }
               }}
               sx={{

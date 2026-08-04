@@ -37,8 +37,7 @@ import { isFlowPath } from '@/lib/routing/app-paths';
 
 export function UnifiedLeftSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { } = useUnifiedDrawer();
+  const { open: openUnified } = useUnifiedDrawer();
   const { } = useAppChrome();
   const { } = useDrawerState();
   const { isOpen: _isCallLauncherOpen } = useCallLauncher();
@@ -253,7 +252,7 @@ export function UnifiedLeftSidebar() {
                   <Box
                     onClick={() => {
                       setWorkspaceMenuOpen(false);
-                      router.push('/workspaces');
+                      openUnified('new-project');
                     }}
                     sx={{
                       display: 'flex',
@@ -279,7 +278,7 @@ export function UnifiedLeftSidebar() {
                         if (w.isPersonal || w.id === user?.$id) {
                           router.push('/app');
                         } else {
-                          router.push(`/workspaces/${w.id}`);
+                          router.push(`/app/${w.id}`);
                         }
                       }}
                       sx={{
