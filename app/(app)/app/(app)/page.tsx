@@ -293,9 +293,14 @@ export default function NotesPage() {
       }
     });
 
-    // 2. Also include live draft notes created in this custom workspace that aren't yet in project_objects
+    // 2. Legacy fallback: include any notes directly linked to activeWorkspace.id regardless of isWorkspace flag
     decrypted.forEach((n: any) => {
-      if (!seenIds.has(n.$id) && (n.isWorkspace || n.projectId === activeWorkspace.id)) {
+      if (
+        !seenIds.has(n.$id) &&
+        (n.projectId === activeWorkspace.id ||
+         n.isWorkspace ||
+         (n.tags && n.tags.some((t: string) => t.includes(activeWorkspace.id))))
+      ) {
         workspaceNotes.unshift(n);
         seenIds.add(n.$id);
       }
@@ -303,6 +308,7 @@ export default function NotesPage() {
 
     return workspaceNotes;
   }, [allNotes, activeWorkspace, isCustomWorkspace, workspaceProjectObjects, user?.$id]);
+
 
 
 

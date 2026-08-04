@@ -80,8 +80,9 @@ import { MultiSectionContainer } from '@/context/SectionContext';
 import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
 import FormDialog from '@/components/forms/FormDialog';
 import { CallActionModal } from '@/components/call/CallActionModal';
-import NewTotpDialog from '@/components/app/totp/new';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
+import { useWorkspace } from '@/context/WorkspaceContext';
+
 
 const TABS_CONFIG = [
   { label: 'Integrated Notes', icon: <FileText size={18} /> },
@@ -464,9 +465,23 @@ export default function ProjectDetailPage() {
     };
   }, [projectId, getCachedDataAsync, applyProjectDetailCache]);
 
+  const { setActiveWorkspaceId } = useWorkspace();
+
+  useEffect(() => {
+    if (!projectId || !rawProject) return;
+
+    const isPublic = rawProject.isPublic || rawProject.visibility === 'public';
+    const isMember = isOwner || collaborators.some((c) => (c.userId || c.$id) === user?.$id);
+
+    if (isPublic) {
+      setActiveWorkspaceId(projectId as string);
+      router.replace('/app');
+    }
+  }, [projectId, rawProject, isOwner, collaborators, user?.$id, setActiveWorkspaceId, router]);
+
   const fetchProjectData = useCallback(async () => {
     if (!projectId) return;
-    
+
     const hasCache = Boolean(getSessionProjectDetail(projectId as string));
     if (!hasCache) {
       setLoading(true);
@@ -478,7 +493,9 @@ export default function ProjectDetailPage() {
         () => ProjectsService.getProject(projectId as string),
         PROJECT_META_TTL,
       );
-      setRawProject(normalizeProjectVisibility(p) as Projects);
+      const normalizedP = normalizeProjectVisibility(p) as Projects;
+      setRawProject(normalizedP);
+
 
       // Resolve owner profile securely
       let resolvedOwner: any = null;
