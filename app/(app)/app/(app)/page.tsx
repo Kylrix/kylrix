@@ -256,22 +256,43 @@ export default function NotesPage() {
     const decrypted = safeNotes.filter((n) => !isClientEncryptedNote(n));
 
     if (!isCustomWorkspace || !activeWorkspace) {
-      return decrypted.filter((n: any) => !n.isWorkspace && !n.projectId);
+      return decrypted.filter((n: any) => !n.isWorkspace);
     }
 
-    const linkedEntityIds = new Set(
-      (workspaceProjectObjects || []).map((po: any) => po.entityId || po.id).filter(Boolean)
-    );
+    const notesById = new Map<string, Notes>();
+    decrypted.forEach((n) => notesById.set(n.$id, n));
 
-    const pid = activeWorkspace.id;
-    return decrypted.filter(
-      (n: any) =>
-        linkedEntityIds.has(n.$id) ||
-        n.projectId === pid ||
-        (n.isWorkspace && (n.projectId === pid || !n.projectId)) ||
-        (n.tags && n.tags.some((t: string) => t.includes(pid)))
-    );
-  }, [allNotes, activeWorkspace, isCustomWorkspace, workspaceProjectObjects]);
+    const workspaceNotes: Notes[] = [];
+    (workspaceProjectObjects || []).forEach((po: any) => {
+      const entityId = po.entityId || po.id;
+      if (!entityId) return;
+      const noteDoc = notesById.get(entityId);
+      if (noteDoc) {
+        workspaceNotes.push(noteDoc);
+      } else if (po.metadata) {
+        // Fallback: hydrate synthetic note row from project_object metadata if not in notes context yet
+        try {
+          const meta = typeof po.metadata === 'string' ? JSON.parse(po.metadata) : po.metadata;
+          workspaceNotes.push({
+            $id: entityId,
+            title: meta.title || po.title || 'Untitled Note',
+            content: meta.content || '',
+            tags: meta.tags || [],
+            format: 'text',
+            userId: user?.$id || '',
+            isPublic: false,
+            isGuest: false,
+            isWorkspace: true,
+            $createdAt: po.$createdAt || new Date().toISOString(),
+            $updatedAt: po.$updatedAt || new Date().toISOString(),
+          } as unknown as Notes);
+        } catch {}
+      }
+    });
+
+    return workspaceNotes;
+  }, [allNotes, activeWorkspace, isCustomWorkspace, workspaceProjectObjects, user?.$id]);
+
 
 
 
