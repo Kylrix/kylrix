@@ -169,22 +169,44 @@ export function CreateGoalComposer({
     [onGoalCreated, pushLiveGoal],
   );
 
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushLiveGoal = useCallback(() => {
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = null;
+    }
+    const hasContent = Boolean(content.trim() || title.trim());
+    if (!hasContent) return;
+    const task = buildLive(content, title, priority, dueDate);
+    pushLive(task);
+  }, [buildLive, content, dueDate, priority, pushLive, title]);
+
+  const scheduleLiveGoalSync = useCallback(() => {
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      flushLiveGoal();
+    }, 250);
+  }, [flushLiveGoal]);
+
   const handleContentChange = useCallback(
     (next: string) => {
       setContent(next);
       const generated = isTitleManuallyEdited ? title : buildAutoTitleFromContent(next);
       if (!isTitleManuallyEdited) setTitle(generated);
-      pushLive(buildLive(next, generated));
 
       if (contentRef.current) {
         contentRef.current.style.height = 'auto';
         contentRef.current.style.height = `${Math.max(76, Math.min(contentRef.current.scrollHeight, 360))}px`;
       }
+
+      scheduleLiveGoalSync();
     },
-    [buildLive, isTitleManuallyEdited, pushLive, title],
+    [isTitleManuallyEdited, scheduleLiveGoalSync, title],
   );
 
   const handleClose = useCallback(() => {
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     const id = liveIdRef.current || resolvedId;
     const hasContent = Boolean(content.trim() || title.trim());
     if (!hasContent && id) {
@@ -193,11 +215,17 @@ export function CreateGoalComposer({
       }
       autonomicSyncEngine.ack(goalPendingKey(id));
     } else if (hasContent) {
-      pushLive(buildLive(content, title));
+      pushLive(buildLive(content, title, priority, dueDate));
       autonomicSyncEngine.nudge();
     }
     onClose?.();
-  }, [buildLive, content, deleteTask, onClose, pushLive, resolvedId, title]);
+  }, [buildLive, content, deleteTask, dueDate, onClose, priority, pushLive, resolvedId, title]);
+
+  useEffect(() => {
+    return () => {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    };
+  }, []);
 
   const handleOpenDatePicker = useCallback(() => {
     const isDesktopWindow = typeof window !== 'undefined' && window.innerWidth >= 900;
@@ -327,7 +355,7 @@ export function CreateGoalComposer({
             onChange={(e) => {
               setTitle(e.target.value);
               setIsTitleManuallyEdited(true);
-              pushLive(buildLive(content, e.target.value));
+              scheduleLiveGoalSync();
             }}
             placeholder="What do you want to accomplish?"
             className="w-full bg-transparent text-white placeholder-white/20 border-0 border-b border-white/10 focus:border-[#A855F7] px-0 py-1.5 text-lg font-bold font-clash focus:outline-none transition-colors"
