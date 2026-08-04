@@ -55,7 +55,7 @@ export default function EventList() {
   const { openOverlay, closeOverlay } = useOverlay();
   const { isAuthenticated, openIDMWindow } = useAuth();
   const { setConfiguration, resetConfiguration } = useFAB();
-  const { activeWorkspace } = useWorkspace();
+  const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const [isDesktop, _setIsDesktop] = useState(true);
   const committedIdsRef = React.useRef<Set<string>>(new Set());
 
@@ -112,6 +112,7 @@ export default function EventList() {
           }
         }
 
+        const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
         const newDoc = await eventApi.create(
           {
             userId: currentUserId,
@@ -126,10 +127,14 @@ export default function EventList() {
             status: 'confirmed',
             coverImageId: eventData.coverImage || '',
             recurrenceRule: '',
-            isWorkspace: activeWorkspace?.isPersonal === false,
+            isWorkspace: isCustomWorkspace,
           } as any,
           eventPermissions,
         );
+
+        if (isCustomWorkspace && (newDoc?.$id || (newDoc as any)?.id)) {
+          void attachEntityToActiveWorkspace('event', newDoc.$id || (newDoc as any).id);
+        }
 
         const created = mapRemoteEvent(newDoc);
         // Replace ephemeral draft ID with confirmed remote Appwrite ID (pending: false -> green dot)

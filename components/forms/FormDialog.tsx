@@ -38,6 +38,7 @@ import { DraftsService, FormDraft } from '@/lib/services/drafts';
 import { Forms, FormsStatus } from '@/generated/appwrite/types';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
@@ -310,6 +311,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
   const { invalidate } = useDataNexus();
+  const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const { setIsDrawerOpen } = useDrawerState();
   const [isExpanded, setIsExpanded] = useState(true);
   const [title, setTitle] = useState('');
@@ -590,7 +592,14 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         if (user) invalidate(`f_user_forms_${user.$id}`);
         invalidate(`f_form_schema_${form.$id}`);
       } else {
-        const newForm = await FormsService.createForm(user.$id, formData);
+        const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
+        const newForm = await FormsService.createForm(user.$id, {
+          ...formData,
+          isWorkspace: isCustomWorkspace,
+        } as any);
+        if (isCustomWorkspace && newForm?.$id) {
+          void attachEntityToActiveWorkspace('form', newForm.$id);
+        }
         autonomicSyncEngine.ack(newForm.$id);
         if (user) invalidate(`f_user_forms_${user.$id}`);
       }

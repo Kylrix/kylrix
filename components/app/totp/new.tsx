@@ -10,6 +10,8 @@ import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useSudo } from '@/context/SudoContext';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 
+import { useWorkspace } from '@/context/WorkspaceContext';
+
 const DRAWER_SX = {
   borderTopLeftRadius: '24px',
   borderTopRightRadius: '24px',
@@ -38,6 +40,7 @@ export default function NewTotpDialog({
   };
 }) {
   const { user } = useAppwriteVault();
+  const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const { setIsDrawerOpen } = useDrawerState();
   const { requestSudo } = useSudo();
   
@@ -101,21 +104,28 @@ export default function NewTotpDialog({
     try {
       if (!user) throw new Error("Not authenticated");
 
+      const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
+
       if (initialData && initialData.$id) {
         await updateTotpSecret(initialData.$id, {
           ...form,
           updatedAt: new Date().toISOString()});
         toast.success("Smart Code updated!");
       } else {
-        await createTotpSecret({
+        const created = await createTotpSecret({
           userId: user.$id,
           ...form,
           url: null,
           tags: null,
+          isWorkspace: isCustomWorkspace,
           isFavorite: false,
           isDeleted: false,
           createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()});
+          updatedAt: new Date().toISOString()} as any);
+
+        if (isCustomWorkspace && (created?.$id || (created as any)?.id)) {
+          void attachEntityToActiveWorkspace('totp', created.$id || (created as any).id);
+        }
         toast.success("Smart Code added!");
       }
       handleClose();

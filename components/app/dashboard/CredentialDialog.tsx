@@ -29,6 +29,7 @@ import {
 import { useSection } from '@/context/SectionContext';
 import { useSudo } from '@/context/SudoContext';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
+import { useWorkspace } from '@/context/WorkspaceContext';
 
 
 export default function CredentialDialog({
@@ -56,6 +57,7 @@ export default function CredentialDialog({
   }, []);
 
   const { user } = useAppwriteVault();
+  const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const { setIsDrawerOpen } = useDrawerState();
   const { setActiveDetail } = useSection();
   const { requestSudo } = useSudo();
@@ -295,10 +297,18 @@ export default function CredentialDialog({
 
       credentialData.userId = user?.$id || 'guest';
 
+      const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
+      if (isCustomWorkspace) {
+        (credentialData as any).isWorkspace = true;
+      }
+
       if (initial && initial.$id) {
         await updateCredential(initial.$id, credentialData);
       } else {
-        await createCredential(credentialData);
+        const created = await createCredential(credentialData);
+        if (isCustomWorkspace && (created?.$id || (created as any)?.id)) {
+          void attachEntityToActiveWorkspace('credential', created.$id || (created as any).id);
+        }
       }
       if (!initial && typeof window !== 'undefined') {
         localStorage.removeItem('kylrix:draft:secret');
