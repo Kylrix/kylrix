@@ -272,30 +272,13 @@ export default function NotesPage() {
     (workspaceProjectObjects || []).forEach((po: any) => {
       const entityId = po.entityId || po.id;
       if (!entityId || seenIds.has(entityId)) return;
-      seenIds.add(entityId);
       const noteDoc = notesById.get(entityId);
       if (noteDoc) {
+        seenIds.add(entityId);
         workspaceNotes.push(noteDoc);
-      } else {
-        let meta: any = {};
-        try {
-          meta = typeof po.metadata === 'string' ? JSON.parse(po.metadata || '{}') : (po.metadata || {});
-        } catch {}
-        workspaceNotes.push({
-          $id: entityId,
-          title: meta.title || po.title || 'Untitled Note',
-          content: meta.content || '',
-          tags: meta.tags || [],
-          format: 'text',
-          userId: user?.$id || '',
-          isPublic: false,
-          isGuest: false,
-          isWorkspace: true,
-          $createdAt: po.$createdAt || new Date().toISOString(),
-          $updatedAt: po.$updatedAt || new Date().toISOString(),
-        } as unknown as Notes);
       }
     });
+
 
     // 2. Direct workspace items in NotesContext
     decrypted.forEach((n: any) => {
