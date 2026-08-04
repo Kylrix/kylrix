@@ -51,7 +51,7 @@ export function CreateGoalComposer({
   const { pushLiveGoal, selectedProjectId, userId, deleteTask } = useTask();
   const { user } = useAuth();
   const ownerId = user?.$id || userId || 'guest';
-  const { openSidebar } = useDynamicSidebar();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { getCachedData, setCachedData } = useDataNexus();
   const draftKey = `kylrix_goal_compose_draft_${ownerId}`;
 
@@ -270,8 +270,11 @@ export function CreateGoalComposer({
         onGoalCreated?.(task);
       }
     }
-    onClose?.();
-  }, [buildLive, content, deleteTask, draftKey, dueDate, onClose, onGoalCreated, priority, pushLiveGoal, resolvedId, setCachedData, title]);
+    if (typeof onClose === 'function') {
+      onClose();
+    }
+    closeSidebar();
+  }, [buildLive, closeSidebar, content, deleteTask, draftKey, dueDate, onClose, onGoalCreated, priority, pushLiveGoal, resolvedId, setCachedData, title]);
 
   useEffect(() => {
     return () => {
