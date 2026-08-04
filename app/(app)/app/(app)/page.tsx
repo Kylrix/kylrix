@@ -252,7 +252,13 @@ export default function NotesPage() {
     if (!activeWorkspace || activeWorkspace.isPersonal || activeWorkspace.id === user?.$id) {
       return decrypted.filter((n: any) => !n.isWorkspace);
     }
-    return decrypted.filter((n: any) => n.projectId === activeWorkspace.id || (n.tags && n.tags.some((t: string) => t.includes(activeWorkspace.id))));
+    const pid = activeWorkspace.id;
+    return decrypted.filter(
+      (n: any) =>
+        n.projectId === pid ||
+        n.isWorkspace ||
+        (n.tags && n.tags.some((t: string) => t.includes(pid)))
+    );
   }, [allNotes, activeWorkspace, user?.$id]);
 
   const pinnedNotes = useMemo(() => {
