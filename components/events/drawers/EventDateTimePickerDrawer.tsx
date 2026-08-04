@@ -5,16 +5,22 @@ import { createPortal } from 'react-dom';
 import { Calendar, Clock, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
 import { addHours } from '@/lib/time-util';
 
-type Props = {
-  open: boolean;
+export type EventDateTimePickerProps = {
+  open?: boolean;
   onClose: () => void;
   startTime: Date;
   endTime: Date;
   onApply: (start: Date, end: Date) => void;
+  inline?: boolean;
 };
 
-export function EventDateTimePickerDrawer({ open, onClose, startTime, endTime, onApply }: Props) {
-  const [mounted, setMounted] = useState(false);
+export function EventDateTimePickerSurface({
+  onClose,
+  startTime,
+  endTime,
+  onApply,
+  inline = false,
+}: EventDateTimePickerProps) {
   const [step, setStep] = useState<'date' | 'time'>('date');
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date(startTime));
   const [viewMonth, setViewMonth] = useState<Date>(() => new Date(startTime));
@@ -28,18 +34,12 @@ export function EventDateTimePickerDrawer({ open, onClose, startTime, endTime, o
   const [endStr, setEndStr] = useState(() => toTimeString(endTime));
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (open) {
-      setSelectedDate(new Date(startTime));
-      setViewMonth(new Date(startTime));
-      setStartStr(toTimeString(startTime));
-      setEndStr(toTimeString(endTime));
-      setStep('date');
-    }
-  }, [open, startTime, endTime]);
+    setSelectedDate(new Date(startTime));
+    setViewMonth(new Date(startTime));
+    setStartStr(toTimeString(startTime));
+    setEndStr(toTimeString(endTime));
+    setStep('date');
+  }, [startTime, endTime]);
 
   const daysInMonth = useMemo(() => {
     const year = viewMonth.getFullYear();
@@ -78,49 +78,37 @@ export function EventDateTimePickerDrawer({ open, onClose, startTime, endTime, o
     } else {
       onApply(newStart, newEnd);
     }
-    onClose();
   };
 
-  if (!open || !mounted) return null;
-
   const monthName = viewMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-
   const daysArray = Array.from({ length: daysInMonth.count }, (_, i) => i + 1);
   const blanksArray = Array.from({ length: daysInMonth.firstDay }, (_, i) => i);
 
-  return createPortal(
-    <div className="fixed inset-0 z-[15000] flex flex-col justify-end pointer-events-auto">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-200"
-        onClick={onClose}
-      />
-
-      {/* Drawer Container */}
-      <div className="relative w-full max-w-[540px] mx-auto bg-[#161412] border border-[#34322F] border-b-0 rounded-t-[28px] p-6 shadow-2xl z-[15001] flex flex-col gap-5 text-white overflow-hidden animate-in slide-in-from-bottom duration-250">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-              {step === 'date' ? <Calendar className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
-            </div>
-            <div>
-              <h3 className="font-extrabold text-base font-clash tracking-tight text-white">
-                {step === 'date' ? 'Select Date' : 'Set Event Hours'}
-              </h3>
-              <p className="text-xs text-[#8E8A86] font-mono">
-                {step === 'date' ? 'Step 1 of 2: Pick event date' : 'Step 2 of 2: Set start & end times'}
-              </p>
-            </div>
+  return (
+    <div className={inline ? "w-full h-full min-h-0 flex flex-col bg-[#161412] p-4 text-white overflow-y-auto overscroll-contain scrollbar-thin flex-1 gap-4" : "flex flex-col gap-5 text-white"}>
+      {/* Header */}
+      <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+            {step === 'date' ? <Calendar className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div>
+            <h3 className="font-extrabold text-base font-clash tracking-tight text-white">
+              {step === 'date' ? 'Select Date' : 'Set Event Hours'}
+            </h3>
+            <p className="text-xs text-[#8E8A86] font-mono">
+              {step === 'date' ? 'Step 1 of 2: Pick date' : 'Step 2 of 2: Set hours'}
+            </p>
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1.5 rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
         {/* Body */}
         {step === 'date' ? (
@@ -287,6 +275,27 @@ export function EventDateTimePickerDrawer({ open, onClose, startTime, endTime, o
             </div>
           </div>
         )}
+    </div>
+  );
+}
+
+export function EventDateTimePickerDrawer(props: EventDateTimePickerProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!props.open || !mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[15000] flex flex-col justify-end pointer-events-auto">
+      <div 
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-200"
+        onClick={props.onClose}
+      />
+      <div className="relative w-full max-w-[540px] mx-auto bg-[#161412] border border-[#34322F] border-b-0 rounded-t-[28px] p-6 shadow-2xl z-[15001] flex flex-col gap-5 text-white overflow-hidden animate-in slide-in-from-bottom duration-250">
+        <EventDateTimePickerSurface {...props} />
       </div>
     </div>,
     document.body

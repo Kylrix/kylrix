@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ID } from 'appwrite';
-import { Check, ChevronDown, ChevronUp, Target } from 'lucide-react';
+import { Calendar, Check, ChevronDown, ChevronUp, Target } from 'lucide-react';
 import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
 import { useTask } from '@/context/TaskContext';
 import { useAuth } from '@/lib/auth';
@@ -11,6 +11,11 @@ import { goalPendingKey } from '@/lib/sync/goal-keys';
 import { PRIORITY_COLORS } from '@/components/objects/ObjectCardMeta';
 import type { Priority, Task } from '@/types';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import {
+  EventDateTimePickerSurface,
+  EventDateTimePickerDrawer,
+} from '@/components/events/drawers/EventDateTimePickerDrawer';
 
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low'];
 
@@ -20,6 +25,12 @@ type Props = {
   isExpanded?: boolean;
   onToggleExpand?: () => void;
   onGoalCreated?: (task: Task) => void;
+  initialContent?: {
+    title?: string;
+    content?: string;
+    priority?: Priority;
+    dueDate?: string;
+  };
 };
 
 /**
@@ -32,16 +43,19 @@ export function CreateGoalComposer({
   isExpanded: controlledExpanded,
   onToggleExpand,
   onGoalCreated,
+  initialContent,
 }: Props) {
   const { pushLiveGoal, selectedProjectId, userId, deleteTask } = useTask();
   const { user } = useAuth();
   const ownerId = user?.$id || userId || 'guest';
+  const { swapSidebar } = useDynamicSidebar();
 
-  const [content, setContent] = useState('');
-  const [title, setTitle] = useState('');
-  const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(false);
-  const [priority, setPriority] = useState<Priority>('medium');
-  const [dueDate, setDueDate] = useState('');
+  const [content, setContent] = useState(initialContent?.content || '');
+  const [title, setTitle] = useState(initialContent?.title || '');
+  const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(Boolean(initialContent?.title));
+  const [priority, setPriority] = useState<Priority>(initialContent?.priority || 'medium');
+  const [dueDate, setDueDate] = useState(initialContent?.dueDate || '');
+  const [showMobileDatePicker, setShowMobileDatePicker] = useState(false);
   const [resolvedId, setResolvedId] = useState<string | undefined>();
   const [localExpanded, setLocalExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -164,6 +178,58 @@ export function CreateGoalComposer({
     }
     onClose?.();
   }, [buildLive, content, deleteTask, onClose, pushLive, resolvedId, title]);
+
+  const handleOpenDatePicker = useCallback(() => {
+    const isDesktopWindow = typeof window !== 'undefined' && window.innerWidth >= 900;
+    const initialStart = dueDate ? new Date(`${dueDate}T12:00:00`) : new Date();
+    const initialEnd = new Date(initialStart.getTime() + 3600000);
+
+    const applyDate = (start: Date) => {
+      const y = start.getFullYear();
+      const m = String(start.getMonth() + 1).padStart(2, '0');
+      const d = String(start.getDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${d}`;
+      setDueDate(dateStr);
+      pushLive(buildLive(content, title, priority, dateStr));
+      return dateStr;
+    };
+
+    if (isDesktopWindow) {
+      swapSidebar(
+        <EventDateTimePickerSurface
+          inline
+          startTime={initialStart}
+          endTime={initialEnd}
+          onApply={(start) => {
+            const dateStr = applyDate(start);
+            swapSidebar(
+              <CreateGoalComposer
+                onClose={onClose}
+                onGoalCreated={onGoalCreated}
+                isExpanded={controlledExpanded}
+                initialContent={{ title, content, priority, dueDate: dateStr }}
+              />,
+              { key: 'create-goal', hideHeader: true }
+            );
+          }}
+          onClose={() => {
+            swapSidebar(
+              <CreateGoalComposer
+                onClose={onClose}
+                onGoalCreated={onGoalCreated}
+                isExpanded={controlledExpanded}
+                initialContent={{ title, content, priority, dueDate }}
+              />,
+              { key: 'create-goal', hideHeader: true }
+            );
+          }}
+        />,
+        { key: 'date-picker', hideHeader: true }
+      );
+    } else {
+      setShowMobileDatePicker(true);
+    }
+  }, [dueDate, content, title, priority, buildLive, pushLive, swapSidebar, onClose, onGoalCreated, controlledExpanded]);
 
   useEffect(() => {
     onRegisterClose?.(handleClose);
@@ -311,18 +377,49 @@ export function CreateGoalComposer({
             <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-white/40">
               Target Due Date
             </label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => {
-                setDueDate(e.target.value);
-                pushLive(buildLive(content, title, priority, e.target.value));
-              }}
-              className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-white text-xs font-satoshi normal-case tracking-normal focus:outline-none focus:border-[#A855F7]/40 transition-all"
-            />
+            <button
+              type="button"
+              onClick={handleOpenDatePicker}
+              className="w-full flex items-center justify-between rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-white text-xs font-satoshi hover:border-[#A855F7]/40 hover:bg-white/[0.03] transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Calendar className="w-4 h-4 text-[#A855F7] shrink-0" />
+                <span className="font-bold text-sm font-satoshi truncate">
+                  {dueDate
+                    ? new Date(`${dueDate}T12:00:00`).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : 'Select target due date...'}
+                </span>
+              </div>
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#A855F7] bg-[#A855F7]/10 px-2 py-0.5 rounded-md border border-[#A855F7]/20 group-hover:bg-[#A855F7]/20 transition-all">
+                {dueDate ? 'Change' : 'Pick Date'}
+              </span>
+            </button>
           </div>
         </div>
       </div>
+
+      {showMobileDatePicker && (
+        <EventDateTimePickerDrawer
+          open={showMobileDatePicker}
+          startTime={dueDate ? new Date(`${dueDate}T12:00:00`) : new Date()}
+          endTime={dueDate ? new Date(`${dueDate}T13:00:00`) : new Date(Date.now() + 3600000)}
+          onApply={(start) => {
+            const y = start.getFullYear();
+            const m = String(start.getMonth() + 1).padStart(2, '0');
+            const d = String(start.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${d}`;
+            setDueDate(dateStr);
+            pushLive(buildLive(content, title, priority, dateStr));
+            setShowMobileDatePicker(false);
+          }}
+          onClose={() => setShowMobileDatePicker(false)}
+        />
+      )}
     </div>
   );
 }
