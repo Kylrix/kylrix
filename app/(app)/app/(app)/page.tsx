@@ -263,14 +263,17 @@ export default function NotesPage() {
     decrypted.forEach((n) => notesById.set(n.$id, n));
 
     const workspaceNotes: Notes[] = [];
+    const seenIds = new Set<string>();
+
+    // 1. First add items from project_objects
     (workspaceProjectObjects || []).forEach((po: any) => {
       const entityId = po.entityId || po.id;
       if (!entityId) return;
+      seenIds.add(entityId);
       const noteDoc = notesById.get(entityId);
       if (noteDoc) {
         workspaceNotes.push(noteDoc);
       } else if (po.metadata) {
-        // Fallback: hydrate synthetic note row from project_object metadata if not in notes context yet
         try {
           const meta = typeof po.metadata === 'string' ? JSON.parse(po.metadata) : po.metadata;
           workspaceNotes.push({
@@ -290,8 +293,17 @@ export default function NotesPage() {
       }
     });
 
+    // 2. Also include live draft notes created in this custom workspace that aren't yet in project_objects
+    decrypted.forEach((n: any) => {
+      if (!seenIds.has(n.$id) && (n.isWorkspace || n.projectId === activeWorkspace.id)) {
+        workspaceNotes.unshift(n);
+        seenIds.add(n.$id);
+      }
+    });
+
     return workspaceNotes;
   }, [allNotes, activeWorkspace, isCustomWorkspace, workspaceProjectObjects, user?.$id]);
+
 
 
 
