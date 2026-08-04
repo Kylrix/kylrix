@@ -709,7 +709,7 @@ export function MultiSectionContainer({ children, panels}: MultiSectionContainer
           boxSizing: 'border-box'
         }}
       >
-        {layout.sections.map((section) => {
+        {layout.sections.map((section, index) => {
           if (section.type === 'original') {
             return (
               <Box key={section.id} sx={{ minWidth: 0, width: '100%', gridColumn: { xs: '1 / -1', md: 'auto' } }}>
@@ -718,9 +718,10 @@ export function MultiSectionContainer({ children, panels}: MultiSectionContainer
             );
           }
 
-          if (!section.panels || section.panels.length === 0) return null;
+          const isRightmostPanel = index === layout.sections.length - 1;
+          const hasDetail = isRightmostPanel && activeDetail && !isFullScreenDetail;
 
-          const isRightmostPanel = section.id === layout.sections[layout.sections.length - 1].id;
+          if (!hasDetail && (!section.panels || section.panels.length === 0)) return null;
 
           return (
             <Box 
@@ -732,12 +733,12 @@ export function MultiSectionContainer({ children, panels}: MultiSectionContainer
                 height: 'auto',
                 maxHeight: 'calc(100vh - 120px)',
                 overflowY: 'hidden',
-                width: section.width,
-                minWidth: section.width,
+                width: section.width || '380px',
+                minWidth: section.width || '380px',
                 boxSizing: 'border-box'
               }}
             >
-              {isRightmostPanel && activeDetail && !isFullScreenDetail ? (
+              {hasDetail ? (
                 <Box sx={{ 
                   height: '100%', 
                   bgcolor: '#161412', 
