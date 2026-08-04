@@ -255,17 +255,17 @@ export default function TagsPage() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid gap-6 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
                   {tags.map((tag) => (
                     <div
                       key={tag.$id}
                       onClick={() => setSelectedTag(tag)}
-                      className="p-6 rounded-[32px] bg-[#161412] border border-white/5 shadow-2xl hover:border-white/10 hover:bg-[#1C1A18] hover:translate-y-[-2px] transition-all duration-300 ease-out cursor-pointer flex flex-col justify-between min-h-[196px] group"
+                      className="p-6 rounded-[32px] bg-[#161412] border border-white/5 shadow-2xl hover:border-white/10 hover:bg-[#1C1A18] hover:translate-y-[-2px] transition-all duration-300 ease-out cursor-pointer flex flex-col justify-between min-h-[196px] group min-w-[260px] sm:min-w-[280px] overflow-hidden max-w-full"
                     >
-                      <div>
+                      <div className="min-w-0 max-w-full overflow-hidden">
                         {/* Top Row: Name and Count */}
-                        <div className="flex items-start gap-4 mb-3 w-full justify-between">
-                          <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex items-start gap-4 mb-3 w-full justify-between min-w-0">
+                          <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
                             <div 
                               style={{ 
                                 backgroundColor: `${tag.color || '#6366F1'}1a`,
@@ -276,14 +276,14 @@ export default function TagsPage() {
                             >
                               <TagIcon size={20} />
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="text-white text-base font-black tracking-tight leading-tight truncate font-mono">
+                            <div className="min-w-0 flex-1 overflow-hidden">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <h3 className="text-white text-base font-black tracking-tight leading-tight truncate font-mono min-w-0">
                                   {tag.name}
                                 </h3>
                                 <SyncStatusDot resourceId={tag.$id} />
                               </div>
-                              <span className="block text-[9px] font-black uppercase tracking-wider text-white/30 font-mono mt-0.5">
+                              <span className="block text-[9px] font-black uppercase tracking-wider text-white/30 font-mono mt-0.5 truncate">
                                 {(tag as any).usageCount || 0} items
                               </span>
                             </div>
@@ -292,42 +292,42 @@ export default function TagsPage() {
 
                         {/* Description */}
                         {tag.description && (
-                          <p className="text-xs text-white/50 font-medium leading-relaxed mb-4 line-clamp-2 select-text">
+                          <p className="text-xs text-white/50 font-medium leading-relaxed mb-4 line-clamp-2 select-text break-words">
                             {tag.description}
                           </p>
                         )}
                       </div>
 
-                      <div>
+                      <div className="min-w-0 max-w-full overflow-hidden">
                         {/* Access time metadata */}
-                        <div className="flex items-center gap-1.5 text-white/20 text-[10px] font-bold font-mono uppercase mb-4">
-                          <ClockIcon size={12} />
-                          <span>
+                        <div className="flex items-center gap-1.5 text-white/20 text-[10px] font-bold font-mono uppercase mb-4 truncate">
+                          <ClockIcon size={12} className="shrink-0" />
+                          <span className="truncate">
                             Created {formatDateWithFallback(tag.createdAt, { year: 'numeric', month: 'short', day: 'numeric' })}
                           </span>
                         </div>
 
                         {/* Bottom Row Actions */}
-                        <div className="flex gap-3">
+                        <div className="flex items-center gap-2 w-full shrink-0 min-w-0 overflow-hidden">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleEdit(tag);
                             }}
-                            className="flex-1 py-2 px-3 rounded-xl border border-white/5 bg-[#1C1A18] hover:bg-[#252220] hover:border-white/10 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all"
+                            className="flex-1 min-w-0 py-2 px-2.5 rounded-xl border border-white/5 bg-[#1C1A18] hover:bg-[#252220] hover:border-white/10 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all truncate shrink-0 cursor-pointer"
                           >
-                            <EditIcon size={14} />
-                            <span>Edit</span>
+                            <EditIcon size={14} className="shrink-0" />
+                            <span className="truncate">Edit</span>
                           </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDelete(tag);
                             }}
-                            className="flex-1 py-2 px-3 rounded-xl border border-red-500/10 bg-red-500/5 hover:bg-red-500/10 hover:border-red-500/20 text-red-500 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all"
+                            className="flex-1 min-w-0 py-2 px-2.5 rounded-xl border border-red-500/10 bg-red-500/5 hover:bg-red-500/10 hover:border-red-500/20 text-red-500 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all truncate shrink-0 cursor-pointer"
                           >
-                            <TrashIcon size={14} />
-                            <span>Delete</span>
+                            <TrashIcon size={14} className="shrink-0" />
+                            <span className="truncate">Delete</span>
                           </button>
                         </div>
                       </div>
