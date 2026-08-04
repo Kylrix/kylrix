@@ -27,6 +27,7 @@ import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
 import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { looksEncrypted } from '@/lib/masterpass-crypto';
 import toast from 'react-hot-toast';
 
 export default function CredentialDetail({
@@ -39,12 +40,71 @@ export default function CredentialDetail({
   isMobile: boolean;
   inline?: boolean;
 }) {
+  const [liveCredential, setLiveCredential] = useState<Credentials>(credential);
   const [showPassword, setShowPassword] = useState(false);
   const [showProjectLinker, setShowProjectLinker] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(!!credential.isPublic);
   const { requestSudo } = useSudo();
   const { open: openUnified } = useUnifiedDrawer();
+
+  useEffect(() => {
+    setLiveCredential(credential);
+    let isCancelled = false;
+
+    const decryptAllFields = async () => {
+      try {
+        const { decryptField, masterPassCrypto } = await import('@/lib/masterpass-crypto');
+        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
+        
+        if (!masterPassCrypto.isVaultUnlocked()) return;
+
+        const fieldsToDecrypt = ['name', 'username', 'password', 'url', 'notes', 'customFields'];
+        const updated = { ...credential };
+        let changed = false;
+
+        let dekKey: CryptoKey | null = null;
+        if (credential.dek && looksEncrypted(credential.dek)) {
+          try {
+            const dekBase64 = await decryptField(credential.dek);
+            const rawKey = new Uint8Array(atob(dekBase64).split('').map((c) => c.charCodeAt(0)));
+            dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+          } catch {}
+        }
+
+        for (const field of fieldsToDecrypt) {
+          const val = (credential as any)[field];
+          if (val && typeof val === 'string' && looksEncrypted(val)) {
+            try {
+              let plain: string | null = null;
+              if (dekKey) {
+                plain = await ecosystemSecurity.decryptWithKey(val, dekKey);
+              } else {
+                plain = await decryptField(val);
+              }
+              if (plain && plain !== val) {
+                (updated as any)[field] = plain;
+                changed = true;
+              }
+            } catch (err) {
+              console.error(`[CredentialDetail] Failed to decrypt ${field}:`, err);
+            }
+          }
+        }
+
+        if (changed && !isCancelled) {
+          setLiveCredential(updated);
+        }
+      } catch (e) {
+        console.error('[CredentialDetail] Decryption error:', e);
+      }
+    };
+
+    void decryptAllFields();
+    return () => {
+      isCancelled = true;
+    };
+  }, [credential]);
 
   const handleShareLink = useCallback(async () => {
     try {
@@ -284,11 +344,11 @@ export default function CredentialDetail({
         {/* Row 2: Full-bleed Title & Sync Status Indicator matching TaskDetails / NoteDetailSidebar */}
         <div className="w-full min-w-0 flex flex-col gap-1.5 pt-1">
           <h2 className="w-full min-w-0 text-lg md:text-xl font-black font-clash text-[#10B981] tracking-tight uppercase break-words [overflow-wrap:anywhere]">
-            {credential.name}
+            {looksEncrypted(liveCredential.name) ? 'Encrypted Secret' : liveCredential.name}
           </h2>
           <div className="flex items-center gap-2 shrink-0">
-            <SyncStatusDot resourceId={credential.$id} />
-            <SyncStatusLabel resourceId={credential.$id} />
+            <SyncStatusDot resourceId={liveCredential.$id} />
+            <SyncStatusLabel resourceId={liveCredential.$id} />
           </div>
         </div>
       </div>
@@ -296,34 +356,34 @@ export default function CredentialDetail({
       <ProjectLinker 
         open={showProjectLinker} 
         onClose={() => setShowProjectLinker(false)} 
-        entityId={credential.$id} 
+        entityId={liveCredential.$id} 
         entityKind="password" 
       />
 
       {/* Main Body with Deep Ash Balances */}
       <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
         {/* Favicon & URL Hero Surface */}
-        {credential.url && (
+        {liveCredential.url && !looksEncrypted(liveCredential.url) && (
           <div className="p-4 rounded-2xl bg-[#1C1A18] border border-[#2C2A28] flex items-start gap-3.5">
             <div className="w-12 h-12 rounded-xl bg-[#141211] flex items-center justify-center border border-[#34322F] shrink-0 overflow-hidden">
               {faviconUrl ? (
                 <img src={faviconUrl} className="w-7 h-7 object-contain" alt="" />
               ) : (
                 <span className="text-xl font-black text-[#10B981] font-clash">
-                  {credential.name?.charAt(0)?.toUpperCase() || "?"}
+                  {liveCredential.name?.charAt(0)?.toUpperCase() || "?"}
                 </span>
               )}
             </div>
             <div className="min-w-0 flex-1 flex flex-col gap-1">
               <span className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase font-clash">Website Domain</span>
               <a 
-                href={credential.url} 
+                href={liveCredential.url} 
                 target="_blank" 
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-[#10B981] hover:underline"
               >
                 <Globe className="w-3.5 h-3.5" />
-                <span className="truncate">{new URL(credential.url).hostname}</span>
+                <span className="truncate">{new URL(liveCredential.url).hostname}</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
               {urlSafety && (
@@ -345,8 +405,8 @@ export default function CredentialDetail({
         {/* Fields List */}
         <div className="flex flex-col gap-4">
           <div>
-            <FieldLabel label="Username / Email" onCopy={() => handleCopy(credential.username || '', "username")} fieldId="username" />
-            <FieldValue>{credential.username || "N/A"}</FieldValue>
+            <FieldLabel label="Username / Email" onCopy={() => handleCopy(looksEncrypted(liveCredential.username) ? '' : (liveCredential.username || ''), "username")} fieldId="username" />
+            <FieldValue>{looksEncrypted(liveCredential.username) ? '••••••••' : (liveCredential.username || "N/A")}</FieldValue>
           </div>
 
           {/* Secret Password Value */}
@@ -372,7 +432,7 @@ export default function CredentialDetail({
                 </button>
                 <button 
                   type="button"
-                  onClick={() => requestSudo({ onSuccess: () => handleCopy(credential.password || '', "password") })}
+                  onClick={() => requestSudo({ onSuccess: () => handleCopy(looksEncrypted(liveCredential.password) ? '' : (liveCredential.password || ''), "password") })}
                   className="h-6 text-[10px] font-bold px-2 rounded-lg hover:bg-[#10B981]/10 flex items-center gap-1.5 transition-colors text-[#10B981]"
                 >
                   <Copy className="w-3.5 h-3.5" />
@@ -381,16 +441,16 @@ export default function CredentialDetail({
               </div>
             </div>
             <FieldValue className={showPassword ? 'text-white' : 'text-white/40 tracking-[0.3em]'}>
-              {credential.password ? (showPassword ? credential.password : "••••••••••••••••") : "N/A"}
+              {liveCredential.password ? (showPassword ? (looksEncrypted(liveCredential.password) ? '••••••••' : liveCredential.password) : "••••••••••••••••") : "N/A"}
             </FieldValue>
           </div>
 
           {/* Notes */}
-          {credential.notes && (
+          {liveCredential.notes && (
             <div>
-              <FieldLabel label="Notes" onCopy={() => handleCopy(credential.notes || "", "notes")} fieldId="notes" />
+              <FieldLabel label="Notes" onCopy={() => handleCopy(looksEncrypted(liveCredential.notes) ? '' : (liveCredential.notes || ''), "notes")} fieldId="notes" />
               <FieldValue className="whitespace-pre-wrap font-sans text-xs leading-relaxed text-[#D6D1CA]">
-                {credential.notes}
+                {looksEncrypted(liveCredential.notes) ? 'Encrypted Notes' : liveCredential.notes}
               </FieldValue>
             </div>
           )}
