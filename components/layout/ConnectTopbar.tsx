@@ -1832,11 +1832,7 @@ export default function ConnectTopbar({
               onClick={() => {
                 setActiveWorkspaceId(w.id);
                 handleCloseAll();
-                if (w.isPersonal || w.id === user?.$id) {
-                  router.push('/app');
-                } else {
-                  router.push(`/app/${w.id}`);
-                }
+                router.push('/app');
               }}
               sx={{
                 width: '100%',

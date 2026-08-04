@@ -103,13 +103,36 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [personalWorkspace, mapProjectRows]);
 
+  const ACTIVE_WORKSPACE_CACHE_KEY = `kylrix_active_workspace_${userId}`;
+
   useEffect(() => {
-    void refreshWorkspaces();
-  }, [refreshWorkspaces]);
+    void (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const saved = await LocalEngine.cacheGet(ACTIVE_WORKSPACE_CACHE_KEY);
+        if (saved && typeof saved === 'string') {
+          setActiveWorkspaceIdState(saved);
+        } else if (user?.prefs?.activeWorkspaceId) {
+          setActiveWorkspaceIdState(user.prefs.activeWorkspaceId as string);
+        }
+      } catch {}
+    })();
+  }, [userId, user?.prefs?.activeWorkspaceId, ACTIVE_WORKSPACE_CACHE_KEY]);
+
+  const { updatePreferences } = useAuth();
 
   const setActiveWorkspaceId = useCallback((id: string) => {
     setActiveWorkspaceIdState(id);
-  }, []);
+    void (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, id);
+        if (user?.$id && typeof updatePreferences === 'function') {
+          void updatePreferences({ activeWorkspaceId: id });
+        }
+      } catch {}
+    })();
+  }, [ACTIVE_WORKSPACE_CACHE_KEY, user?.$id, updatePreferences]);
 
   const activeWorkspace = useMemo<WorkspaceItem>(() => {
     const found = workspaces.find((w) => w.id === activeWorkspaceId);
