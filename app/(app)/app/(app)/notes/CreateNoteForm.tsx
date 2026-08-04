@@ -1114,7 +1114,7 @@ export default function CreateNoteForm({
     if (finalDraft) {
       if (!hasAnnouncedDraftRef.current && !hasAnnouncedCreateRef.current) {
         hasAnnouncedDraftRef.current = true;
-        onNoteCreated(finalDraft);
+        onNoteCreated?.(finalDraft);
       }
       void saveComposerNote(finalDraft).catch(() => {});
     } else {
