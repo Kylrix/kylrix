@@ -256,58 +256,63 @@ export default function NotesPage() {
     const decrypted = safeNotes.filter((n) => !isClientEncryptedNote(n));
 
     if (!isCustomWorkspace || !activeWorkspace) {
-      return decrypted.filter((n: any) => !n.isWorkspace);
+      // Personal Workspace: show all user notes that are not tagged as workspace-specific
+      return decrypted.filter((n: any) => !n.isWorkspace && !n.projectId);
     }
 
+    // Custom Workspace:
+    const pid = activeWorkspace.id;
     const notesById = new Map<string, Notes>();
     decrypted.forEach((n) => notesById.set(n.$id, n));
 
     const workspaceNotes: Notes[] = [];
     const seenIds = new Set<string>();
 
-    // 1. First add items from project_objects
+    // 1. Items from project_objects mapping table
     (workspaceProjectObjects || []).forEach((po: any) => {
       const entityId = po.entityId || po.id;
-      if (!entityId) return;
+      if (!entityId || seenIds.has(entityId)) return;
       seenIds.add(entityId);
       const noteDoc = notesById.get(entityId);
       if (noteDoc) {
         workspaceNotes.push(noteDoc);
-      } else if (po.metadata) {
+      } else {
+        let meta: any = {};
         try {
-          const meta = typeof po.metadata === 'string' ? JSON.parse(po.metadata) : po.metadata;
-          workspaceNotes.push({
-            $id: entityId,
-            title: meta.title || po.title || 'Untitled Note',
-            content: meta.content || '',
-            tags: meta.tags || [],
-            format: 'text',
-            userId: user?.$id || '',
-            isPublic: false,
-            isGuest: false,
-            isWorkspace: true,
-            $createdAt: po.$createdAt || new Date().toISOString(),
-            $updatedAt: po.$updatedAt || new Date().toISOString(),
-          } as unknown as Notes);
+          meta = typeof po.metadata === 'string' ? JSON.parse(po.metadata || '{}') : (po.metadata || {});
         } catch {}
+        workspaceNotes.push({
+          $id: entityId,
+          title: meta.title || po.title || 'Untitled Note',
+          content: meta.content || '',
+          tags: meta.tags || [],
+          format: 'text',
+          userId: user?.$id || '',
+          isPublic: false,
+          isGuest: false,
+          isWorkspace: true,
+          $createdAt: po.$createdAt || new Date().toISOString(),
+          $updatedAt: po.$updatedAt || new Date().toISOString(),
+        } as unknown as Notes);
       }
     });
 
-    // 2. Legacy fallback: include any notes directly linked to activeWorkspace.id regardless of isWorkspace flag
+    // 2. Direct workspace items in NotesContext
     decrypted.forEach((n: any) => {
+      if (seenIds.has(n.$id)) return;
       if (
-        !seenIds.has(n.$id) &&
-        (n.projectId === activeWorkspace.id ||
-         n.isWorkspace ||
-         (n.tags && n.tags.some((t: string) => t.includes(activeWorkspace.id))))
+        n.projectId === pid ||
+        n.isWorkspace ||
+        (n.tags && Array.isArray(n.tags) && n.tags.some((t: string) => typeof t === 'string' && t.includes(pid)))
       ) {
-        workspaceNotes.unshift(n);
+        workspaceNotes.push(n);
         seenIds.add(n.$id);
       }
     });
 
     return workspaceNotes;
   }, [allNotes, activeWorkspace, isCustomWorkspace, workspaceProjectObjects, user?.$id]);
+
 
 
 
