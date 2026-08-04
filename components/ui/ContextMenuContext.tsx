@@ -16,6 +16,8 @@ import {
 
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { isFlowPath } from '@/lib/routing/app-paths';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { ContextMenuPanel } from '@/components/ui/ContextMenu';
 
 type KylrixApp = 'root' | 'accounts' | 'kylrix' | 'vault' | 'flow' | 'note' | 'connect';
 
@@ -47,6 +49,7 @@ const ContextMenuContext = createContext<ContextMenuContextType | undefined>(und
 export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<MenuState | null>(null);
   const { setIsDrawerOpen } = useDrawerState();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
   const isOpen = !!state;
 
   useEffect(() => {
@@ -54,7 +57,10 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
     return () => setIsDrawerOpen(false);
   }, [isOpen, setIsDrawerOpen]);
 
-  const closeMenu = useCallback(() => setState(null), []);
+  const closeMenu = useCallback(() => {
+    setState(null);
+    closeSidebar();
+  }, [closeSidebar]);
   
   // Track if a component already handled this context menu event
   const menuOpenedInCurrentTick = useRef(false);
@@ -62,7 +68,15 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
   const openMenu = useCallback((s: MenuState) => {
     setState(s);
     menuOpenedInCurrentTick.current = true;
-  }, []);
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+    if (isDesktop) {
+      openSidebar(
+        <ContextMenuPanel items={s.items} onCloseAction={closeMenu} appType={s.appType} />,
+        'context-menu',
+        { hideHeader: true }
+      );
+    }
+  }, [closeMenu, openSidebar]);
 
   const pathname = usePathname();
   const router = useRouter();
