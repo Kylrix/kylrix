@@ -21,8 +21,10 @@ import {
     Sliders as PreferencesIcon,
     Settings2 as RootAccountIcon,
     ShieldAlert as AdminIcon,
-    Code2 as DevelopersIcon
+    Code2 as DevelopersIcon,
+    FolderKanban as WorkspaceIcon
 } from 'lucide-react';
+import { WorkspaceTab } from '@/components/settings/WorkspaceTab';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { SecurityTab } from '@/components/settings/SecurityTab';
 import { DevelopersTab } from '@/components/settings/DevelopersTab';
@@ -100,7 +102,7 @@ function SettingsPageInner() {
     const { openSidebar, closeSidebar } = useDynamicSidebar();
 
     // Tab state
-    const [activeTab, setActiveTab] = useState<'general' | 'profile' | 'security' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'workspace' | 'profile' | 'security' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
     const [billingDrawerOpen, setBillingDrawerOpen] = useState(false);
     const [mfaFactors, setMfaFactors] = useState<any>(null);
     const [accountMfaEnabled, setAccountMfaEnabled] = useState(false);
@@ -110,7 +112,7 @@ function SettingsPageInner() {
     useEffect(() => {
         const section = (searchParams.get('section') || '').toLowerCase();
         const tab = (searchParams.get('tab') || '').toLowerCase();
-        const allowed = new Set(['general', 'profile', 'security', 'developers', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
+        const allowed = new Set(['general', 'workspace', 'profile', 'security', 'developers', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
         if (section.startsWith('admin') || tab === 'admin') {
             setActiveTab('admin');
             if (section.includes('user')) setAdminSubTab('users');
@@ -457,6 +459,7 @@ function SettingsPageInner() {
 
     const tabsList = [
         { id: 'general', label: 'General', icon: RootAccountIcon },
+        { id: 'workspace', label: 'Workspace', icon: WorkspaceIcon },
         { id: 'profile', label: 'Profile', icon: ProfileIcon },
         { id: 'security', label: 'Security & 2FA', icon: SecurityIcon },
         { id: 'developers', label: 'Developers', icon: DevelopersIcon },
@@ -643,6 +646,10 @@ function SettingsPageInner() {
 
             {/* Tab Rendering Content */}
             <div className="w-full relative min-h-[400px]">
+                {activeTab === 'workspace' && (
+                    <WorkspaceTab />
+                )}
+
                 {activeTab === 'general' && (
                     <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-8 items-start">
                         {/* Left Column: Discoverability, Integrations & Feedback */}
