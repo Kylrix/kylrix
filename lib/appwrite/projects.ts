@@ -249,12 +249,28 @@ export const ProjectsService = {
     void invalidateCache(`project_objects_${projectId}_kind_${entityKind}`);
     void invalidateCache(`project_entities_${projectId}_*`);
     void invalidateCache(`project_tagged_${projectId}_*`);
+
+    let res: any;
     if (typeof window !== 'undefined') {
       const { addObjectToProject } = await import('@/lib/actions/client-ops');
-      return await addObjectToProject(projectId, entityKind, entityId, role, metadata);
+      res = await addObjectToProject(projectId, entityKind, entityId, role, metadata);
+    } else {
+      const { addObjectToProjectSecure } = await import('@/lib/actions/secure-ops');
+      res = await addObjectToProjectSecure(projectId, entityKind, entityId, role, metadata);
     }
-    const { addObjectToProjectSecure } = await import('@/lib/actions/secure-ops');
-    return await addObjectToProjectSecure(projectId, entityKind, entityId, role, metadata);
+
+    // Instantly persist new attachment into LocalEngine cache
+    if (typeof window !== 'undefined' && res) {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const { projectObjectsKindCacheKey } = await import('@/lib/projects/projects-cache');
+        const cacheKey = projectObjectsKindCacheKey(projectId, entityKind);
+        const existing = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
+        const filtered = existing.filter((item: any) => item.$id !== res.$id && item.entityId !== entityId);
+        await LocalEngine.cacheSet(cacheKey, [res, ...filtered]);
+      } catch {}
+    }
+    return res;
   },
 
   async removeObjectFromProject(objectId: string) {
