@@ -248,9 +248,7 @@ export default function NotesPage() {
 
   const { activeWorkspace } = useWorkspace();
 
-  const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
-  const customWorkspaceId = isCustomWorkspace ? activeWorkspace?.id : null;
-  const { rows: workspaceProjectObjects } = useProjectObjects(customWorkspaceId, 'note');
+
 
   const visibleNotes = useMemo(() => {
     const safeNotes = Array.isArray(allNotes) ? allNotes : [];
