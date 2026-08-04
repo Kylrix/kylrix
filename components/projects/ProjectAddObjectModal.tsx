@@ -374,6 +374,34 @@ export default function ProjectAddObjectModal({
       if (mode === 'project') {
         if (!projectId) throw new Error('Project id is required');
         await attachObjectToProject({ projectId, entityKind: kind, entityId });
+        
+        // Mark row as workspace-scoped so default views hide it
+        try {
+          const { databases } = await import('@/lib/appwrite/client');
+          const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+          const tableByKind: Record<string, string> = {
+            note: APPWRITE_CONFIG.TABLES.NOTES,
+            goal: APPWRITE_CONFIG.TABLES.TASKS,
+            task: APPWRITE_CONFIG.TABLES.TASKS,
+            form: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+            event: APPWRITE_CONFIG.TABLES.EVENTS,
+            credential: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+            password: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+            totp: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
+          };
+          const tableId = tableByKind[kind];
+          if (tableId) {
+            await databases.updateRow(
+              APPWRITE_CONFIG.DATABASE_ID,
+              tableId,
+              entityId,
+              { isWorkspace: true },
+            );
+          }
+        } catch (flagErr) {
+          console.warn('[ProjectAddObjectModal] isWorkspace flag update failed:', flagErr);
+        }
+
         showSuccess('Added to project');
         onAdded?.();
       } else {
