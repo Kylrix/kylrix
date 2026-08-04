@@ -176,7 +176,7 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
           onClick();
         }
       }}
-      className="group flex flex-col bg-[#161412] hover:bg-[#1C1A18] border border-[#34322F] hover:border-[#22C55E]/55 rounded-[28px] cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.5)] h-full text-left"
+      className="group flex flex-col bg-[#161412] hover:bg-[#1C1A18] border border-[#34322F] hover:border-[#22C55E]/55 rounded-[28px] cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.5)] h-full text-left min-w-[260px] sm:min-w-[280px]"
     >
       {/* Cover — image or deterministic colorful pattern */}
       <div className="relative overflow-hidden aspect-[16/9] w-full shrink-0">
