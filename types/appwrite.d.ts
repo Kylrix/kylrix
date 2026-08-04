@@ -1015,6 +1015,7 @@ export type Events = Models.Row & {
     isDeleted: boolean;
     isTrash: boolean;
     isWorkspace: boolean;
+    attendeeCount: number;
 }
 
 export type Calendars = Models.Row & {
@@ -1185,6 +1186,8 @@ export type Workflows = Models.Row & {
     reviewStatus: WorkflowsReviewStatus;
     publisherHandle: string | null;
     verifiedKind: WorkflowsVerifiedKind;
+    version: number;
+    contentHash: string | null;
 }
 
 export type Objects = Models.Row & {
@@ -1302,6 +1305,9 @@ export type FlowInstalls = Models.Row & {
     status: FlowInstallsStatus;
     createdAt: string | null;
     updatedAt: string | null;
+    pinnedVersion: number | null;
+    autoUpdate: boolean;
+    installedHash: string | null;
 }
 
 export type FlowReviews = Models.Row & {
