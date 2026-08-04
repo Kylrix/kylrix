@@ -313,6 +313,7 @@ export function CreateGoalComposer({
               }}
               className="w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-white text-xs font-satoshi normal-case tracking-normal focus:outline-none focus:border-[#A855F7]/40 transition-all"
             />
+          </div>
         </div>
       </div>
     </div>
