@@ -12,12 +12,16 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 import toast from 'react-hot-toast';
 import CredentialItem from '@/components/app/dashboard/CredentialItem';
+import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
 import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
 import SudoModal from '@/components/overlays/SudoModal';
 import { useAI } from '@/context/AIContext';
 import { useSudo } from '@/context/SudoContext';
 import { useFAB } from '@/context/FABContext';
 import { MultiSectionContainer, useSection } from '@/context/SectionContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { useLayout } from '@/context/LayoutContext';
 import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { TOTPPageContent } from './totp/page';
@@ -31,6 +35,9 @@ function DashboardPageContent() {
   const { registerCreateModal } = useAI();
   const { requestSudo, unlockOnDemand } = useSudo();
   const { setConfiguration, resetConfiguration } = useFAB();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { openOverlay, closeOverlay } = useOverlay();
+  const { isDesktop } = useLayout();
   const { setActiveDetail } = useSection();
   
   // Master password modal — only auto-open when unlock-on-demand is off
@@ -100,11 +107,30 @@ function DashboardPageContent() {
     (cred: Credentials) => {
       const open = () => {
         setSelectedCredential(cred);
-        setActiveDetail({ type: 'secret', id: cred.$id, data: cred });
+        if (isDesktop) {
+          openSidebar(
+            <CredentialDetail
+              credential={cred}
+              onClose={() => closeSidebar()}
+              isMobile={false}
+              inline
+            />,
+            cred.$id,
+            { hideHeader: true },
+          );
+        } else {
+          openOverlay(
+            <CredentialDetail
+              credential={cred}
+              onClose={() => closeOverlay()}
+              isMobile
+            />,
+          );
+        }
       };
       requireUnlock(open);
     },
-    [requireUnlock, setActiveDetail]
+    [isDesktop, openSidebar, closeSidebar, openOverlay, closeOverlay, requireUnlock],
   );
 
   const handleEdit = (cred: Credentials) => {
