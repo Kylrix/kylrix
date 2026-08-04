@@ -96,28 +96,29 @@ export function DynamicSidebar() {
 
   const sheet = (
     <>
-      {/* Openbricks: blur scrim behind focused drawer */}
+      {/* Light scrim behind focused drawer — unblurred */}
       <Box
         onClick={closeSidebar}
         sx={{
           position: 'fixed',
           inset: 0,
           zIndex: 10000,
-          bgcolor: 'rgba(0, 0, 0, 0.58)',
+          bgcolor: 'rgba(0, 0, 0, 0.2)',
           opacity: isOpen ? 1 : 0,
           pointerEvents: isOpen ? 'auto' : 'none',
-          transition: 'opacity 0.3s ease'}}
+          transition: 'opacity 0.3s ease',
+        }}
       />
 
-      {/* Side sheet — portaled above global topbar (z 1200). Object details = true fullscreen. */}
+      {/* Side sheet — positioned cleanly below topbar on desktop (top: 57px) */}
       <Box
         sx={{
           position: 'fixed',
-          top: 0,
+          top: isFullscreen ? 0 : { xs: 0, md: '57px' },
           right: 0,
           bottom: 0,
           left: isFullscreen ? 0 : 'auto',
-          height: '100dvh',
+          height: isFullscreen ? '100dvh' : { xs: '100dvh', md: 'calc(100vh - 57px)' },
           width: isFullscreen ? '100%' : { xs: '100%', md: 480, lg: 520 },
           maxWidth: isFullscreen ? '100%' : undefined,
           display: 'flex',
