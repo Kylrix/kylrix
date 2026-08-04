@@ -98,7 +98,7 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
         </div>
       ) : (
         <div
-          className="grid gap-6 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(320px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(340px,1fr))] min-w-0 w-full overflow-x-hidden"
+          className="grid gap-6 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))] min-w-0 w-full max-w-full overflow-hidden"
           style={{ overflowAnchor: 'none' }}
         >
           {items.map((item) => (

@@ -5,9 +5,9 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Hash, MessageSquare, Phone, Plus, PlusCircle } from 'lucide-react';
 import { ChatList } from '@/components/chat/ChatList';
 import { MailBox } from '@/components/connect/MailBox';
-import { ConnectMomentsPanel } from '@/components/connect/ConnectMomentsPanel';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 
 type ConnectTab = 'moments' | 'chats' | 'mail';
 
@@ -31,6 +31,7 @@ function ConnectHomeContent() {
   const isDesktop = useIsDesktop();
   const { setConfiguration, resetConfiguration } = useFAB();
   const { open: openUnified } = useUnifiedDrawer();
+  const { isOpen: isDynamicSidebarOpen } = useDynamicSidebar();
   const [activeTab, setActiveTab] = useState<ConnectTab>('moments');
   const [chatsActiveTab, setChatsActiveTab] = useState<'secure' | 'public'>('secure');
 
@@ -133,7 +134,7 @@ function ConnectHomeContent() {
   }, [openMomentComposer, pathname, router, searchParams]);
 
   return (
-    <div className="flex-1 min-h-screen bg-[#000000] pointer-events-auto px-3 sm:px-4 md:px-0 pb-10">
+    <div className="flex-1 min-h-screen bg-[#000000] pointer-events-auto px-3 sm:px-4 md:px-0 pb-10 min-w-0 max-w-full overflow-hidden">
       <div className="flex items-center gap-2 p-1 bg-[#161412] border border-[#34322F] rounded-2xl w-fit select-none mb-8">
         {(['moments', 'chats', 'mail'] as ConnectTab[]).map((tab) => (
           <button
