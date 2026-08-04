@@ -38,6 +38,11 @@ To prevent 'Unauthorized' errors in privileged tasks (Sharing, Minting):
 - **Resilient Discovery**: Scan for all possible session cookie names (`a_session_*`, `session`).
 - **Identity Pass**: Authenticate once at the Action layer using `getActor()`, then pass the verified `actorId` to Admin-SDK-powered internal services.
 
+### 5. Last-Come, First-Serve Surface Stacking & Topmost Unstacking
+- **Strict Stacking Order**: Newly triggered surfaces (e.g. object context menus, date pickers, detail panels) MUST stack ON TOP of whatever surface is currently active (`z-[10100]` for Context Menu, portaled directly to `document.body`).
+- **Topmost Unstacking**: Dismissing or clicking back on the topmost surface MUST pop only the topmost surface. Underlying panels (such as an open goal detail or composer sidebar) remain preserved beneath it.
+- **Portaled Context Menus**: Context menus and object action sheets MUST be rendered via `createPortal(..., document.body)` so they are never trapped below active drawers or modal stacking contexts.
+
 ## Performance Mandates
 - **Memoized Providers**: All high-level context values must be wrapped in `useMemo`.
 - **Stable Callbacks**: Functions passed to list items (e.g., `NoteCard`) must have stable identities to prevent list-wide re-render storms.

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { KylrixApp } from '@/lib/sdk/design';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -67,10 +68,12 @@ export function ContextMenu({ onCloseAction, items }: ContextMenuProps) {
     }
   };
 
-  return (
+  if (typeof window === 'undefined') return null;
+
+  return createPortal(
     <>
       <div
-        className="fixed inset-0 z-[99999998] bg-black/20 transition-opacity duration-300 ease-in-out cursor-default"
+        className="fixed inset-0 z-[10090] bg-black/20 transition-opacity duration-300 ease-in-out cursor-default"
         onClick={onCloseAction}
       />
 
@@ -78,8 +81,8 @@ export function ContextMenu({ onCloseAction, items }: ContextMenuProps) {
         data-kylrix-context-menu="true"
         className={
           isDesktop
-            ? 'fixed top-[57px] right-0 bottom-0 w-full max-w-[420px] h-[calc(100vh-57px)] bg-[#161412] border-l border-white/10 z-[99999999] text-white p-5 flex flex-col gap-4 overflow-y-auto font-satoshi shadow-[-24px_0_48px_rgba(0,0,0,0.8)]'
-            : 'fixed bottom-0 left-0 right-0 h-[60vh] max-h-[600px] bg-[#161412] border-t border-white/10 rounded-t-[28px] z-[99999999] text-white p-5 flex flex-col gap-4 animate-slide-up overflow-y-auto font-satoshi shadow-[0_-24px_48px_rgba(0,0,0,0.8)] max-w-xl mx-auto'
+            ? 'fixed top-[57px] right-0 bottom-0 w-full max-w-[420px] h-[calc(100vh-57px)] bg-[#161412] border-l border-white/10 z-[10100] text-white p-5 flex flex-col gap-4 overflow-y-auto font-satoshi shadow-[-24px_0_48px_rgba(0,0,0,0.8)]'
+            : 'fixed bottom-0 left-0 right-0 h-[60vh] max-h-[600px] bg-[#161412] border-t border-white/10 rounded-t-[28px] z-[10100] text-white p-5 flex flex-col gap-4 animate-slide-up overflow-y-auto font-satoshi shadow-[0_-24px_48px_rgba(0,0,0,0.8)] max-w-xl mx-auto'
         }
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
@@ -141,6 +144,7 @@ export function ContextMenu({ onCloseAction, items }: ContextMenuProps) {
           ))}
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
