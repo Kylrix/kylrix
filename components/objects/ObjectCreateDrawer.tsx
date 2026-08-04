@@ -27,6 +27,7 @@ const CreateChatComposer = dynamic(
 );
 
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 
 type HeightMode = 'partial' | 'full';
 
@@ -131,7 +132,88 @@ export function ObjectCreateDrawer({
     });
   }, [formOnlyFull, isDesktop]);
 
-  if (!open || !mounted) return null;
+  const { openSidebar } = useDynamicSidebar();
+
+  useEffect(() => {
+    if (!open || !mounted || !isDesktop) return;
+    const body = (
+      <div className="h-full min-h-0 flex flex-col bg-[#161412] overflow-hidden">
+        {kind === 'note' ? (
+          <CreateNoteForm
+            initialContent={initialContent}
+            onNoteCreated={(note) => {
+              onNoteCreated?.(note);
+            }}
+            onRegisterClose={(close) => {
+              composerCloseRef.current = close;
+            }}
+            isExpanded={true}
+            onToggleExpand={toggleExpand}
+            onClose={onClose}
+          />
+        ) : null}
+
+        {kind === 'goal' ? (
+          <CreateGoalComposer
+            onGoalCreated={onGoalCreated}
+            onRegisterClose={(close) => {
+              composerCloseRef.current = close;
+            }}
+            isExpanded={true}
+            onToggleExpand={toggleExpand}
+            onClose={onClose}
+          />
+        ) : null}
+
+        {kind === 'event' ? (
+          <CreateEventComposer
+            onEventCreated={onEventCreated}
+            onLiveEvent={onLiveEvent}
+            onCommitEvent={onCommitEvent}
+            onRegisterClose={(close) => {
+              composerCloseRef.current = close;
+            }}
+            isExpanded={true}
+            onToggleExpand={toggleExpand}
+            onClose={onClose}
+          />
+        ) : null}
+
+        {kind === 'chat' ? (
+          <CreateChatComposer
+            onClose={onClose}
+            onRegisterClose={(close) => {
+              composerCloseRef.current = close;
+            }}
+            isExpanded={true}
+            onToggleExpand={toggleExpand}
+            initialMode={chatInitialMode}
+            legacyThread={chatLegacyThread}
+          />
+        ) : null}
+      </div>
+    );
+
+    openSidebar(body, `create-${kind}`, { hideHeader: true });
+  }, [
+    open,
+    mounted,
+    isDesktop,
+    kind,
+    initialContent,
+    onNoteCreated,
+    onGoalCreated,
+    onEventCreated,
+    onLiveEvent,
+    onCommitEvent,
+    onClose,
+    chatInitialMode,
+    chatLegacyThread,
+    openSidebar,
+    toggleExpand,
+  ]);
+
+  if (!open || !mounted || isDesktop) return null;
 
   const isFull = heightMode === 'full' || formOnlyFull;
   const maxHeight = isDesktop || isFull ? '100dvh' : '60dvh';
