@@ -54,6 +54,8 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     isPinned?: boolean | null;
     userId?: string | null;
     dek?: string | null;
+    isWorkspace?: boolean | null;
+    projectId?: string | null;
   };
 
   const [totpCodes, setTotpCodes] = useState<TotpItem[]>([]);

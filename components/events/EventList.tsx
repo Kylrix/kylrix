@@ -146,7 +146,7 @@ export default function EventList() {
         // Do NOT call ack on failure — leaves dot AMBER so UI never lies about failed sync
       }
     },
-    [activeWorkspace, replaceDraftEventId, userId],
+    [activeWorkspace, attachEntityToActiveWorkspace, replaceDraftEventId, userId],
   );
 
   const visibleEvents = useMemo(() => {

@@ -37,6 +37,7 @@ import { useProUpgrade } from '@/context/ProUpgradeContext';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
 import ProjectExtractGoalsModal from '@/components/projects/ProjectExtractGoalsModal';
 import ProjectAddSubProjectModal from '@/components/projects/ProjectAddSubProjectModal';
+import NewTotpDialog from '@/components/app/totp/new';
 import { databases, storage } from '@/lib/appwrite/client';
 import { getUserSubscriptionTier, hasTeamsKylrixPlan } from '@/lib/utils';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -471,7 +472,7 @@ export default function ProjectDetailPage() {
     if (!projectId || !rawProject) return;
 
     const isPublic = rawProject.isPublic || rawProject.visibility === 'public';
-    const isMember = isOwner || collaborators.some((c) => (c.userId || c.$id) === user?.$id);
+    const _isMember = isOwner || collaborators.some((c) => (c.userId || c.$id) === user?.$id);
 
     if (isPublic) {
       setActiveWorkspaceId(projectId as string);

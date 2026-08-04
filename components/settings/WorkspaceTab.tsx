@@ -6,15 +6,12 @@ import {
   Users, 
   UserPlus, 
   UserMinus, 
-  Shield, 
   Globe, 
   Lock, 
   Archive, 
   Trash2, 
   Save, 
   RefreshCw, 
-  Check, 
-  X,
   Mail,
   AlertTriangle
 } from 'lucide-react';
@@ -27,19 +24,19 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 export function WorkspaceTab() {
   const { activeWorkspace, refreshWorkspaces } = useWorkspace();
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const { open: openDrawer } = useUnifiedDrawer();
 
   const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
-  const [project, setProject] = useState<Projects | null>(null);
+  const [_project, setProject] = useState<Projects | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Form states initialized optimistically from activeWorkspace
-  const [title, setTitle] = useState(activeWorkspace?.name || '');
-  const [summary, setSummary] = useState(activeWorkspace?.summary || '');
+  const [title, setTitle] = useState(activeWorkspace?.title || '');
+  const [summary, setSummary] = useState((activeWorkspace as any)?.summary || '');
   const [visibility, setVisibility] = useState<'private' | 'public'>(
-    activeWorkspace?.isPublic ? 'public' : 'private'
+    (activeWorkspace as any)?.isPublic ? 'public' : 'private'
   );
   const [status, setStatus] = useState<'active' | 'archived'>('active');
 
@@ -160,7 +157,7 @@ export function WorkspaceTab() {
   const handleDeleteWorkspace = async () => {
     if (!activeWorkspace?.id) return;
     openDrawer('delete-confirm', {
-      title: `Purge Workspace "${activeWorkspace.name}"?`,
+      title: `Purge Workspace "${activeWorkspace.title}"?`,
       description: 'WARNING: This will permanently delete the workspace and detach its linked objects. This action cannot be undone.',
       confirmLabel: 'Purge Workspace',
       onConfirm: async () => {
@@ -197,7 +194,7 @@ export function WorkspaceTab() {
               <h2 className="text-xl font-black text-white font-clash">Workspace Settings</h2>
               {loading && <RefreshCw size={14} className="animate-spin text-[#6366F1]" />}
             </div>
-            <p className="text-xs text-[#9B9691]">Manage details and visibility for &quot;{activeWorkspace.name}&quot;</p>
+            <p className="text-xs text-[#9B9691]">Manage details and visibility for &quot;{activeWorkspace.title}&quot;</p>
           </div>
           <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
             status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
