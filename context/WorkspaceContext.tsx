@@ -144,8 +144,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const activeWorkspace = useMemo<WorkspaceItem>(() => {
     const found = workspaces.find((w) => w.id === activeWorkspaceId);
-    return found || personalWorkspace;
-  }, [workspaces, activeWorkspaceId, personalWorkspace]);
+    if (found) return found;
+    if (activeWorkspaceId && activeWorkspaceId !== userId && activeWorkspaceId !== 'guest') {
+      return {
+        id: activeWorkspaceId,
+        title: 'Workspace',
+        ownerId: userId,
+        isPersonal: false,
+      };
+    }
+    return personalWorkspace;
+  }, [workspaces, activeWorkspaceId, personalWorkspace, userId]);
+
 
   const createWorkspace = useCallback(
     async (title: string, summary?: string): Promise<WorkspaceItem | null> => {
