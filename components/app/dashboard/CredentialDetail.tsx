@@ -361,7 +361,7 @@ export default function CredentialDetail({
       />
 
       {/* Main Body with Deep Ash Balances */}
-      <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
+      <div className="flex-1 overflow-y-auto overscroll-contain p-5 flex flex-col gap-5">
         {/* Favicon & URL Hero Surface */}
         {liveCredential.url && !looksEncrypted(liveCredential.url) && (
           <div className="p-4 rounded-2xl bg-[#1C1A18] border border-[#2C2A28] flex items-start gap-3.5">

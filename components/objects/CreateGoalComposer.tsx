@@ -170,7 +170,7 @@ export function CreateGoalComposer({
   return (
     <div
       onContextMenu={(e) => e.preventDefault()}
-      className="w-full h-full min-h-0 flex flex-col bg-[#161412] text-white"
+      className="w-full h-full min-h-0 flex flex-col bg-[#161412] text-white overscroll-contain"
     >
       <div className="px-2 py-1.5 flex items-center justify-between border-b border-white/5 sticky top-0 z-20 bg-[#161412]/95 shrink-0">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -209,7 +209,7 @@ export function CreateGoalComposer({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 min-h-0 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto overscroll-contain p-2 flex flex-col gap-2 min-h-0 scrollbar-thin">
         {(content.trim().length >= 5 || isTitleManuallyEdited) && (
           <input
             type="text"
