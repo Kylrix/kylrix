@@ -157,7 +157,7 @@ export default function CredentialItem({
         y: e.clientY,
         items: contextMenuItems,
         appType: 'vault',
-        title: item.name || 'Credential',
+        title: credential.name || 'Credential',
       });
     }
   };

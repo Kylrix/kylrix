@@ -24,9 +24,6 @@ import {
   Tag as TagIcon,
   Info,
   Plus as PlusIcon,
-  Edit2 as EditIcon,
-  Trash2 as TrashIcon,
-  Clock as ClockIcon,
   Loader2 as SpinnerIcon,
   ShieldCheck
 } from 'lucide-react';
@@ -54,7 +51,6 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useLayout } from '@/context/LayoutContext';
 import { useToast } from '@/components/ui/Toast';
 import { TaggedResourcesTabs } from '@/components/share/TaggedResourcesTabs';
-import { formatDateWithFallback } from '@/lib/date-utils';
 
 // Client-side persistence cache to resist reload flicker
 

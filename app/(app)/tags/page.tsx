@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Tags } from '@/types/appwrite';
 import { listTags, deleteTag } from '@/lib/appwrite';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useAuth } from '@/context/auth/AuthContext';
-import { formatDateWithFallback } from '@/lib/date-utils';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { MultiSectionContainer, useSection } from '@/context/SectionContext';
 import { useFAB } from '@/context/FABContext';
@@ -20,12 +19,10 @@ import {
   Edit2 as EditIcon, 
   Trash2 as TrashIcon, 
   Tag as TagIcon,
-  Clock as ClockIcon,
   Loader2 as SpinnerIcon,
   ArrowLeft,
   ShieldCheck
 } from 'lucide-react';
-import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 
 import { TagNotesListSidebar } from '@/components/ui/TagNotesListSidebar';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
@@ -34,13 +31,29 @@ import { TagObjectRow } from '@/components/ui/TagObjectRow';
 
 const PAGE_SIZE = 12;
 
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(min-width: 768px)');
+    const sync = () => setIsDesktop(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
+
+  return isDesktop;
+}
+
 export default function TagsPage() {
   const { user, isAuthenticated, openIDMWindow } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
   const {} = useFAB();
   const { } = useSection();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
-  const { openSecondarySidebar, isDesktop } = useLayout();
+  const { openSecondarySidebar } = useLayout();
+  const isDesktop = useIsDesktop();
   const { openOverlay, closeOverlay } = useOverlay();
   const contextMenu = useContextMenu();
   const { showError } = useToast();
@@ -229,12 +242,13 @@ export default function TagsPage() {
   );
 
   const handleTagContextMenu = useCallback(
-    (e: React.MouseEvent, tag: Tags) => {
+    (e: React.MouseEvent | React.TouchEvent, tag: Tags) => {
       e.preventDefault();
       e.stopPropagation();
+      const point = 'touches' in e ? e.touches[0] : e;
       contextMenu?.openMenu({
-        x: e.clientX,
-        y: e.clientY,
+        x: point?.clientX ?? 0,
+        y: point?.clientY ?? 0,
         items: [
           {
             label: `Tag: #${tag.name}`,

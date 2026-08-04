@@ -19,12 +19,25 @@ import { useAI } from '@/context/AIContext';
 import { useSudo } from '@/context/SudoContext';
 import { useFAB } from '@/context/FABContext';
 import { MultiSectionContainer, useSection } from '@/context/SectionContext';
-import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
-import { useLayout } from '@/context/LayoutContext';
 import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, RefreshCw } from 'lucide-react';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { TOTPPageContent } from './totp/page';
+
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(min-width: 768px)');
+    const sync = () => setIsDesktop(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
+
+  return isDesktop;
+}
 
 function DashboardPageContent() {
   const { user, needsMasterPassword, isVaultUnlocked, isVaultBlurEnabled, setVaultBlurEnabled } = useAppwriteVault();
@@ -35,9 +48,8 @@ function DashboardPageContent() {
   const { registerCreateModal } = useAI();
   const { requestSudo, unlockOnDemand } = useSudo();
   const { setConfiguration, resetConfiguration } = useFAB();
-  const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
-  const { isDesktop } = useLayout();
+  const isDesktop = useIsDesktop();
   const { setActiveDetail } = useSection();
   
   // Master password modal — only auto-open when unlock-on-demand is off

@@ -232,13 +232,13 @@ export default function SharedTotpClient({ totpId, keySegments, rawTotp }: Share
   }, [code]);
 
   const copyTitle = useCallback(async () => {
-    if (!state.label) return;
+    if (state.kind !== 'ready' || !state.label) return;
     try {
       await navigator.clipboard.writeText(state.label);
       setCopiedTitle(true);
       setTimeout(() => setCopiedTitle(false), 2000);
     } catch { /**/ }
-  }, [state.label]);
+  }, [state]);
 
   if (state.kind === 'loading') {
     return (

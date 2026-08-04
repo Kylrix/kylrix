@@ -5,9 +5,9 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Hash, MessageSquare, Phone, Plus, PlusCircle } from 'lucide-react';
 import { ChatList } from '@/components/chat/ChatList';
 import { MailBox } from '@/components/connect/MailBox';
+import { ConnectMomentsPanel } from '@/components/connect/ConnectMomentsPanel';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 
 type ConnectTab = 'moments' | 'chats' | 'mail';
 
@@ -31,7 +31,6 @@ function ConnectHomeContent() {
   const isDesktop = useIsDesktop();
   const { setConfiguration, resetConfiguration } = useFAB();
   const { open: openUnified } = useUnifiedDrawer();
-  const { isOpen: isDynamicSidebarOpen } = useDynamicSidebar();
   const [activeTab, setActiveTab] = useState<ConnectTab>('moments');
   const [chatsActiveTab, setChatsActiveTab] = useState<'secure' | 'public'>('secure');
 

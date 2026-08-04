@@ -522,7 +522,7 @@ export function CreateGoalComposer({
         <EventDateTimePickerDrawer
           open={showMobileDatePicker}
           startTime={dueDate ? new Date(`${dueDate}T12:00:00`) : new Date()}
-          endTime={dueDate ? new Date(`${dueDate}T13:00:00`) : new Date(Date.now() + 3600000)}
+          endTime={dueDate ? new Date(`${dueDate}T13:00:00`) : new Date(new Date().getTime() + 3600000)}
           onApply={(start) => {
             const y = start.getFullYear();
             const m = String(start.getMonth() + 1).padStart(2, '0');

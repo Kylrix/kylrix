@@ -10,7 +10,7 @@ import { formatDateWithFallback } from '@/lib/date-utils';
 type TagObjectRowProps = {
   tag: Tags;
   onClick: () => void;
-  onContextMenu: (e: React.MouseEvent) => void;
+  onContextMenu: (e: React.MouseEvent | React.TouchEvent) => void;
   onEdit: () => void;
   onDelete: () => void;
 };
@@ -22,9 +22,9 @@ export function TagObjectRow({ tag, onClick, onContextMenu, onEdit, onDelete }: 
     <ObjectCard
       item={{
         id: tag.$id,
-        title: tag.name,
+        title: tag.name || 'Untitled tag',
         subtitle: tag.description || '',
-        kind: 'tag',
+        kind: 'note',
         accent: accentColor,
       }}
       onOpen={onClick}
