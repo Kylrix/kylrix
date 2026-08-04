@@ -31,6 +31,7 @@ export function NoteDrawer() {
       open
       kind="note"
       onClose={handleClose}
+      onNoteCreated={drawerData?.onCreated || (() => {})}
       initialContent={{
         isPublic,
         isGuest,
