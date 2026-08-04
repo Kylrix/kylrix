@@ -7,6 +7,7 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { Notes } from '@/types/appwrite';
 import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
+import { TagObjectRow } from '@/components/ui/TagObjectRow';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
 import { useSearch } from '@/hooks/useSearch';
@@ -545,80 +546,19 @@ export default function NotesPage() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid gap-6 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
               {globalTags.map((tag) => (
-                <div
+                <TagObjectRow
                   key={tag.$id}
+                  tag={tag}
                   onClick={() => setSelectedTag(tag)}
-                  className="p-6 rounded-[32px] bg-[#161412] border border-white/5 shadow-2xl hover:border-white/10 hover:bg-[#1C1A18] hover:translate-y-[-2px] transition-all duration-300 ease-out cursor-pointer flex flex-col justify-between min-h-[196px] group"
-                >
-                  <div>
-                    {/* Top Row: Name and Count */}
-                    <div className="flex items-start gap-4 mb-3 w-full justify-between">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div 
-                          style={{ 
-                            backgroundColor: `${tag.color || '#10B981'}1a`,
-                            color: tag.color || '#10B981',
-                            borderColor: `${tag.color || '#10B981'}33`
-                          }}
-                          className="w-12 h-12 rounded-2xl border flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform"
-                        >
-                          <TagIcon size={20} />
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="text-white text-base font-black tracking-tight leading-tight truncate font-mono">
-                            {tag.name}
-                          </h3>
-                          <span className="block text-[9px] font-black uppercase tracking-wider text-white/30 font-mono mt-0.5">
-                            {(tag as any).usageCount || 0} items
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    {tag.description && (
-                      <p className="text-xs text-white/50 font-medium leading-relaxed mb-4 line-clamp-2 select-text">
-                        {tag.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    {/* Access time metadata */}
-                    <div className="flex items-center gap-1.5 text-white/20 text-[10px] font-bold font-mono uppercase mb-4">
-                      <ClockIcon size={12} />
-                      <span>
-                        Created {formatDateWithFallback(tag.createdAt, { year: 'numeric', month: 'short', day: 'numeric' })}
-                      </span>
-                    </div>
-
-                    {/* Bottom Row Actions */}
-                    <div className="flex gap-3">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditTag(tag);
-                        }}
-                        className="flex-1 py-2 px-3 rounded-xl border border-white/5 bg-[#1C1A18] hover:bg-[#252220] hover:border-white/10 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all"
-                      >
-                        <EditIcon size={14} />
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteTag(tag);
-                        }}
-                        className="flex-1 py-2 px-3 rounded-xl border border-red-500/10 bg-red-500/5 hover:bg-red-500/10 hover:border-red-500/20 text-red-500 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all"
-                      >
-                        <TrashIcon size={14} />
-                        <span>Delete</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onEdit={() => handleEditTag(tag)}
+                  onDelete={() => handleDeleteTag(tag)}
+                />
               ))}
             </div>
           )}
