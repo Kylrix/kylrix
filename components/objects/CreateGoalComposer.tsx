@@ -56,12 +56,12 @@ export function CreateGoalComposer({
   const [priority, setPriority] = useState<Priority>(initialContent?.priority || 'medium');
   const [dueDate, setDueDate] = useState(initialContent?.dueDate || '');
   const [showMobileDatePicker, setShowMobileDatePicker] = useState(false);
-  const [resolvedId, setResolvedId] = useState<string | undefined>();
+  const [resolvedId, setResolvedId] = useState<string | undefined>(initialContent?.id);
   const [localExpanded, setLocalExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const isExpanded = controlledExpanded !== undefined ? controlledExpanded : localExpanded;
   const toggleExpand = onToggleExpand || (() => setLocalExpanded((v) => !v));
-  const liveIdRef = useRef<string | undefined>(undefined);
+  const liveIdRef = useRef<string | undefined>(initialContent?.id);
   const announcedRef = useRef(false);
   const isPastedRef = useRef(false);
   const pasteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -75,6 +75,10 @@ export function CreateGoalComposer({
   }, []);
 
   useEffect(() => {
+    if (initialContent?.id) {
+      liveIdRef.current = initialContent.id;
+      setResolvedId(initialContent.id);
+    }
     if (initialContent?.dueDate !== undefined) {
       setDueDate(initialContent.dueDate);
     }
@@ -88,7 +92,7 @@ export function CreateGoalComposer({
     if (initialContent?.priority !== undefined) {
       setPriority(initialContent.priority);
     }
-  }, [initialContent?.dueDate, initialContent?.content, initialContent?.title, initialContent?.priority]);
+  }, [initialContent?.id, initialContent?.dueDate, initialContent?.content, initialContent?.title, initialContent?.priority]);
 
   useEffect(() => {
     if (isTitleManuallyEdited) return;
@@ -97,13 +101,13 @@ export function CreateGoalComposer({
   }, [content, isTitleManuallyEdited]);
 
   const ensureId = useCallback(() => {
-    const existing = resolvedId || liveIdRef.current;
+    const existing = initialContent?.id || resolvedId || liveIdRef.current;
     if (existing) return existing;
     const id = ID.unique();
     liveIdRef.current = id;
     setResolvedId(id);
     return id;
-  }, [resolvedId]);
+  }, [initialContent?.id, resolvedId]);
 
   const buildLive = useCallback(
     (nextContent: string, nextTitle?: string, nextPriority?: Priority, nextDue?: string): Task => {
@@ -199,6 +203,7 @@ export function CreateGoalComposer({
     const isDesktopWindow = typeof window !== 'undefined' && window.innerWidth >= 900;
     const initialStart = dueDate ? new Date(`${dueDate}T12:00:00`) : new Date();
     const initialEnd = new Date(initialStart.getTime() + 3600000);
+    const activeId = ensureId();
 
     const applyDate = (start: Date) => {
       const y = start.getFullYear();
@@ -223,7 +228,7 @@ export function CreateGoalComposer({
                 onClose={onClose}
                 onGoalCreated={onGoalCreated}
                 isExpanded={controlledExpanded}
-                initialContent={{ title, content, priority, dueDate: dateStr }}
+                initialContent={{ id: activeId, title, content, priority, dueDate: dateStr }}
               />,
               'create-goal',
               { hideHeader: true }
@@ -235,7 +240,7 @@ export function CreateGoalComposer({
                 onClose={onClose}
                 onGoalCreated={onGoalCreated}
                 isExpanded={controlledExpanded}
-                initialContent={{ title, content, priority, dueDate }}
+                initialContent={{ id: activeId, title, content, priority, dueDate }}
               />,
               'create-goal',
               { hideHeader: true }
@@ -248,7 +253,7 @@ export function CreateGoalComposer({
     } else {
       setShowMobileDatePicker(true);
     }
-  }, [dueDate, content, title, priority, buildLive, pushLive, openSidebar, onClose, onGoalCreated, controlledExpanded]);
+  }, [dueDate, content, title, priority, buildLive, pushLive, openSidebar, onClose, onGoalCreated, controlledExpanded, ensureId]);
 
   useEffect(() => {
     onRegisterClose?.(handleClose);
