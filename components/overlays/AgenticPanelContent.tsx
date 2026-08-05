@@ -16,6 +16,7 @@ import {
   Copy,
   ClipboardPaste,
   CreditCard,
+  Download,
   FilePlus,
   Flag,
   FolderKanban,
@@ -1329,9 +1330,17 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             type="button"
             onClick={handleOpenSessions}
             title="Past chats with Kylie"
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-white/45 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 flex-shrink-0 mr-1"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-white/45 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 flex-shrink-0"
           >
             <History size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={handleExportSession}
+            title="Export session conversation as JSON"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-white/45 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 flex-shrink-0"
+          >
+            <Download size={16} />
           </button>
           <button
             type="button"
