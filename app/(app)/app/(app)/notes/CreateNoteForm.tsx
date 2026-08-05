@@ -762,6 +762,9 @@ export default function CreateNoteForm({
 
     pushLiveNote(draftNote);
     setCachedData(`note_${draftId}`, draftNote);
+    if (activeWorkspace && !activeWorkspace.isPersonal && draftId) {
+      void attachEntityToActiveWorkspace('note', draftId);
+    }
   }, [title, content, tags, resolvedNoteId, isPublic, isGuest, user?.$id, isTitleManuallyEdited, pushLiveNote, registerComposeSession, setCachedData, activeWorkspace]);
 
   useEffect(() => {
@@ -970,7 +973,7 @@ export default function CreateNoteForm({
         })) as Notes;
         markNotePersistedRemote(saved.$id);
         if (saved?.$id && activeWorkspace && !activeWorkspace.isPersonal) {
-          void attachEntityToActiveWorkspace('note', saved.$id);
+          await attachEntityToActiveWorkspace('note', saved.$id);
         }
         migrateDraftId(saved.$id, ephemeralId);
         if (typeof window !== 'undefined') {
