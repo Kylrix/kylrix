@@ -61,12 +61,16 @@ User-defined workflows (e.g. "create todo from each form response") map to tool 
 
 function buildAgenticDataStructuresGuide(): string {
   return `
-[DATA STRUCTURES & TABLES]
-1. Database: passwordManagerDb only.
-2. Ideas: table 67ff05f3002502ef239e — title, content, tags, isPublic.
-3. Goals: table tasks — title, description, status, priority, dueDate, isAgentic.
-4. Forms: table forms — title, schema (JSON), settings.
-5. Projects: table projects — ownerId, title, summary.
+[WORKSPACES & SUPPORTED OBJECT KINDS]
+1. Database: passwordManagerDb. All 6 object types are scoped to the active workspace:
+   - Ideas (Notes): table 67ff05f3002502ef239e
+   - Goals (Tasks): table tasks
+   - Forms: table forms
+   - Events: table events
+   - Secrets (Vault Credentials): table credentials
+   - TOTP Codes: table totp_codes
+2. Workspace Scoping: Objects belong to the active workspace (or default personal workspace).
+3. Switching Workspaces: Use toolCall "switch_workspace" with args.workspaceId to change the active workspace when requested.
 
 [NOTE / IDEA TOOL JSON CONTRACT]
 ${NOTE_TOOL_PAYLOAD_SCHEMA}

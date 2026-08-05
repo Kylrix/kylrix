@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Notes } from '@/types/appwrite';
 
 import NoteContentRenderer from '@/components/NoteContentRenderer';
+import { AgenticDiffViewer } from '@/components/agentic/AgenticDiffViewer';
 
 import {
   Mic,
@@ -1037,6 +1038,13 @@ export function NoteDetailSidebar({
               <ActionIcon className="w-4 h-4" />
             </button>
           )}
+
+          {/* Agentic Diff Badge indicator when object has agentic edits */}
+          {liveNote && (liveNote as any).agenticDiffs && (liveNote as any).agenticDiffs.length > 0 ? (
+            <div className="w-full mt-2">
+              <AgenticDiffViewer changes={(liveNote as any).agenticDiffs} />
+            </div>
+          ) : null}
 
           {/* Start Huddle */}
           {!readOnly && (

@@ -61,6 +61,9 @@ import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useNotes } from '@/context/NotesContext';
 import { useTask } from '@/context/TaskContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { AgenticService } from '@/lib/services/agentic';
 import {
@@ -248,6 +251,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const { notes: allNotes, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote } = useNotes();
   const { setCachedData } = useDataNexus();
   const { addTask, updateTask, deleteTask, tasks } = useTask();
+  const { activeWorkspace, setActiveWorkspaceId } = useWorkspace();
+  const { openOverlay } = useOverlay();
+  const { openSidebar } = useDynamicSidebar();
   const { openProUpgrade } = useProUpgrade();
   const pathname = usePathname() || '/';
   const router = useRouter();
@@ -868,6 +874,18 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       user,
                       router,
                       onClose,
+                      setActiveWorkspaceId,
+                      openDetailOverlay: (kind: string, id: string) => {
+                        const targetNote = allNotes.find((n: any) => n.$id === id);
+                        const NoteDetailSidebar = require('@/components/ui/NoteDetailSidebar').default;
+                        if (targetNote && NoteDetailSidebar) {
+                          if (isDesktop) {
+                            openSidebar(<NoteDetailSidebar note={targetNote} onClose={() => {}} />, id, { fullscreen: true });
+                          } else {
+                            openOverlay(<NoteDetailSidebar note={targetNote} onClose={() => {}} />);
+                          }
+                        }
+                      },
                       tasks,
                       notes: allNotes,
                       setCachedData,

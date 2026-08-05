@@ -20,6 +20,7 @@ export interface AgenticExecutionContext {
   user?: { $id?: string } | null;
   router: AppRouterInstance;
   onClose?: () => void;
+  setActiveWorkspaceId?: (id: string) => void;
   tasks?: any[];
   notes?: any[];
   setCachedData?: (key: string, data: unknown) => void;
@@ -36,6 +37,7 @@ export interface AgenticExecutionContext {
     content: string,
     opts?: { blocks?: AgenticMessageBlock[] }) => void;
   openDrawer?: (type: string, payload?: Record<string, unknown>) => void;
+  openDetailOverlay?: (kind: string, id: string) => void;
   recordSessionObject?: (payload: {
     objectId: string;
     objectType: string;
@@ -82,6 +84,17 @@ async function executeAgenticToolCall(
       ctx.onClose?.();
       ctx.router.push(route);
       return { success: true, summary: `Navigate: ${route}` };
+    }
+
+    // ── Workspace Context Switch ────────────────────────────────
+    if (key === 'switch_workspace') {
+      const workspaceId = String(args.workspaceId || call.specifier || '').trim();
+      if (!workspaceId) {
+        return { success: false, summary: '', error: 'Workspace ID required for switch_workspace' };
+      }
+      ctx.setActiveWorkspaceId?.(workspaceId);
+      const title = String(args.workspaceTitle || workspaceId);
+      return { success: true, summary: `Switched active workspace to "${title}"` };
     }
 
     // ── Search ──────────────────────────────────────────────────
@@ -237,6 +250,7 @@ async function executeAgenticToolCall(
         objectType: 'idea',
         title: note.title || null,
         toolKey: key});
+      ctx.openDetailOverlay?.('idea', note.$id);
       ctx.appendMessage?.('assistant', `Loaded Idea **"${note.title || 'Untitled'}"**.`);
       return { success: true, summary: `Loaded idea: "${note.title || 'Untitled'}"`, skipToast: true };
     }

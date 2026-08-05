@@ -91,6 +91,13 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     requiresAuthorization: false,
     parameters: ['target', 'route']},
   {
+    key: 'switch_workspace',
+    name: 'Switch Active Workspace',
+    description:
+      'Switch the active workspace context to a target workspace ID or title. Specifier: workspace $id or title. Args: workspaceId (string), workspaceTitle (optional string). User is instantly context-switched without leaving the app.',
+    requiresAuthorization: false,
+    parameters: ['workspaceId', 'workspaceTitle']},
+  {
     key: 'ui.navigate',
     name: 'Navigate (Semantic)',
     description:
