@@ -1011,6 +1011,36 @@ export function NoteDetailSidebar({
 
         {/* Row 2: Action Buttons Row */}
         <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Copyable Object ID & Workspace ID Badges */}
+          {liveNote?.$id && (
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard.writeText(liveNote.$id);
+                showSuccess('Copied Object ID', liveNote.$id);
+              }}
+              className="px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[11px] font-mono text-white/70 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+              title="Click to copy Object ID"
+            >
+              <span className="text-white/40 select-none">ID:</span>
+              <span className="truncate max-w-[100px]">{liveNote.$id}</span>
+            </button>
+          )}
+
+          {activeWorkspace && !activeWorkspace.isPersonal && (
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard.writeText(activeWorkspace.id);
+                showSuccess('Copied Workspace ID', activeWorkspace.id);
+              }}
+              className="px-2 py-0.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-[11px] font-mono text-indigo-300 hover:text-indigo-200 transition-colors flex items-center gap-1 cursor-pointer"
+              title="Click to copy Workspace ID"
+            >
+              <span className="text-indigo-400/50 select-none">WS:</span>
+              <span className="truncate max-w-[100px]">{activeWorkspace.id}</span>
+            </button>
+          )}
           {/* Public/Private visibility status toggle — only for owner */}
           {!readOnly && (
             <ShareLockButton 
