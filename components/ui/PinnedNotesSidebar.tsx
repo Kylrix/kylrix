@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Query } from 'appwrite';
-import { Box, Typography, Stack, IconButton, useTheme, alpha, CircularProgress } from '@/lib/openbricks/primitives';
+import { Box, Typography, Stack, IconButton, useTheme, alpha, CircularProgress, useMediaQuery } from '@/lib/openbricks/primitives';
 import { Close as CloseIcon, PushPin as PinIcon } from '@/lib/openbricks/icons';
 import { useNotes } from '@/context/NotesContext';
 import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
@@ -10,8 +10,9 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { Notes } from '@/types/appwrite';
 import { getPinnedNoteIds, listNotes, getNote } from '@/lib/appwrite';
 import { isClientEncryptedNote, resolvePinnedNoteRows } from '@/lib/note/note-visibility';
-import { useSection } from '@/context/SectionContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
+import { NoteObjectDetail } from '@/components/objects/NoteObjectDetail';
+import { useOverlay } from '@/components/ui/OverlayContext';
 
 async function fetchPinnedNoteRows(ids: string[], seed: Notes[]): Promise<Notes[]> {
   if (!ids.length) return [];
@@ -48,9 +49,10 @@ async function fetchPinnedNoteRows(ids: string[], seed: Notes[]): Promise<Notes[
 
 export function PinnedNotesSidebar() {
   const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { notes: allNotes, pinnedIds } = useNotes();
-  const { closeSidebar } = useDynamicSidebar();
-  const { setActiveDetail } = useSection();
+  const { closeSidebar, openSidebar } = useDynamicSidebar();
+  const { openOverlay, closeOverlay } = useOverlay();
   const safePinnedIds = useMemo(() => pinnedIds ?? [], [pinnedIds]);
 
   const contextPinned = useMemo(
@@ -103,25 +105,46 @@ export function PinnedNotesSidebar() {
     };
   }, [safePinnedIds, allNotes]);
 
+  const handleNoteSelect = (n: Notes) => {
+    closeSidebar();
+    if (isDesktop) {
+      openSidebar(
+        <NoteObjectDetail note={n} embedded />,
+        n.$id || 'note-detail',
+        { hideHeader: true }
+      );
+    } else {
+      openOverlay(
+        <NoteObjectDetail note={n} onClose={closeOverlay} embedded />
+      );
+    }
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#161412', overflow: 'hidden' }}>
+      {/* Header - Sticky/Fixed at Top with Unified #161412 fill */}
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          p: { xs: 2, md: 2.5 },
-          pt: { xs: 'max(16px, env(safe-area-inset-top))', md: 2.5 },
+          px: { xs: 2.5, md: 3 },
+          py: 2.5,
+          pt: { xs: 'max(20px, env(safe-area-inset-top))', md: 2.5 },
           flexShrink: 0,
           bgcolor: '#161412',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.05)'}}
+          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+        }}
       >
         <Stack direction="row" spacing={1.5} alignItems="center">
           <IconButton
             onClick={closeSidebar}
             sx={{
               color: 'rgba(255,255,255,0.55)',
-              '&:hover': { color: '#fff', bgcolor: '#1C1A18' }}}
+              p: 1,
+              borderRadius: '12px',
+              '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.06)' },
+            }}
             size="small"
             aria-label="Close pinned notes"
           >
@@ -130,40 +153,42 @@ export function PinnedNotesSidebar() {
           <Box
             sx={{
               p: 1,
-              bgcolor: alpha(theme.palette.primary.main, 0.08),
-              borderRadius: '10px',
+              bgcolor: 'rgba(99, 102, 241, 0.12)',
+              borderRadius: '12px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'}}
+              justifyContent: 'center',
+            }}
           >
-            <PinIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
+            <PinIcon sx={{ fontSize: 18, color: '#6366F1' }} />
           </Box>
           <Typography
-            variant="h6"
             sx={{
-              fontWeight: 900,
-              fontFamily: '"Space Grotesk", sans-serif',
-              color: 'white',
+              fontWeight: 800,
+              fontFamily: 'var(--font-clash), sans-serif',
+              color: '#F5F2ED',
               textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              fontSize: '1.1rem'}}
+              letterSpacing: '0.04em',
+              fontSize: '1rem',
+            }}
           >
-            Pinned Notes ({safePinnedIds.length || pinnedNotes.length})
+            Pinned ({scopedPinnedNotes.length})
           </Typography>
         </Stack>
       </Box>
 
-      <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* List Container - Inset padding so cards do not touch component edges */}
+      <Box sx={{ flex: 1, overflowY: 'auto', px: { xs: 2.5, md: 3 }, py: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
         {loading && pinnedNotes.length === 0 ? (
-          <Box sx={{ py: 8, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }}>
-            <CircularProgress size={24} sx={{ color: theme.palette.primary.main }} />
-            <Typography variant="body2" sx={{ ml: 2, color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>
+          <Box sx={{ py: 8, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <CircularProgress size={22} sx={{ color: '#6366F1' }} />
+            <Typography variant="body2" sx={{ ml: 2, color: 'rgba(255,255,255,0.4)', fontWeight: 700, fontFamily: 'var(--font-satoshi), sans-serif' }}>
               Loading pinned notes...
             </Typography>
           </Box>
         ) : !loading && scopedPinnedNotes.length === 0 ? (
-          <Box sx={{ p: 4, textAlign: 'center' }}>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
+          <Box sx={{ py: 8, px: 2, textAlign: 'center' }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', fontFamily: 'var(--font-satoshi), sans-serif' }}>
               No pinned notes in this workspace.
             </Typography>
           </Box>
@@ -173,15 +198,12 @@ export function PinnedNotesSidebar() {
               <NoteObjectRow
                 key={note.$id}
                 note={note}
-                onSelect={(n) => {
-                  setActiveDetail({ type: 'note', id: n.$id });
-                  closeSidebar();
-                }}
+                onSelect={handleNoteSelect}
               />
             ))}
             {loading && (
               <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}>
-                <CircularProgress size={16} sx={{ color: theme.palette.primary.main }} />
+                <CircularProgress size={16} sx={{ color: '#6366F1' }} />
               </Box>
             )}
           </>
