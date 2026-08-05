@@ -35,6 +35,7 @@ import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { loadGoalsFromLocalCopy } from '@/lib/goals/load-local-goals';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
+import { useProjectObjects } from '@/hooks/useProjectObjects';
 
 // Mappers
 function coerceCachedTask(row: any): Task | null {
@@ -760,6 +761,16 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const { user: authUser, isLoading: isAuthLoading } = useAuth();
   const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
   const { activeWorkspace } = useWorkspace();
+  const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
+  const customWorkspaceId = isCustomWorkspace ? activeWorkspace?.id : null;
+  const { rows: goalProjectObjects } = useProjectObjects(customWorkspaceId, 'goal');
+  // Keep IDs in a ref so getFilteredTasks callback can read without being in deps
+  const goalProjectObjectIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    goalProjectObjectIdsRef.current = new Set(
+      goalProjectObjects.map((po) => po.entityId).filter(Boolean) as string[]
+    );
+  }, [goalProjectObjects]);
   const flowWarmOwnerRef = useRef<string | null>(null);
   const pendingStatusPatchesRef = useRef<Map<string, PendingStatusPatch>>(new Map());
 
@@ -1729,8 +1740,12 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     if (!activeWorkspace || activeWorkspace.isPersonal) {
       sourceTasks = sourceTasks.filter(isDefaultWorkspaceObject);
     } else {
+      // Real workspace: filter by project_objects join table (same as notes/vault pattern)
+      const registeredIds = goalProjectObjectIdsRef.current;
       const pid = activeWorkspace.id;
-      sourceTasks = sourceTasks.filter((t) => t.projectId === pid || t.isWorkspace);
+      sourceTasks = sourceTasks.filter(
+        (t) => registeredIds.has(t.id) || t.projectId === pid
+      );
     }
     if (state.userId && state.userId !== 'guest') {
       const activeId = state.userId;
@@ -1826,7 +1841,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     });
 
     return filtered;
-  }, [state.tasks, state.filter, state.sort, state.searchQuery, isResourcePinned, activeWorkspace?.isPersonal, state.userId]);
+  }, [state.tasks, state.filter, state.sort, state.searchQuery, isResourcePinned, activeWorkspace?.isPersonal, activeWorkspace?.id, state.userId]);
 
   const getTasksByProject = useCallback(
     (projectId: string) => {

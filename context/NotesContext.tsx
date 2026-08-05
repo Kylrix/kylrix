@@ -1005,16 +1005,12 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const sortedNotes = useMemo(() => {
     let scoped = notes;
     if (!activeWorkspace || activeWorkspace.isPersonal) {
+      // Personal workspace: exclude anything tagged for a named workspace
       scoped = notes.filter(isDefaultWorkspaceObject);
-    } else {
-      const pid = activeWorkspace.id;
-      scoped = notes.filter(
-        (n: any) =>
-          n.projectId === pid ||
-          n.isWorkspace ||
-          (n.tags && n.tags.some((t: string) => t.includes(pid)))
-      );
     }
+    // Real workspace: pass ALL notes through — the consuming page filters via
+    // project_objects join table (registeredIds). Filtering here by isWorkspace
+    // would show notes from ALL workspaces, not just the active one.
     return sortPinnedThenCreatedAt(scoped, (row) =>
       isResourcePinned('note', row.$id, noteOwnerId(row), row.isPinned),
     );

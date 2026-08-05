@@ -17,6 +17,7 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useFAB } from '@/context/FABContext';
 import EventDetails from './EventDetails';
 import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
+import { useProjectObjects } from '@/hooks/useProjectObjects';
 import { useWorkspace } from '@/context/WorkspaceContext';
 
 function mapRemoteEvent(doc: any): Event {
@@ -149,10 +150,20 @@ export default function EventList() {
     [activeWorkspace, attachEntityToActiveWorkspace, replaceDraftEventId, userId],
   );
 
+  const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
+  const customWorkspaceId = isCustomWorkspace ? activeWorkspace?.id : null;
+  const { rows: workspaceProjectObjects } = useProjectObjects(customWorkspaceId, 'event');
+
   const visibleEvents = useMemo(() => {
     let list = events;
-    if (activeWorkspace?.isPersonal !== false) {
+    if (!activeWorkspace || activeWorkspace.isPersonal) {
       list = list.filter((e) => isDefaultWorkspaceObject(e as any));
+    } else {
+      const registeredIds = new Set(workspaceProjectObjects.map((po) => po.entityId).filter(Boolean));
+      const pid = activeWorkspace.id;
+      list = list.filter(
+        (e: any) => registeredIds.has(e.$id || e.id) || e.projectId === pid
+      );
     }
     if (tabValue === 1) {
       list = list.filter((e) => {
@@ -162,9 +173,8 @@ export default function EventList() {
     } else if (tabValue === 2 && userId) {
       list = list.filter((e) => e.creatorId === userId);
     }
-    // tab 0 = all (same rows attach-object shows), not an empty "upcoming-only" trap
     return list;
-  }, [activeWorkspace?.isPersonal, events, tabValue, userId]);
+  }, [activeWorkspace, workspaceProjectObjects, events, tabValue, userId]);
 
   if (isLoading) {
     return (
