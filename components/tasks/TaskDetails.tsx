@@ -43,6 +43,7 @@ import { useAI } from '@/hooks/useAI';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { usePresence } from '@/components/providers/PresenceProvider';
 import { useToast } from '@/components/ui/Toast';
+import { useWorkspace } from '@/context/WorkspaceContext';
 import { AppwriteService } from '@/lib/appwrite';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import ProjectLinker from '@/components/projects/ProjectLinker';
@@ -88,6 +89,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const { closeSecondarySidebar} = useLayout();
 
   const { closeSidebar } = useDynamicSidebar();
+  const { activeWorkspace } = useWorkspace();
   const { closeOverlay } = useOverlay();
 
   const handleClose = () => {
@@ -877,10 +879,10 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
         {/* Actionable Meta Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 px-1">
           <div>
-            <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider mb-1.5 block font-mono">Project Domain</span>
+            <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider mb-1.5 block font-mono">Workspace Domain</span>
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: project?.color || '#6366F1' }} />
-              <span className="text-sm font-bold text-[#F5F2ED]">{project?.name || 'Inbox'}</span>
+              <span className="text-sm font-bold text-[#F5F2ED]">{project?.name || activeWorkspace.title}</span>
             </div>
           </div>
           <div>
