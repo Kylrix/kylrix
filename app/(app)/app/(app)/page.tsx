@@ -54,6 +54,7 @@ import { TaggedResourcesTabs } from '@/components/share/TaggedResourcesTabs';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
+import { useProjectObjects } from '@/hooks/useProjectObjects';
 
 
 // Client-side persistence cache to resist reload flicker
