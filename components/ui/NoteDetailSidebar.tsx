@@ -140,6 +140,7 @@ export function NoteDetailSidebar({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { setCachedData } = useDataNexus();
+  const { activeWorkspace } = useWorkspace();
   const { notes: allNotes, isPinned, pinNote, unpinNote, pushLiveNote, registerComposeSession } = useNotes();
   const isPinnedFunc = useMemo(() => typeof isPinned === 'function' ? isPinned : () => false, [isPinned]);
   const pinNoteFunc = useMemo(() => typeof pinNote === 'function' ? pinNote : async () => {}, [pinNote]);
