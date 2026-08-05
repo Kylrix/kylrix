@@ -879,6 +879,8 @@ export default function CreateNoteForm({
       isPublic,
       isGuest,
       article: isArticle,
+      isWorkspace: Boolean(activeWorkspace && !activeWorkspace.isPersonal),
+      projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : undefined,
       metadata: JSON.stringify({
         paywall: hasPaywall && paywallAmount ? {
           enabled: true,
@@ -1025,6 +1027,8 @@ export default function CreateNoteForm({
       title: cardTitle,
       content: source.content || saved.content || '',
       tags: normalizedTags,
+      isWorkspace: Boolean(activeWorkspace && !activeWorkspace.isPersonal),
+      projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : (saved as any).projectId,
       $updatedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
