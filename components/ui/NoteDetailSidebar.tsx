@@ -175,11 +175,11 @@ export function NoteDetailSidebar({
 
   const updateLocalAndParentNote = useCallback((updated: Notes) => {
     if (updated?.$id) {
-      pushLiveNote(updated, { pending: !readOnly });
+      pushLiveNote(updated, { pending: false });
       void setCachedData(`note_${updated.$id}`, updated);
     }
     onUpdate(updated);
-  }, [onUpdate, pushLiveNote, setCachedData, readOnly]);
+  }, [onUpdate, pushLiveNote, setCachedData]);
 
   useEffect(() => {
     noteRef.current = note;
@@ -191,10 +191,10 @@ export function NoteDetailSidebar({
     if (!seed?.$id || isEphemeralComposeNoteId(seed.$id)) return;
     const exists = allNotesRef.current.some((candidate) => candidate.$id === seed.$id);
     if (!exists) {
-      pushLiveNote(seed, { pending: !readOnly });
+      pushLiveNote(seed, { pending: false });
       void setCachedData(`note_${seed.$id}`, seed);
     }
-  }, [note.$id, pushLiveNote, setCachedData, readOnly]);
+  }, [note.$id, pushLiveNote, setCachedData]);
 
   useEffect(() => {
     if (liveNote?.$id) {
