@@ -16,6 +16,7 @@ import { updateNote, createNote } from '@/lib/actions/client-ops';
 import { getNotePublicState } from '@/lib/appwrite';
 import { pickNoteAutosavePayload } from '@/lib/appwrite/note';
 import { getLiveNoteForSync, getLiveGoalForSync, getLiveEventForSync } from '@/lib/sync/pending-sync-bridge';
+import { LocalEngine } from '@/lib/services/LocalEngine';
 import type { Event } from '@/types';
 
 function safeIsoString(val: any): string {
@@ -756,6 +757,7 @@ export const autonomicSyncEngine = {
           const { getNote } = await import('@/lib/appwrite');
           const remote = await getNote(targetId).catch(() => null);
           if (remote && !this.isPending(targetId)) {
+            LocalEngine.snapshotBaseline(targetId, remote);
             if (onRefreshed) onRefreshed(remote);
           }
         } else if (kind === 'goal') {
@@ -764,6 +766,7 @@ export const autonomicSyncEngine = {
           const remoteDoc = await taskApi.get(targetId).catch(() => null);
           if (remoteDoc && !this.isPending(targetId)) {
             const mapped = mapAppwriteTaskToTask(remoteDoc);
+            LocalEngine.snapshotBaseline(targetId, mapped);
             if (onRefreshed) onRefreshed(mapped);
           }
         }
@@ -793,6 +796,11 @@ export const autonomicSyncEngine = {
     let id = rawId;
     if (!parseGoalPendingKey(rawId) && getLiveGoalForSync(rawId)) {
       id = goalPendingKey(rawId);
+    }
+
+    // Baseline diff engine check: if an existing object has zero structural changes, discard false pending mark
+    if (payload && !id.startsWith('live-') && !id.startsWith('ghost-') && !LocalEngine.hasObjectDiff(rawId, payload)) {
+      return;
     }
 
     pendingById.set(id, rev);
@@ -841,6 +849,11 @@ export const autonomicSyncEngine = {
     const goalId = parseGoalPendingKey(id);
     if (goalId) {
       pendingPayloads.delete(goalId);
+    }
+    // Update baseline snapshot to the clean acked state
+    const cleanPayload = pendingPayloads.get(id) || pendingPayloads.get(goalId || id);
+    if (cleanPayload) {
+      LocalEngine.snapshotBaseline(id, cleanPayload);
     }
     if (!parseGoalPendingKey(id)) {
       markComposePersisted(id);

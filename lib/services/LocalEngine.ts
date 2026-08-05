@@ -64,4 +64,48 @@ export const LocalEngine = {
       kind,
       payload,
       createdAt: new Date().toISOString()});
-  }};
+  },
+
+  /** Store a clean baseline snapshot for an object ID when loaded from server/clean state. */
+  snapshotBaseline(id: string, payload: any): void {
+    if (typeof window === 'undefined' || !id || !payload) return;
+    try {
+      const cleanData = pickComparablePayload(payload);
+      const snapshot = JSON.stringify(cleanData);
+      (window as any)[`__kylrix_baseline_${id}`] = snapshot;
+    } catch {}
+  },
+
+  /** Check if a incoming payload has actual structural differences against its baseline snapshot. */
+  hasObjectDiff(id: string, payload: any): boolean {
+    if (typeof window === 'undefined' || !id || !payload) return true;
+    const baseline = (window as any)[`__kylrix_baseline_${id}`];
+    if (!baseline) {
+      // First encounter — store baseline and return false (no edit yet)
+      this.snapshotBaseline(id, payload);
+      return false;
+    }
+    try {
+      const currentSnapshot = JSON.stringify(pickComparablePayload(payload));
+      return currentSnapshot !== baseline;
+    } catch {
+      return true;
+    }
+  },
+};
+
+function pickComparablePayload(payload: any): Record<string, any> {
+  if (!payload || typeof payload !== 'object') return {};
+  return {
+    title: String(payload.title || '').trim(),
+    content: String(payload.content || '').trim(),
+    description: String(payload.description || '').trim(),
+    tags: Array.isArray(payload.tags) ? [...payload.tags].sort() : [],
+    labels: Array.isArray(payload.labels) ? [...payload.labels].sort() : [],
+    status: payload.status || undefined,
+    priority: payload.priority || undefined,
+    isPublic: payload.isPublic ?? undefined,
+    isGuest: payload.isGuest ?? undefined,
+    dueDate: payload.dueDate ? new Date(payload.dueDate).toISOString() : undefined,
+  };
+}
