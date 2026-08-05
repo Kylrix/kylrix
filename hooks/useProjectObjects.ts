@@ -90,12 +90,12 @@ export function useProjectObjects(
             const byId = new Map<string, ProjectObjects>();
             // Load existing local rows first
             prev.forEach((r) => {
-              const key = r.$id || r.entityId || (r as any).id;
+              const key = r.entityId || r.$id || (r as any).id;
               if (key) byId.set(key, r);
             });
             // Merge remote rows
             remote.forEach((r: ProjectObjects) => {
-              const key = r.$id || r.entityId || (r as any).id;
+              const key = r.entityId || r.$id || (r as any).id;
               if (key) byId.set(key, r);
             });
             const merged = Array.from(byId.values());
