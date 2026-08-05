@@ -89,7 +89,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const { closeSecondarySidebar} = useLayout();
 
   const { closeSidebar } = useDynamicSidebar();
-  const { activeWorkspace } = useWorkspace();
+  const { activeWorkspace, workspaces } = useWorkspace();
   const { closeOverlay } = useOverlay();
 
   const handleClose = () => {
@@ -481,7 +481,15 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
     return () => { active = false; };
   }, [taskId]);
 
-  const project = projects.find((p) => p.id === task?.projectId);
+  const matchedWorkspace = useMemo(() => {
+    if (task?.projectId) {
+      const found = workspaces.find((w) => w.id === task.projectId);
+      if (found) return found.title;
+    }
+    const foundProject = projects.find((p) => p.id === task?.projectId);
+    if (foundProject?.name) return foundProject.name;
+    return activeWorkspace.title;
+  }, [task?.projectId, workspaces, projects, activeWorkspace.title]);
   
   const taskLabels = useMemo(() => {
     if (!task) return [];
@@ -881,8 +889,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
           <div>
             <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider mb-1.5 block font-mono">Workspace Domain</span>
             <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: project?.color || '#6366F1' }} />
-              <span className="text-sm font-bold text-[#F5F2ED]">{project?.name || activeWorkspace.title}</span>
+              <div className="w-2.5 h-2.5 rounded-full bg-[#6366F1]" />
+              <span className="text-sm font-bold text-[#F5F2ED]">{matchedWorkspace}</span>
             </div>
           </div>
           <div>
