@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useCallback, useMemo, useState, useRef } from 'react';
 import { deleteNote } from '@/lib/actions/client-ops';
 import { useNotes } from '@/context/NotesContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -8,9 +8,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import type { Notes } from '@/types/appwrite';
 import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
 import { TagObjectRow } from '@/components/ui/TagObjectRow';
-import { Button } from '@/components/ui/Button';
-import { Pagination } from '@/components/ui/Pagination';
-import { useSearch } from '@/hooks/useSearch';
 import { useFAB } from '@/context/FABContext';
 import { 
   Search as SearchIcon, 
@@ -309,12 +306,10 @@ export default function NotesPage() {
     return resolvePinnedNoteRows(pinnedIds, visibleNotes);
   }, [pinnedIds, visibleNotes, searchParams]);
 
-  // Regular source notes exclude pinned notes when there is no active search query
+  // Regular source notes — pinned included, sorting handles pinned-first (local copy SoT per sync)
   const regularSourceNotes = useMemo(() => {
-    const hasSearch = searchParams.get('query');
-    if (hasSearch) return visibleNotes;
-    return visibleNotes.filter(n => !isPinned(n.$id));
-  }, [visibleNotes, searchParams, isPinned]);
+    return visibleNotes;
+  }, [visibleNotes]);
 
   // Fetch notes action for the search hook
   const fetchNotesAction = useCallback(async () => {
@@ -325,54 +320,59 @@ export default function NotesPage() {
     };
   }, [regularSourceNotes]);
 
-  // Search and pagination configuration
-  const searchConfig = useMemo(() => ({
-    searchFields: ['title', 'content', 'tags'],
-    localSearch: true,
-    threshold: 500,
-    debounceMs: 300
-  }), []);
-
-  // Derive UI page size from viewport
-  const derivedPageSize = useMemo(() => {
-    if (typeof window === 'undefined') return 12;
-    const width = window.innerWidth;
-    if (width < 640) return 8;
-    if (width < 1024) return 12;
-    if (width < 1440) return 16;
-    return 20;
-  }, []);
-
-  const paginationConfig = useMemo(() => ({
-    pageSize: derivedPageSize
-  }), [derivedPageSize]);
-
-  // Use the search hook
-  const {
-    items: paginatedNotes,
-    totalCount,
-    error,
-    searchQuery,
-    setSearchQuery,
-    hasSearchResults,
-    currentPage,
-    totalPages,
-    hasNextPage,
-    hasPreviousPage,
-    goToPage,
-    nextPage,
-    previousPage,
-    clearSearch
-  } = useSearch({
-    data: regularSourceNotes,
-    fetchDataAction: fetchNotesAction,
-    searchConfig,
-    paginationConfig
-  });
-
-  const regularNotes = useMemo(() => {
-    return paginatedNotes;
-  }, [paginatedNotes]);
+  const PAGE_SIZE = 20;
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchError] = useState<string | null>(null);
+  const error = searchError;
+  const hasSearchResults = searchQuery.trim().length > 0;
+  const clearSearch = useCallback(() => setSearchQuery(''), []);
+  // LocalEngine is SoT — UI paginates local copy only (sync SKILL.md). Engine background-fills LocalEngine decoupled.
+  const filteredNotes = useMemo(() => {
+    if (!searchQuery.trim()) return regularSourceNotes;
+    const q = searchQuery.toLowerCase();
+    return regularSourceNotes.filter((n: any) =>
+      ['title', 'content', 'tags'].some((f) => String(n[f] ?? '').toLowerCase().includes(q))
+    );
+  }, [regularSourceNotes, searchQuery]);
+  const sortedFilteredNotes = useMemo(() => {
+    return [...filteredNotes].sort((a: any, b: any) => {
+      const aPinned = isPinned(a.$id) ? 0 : 1;
+      const bPinned = isPinned(b.$id) ? 0 : 1;
+      if (aPinned !== bPinned) return aPinned - bPinned;
+      const aT = new Date(a.$updatedAt || a.updatedAt || a.$createdAt || 0).getTime();
+      const bT = new Date(b.$updatedAt || b.updatedAt || b.$createdAt || 0).getTime();
+      return bT - aT;
+    });
+  }, [filteredNotes, isPinned]);
+  const [page, setPage] = useState(1);
+  const totalCount = sortedFilteredNotes.length;
+  const paginatedNotes = useMemo(() => sortedFilteredNotes.slice(0, page * PAGE_SIZE), [sortedFilteredNotes, page]);
+  const hasNextPage = paginatedNotes.length < sortedFilteredNotes.length;
+  // Callback ref prevents stale-null + unobserve stutter; throttle via hasNextPage gate
+  const [sentinelNode, setSentinelNode] = useState<HTMLDivElement | null>(null);
+  const sentinelRef = useCallback((node: HTMLDivElement | null) => setSentinelNode(node), []);
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, regularSourceNotes]);
+  useEffect(() => {
+    if (!sentinelNode || !hasNextPage) return;
+    let ticking = false;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (ticking) return;
+        if (entries[0]?.isIntersecting) {
+          ticking = true;
+          setPage((p) => p + 1);
+          setTimeout(() => { ticking = false; }, 300);
+        }
+      },
+      { rootMargin: '400px', threshold: 0.1 }
+    );
+    obs.observe(sentinelNode);
+    return () => obs.disconnect();
+  }, [sentinelNode, hasNextPage]);
+  const regularNotes = useMemo(() => paginatedNotes, [paginatedNotes]);
+  void fetchNotesAction;
 
 
   const openComposer = useCallback((kind: 'note' | 'project') => {
@@ -597,9 +597,13 @@ export default function NotesPage() {
               <p className="text-white/40 text-xs font-semibold max-w-xs leading-relaxed mb-6">
                 Create your first tag to start organizing your ecosystem
               </p>
-              <Button onClick={handleCreateNewTag}>
-                Create First Tag
-              </Button>
+              <button 
+                onClick={handleCreateNewTag}
+                className="h-10 px-4 rounded-xl bg-[#10B981]/10 hover:bg-[#10B981]/20 border border-[#10B981]/20 hover:border-[#10B981]/40 flex items-center justify-center text-[#34D399] font-bold text-xs gap-1.5 transition-all"
+              >
+                <PlusIcon size={16} />
+                <span>Create First Tag</span>
+              </button>
             </div>
           ) : (
             <div className="grid gap-6 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
@@ -750,23 +754,7 @@ export default function NotesPage() {
         </div>
       )}
 
-      {/* Top Pagination */}
-      {totalPages > 1 && (
-        <div className="mb-2">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            hasNextPage={hasNextPage}
-            hasPreviousPage={hasPreviousPage}
-            onPageChange={goToPage}
-            onNextPage={nextPage}
-            onPreviousPage={previousPage}
-            totalCount={hasSearchResults ? totalCount : visibleNotes.length}
-            pageSize={paginationConfig.pageSize}
-            compact={false}
-          />
-        </div>
-      )}
+      {/* Infinite scroll sentinel (top not needed) */}
 
       {/* Error State */}
       {error && (
@@ -797,17 +785,28 @@ export default function NotesPage() {
           </p>
           {hasSearchResults ? (
               <div className="flex items-center gap-3">
-                <Button variant="outlined" onClick={clearSearch}>
+                <button 
+                  onClick={clearSearch}
+                  className="h-10 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white font-bold text-xs transition-all"
+                >
                   Clear Search
-                </Button>
-                <Button onClick={handleCreateNoteClick}>
-                  New Idea
-                </Button>
+                </button>
+                <button 
+                  onClick={handleCreateNoteClick}
+                  className="h-10 px-4 rounded-xl bg-[#6366F1]/10 hover:bg-[#6366F1]/20 border border-[#6366F1]/20 hover:border-[#6366F1]/40 flex items-center justify-center text-[#818CF8] font-bold text-xs gap-1.5 transition-all"
+                >
+                  <PlusCircleIcon size={16} />
+                  <span>New Idea</span>
+                </button>
               </div>
             ) : (
-              <Button onClick={handleCreateNoteClick}>
-                Open Composer
-              </Button>
+              <button 
+                onClick={handleCreateNoteClick}
+                className="h-10 px-4 rounded-xl bg-[#6366F1]/10 hover:bg-[#6366F1]/20 border border-[#6366F1]/20 hover:border-[#6366F1]/40 flex items-center justify-center text-[#818CF8] font-bold text-xs gap-1.5 transition-all"
+              >
+                <PlusCircleIcon size={16} />
+                <span>Open Composer</span>
+              </button>
             )}
         </div>
       ) : (
@@ -877,31 +876,16 @@ export default function NotesPage() {
             </div>
           )}
           
-          {hasNextPage && !hasSearchResults && (
-            <div className="flex justify-center mt-2">
-              <Button variant="outlined" onClick={nextPage}>
-                Load More
-              </Button>
+          {hasNextPage && (
+            <div ref={sentinelRef} className="flex justify-center py-6">
+              <span className="text-xs font-bold tracking-widest uppercase text-white/25">Loading more…</span>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Bottom Pagination */}
-      {totalPages > 1 && paginatedNotes.length > 0 && (
-        <div className="mt-4">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            hasNextPage={hasNextPage}
-            hasPreviousPage={hasPreviousPage}
-            onPageChange={goToPage}
-            onNextPage={nextPage}
-            onPreviousPage={previousPage}
-            totalCount={hasSearchResults ? totalCount : (visibleNotes || []).length}
-            pageSize={paginationConfig.pageSize}
-            compact={false}
-          />
+          {!hasNextPage && paginatedNotes.length > 0 && (
+            <div className="flex justify-center py-4">
+              <span className="text-[10px] font-bold tracking-widest uppercase text-white/15">End of list</span>
+            </div>
+          )}
         </div>
       )}
     </div>

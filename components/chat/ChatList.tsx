@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useTransition } from 'react';
+import React, { useEffect, useState, useCallback, useTransition, useRef, useMemo } from 'react';
 import { ChatService, rememberConversationRoster } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';
 import { UsersService } from '@/lib/services/users';
@@ -1356,6 +1356,35 @@ export const ChatList = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: tab enter, not every ghost length change
     }, [user, activeTab, skipThreadsLoad, loadGhostConversations]);
 
+    const filteredConversationsAll = conversations.filter(c =>
+        c.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    const filteredGhostConversationsAll = ghostConversations.filter(c =>
+        c.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    const CHAT_PAGE_SIZE = 20;
+    const [chatPage, setChatPage] = useState(1);
+    const [ghostPage, setGhostPage] = useState(1);
+    const chatSentinelRef = useRef<HTMLDivElement | null>(null);
+    const ghostSentinelRef = useRef<HTMLDivElement | null>(null);
+    const filteredConversations = useMemo(() => filteredConversationsAll.slice(0, chatPage * CHAT_PAGE_SIZE), [filteredConversationsAll, chatPage]);
+    const filteredGhostConversations = useMemo(() => filteredGhostConversationsAll.slice(0, ghostPage * CHAT_PAGE_SIZE), [filteredGhostConversationsAll, ghostPage]);
+    const hasMoreChats = filteredConversations.length < filteredConversationsAll.length;
+    const hasMoreGhosts = filteredGhostConversations.length < filteredGhostConversationsAll.length;
+    useEffect(() => { setChatPage(1); setGhostPage(1); }, [searchQuery, conversations.length, ghostConversations.length]);
+    useEffect(() => {
+      if (!chatSentinelRef.current || !hasMoreChats) return;
+      const obs = new IntersectionObserver((e) => { if (e[0]?.isIntersecting) setChatPage((p) => p + 1); }, { rootMargin: '400px' });
+      obs.observe(chatSentinelRef.current);
+      return () => obs.disconnect();
+    }, [hasMoreChats, filteredConversationsAll.length]);
+    useEffect(() => {
+      if (!ghostSentinelRef.current || !hasMoreGhosts) return;
+      const obs = new IntersectionObserver((e) => { if (e[0]?.isIntersecting) setGhostPage((p) => p + 1); }, { rootMargin: '400px' });
+      obs.observe(ghostSentinelRef.current);
+      return () => obs.disconnect();
+    }, [hasMoreGhosts, filteredGhostConversationsAll.length]);
+
     // Soft skeletons only when there is zero local copy — never hide a painted list
     if (loading && conversations.length === 0 && activeTab === 'secure' && !skipSecureLoad) return (
         <div className="p-4 space-y-3">
@@ -1369,14 +1398,6 @@ export const ChatList = ({
                 </div>
             ))}
         </div>
-    );
-
-    const filteredConversations = conversations.filter(c =>
-        c.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    const filteredGhostConversations = ghostConversations.filter(c =>
-        c.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const showGlobalResults = searchQuery.length >= 2 && searchResults.length > 0;
@@ -1486,8 +1507,9 @@ export const ChatList = ({
                             <span className="text-sm text-[#9B9691] font-medium block">No encrypted channels found matching your query.</span>
                         </div>
                     ) : (
-                        <div className="space-y-3">
-                            {filteredConversations.map((conv) => (
+                        <>
+                            <div className="space-y-3">
+                                {filteredConversations.map((conv) => (
                                 <div key={conv.$id} className="w-full">
                                     <div
                                         role="button"
@@ -1606,7 +1628,13 @@ export const ChatList = ({
                                     </div>
                                 </div>
                             ))}
-                        </div>
+                            </div>
+                            {hasMoreChats && (
+                              <div ref={chatSentinelRef} className="flex justify-center py-6">
+                                <span className="text-xs font-bold tracking-widest uppercase text-white/25">Loading more…</span>
+                              </div>
+                            )}
+                            </>
                     )
                 ) : (
                     loadingGhost && filteredGhostConversations.length === 0 ? (
@@ -1627,8 +1655,9 @@ export const ChatList = ({
                             <span className="text-sm text-[#9B9691] font-medium block">No huddle threads active matching your query.</span>
                         </div>
                     ) : (
-                        <div className="space-y-3">
-                            {filteredGhostConversations.map((conv) => (
+                        <>
+                            <div className="space-y-3">
+                                {filteredGhostConversations.map((conv) => (
                                 <div key={conv.$id} className="w-full">
                                     <div
                                         role="button"
@@ -1770,7 +1799,13 @@ export const ChatList = ({
                                     </div>
                                 </div>
                             ))}
-                        </div>
+                            </div>
+                            {hasMoreGhosts && (
+                              <div ref={ghostSentinelRef} className="flex justify-center py-6">
+                                <span className="text-xs font-bold tracking-widest uppercase text-white/25">Loading more…</span>
+                              </div>
+                            )}
+                            </>
                     )
                 )}
             </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
@@ -52,6 +52,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   );
 
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string>(userId);
+  const hydratedRef = useRef(false);
+  const lastSetIdRef = useRef<string | null>(null);
+  const pendingPrefSyncRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastUserIdRef = useRef(userId);
 
   const mapProjectRows = useCallback(
     (rows: unknown): WorkspaceItem[] =>
@@ -74,6 +78,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
 
   useEffect(() => {
+    if (lastUserIdRef.current !== userId) {
+      hydratedRef.current = false;
+      lastUserIdRef.current = userId;
+    }
     setActiveWorkspaceIdState((prev) => (prev === 'guest' && userId !== 'guest' ? userId : prev));
   }, [userId]);
 
@@ -114,32 +122,69 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const ACTIVE_WORKSPACE_CACHE_KEY = `kylrix_active_workspace_${userId}`;
 
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const saved = await LocalEngine.cacheGet(ACTIVE_WORKSPACE_CACHE_KEY);
-        if (saved && typeof saved === 'string') {
-          setActiveWorkspaceIdState(saved);
-        } else if (user?.prefs?.activeWorkspaceId) {
-          setActiveWorkspaceIdState(user.prefs.activeWorkspaceId as string);
+        if (cancelled) return;
+        if (hydratedRef.current) return;
+        if (saved && typeof saved === 'string' && saved.trim()) {
+          const trimmed = saved.trim();
+          hydratedRef.current = true;
+          lastSetIdRef.current = trimmed;
+          setActiveWorkspaceIdState(trimmed);
+          return;
         }
-      } catch {}
+        if (user?.prefs?.activeWorkspaceId && typeof user.prefs.activeWorkspaceId === 'string') {
+          const prefId = (user.prefs.activeWorkspaceId as string).trim();
+          if (prefId) {
+            hydratedRef.current = true;
+            lastSetIdRef.current = prefId;
+            setActiveWorkspaceIdState(prefId);
+            try {
+              await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, prefId);
+            } catch {}
+            return;
+          }
+        }
+        hydratedRef.current = true;
+      } catch {
+        hydratedRef.current = true;
+      }
     })();
-  }, [userId, user?.prefs?.activeWorkspaceId, ACTIVE_WORKSPACE_CACHE_KEY]);
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, ACTIVE_WORKSPACE_CACHE_KEY]);
+
+  useEffect(() => {
+    return () => {
+      if (pendingPrefSyncRef.current) clearTimeout(pendingPrefSyncRef.current);
+    };
+  }, []);
 
   const { updatePreferences } = useAuth();
 
   const setActiveWorkspaceId = useCallback((id: string) => {
-    setActiveWorkspaceIdState(id);
+    const trimmed = String(id || '').trim();
+    if (!trimmed) return;
+    if (trimmed === lastSetIdRef.current) return;
+    lastSetIdRef.current = trimmed;
+    hydratedRef.current = true;
+    setActiveWorkspaceIdState(trimmed);
     void (async () => {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, id);
-        if (user?.$id && typeof updatePreferences === 'function') {
-          void updatePreferences({ activeWorkspaceId: id });
-        }
+        await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, trimmed);
       } catch {}
     })();
+    if (pendingPrefSyncRef.current) clearTimeout(pendingPrefSyncRef.current);
+    pendingPrefSyncRef.current = setTimeout(() => {
+      if (user?.$id && typeof updatePreferences === 'function') {
+        void updatePreferences({ activeWorkspaceId: trimmed });
+      }
+    }, 800);
   }, [ACTIVE_WORKSPACE_CACHE_KEY, user?.$id, updatePreferences]);
 
   const activeWorkspace = useMemo<WorkspaceItem>(() => {

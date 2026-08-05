@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -21,6 +21,7 @@ import {
   useMediaQuery,
   useTheme} from '@/lib/openbricks/primitives';
 import { isFlowPath } from '@/lib/routing/app-paths';
+import { searchLocalEngine, type GlobalResult } from '@/lib/search/globalLocalSearch';
 import {
   Bot,
   Wallet,
@@ -35,7 +36,6 @@ import {
   ChevronRight,
   Keyboard,
   Target,
-  FolderKanban,
   FileText,
   Lock,
   MessageCircle,
@@ -93,6 +93,8 @@ export default function ConnectTopbar({
   const { currentTier } = useSubscription();
   const isPro = hasEffectivePaidAccess(user, currentTier);
   const router = useRouter();
+  const [, startNavTransition] = useTransition();
+  const navPush = useCallback((href: string) => startNavTransition(() => router.push(href)), [router]);
   const pathname = usePathname();
   const { setIsCollapsed } = useSidebar();
   const { activeWorkspace, workspaces, setActiveWorkspaceId, loadingWorkspaces } = useWorkspace();
@@ -148,36 +150,36 @@ export default function ConnectTopbar({
     setOnPageResults(matches);
   }, [searchQuery]);
 
-  const localNoteResults = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (q.length < 2) return [];
-    return notes.filter(note => 
-      note.title?.toLowerCase().includes(q) || 
-      note.content?.toLowerCase().includes(q)
-    );
-  }, [notes, searchQuery]);
-
-  const localTaskResults = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (q.length < 2) return [];
-    return tasks.filter(task => 
-      task.title?.toLowerCase().includes(q) || 
-      task.description?.toLowerCase().includes(q)
-    );
-  }, [tasks, searchQuery]);
-
-  const localProjectResults = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (q.length < 2) return [];
-    return projects.filter(proj => 
-      proj.name?.toLowerCase().includes(q) || 
-      proj.description?.toLowerCase().includes(q)
-    );
-  }, [projects, searchQuery]);
+  const { events: localEvents } = useLocalContext();
+  const globalResults = useMemo(() => {
+    return searchLocalEngine(searchQuery, {
+      notes,
+      tasks,
+      workspaces: projects,
+      events: localEvents,
+      // forms/flows/vault/moments/chats/threads/tags are LocalEngine-backed — extend ctx as providers hydrate
+      forms: [],
+      flows: [],
+      vaultCreds: [],
+      vaultTotp: [],
+      moments: [],
+      chats: [],
+      threads: [],
+      tags: [],
+    });
+  }, [searchQuery, notes, tasks, projects, localEvents]);
+  const groupedGlobalResults = useMemo(() => {
+    const byKind: Record<string, GlobalResult[]> = {};
+    for (const r of globalResults) {
+      byKind[r.kind] = byKind[r.kind] || [];
+      byKind[r.kind].push(r);
+    }
+    return byKind;
+  }, [globalResults]);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
 
-  const { events, suggestions, dismissSuggestion } = useLocalContext();
+  const { suggestions, dismissSuggestion } = useLocalContext();
 
   // Watch for new intelligence pulses (suggestions) to show in Dynamic Island
   useEffect(() => {
@@ -394,7 +396,7 @@ export default function ConnectTopbar({
 
     // 2. Historical recommendations based on past user actions (most frequent niches in cache)
     const nicheCounts: Record<string, number> = {};
-    events.forEach(e => {
+    localEvents.forEach(e => {
       nicheCounts[e.niche] = (nicheCounts[e.niche] || 0) + 1;
     });
 
@@ -439,7 +441,7 @@ export default function ConnectTopbar({
     }
 
     return [...currentAppSuggestions, ...historicalSuggestions].slice(0, 3);
-  }, [activeApp, events]);
+  }, [activeApp, localEvents]);
 
   const handleCopyUserId = useCallback(async () => {
     if (!profileSeed.userId || typeof navigator === 'undefined' || !navigator.clipboard) return;
@@ -1091,137 +1093,59 @@ export default function ConnectTopbar({
           ) : (
             /* Results View */
             <Box sx={{ display: 'grid', gap: 2 }}>
-              {/* Local Notes Matches */}
-              {localNoteResults.length > 0 && (
-                <Box sx={{ display: 'grid', gap: 0.75 }}>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
-                    Ideas ({localNoteResults.length})
-                  </Typography>
-                  <Box sx={{ display: 'grid', gap: 0.75 }}>
-                    {localNoteResults.slice(0, 4).map((note) => (
-                      <Box
-                        key={note.$id}
-                        component="button"
-                        onClick={() => {
-                          handleCloseAll();
-                          router.push(`/note?id=${note.$id}`);
-                        }}
-                        sx={{
-                          width: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1.25,
-                          px: 2,
-                          py: 1.25,
-                          borderRadius: '20px',
-                          bgcolor: 'rgba(255,255,255,0.01)',
-                          border: '1px solid rgba(255,255,255,0.04)',
-                          color: 'white',
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }
-                        }}
-                      >
-                        <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(236, 72, 153, 0.12)', color: '#EC4899', flexShrink: 0 }}>
-                          <Logo app="note" size={15} variant="icon" />
-                        </Box>
-                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                          <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
-                            {note.title || 'Untitled Note'}
-                          </Typography>
-                          <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
-                            {note.content?.slice(0, 60) || 'Empty content'}
-                          </Typography>
-                        </Box>
+              {/* Global LocalEngine Results — miniature cards, desktop uses sidebar grid */}
+              {globalResults.length > 0 && (
+                <Box sx={{ display: 'grid', gap: 1.25 }}>
+                  {Object.entries(groupedGlobalResults).map(([kind, items]) => (
+                    <Box key={kind} sx={{ display: 'grid', gap: 0.75 }}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                        {kind} · {items.length}
+                      </Typography>
+                      <Box sx={{ display: 'grid', gap: 0.75, gridTemplateColumns: isDesktop ? '1fr 1fr' : '1fr' }}>
+                        {items.slice(0, isDesktop ? 6 : 4).map((r) => (
+                          <Box
+                            key={`${r.kind}-${r.id}`}
+                            component="button"
+                            onClick={() => {
+                              handleCloseAll();
+                              navPush(r.href);
+                            }}
+                            sx={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                              px: 1.75,
+                              py: 1.15,
+                              borderRadius: '16px',
+                              bgcolor: 'rgba(255,255,255,0.02)',
+                              border: `1px solid ${r.accent}14`,
+                              color: 'white',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                              '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', borderColor: `${r.accent}30` },
+                            }}
+                          >
+                            <Box sx={{ width: 28, height: 28, borderRadius: '8px', display: 'grid', placeItems: 'center', bgcolor: `${r.accent}18`, color: r.accent, flexShrink: 0, fontSize: '0.7rem', fontWeight: 900 }}>
+                              {r.kind[0].toUpperCase()}
+                            </Box>
+                            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.15 }}>
+                              <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.82rem', lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {r.title}
+                              </Typography>
+                              <Typography component="span" sx={{ color: 'rgba(255,255,255,0.55)', fontWeight: 600, fontSize: '0.7rem', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {r.subtitle || r.kind}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        ))}
                       </Box>
-                    ))}
-                  </Box>
+                    </Box>
+                  ))}
                 </Box>
               )}
-
-              {/* Local Tasks & Workspaces Matches */}
-              {(localTaskResults.length > 0 || localProjectResults.length > 0) && (
-                <Box sx={{ display: 'grid', gap: 0.75 }}>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
-                    Goals & Workspaces
-                  </Typography>
-                  <Box sx={{ display: 'grid', gap: 0.75 }}>
-                    {localProjectResults.slice(0, 2).map((proj) => (
-                      <Box
-                        key={proj.id}
-                        component="button"
-                        onClick={() => {
-                          handleCloseAll();
-                          router.push(`/workspaces/${proj.id}`);
-                        }}
-                        sx={{
-                          width: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1.25,
-                          px: 2,
-                          py: 1.25,
-                          borderRadius: '20px',
-                          bgcolor: 'rgba(255,255,255,0.01)',
-                          border: '1px solid rgba(255,255,255,0.04)',
-                          color: 'white',
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }
-                        }}
-                      >
-                        <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(168, 85, 247, 0.12)', color: '#A855F7', flexShrink: 0 }}>
-                          <FolderKanban size={15} strokeWidth={1.75} />
-                        </Box>
-                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                          <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
-                            Project: {proj.name}
-                          </Typography>
-                          <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
-                            {proj.description || 'Active project container'}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    ))}
-                    {localTaskResults.slice(0, 3).map((task) => (
-                      <Box
-                        key={task.id}
-                        component="button"
-                        onClick={() => {
-                          handleCloseAll();
-                          router.push(`/goals?task=${task.id}`);
-                        }}
-                        sx={{
-                          width: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1.25,
-                          px: 2,
-                          py: 1.25,
-                          borderRadius: '20px',
-                          bgcolor: 'rgba(255,255,255,0.01)',
-                          border: '1px solid rgba(255,255,255,0.04)',
-                          color: 'white',
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }
-                        }}
-                      >
-                        <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(168, 85, 247, 0.12)', color: '#A855F7', flexShrink: 0 }}>
-                          <Target size={15} strokeWidth={1.75} />
-                        </Box>
-                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                          <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
-                            Goal: {task.title}
-                          </Typography>
-                          <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
-                            {task.description || 'Active goal'}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
+              {globalResults.length === 0 && searchQuery.trim().length >= 2 && !searchingPeople && (
+                <Typography sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.84rem', px: 0.5, fontWeight: 600 }}>No local matches — try people or check spelling.</Typography>
               )}
 
               {/* On-Page Results Matches */}
@@ -1392,7 +1316,7 @@ export default function ConnectTopbar({
           <NativeSidebarMount
             active={searchOpen}
             sidebarKey="topbar-search"
-            width={420}
+            width={560}
             title="Search"
           >
             <Box sx={{ p: 2.75, height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#161412' }}>
@@ -1451,7 +1375,7 @@ export default function ConnectTopbar({
           PaperProps={{
             sx: {
               bgcolor: '#161412',
-              width: 320,
+              width: 420,
               height: '100vh',
               borderRight: '1px solid rgba(255, 255, 255, 0.06)',
               p: 2.75,

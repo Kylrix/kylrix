@@ -154,7 +154,7 @@ export default function EventList() {
   const customWorkspaceId = isCustomWorkspace ? activeWorkspace?.id : null;
   const { rows: workspaceProjectObjects } = useProjectObjects(customWorkspaceId, 'event');
 
-  const visibleEvents = useMemo(() => {
+  const visibleEventsAll = useMemo(() => {
     let list = events;
     if (!activeWorkspace || activeWorkspace.isPersonal) {
       list = list.filter((e) => isDefaultWorkspaceObject(e as any));
@@ -175,6 +175,27 @@ export default function EventList() {
     }
     return list;
   }, [activeWorkspace, workspaceProjectObjects, events, tabValue, userId]);
+
+  const EVENT_PAGE_SIZE = 20;
+  const [eventPage, setEventPage] = useState(1);
+  const [eventSentinelNode, setEventSentinelNode] = useState<HTMLDivElement | null>(null);
+  const eventSentinelRef = useCallback((node: HTMLDivElement | null) => setEventSentinelNode(node), []);
+  const visibleEvents = useMemo(() => visibleEventsAll.slice(0, eventPage * EVENT_PAGE_SIZE), [visibleEventsAll, eventPage]);
+  const hasMoreEvents = visibleEvents.length < visibleEventsAll.length;
+  useEffect(() => {
+    setEventPage(1);
+  }, [visibleEventsAll.length, tabValue]);
+  useEffect(() => {
+    if (!eventSentinelNode || !hasMoreEvents) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) setEventPage((p) => p + 1);
+      },
+      { rootMargin: '400px', threshold: 0.1 }
+    );
+    obs.observe(eventSentinelNode);
+    return () => obs.disconnect();
+  }, [eventSentinelNode, hasMoreEvents, visibleEventsAll.length]);
 
   if (isLoading) {
     return (
@@ -261,6 +282,16 @@ export default function EventList() {
             </div>
           ))}
         </div>
+        {hasMoreEvents && (
+          <div ref={eventSentinelRef} className="flex justify-center py-6">
+            <span className="text-xs font-bold tracking-widest uppercase text-white/25">Loading more…</span>
+          </div>
+        )}
+        {!hasMoreEvents && visibleEvents.length > 0 && visibleEventsAll.length > EVENT_PAGE_SIZE && (
+          <div className="flex justify-center py-4">
+            <span className="text-[10px] font-bold tracking-widest uppercase text-white/15">End of list</span>
+          </div>
+        )}
 
         <ObjectCreateDrawer
           open={isDialogOpen}

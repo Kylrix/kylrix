@@ -466,15 +466,18 @@ export default function ProjectDetailPage() {
     };
   }, [projectId, getCachedDataAsync, applyProjectDetailCache]);
 
-  const { setActiveWorkspaceId } = useWorkspace();
+  const { activeWorkspace, setActiveWorkspaceId } = useWorkspace();
+  const hasSwitchedRef = useRef(false);
 
   useEffect(() => {
-    if (!projectId) return;
-
-    // Instantly context switch active workspace to target workspace ID and redirect to main app view (/app)
-    setActiveWorkspaceId(projectId as string);
+    if (!projectId || hasSwitchedRef.current) return;
+    const targetId = String(projectId);
+    hasSwitchedRef.current = true;
+    if (activeWorkspace?.id !== targetId) {
+      setActiveWorkspaceId(targetId);
+    }
     router.replace('/app');
-  }, [projectId, setActiveWorkspaceId, router]);
+  }, [projectId, activeWorkspace?.id, setActiveWorkspaceId, router]);
 
   const fetchProjectData = useCallback(async () => {
     if (!projectId) return;

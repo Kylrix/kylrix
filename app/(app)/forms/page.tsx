@@ -284,7 +284,20 @@ export default function FormsDashboard() {
         }
     };
 
-    const filteredForms = forms; // Active forms (published/draft on server)
+    const FORM_PAGE_SIZE = 20;
+    const [formPage, setFormPage] = useState(1);
+    const [formSentinelNode, setFormSentinelNode] = useState<HTMLDivElement | null>(null);
+    const formSentinelRef = useCallback((node: HTMLDivElement | null) => setFormSentinelNode(node), []);
+    const filteredFormsAll = forms;
+    const filteredForms = React.useMemo(() => filteredFormsAll.slice(0, formPage * FORM_PAGE_SIZE), [filteredFormsAll, formPage]);
+    const hasMoreForms = filteredForms.length < filteredFormsAll.length;
+    React.useEffect(() => { setFormPage(1); }, [filteredFormsAll.length]);
+    React.useEffect(() => {
+      if (!formSentinelNode || !hasMoreForms) return;
+      const obs = new IntersectionObserver((entries) => { if (entries[0]?.isIntersecting) setFormPage((p) => p + 1); }, { rootMargin: '400px', threshold: 0.1 });
+      obs.observe(formSentinelNode);
+      return () => obs.disconnect();
+    }, [formSentinelNode, hasMoreForms, filteredFormsAll.length]);
 
     return (
         <div className="animate-fadeIn p-4 md:px-0 md:py-8 min-h-screen bg-black">
@@ -551,6 +564,16 @@ export default function FormsDashboard() {
                                                 </div>
                                             );
                                         })}
+                                    </div>
+                                )}
+                                {hasMoreForms && (
+                                    <div ref={formSentinelRef} className="flex justify-center py-6">
+                                        <span className="text-xs font-bold tracking-widest uppercase text-white/25">Loading more…</span>
+                                    </div>
+                                )}
+                                {!hasMoreForms && filteredFormsAll.length > FORM_PAGE_SIZE && (
+                                    <div className="flex justify-center py-4">
+                                        <span className="text-[10px] font-bold tracking-widest uppercase text-white/15">End of list</span>
                                     </div>
                                 )}
                             </>

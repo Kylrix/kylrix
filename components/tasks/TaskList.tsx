@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { Plus, ArrowUpDown, Filter, List, LayoutGrid, Calendar, ArrowUp, ArrowDown, CheckCircle2, Trash2, Sparkles, ChevronDown, ChevronUp, Tag, X, RefreshCw } from 'lucide-react';
 import GoalObjectRow from './GoalObjectRow';
 import { useTask } from '@/context/TaskContext';
@@ -75,6 +75,27 @@ export default function TaskList() {
   const tasks = getFilteredTasks();
   const activeTasks = tasks.filter(t => t.status !== 'done');
   const completedTasks = tasks.filter(t => t.status === 'done');
+
+  const GOAL_PAGE_SIZE = 20;
+  const [goalPage, setGoalPage] = useState(1);
+  const [goalSentinelNode, setGoalSentinelNode] = useState<HTMLDivElement | null>(null);
+  const goalSentinelRef = useCallback((node: HTMLDivElement | null) => setGoalSentinelNode(node), []);
+  const visibleActiveTasks = useMemo(() => activeTasks.slice(0, goalPage * GOAL_PAGE_SIZE), [activeTasks, goalPage]);
+  const hasMoreGoals = visibleActiveTasks.length < activeTasks.length;
+  useEffect(() => {
+    setGoalPage(1);
+  }, [tasks.length, filter.search, filter.status, filter.labels]);
+  useEffect(() => {
+    if (!goalSentinelNode || !hasMoreGoals) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) setGoalPage((p) => p + 1);
+      },
+      { rootMargin: '400px', threshold: 0.1 }
+    );
+    obs.observe(goalSentinelNode);
+    return () => obs.disconnect();
+  }, [goalSentinelNode, hasMoreGoals, activeTasks.length]);
 
   const handleBulkDeleteCompleted = () => {
     if (completedTasks.length === 0) return;
@@ -417,8 +438,18 @@ export default function TaskList() {
                         <div className="flex-1 h-px bg-gradient-to-r from-[#A855F7]/20 to-transparent" />
                       </div>
                       <div className="grid gap-4 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
-                        {activeTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
+                        {visibleActiveTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
                       </div>
+                      {hasMoreGoals && (
+                        <div ref={goalSentinelRef} className="flex justify-center py-6">
+                          <span className="text-xs font-bold tracking-widest uppercase text-white/25">Loading more…</span>
+                        </div>
+                      )}
+                      {!hasMoreGoals && visibleActiveTasks.length > 0 && activeTasks.length > GOAL_PAGE_SIZE && (
+                        <div className="flex justify-center py-4">
+                          <span className="text-[10px] font-bold tracking-widest uppercase text-white/15">End of list</span>
+                        </div>
+                      )}
                     </div>
                   )}
 

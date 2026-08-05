@@ -11,8 +11,8 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 
 type Props = {
   note: Notes;
-  onUpdate: (updatedNote: Notes) => void;
-  onDelete: (noteId: string) => void;
+  onUpdate?: (updatedNote: Notes) => void;
+  onDelete?: (noteId: string) => void;
   onClose?: () => void;
   embedded?: boolean;
   readOnly?: boolean;
@@ -43,11 +43,14 @@ export function NoteObjectDetail({
     closeOverlay();
   }, [onClose, closeSidebar, closeOverlay]);
 
+  const noopUpdate = useCallback((_n: Notes) => {}, []);
+  const noopDelete = useCallback((_id: string) => {}, []);
+
   const body = (
     <NoteDetailSidebar
       note={live}
-      onUpdate={onUpdate}
-      onDelete={onDelete}
+      onUpdate={onUpdate || noopUpdate}
+      onDelete={onDelete || noopDelete}
       onBack={layout === 'drawer' ? handleClose : undefined}
       layout={layout}
       readOnly={readOnly}

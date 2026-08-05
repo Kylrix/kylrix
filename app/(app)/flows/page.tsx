@@ -71,7 +71,7 @@ function FlowRow({
   recentlyUpdated?: boolean;
 }) {
   return (
-    <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] overflow-hidden">
+    <div className="rounded-2xl bg-[#0A0908] border border-white/[0.05] overflow-hidden h-full">
       <div className="flex items-center gap-3 p-3.5">
         <button
           type="button"
@@ -200,6 +200,10 @@ export default function FlowsPage() {
   }, [isRecording, startRecording, stopRecording]);
 
   useEffect(() => {
+    if (isDesktop) {
+      resetConfiguration();
+      return;
+    }
     setConfiguration({
       isVisible: true,
       mainColor: isRecording ? '#EF4444' : '#A855F7',
@@ -213,7 +217,7 @@ export default function FlowsPage() {
       actions: [],
     });
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, isRecording, handleRecordToggle]);
+  }, [setConfiguration, resetConfiguration, isRecording, handleRecordToggle, isDesktop]);
 
   const yours = useMemo(() => Object.values(savedWorkflows), [savedWorkflows]);
 
@@ -380,7 +384,7 @@ export default function FlowsPage() {
   return (
     <>
     <div className="flex-1 min-h-screen pointer-events-auto font-satoshi text-white">
-      <div className="w-full max-w-[880px] mx-auto p-4 md:p-8 space-y-5">
+      <div className="w-full max-w-[880px] lg:max-w-[1100px] xl:max-w-[1200px] mx-auto p-4 md:p-6 lg:p-8 space-y-5">
         <div className="flex items-end justify-between gap-4">
           <h1 className="font-clash text-2xl md:text-3xl font-semibold tracking-tight text-white">
             Flows
@@ -446,7 +450,7 @@ export default function FlowsPage() {
           })}
         </div>
 
-        <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-2.5">
+        <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-4">
           <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">
             {tab === 'discover' ? 'Discover' : 'Installed'}
           </h3>
@@ -470,7 +474,8 @@ export default function FlowsPage() {
               )}
             </div>
           ) : (
-            list.map((flow) => {
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
+              {list.map((flow) => {
               const isOwner = flow.source === 'yours';
               const installed = installedIds.includes(flow.id) || isOwner;
               return (
@@ -515,7 +520,8 @@ export default function FlowsPage() {
                   }
                 />
               );
-            })
+            })}
+            </div>
           )}
         </section>
       </div>
