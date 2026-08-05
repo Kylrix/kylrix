@@ -384,7 +384,7 @@ export function NewProjectDrawer() {
               <>
                 <Box>
                     <Typography component="span" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', lineHeight: 1.35 }}>
-                    Project Title
+                    Workspace Title
                     </Typography>
                     <TextField
                     fullWidth
@@ -421,7 +421,7 @@ export function NewProjectDrawer() {
                     rows={2}
                     value={summary}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSummary(e.target.value)}
-                    placeholder="Optional project overview..."
+                    placeholder="Optional workspace overview..."
                     variant="standard"
                     InputProps={{
                         disableUnderline: true,

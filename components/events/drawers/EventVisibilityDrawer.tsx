@@ -36,7 +36,7 @@ export function EventVisibilityDrawer({ open, onClose, isPublic: initialIsPublic
     <div className="fixed inset-0 z-[15000] flex flex-col justify-end pointer-events-auto">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-200"
+        className="absolute inset-0 bg-black/80 transition-opacity duration-200"
         onClick={onClose}
       />
 

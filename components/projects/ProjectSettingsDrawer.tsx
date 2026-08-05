@@ -102,7 +102,7 @@ export default function ProjectSettingsDrawer({
           <form onSubmit={handleSubmit} className="flex flex-col gap-6 h-full">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold text-[#9B9691] tracking-wider uppercase font-clash">
-                Project Title
+                Workspace Title
               </label>
               <input
                 type="text"
