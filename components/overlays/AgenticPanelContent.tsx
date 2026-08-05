@@ -1301,6 +1301,40 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     handleComposerClear,
   ]);
 
+  const handleExportSession = useCallback(() => {
+    if (!messages.length) {
+      toast.error('No conversation messages to export');
+      return;
+    }
+    try {
+      const payload = {
+        sessionId: activeSessionId || 'current-session',
+        exportedAt: new Date().toISOString(),
+        messages: messages.map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          blocks: m.blocks,
+          timestamp: m.timestamp,
+        })),
+      };
+      const jsonStr = JSON.stringify(payload, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kylie-session-${activeSessionId || 'export'}-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Conversation exported as JSON');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to export conversation');
+    }
+  }, [messages, activeSessionId]);
+
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden">
       {/* Sticky header */}
