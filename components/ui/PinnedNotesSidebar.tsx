@@ -11,6 +11,7 @@ import { Notes } from '@/types/appwrite';
 import { getPinnedNoteIds, listNotes, getNote } from '@/lib/appwrite';
 import { isClientEncryptedNote, resolvePinnedNoteRows } from '@/lib/note/note-visibility';
 import { useSection } from '@/context/SectionContext';
+import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 
 async function fetchPinnedNoteRows(ids: string[], seed: Notes[]): Promise<Notes[]> {
   if (!ids.length) return [];
@@ -57,6 +58,7 @@ export function PinnedNotesSidebar() {
     [safePinnedIds, allNotes]);
 
   const [pinnedNotes, setPinnedNotes] = useState<Notes[]>(contextPinned);
+  const { filteredItems: scopedPinnedNotes } = useWorkspaceFilteredItems(pinnedNotes, 'note');
   const [loading, setLoading] = useState(
     () => safePinnedIds.length > 0 && contextPinned.length < safePinnedIds.length);
 
@@ -159,13 +161,15 @@ export function PinnedNotesSidebar() {
               Loading pinned notes...
             </Typography>
           </Box>
-        ) : pinnedNotes.length === 0 ? (
-          <Box sx={{ py: 8, textAlign: 'center', opacity: 0.5 }}>
-            <Typography variant="body2">No pinned notes</Typography>
+        ) : !loading && scopedPinnedNotes.length === 0 ? (
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
+              No pinned notes in this workspace.
+            </Typography>
           </Box>
         ) : (
           <>
-            {pinnedNotes.map((note) => (
+            {scopedPinnedNotes.map((note) => (
               <NoteObjectRow
                 key={note.$id}
                 note={note}
