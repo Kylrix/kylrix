@@ -98,6 +98,9 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
     }
     if (method === 'DELETE') return jsonOk(await ApiResources.deleteWorkspace(actor, b));
   }
+  if ((a === 'workspaces' || a === 'projects') && b && (c === 'objects' || c === 'attach') && !d && method === 'POST') {
+    return jsonOk(await ApiResources.attachObjectToWorkspace(actor, b, await readBody(req)));
+  }
 
   // Events
   if (a === 'events' && !b) {

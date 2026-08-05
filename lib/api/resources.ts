@@ -827,6 +827,24 @@ export const ApiResources = {
     return { id, deleted: true };
   },
 
+  async attachObjectToWorkspace(actor: ApiActor, workspaceId: string, body: Record<string, unknown>) {
+    requireScope(actor, 'workspaces:write');
+    requireScope(actor, 'objects:write');
+    await this.getWorkspace(actor, workspaceId);
+    const entityKind = String(body.entityKind || body.kind || '').trim();
+    const entityId = String(body.entityId || body.id || '').trim();
+    if (!entityKind || !entityId) badRequest('entityKind and entityId required');
+    const { addObjectToProjectSecure } = await import('@/lib/actions/secure-ops');
+    const res = await addObjectToProjectSecure(workspaceId, entityKind, entityId, body.role as string, body.metadata);
+    return {
+      id: (res as any)?.$id || ID.unique(),
+      workspaceId,
+      entityKind,
+      entityId,
+      attached: true,
+    };
+  },
+
   async getEvent(actor: ApiActor, id: string) {
     requireScope(actor, 'events:read');
     const tables = createSystemTablesDB();
