@@ -237,8 +237,8 @@ async function executeAgenticToolCall(
         objectType: 'idea',
         title: note.title || null,
         toolKey: key});
-      ctx.appendMessage?.('assistant', `Loaded Idea **${note.title || 'Untitled'}** (\`${note.$id}\`).`);
-      return { success: true, summary: `Loaded idea: ${note.title || 'Untitled'}`, skipToast: true };
+      ctx.appendMessage?.('assistant', `Loaded Idea **"${note.title || 'Untitled'}"**.`);
+      return { success: true, summary: `Loaded idea: "${note.title || 'Untitled'}"`, skipToast: true };
     }
 
     // ── Goals ───────────────────────────────────────────────────

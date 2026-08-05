@@ -151,14 +151,13 @@ export function EcosystemHitCards({
           <span className="text-[9px] font-bold text-[#A855F7] uppercase tracking-wide">{plan.temporal}</span>
         ) : null}
       </div>
-      <div className="flex flex-col gap-2 max-h-[min(52vh,420px)] overflow-y-auto pr-0.5">
+      <div className="flex flex-col gap-3 max-h-[min(52vh,420px)] overflow-y-auto pr-1 py-1">
         {hydrated.map((hit) => (
           <HitCard
             key={`${hit.domain}:${hit.id}`}
             hit={hit}
             onOpen={() => {
               onPick?.(hit);
-              if (hit.route) router.push(hit.route);
             }}
           />
         ))}

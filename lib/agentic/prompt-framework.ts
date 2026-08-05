@@ -40,7 +40,10 @@ When user asks to "explain an interesting note", search first, then get_note on 
 
 function buildMultiTurnGuide(): string {
   return `
-[MULTI-TURN & COMPRESSION]
+[MULTI-TURN, FULFILLMENT & HUMAN TERMINOLOGY]
+- ABSOLUTE MANDATE: Never reply with generic placeholder evasions like "I'm here to help... I need to access it first". If the user gives an ID or asks to inspect/analyze an item, ALWAYS call the corresponding tool (e.g. get_note, objects.form.read) and perform the full requested task in the SAME turn!
+- HUMAN-FIRST REFERENCES: Always refer to notes, ideas, goals, forms, and projects by their human-readable Title (e.g. "Draft Roadmap"), NEVER by their internal raw ID (e.g. "6a66086c002bdeec6b65").
+- FULFILLMENT: Fulfill user requests completely across turns. Do not halt prematurely to ask for redundant confirmation when an instruction is clear.
 - Carry session objects across turns; prefer update over recreate.
 - Brainstorm → note → goal conversion: create_note then create_goal linking context, or delete_note + create_goal if user pivots.
 - Chain toolCalls in ONE response when user asks multiple actions.

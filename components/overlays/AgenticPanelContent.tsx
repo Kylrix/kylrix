@@ -1507,7 +1507,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 content={msg.content}
                 blocks={msg.blocks}
                 onPickHit={(hit) => {
-                  void runPrompt(`Pick this ${hit.domain} (${hit.id}) and explain the interesting parts to me in plain language.`);
+                  void runPrompt(`Load "${hit.title}" (${hit.id}) and explain its core details and interesting parts in plain language.`);
                 }}
               />
               {msg.role === 'assistant' && msg.tools && msg.tools.length > 0 && (
