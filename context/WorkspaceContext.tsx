@@ -36,10 +36,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   // Avoid "My's Workspace" — if name contains an apostrophe already or is absent,
   // we use the raw name but strip a trailing "'s" to prevent double-possessive.
   const rawName = (user?.name || user?.email?.split('@')[0] || '').trim();
-  // Build title: "<Name>'s Workspace" when we have a real name, otherwise plain "Personal Workspace"
+  // Build title: "<Name>'s Workspace" when we have a name, otherwise "My Workspace"
   const personalWorkspaceTitle = rawName
     ? `${rawName}'s Workspace`
-    : 'Personal Workspace';
+    : 'My Workspace';
 
   const personalWorkspace = useMemo<WorkspaceItem>(
     () => ({
