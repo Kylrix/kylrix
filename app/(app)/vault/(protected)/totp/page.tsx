@@ -17,8 +17,8 @@ import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { useMemo, useCallback } from 'react';
 import SudoModal from '@/components/overlays/SudoModal';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
-import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
+import type { TotpSecrets as TotpItem } from '@/types/appwrite';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,11 +28,12 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   const router = useRouter();
   const { user, needsMasterPassword, isVaultUnlocked, isVaultBlurEnabled } = useAppwriteVault();
   const { setConfiguration, resetConfiguration } = useFAB();
-  
+  const [totpCodes, setTotpCodes] = useState<TotpItem[]>([]);
   const { filteredItems: scopedTotpCodes } = useWorkspaceFilteredItems(totpCodes, 'totp');
   const [folders, setFolders] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
+  const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(false);
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;

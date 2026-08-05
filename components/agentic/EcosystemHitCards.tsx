@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Calendar,
   ChevronRight,
@@ -119,7 +118,6 @@ export function EcosystemHitCards({
   hits: EcosystemHitRef[];
   onPick?: (hit: HydratedEcosystemHit) => void;
 }) {
-  const router = useRouter();
   const { notes } = useNotes();
   const { tasks } = useTask();
   const { getCachedData } = useDataNexus();

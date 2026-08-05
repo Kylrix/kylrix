@@ -52,7 +52,6 @@ import { useLayout } from '@/context/LayoutContext';
 import { useToast } from '@/components/ui/Toast';
 import { TaggedResourcesTabs } from '@/components/share/TaggedResourcesTabs';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { useProjectObjects } from '@/hooks/useProjectObjects';
 

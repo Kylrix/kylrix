@@ -251,7 +251,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const { notes: allNotes, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote } = useNotes();
   const { setCachedData } = useDataNexus();
   const { addTask, updateTask, deleteTask, tasks } = useTask();
-  const { activeWorkspace, setActiveWorkspaceId } = useWorkspace();
+  const { setActiveWorkspaceId } = useWorkspace();
   const { openOverlay } = useOverlay();
   const { openSidebar } = useDynamicSidebar();
   const { openProUpgrade } = useProUpgrade();
@@ -1333,7 +1333,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           role: m.role,
           content: m.content,
           blocks: m.blocks,
-          timestamp: m.timestamp,
+          timestamp: (m as any).timestamp || Date.now(),
         })),
       };
       const jsonStr = JSON.stringify(payload, null, 2);

@@ -1,13 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useWorkspace, WorkspaceItem } from '@/context/WorkspaceContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
 import { useProjectObjects } from '@/hooks/useProjectObjects';
 import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 
 export interface WorkspaceItemLike {
-  $id?: string;
-  id?: string;
+  $id?: string | null;
+  id?: string | null;
   projectId?: string | null;
   isWorkspace?: boolean | null;
   [key: string]: any;

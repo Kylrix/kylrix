@@ -8,7 +8,6 @@ import {
   deleteCredential,
   listAllCredentials} from '@/lib/appwrite';
 import { useResourcePins } from '@/context/ResourcePinContext';
-import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import toast from 'react-hot-toast';
 import CredentialItem from '@/components/app/dashboard/CredentialItem';
@@ -42,7 +41,6 @@ function useIsDesktop() {
 function DashboardPageContent() {
   const { user, needsMasterPassword, isVaultUnlocked, isVaultBlurEnabled, setVaultBlurEnabled } = useAppwriteVault();
   const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
-  const { activeWorkspace } = useWorkspace();
   const searchParams = useSearchParams();
   const router = useRouter();
   const { registerCreateModal } = useAI();

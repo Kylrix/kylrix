@@ -1034,7 +1034,7 @@ export default function CreateNoteForm({
       projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : (saved as any).projectId,
       $updatedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    };
+    } as unknown as Notes;
     // Already on Appwrite — hydrate live copy without re-amber; ack any draft queue entry.
     pushLiveNote(localNote, { pending: false });
     autonomicSyncEngine.ack(saved.$id, localNote.updatedAt);
