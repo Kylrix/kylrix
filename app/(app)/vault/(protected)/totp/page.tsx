@@ -18,8 +18,7 @@ import { useMemo, useCallback } from 'react';
 import SudoModal from '@/components/overlays/SudoModal';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
-import { useProjectObjects } from '@/hooks/useProjectObjects';
+import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,44 +29,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   const { user, needsMasterPassword, isVaultUnlocked, isVaultBlurEnabled } = useAppwriteVault();
   const { setConfiguration, resetConfiguration } = useFAB();
   
-  const { activeWorkspace } = useWorkspace();
-  const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
-  const customWorkspaceId = isCustomWorkspace ? activeWorkspace?.id : null;
-  const { rows: workspaceProjectObjects } = useProjectObjects(customWorkspaceId, 'totp');
-
-  // Master password modal — only auto-open when unlock-on-demand is off
-  const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(false);
-  
-  type TotpItem = {
-    $id: string;
-    issuer?: string | null;
-    accountName?: string | null;
-    secretKey: string;
-    period?: number | null;
-    digits?: number | null;
-    algorithm?: string | null;
-    folderId?: string | null;
-    sharedFrom?: string | null;
-    url?: string | null;
-    isPublic?: boolean | null;
-    isGuest?: boolean | null;
-    isPinned?: boolean | null;
-    userId?: string | null;
-    dek?: string | null;
-    isWorkspace?: boolean | null;
-    projectId?: string | null;
-  };
-
-  const [totpCodes, setTotpCodes] = useState<TotpItem[]>([]);
-
-  const scopedTotpCodes = useMemo(() => {
-    if (!activeWorkspace || activeWorkspace.isPersonal) {
-      return totpCodes.filter(isDefaultWorkspaceObject);
-    }
-    const registeredIds = new Set(workspaceProjectObjects.map((po) => po.entityId).filter(Boolean));
-    const pid = activeWorkspace.id;
-    return totpCodes.filter((t: any) => registeredIds.has(t.$id) || t.projectId === pid);
-  }, [totpCodes, activeWorkspace, workspaceProjectObjects]);
+  const { filteredItems: scopedTotpCodes } = useWorkspaceFilteredItems(totpCodes, 'totp');
   const [folders, setFolders] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);

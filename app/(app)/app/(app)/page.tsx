@@ -53,7 +53,7 @@ import { useToast } from '@/components/ui/Toast';
 import { TaggedResourcesTabs } from '@/components/share/TaggedResourcesTabs';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
-import { useProjectObjects } from '@/hooks/useProjectObjects';
+import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 
 
 // Client-side persistence cache to resist reload flicker
@@ -289,26 +289,12 @@ export default function NotesPage() {
     };
   }, [isCustomWorkspace, workspaceProjectObjects, allNotes]);
 
-  const visibleNotes = useMemo(() => {
+  const combinedNotes = useMemo(() => {
     const safeNotes = Array.isArray(allNotes) ? allNotes : [];
-    const combinedNotes = [...safeNotes, ...extraWorkspaceNotes];
-    const decrypted = combinedNotes.filter((n) => !isClientEncryptedNote(n));
+    return [...safeNotes, ...extraWorkspaceNotes].filter((n) => !isClientEncryptedNote(n));
+  }, [allNotes, extraWorkspaceNotes]);
 
-    if (!activeWorkspace || activeWorkspace.isPersonal) {
-      return decrypted.filter(isDefaultWorkspaceObject);
-    }
-
-    // Build a set of note IDs registered in project_objects for this workspace
-    const registeredIds = new Set(workspaceProjectObjects.map((po) => po.entityId).filter(Boolean));
-    const pid = activeWorkspace.id;
-
-    return decrypted.filter((n: any) =>
-      // Primary: note ID is in the project_objects join table
-      registeredIds.has(n.$id) ||
-      // Fallback: local draft not yet written to project_objects but has projectId in metadata
-      n.projectId === pid
-    );
-  }, [allNotes, extraWorkspaceNotes, activeWorkspace, workspaceProjectObjects]);
+  const { filteredItems: visibleNotes } = useWorkspaceFilteredItems(combinedNotes, 'note');
 
 
 
