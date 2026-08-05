@@ -469,16 +469,12 @@ export default function ProjectDetailPage() {
   const { setActiveWorkspaceId } = useWorkspace();
 
   useEffect(() => {
-    if (!projectId || !rawProject) return;
+    if (!projectId) return;
 
-    const isPublic = rawProject.isPublic || rawProject.visibility === 'public';
-    const _isMember = isOwner || collaborators.some((c) => (c.userId || c.$id) === user?.$id);
-
-    if (isPublic) {
-      setActiveWorkspaceId(projectId as string);
-      router.replace('/app');
-    }
-  }, [projectId, rawProject, isOwner, collaborators, user?.$id, setActiveWorkspaceId, router]);
+    // Instantly context switch active workspace to target workspace ID and redirect to main app view (/app)
+    setActiveWorkspaceId(projectId as string);
+    router.replace('/app');
+  }, [projectId, setActiveWorkspaceId, router]);
 
   const fetchProjectData = useCallback(async () => {
     if (!projectId) return;
