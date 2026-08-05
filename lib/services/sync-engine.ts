@@ -129,9 +129,11 @@ let isSyncing = false;
 /** markPending during an in-flight cycle must not drop the next flush. */
 let flushQueuedDuringSync = false;
 let persistWriteChain: Promise<void> = Promise.resolve();
+let firstPendingTimestamp: number | null = null;
 
 /** Coalesce keystroke/CRUD bursts — ultra fast 150ms demand flush. */
 const FLUSH_COALESCE_MS = 150;
+const HARD_CEILING_MS = 2000;
 const RETRY_BASE_MS = 2_000;
 const RETRY_MAX_MS = 60_000;
 
@@ -299,7 +301,11 @@ if (typeof window !== 'undefined') {
   window.addEventListener('input', handleUserActivity, { passive: true });
   window.addEventListener('scroll', handleUserActivity, { passive: true });
   window.addEventListener('click', handleUserActivity, { passive: true });
-  window.addEventListener('online', () => scheduleDemandFlush({ immediate: true }), { passive: true });
+  window.addEventListener('online', () => {
+    // Instant network status reset: clear backoff penalty and flush queue immediately
+    failedSyncAttempts.clear();
+    scheduleDemandFlush({ immediate: true });
+  }, { passive: true });
   window.addEventListener('beforeunload', () => autonomicSyncEngine.flushImmediately());
   window.addEventListener('pagehide', () => autonomicSyncEngine.flushImmediately());
   document.addEventListener('visibilitychange', () => {
@@ -803,6 +809,10 @@ export const autonomicSyncEngine = {
       return;
     }
 
+    if (pendingById.size === 0) {
+      firstPendingTimestamp = Date.now();
+    }
+
     pendingById.set(id, rev);
     if (payload) {
       pendingPayloads.set(id, payload);
@@ -814,7 +824,15 @@ export const autonomicSyncEngine = {
     }
     writePersistedQueue();
     notifyStatusListeners();
-    triggerAutonomicSyncScheduler();
+
+    // Flush immediately if hard ceiling (2000ms continuous edit) is breached, otherwise schedule 150ms coalesce
+    const duration = Date.now() - (firstPendingTimestamp || Date.now());
+    if (duration >= HARD_CEILING_MS) {
+      firstPendingTimestamp = Date.now();
+      scheduleDemandFlush({ immediate: true });
+    } else {
+      triggerAutonomicSyncScheduler();
+    }
   },
 
   /** True while engine still owes upstream a flush for this id. */
