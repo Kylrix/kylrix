@@ -142,14 +142,15 @@ function normalizeVisibility(note: Notes): Notes {
       return {};
     }
   })();
-  // Prefer the real DB projectId; fall back to metadata only for local drafts
+  // Prefer real DB projectId; fall back to metadata for local drafts
   const projectId = (note as any).projectId || meta.projectId || undefined;
+  // Respect DB/metadata isWorkspace flag or fallback to presence of projectId
+  const isWorkspace = note.isWorkspace === true || meta.isWorkspace === true || Boolean(projectId);
   return {
     ...note,
     isPublic: getNotePublicState(note),
     projectId,
-    // isWorkspace is true only when there is a real projectId — not speculatively
-    isWorkspace: Boolean(projectId),
+    isWorkspace,
   } as Notes;
 }
 
