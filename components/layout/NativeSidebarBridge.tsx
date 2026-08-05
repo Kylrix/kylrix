@@ -132,7 +132,9 @@ export function NativeSidebarBridge() {
           key,
           width: unifiedDrawerWidth(unified.activeContent),
           sticky: unified.activeContent === 'agentic',
-          title: unified.activeContent.replace(/-/g, ' '),
+          title: unified.activeContent === 'new-project'
+            ? 'New Workspace'
+            : unified.activeContent.replace(/-/g, ' '),
           restore: {
             type: 'unified',
             payload: { content: unified.activeContent },

@@ -211,7 +211,7 @@ export function NewProjectDrawer() {
           }
       }
 
-      showSuccess('Project activated');
+      showSuccess('Workspace created');
       if (onSuccess) onSuccess(project);
       close();
     } catch (err: any) {
@@ -301,10 +301,10 @@ export function NewProjectDrawer() {
             </Box>
             <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
                 <Typography component="span" sx={{ color: '#fff', fontWeight: 900, fontSize: '1.1rem', fontFamily: fontDisplay, letterSpacing: '-0.02em', lineHeight: 1.25 }} noWrap>
-                    {template?.title || 'New Project'}
+                    {template?.title || 'New Workspace'}
                 </Typography>
                 <Typography component="span" sx={{ color: TEXT_MUTED, fontWeight: 700, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', fontSize: '0.65rem', lineHeight: 1.35 }} noWrap>
-                    {step === 1 ? 'Step 1: Link Context' : 'Step 2: Finalize'}
+                    {step === 1 ? 'Step 1: Link Context' : 'Step 2: Finalize Workspace'}
                 </Typography>
             </Box>
           </Stack>
