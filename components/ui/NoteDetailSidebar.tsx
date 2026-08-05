@@ -58,6 +58,7 @@ import { useAuth } from '@/lib/auth';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useNotes } from '@/context/NotesContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
 import { isEphemeralComposeNoteId } from '@/lib/notes/compose-draft-registry';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { useSection } from '@/context/SectionContext';
