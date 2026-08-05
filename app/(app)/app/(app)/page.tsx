@@ -813,7 +813,7 @@ export default function NotesPage() {
       ) : (
         <div className="flex flex-col gap-8">
           {/* Pinned Notes Section */}
-          {pinnedIds.length > 0 && (
+          {pinnedNotes.length > 0 && (
             <div className="p-5 md:p-6 bg-white/[0.01] border border-white/5 rounded-[32px] shadow-lg">
               <div className="flex items-center justify-between gap-4 mb-5 px-1 select-none">
                 <div className="flex items-center gap-2.5">
@@ -821,16 +821,16 @@ export default function NotesPage() {
                     <PinIcon size={14} className="rotate-45" />
                   </div>
                   <span className="font-black text-[10px] tracking-widest uppercase text-[#EC4899] font-mono leading-none">
-                    Pinned Ideas ({pinnedIds.length})
+                    Pinned Ideas ({pinnedNotes.length})
                   </span>
                 </div>
 
-                {pinnedIds.length > 3 && (
+                {pinnedNotes.length > 3 && (
                   <button 
                     onClick={() => openSidebar(<PinnedNotesSidebar />, 'pinned-notes', { hideHeader: true })}
                     className="text-xs font-black text-[#EC4899] hover:text-[#f472b6] bg-[#EC4899]/5 hover:bg-[#EC4899]/10 border border-[#EC4899]/10 hover:border-[#EC4899]/20 px-3 py-1.5 rounded-xl transition-all"
                   >
-                    See More ({pinnedIds.length - 3})
+                    See More ({pinnedNotes.length - 3})
                   </button>
                 )}
               </div>
