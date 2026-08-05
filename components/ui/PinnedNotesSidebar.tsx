@@ -47,7 +47,7 @@ async function fetchPinnedNoteRows(ids: string[], seed: Notes[]): Promise<Notes[
     .filter((n): n is Notes => Boolean(n && !isClientEncryptedNote(n)));
 }
 
-export function PinnedNotesSidebar() {
+export function PinnedNotesSidebar({ offset = 0 }: { offset?: number }) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { notes: allNotes, pinnedIds } = useNotes();
@@ -61,6 +61,7 @@ export function PinnedNotesSidebar() {
 
   const [pinnedNotes, setPinnedNotes] = useState<Notes[]>(contextPinned);
   const { filteredItems: scopedPinnedNotes } = useWorkspaceFilteredItems(pinnedNotes, 'note');
+  const displayNotes = useMemo(() => scopedPinnedNotes.slice(offset), [scopedPinnedNotes, offset]);
   const [loading, setLoading] = useState(
     () => safePinnedIds.length > 0 && contextPinned.length < safePinnedIds.length);
 
@@ -106,7 +107,6 @@ export function PinnedNotesSidebar() {
   }, [safePinnedIds, allNotes]);
 
   const handleNoteSelect = (n: Notes) => {
-    closeSidebar();
     if (isDesktop) {
       openSidebar(
         <NoteObjectDetail note={n} embedded />,
@@ -114,6 +114,7 @@ export function PinnedNotesSidebar() {
         { hideHeader: true }
       );
     } else {
+      closeSidebar();
       openOverlay(
         <NoteObjectDetail note={n} onClose={closeOverlay} embedded />
       );
@@ -186,15 +187,15 @@ export function PinnedNotesSidebar() {
               Loading pinned notes...
             </Typography>
           </Box>
-        ) : !loading && scopedPinnedNotes.length === 0 ? (
+        ) : !loading && displayNotes.length === 0 ? (
           <Box sx={{ py: 8, px: 2, textAlign: 'center' }}>
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', fontFamily: 'var(--font-satoshi), sans-serif' }}>
-              No pinned notes in this workspace.
+              No additional pinned notes in this workspace.
             </Typography>
           </Box>
         ) : (
           <>
-            {scopedPinnedNotes.map((note) => (
+            {displayNotes.map((note) => (
               <NoteObjectRow
                 key={note.$id}
                 note={note}
