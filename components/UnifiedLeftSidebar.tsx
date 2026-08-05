@@ -202,7 +202,7 @@ export function UnifiedLeftSidebar() {
                       {activeWorkspace?.title || 'Workspace'}
                     </span>
                     <span style={{ display: 'block', color: 'rgba(255, 255, 255, 0.45)', fontWeight: 600, fontSize: '0.68rem', fontFamily: 'var(--font-satoshi)' }}>
-                      Workspace
+                      {activeWorkspace?.isPersonal ? 'Default workspace' : 'Workspace'}
                     </span>
                   </Box>
                 )}
@@ -285,20 +285,24 @@ export function UnifiedLeftSidebar() {
                           bgcolor: isActive ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.06)',
                           color: isActive ? '#F59E0B' : '#fff'}}}
                     >
-                      <span
-                        style={{
-                          fontSize: '0.78rem',
-                          fontWeight: isActive ? 800 : 600,
-                          fontFamily: 'var(--font-satoshi)',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          minWidth: 0,
-                          flex: 1,
-                        }}
-                      >
-                        {w.title}
-                      </span>
+                      <Box sx={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                        <span
+                          style={{
+                            display: 'block',
+                            fontSize: '0.78rem',
+                            fontWeight: isActive ? 800 : 600,
+                            fontFamily: 'var(--font-satoshi)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {w.title}
+                        </span>
+                        <span style={{ display: 'block', fontSize: '0.65rem', color: isActive ? 'rgba(245, 158, 11, 0.8)' : 'rgba(255, 255, 255, 0.4)', fontFamily: 'var(--font-satoshi)' }}>
+                          {w.isPersonal ? 'Default workspace' : 'Workspace'}
+                        </span>
+                      </Box>
                       {isActive && <CheckIcon size={14} color="#F59E0B" style={{ flexShrink: 0 }} />}
                     </Box>
                   );
