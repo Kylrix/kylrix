@@ -551,7 +551,37 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             </button>
           )}
 
-          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto flex-wrap">
+            {/* Copyable Goal ID & Workspace ID Badges */}
+            {task?.id && (
+              <button
+                type="button"
+                onClick={() => {
+                  void navigator.clipboard.writeText(task.id);
+                  showSuccess('Copied Goal ID', task.id);
+                }}
+                className="px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[11px] font-mono text-white/70 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+                title="Click to copy Goal ID"
+              >
+                <span className="text-white/40 select-none">ID:</span>
+                <span className="truncate max-w-[90px]">{task.id}</span>
+              </button>
+            )}
+
+            {task?.projectId && (
+              <button
+                type="button"
+                onClick={() => {
+                  void navigator.clipboard.writeText(task.projectId!);
+                  showSuccess('Copied Workspace ID', task.projectId!);
+                }}
+                className="px-2 py-0.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-[11px] font-mono text-indigo-300 hover:text-indigo-200 transition-colors flex items-center gap-1 cursor-pointer"
+                title="Click to copy Workspace ID"
+              >
+                <span className="text-indigo-400/50 select-none">WS:</span>
+                <span className="truncate max-w-[90px]">{task.projectId}</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setShowProjectLinker(true)}
