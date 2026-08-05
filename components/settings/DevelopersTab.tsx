@@ -15,6 +15,8 @@ import { CreatePatDrawer } from '@/components/settings/CreatePatDrawer';
 import { CreateOAuthAppDrawer } from '@/components/settings/CreateOAuthAppDrawer';
 import { ManageOAuthAppDrawer } from '@/components/settings/ManageOAuthAppDrawer';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useSubscription } from '@/context/subscription/SubscriptionContext';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
 
 type PatItem = {
   id: string;
@@ -97,6 +99,10 @@ function SkillRow({
 
 export function DevelopersTab() {
   const { open: openDrawer } = useUnifiedDrawer();
+  const { currentTier } = useSubscription();
+  const { openProUpgrade } = useProUpgrade();
+  const isTeams = currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
+
   const [developerMode, setDeveloperMode] = useState(false);
   const [pats, setPats] = useState<PatItem[]>([]);
   const [apps, setApps] = useState<OauthApp[]>([]);
@@ -105,6 +111,14 @@ export function DevelopersTab() {
   const [patDrawerOpen, setPatDrawerOpen] = useState(false);
   const [oauthDrawerOpen, setOauthDrawerOpen] = useState(false);
   const [manageAppId, setManageAppId] = useState<string | null>(null);
+
+  const handleOpenOauthSetup = () => {
+    if (!isTeams) {
+      openProUpgrade('Sign in with Kylrix (OAuth 2.1 Provider)');
+      return;
+    }
+    setOauthDrawerOpen(true);
+  };
 
   const refreshPats = useCallback(async () => {
     setLoadingPats(true);
@@ -267,7 +281,7 @@ export function DevelopersTab() {
         action={
           <button
             type="button"
-            onClick={() => setOauthDrawerOpen(true)}
+            onClick={handleOpenOauthSetup}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-[#6366F1] text-white cursor-pointer"
           >
             <Plus size={12} strokeWidth={3} />
@@ -289,7 +303,7 @@ export function DevelopersTab() {
             <p className="text-sm font-bold text-white/50">No OAuth apps yet</p>
             <button
               type="button"
-              onClick={() => setOauthDrawerOpen(true)}
+              onClick={handleOpenOauthSetup}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white cursor-pointer"
             >
               <Plus size={14} strokeWidth={3} />
