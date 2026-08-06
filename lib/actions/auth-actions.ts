@@ -218,39 +218,25 @@ export async function checkEmailAuthStatusAction(email: string) {
 
     const userId = usersList.users[0].$id;
 
-    // 2. Check if user has masterpass in users table
+    // 2. Strict check: masterpass enabled FOR LOGIN (authPass flag) — keychain only
+    // New users or users without authPass must NOT see password input (OTP only)
     let hasMasterpass = false;
     try {
-      const userRows = await db.listRows(
+      const keychainRows = await db.listRows(
         APPWRITE_DATABASE_ID,
-        'users',
-        [Query.equal('userId', userId), Query.limit(1)]
+        APPWRITE_COLLECTION_KEYCHAIN_ID,
+        [
+          Query.equal('userId', userId),
+          Query.equal('type', 'password'),
+          Query.equal('authPass', true),
+          Query.limit(1)
+        ]
       );
-      if (userRows.total > 0 && userRows.rows[0].hasMasterpass) {
+      if (keychainRows.total > 0) {
         hasMasterpass = true;
       }
     } catch (e) {
-      console.warn('Error checking users table for masterpass:', e);
-    }
-
-    // 3. Fallback/Double check keychain table for password entry
-    if (!hasMasterpass) {
-      try {
-        const keychainRows = await db.listRows(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_COLLECTION_KEYCHAIN_ID,
-          [
-            Query.equal('userId', userId),
-            Query.equal('type', 'password'),
-            Query.limit(1)
-          ]
-        );
-        if (keychainRows.total > 0) {
-          hasMasterpass = true;
-        }
-      } catch (e) {
-        console.warn('Error checking keychain table for masterpass:', e);
-      }
+      console.warn('Error checking keychain table for authPass:', e);
     }
 
     return { success: true, exists: true, hasMasterpass, userId };

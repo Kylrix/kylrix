@@ -131,7 +131,7 @@ export default function ConnectTopbar({
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifHint, setNotifHint] = useState<{ id: string; title: string; description: string; accent: string } | null>(null);
-  const [dismissedHintId, setDismissedHintId] = useState<string | null>(null);
+  const [dismissedHintId, _setDismissedHintId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [peopleResults, setPeopleResults] = useState<any[]>([]);
   const [searchingPeople, setSearchingPeople] = useState(false);
