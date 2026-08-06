@@ -10,11 +10,10 @@ function escapeAttr(s: string): string {
   return escapeHtml(s).replace(/'/g, '&#39;');
 }
 
-function renderQuoteCopyHtml(inner: string, quote: string = '"'): string {
+function renderQuoteCopyHtml(inner: string, _quote: string = '"'): string {
   const trimmed = inner.trim();
   if (!trimmed) return escapeHtml(inner);
-  const escQuote = escapeHtml(quote);
-  const escText = `${escQuote}${escapeHtml(trimmed)}${escQuote}`;
+  const escText = escapeHtml(trimmed);
   const escAttr = escapeAttr(trimmed);
   // Cute openbricks: opaque #161412 panel, border white/06 or #34322F, no gradients/blur, top hairline acent #6366F1
   return `<div class="kylrix-quote-copy" data-quote="${escAttr}" style="margin:12px 0;padding:0;position:relative;">` +
