@@ -5,8 +5,9 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
-import { getSessionProjectsList } from '@/lib/projects/projects-cache';
+import { getSessionProjectsList, projectObjectsKindCacheKey } from '@/lib/projects/projects-cache';
 import { normalizeProjectsList, warmProjectsList } from '@/lib/projects/warm-projects-list';
+import type { ProjectObjects } from '@/types/appwrite';
 
 export interface WorkspaceItem {
   id: string;
@@ -24,6 +25,7 @@ interface WorkspaceContextType {
   createWorkspace: (title: string, summary?: string) => Promise<WorkspaceItem | null>;
   attachEntityToActiveWorkspace: (entityKind: string, entityId: string) => Promise<void>;
   setEntityPersonalWorkspaceState: (entityKind: string, entityId: string, inPersonal: boolean) => Promise<void>;
+  isEntityPendingInActiveWorkspace: (entityKind: string, entityId: string) => boolean;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -56,6 +58,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const lastSetIdRef = useRef<string | null>(null);
   const pendingPrefSyncRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastUserIdRef = useRef(userId);
+  const pendingProjectObjectsRef = useRef<Map<string, Set<string>>>(new Map());
+  const isEntityPendingInActiveWorkspace = useCallback(
+    (entityKind: string, entityId: string) => {
+      if (!activeWorkspaceId || activeWorkspaceId === userId) return false;
+      const key = `${activeWorkspaceId}:${entityKind}`;
+      const set = pendingProjectObjectsRef.current.get(key);
+      return set ? set.has(entityId) : false;
+    },
+    [activeWorkspaceId, userId]
+  );
 
   const mapProjectRows = useCallback(
     (rows: unknown): WorkspaceItem[] =>
@@ -236,6 +248,27 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       if (activeWorkspace.isPersonal || activeWorkspace.id === userId) {
         return; // Personal items stay in personal workspace naturally
       }
+      // Optimistic pending + LocalEngine cache so filter includes instantly (fixes third-workspace disappearance)
+      const pendingKey = `${activeWorkspace.id}:${entityKind}`;
+      const pendingSet = pendingProjectObjectsRef.current.get(pendingKey) || new Set<string>();
+      pendingSet.add(entityId);
+      pendingProjectObjectsRef.current.set(pendingKey, pendingSet);
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cacheKey = projectObjectsKindCacheKey(activeWorkspace.id, entityKind);
+        const existing = (await LocalEngine.cacheGet<ProjectObjects[]>(cacheKey)) || [];
+        const already = existing.some((r) => (r.entityId || (r as any).$id) === entityId);
+        if (!already) {
+          const optimisticRow = {
+            $id: `${activeWorkspace.id}:${entityKind}:${entityId}`,
+            entityId,
+            entityKind,
+            projectId: activeWorkspace.id,
+            $createdAt: new Date().toISOString(),
+          } as unknown as ProjectObjects;
+          await LocalEngine.cacheSet(cacheKey, [...existing, optimisticRow]);
+        }
+      } catch {}
       try {
         await attachObjectToProject({
           projectId: activeWorkspace.id,
@@ -315,6 +348,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       createWorkspace,
       attachEntityToActiveWorkspace,
       setEntityPersonalWorkspaceState,
+      isEntityPendingInActiveWorkspace,
     }),
     [
       activeWorkspace,
@@ -325,6 +359,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       createWorkspace,
       attachEntityToActiveWorkspace,
       setEntityPersonalWorkspaceState,
+      isEntityPendingInActiveWorkspace,
     ]
   );
 
@@ -347,6 +382,7 @@ const fallbackWorkspaceContext: WorkspaceContextType = {
   createWorkspace: async () => null,
   attachEntityToActiveWorkspace: async () => {},
   setEntityPersonalWorkspaceState: async () => {},
+  isEntityPendingInActiveWorkspace: () => false,
 };
 
 export function useWorkspace() {

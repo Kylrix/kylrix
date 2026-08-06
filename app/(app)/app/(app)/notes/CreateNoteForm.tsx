@@ -53,7 +53,7 @@ import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
 
 interface CreateNoteFormProps {
-  onNoteCreated: (note: Notes) => void;
+  onNoteCreated?: (note: Notes) => void;
   initialContent?: {
     title?: string;
     content?: string;
@@ -156,6 +156,9 @@ export default function CreateNoteForm({
   const [_isCheckingUrl, setIsCheckingUrl] = useState(false);
   const [pendingBlockDelete, setPendingBlockDelete] = useState<ParsedObjectBlock | null>(null);
   const fileUploadRef = useRef<HTMLInputElement | null>(null);
+  // Debounced live-copy sync (mirrors CreateGoalComposer.scheduleLiveGoalSync — 250ms)
+  // Keeps typing snappy: React state updates instantly, RxDB/DataNexus/NotesContext fanout debounced.
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const ensureLiveDraftId = useCallback(() => {
     const existingId = resolvedNoteId || liveDraftIdRef.current;
@@ -355,45 +358,32 @@ export default function CreateNoteForm({
     }
   }, [ensureLiveDraftId, insertObjectBlock, showSuccess, showError]);
 
-  // Protected-block content change interceptor
-  // When a keystroke or paste would mutate inside a [[kylrix-object:...]] block, intercept and show confirm.
-  const handleContentChange = useCallback((nextValue: string) => {
-    const blocks = parseObjectBlocks(content);
-    const changed = blocks.find(b => {
-      const prevBlock = content.slice(b.start, b.end);
-      const nextBlock = nextValue.slice(b.start, b.start + prevBlock.length);
-      return prevBlock !== nextBlock;
-    });
-    if (changed) {
-      setPendingBlockDelete(changed);
-      return; // Reject the mutation — show confirm drawer instead
-    }
-    setContent(nextValue);
-
-    // Propagate character directly to RxDB/Context local state instantly
+  // Debounced live-copy flush (segregated manifest pattern: lightweight UI state immediate, heavy RxDB/DataNexus debounced)
+  const flushLiveNote = useCallback(() => {
     let draftId = resolvedNoteId || liveDraftIdRef.current;
     if (!draftId) {
       draftId = ID.unique();
       liveDraftIdRef.current = draftId;
-      setResolvedNoteId(draftId);
       registerComposeSession(draftId);
+      setResolvedNoteId(draftId);
       hasBootstrappedDraftRef.current = true;
     }
-
-    const generatedTitle = isTitleManuallyEdited ? title : buildAutoTitleFromContent(nextValue);
-    const previewTitle = resolveNoteCardTitle(
-      isTitleManuallyEdited ? title : generatedTitle,
-      nextValue,
-    ) || generatedTitle || 'Untitled Thought';
-
+    const curTitle = editorStateRef.current.title;
+    const curContent = editorStateRef.current.content;
+    const curTags = editorStateRef.current.tags as string[];
+    const curIsPublic = editorStateRef.current.isPublic;
+    const curIsGuest = editorStateRef.current.isGuest;
+    const curIsManuallyEdited = isTitleManuallyEdited;
+    const genTitle = curIsManuallyEdited ? curTitle : buildAutoTitleFromContent(curContent);
+    const previewTitle = resolveNoteCardTitle(curIsManuallyEdited ? curTitle : genTitle, curContent) || genTitle || 'Untitled Thought';
     const draftNote: Notes = {
       $id: draftId,
       title: previewTitle,
-      content: nextValue,
-      tags: normalizeTags(tags),
+      content: curContent,
+      tags: normalizeTags(curTags),
       format: 'text',
-      isPublic,
-      isGuest,
+      isPublic: curIsPublic,
+      isGuest: curIsGuest,
       projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : undefined,
       isWorkspace: Boolean(activeWorkspace && !activeWorkspace.isPersonal),
       userId: user?.$id || '',
@@ -401,10 +391,38 @@ export default function CreateNoteForm({
       $updatedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     } as unknown as Notes;
-
     pushLiveNote(draftNote);
     setCachedData(`note_${draftId}`, draftNote);
-  }, [content, resolvedNoteId, title, isTitleManuallyEdited, tags, isPublic, isGuest, user?.$id, pushLiveNote, registerComposeSession, setCachedData]);
+  }, [activeWorkspace, isTitleManuallyEdited, pushLiveNote, registerComposeSession, resolvedNoteId, setCachedData, user?.$id]);
+
+  const scheduleLiveNoteSync = useCallback(() => {
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => flushLiveNote(), 250);
+  }, [flushLiveNote]);
+
+  // Protected-block content change interceptor — lightweight: React state only, debounced sync
+  const handleContentChange = useCallback((nextValue: string) => {
+    // Cheap guard: only parse blocks if content actually contains a block marker
+    if (content.includes('[[kylrix-object:')) {
+      const blocks = parseObjectBlocks(content);
+      const changed = blocks.find(b => {
+        const prevBlock = content.slice(b.start, b.end);
+        const nextBlock = nextValue.slice(b.start, b.start + prevBlock.length);
+        return prevBlock !== nextBlock;
+      });
+      if (changed) {
+        setPendingBlockDelete(changed);
+        return;
+      }
+    }
+    setContent(nextValue);
+    // Keep textarea height snappy without triggering RxDB
+    if (contentRef.current) {
+      contentRef.current.style.height = 'auto';
+      contentRef.current.style.height = `${Math.max(76, Math.min(contentRef.current.scrollHeight, 360))}px`;
+    }
+    scheduleLiveNoteSync();
+  }, [content, scheduleLiveNoteSync]);
 
   const insertTextAtCursor = (text: string) => {
     const textarea = contentRef.current;
@@ -438,14 +456,10 @@ export default function CreateNoteForm({
 
   const existingTags = useMemo(() => {
     const tagSet = new Set<string>(ecosystemTags.map(t => t.name).filter(Boolean) as string[]);
-    (Array.isArray(allNotes) ? allNotes : []).forEach((note) => {
-      (note.tags || []).forEach((tag: string) => {
-        const cleaned = tag.trim();
-        if (cleaned) tagSet.add(cleaned);
-      });
-    });
+    // Avoid iterating allNotes on every keystroke — that caused O(N) churn per char via pushLiveNote→allNotes change.
+    // Only needed for tag autocomplete, so lazy-read without subscribing to live notes.
     return Array.from(tagSet);
-  }, [allNotes, ecosystemTags]);
+  }, [ecosystemTags]);
 
   const _filteredExistingTags = useMemo(() => {
     const available = existingTags.filter((t) => !tags.includes(t));
@@ -640,7 +654,7 @@ export default function CreateNoteForm({
 
     if (!hasAnnouncedDraftRef.current) {
       hasAnnouncedDraftRef.current = true;
-      onNoteCreated(shell);
+      onNoteCreated?.(shell);
     }
   }, [
     composerKind,
@@ -725,47 +739,26 @@ export default function CreateNoteForm({
   const flushLiveNoteDraftRef = useRef(flushLiveNoteDraft);
   flushLiveNoteDraftRef.current = flushLiveNoteDraft;
 
-  // Mirror editor state to the card on every keystroke — no debounce so close never drops content.
+  // Mirror editor state to the card — debounced like Goal (single path, no per-keystroke fanout).
+  // handleContentChange already schedules flush; this handles title/tags/toggle changes.
   useEffect(() => {
     const hasContent = Boolean(title.trim() || content.trim() || tags.length);
     if (!hasContent) return;
+    // Avoid double-scheduling when handleContentChange already queued a flush for content.
+    // For non-content changes (title, tags, isPublic/isGuest) we still need a debounced push.
+    scheduleLiveNoteSync();
+  }, [title, tags, isPublic, isGuest, scheduleLiveNoteSync]);
 
-    let draftId = resolvedNoteId || liveDraftIdRef.current;
-    if (!draftId) {
-      draftId = ID.unique();
-      liveDraftIdRef.current = draftId;
-      setResolvedNoteId(draftId);
-      registerComposeSession(draftId);
-      hasBootstrappedDraftRef.current = true;
-    }
-
-    const previewTitle = resolveNoteCardTitle(
-      isTitleManuallyEdited ? title : null,
-      content,
-    ) || '';
-
-    const draftNote: Notes = {
-      $id: draftId,
-      title: previewTitle,
-      content,
-      tags: normalizeTags(tags),
-      format: 'text',
-      isPublic,
-      isGuest,
-      projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : undefined,
-      isWorkspace: Boolean(activeWorkspace && !activeWorkspace.isPersonal),
-      userId: user?.$id || '',
-      $createdAt: new Date().toISOString(),
-      $updatedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    } as unknown as Notes;
-
-    pushLiveNote(draftNote);
-    setCachedData(`note_${draftId}`, draftNote);
-    if (activeWorkspace && !activeWorkspace.isPersonal && draftId) {
-      void attachEntityToActiveWorkspace('note', draftId);
-    }
-  }, [title, content, tags, resolvedNoteId, isPublic, isGuest, user?.$id, isTitleManuallyEdited, pushLiveNote, registerComposeSession, setCachedData, activeWorkspace]);
+  // Ensure pending debounced write flushes before close/unmount (metadata segregation: manifest + content isolated per drafts skill)
+  useEffect(() => {
+    return () => {
+      if (syncTimerRef.current) {
+        clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = null;
+        flushLiveNote();
+      }
+    };
+  }, [flushLiveNote]);
 
   useEffect(() => {
     return () => {
@@ -915,7 +908,7 @@ export default function CreateNoteForm({
       migrateDraftId(id, source.$id);
       if (!hasAnnouncedCreateRef.current) {
         hasAnnouncedCreateRef.current = true;
-        onNoteCreated(saved);
+        onNoteCreated?.(saved);
       }
       applyPersistSnapshot(saved, source);
       pushLiveNote(saved, { pending: true });
@@ -946,7 +939,7 @@ export default function CreateNoteForm({
       autonomicSyncEngine.markPending(source.$id, localNote.updatedAt, localNote);
       if (!hasAnnouncedCreateRef.current) {
         hasAnnouncedCreateRef.current = true;
-        onNoteCreated(localNote);
+        onNoteCreated?.(localNote);
       }
       return localNote;
     }
@@ -981,7 +974,7 @@ export default function CreateNoteForm({
         }
         if (!hasAnnouncedCreateRef.current) {
           hasAnnouncedCreateRef.current = true;
-          onNoteCreated(saved);
+          onNoteCreated?.(saved);
         }
       }
     } catch (error) {

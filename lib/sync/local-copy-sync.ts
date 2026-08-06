@@ -112,10 +112,11 @@ export function sortPinnedThenCreatedAt<T extends SyncableRow>(
   });
 }
 
-/** Soft-pull cadence helpers (activity / heartbeat). */
-const SYNC_PULL_IDLE_MS = 60_000;
-const SYNC_PULL_ACTIVE_MS = 10_000;
-const SYNC_PULL_MIN_GAP_MS = 5_000;
+/** Soft-pull cadence — REDUCED reads for 1000x rethink: rely on Realtime + engine acks.
+ * No more 10s/5s polling spikes. Visible active 30s, idle 120s, min gap 15s. */
+const SYNC_PULL_IDLE_MS = 120_000;
+const SYNC_PULL_ACTIVE_MS = 30_000;
+const SYNC_PULL_MIN_GAP_MS = 15_000;
 
 export function shouldSoftPull(params: {
   lastPullAt: number;

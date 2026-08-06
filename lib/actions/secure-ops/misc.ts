@@ -460,11 +460,31 @@ export async function createRowSecure(
     const isSpecializedTable = await getIsSpecializedTable(tblId);
 
     if (!isSpecializedTable) {
+      // Workspace/project escape hatch: project-linked rows use isGuest/isGeneral + project_objects membership, not strict userId equality.
+      // If actor is guest due to stale JWT but cookies still resolve, getActor would have returned real actor; guest fallback only for anonymous.
+      // For workspace-linked payloads we auto-restamp to actor instead of throwing, to clear amber on stale-JWT Forbidden.
+      const isWorkspaceLinked = !!(rowData as any).projectId || (rowData as any).isWorkspace === true;
+      const actorIsGuest = !actor?.$id || actor.$id === 'guest';
       if ((rowData as any).userId && (rowData as any).userId !== actor?.$id) {
-        throw new Error('Forbidden: Cannot create resource for another user');
+        if (isWorkspaceLinked && actor?.$id && !actorIsGuest) {
+          // Restamp workspace object to current actor (privileged adapter pattern: Actor ID is source of truth)
+          (rowData as any).userId = actor.$id;
+          if ((rowData as any).ownerId) (rowData as any).ownerId = actor.$id;
+          if ((rowData as any).creatorId) (rowData as any).creatorId = actor.$id;
+        } else if (actorIsGuest) {
+          throw new Error('Unauthorized: Session expired or invalid');
+        } else {
+          throw new Error('Forbidden: Cannot create resource for another user');
+        }
       }
       if ((rowData as any).ownerId && (rowData as any).ownerId !== actor?.$id) {
-        throw new Error('Forbidden: Cannot create resource for another user');
+        if (isWorkspaceLinked && actor?.$id && !actorIsGuest) {
+          (rowData as any).ownerId = actor.$id;
+        } else if (actorIsGuest) {
+          throw new Error('Unauthorized: Session expired or invalid');
+        } else {
+          throw new Error('Forbidden: Cannot create resource for another user');
+        }
       }
       if (!(rowData as any).userId && !(rowData as any).ownerId && actor?.$id) {
         (rowData as any).userId = actor.$id;

@@ -81,9 +81,8 @@ export const LocalEngine = {
     if (typeof window === 'undefined' || !id || !payload) return true;
     const baseline = (window as any)[`__kylrix_baseline_${id}`];
     if (!baseline) {
-      // First encounter — store baseline and return false (no edit yet)
       this.snapshotBaseline(id, payload);
-      return false;
+      return true;
     }
     try {
       const currentSnapshot = JSON.stringify(pickComparablePayload(payload));

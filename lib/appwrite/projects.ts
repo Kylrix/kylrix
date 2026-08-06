@@ -198,22 +198,57 @@ export const ProjectsService = {
     const { projectObjectsKindCacheKey } = await import('@/lib/projects/projects-cache');
     const cacheKey = projectObjectsKindCacheKey(projectId, entityKind);
 
-    // 1. Serve from local copy immediately (background refresh below)
+    // Helper: paginated fetch all (Appwrite default 25 would truncate workspaces >25)
+    const fetchAllRemote = async (): Promise<any[]> => {
+      const all: any[] = [];
+      let cursor: string | null = null;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const queries: string[] = [
+          Query.equal('projectId', projectId),
+          Query.equal('entityKind', entityKind),
+          Query.limit(100),
+          Query.orderDesc('$createdAt'),
+        ];
+        if (cursor) queries.push(Query.cursorAfter(cursor));
+        const page: any = await (databases as any).listRows(
+          DATABASE_ID,
+          PROJECT_OBJECTS_COLLECTION_ID,
+          queries,
+        );
+        const rows: any[] = page?.rows || [];
+        if (rows.length === 0) break;
+        all.push(...rows);
+        if (rows.length < 100) break;
+        cursor = rows[rows.length - 1].$id;
+        // Safety cap for workspaces — 500 objects per kind covers current caps
+        if (all.length >= 500) break;
+      }
+      return all;
+    };
+
+    // 1. Serve from local copy immediately (background refresh below — merge, never replace)
     if (typeof window !== 'undefined') {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const cached = await LocalEngine.cacheGet<any[]>(cacheKey);
         if (cached && cached.length > 0) {
-          // Fire background refresh to keep local copy warm
-          (databases as any)
-            .listRows(DATABASE_ID, PROJECT_OBJECTS_COLLECTION_ID, [
-              Query.equal('projectId', projectId),
-              Query.equal('entityKind', entityKind),
-            ])
-            .then(async (remote: any) => {
-              if (remote?.rows?.length) {
-                await LocalEngine.cacheSet(cacheKey, remote.rows);
-              }
+          // Fire background refresh to keep local copy warm — merge into cache, never wipe
+          fetchAllRemote()
+            .then(async (remoteRows: any[]) => {
+              if (!remoteRows?.length) return;
+              const existing = (await LocalEngine.cacheGet<any[]>(cacheKey)) || cached;
+              const byId = new Map<string, any>();
+              existing.forEach((r: any) => {
+                const k = r.entityId || r.$id || (r as any).id;
+                if (k) byId.set(k, r);
+              });
+              remoteRows.forEach((r: any) => {
+                const k = r.entityId || r.$id || (r as any).id;
+                if (k) byId.set(k, r);
+              });
+              const merged = Array.from(byId.values());
+              await LocalEngine.cacheSet(cacheKey, merged);
             })
             .catch(() => {});
           return { rows: cached };
@@ -221,15 +256,9 @@ export const ProjectsService = {
       } catch {}
     }
 
-    // 2. No local copy — fetch remote and persist
-    const result = await (databases as any).listRows(
-      DATABASE_ID,
-      PROJECT_OBJECTS_COLLECTION_ID,
-      [
-        Query.equal('projectId', projectId),
-        Query.equal('entityKind', entityKind),
-      ],
-    );
+    // 2. No local copy — fetch remote (paginated) and persist
+    const allRows = await fetchAllRemote();
+    const result = { rows: allRows, total: allRows.length } as any;
 
     if (typeof window !== 'undefined' && result?.rows?.length) {
       try {

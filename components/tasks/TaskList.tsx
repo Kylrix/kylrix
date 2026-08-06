@@ -46,7 +46,19 @@ export default function TaskList() {
     setCreateOpen(true);
   }, [isAuthenticated, openIDMWindow]);
 
+  const [isDesktop, setIsDesktop] = useState(false);
   useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 1024);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  useEffect(() => {
+    if (isDesktop) {
+      resetConfiguration();
+      return;
+    }
     setConfiguration({
       isVisible: true,
       mainColor: '#A855F7',
@@ -56,7 +68,7 @@ export default function TaskList() {
       actions: [],
     });
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, openCreateGoal]);
+  }, [setConfiguration, resetConfiguration, openCreateGoal, isDesktop]);
 
   const tagFilterOptions = getTagFilterOptions();
   const activeTagFilter = filter.labels?.[0] ?? null;
