@@ -64,6 +64,8 @@ import AdminCouponsPage from '@/components/admin/AdminCoupons';
 import { PasskeySetup } from '@/components/overlays/PasskeySetup';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useSidebar } from '@/components/ui/SidebarContext';
+import { useNativeSidebarOptional } from '@/context/RightRailContext';
 
 // Inline Custom Telegram Icon SVG for lucide alignment
 function TelegramIcon({ className = "w-5 h-5" }: { className?: string }) {
@@ -100,6 +102,8 @@ function SettingsPageInner() {
     const { open: openDrawer } = useUnifiedDrawer();
     const { openOverlay, closeOverlay } = useOverlay();
     const { openSidebar, closeSidebar } = useDynamicSidebar();
+    const { isRightRailPushing } = useSidebar();
+    const _nativeSidebar = useNativeSidebarOptional();
 
     // Tab state
     const [activeTab, setActiveTab] = useState<'general' | 'workspace' | 'profile' | 'security' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
@@ -535,7 +539,7 @@ function SettingsPageInner() {
 
     return (
         <MultiSectionContainer>
-            <div className="relative w-full max-w-[1200px] mx-auto pt-4 md:pt-6 pb-12 px-4 md:px-6 z-10 select-none">
+            <div className="relative w-full max-w-[1600px] mx-auto pt-4 md:pt-6 pb-12 px-4 md:px-6 lg:px-8 z-10 select-none transition-all duration-300">
             
             {/* Back Button */}
             <button
@@ -556,7 +560,7 @@ function SettingsPageInner() {
             >
                 <div className="absolute -top-12 -right-12 w-32 h-32 bg-[#6366F1]/10 rounded-full pointer-events-none" />
                 
-                <div className="flex flex-col md:flex-row gap-6 items-center relative z-10">
+                <div className={`flex flex-col gap-6 items-center relative z-10 ${isRightRailPushing ? 'xl:flex-row' : 'md:flex-row'}`}>
                     {/* Profile */}
                     <div className="flex-shrink-0">
                         <IdentityAvatar 
@@ -597,7 +601,7 @@ function SettingsPageInner() {
                     </div>
 
                     {/* AI Compute Section (Usage 0-100%) */}
-                    <div className="w-full md:w-[220px] flex flex-col gap-2">
+                    <div className={`w-full flex flex-col gap-2 ${isRightRailPushing ? 'xl:w-[220px]' : 'md:w-[220px]'}`}>
                         <div className="flex items-center justify-between gap-2">
                             <span className="text-[9px] font-black text-white/30 tracking-widest uppercase font-mono">
                                 AI Compute Usage
@@ -621,37 +625,68 @@ function SettingsPageInner() {
                 </div>
             </header>
 
-            {/* Horizontal Tabs Bar */}
-            <div className="flex gap-2 overflow-x-auto pb-3 mb-8 border-b border-white/5 scrollbar-none select-none">
-                {tabsList.map((t) => {
-                    const Icon = t.icon;
-                    const isActive = activeTab === t.id;
-                    return (
-                        <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => setActiveTab(t.id as any)}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-shrink-0 cursor-pointer ${
-                                isActive 
-                                    ? 'bg-[#6366F1] text-white border border-[#6366F1]' 
-                                    : 'bg-[#161412] hover:bg-[#1C1A18] text-white/50 border border-white/5'
-                            }`}
-                        >
-                            <Icon size={14} />
-                            <span>{t.label}</span>
-                        </button>
-                    );
-                })}
-            </div>
+            {/* Desktop: fluid canvas — vertical nav + content; Mobile: horizontal pills */}
+            <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6 lg:gap-8 items-start">
+                {/* Desktop vertical nav — hidden on mobile, sticky, aware of right rail */}
+                <aside className="hidden lg:block sticky top-[96px] self-start z-10">
+                    <nav className="flex flex-col gap-1.5 p-2 bg-[#161412] border border-white/5 rounded-2xl shadow-xl">
+                        {tabsList.map((t) => {
+                            const Icon = t.icon;
+                            const isActive = activeTab === t.id;
+                            return (
+                                <button
+                                    key={t.id}
+                                    type="button"
+                                    onClick={() => setActiveTab(t.id as any)}
+                                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all text-left w-full cursor-pointer ${
+                                        isActive
+                                            ? 'bg-[#6366F1] text-white shadow-lg'
+                                            : 'text-white/60 hover:text-white hover:bg-white/[0.06] border border-transparent'
+                                    }`}
+                                >
+                                    <Icon size={16} className={isActive ? 'text-white' : 'text-white/40'} />
+                                    <span className="truncate">{t.label}</span>
+                                </button>
+                            );
+                        })}
+                    </nav>
+                    <div className="mt-4 p-3 bg-white/[0.02] border border-white/5 rounded-xl">
+                        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Tip</p>
+                        <p className="text-xs text-white/50 leading-relaxed mt-1">Right sidebar pushes this layout — no overlay. Resize to see fluid reflow.</p>
+                    </div>
+                </aside>
 
-            {/* Tab Rendering Content */}
-            <div className="w-full relative min-h-[400px]">
+                {/* Mobile horizontal tabs — visible only on mobile */}
+                <div className="lg:hidden col-span-1 -mx-4 px-4 flex gap-2 overflow-x-auto pb-3 border-b border-white/5 scrollbar-none select-none snap-x snap-mandatory">
+                    {tabsList.map((t) => {
+                        const Icon = t.icon;
+                        const isActive = activeTab === t.id;
+                        return (
+                            <button
+                                key={t.id}
+                                type="button"
+                                onClick={() => setActiveTab(t.id as any)}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex-shrink-0 cursor-pointer snap-start ${
+                                    isActive 
+                                        ? 'bg-[#6366F1] text-white border border-[#6366F1] shadow-lg' 
+                                        : 'bg-[#161412] hover:bg-[#1C1A18] text-white/60 border border-white/5'
+                                }`}
+                            >
+                                <Icon size={14} />
+                                <span>{t.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Content — fluid, right-rail aware */}
+                <div className="w-full relative min-h-[400px] min-w-0 col-span-1 lg:col-span-1">
                 {activeTab === 'workspace' && (
                     <WorkspaceTab />
                 )}
 
                 {activeTab === 'general' && (
-                    <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-8 items-start">
+                    <div className={`grid gap-8 items-start ${isRightRailPushing ? 'grid-cols-1 xl:grid-cols-[1.1fr_1fr]' : 'grid-cols-1 md:grid-cols-[1.1fr_1fr]'}`}>
                         {/* Left Column: Discoverability, Integrations & Feedback */}
                         <div className="flex flex-col gap-8">
                             {/* Daily Token Mint */}
@@ -967,6 +1002,7 @@ function SettingsPageInner() {
                         </div>
                     </div>
                 )}
+                </div>
             </div>
 
         {/* TOS & Privacy Policy Links */}

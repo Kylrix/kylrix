@@ -87,6 +87,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     isWorkspacesPath(pathname) ||
     pathname?.startsWith('/connect') ||
     pathname?.startsWith('/tags') ||
+    pathname?.startsWith('/trash') ||
     pathname?.startsWith('/accounts') ||
     pathname?.startsWith('/settings')
   ), [pathname]);

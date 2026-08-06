@@ -108,50 +108,60 @@ export default function TagsPage() {
     const userId = user.$id;
     const cacheKey = `f_user_tags_${userId}`;
 
+    // 1. Paint local first — LocalEngine instant (global, workspace-agnostic per tag spec)
     if (tagsLengthRef.current === 0) {
       try {
-        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-        const db = await getRxDB().catch(() => null);
-        if (db) {
-          const cachedDoc = await db.cache.findOne(cacheKey).exec().catch(() => null);
-          if (cachedDoc?.data && Array.isArray(cachedDoc.data)) {
-            setTags(cachedDoc.data as Tags[]);
-            setLoading(false);
-          }
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cached = await LocalEngine.cacheGet<Tags[]>(cacheKey);
+        if (cached && Array.isArray(cached) && cached.length) {
+          setTags(cached);
+          setLoading(false);
         }
       } catch {}
     }
 
     try {
       if (showLoading && tagsLengthRef.current === 0) setLoading(true);
-      const response = await listTags();
-      const tagRows: Tags[] = Array.isArray(response)
-        ? response
-        : (Array.isArray((response as any)?.rows) ? (response as any).rows : []);
+
+      // 2. Background replenish — via secure-ops branching (client TablesDB read-only per system.server-sdk-action)
+      // Tags are global (not one of 6 workspace-scoped objects: note/goal/event/form/credential/totp), so fetch once
+      // Uses listTags() → listTagsSecure() → createSystemTablesDB (Admin) + getActor(JWT) — RLS-safe, not direct DB bypass
+      const fetchAllTags = async (): Promise<Tags[]> => {
+        try {
+          const res: any = await listTags();
+          const rows: Tags[] = Array.isArray(res?.rows) ? res.rows : (Array.isArray(res) ? res : []);
+          // Server already does limit 100 + orderDesc; for >100, paginated secure fetch would be needed
+          // For now treat as full (covers most users) and merge locally
+          return rows.filter((r: any) => r?.$id) as Tags[];
+        } catch {
+          return [];
+        }
+      };
+
+      const tagRows = await fetchAllTags();
 
       setTags((prev) => {
         const byId = new Map<string, Tags>();
         (prev || []).forEach((t) => t && t.$id && byId.set(t.$id, t));
         tagRows.forEach((t) => t && t.$id && byId.set(t.$id, t));
         const merged = Array.from(byId.values());
+        // Sort by updatedAt desc for stable UI (matches server orderDesc)
+        merged.sort((a: any, b: any) => new Date(b.$updatedAt || b.$createdAt || 0).getTime() - new Date(a.$updatedAt || a.$createdAt || 0).getTime());
 
-        (async () => {
+        void (async () => {
           try {
-            const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-            const db = await getRxDB().catch(() => null);
-            if (db) {
-              await db.cache.upsert({
-                id: cacheKey,
-                data: merged as any,
-                timestamp: Date.now()}).catch(() => {});
-            }
+            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+            await LocalEngine.cacheSet(cacheKey, merged);
           } catch {}
         })();
 
         return merged;
       });
     } catch (err: any) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch tags');
+      // Failed pull must not wipe populated live set (local-first #2)
+      if (tagsLengthRef.current === 0) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch tags');
+      }
     } finally {
       setLoading(false);
     }
