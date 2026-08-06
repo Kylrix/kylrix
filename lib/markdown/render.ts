@@ -11,6 +11,7 @@ import {
 import { registerMathTransforms } from '@/lib/markdown/math';
 import { registerChartTransforms } from '@/lib/markdown/charts';
 import { registerHtmlPreviewTransform } from '@/lib/markdown/html-preview';
+import { registerQuoteCopyTransforms } from '@/lib/markdown/quote-copy';
 
 let layersReady = false;
 
@@ -18,6 +19,7 @@ export function ensureMarkdownLayers() {
   if (layersReady) return;
   registerMathTransforms();
   registerChartTransforms();
+  registerQuoteCopyTransforms();
   registerHtmlPreviewTransform();
   layersReady = true;
 }
@@ -85,6 +87,10 @@ const MATH_PURIFY: DomPurifyConfig = {
     'aria-label',
     'aria-hidden',
     'data-kylrix-html-preview',
+    'data-quote',
+    'data-copy',
+    'title',
+    'type',
   ],
   RETURN_TRUSTED_TYPE: false,
 };
