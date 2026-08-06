@@ -34,3 +34,8 @@
 - **Terminology Mandate (STRICT)**: Use **"Table"** instead of "Collection" and **"Row"** instead of "Document" in all code, comments, logs, and internal documentation. The Appwrite-native "document" and "collection" terms are deprecated and must never be reintroduced. This applies to method names (e.g., `listRows` over `listDocuments`), variable names, and UI copy.
 - **Single Database Mandate**: Kylrix uses a single-database design where all tables exist inside a single Appwrite database ID: `passwordManagerDb` (as defined in `appwrite.config.json`). References to `whisperrflow` or any database ID other than `passwordManagerDb` are invalid and will fail runtime execution. Ensure all database operations target `passwordManagerDb` or use the configuration constants.
 
+### 🤖 Agent Verification & Tooling Policy (STRICT)
+- **No Playwright Unless Asked**: Do not run Playwright, headless browser verification, screenshot capture, or pixel/FPS checks unless the user explicitly requests it. User's eyes are the verifier by default.
+- **No Agent Dev Servers**: Do not start dedicated dev servers (`pnpm dev`, `next dev`, etc.) as the agent. Port `3005` is user-pinned — never occupy it or spawn competing servers. If a running server is needed, ask the user to start it.
+- **No Build/Lint Unless Asked**: Do not run `pnpm build`, `pnpm lint`, `tsc`, or equivalent verification gates unless the user explicitly tells you to. Default to surgical code edits only.
+
