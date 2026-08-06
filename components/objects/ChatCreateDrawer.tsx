@@ -5,6 +5,8 @@ import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
 import type { ChatCreateMode } from '@/components/objects/CreateChatComposer';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
 
 type Props = {
   open?: boolean;
@@ -25,6 +27,8 @@ export function ChatCreateDrawer({
 }: Props) {
   const { close, drawerData } = useUnifiedDrawer();
   const { setIsDrawerOpen } = useDrawerState();
+  const { closeSidebar } = useDynamicSidebar();
+  const { closeOverlay } = useOverlay();
 
   const resolvedLegacy =
     legacyMode ||
@@ -38,8 +42,10 @@ export function ChatCreateDrawer({
   const handleClose = useCallback(() => {
     setIsDrawerOpen(false);
     onClose?.();
+    try { closeSidebar(); } catch {}
+    try { closeOverlay(); } catch {}
     close();
-  }, [close, onClose, setIsDrawerOpen]);
+  }, [close, onClose, setIsDrawerOpen, closeSidebar, closeOverlay]);
 
   useEffect(() => {
     if (!open) return;

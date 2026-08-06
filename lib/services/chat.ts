@@ -789,9 +789,8 @@ export const ChatService = {
     },
 
     async getConversations(userId: string, options?: { forceRefresh?: boolean }) {
-        if (!ecosystemSecurity.status.isUnlocked) {
-            return { total: 0, rows: [] as any[], authoritative: false };
-        }
+        // List rows are plaintext participants metadata — vault lock must NOT gate the list.
+        // Empty is illegal (self-chat minimum per architecture.local-first/sync), so never return authoritative false empty when local exists.
 
         const cached = conversationsListCache.get(userId);
         if (
@@ -947,22 +946,46 @@ export const ChatService = {
             return { conversation: probe.conversation, created: false, skippedReason: 'exists' };
         }
 
-        await ecosystemSecurity.ensureE2EIdentity(userId);
-        const created = await this.createConversation([userId], 'direct');
-        return { conversation: created, created: true };
+        // Self-chat must exist even when vault locked — listing is plaintext and opening will prompt unlock.
+        // Only ensure identity when unlocked; placeholder creation is allowed locked.
+        if (ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity) {
+            try { await ecosystemSecurity.ensureE2EIdentity(userId); } catch {}
+        }
+        try {
+            const created = await this.createConversation([userId], 'direct');
+            return { conversation: created, created: true };
+        } catch {
+            // Locked or not ready — fallback to local placeholder so list never empty (self-chat minimum)
+            return {
+                conversation: {
+                    $id: `self-${userId}`,
+                    $createdAt: new Date().toISOString(),
+                    lastMessageAt: new Date().toISOString(),
+                    type: 'direct',
+                    participants: [userId],
+                    isSelf: true,
+                    name: 'You',
+                    _placeholder: true,
+                },
+                created: false,
+                skippedReason: undefined,
+            };
+        }
     },
 
     async createConversation(participants: string[], type: 'direct' | 'group' = 'direct', name?: string) {
-        if (!ecosystemSecurity.status.isUnlocked) {
-            throw new Error('Vault must be unlocked before creating conversations');
-        }
-
-        if (!ecosystemSecurity.status.hasIdentity) {
-            throw new Error('E2E identity must be initialized before creating conversations');
-        }
-
         const creatorId = participants[0];
         const isSelf = type === 'direct' && participants.length === 1 && participants[0] === participants[participants.length - 1];
+        const isSelfPlaceholder = isSelf;
+
+        if (!isSelfPlaceholder) {
+            if (!ecosystemSecurity.status.isUnlocked) {
+                throw new Error('Vault must be unlocked before creating conversations');
+            }
+            if (!ecosystemSecurity.status.hasIdentity) {
+                throw new Error('E2E identity must be initialized before creating conversations');
+            }
+        }
         const uniqueParticipants = isSelf ? [participants[0], participants[0]] : Array.from(new Set(participants));
 
         // Personal chat: only proceed when a successful probe says it does not exist.

@@ -141,10 +141,7 @@ function ChatHandler({ onResolved }: { onResolved: (id: string) => void }) {
 function ConnectChatsBody() {
   const isDesktop = useIsDesktop();
   const { selectedId, selectChat } = useSelectedChatId();
-  const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
-  const [activeTab, setActiveTab] = useState<'secure' | 'public'>(() =>
-    ecosystemSecurity.status.isUnlocked ? 'secure' : 'public',
-  );
+  const [activeTab, setActiveTab] = useState<'secure' | 'public'>(() => 'secure');
 
   const { setConfiguration, resetConfiguration } = useFAB();
   const { open: openUnified } = useUnifiedDrawer();
@@ -198,16 +195,11 @@ function ConnectChatsBody() {
   }, [selectedId, isDesktop, openCreate, setConfiguration, resetConfiguration]);
 
   useEffect(() => {
-    const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
-      setIsUnlocked(status.isUnlocked);
-      setActiveTab(status.isUnlocked ? 'secure' : 'public');
+    const unsubscribe = ecosystemSecurity.onStatusChange((_status) => {
+      // Unlocked state change listener
     });
     return unsubscribe;
   }, []);
-
-  useEffect(() => {
-    setActiveTab(isUnlocked ? 'secure' : 'public');
-  }, [isUnlocked]);
 
   // Mobile deep-link ?c= → overlay once (list stays; no page navigation)
   const deepLinkHandled = useRef<string | null>(null);

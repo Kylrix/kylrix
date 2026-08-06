@@ -333,7 +333,7 @@ const isSpecificPostPage = useMemo(
       {unifiedDrawerActive === 'moment-composer' && (
         <MomentComposerDrawer onClose={() => closeUnified()} />
       )}
-      {unifiedDrawerActive === 'new-chat' && (
+      {isDesktopShell && unifiedDrawerActive === 'new-chat' && (
         <ChatCreateDrawer open onClose={() => closeUnified()} />
       )}
       {showProUpgrade && <ProUpgradeDrawer />}

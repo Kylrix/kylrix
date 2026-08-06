@@ -22,12 +22,6 @@ import {
     Trash2, 
     ShieldCheck, 
     Lock, 
-    Folder, 
-    CheckSquare, 
-    Calendar, 
-    ClipboardList, 
-    Tag, 
-    StickyNote, 
     ExternalLink, 
     Link as LinkIcon, 
     Sliders,
@@ -167,7 +161,7 @@ export const ChatList = ({
     const [activePreviewConversationId, setActivePreviewConversationId] = useState<string | null>(null);
     const [_isPending, startTransition] = useTransition();
     const [activeTabState, setActiveTabState] = useState<'secure' | 'public'>(() => {
-        return propActiveTab || (ecosystemSecurity.status.isUnlocked ? 'secure' : 'public');
+        return propActiveTab || 'secure';
     });
     const activeTab = propActiveTab || activeTabState;
 
@@ -472,14 +466,7 @@ export const ChatList = ({
         }
     }, [propActiveTab]);
 
-    useEffect(() => {
-        if (hideTabs || propActiveTab) return;
-        if (isUnlocked) {
-            setActiveTab('secure');
-        } else {
-            setActiveTab('public');
-        }
-    }, [isUnlocked, setActiveTab, hideTabs, propActiveTab]);
+    // Secure list is plaintext metadata — never auto-switch to public when locked
 
     useEffect(() => {
         rememberConversationRoster(conversations);
@@ -894,11 +881,8 @@ export const ChatList = ({
         const run = (async () => {
         const requestId = ++loadRequestRef.current;
         try {
-            if (!ecosystemSecurity.status.isUnlocked) {
-                setLoading(false);
-                return;
-            }
-
+            // List metadata is plaintext (participants, names) — show even when vault locked.
+            // Only per-message E2EE body remains gated elsewhere. Local-first per architecture.local-first.
             // Always prefer local paint before any network
             if (conversationsRef.current.length === 0) {
                 const local = peekChatsListMemory();
@@ -923,8 +907,13 @@ export const ChatList = ({
             let rows = [...response.rows];
             const listAuthoritative = (response as { authoritative?: boolean }).authoritative !== false;
 
-            const hasEncrypted = rows.some(c => c.isEncrypted);
-            if (hasEncrypted && !ecosystemSecurity.status.isUnlocked) return;
+            // Non-authoritative empty is not-yet-synced, not true empty — never overwrite local with empty. Self-chat guarantees ≥1 row.
+            if (!listAuthoritative && rows.length === 0) {
+                setLoading(false);
+                return;
+            }
+
+            // Chats list rows are plaintext metadata — never block list on hasEncrypted/locked
 
             // Bridge: Detect and deduplicate self-chats, then ensure one exists
             const isSelfChat = (c: any) => ChatService.isSelfChatConversation(c, user!.$id);
@@ -1064,6 +1053,55 @@ export const ChatList = ({
                 };
             });
 
+            // Empty is mathematically impossible (self-chat minimum). Never tell LocalEngine it is empty.
+            if (mergedRows.length === 0) {
+                console.warn('[ChatList] Remote returned 0 rows — preserving local copy (self-chat minimum)');
+                setLoading(false);
+                setIsInitializing(false);
+                // Always ensure self-chat placeholder exists — local engine loads it even when vault locked.
+                // Opening will prompt vault unlock if needed per UX spec.
+                void (async () => {
+                    try {
+                        const res = await ChatService.ensureSelfConversation(user!.$id);
+                        const conv = res.conversation || {
+                            $id: `self-${user!.$id}`,
+                            $createdAt: new Date().toISOString(),
+                            lastMessageAt: new Date().toISOString(),
+                            type: 'direct',
+                            participants: [user!.$id],
+                            isSelf: true,
+                            name: 'You',
+                            _placeholder: true,
+                        };
+                        const local = await readChatsListLocal();
+                        // Prefer disk if it already has self, otherwise inject placeholder
+                        const hasLocal = local.some((c: any) => c.$id === conv.$id || c.isSelf);
+                        const next = hasLocal ? local : [conv, ...local];
+                        const sortedEnsure = sortConversations(next as any);
+                        // Persist placeholder to LocalEngine so next paint is instant
+                        writeChatsListLocal(sortedEnsure as any);
+                        startTransition(() => {
+                            setConversations(sortedEnsure as any);
+                            conversationsRef.current = sortedEnsure as any;
+                        });
+                    } catch {}
+                })();
+                // If we already have local, paint it immediately without waiting for placeholder
+                if (conversationsRef.current.length === 0) {
+                    void (async () => {
+                        const disk = await readChatsListLocal();
+                        if (disk.length) {
+                            const sortedDisk = sortConversations(disk as any);
+                            startTransition(() => {
+                                setConversations(sortedDisk as any);
+                                conversationsRef.current = sortedDisk as any;
+                            });
+                        }
+                    })();
+                }
+                return;
+            }
+
             const sorted = sortConversations(mergedRows);
 
             console.log('[ChatList] Base conversations count:', sorted.length);
@@ -1197,10 +1235,11 @@ export const ChatList = ({
                     void loadConversations({ silent: true, forceRefresh: true });
                 })();
             } else if (!status.isUnlocked) {
+                // Keep list visible when locked — chats metadata is plaintext; only E2EE body is gated.
+                // Do NOT tell LocalEngine it is empty; empty is mathematically impossible (self-chat minimum).
                 ChatService.clearConversationPreviewCache();
+                // Invalidate memory cache so next unlock fetches fresh, but keep disk/local UI intact
                 ChatService.invalidateConversationsListCache(user?.$id);
-                startTransition(() => setConversations([]));
-                conversationsRef.current = [];
                 setLoading(false);
             }
         });
@@ -1479,29 +1518,7 @@ export const ChatList = ({
                 )}
 
                 {activeTab === 'secure' ? (
-                    !isUnlocked ? (
-                        <div className="min-h-[50vh] grid place-items-center px-6 py-8">
-                            <div className="flex flex-col items-center gap-6 max-w-sm text-center">
-                                <div className="p-4 rounded-3xl bg-[#161412] text-[#F59E0B] border border-[#1C1A18] mb-1">
-                                    <ShieldCheck size={48} />
-                                </div>
-                                <h5 className="text-xl font-black font-clash text-white">Vault Secured</h5>
-                                <p className="text-[#9B9691] font-medium leading-relaxed text-sm">
-                                    Unlock your decentralized node to initialize secure communication channels and identity resolution.
-                                </p>
-                                <button 
-                                    onClick={() => requestSudo({
-                                        onSuccess: () => {
-                                            setIsUnlocked(true);
-                                            void loadConversations({ forceRefresh: true });
-                                        }})}
-                                    className="px-8 py-3.5 rounded-2xl font-black bg-[#F59E0B] text-black text-sm shadow-[0_12px_24px_rgba(245,158,11,0.15)] hover:bg-[#eab308] hover:-translate-y-0.5 transition-all duration-300 ease-out"
-                                >
-                                    Unlock Node
-                                </button>
-                            </div>
-                        </div>
-                    ) : filteredConversations.length === 0 && !showGlobalResults && !loading ? (
+                    filteredConversations.length === 0 && !showGlobalResults && !loading ? (
                         <div className="p-12 text-center">
                             <span className="font-black text-white text-lg mb-1 font-clash block">Quiet Frequency</span>
                             <span className="text-sm text-[#9B9691] font-medium block">No encrypted channels found matching your query.</span>
@@ -1696,39 +1713,16 @@ export const ChatList = ({
                                             } : undefined}
                                         >
                                             {conv.linkedResourceType ? (
-                                                <div 
-                                                    className="w-11 h-11 rounded-2xl flex items-center justify-center border"
-                                                    style={{
-                                                        backgroundColor: alpha(
-                                                            conv.linkedResourceType === 'project' ? '#6366F1' :
-                                                            conv.linkedResourceType === 'task' ? '#10B981' :
-                                                            conv.linkedResourceType === 'event' ? '#EC4899' :
-                                                            conv.linkedResourceType === 'form' ? '#8B5CF6' :
-                                                            conv.linkedResourceType === 'tag' ? '#EF4444' : '#F59E0B',
-                                                            0.1
-                                                        ),
-                                                        color: 
-                                                            conv.linkedResourceType === 'project' ? '#818CF8' :
-                                                            conv.linkedResourceType === 'task' ? '#34D399' :
-                                                            conv.linkedResourceType === 'event' ? '#F472B6' :
-                                                            conv.linkedResourceType === 'form' ? '#A78BFA' :
-                                                            conv.linkedResourceType === 'tag' ? '#F87171' : '#FBBF24',
-                                                        borderColor: alpha(
-                                                            conv.linkedResourceType === 'project' ? '#818CF8' :
-                                                            conv.linkedResourceType === 'task' ? '#34D399' :
-                                                            conv.linkedResourceType === 'event' ? '#F472B6' :
-                                                            conv.linkedResourceType === 'form' ? '#A78BFA' :
-                                                            conv.linkedResourceType === 'tag' ? '#F87171' : '#FBBF24',
-                                                            0.15
-                                                        )
-                                                    }}
-                                                >
-                                                    {conv.linkedResourceType === 'project' && <Folder size={20} />}
-                                                    {conv.linkedResourceType === 'task' && <CheckSquare size={20} />}
-                                                    {conv.linkedResourceType === 'event' && <Calendar size={20} />}
-                                                    {conv.linkedResourceType === 'form' && <ClipboardList size={20} />}
-                                                    {conv.linkedResourceType === 'tag' && <Tag size={20} />}
-                                                    {!['project', 'task', 'event', 'form', 'tag'].includes(conv.linkedResourceType) && <StickyNote size={20} />}
+                                                <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#0A0908] border border-white/[0.06]">
+                                                    <span className="font-clash font-black text-white text-[13px] tracking-tight leading-none">
+                                                        {(() => {
+                                                            const src = conv.linkedResourceName || conv.name || conv.linkedResourceType || 'H';
+                                                            const parts = String(src).trim().split(/\s+/).filter(Boolean);
+                                                            if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+                                                            const w = parts[0] || 'H';
+                                                            return w.slice(0, 2).toUpperCase();
+                                                        })()}
+                                                    </span>
                                                 </div>
                                             ) : (
                                                 <IdentityAvatar

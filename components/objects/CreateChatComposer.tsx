@@ -415,17 +415,35 @@ export function CreateChatComposer({
       </div>
 
       {mode === 'hangout' ? (
-        <div className="px-5 py-4 border-t border-[#34322F] shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="px-5 py-4 border-t border-[#34322F] shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="flex-1 h-12 rounded-xl border border-white/10 bg-white/[0.02] text-white font-bold text-sm hover:bg-white/5 disabled:opacity-40 transition-colors"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             disabled={busy || !hangoutName.trim() || selectedUsers.length === 0}
             onClick={() => void createHangout()}
-            className="w-full h-12 rounded-xl bg-[#F59E0B] text-black font-extrabold text-sm disabled:opacity-40 hover:bg-amber-500 transition-colors"
+            className="flex-1 h-12 rounded-xl bg-[#F59E0B] text-black font-extrabold text-sm disabled:opacity-40 hover:bg-amber-500 transition-colors"
           >
             {busy ? 'Creating…' : isTeams ? 'Create hangout' : 'Create hangout (Pro)'}
           </button>
         </div>
-      ) : null}
+      ) : (
+        <div className="px-5 py-4 border-t border-[#34322F]/0 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full h-11 rounded-xl border border-white/10 bg-white/[0.02] text-white font-bold text-sm hover:bg-white/5 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 }

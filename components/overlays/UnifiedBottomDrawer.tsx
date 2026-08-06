@@ -13,8 +13,19 @@ import {
  */
 export function UnifiedBottomDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
+  const [isDesktop, setIsDesktop] = React.useState(false);
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const m = window.matchMedia('(min-width: 768px)');
+    const h = () => setIsDesktop(m.matches);
+    h();
+    m.addEventListener('change', h);
+    return () => m.removeEventListener('change', h);
+  }, []);
 
   if (!activeContent || (activeContent as string) === 'navbar' || (activeContent as string) === 'note') return null;
+  // Desktop new-chat is native right rail via ObjectCreateDrawer/DynamicSidebar — no bottom-drawer backdrop (prevents full-UI blur/dim)
+  if (isDesktop && (activeContent as string) === 'new-chat') return null;
 
   const content = (
     <UnifiedDrawerBody
