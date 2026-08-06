@@ -51,6 +51,7 @@ import { TaggedResourcesTabs } from '@/components/share/TaggedResourcesTabs';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { useProjectObjects } from '@/hooks/useProjectObjects';
+import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 
 
 // Client-side persistence cache to resist reload flicker
@@ -302,11 +303,16 @@ export default function NotesPage() {
 
 
 
+  // Pinned scope is stable like goals: for personal, fallback to personal-scoped combinedNotes so pinned never vanishes during hydrate
+  // For workspace, respect project_objects filter (visibleNotes) — no personal fallback
   const pinnedNotes = useMemo(() => {
-    if (searchParams.get('query')) return [];
-    // Vault-like zero complexity: row isPinned is source of truth, isPinned() is fallback for legacy ids
+    if (activeWorkspace.isPersonal) {
+      const scopedForPinned = visibleNotes.length ? visibleNotes : combinedNotes.filter(isDefaultWorkspaceObject as any);
+      const src = scopedForPinned.length ? scopedForPinned : visibleNotes;
+      return src.filter((n: any) => !!(n as any).isPinned || isPinned(n.$id));
+    }
     return visibleNotes.filter((n: any) => !!(n as any).isPinned || isPinned(n.$id));
-  }, [visibleNotes, isPinned, searchParams]);
+  }, [visibleNotes, combinedNotes, isPinned, activeWorkspace.isPersonal]);
 
   const regularSourceNotes = useMemo(() => {
     return visibleNotes.filter((n: any) => !(n as any).isPinned && !isPinned(n.$id));
@@ -532,9 +538,22 @@ export default function NotesPage() {
 
 
   const tags = useMemo(() => {
-    const existingTags = Array.from(new Set(visibleNotes.flatMap(note => note.tags || [])));
-    return existingTags.length > 0 ? existingTags.slice(0, 8) : ['Personal', 'Work', 'Ideas', 'To-Do'];
-  }, [visibleNotes]);
+    // Goals-like stable merge: global tags (ecosystemTags) + scoped notes tags, not just transient visibleNotes
+    // Personal fallback stable; workspace respects its own visibleNotes (no personal leak)
+    if (activeWorkspace.isPersonal) {
+      const scopedForTags = visibleNotes.length ? visibleNotes : combinedNotes.filter(isDefaultWorkspaceObject as any);
+      const src = scopedForTags.length ? scopedForTags : visibleNotes;
+      const fromGlobal = (globalTags || []).map((t: any) => t.name).filter(Boolean);
+      const fromScoped = src.flatMap((note: any) => note.tags || []);
+      const fromCombined = combinedNotes.filter(isDefaultWorkspaceObject as any).flatMap((n: any) => n.tags || []);
+      const merged = Array.from(new Set([...fromGlobal, ...fromScoped, ...fromCombined].filter(Boolean) as string[])).slice(0, 8);
+      return merged.length > 0 ? merged : ['Personal', 'Work', 'Ideas', 'To-Do'];
+    }
+    const fromGlobalWs = (globalTags || []).map((t: any) => t.name).filter(Boolean);
+    const fromVisible = visibleNotes.flatMap((note: any) => note.tags || []);
+    const mergedWs = Array.from(new Set([...fromGlobalWs, ...fromVisible].filter(Boolean) as string[])).slice(0, 8);
+    return mergedWs.length > 0 ? mergedWs : ['Personal', 'Work', 'Ideas', 'To-Do'];
+  }, [visibleNotes, combinedNotes, globalTags, activeWorkspace.isPersonal]);
 
   const tagsGridContent = (
     <div className="flex flex-col gap-6">
