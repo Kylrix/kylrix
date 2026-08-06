@@ -41,7 +41,7 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { NoteObjectDetail } from '@/components/objects/NoteObjectDetail';
 import { NotesErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
-import { isClientEncryptedNote, resolvePinnedNoteRows } from '@/lib/note/note-visibility';
+
 import { useSudo } from '@/context/SudoContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -77,7 +77,7 @@ export default function NotesPage() {
     removeNote,
     refetchNotes,
     isPinned,
-    pinnedIds,
+    pinnedIds: _pinnedIds,
     hasMore: _hasMore,
     loadMore: _loadMore
   } = useNotes();
@@ -288,7 +288,8 @@ export default function NotesPage() {
 
   const combinedNotes = useMemo(() => {
     const safeNotes = Array.isArray(allNotes) ? allNotes : [];
-    return [...safeNotes, ...extraWorkspaceNotes].filter((n) => !isClientEncryptedNote(n));
+    // Vault-like: show all notes including encrypted; unlock is prompted on open, not filtered from list
+    return [...safeNotes, ...extraWorkspaceNotes];
   }, [allNotes, extraWorkspaceNotes]);
 
   const { filteredItems: visibleNotes } = useWorkspaceFilteredItems(combinedNotes, 'note');
@@ -303,13 +304,13 @@ export default function NotesPage() {
 
   const pinnedNotes = useMemo(() => {
     if (searchParams.get('query')) return [];
-    return resolvePinnedNoteRows(pinnedIds, visibleNotes);
-  }, [pinnedIds, visibleNotes, searchParams]);
+    // Vault-like zero complexity: row isPinned is source of truth, isPinned() is fallback for legacy ids
+    return visibleNotes.filter((n: any) => !!(n as any).isPinned || isPinned(n.$id));
+  }, [visibleNotes, isPinned, searchParams]);
 
-  // Regular source notes — pinned included, sorting handles pinned-first (local copy SoT per sync)
   const regularSourceNotes = useMemo(() => {
-    return visibleNotes;
-  }, [visibleNotes]);
+    return visibleNotes.filter((n: any) => !(n as any).isPinned && !isPinned(n.$id));
+  }, [visibleNotes, isPinned]);
 
   // Fetch notes action for the search hook
   const fetchNotesAction = useCallback(async () => {
