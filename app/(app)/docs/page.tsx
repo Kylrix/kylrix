@@ -40,6 +40,15 @@ export default function DocsHomePage() {
 
         <div className="grid gap-3">
           <Link
+            href="/docs/markdown"
+            className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 hover:border-white/10 transition-colors"
+          >
+            <h2 className="font-clash text-lg font-semibold">Markdown rendering</h2>
+            <p className="text-xs text-white/45 mt-1">
+              Custom layers over marked — quote copy, file preview, math, charts, voice.
+            </p>
+          </Link>
+          <Link
             href="/docs/api"
             className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 hover:border-white/10 transition-colors"
           >

@@ -10,16 +10,17 @@ function escapeAttr(s: string): string {
   return escapeHtml(s).replace(/'/g, '&#39;');
 }
 
-function renderQuoteCopyHtml(inner: string): string {
+function renderQuoteCopyHtml(inner: string, quote: string = '"'): string {
   const trimmed = inner.trim();
   if (!trimmed) return escapeHtml(inner);
-  const escText = escapeHtml(trimmed);
+  const escQuote = escapeHtml(quote);
+  const escText = `${escQuote}${escapeHtml(trimmed)}${escQuote}`;
   const escAttr = escapeAttr(trimmed);
   // Cute openbricks: opaque #161412 panel, border white/06 or #34322F, no gradients/blur, top hairline acent #6366F1
   return `<div class="kylrix-quote-copy" data-quote="${escAttr}" style="margin:12px 0;padding:0;position:relative;">` +
     `<div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:#161412;border:1px solid rgba(255,255,255,0.06);border-radius:14px;position:relative;overflow:hidden;">` +
     `<div style="position:absolute;top:-1px;left:10%;right:10%;height:1px;background:linear-gradient(90deg,transparent,rgba(99,102,241,0.55),transparent);"></div>` +
-    `<div style="width:28px;height:28px;min-width:28px;border-radius:9px;background:#0A0908;border:1px solid rgba(255,255,255,0.06);display:grid;place-items:center;flex-shrink:0;color:#6366F1;font-size:13px;line-height:1;">“</div>` +
+    `<div style="width:28px;height:28px;min-width:28px;border-radius:9px;background:#0A0908;border:1px solid rgba(255,255,255,0.06);display:grid;place-items:center;flex-shrink:0;color:#6366F1;font-size:13px;line-height:1;">✦</div>` +
     `<span class="kylrix-quote-copy-text" style="flex:1;min-width:0;color:rgba(255,255,255,0.92);font-size:14px;line-height:1.6;font-weight:600;word-break:break-word;white-space:pre-wrap;">${escText}</span>` +
     `<button type="button" class="kylrix-quote-copy-btn" data-copy="${escAttr}" aria-label="Copy quote" title="Copy" style="width:32px;height:32px;min-width:32px;border-radius:9px;background:#0A0908;border:1px solid rgba(255,255,255,0.08);display:grid;place-items:center;cursor:pointer;flex-shrink:0;color:rgba(255,255,255,0.7);transition:all 0.16s;">` +
     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v3"></path></svg>` +
@@ -52,7 +53,7 @@ export function extractQuoteCopyPlaceholders(md: string): { text: string; blocks
     // avoid matching "" empty or "a"
     if (inner.trim().length < 2) return m;
     const i = blocks.length;
-    blocks.push(renderQuoteCopyHtml(inner));
+    blocks.push(renderQuoteCopyHtml(inner, '"'));
     return `${pre}${QC_PH}${i}@@`;
   });
 
@@ -63,7 +64,7 @@ export function extractQuoteCopyPlaceholders(md: string): { text: string; blocks
     if (!t.includes(' ') && t.length < 3) return m;
     // skip common contractions inside: it's, don't, etc if no space and short
     const i = blocks.length;
-    blocks.push(renderQuoteCopyHtml(inner));
+    blocks.push(renderQuoteCopyHtml(inner, "'"));
     return `${pre}${QC_PH}${i}@@`;
   });
 
