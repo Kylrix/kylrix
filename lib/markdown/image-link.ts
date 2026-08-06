@@ -17,7 +17,7 @@ function isImageUrl(url: string): boolean {
 
 function isPlainLinkUrl(url: string): boolean {
   try {
-    const u = new URL(url.startsWith('http') ? url : `https://${url}`);
+    const u = new URL(url.toLowerCase().startsWith('http') ? url : `https://${url}`);
     const host = u.hostname;
     if (!host.includes('.') || host.startsWith('.')) return false;
     if (host.length < 4) return false;
@@ -56,17 +56,20 @@ function renderImageHtml(url: string): string {
 
 function renderLinkPreviewHtml(url: string): string {
   const escUrl = escapeAttr(url);
-  const escDisplay = escapeHtml(url);
   let host = '';
   try { host = new URL(url).hostname; } catch { host = url; }
   const escHost = escapeHtml(host);
   const favicon = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
-  return `<a href="${escUrl}" target="_blank" rel="noreferrer" class="kylrix-link-preview" data-link-preview="${escUrl}" style="display:flex;align-items:center;gap:12px;margin:12px 0;padding:12px 14px;background:#161412;border:1px solid rgba(255,255,255,0.06);border-radius:14px;text-decoration:none;overflow:hidden;">` +
+  // Redundant url display removed — preview shows host + fetched title/desc/image when available
+  return `<div class="kylrix-link-preview" data-link-preview="${escUrl}" data-url="${escUrl}" style="margin:12px 0;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);background:#161412;">` +
+    `<a href="${escUrl}" target="_blank" rel="noreferrer" style="display:flex;align-items:center;gap:12px;padding:12px 14px;text-decoration:none;">` +
     `<img src="${escapeAttr(favicon)}" alt="" width="32" height="32" style="width:32px;height:32px;border-radius:8px;background:#0A0908;flex-shrink:0;object-fit:cover;" onerror="this.style.display='none'" />` +
     `<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;">` +
-    `<span style="color:white;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHost}</span>` +
-    `<span style="color:rgba(255,255,255,0.55);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escDisplay}</span>` +
-    `</span><span style="color:#6366F1;font-size:11px;font-weight:700;flex-shrink:0;">↗</span></a>`;
+    `<span class="kylrix-link-title" style="color:white;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHost}</span>` +
+    `<span class="kylrix-link-desc" style="color:rgba(255,255,255,0.55);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:none;"></span>` +
+    `</span><span style="color:#6366F1;font-size:11px;font-weight:700;flex-shrink:0;">↗</span></a>` +
+    `<img class="kylrix-link-image" data-link-image="${escUrl}" style="display:none;width:100%;max-height:320px;object-fit:cover;background:#0A0908;border-top:1px solid rgba(255,255,255,0.06);" alt="" loading="lazy" />` +
+    `</div>`;
 }
 
 function cacheLinkPreview(url: string, kind: 'image' | 'link'): void {
@@ -213,4 +216,61 @@ export function registerImageLinkTransforms() {
       return restoreImageLinkPlaceholders(input, blocks);
     },
   });
+}
+
+// Hydrate link previews client-side: fetch real title/desc/image, cache in RxDB, update DOM
+if (typeof window !== 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).__kylrixLinkPreviewBound ||= (() => {
+    const hydrate = async () => {
+      const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-link-preview]'));
+      for (const el of nodes) {
+        const url = el.getAttribute('data-url') || el.getAttribute('data-link-preview') || '';
+        if (!url || el.dataset.hydrated === '1') continue;
+        el.dataset.hydrated = '1';
+        const cacheKey = linkPreviewCacheKey(url);
+        // try local cache first
+        try {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          const cached = await LocalEngine.cacheGet<any>(cacheKey).catch(() => null);
+          if (cached?.title || cached?.image) {
+            const t = el.querySelector<HTMLElement>('.kylrix-link-title');
+            const d = el.querySelector<HTMLElement>('.kylrix-link-desc');
+            const img = el.querySelector<HTMLImageElement>('.kylrix-link-image');
+            if (t && cached.title) t.textContent = String(cached.title);
+            if (d && cached.description) { d.textContent = String(cached.description); d.style.display = 'block'; }
+            if (img && cached.image) { img.src = String(cached.image); img.style.display = 'block'; }
+            continue;
+          }
+        } catch {}
+        // fetch via microlink (no internal API, CORS-friendly)
+        try {
+          const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`, { method: 'GET' });
+          const json = await res.json().catch(() => null);
+          const data = (json as any)?.data;
+          const title = data?.title ? String(data.title) : '';
+          const desc = data?.description ? String(data.description) : '';
+          const imageUrl = data?.image?.url ? String(data.image.url) : data?.logo?.url ? String(data.logo.url) : '';
+          const t = el.querySelector<HTMLElement>('.kylrix-link-title');
+          const d = el.querySelector<HTMLElement>('.kylrix-link-desc');
+          const img = el.querySelector<HTMLImageElement>('.kylrix-link-image');
+          if (t && title) t.textContent = title;
+          if (d && desc) { d.textContent = desc; d.style.display = 'block'; }
+          if (img && imageUrl) { img.src = imageUrl; img.style.display = 'block'; }
+          // cache
+          try {
+            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+            await LocalEngine.cacheSet(cacheKey, { url, title, description: desc, image: imageUrl, at: Date.now() }).catch(() => {});
+          } catch {}
+        } catch {}
+      }
+    };
+    // run on load and on mutation (preview inserted after markdown render)
+    const obs = typeof MutationObserver !== 'undefined' ? new MutationObserver(() => void hydrate()) : null;
+    if (obs) obs.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('load', () => void hydrate());
+    // also hydrate shortly after transform restores
+    setTimeout(() => void hydrate(), 800);
+    return true;
+  })();
 }
