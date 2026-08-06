@@ -30,6 +30,7 @@ marked.setOptions({ gfm: true, breaks: true });
 
 const MATH_PURIFY: DomPurifyConfig = {
   ADD_TAGS: [
+    'a',
     'math',
     'annotation',
     'semantics',

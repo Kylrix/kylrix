@@ -13,6 +13,7 @@ import {
   Trash2 as TrashIcon,
   ExternalLink as OpenIcon,
   Pin as PinIcon,
+  EyeOff as EyeOffIcon,
   ArrowLeft as BackIcon,
   Link2 as LinkIcon,
   Lock as LockIcon,
@@ -49,6 +50,7 @@ import {
 import { useTask } from '@/context/TaskContext';
 import { useToast } from '@/components/ui/Toast';
 import { useSudo } from '@/context/SudoContext';
+import { useInstantNoteInput } from '@/lib/note/useInstantNoteInput';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -185,6 +187,8 @@ export function NoteDetailSidebar({
     noteRef.current = note;
   }, [note]);
 
+  const { markDirty, getLastEditAt, resetEditClock } = useInstantNoteInput(liveNote.$id, readOnly);
+
   // Seed local copy once per id when sync has not delivered it yet (no network in detail).
   useEffect(() => {
     const seed = noteRef.current;
@@ -200,10 +204,22 @@ export function NoteDetailSidebar({
     if (liveNote?.$id) {
       void refreshEcosystemTags();
       autonomicSyncEngine.requestObjectFreshness('note', liveNote.$id, (refreshed) => {
+        // Guarded freshness: never clobber local dirty typing (pending queue is SoT)
+        const lastEdit = getLastEditAt();
+        const isDirty = Date.now() - lastEdit < 2500;
+        const remoteNewer = new Date(refreshed.$updatedAt || refreshed.updatedAt || 0).getTime() > new Date(liveNoteRef.current.$updatedAt || liveNoteRef.current.updatedAt || 0).getTime();
+        if (isDirty) return;
+        if (!remoteNewer) return;
+        // Only update if not currently focused typing
+        if (typeof document !== 'undefined' && document.hasFocus() && (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA')) {
+          // Defer to next blur
+          return;
+        }
+        resetEditClock();
         updateLocalAndParentNote(refreshed);
       });
     }
-  }, [liveNote?.$id, refreshEcosystemTags, updateLocalAndParentNote]);
+  }, [liveNote?.$id, refreshEcosystemTags, updateLocalAndParentNote, getLastEditAt, resetEditClock]);
   
   const noteMeta = useMemo(() => {
     try {
@@ -230,55 +246,50 @@ export function NoteDetailSidebar({
   const [tags, setTags] = useState(liveNote.tags?.join(', ') || '');
   const [isPublic, _setIsPublic] = useState(getNotePublicState(liveNote));
 
+  // Guarded sync from liveNote -> local fields: never clobber dirty typing
   useEffect(() => {
+    const isDirty = Date.now() - getLastEditAt() < 2000;
+    if (isDirty) return;
     setTitle(liveNote.title || '');
     setContent(liveNote.content || '');
     setTags(liveNote.tags?.join(', ') || '');
-  }, [liveNote.$id, liveNote.tags]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveNote.$id, liveNote.tags, liveNote.title, liveNote.content]);
 
-  /**
-   * Direct Funnel to Local Copy: Any edit in detail immediately updates NotesContext live copy & triggers sync cycle.
-   */
-  useEffect(() => {
+  // Hardcore instant handlers — flow.realtime-input-rxdb-sync (direct interception, no useEffect queue)
+  const handleTitleChange = useCallback((next: string) => {
     if (readOnly) return;
+    setTitle(next);
     const noteId = liveNoteRef.current?.$id;
     if (!noteId) return;
-
-    const normalizedTags = tags
-      .split(',')
-      .map((t: string) => t.trim())
-      .filter(Boolean);
-
-    const hasChanged =
-      title !== (liveNoteRef.current.title || '') ||
-      content !== (liveNoteRef.current.content || '') ||
-      JSON.stringify(normalizedTags) !== JSON.stringify(liveNoteRef.current.tags || []);
-
-    if (!hasChanged) return;
-
     registerComposeSession(noteId);
+    const draft: Notes = { ...liveNoteRef.current, title: next, $updatedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Notes;
+    markDirty(draft);
+    onUpdate(draft);
+  }, [readOnly, registerComposeSession, markDirty, onUpdate]);
 
-    const draftNote: Notes = {
-      ...liveNoteRef.current,
-      title,
-      content,
-      tags: normalizedTags,
-      updatedAt: new Date().toISOString(),
-      $updatedAt: new Date().toISOString()};
+  const handleContentChange = useCallback((next: string) => {
+    if (readOnly) return;
+    setContent(next);
+    const noteId = liveNoteRef.current?.$id;
+    if (!noteId) return;
+    registerComposeSession(noteId);
+    const draft: Notes = { ...liveNoteRef.current, content: next, $updatedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Notes;
+    markDirty(draft);
+    onUpdate(draft);
+  }, [readOnly, registerComposeSession, markDirty, onUpdate]);
 
-    pushLiveNote(draftNote);
-    void setCachedData(`note_${noteId}`, draftNote);
-    onUpdate(draftNote);
-  }, [
-    title,
-    content,
-    tags,
-    readOnly,
-    registerComposeSession,
-    pushLiveNote,
-    setCachedData,
-    onUpdate,
-  ]);
+  const handleTagsChange = useCallback((nextRaw: string) => {
+    if (readOnly) return;
+    setTags(nextRaw);
+    const noteId = liveNoteRef.current?.$id;
+    if (!noteId) return;
+    registerComposeSession(noteId);
+    const normalizedTags = nextRaw.split(',').map((t: string) => t.trim()).filter(Boolean);
+    const draft: Notes = { ...liveNoteRef.current, tags: normalizedTags as any, $updatedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Notes;
+    markDirty(draft);
+    onUpdate(draft);
+  }, [readOnly, registerComposeSession, markDirty, onUpdate]);
 
   const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(false);
   const [collaboratorProfiles, setCollaboratorProfiles] = useState<any[]>([]);
@@ -776,8 +787,8 @@ export function NoteDetailSidebar({
 
 
   const replaceContentWithSave = useCallback(async (nextContent: string) => {
-    setContent(nextContent);
-  }, []);
+    handleContentChange(nextContent);
+  }, [handleContentChange]);
 
   const insertObjectBlockAtCursor = useCallback(async (block: string) => {
     const textarea = contentTextareaRef.current;
@@ -876,12 +887,12 @@ export function NoteDetailSidebar({
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const { next, cursorStart, cursorEnd } = applyMarkdownWrap(content, start, end, left, right);
-    setContent(next);
+    handleContentChange(next);
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(cursorStart, cursorEnd);
     }, 0);
-  }, [content]);
+  }, [content, handleContentChange]);
 
   const onEditorKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key !== 'Backspace' && event.key !== 'Delete') return;
@@ -990,9 +1001,7 @@ export function NoteDetailSidebar({
               <input
                 type="text"
                 value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                }}
+                onChange={(e) => handleTitleChange(e.target.value)}
                 className="w-full min-w-0 bg-transparent text-[#6366F1] font-extrabold text-lg font-clash tracking-tight leading-tight border-none focus:outline-none placeholder:text-white/25"
                 placeholder="Untitled note"
               />
@@ -1326,7 +1335,7 @@ export function NoteDetailSidebar({
                         setPendingBlockDelete(changed);
                         return;
                       }
-                      setContent(nextValue);
+                      handleContentChange(nextValue);
                     }}
                     ref={contentTextareaRef}
                     onKeyDown={onEditorKeyDown}
@@ -1375,7 +1384,7 @@ export function NoteDetailSidebar({
                       type="button"
                       onClick={() => {
                         const newTags = displayTags.filter((t) => t !== tag);
-                        setTags(newTags.join(', '));
+                        handleTagsChange(newTags.join(', '));
                       }}
                       className="hover:text-white"
                     >
@@ -1830,6 +1839,30 @@ export function NoteDetailSidebar({
                 <span>Attach object</span>
               </button>
             </>
+
+            <button
+              type="button"
+              onClick={async () => {
+                const { LocalEngine } = await import('@/lib/services/LocalEngine');
+                const userId = (liveNote as any).userId || (note as any).userId || 'guest';
+                try {
+                  const { getDisablePreviews, setDisablePreviews } = await import('@/lib/link-preview/settings');
+                  const cur = await getDisablePreviews(userId);
+                  await setDisablePreviews(userId, !cur);
+                  showSuccess(cur ? 'Previews enabled' : 'Previews disabled', cur ? 'External link previews will show again.' : 'External previews hidden. Kylrix and attached previews still show.');
+                } catch {
+                  const raw = await LocalEngine.cacheGet<boolean>('kylrix_disable_link_previews').catch(() => null);
+                  const next = !raw;
+                  await LocalEngine.cacheSet('kylrix_disable_link_previews', next);
+                  (window as any).__KylrixDisableLinkPreviews = next;
+                }
+                setIsContextDrawerOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+            >
+              <EyeOffIcon className="w-5 h-5 text-slate-400" />
+              <span>Disable previews</span>
+            </button>
 
             <button
               type="button"
