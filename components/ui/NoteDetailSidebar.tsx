@@ -664,6 +664,16 @@ export function NoteDetailSidebar({
 
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [isContextDrawerOpen, setIsContextDrawerOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const m = window.matchMedia('(min-width: 768px)');
+    const on = () => setIsDesktop(m.matches);
+    on();
+    m.addEventListener('change', on);
+    return () => m.removeEventListener('change', on);
+  }, []);
+  const { openSidebar: openNativeSidebar } = useDynamicSidebar();
   const [isExportDrawerOpen, setIsExportDrawerOpen] = useState(false);
   const [isAttachObjectPickerOpen, setIsAttachObjectPickerOpen] = useState(false);
   const [isObjectPermissionInfoOpen, setIsObjectPermissionInfoOpen] = useState(false);
@@ -683,9 +693,29 @@ export function NoteDetailSidebar({
   const isPageLayout = layout === 'page';
 
   useEffect(() => {
+    // Desktop: push context as stacked right sidebar, keep note detail underneath
+    if (isDesktop && isContextDrawerOpen) {
+      const ctx = (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, p: 2 }}>
+          <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36', mx: 'auto', mb: 1 }} aria-hidden />
+          <Typography sx={{ fontSize: '0.9rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', tracking: '0.05em', fontFamily: 'var(--font-mono)', mb: 1, textAlign: 'center' }}>Text Actions</Typography>
+          <button type="button" onClick={() => { navigator.clipboard.writeText(content); setIsContextDrawerOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 text-left">Copy All Content</button>
+          <button type="button" onClick={() => { setIsContextDrawerOpen(false); setTimeout(()=>{ const t=contentTextareaRef.current; if(t){t.focus(); t.select();}},100);}} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 text-left">Select All</button>
+          <button type="button" onClick={async()=>{ setIsContextDrawerOpen(false); try{ const text=await navigator.clipboard.readText(); const ta=contentTextareaRef.current; if(ta){ const s=ta.selectionStart,e=ta.selectionEnd; if(s===0&&e===ta.value.length) setContent(text); else { const n=content.substring(0,s)+text+content.substring(e); setContent(n); setTimeout(()=>{ta.focus(); ta.setSelectionRange(s+text.length,s+text.length);},50);} } }catch{}}} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 text-left">Paste Clipboard</button>
+          <button type="button" onClick={()=>{ setIsContextDrawerOpen(false); openFileDrawer({ title: 'Attach Object or Media', onSelectFile: (file:any)=>{ const block=file.fileUrl?.startsWith('[[kylrix-object:')?file.fileUrl:serializeObjectBlock({ childId:file.$id, childKind:file.mimeType?.startsWith('image/')?'image':'file', bucketId:file.bucketId, label:file.name, appTheme:'idea', metadata:{ mimeType:file.mimeType, fileName:file.name, fileUrl:file.fileUrl }}); insertObjectBlockAtCursor(block);}});}} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-pink-500/40 text-sm font-bold text-pink-300 text-left">Attach object</button>
+          <button type="button" onClick={async()=>{ const {LocalEngine}=await import('@/lib/services/LocalEngine'); const uid=(liveNote as any).userId||(note as any).userId||'guest'; try{ const{getDisablePreviews,setDisablePreviews}=await import('@/lib/link-preview/settings'); const cur=await getDisablePreviews(uid); await setDisablePreviews(uid,!cur);}catch{ const raw=await LocalEngine.cacheGet<boolean>('kylrix_disable_link_previews').catch(()=>null); const nxt=!raw; await LocalEngine.cacheSet('kylrix_disable_link_previews',nxt); (window as any).__KylrixDisableLinkPreviews=nxt; } setIsContextDrawerOpen(false);}} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 text-left"><EyeOffIcon className="w-5 h-5" />Disable previews</button>
+          <button type="button" onClick={()=>{ setIsContextDrawerOpen(false); setIsExportDrawerOpen(true);}} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 text-left">Export</button>
+          <button type="button" onClick={()=> setIsContextDrawerOpen(false)} className="w-full mt-2 py-2 text-xs text-white/40">Close</button>
+        </Box>
+      );
+      openNativeSidebar(ctx, 'note-context-actions', { hideHeader: true });
+      // close the inline flag — stacked sidebar now holds context, detail stays in stack
+      setTimeout(()=> setIsContextDrawerOpen(false), 0);
+      return;
+    }
     setIsDrawerOpen(isContextDrawerOpen);
     return () => setIsDrawerOpen(false);
-  }, [isContextDrawerOpen, setIsDrawerOpen]);
+  }, [isContextDrawerOpen, setIsDrawerOpen, isDesktop, openNativeSidebar, content]);
 
   useEffect(() => {
     setIsDrawerOpen(isObjectPermissionInfoOpen);
@@ -1713,7 +1743,7 @@ export function NoteDetailSidebar({
         </Box>
       </Drawer>
 
-      {isContextDrawerOpen && (
+      {isContextDrawerOpen && !isDesktop && (
         <Drawer
           anchor="bottom"
           open={isContextDrawerOpen}

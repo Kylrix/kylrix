@@ -303,20 +303,83 @@ export default function NotesPage() {
 
 
 
-  // Pinned scope is stable like goals: for personal, fallback to personal-scoped combinedNotes so pinned never vanishes during hydrate
-  // For workspace, respect project_objects filter (visibleNotes) — no personal fallback
+  // LocalEngine direct sources (CoD Tier 2) — avoid zombie initial-load that shows old haphazard notes.
+  const [localPinnedRaw, setLocalPinnedRaw] = useState<Notes[]>([]);
+  const [localAllRaw, setLocalAllRaw] = useState<Notes[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    const loadLocal = async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const uid = user?.$id || 'guest';
+        const keys = [`f_notes_list_${uid}`, 'f_notes_list', `initial_notes_${uid}`];
+        let found: Notes[] = [];
+        for (const k of keys) {
+          const v = await LocalEngine.cacheGet<any>(k).catch(() => null);
+          const arr = Array.isArray(v) ? v : Array.isArray(v?.notes) ? v.notes : [];
+          if (arr.length) { found = arr as Notes[]; break; }
+        }
+        if (!found.length) {
+          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+          const db = await getRxDB().catch(() => null);
+          if (db?.notes) {
+            const rows = await db.notes.find().exec();
+            found = rows.map((d: any) => {
+              const j = d.toJSON();
+              return { $id: j.id || j.$id, title: j.title, content: j.content || '', tags: j.tags || [], isPinned: j.isPinned, isWorkspace: j.isWorkspace, $updatedAt: j.updatedAt || j.$updatedAt, $createdAt: j.createdAt || j.$createdAt } as any;
+            });
+          }
+        }
+        // Merge live allNotes so recently edited/created (not yet in cache) is included and deduped by id, newest wins
+        const liveMap = new Map<string, Notes>();
+        for (const n of [...(Array.isArray(allNotes) ? allNotes : []), ...found]) {
+          if (!n?.$id) continue;
+          const prev = liveMap.get(n.$id);
+          if (!prev) liveMap.set(n.$id, n as Notes);
+          else {
+            const aT = new Date((prev as any).$updatedAt || (prev as any).updatedAt || 0).getTime();
+            const bT = new Date((n as any).$updatedAt || (n as any).updatedAt || 0).getTime();
+            if (bT >= aT) liveMap.set(n.$id, n as Notes);
+          }
+        }
+        const merged = Array.from(liveMap.values());
+        if (!cancelled && merged.length) {
+          setLocalAllRaw(merged);
+          // pinned SoT: row.isPinned OR legacy isPinned() via pinSets; must include live pinned not yet cached
+          setLocalPinnedRaw(merged.filter((n: any) => n.isPinned === true || isPinned(n.$id)));
+        }
+      } catch {}
+    };
+    void loadLocal();
+    return () => { cancelled = true; };
+  }, [user?.$id, allNotes, visibleNotes.length, isPinned]);
   const pinnedNotes = useMemo(() => {
-    if (activeWorkspace.isPersonal) {
-      const scopedForPinned = visibleNotes.length ? visibleNotes : combinedNotes.filter(isDefaultWorkspaceObject as any);
-      const src = scopedForPinned.length ? scopedForPinned : visibleNotes;
-      return src.filter((n: any) => !!(n as any).isPinned || isPinned(n.$id));
+    // Prefer LocalEngine direct (includes recently edited) — filter by updatedAt, keep pinned visible everywhere
+    const sortByUpdatedAt = (a: any, b: any) => new Date(b.$updatedAt || b.updatedAt || b.$createdAt || 0).getTime() - new Date(a.$updatedAt || a.updatedAt || a.$createdAt || 0).getTime();
+    if (localPinnedRaw.length) {
+      const src = activeWorkspace.isPersonal
+        ? localPinnedRaw.filter(isDefaultWorkspaceObject as any)
+        : localPinnedRaw.filter((n: any) => visibleNotes.some(v => v.$id === n.$id) || (n as any).isWorkspace === true);
+      if (src.length) return [...src].sort(sortByUpdatedAt);
     }
-    return visibleNotes.filter((n: any) => !!(n as any).isPinned || isPinned(n.$id));
-  }, [visibleNotes, combinedNotes, isPinned, activeWorkspace.isPersonal]);
+    const source = activeWorkspace.isPersonal
+      ? (visibleNotes.length ? visibleNotes : combinedNotes.filter(isDefaultWorkspaceObject as any))
+      : visibleNotes;
+    const effective = source.length ? source : combinedNotes.filter(isDefaultWorkspaceObject as any);
+    const out = effective.filter((n: any) => n.isPinned === true || isPinned(n.$id));
+    return [...out].sort(sortByUpdatedAt);
+  }, [localPinnedRaw, visibleNotes, combinedNotes, isPinned, activeWorkspace.isPersonal]);
 
   const regularSourceNotes = useMemo(() => {
-    return visibleNotes.filter((n: any) => !(n as any).isPinned && !isPinned(n.$id));
-  }, [visibleNotes, isPinned]);
+    // CoD: regular not limited to currently paginated visible page — use LocalEngine when visible empty to avoid 0-ideas zombie
+    const base = visibleNotes.length
+      ? visibleNotes
+      : (localAllRaw.length
+          ? localAllRaw.filter(isDefaultWorkspaceObject as any)
+          : combinedNotes.filter(isDefaultWorkspaceObject as any));
+    const src = base.length ? base : visibleNotes;
+    return src.filter((n: any) => !(n.isPinned === true || isPinned(n.$id)));
+  }, [visibleNotes, localAllRaw, combinedNotes, isPinned]);
 
   // Fetch notes action for the search hook
   const fetchNotesAction = useCallback(async () => {
@@ -334,13 +397,20 @@ export default function NotesPage() {
   const hasSearchResults = searchQuery.trim().length > 0;
   const clearSearch = useCallback(() => setSearchQuery(''), []);
   // LocalEngine is SoT — UI paginates local copy only (sync SKILL.md). Engine background-fills LocalEngine decoupled.
+  // Search must include pinned so pinned recent edit is findable; when searching, regular+ pinned are searched together
+  const allSearchableNotes = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const n of [...pinnedNotes, ...regularSourceNotes]) if (n?.$id) map.set(n.$id, n);
+    return Array.from(map.values());
+  }, [pinnedNotes, regularSourceNotes]);
   const filteredNotes = useMemo(() => {
     if (!searchQuery.trim()) return regularSourceNotes;
     const q = searchQuery.toLowerCase();
-    return regularSourceNotes.filter((n: any) =>
+    const src = hasSearchResults ? allSearchableNotes : regularSourceNotes;
+    return src.filter((n: any) =>
       ['title', 'content', 'tags'].some((f) => String(n[f] ?? '').toLowerCase().includes(q))
     );
-  }, [regularSourceNotes, searchQuery]);
+  }, [regularSourceNotes, allSearchableNotes, searchQuery, hasSearchResults]);
   const sortedFilteredNotes = useMemo(() => {
     return [...filteredNotes].sort((a: any, b: any) => {
       const aPinned = isPinned(a.$id) ? 0 : 1;
@@ -538,22 +608,26 @@ export default function NotesPage() {
 
 
   const tags = useMemo(() => {
-    // Goals-like stable merge: global tags (ecosystemTags) + scoped notes tags, not just transient visibleNotes
-    // Personal fallback stable; workspace respects its own visibleNotes (no personal leak)
+    // CoD: tags from LocalEngine direct — not limited to currently paginated UI page; avoids 0-ideas haphazard zombie
+    const localTags = (localAllRaw.length ? localAllRaw : combinedNotes).flatMap((n: any) => n.tags || []);
+    const fromGlobal = (globalTags || []).map((t: any) => t.name).filter(Boolean);
+    const fromLocal = localTags.filter(Boolean) as string[];
+    // Prefer recently edited note's tags first so it doesn't get excluded
+    const merged = Array.from(new Set([...fromGlobal, ...fromLocal].filter(Boolean) as string[])).slice(0, 8);
+    if (merged.length) return merged;
+    // Fallback to visible/combined only if LocalEngine empty (first load)
     if (activeWorkspace.isPersonal) {
       const scopedForTags = visibleNotes.length ? visibleNotes : combinedNotes.filter(isDefaultWorkspaceObject as any);
       const src = scopedForTags.length ? scopedForTags : visibleNotes;
-      const fromGlobal = (globalTags || []).map((t: any) => t.name).filter(Boolean);
       const fromScoped = src.flatMap((note: any) => note.tags || []);
       const fromCombined = combinedNotes.filter(isDefaultWorkspaceObject as any).flatMap((n: any) => n.tags || []);
-      const merged = Array.from(new Set([...fromGlobal, ...fromScoped, ...fromCombined].filter(Boolean) as string[])).slice(0, 8);
-      return merged.length > 0 ? merged : ['Personal', 'Work', 'Ideas', 'To-Do'];
+      const m2 = Array.from(new Set([...fromGlobal, ...fromScoped, ...fromCombined].filter(Boolean) as string[])).slice(0, 8);
+      return m2.length ? m2 : ['Personal', 'Work', 'Ideas', 'To-Do'];
     }
-    const fromGlobalWs = (globalTags || []).map((t: any) => t.name).filter(Boolean);
     const fromVisible = visibleNotes.flatMap((note: any) => note.tags || []);
-    const mergedWs = Array.from(new Set([...fromGlobalWs, ...fromVisible].filter(Boolean) as string[])).slice(0, 8);
-    return mergedWs.length > 0 ? mergedWs : ['Personal', 'Work', 'Ideas', 'To-Do'];
-  }, [visibleNotes, combinedNotes, globalTags, activeWorkspace.isPersonal]);
+    const m2 = Array.from(new Set([...fromGlobal, ...fromVisible].filter(Boolean) as string[])).slice(0, 8);
+    return m2.length ? m2 : ['Personal', 'Work', 'Ideas', 'To-Do'];
+  }, [localAllRaw, visibleNotes, combinedNotes, globalTags, activeWorkspace.isPersonal]);
 
   const tagsGridContent = (
     <div className="flex flex-col gap-6">

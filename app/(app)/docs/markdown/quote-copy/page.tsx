@@ -7,7 +7,7 @@ export default function QuoteCopyDocsPage() {
         <div>
           <Link href="/docs/markdown" className="text-[11px] font-extrabold uppercase tracking-wider text-white/40 hover:text-white">← Markdown</Link>
           <h1 className="font-clash text-3xl font-semibold tracking-tight mt-3">Quote copy</h1>
-          <p className="mt-2 text-sm text-white/50">Single `'...'` or double `"..."` wrapped blocks → cute copy card in preview.</p>
+          <p className="mt-2 text-sm text-white/50">Single &apos;...&apos; or double &quot;...&quot; wrapped blocks → cute copy card in preview.</p>
         </div>
 
         <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-3">

@@ -36,6 +36,7 @@ export function DynamicSidebarProvider({ children }: { children: ReactNode }) {
     return localStorage.getItem('kylrixnote_dynamic_sidebar_key');
   });
   const [options, setOptions] = useState<DynamicSidebarOptions | null>(null);
+  const stackRef = useRef<Array<{ content: ReactNode; key: string | null; options: DynamicSidebarOptions | null }>>([]);
 
   // Use refs to keep callbacks stable and prevent massive list re-renders
   const stateRef = useRef({ isOpen, activeContentKey });
@@ -46,6 +47,10 @@ export function DynamicSidebarProvider({ children }: { children: ReactNode }) {
 
   const openSidebar = useCallback(
     (newContent: ReactNode, key: string | null = null, newOptions: DynamicSidebarOptions | null = null) => {
+      // Stackable: push current onto stack if already open
+      if (stateRef.current.isOpen && content) {
+        stackRef.current.push({ content, key: stateRef.current.activeContentKey, options });
+      }
       setContent(newContent);
       setActiveContentKey(key);
       setOptions(newOptions);
@@ -54,9 +59,20 @@ export function DynamicSidebarProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('kylrixnote_dynamic_sidebar_key', key);
       }
     },
-    []);
+    [content, options]);
 
   const closeSidebar = useCallback(() => {
+    // Pop stack if available — restores previous detail instead of closing entirely
+    const prev = stackRef.current.pop();
+    if (prev) {
+      setContent(prev.content);
+      setActiveContentKey(prev.key);
+      setOptions(prev.options);
+      setIsOpen(true);
+      if (prev.key) localStorage.setItem('kylrixnote_dynamic_sidebar_key', prev.key);
+      else localStorage.removeItem('kylrixnote_dynamic_sidebar_key');
+      return;
+    }
     setIsOpen(false);
     setActiveContentKey(null);
     setOptions(null);
