@@ -45,7 +45,7 @@ function useIsDesktopRail() {
  * Mobile object details stay on Overlay / DynamicSidebar (true fullscreen drawers).
  */
 export function NativeSidebarBridge() {
-  const { open, close, dismiss, isOpen, activeKey, sticky } = useNativeSidebar();
+  const { open, close, dismiss, swap, isOpen, activeKey, sticky } = useNativeSidebar();
   const overlay = useOverlay();
   const dynamic = useDynamicSidebar();
   const agentic = useAgenticDrawer();
@@ -53,19 +53,24 @@ export function NativeSidebarBridge() {
   const unified = useUnifiedDrawer();
   const isDesktop = useIsDesktopRail();
   const lastKeyRef = useRef<string | null>(null);
+  const lastDynamicContentRef = useRef<React.ReactNode | null>(null);
+  const lastOverlayContentRef = useRef<React.ReactNode | null>(null);
 
   const openRef = useRef(open);
   const closeRef = useRef(close);
   const dismissRef = useRef(dismiss);
+  const swapRef = useRef(swap);
 
   useEffect(() => {
     openRef.current = open;
     closeRef.current = close;
     dismissRef.current = dismiss;
-  }, [open, close, dismiss]);
+    swapRef.current = swap;
+  }, [open, close, dismiss, swap]);
 
   useEffect(() => {
     if (agentic.isOpen) {
+      if (lastKeyRef.current === 'agentic') return;
       lastKeyRef.current = 'agentic';
       openRef.current(
         <AgenticPanelContent
@@ -92,6 +97,7 @@ export function NativeSidebarBridge() {
     }
 
     if (wallet.isWalletOpen) {
+      if (lastKeyRef.current === 'wallet') return;
       lastKeyRef.current = 'wallet';
       openRef.current(
         <WalletSidebar
@@ -116,6 +122,7 @@ export function NativeSidebarBridge() {
 
     if (!isUnifiedOverlayOnly(unified.activeContent)) {
       const key = `unified:${unified.activeContent}`;
+      if (lastKeyRef.current === key) return;
       lastKeyRef.current = key;
       openRef.current(
         <div className="h-full min-h-0 overflow-y-auto bg-[#0A0908]">
@@ -158,37 +165,40 @@ export function NativeSidebarBridge() {
     } else {
       if (dynamic.isOpen && dynamic.content) {
         const key = dynamic.activeContentKey || 'dynamic';
-        lastKeyRef.current = key;
-        openRef.current(
-          <div className="h-full min-h-0 overflow-hidden flex flex-col bg-[#0A0908]">
-            {dynamic.content}
-          </div>,
-          {
-            key,
-            width: NATIVE_SIDEBAR_WIDTHS.detail,
-            title: 'Detail',
-            restore: {
-              type: 'dynamic',
-              payload: { key: dynamic.activeContentKey },
+        // Guard: key is the source of truth — content reference churn (inline JSX) must not retrigger swap loops.
+        if (lastKeyRef.current !== key) {
+          lastKeyRef.current = key;
+          lastDynamicContentRef.current = dynamic.content;
+          openRef.current(
+            dynamic.content,
+            {
+              key,
+              width: NATIVE_SIDEBAR_WIDTHS.detail,
+              title: 'Detail',
+              restore: {
+                type: 'dynamic',
+                payload: { key: dynamic.activeContentKey },
+              },
             },
-          },
-        );
+          );
+        }
         return;
       }
 
       if (overlay.isOpen && overlay.content) {
-        lastKeyRef.current = 'overlay';
-        openRef.current(
-          <div className="h-full min-h-0 overflow-hidden flex flex-col bg-[#0A0908]">
-            {overlay.content}
-          </div>,
-          {
-            key: 'overlay',
-            width: NATIVE_SIDEBAR_WIDTHS.detail,
-            title: 'Detail',
-            restore: { type: 'overlay' },
-          },
-        );
+        if (lastKeyRef.current !== 'overlay') {
+          lastKeyRef.current = 'overlay';
+          lastOverlayContentRef.current = overlay.content;
+          openRef.current(
+            overlay.content,
+            {
+              key: 'overlay',
+              width: NATIVE_SIDEBAR_WIDTHS.detail,
+              title: 'Detail',
+              restore: { type: 'overlay' },
+            },
+          );
+        }
         return;
       }
     }
@@ -218,8 +228,6 @@ export function NativeSidebarBridge() {
     overlay.content,
     sticky,
     isDesktop,
-    wallet,
-    unified,
   ]);
 
   useEffect(() => {
@@ -227,7 +235,7 @@ export function NativeSidebarBridge() {
       agentic.closeAgenticDrawer();
       lastKeyRef.current = null;
     }
-  }, [isOpen, agentic]);
+  }, [isOpen, agentic.isOpen]);
 
   void activeKey;
 

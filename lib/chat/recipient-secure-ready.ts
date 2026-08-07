@@ -36,18 +36,44 @@ export async function discoverRecipientSecureReady(
   };
 }
 
+export function canonicalDirectParticipants(ids: string[]): string[] {
+  return Array.from(new Set(ids.map((s) => String(s).trim()).filter(Boolean))).sort();
+}
+
+export function directParticipantsEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const ca = [...a].sort();
+  const cb = [...b].sort();
+  return ca.every((v, i) => v === cb[i]);
+}
+
+export function extractGhostParticipantIds(ghost: any): string[] {
+  let metadataObj: any = {};
+  try {
+    metadataObj = typeof ghost.metadata === 'string' ? JSON.parse(ghost.metadata) : ghost.metadata || {};
+  } catch {
+    /* ignore */
+  }
+  const raw = Array.isArray(ghost.collaborators) && ghost.collaborators.length
+    ? ghost.collaborators
+    : metadataObj.participants || metadataObj.participantIds || [];
+  return Array.isArray(raw) ? raw.map((s: any) => String(s)).filter(Boolean) : [];
+}
+
 /**
  * Decide secure chat vs thread.
- * - Secure is default when recipient is ready (valid published public key).
- * - Thread only when the user explicitly asked for a thread, OR recipient is not ready.
- * - Never start secure without a valid key; never force a thread when they are ready unless explicit.
+ * - Secure is default when BOTH participants are ready (valid published X25519 public keys).
+ * - Thread only when the user explicitly asked for a thread, OR either side is not ready.
+ * - Never start secure without valid keys on both ends; never force a thread when both are ready unless explicit.
  */
 export function resolveChatChannelKind(opts: {
   recipientReady: boolean;
+  selfReady?: boolean;
   /** User opened create from Threads / chose thread */
   explicitThread?: boolean;
 }): 'secure' | 'thread' {
   if (opts.explicitThread) return 'thread';
-  if (opts.recipientReady) return 'secure';
+  const selfReady = opts.selfReady ?? true;
+  if (opts.recipientReady && selfReady) return 'secure';
   return 'thread';
 }

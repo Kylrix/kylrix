@@ -91,6 +91,9 @@ export function NativeSidebarProvider({ children }: { children: ReactNode }) {
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const stickyRef = useRef(false);
   const restoreRef = useRef<SidebarRestoreHint | null>(null);
+  const contentRef = useRef<ReactNode | null>(null);
+  const widthRef = useRef<number>(DEFAULT_WIDTH);
+  const titleRef = useRef<string | null>(null);
   const memoryRef = useRef<SidebarMemoryDoc>(emptySidebarMemory());
   const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -200,20 +203,34 @@ export function NativeSidebarProvider({ children }: { children: ReactNode }) {
       const nextSticky = Boolean(options?.sticky);
       const nextWidth = options?.width ?? DEFAULT_WIDTH;
       const nextTitle = options?.title ?? null;
+      // Idempotent guard — prevents Maximum update depth when bridge re-calls open with same key/content
+      // Use refs (not state) so guard is stable across renders and avoids stale closure loops.
+      if (
+        keyRef.current === nextKey &&
+        contentRef.current === next &&
+        stickyRef.current === nextSticky &&
+        widthRef.current === nextWidth &&
+        titleRef.current === nextTitle
+      ) {
+        return;
+      }
       if (mode === 'open' || keyRef.current !== nextKey) {
         if (keyRef.current && keyRef.current !== nextKey) {
           releaseRightRail(keyRef.current);
         }
         keyRef.current = nextKey;
-        setActiveKey(nextKey);
+        setActiveKey((prev) => (prev === nextKey ? prev : nextKey));
         acquireRightRail(nextKey);
       }
       stickyRef.current = nextSticky;
       restoreRef.current = options?.restore ?? null;
+      widthRef.current = nextWidth;
+      titleRef.current = nextTitle;
+      contentRef.current = next;
       setSticky((prev) => (prev === nextSticky ? prev : nextSticky));
       setWidth((prev) => (prev === nextWidth ? prev : nextWidth));
       setTitle((prev) => (prev === nextTitle ? prev : nextTitle));
-      setContent(next);
+      setContent((prev) => (prev === next ? prev : next));
 
       writeRouteMemory({
         key: nextKey,
@@ -253,6 +270,9 @@ export function NativeSidebarProvider({ children }: { children: ReactNode }) {
     keyRef.current = null;
     stickyRef.current = false;
     restoreRef.current = null;
+    contentRef.current = null;
+    widthRef.current = DEFAULT_WIDTH;
+    titleRef.current = null;
     setActiveKey(null);
     setSticky(false);
     setContent(null);

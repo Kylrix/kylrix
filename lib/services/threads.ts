@@ -11,6 +11,7 @@
 
 import { ID, Permission, Query, Role } from 'node-appwrite';
 import { createSystemTablesDB } from '@/lib/appwrite-admin';
+import { tablesDB as clientTablesDB } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
   buildThreadScopeKey,
@@ -140,21 +141,51 @@ export const ThreadService = {
   CHANNEL_DISCUSS: THREAD_CHANNEL_DISCUSS,
 
   async findByScopeKey(scopeKey: string) {
-    const tables = createSystemTablesDB();
-    const res = await tables.listRows({
-      databaseId: DB,
-      tableId: THREADS,
-      queries: [Query.equal('scopeKey', scopeKey), Query.limit(1)],
-    });
-    return res.rows[0] ? shapeThread(res.rows[0]) : null;
+    try {
+      if (typeof window === 'undefined') {
+        const tables = createSystemTablesDB();
+        const res = await tables.listRows({
+          databaseId: DB,
+          tableId: THREADS,
+          queries: [Query.equal('scopeKey', scopeKey), Query.limit(1)],
+        });
+        if (res.rows[0]) return shapeThread(res.rows[0]);
+      }
+    } catch {
+      /* fall through to client */
+    }
+    try {
+      const res = await (clientTablesDB as any).listRows(DB, THREADS, [
+        Query.equal('scopeKey', scopeKey),
+        Query.limit(1),
+      ]);
+      return res.rows[0] ? shapeThread(res.rows[0]) : null;
+    } catch {
+      return null;
+    }
   },
 
   async getById(threadId: string) {
-    const tables = createSystemTablesDB();
-    const row = (await tables
-      .getRow({ databaseId: DB, tableId: THREADS, rowId: threadId })
-      .catch(() => null)) as any;
-    return row ? shapeThread(row) : null;
+    // Client-safe: try system (server) first, fall back to client tablesDB when APPWRITE_API missing
+    try {
+      if (typeof window === 'undefined') {
+        const tables = createSystemTablesDB();
+        const row = (await tables
+          .getRow({ databaseId: DB, tableId: THREADS, rowId: threadId })
+          .catch(() => null)) as any;
+        if (row) return shapeThread(row);
+      }
+    } catch {
+      /* system client unavailable on client — fall through to client tablesDB */
+    }
+    try {
+      const row = (await (clientTablesDB as any)
+        .getRow(DB, THREADS, threadId)
+        .catch(() => null)) as any;
+      return row ? shapeThread(row) : null;
+    } catch {
+      return null;
+    }
   },
 
   /**

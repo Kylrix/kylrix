@@ -17,6 +17,7 @@ import { FusedSecondarySidebar } from '@/components/layout/FusedSecondarySidebar
 import { ConnectCommRail } from '@/components/connect/ConnectCommRail';
 import { CommObjectDetail } from '@/components/objects/CommObjectDetail';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { useNativeSidebar } from '@/context/RightRailContext';
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false);
@@ -142,6 +143,30 @@ function ConnectChatsBody() {
   const isDesktop = useIsDesktop();
   const { selectedId, selectChat } = useSelectedChatId();
   const [activeTab, setActiveTab] = useState<'secure' | 'public'>(() => 'secure');
+  const { isOpen: isRightRailOpen } = useNativeSidebar();
+  // Stackable right detail: push previous ?c onto stack so back pops rather than clears
+  const chatStackRef = useRef<string[]>([]);
+  const selectChatStackable = useCallback(
+    (id: string | null) => {
+      if (id) {
+        if (selectedId && selectedId !== id) chatStackRef.current.push(selectedId);
+        selectChat(id);
+        return;
+      }
+      const prev = chatStackRef.current.pop();
+      if (prev) {
+        selectChat(prev);
+        return;
+      }
+      selectChat(null);
+    },
+    [selectedId, selectChat],
+  );
+  const handleDetailClose = useCallback(() => {
+    const prev = chatStackRef.current.pop();
+    if (prev) selectChat(prev);
+    else selectChat(null);
+  }, [selectChat]);
 
   const { setConfiguration, resetConfiguration } = useFAB();
   const { open: openUnified } = useUnifiedDrawer();
@@ -153,11 +178,11 @@ function ConnectChatsBody() {
     });
   }, [openUnified, activeTab]);
 
-  /** Mobile: fullscreen object detail overlay. Desktop: fused right pane via ?c=. */
+  /** Mobile: fullscreen overlay. Desktop: fused right pane via ?c= (stackable per ui.chrome-surfaces). */
   const openChatDetail = useCallback(
     (conversationId: string, kind: 'chat' | 'thread' = 'chat') => {
       if (isDesktop) {
-        selectChat(conversationId);
+        selectChatStackable(conversationId);
         return;
       }
       openOverlay(
@@ -169,7 +194,7 @@ function ConnectChatsBody() {
         />,
       );
     },
-    [isDesktop, selectChat, openOverlay, closeOverlay],
+    [isDesktop, selectChatStackable, openOverlay, closeOverlay],
   );
 
   const onResolved = useCallback(
@@ -231,19 +256,23 @@ function ConnectChatsBody() {
 
       {isDesktop ? (
         <div className="flex h-[calc(100dvh-96px)] min-h-0 w-full overflow-hidden">
-          <FusedSecondarySidebar density={railDensity} label="Chats">
-            <ConnectCommRail
-              mode={railDensity}
-              activeId={selectedId}
-              onSelect={selectChat}
-            />
-          </FusedSecondarySidebar>
+          {/* Chat list is part of chat native layout, not a push sidebar — hide entirely when a real right rail is open */}
+          {!isRightRailOpen && (
+            <FusedSecondarySidebar density={railDensity} label="Chats">
+              <ConnectCommRail
+                mode={railDensity}
+                activeId={selectedId}
+                onSelect={selectChatStackable}
+              />
+            </FusedSecondarySidebar>
+          )}
           <div className="relative flex-1 min-w-0 min-h-0 bg-[#0A0908] border-l border-[#34322F]">
             {selectedId ? (
               <CommObjectDetail
+                key={selectedId}
                 conversationId={selectedId}
                 embedded
-                onClose={() => selectChat(null)}
+                onClose={handleDetailClose}
               />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">

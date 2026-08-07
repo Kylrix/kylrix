@@ -39,6 +39,8 @@ import { VoiceMessage } from '@/components/chat/VoiceMessage';
 import { StorageService } from '@/lib/services/storage';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { LocalEngine } from '@/lib/services/LocalEngine';
+import { chatMessagesCacheKey } from '@/lib/chat/local-chat-cache';
 
 interface HuddleChatWindowProps {
   chatNoteId: string;
@@ -74,12 +76,14 @@ export function HuddleChatWindow({
   const [editInputText, setEditInputText] = useState('');
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('kylrix_my_comments');
-      if (stored) {
-        setMyCommentIds(JSON.parse(stored));
-      }
-    } catch {}
+    let cancelled = false;
+    void (async () => {
+      try {
+        const cached = await LocalEngine.cacheGet<string[]>('f_my_comments');
+        if (!cancelled && Array.isArray(cached)) setMyCommentIds(cached);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const handleStartEdit = (msg: any) => {
@@ -243,10 +247,19 @@ export function HuddleChatWindow({
     };
   }, []);
 
-  // Load and Subscribe to Huddle Thread (Ghost Note)
+  // Load and Subscribe to Huddle Thread (Ghost Note) — local-first
   const loadHuddleMessages = useCallback(async () => {
     if (!chatNoteId) return;
     try {
+      // Paint cached thread messages instantly
+      try {
+        const cached = await LocalEngine.cacheGet<any[]>(chatMessagesCacheKey(chatNoteId));
+        if (cached?.length) {
+          // eslint-disable-next-line react-hooks/exhaustive-deps -- startTransition stable
+          setMessages(cached);
+          setLoading(false);
+        }
+      } catch {}
       const res = await listComments(chatNoteId);
       
       // Load reactions for comments parallelly
@@ -292,6 +305,7 @@ export function HuddleChatWindow({
       );
       msgs.sort((a: any, b: any) => a.timestamp - b.timestamp);
       setMessages(msgs);
+      void LocalEngine.cacheSet(chatMessagesCacheKey(chatNoteId), msgs);
     } catch (err) {
       console.error('Failed to load huddle comments:', err);
     } finally {
@@ -337,13 +351,12 @@ export function HuddleChatWindow({
       }));
       if (res && res.$id) {
         try {
-          const stored = localStorage.getItem('kylrix_my_comments');
-          const list = stored ? JSON.parse(stored) : [];
-          list.push(res.$id);
-          localStorage.setItem('kylrix_my_comments', JSON.stringify(list));
-          setMyCommentIds(list);
+          const prev = (await LocalEngine.cacheGet<string[]>('f_my_comments')) || myCommentIds || [];
+          const next = [...prev, res.$id];
+          await LocalEngine.cacheSet('f_my_comments', next);
+          setMyCommentIds(next);
         } catch (e) {
-          console.warn('Failed to save comment ID to local storage:', e);
+          console.warn('Failed to save comment ID:', e);
         }
       }
       return true;
@@ -366,13 +379,12 @@ export function HuddleChatWindow({
       }), activeThreadParent.id);
       if (res && res.$id) {
         try {
-          const stored = localStorage.getItem('kylrix_my_comments');
-          const list = stored ? JSON.parse(stored) : [];
-          list.push(res.$id);
-          localStorage.setItem('kylrix_my_comments', JSON.stringify(list));
-          setMyCommentIds(list);
+          const prev = (await LocalEngine.cacheGet<string[]>('f_my_comments')) || myCommentIds || [];
+          const next = [...prev, res.$id];
+          await LocalEngine.cacheSet('f_my_comments', next);
+          setMyCommentIds(next);
         } catch (e) {
-          console.warn('Failed to save comment ID to local storage:', e);
+          console.warn('Failed to save comment ID:', e);
         }
       }
       loadHuddleMessages();
@@ -578,7 +590,14 @@ export function HuddleChatWindow({
           >
             <ArrowLeft size={18} />
           </IconButton>
-          
+          {(() => {
+            const initials = String(title || 'Thread').trim().split(/\s+/).slice(0,2).map(w=>w[0]?.toUpperCase()||'').join('') || 'TH';
+            return (
+              <Box sx={{ width: 36, height: 36, borderRadius: '10px', bgcolor: '#161412', border: '1px solid rgba(255,255,255,0.06)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                <Typography sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#F59E0B', fontSize: '0.8rem', lineHeight: 1 }}>{initials}</Typography>
+              </Box>
+            );
+          })()}
           <Box>
             <Typography variant="body1" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
               {title}
@@ -586,7 +605,7 @@ export function HuddleChatWindow({
             <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.25 }}>
               <Globe size={10} color="#F59E0B" />
               <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 800, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Standard Huddle Chat
+                Thread
               </Typography>
               {expiresAt && (
                 <>

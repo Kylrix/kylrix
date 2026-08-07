@@ -55,6 +55,7 @@
     "eslint-plugin-unused-imports": "^4.4.1",
     "happy-dom": "^20.9.0",
     "knip": "^6.29.0",
+    "playwright": "1.62.1",
     "tailwindcss": "^4.3.0",
     "typescript": "^5.9.3",
     "vite": "^8.0.16",

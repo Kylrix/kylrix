@@ -16,6 +16,9 @@ import { formatSecureChatStartError } from '@/lib/crypto/public-key';
 import {
   discoverRecipientSecureReady,
   resolveChatChannelKind,
+  canonicalDirectParticipants,
+  directParticipantsEqual,
+  extractGhostParticipantIds,
 } from '@/lib/chat/recipient-secure-ready';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
@@ -103,20 +106,24 @@ export function CreateChatComposer({
 
       toast.loading('Checking secure setup…', { id: 'chat-create' });
 
-      const discovery = await discoverRecipientSecureReady(
-        targetUserId,
-        typeof targetUser.publicKey === 'string' ? targetUser.publicKey : null,
-      );
+      const [selfDiscovery, discovery] = await Promise.all([
+        discoverRecipientSecureReady(user.$id),
+        discoverRecipientSecureReady(
+          targetUserId,
+          typeof targetUser.publicKey === 'string' ? targetUser.publicKey : null,
+        ),
+      ]);
 
       const channel = resolveChatChannelKind({
         recipientReady: discovery.ready,
+        selfReady: selfDiscovery.ready,
         explicitThread: legacyThread,
       });
 
-      // Explicit thread OR recipient not secure-ready → thread
+      // Explicit thread OR either side not secure-ready → thread (hardened)
       if (channel === 'thread') {
         try {
-          if (!legacyThread && !discovery.ready) {
+          if (!legacyThread && (!discovery.ready || !selfDiscovery.ready)) {
             toast(
               "This person hasn't set up secure chat yet. Starting a standard chat instead.",
               { id: 'chat-create' },
@@ -126,16 +133,10 @@ export function CreateChatComposer({
           }
 
           const existingGhosts = await listGhostNoteChats();
+          const targetSet = canonicalDirectParticipants([user.$id, targetUserId]);
           const foundGhost = existingGhosts.find((c: any) => {
-            let metadataObj: any = {};
-            try {
-              metadataObj =
-                typeof c.metadata === 'string' ? JSON.parse(c.metadata) : c.metadata || {};
-            } catch {
-              /* ignore */
-            }
-            const participants = c.collaborators || metadataObj.participants || [];
-            return participants.includes(targetUserId);
+            const participants = extractGhostParticipantIds(c);
+            return directParticipantsEqual(participants, targetSet);
           });
           if (foundGhost) {
             toast.dismiss('chat-create');
@@ -157,18 +158,20 @@ export function CreateChatComposer({
         return;
       }
 
-      // Secure path — recipient is ready. Unlock vault if needed; never fall back to thread.
+      // Secure path — BOTH ready. Hardened presence check before creating.
       const openSecure = async () => {
         try {
           await ecosystemSecurity.ensureE2EIdentity(user.$id);
+          const targetSet = canonicalDirectParticipants([user.$id, targetUserId]);
           try {
             const existing = await ChatService.getConversations(user.$id);
-            const found = existing.rows.find(
-              (c: any) =>
-                c.type === 'direct' &&
-                Array.isArray(c.participants) &&
-                c.participants.includes(targetUserId),
-            );
+            const found = existing.rows.find((c: any) => {
+              if (c.type !== 'direct' || !Array.isArray(c.participants)) return false;
+              return directParticipantsEqual(
+                canonicalDirectParticipants(c.participants),
+                targetSet,
+              );
+            });
             if (found) {
               toast.dismiss('chat-create');
               openConversation(found.$id, 'chat');

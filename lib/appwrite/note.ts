@@ -105,6 +105,7 @@ export function invalidateNoteRowClientCache(noteId?: string | null) {
 
 async function loadNoteRowFromOrigin(noteId: string): Promise<Notes> {
   const doc = await databases.getRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId) as any;
+  if (!doc) throw new Error(`Note not found: ${noteId}`);
 
   hydrateVirtualAttributes(doc);
 
@@ -211,6 +212,7 @@ export function ideaListExclusionQueries(): any[] {
 }
 
 function hydrateVirtualAttributes(doc: any): any {
+  if (!doc) return doc;
   if (doc && doc.metadata) {
     try {
       const extra = JSON.parse(doc.metadata);

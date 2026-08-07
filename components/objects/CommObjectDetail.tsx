@@ -46,12 +46,14 @@ export function CommObjectDetail({
   }, [onClose, router]);
 
   // Instant mural — never wait on getNote / network before painting ChatWindow.
-  // Huddle detection can flip later; default to chat shell for kind !== thread.
+  // Resolve huddle/thread vs secure chat for any id (thread ids are ghost notes, not conversations).
   useEffect(() => {
     let cancelled = false;
+    const explicitThread = kind === 'thread';
+    if (explicitThread) setIsHuddle(true);
     void (async () => {
-      if (kind === 'call' || kind === 'thread') return;
-
+      if (kind === 'call') return;
+      // Try cache first
       try {
         const cached = await LocalEngine.cacheGet<{
           isHuddle?: boolean;
@@ -59,35 +61,61 @@ export function CommObjectDetail({
         }>(chatConversationCacheKey(conversationId));
         if (!cancelled && cached?.isHuddle) {
           setIsHuddle(true);
-          setHuddleTitle(cached.title || title || 'Thread');
+          if (cached.title && cached.title !== 'Thread') setHuddleTitle(cached.title);
+          if (explicitThread) return;
+        }
+        if (!cancelled && cached?.title && cached.title !== 'Thread' && explicitThread) {
+          setHuddleTitle(cached.title);
           return;
         }
       } catch {
         /* ignore */
       }
+      // Try canonical threads table (new substrate)
+      try {
+        const { ThreadService } = await import('@/lib/services/threads');
+        const t = await (ThreadService as any).getById?.(conversationId).catch(() => null);
+        if (!cancelled && t?.title) {
+          setHuddleTitle(String(t.title));
+          setIsHuddle(true);
+          void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), { isHuddle: true, title: String(t.title) });
+          return;
+        }
+        if (!cancelled && t?.id) {
+          setIsHuddle(true);
+          return;
+        }
+      } catch {}
+      if (explicitThread) {
+        // keep title prop fallback; getNote will enrich via legacy path below if needed
+        if (title && title !== 'Thread') setHuddleTitle(title);
+      }
 
       // Soft probe — do not block UI; timeout so hung note fetch can't stall forever
-      try {
-        const note = (await Promise.race([
-          getNote(conversationId),
-          new Promise((resolve) => setTimeout(() => resolve(null), 2500)),
-        ])) as any;
-        if (cancelled || !note) return;
-        if (note && (note.isChat || note.isThread || note.isGhost)) {
-          setIsHuddle(true);
-          setHuddleTitle(note.title || title || 'Thread');
-          void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), {
-            isHuddle: true,
-            title: note.title || title || 'Thread',
-          });
-        } else {
-          setIsHuddle(false);
-          void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), {
-            isHuddle: false,
-          });
+      // Skip probe override for explicit thread callers — mural already correct via threads table
+      if (!explicitThread) {
+        try {
+          const note = (await Promise.race([
+            getNote(conversationId),
+            new Promise((resolve) => setTimeout(() => resolve(null), 2500)),
+          ])) as any;
+          if (cancelled || !note) return;
+          if (note && (note.isChat || note.isThread || note.isGhost)) {
+            setIsHuddle(true);
+            setHuddleTitle(note.title || title || 'Thread');
+            void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), {
+              isHuddle: true,
+              title: note.title || title || 'Thread',
+            });
+          } else if (note) {
+            setIsHuddle(false);
+            void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), {
+              isHuddle: false,
+            });
+          }
+        } catch {
+          /* keep chat surface */
         }
-      } catch {
-        /* keep chat surface */
       }
     })();
     return () => {

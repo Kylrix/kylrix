@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Hash, MessageSquare, Plus, ShieldCheck } from 'lucide-react';
+import { Plus, ShieldCheck, Lock } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { ChatService } from '@/lib/services/chat';
 import { listGhostNoteChats } from '@/lib/actions/client-ops';
@@ -80,7 +80,7 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
   const router = useRouter();
   const { open: openUnified } = useUnifiedDrawer();
   const { requestSudo } = useSudo();
-  const [tab, setTab] = useState<RailTab>(
+  const [_tab, _setTab] = useState<RailTab>(
     ecosystemSecurity.status.isUnlocked ? 'secure' : 'public',
   );
   const [secure, setSecure] = useState<RailItem[]>(() => mapSecure(peekChatsListMemory()));
@@ -131,9 +131,19 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
 
   useEffect(() => {
     let cancelled = false;
+    // Instant paint: peek memory before async disk (0ms) per architecture.local-first
+    const memSecure = peekChatsListMemory();
+    const memThreads = peekThreadsListMemory();
+    if (memSecure.length) {
+      setSecure(mapSecure(memSecure));
+      setLoading(false);
+    }
+    if (memThreads.length) {
+      setThreads(mapThreads(memThreads));
+      setLoading(false);
+    }
     (async () => {
-      if (!user?.$id) return;
-
+      // Always hydrate from disk even if user not yet resolved (guest local copy)
       const [cachedSecure, cachedThreads] = await Promise.all([
         readChatsListLocal(),
         readThreadsListLocal(),
@@ -147,13 +157,33 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
           setThreads(mapThreads(cachedThreads));
           setLoading(false);
         }
+        // If we have anything local, hide skeleton immediately — don't wait for network
+        if (cachedSecure.length || cachedThreads.length || memSecure.length || memThreads.length) {
+          setLoading(false);
+        }
+      }
+      if (!user?.$id) {
+        if (!cancelled) setLoading(false);
+        return;
       }
 
       try {
-        const [secureRes, ghostRows] = await Promise.all([
-          ChatService.getConversations(user.$id).catch(() => ({ rows: [] as any[] })),
-          listGhostNoteChats().catch(() => [] as any[]),
-        ]);
+        const timeout = (ms: number) => new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms));
+        const raced = await (Promise.race([
+          Promise.all([
+            ChatService.getConversations(user.$id).catch(() => ({ rows: [] as any[] })),
+            listGhostNoteChats().catch(() => [] as any[]),
+          ]),
+          timeout(4000),
+        ] as any).catch((e) => {
+          console.warn('[ConnectCommRail] fetch timed out:', (e as any)?.message);
+          return null;
+        }) as any);
+        if (!raced) {
+          if (!cancelled) setLoading(false);
+          return;
+        }
+        const [secureRes, ghostRows] = raced as any;
         const secureRows = ((secureRes as any)?.rows || []).map((c: any) => ({
           ...c,
           _viewerId: user.$id,
@@ -192,7 +222,11 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
     };
   }, [user?.$id]);
 
-  const items = tab === 'secure' ? secure : threads;
+  const items = (() => {
+    const combined = [...secure, ...threads];
+    // pinned first, then recency (secure uses _viewerId, threads use lastMessageAt)
+    return combined;
+  })();
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-[#000000]">
@@ -208,7 +242,7 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
               type="button"
               onClick={() =>
                 openUnified('new-chat', {
-                  mode: tab === 'public' ? 'thread' : 'secure',
+                  mode: 'secure',
                 })
               }
               className="w-8 h-8 rounded-lg bg-[#F59E0B] text-black flex items-center justify-center"
@@ -222,7 +256,7 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
             type="button"
             onClick={() =>
               openUnified('new-chat', {
-                mode: tab === 'public' ? 'thread' : 'secure',
+                mode: 'secure',
               })
             }
             className="w-full aspect-square rounded-xl bg-[#161412] border border-[#34322F] flex items-center justify-center text-[#F59E0B] mb-2"
@@ -232,48 +266,11 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
           </button>
         )}
 
-        <div
-          className={`flex ${mode === 'compact' ? 'flex-col gap-1' : 'gap-1 p-1 bg-[#161412] rounded-xl border border-[#34322F]'}`}
-        >
-          <button
-            type="button"
-            onClick={() => setTab('secure')}
-            className={
-              mode === 'compact'
-                ? `w-full aspect-square rounded-xl flex items-center justify-center ${
-                    tab === 'secure' ? 'bg-[#F59E0B] text-black' : 'text-white/60 hover:bg-white/5'
-                  }`
-                : `flex-1 py-1.5 rounded-lg text-[10px] font-extrabold ${
-                    tab === 'secure' ? 'bg-[#F59E0B] text-black' : 'text-white/55'
-                  }`
-            }
-            aria-label="Secure chats"
-            title="Secure"
-          >
-            {mode === 'compact' ? <MessageSquare size={16} /> : 'Secure'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab('public')}
-            className={
-              mode === 'compact'
-                ? `w-full aspect-square rounded-xl flex items-center justify-center ${
-                    tab === 'public' ? 'bg-[#F59E0B] text-black' : 'text-white/60 hover:bg-white/5'
-                  }`
-                : `flex-1 py-1.5 rounded-lg text-[10px] font-extrabold ${
-                    tab === 'public' ? 'bg-[#F59E0B] text-black' : 'text-white/55'
-                  }`
-            }
-            aria-label="Threads"
-            title="Threads"
-          >
-            {mode === 'compact' ? <Hash size={16} /> : 'Threads'}
-          </button>
-        </div>
+        {/* Unified: no separate tabs — secret chats show lock on avatar */}
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {mode === 'full' && tab === 'secure' && (needsMasterPass || !isUnlocked) ? (
+        {mode === 'full' && (needsMasterPass || !isUnlocked) ? (
           <div className="m-2 rounded-2xl border border-[#F59E0B]/25 bg-[#161412] p-4 text-center">
             <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-[#F59E0B]/10 text-[#F59E0B]">
               <ShieldCheck size={20} />
@@ -284,7 +281,7 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
             <p className="text-white/45 text-[10px] leading-relaxed m-0 mb-3">
               {needsMasterPass
                 ? 'Create a Master Pass to use private chats on this device.'
-                : 'Unlock to load your private conversations.'}
+                : 'Unlock to load your private conversations. Chats list is shown from local copy.'}
             </p>
             <button
               type="button"
@@ -336,13 +333,20 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
                           : 'border-transparent hover:bg-white/5'
                       }`}
                     >
-                      <IdentityAvatar
-                        userId={item.id}
-                        fileId={item.avatar}
-                        alt={item.name}
-                        fallback={item.name.replace(/^@/, '').charAt(0).toUpperCase() || 'C'}
-                        size={36}
-                      />
+                      <span className="relative inline-flex">
+                        <IdentityAvatar
+                          userId={item.id}
+                          fileId={item.avatar}
+                          alt={item.name}
+                          fallback={item.name.replace(/^@/, '').charAt(0).toUpperCase() || 'C'}
+                          size={36}
+                        />
+                        {item.kind === 'secure' && (
+                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#0A0908] border border-[#34322F] flex items-center justify-center">
+                            <Lock size={8} className="text-[#F59E0B]" />
+                          </span>
+                        )}
+                      </span>
                     </button>
                   </li>
                 );
@@ -359,13 +363,20 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
                         : 'border border-transparent hover:bg-white/5'
                     }`}
                   >
-                    <IdentityAvatar
-                      userId={item.id}
-                      fileId={item.avatar}
-                      alt={item.name}
-                      fallback={item.name.replace(/^@/, '').charAt(0).toUpperCase() || 'C'}
-                      size={40}
-                    />
+                    <span className="relative inline-flex shrink-0">
+                      <IdentityAvatar
+                        userId={item.id}
+                        fileId={item.avatar}
+                        alt={item.name}
+                        fallback={item.name.replace(/^@/, '').charAt(0).toUpperCase() || 'C'}
+                        size={40}
+                      />
+                      {item.kind === 'secure' && (
+                        <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#0A0908] border border-[#34322F] flex items-center justify-center">
+                          <Lock size={10} className="text-[#F59E0B]" />
+                        </span>
+                      )}
+                    </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-white text-sm font-bold truncate font-satoshi m-0">
                         {item.name}

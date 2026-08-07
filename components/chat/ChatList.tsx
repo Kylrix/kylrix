@@ -13,6 +13,9 @@ import { formatSecureChatStartError } from '@/lib/crypto/public-key';
 import {
     discoverRecipientSecureReady,
     resolveChatChannelKind,
+    canonicalDirectParticipants,
+    directParticipantsEqual,
+    extractGhostParticipantIds,
 } from '@/lib/chat/recipient-secure-ready';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -429,29 +432,40 @@ export const ChatList = ({
         }
     }, [activeTab, hasMasterpass, hideTabs]);
 
-    // Instant paint: memory → LocalEngine. Never wait on network for first frame.
+    // Instant paint: memory → LocalEngine. Never wait on network for first frame. Local-first: paint cached instantly, hide skeletons.
     useEffect(() => {
         migrateLegacyChatListCache();
         let cancelled = false;
+        // Memory already painted via initial state (peek); clear skeletons instantly if we have it
+        if (!skipSecureLoad && conversationsRef.current.length > 0) setLoading(false);
+        if (!skipThreadsLoad && ghostConversations.length > 0) setLoadingGhost(false);
         void (async () => {
             if (!skipSecureLoad && conversationsRef.current.length === 0) {
                 const cached = await readChatsListLocal();
-                if (!cancelled && cached.length) {
-                    startTransition(() => {
-                        setConversations(cached);
-                        conversationsRef.current = cached;
-                        setLoading(false);
-                    });
+                if (!cancelled) {
+                    if (cached.length) {
+                        startTransition(() => {
+                            setConversations(cached);
+                            conversationsRef.current = cached;
+                        });
+                    }
+                    setLoading(false);
                 }
+            } else if (!skipSecureLoad) {
+                setLoading(false);
             }
             if (!skipThreadsLoad && ghostConversations.length === 0) {
                 const cachedThr = await readThreadsListLocal();
-                if (!cancelled && cachedThr.length) {
-                    startTransition(() => {
-                        setGhostConversations(cachedThr);
-                        setLoadingGhost(false);
-                    });
+                if (!cancelled) {
+                    if (cachedThr.length) {
+                        startTransition(() => {
+                            setGhostConversations(cachedThr);
+                        });
+                    }
+                    setLoadingGhost(false);
                 }
+            } else if (!skipThreadsLoad) {
+                setLoadingGhost(false);
             }
         })();
         return () => {
@@ -482,8 +496,7 @@ export const ChatList = ({
     }, [ghostConversations]);
 
     const loadGhostConversations = React.useCallback(async (options?: { silent?: boolean }) => {
-        if (!user) return;
-
+        // Local-first: always paint local even when user not yet resolved (guest keyspace)
         if (ghostConversationsRef.current.length === 0) {
             const local = peekThreadsListMemory();
             if (local.length) {
@@ -504,8 +517,22 @@ export const ChatList = ({
             // Soft empty-state spinner only when truly nothing local
             setLoadingGhost(true);
         }
+        if (!user) {
+            setLoadingGhost(false);
+            return;
+        }
         try {
-            const results = await listGhostNoteChats();
+            const results = await Promise.race([
+                listGhostNoteChats(),
+                new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error('ghost fetch timeout')), 4000)),
+            ]).catch((e) => {
+                console.warn('[ChatList] ghost fetch timed out or failed:', (e as any)?.message);
+                return null;
+            }) as any;
+            if (!results) {
+                setLoadingGhost(false);
+                return;
+            }
 
             const mapped = results.map((note: any) => {
                 let metadataObj: any = {};
@@ -727,20 +754,24 @@ export const ChatList = ({
 
         toast.loading('Checking secure setup…', { id: 'ghost-init' });
 
-        // Always live-fetch profile — search cards often omit publicKey and caused false threads.
-        const discovery = await discoverRecipientSecureReady(
-            targetUserId,
-            typeof targetUser.publicKey === 'string' ? targetUser.publicKey : null,
-        );
+        // Always live-fetch BOTH profiles — search cards omit publicKey and single-side checks caused false threads.
+        const [selfDiscovery, discovery] = await Promise.all([
+            discoverRecipientSecureReady(user.$id),
+            discoverRecipientSecureReady(
+                targetUserId,
+                typeof targetUser.publicKey === 'string' ? targetUser.publicKey : null,
+            ),
+        ]);
 
         const channel = resolveChatChannelKind({
             recipientReady: discovery.ready,
+            selfReady: selfDiscovery.ready,
             explicitThread: activeTab === 'public',
         });
 
         if (channel === 'thread') {
             try {
-                if (activeTab !== 'public' && !discovery.ready) {
+                if (activeTab !== 'public' && (!discovery.ready || !selfDiscovery.ready)) {
                     toast(
                         "This person hasn't set up secure chat yet. Starting a standard chat instead.",
                         { id: 'ghost-init' },
@@ -750,16 +781,10 @@ export const ChatList = ({
                 }
 
                 const existingGhosts = await listGhostNoteChats();
+                const targetSet = canonicalDirectParticipants([user.$id, targetUserId]);
                 const foundGhost = existingGhosts.find((c: any) => {
-                    let metadataObj: any = {};
-                    try {
-                        metadataObj =
-                            typeof c.metadata === 'string' ? JSON.parse(c.metadata) : c.metadata || {};
-                    } catch {
-                        /* ignore */
-                    }
-                    const participants = c.collaborators || metadataObj.participants || [];
-                    return participants.includes(targetUserId);
+                    const participants = extractGhostParticipantIds(c);
+                    return directParticipantsEqual(participants, targetSet);
                 });
 
                 if (foundGhost) {
@@ -783,27 +808,32 @@ export const ChatList = ({
             return;
         }
 
-        // Secure default — recipient is ready. Unlock if needed; never fall back to thread.
+        // Secure default — BOTH ready. Hardened presence (exact participant set) before creating.
         const openSecure = async () => {
             try {
                 await ecosystemSecurity.ensureE2EIdentity(user.$id);
-                const found = conversations.find(
-                    (c: any) =>
-                        c.type === 'direct' && c.participants?.includes(targetUserId),
-                );
-                if (found) {
+                const targetSet = canonicalDirectParticipants([user.$id, targetUserId]);
+                const foundLocal = conversations.find((c: any) => {
+                    if (c.type !== 'direct' || !Array.isArray(c.participants)) return false;
+                    return directParticipantsEqual(
+                        canonicalDirectParticipants(c.participants),
+                        targetSet,
+                    );
+                });
+                if (foundLocal) {
                     toast.dismiss('ghost-init');
-                    openConversation(found.$id, 'chat');
+                    openConversation(foundLocal.$id, 'chat');
                     return;
                 }
                 try {
                     const existing = await ChatService.getConversations(user.$id);
-                    const remote = existing.rows.find(
-                        (c: any) =>
-                            c.type === 'direct' &&
-                            Array.isArray(c.participants) &&
-                            c.participants.includes(targetUserId),
-                    );
+                    const remote = existing.rows.find((c: any) => {
+                        if (c.type !== 'direct' || !Array.isArray(c.participants)) return false;
+                        return directParticipantsEqual(
+                            canonicalDirectParticipants(c.participants),
+                            targetSet,
+                        );
+                    });
                     if (remote) {
                         toast.dismiss('ghost-init');
                         openConversation(remote.$id, 'chat');
@@ -900,10 +930,24 @@ export const ChatList = ({
 
             // Never block the tab on network — local copy is the list SoT for paint
             setLoading(false);
+            if (!user?.$id) {
+                setLoading(false);
+                return;
+            }
 
-            const response = await ChatService.getConversations(user!.$id, {
-                forceRefresh: options?.forceRefresh,
-            });
+            const response = await Promise.race([
+                ChatService.getConversations(user.$id, {
+                    forceRefresh: options?.forceRefresh,
+                }),
+                new Promise<never>((_, reject) => setTimeout(() => reject(new Error('conversations fetch timeout')), 4000)),
+            ]).catch((e) => {
+                console.warn('[ChatList] conversations fetch timed out or failed:', (e as any)?.message);
+                return null;
+            }) as any;
+            if (!response) {
+                setLoading(false);
+                return;
+            }
             let rows = [...response.rows];
             const listAuthoritative = (response as { authoritative?: boolean }).authoritative !== false;
 
@@ -1410,6 +1454,19 @@ export const ChatList = ({
     const filteredGhostConversations = useMemo(() => filteredGhostConversationsAll.slice(0, ghostPage * CHAT_PAGE_SIZE), [filteredGhostConversationsAll, ghostPage]);
     const hasMoreChats = filteredConversations.length < filteredConversationsAll.length;
     const hasMoreGhosts = filteredGhostConversations.length < filteredGhostConversationsAll.length;
+    // Unified feed: secret chats + threads together, sorted by recency, pinned first. Secret shows lock on avatar.
+    const unifiedItems = useMemo(() => {
+        const secureMapped = filteredConversations.map((c: any) => ({ ...c, _kind: 'secure' as const, _sortAt: c.lastMessageAt || c.createdAt }));
+        const threadMapped = filteredGhostConversations.map((c: any) => ({ ...c, _kind: 'thread' as const, _sortAt: c.lastMessageAt || c.$createdAt || c.createdAt }));
+        const combined = [...secureMapped, ...threadMapped];
+        const pinned = pinSets.conversation;
+        return combined.sort((a: any, b: any) => {
+            const ap = pinned.has(a.$id) ? 1 : 0;
+            const bp = pinned.has(b.$id) ? 1 : 0;
+            if (ap !== bp) return bp - ap;
+            return new Date(b._sortAt || 0).getTime() - new Date(a._sortAt || 0).getTime();
+        });
+    }, [filteredConversations, filteredGhostConversations, pinSets.conversation]);
     useEffect(() => { setChatPage(1); setGhostPage(1); }, [searchQuery, conversations.length, ghostConversations.length]);
     useEffect(() => {
       if (!chatSentinelRef.current || !hasMoreChats) return;
@@ -1424,8 +1481,8 @@ export const ChatList = ({
       return () => obs.disconnect();
     }, [hasMoreGhosts, filteredGhostConversationsAll.length]);
 
-    // Soft skeletons only when there is zero local copy — never hide a painted list
-    if (loading && conversations.length === 0 && activeTab === 'secure' && !skipSecureLoad) return (
+    // Soft skeletons only when there is zero local copy — never hide a painted list (unified)
+    if (loading && conversations.length === 0 && ghostConversations.length === 0 && !skipSecureLoad && !skipThreadsLoad) return (
         <div className="p-4 space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex items-center gap-4 p-2 animate-pulse">
@@ -1441,33 +1498,11 @@ export const ChatList = ({
 
     const showGlobalResults = searchQuery.length >= 2 && searchResults.length > 0;
 
+    const unifiedHasMore = hasMoreChats || hasMoreGhosts;
+
     return (
         <div className="flex flex-col relative w-full">
-            {/* Elegant Pill Tab Switcher */}
-            {!hideTabs && (
-                <div className="bg-[#161412] rounded-2xl p-1 w-fit border border-[#34322F] mb-6 flex gap-1">
-                    <button
-                        onClick={() => setActiveTab('secure')}
-                        className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-colors ${
-                            activeTab === 'secure'
-                                ? 'bg-[#0A0908] text-white border border-white/[0.06]'
-                                : 'text-white/50 hover:text-white'
-                        }`}
-                    >
-                        Secure
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('public')}
-                        className={`px-5 py-2 rounded-xl text-xs font-extrabold transition-colors ${
-                            activeTab === 'public'
-                                ? 'bg-[#0A0908] text-white border border-white/[0.06]'
-                                : 'text-white/50 hover:text-white'
-                        }`}
-                    >
-                        Threads
-                    </button>
-                </div>
-            )}
+            {/* Unified — no separate tabs; secret chats show lock on avatar */}
 
             <div className="flex-1">
                 {showGlobalResults && (
@@ -1478,9 +1513,7 @@ export const ChatList = ({
                         <div className="space-y-2">
                             {searchResults.map((u) => {
                                 const targetId = u.userId || u.$id;
-                                const hasChat = activeTab === 'secure' 
-                                    ? conversations.some(c => c.type === 'direct' && c.participants?.includes(targetId))
-                                    : ghostConversations.some(c => {
+                                const hasChat = conversations.some(c => c.type === 'direct' && c.participants?.includes(targetId)) || ghostConversations.some(c => {
                                         let metaObj: any = {};
                                         try { metaObj = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata || {}); } catch {}
                                         const participants = c.collaborators || metaObj.participants || [];
@@ -1517,144 +1550,7 @@ export const ChatList = ({
                     </div>
                 )}
 
-                {activeTab === 'secure' ? (
-                    filteredConversations.length === 0 && !showGlobalResults && !loading ? (
-                        <div className="p-12 text-center">
-                            <span className="font-black text-white text-lg mb-1 font-clash block">Quiet Frequency</span>
-                            <span className="text-sm text-[#9B9691] font-medium block">No encrypted channels found matching your query.</span>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="space-y-3">
-                                {filteredConversations.map((conv) => (
-                                <div key={conv.$id} className="w-full">
-                                    <div
-                                        role="button"
-                                        tabIndex={0}
-                                        onClick={(e: React.MouseEvent) => {
-                                            handleItemClick(e);
-                                            if (!isInitializing) {
-                                                openConversation(conv.$id, 'chat');
-                                            }
-                                        }}
-                                        onContextMenu={(e) => handleConversationRightClick(e, conv)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                e.preventDefault();
-                                                if (!isInitializing) {
-                                                    openConversation(conv.$id, 'chat');
-                                                }
-                                            }
-                                        }}
-                                        className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-[20px] bg-[#161412] border border-[#34322F] hover:bg-[#1C1A18] hover:border-[#3C3A38] transition-colors text-left cursor-pointer ${
-                                            activePreviewConversationId === conv.$id ? 'border-[#F59E0B]/50' : ''
-                                        }`}
-                                    >
-                                        <div
-                                            role="button"
-                                            tabIndex={0}
-                                            onClick={(event) => {
-                                                event.preventDefault();
-                                                event.stopPropagation();
-                                                if (isInitializing) {
-                                                    showIslandNotification({
-                                                        type: 'warning',
-                                                        title: 'Initializing Encryption',
-                                                        message: 'Securing connection channels...',
-                                                        app: 'connect',
-                                                        majestic: false,
-                                                        duration: 4000
-                                                    });
-                                                    return;
-                                                }
-                                                openAvatarPeek(conv);
-                                            }}
-                                            onKeyDown={(event) => {
-                                                if (event.key !== 'Enter' && event.key !== ' ') return;
-                                                event.preventDefault();
-                                                event.stopPropagation();
-                                                if (isInitializing) {
-                                                    showIslandNotification({
-                                                        type: 'warning',
-                                                        title: 'Initializing Encryption',
-                                                        message: 'Securing connection channels...',
-                                                        app: 'connect',
-                                                        majestic: false,
-                                                        duration: 4000
-                                                    });
-                                                    return;
-                                                }
-                                                openAvatarPeek(conv);
-                                            }}
-                                            className="flex-shrink-0 mr-1"
-                                        >
-                                            <IdentityAvatar
-                                                userId={conv.isSelf ? user?.$id : conv.otherUserId}
-                                                src={conv.avatarUrl || conv.avatar || null}
-                                                alt={conv.name}
-                                                fallback={conv.name?.replace(/\(You\)/gi, '').replace(/^@/, '').trim().charAt(0).toUpperCase() || 'U'}
-                                                size={48}
-                                                status={conv.type === 'direct' && conv.otherUserId ? globalPresence?.[conv.otherUserId]?.state : undefined}
-                                            />
-                                        </div>
-                                        <div className="flex-1 min-w-0 flex flex-col gap-1">
-                                            <span className={`font-black text-base font-clash tracking-tight truncate flex items-center gap-1.5 ${conv.isSelf ? 'text-[#F59E0B]' : 'text-white'}`}>
-                                                {isResourcePinned('conversation', conv.$id, user?.$id, false) ? (
-                                                    <Pin size={14} className="text-[#F59E0B] shrink-0 fill-[#F59E0B]" />
-                                                ) : null}
-                                                {conv.name || (conv.type === 'direct' ? conv.otherUserId : 'Hangout')}
-                                            </span>
-                                            <span className="text-[#9B9691] font-medium text-sm truncate flex items-center gap-1.5">
-                                                {(() => {
-                                                    const memoryPreview = ChatService.getConversationPreviewSnapshot(conv.$id);
-                                                    const memoryAt = memoryPreview?.lastMessageAt ? new Date(memoryPreview.lastMessageAt).getTime() : -1;
-                                                    const rowAt = conv.lastMessageAt ? new Date(conv.lastMessageAt).getTime() : -1;
-                                                    const memoryText = memoryPreview && (memoryAt >= rowAt || !conv.lastMessageText)
-                                                        ? memoryPreview.lastMessageText
-                                                        : null;
-                                                    const resolvedPreview = livePreviewByConversation[conv.$id]?.lastMessageText || memoryText || conv.lastMessageText || 'No messages yet';
-
-                                                    return (conv.isEncrypted && isLikelyEncrypted(resolvedPreview)) ? (
-                                                        <span className="flex items-center gap-1">
-                                                            <Lock size={12} className="text-[#9B9691]" />
-                                                            <span>Secured Payload</span>
-                                                        </span>
-                                                    ) : (
-                                                        <span>{resolvedPreview}</span>
-                                                    );
-                                                })()}
-                                            </span>
-                                        </div>
-                                        <div className="flex-shrink-0 flex flex-col items-end gap-1.5 ml-2">
-                                            {conv.lastMessageAt && (
-                                                <span className="text-[11px] text-[#9B9691] font-black font-mono">
-                                                    {new Date(conv.lastMessageAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                                                </span>
-                                            )}
-                                            {conv.lastMessageAt && conv.lastMessageId && !conv.isSelf && (() => {
-                                                const readAt = getConversationReadAt(user?.$id, conv.$id);
-                                                const isUnread = unreadConversations.has(conv.$id) || (
-                                                    conv.lastMessageSenderId !== user?.$id &&
-                                                    new Date(conv.lastMessageAt).getTime() > readAt
-                                                );
-                                                return isUnread ? (
-                                                    <span className="w-2.5 h-2.5 bg-[#F59E0B] rounded-full shadow-[0_0_12px_rgba(245,158,11,0.4)]" />
-                                                ) : null;
-                                            })()}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                            </div>
-                            {hasMoreChats && (
-                              <div ref={chatSentinelRef} className="flex justify-center py-6">
-                                <span className="text-xs font-bold tracking-widest uppercase text-white/25">Loading more…</span>
-                              </div>
-                            )}
-                            </>
-                    )
-                ) : (
-                    loadingGhost && filteredGhostConversations.length === 0 ? (
+                {(loading || loadingGhost) && unifiedItems.length === 0 && !showGlobalResults ? (
                         <div className="p-4 space-y-3 animate-pulse">
                             {[1, 2, 3].map((i) => (
                                 <div key={i} className="flex items-center gap-4 p-2">
@@ -1666,15 +1562,19 @@ export const ChatList = ({
                                 </div>
                             ))}
                         </div>
-                    ) : filteredGhostConversations.length === 0 && !showGlobalResults ? (
+                    ) : unifiedItems.length === 0 && !showGlobalResults ? (
                         <div className="p-12 text-center">
-                            <span className="font-black text-white text-lg mb-1 font-clash block">Quiet Airwaves</span>
-                            <span className="text-sm text-[#9B9691] font-medium block">No huddle threads active matching your query.</span>
+                            <span className="font-black text-white text-lg mb-1 font-clash block">No conversations yet</span>
+                            <span className="text-sm text-[#9B9691] font-medium block">Start a secret chat or thread to see it here.</span>
                         </div>
                     ) : (
                         <>
                             <div className="space-y-3">
-                                {filteredGhostConversations.map((conv) => (
+                                {unifiedItems.map((conv: any) => {
+                                const isSecure = conv._kind === 'secure';
+                                const handler = isSecure ? (e: any) => handleConversationRightClick(e, conv) : (e: any) => handleGhostConversationRightClick(e, conv);
+                                const openKind = isSecure ? 'chat' as const : 'thread' as const;
+                                return (
                                 <div key={conv.$id} className="w-full">
                                     <div
                                         role="button"
@@ -1682,126 +1582,130 @@ export const ChatList = ({
                                         onClick={(e: React.MouseEvent) => {
                                             handleItemClick(e);
                                             if (!isInitializing) {
-                                                openConversation(conv.$id, 'thread');
+                                                openConversation(conv.$id, openKind);
                                             }
                                         }}
-                                        onContextMenu={(e) => handleGhostConversationRightClick(e, conv)}
+                                        onContextMenu={handler}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
                                                 e.preventDefault();
                                                 if (!isInitializing) {
-                                                    openConversation(conv.$id, 'thread');
+                                                    openConversation(conv.$id, openKind);
                                                 }
                                             }
                                         }}
-                                        className="w-full flex items-center gap-4 px-5 py-4 rounded-3xl bg-[#161412] border border-[#1C1A18] hover:bg-[#1C1A18] hover:border-[#F59E0B]/20 hover:-translate-y-0.5 transition-all duration-300 ease-out text-left cursor-pointer shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9)]"
+                                        className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-[20px] bg-[#161412] border border-[#34322F] hover:bg-[#1C1A18] hover:border-[#3C3A38] transition-colors text-left cursor-pointer ${activePreviewConversationId === conv.$id ? 'border-[#F59E0B]/50' : ''}`}
                                     >
-                                        <div
-                                            className="flex-shrink-0"
-                                            role={!conv.linkedResourceType ? 'button' : undefined}
-                                            tabIndex={!conv.linkedResourceType ? 0 : undefined}
-                                            onClick={!conv.linkedResourceType ? (event) => {
-                                                event.preventDefault();
-                                                event.stopPropagation();
-                                                openAvatarPeek(conv);
-                                            } : undefined}
-                                            onKeyDown={!conv.linkedResourceType ? (event) => {
-                                                if (event.key !== 'Enter' && event.key !== ' ') return;
-                                                event.preventDefault();
-                                                event.stopPropagation();
-                                                openAvatarPeek(conv);
-                                            } : undefined}
-                                        >
-                                            {conv.linkedResourceType ? (
-                                                <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#0A0908] border border-white/[0.06]">
-                                                    <span className="font-clash font-black text-white text-[13px] tracking-tight leading-none">
-                                                        {(() => {
-                                                            const src = conv.linkedResourceName || conv.name || conv.linkedResourceType || 'H';
-                                                            const parts = String(src).trim().split(/\s+/).filter(Boolean);
-                                                            if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-                                                            const w = parts[0] || 'H';
-                                                            return w.slice(0, 2).toUpperCase();
-                                                        })()}
+                                        <div className="flex-shrink-0 mr-1 relative">
+                                            <div
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={(event) => {
+                                                    event.preventDefault();
+                                                    event.stopPropagation();
+                                                    if (isInitializing) {
+                                                        showIslandNotification({
+                                                            type: 'warning',
+                                                            title: 'Initializing Encryption',
+                                                            message: 'Securing connection channels...',
+                                                            app: 'connect',
+                                                            majestic: false,
+                                                            duration: 4000
+                                                        });
+                                                        return;
+                                                    }
+                                                    openAvatarPeek(conv);
+                                                }}
+                                                onKeyDown={(event) => {
+                                                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                                                    event.preventDefault();
+                                                    event.stopPropagation();
+                                                    openAvatarPeek(conv);
+                                                }}
+                                                className="relative"
+                                            >
+                                                {isSecure ? (
+                                                    <IdentityAvatar
+                                                        userId={conv.isSelf ? user?.$id : conv.otherUserId}
+                                                        src={conv.avatarUrl || conv.avatar || null}
+                                                        alt={conv.name}
+                                                        fallback={conv.name?.replace(/\(You\)/gi, '').replace(/^@/, '').trim().charAt(0).toUpperCase() || 'U'}
+                                                        size={48}
+                                                        status={conv.type === 'direct' && conv.otherUserId ? globalPresence?.[conv.otherUserId]?.state : undefined}
+                                                    />
+                                                ) : conv.linkedResourceType ? (
+                                                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#0A0908] border border-white/[0.06]">
+                                                        <span className="font-clash font-black text-white text-[13px] tracking-tight leading-none">
+                                                            {(() => {
+                                                                const src = conv.linkedResourceName || conv.name || conv.linkedResourceType || 'H';
+                                                                const parts = String(src).trim().split(/\s+/).filter(Boolean);
+                                                                if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+                                                                const w = parts[0] || 'H';
+                                                                return w.slice(0, 2).toUpperCase();
+                                                            })()}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <IdentityAvatar
+                                                        src={conv.avatarUrl}
+                                                        alt={conv.name}
+                                                        fallback={conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'H'}
+                                                        size={48}
+                                                        status={conv.otherUserId ? globalPresence?.[conv.otherUserId]?.state : undefined}
+                                                    />
+                                                )}
+                                                {isSecure && (
+                                                    <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#0A0908] border border-[#34322F] flex items-center justify-center">
+                                                        <Lock size={10} className="text-[#F59E0B]" />
                                                     </span>
-                                                </div>
-                                            ) : (
-                                                <IdentityAvatar
-                                                    src={conv.avatarUrl}
-                                                    alt={conv.name}
-                                                    fallback={conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'H'}
-                                                    size={48}
-                                                    status={conv.otherUserId ? globalPresence?.[conv.otherUserId]?.state : undefined}
-                                                />
-                                            )}
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="flex-1 min-w-0 flex flex-col gap-1">
-                                            <div className="flex items-center gap-2">
+                                            <span className={`font-black text-base font-clash tracking-tight truncate flex items-center gap-1.5 ${conv.isSelf ? 'text-[#F59E0B]' : 'text-white'}`}>
                                                 {isResourcePinned('conversation', conv.$id, user?.$id, false) ? (
                                                     <Pin size={14} className="text-[#F59E0B] shrink-0 fill-[#F59E0B]" />
                                                 ) : null}
-                                                <span className="font-black text-base font-clash tracking-tight text-white truncate">
-                                                    {conv.name}
-                                                </span>
-                                                {conv.linkedResourceType && (
-                                                    <div 
-                                                        className="px-2 py-0.5 rounded border flex-shrink-0"
-                                                        style={{
-                                                            backgroundColor: alpha(
-                                                                conv.linkedResourceType === 'project' ? '#6366F1' :
-                                                                conv.linkedResourceType === 'task' ? '#10B981' :
-                                                                conv.linkedResourceType === 'event' ? '#EC4899' :
-                                                                conv.linkedResourceType === 'form' ? '#8B5CF6' :
-                                                                conv.linkedResourceType === 'tag' ? '#EF4444' : '#F59E0B',
-                                                                0.1
-                                                            ),
-                                                            borderColor: alpha(
-                                                                conv.linkedResourceType === 'project' ? '#818CF8' :
-                                                                conv.linkedResourceType === 'task' ? '#34D399' :
-                                                                conv.linkedResourceType === 'event' ? '#F472B6' :
-                                                                conv.linkedResourceType === 'form' ? '#A78BFA' :
-                                                                conv.linkedResourceType === 'tag' ? '#F87171' : '#FBBF24',
-                                                                0.2
-                                                            )
-                                                        }}
-                                                    >
-                                                        <span 
-                                                            className="text-[9px] font-black font-mono uppercase tracking-wider"
-                                                            style={{
-                                                                color: 
-                                                                    conv.linkedResourceType === 'project' ? '#818CF8' :
-                                                                    conv.linkedResourceType === 'task' ? '#34D399' :
-                                                                    conv.linkedResourceType === 'event' ? '#F472B6' :
-                                                                    conv.linkedResourceType === 'form' ? '#A78BFA' :
-                                                                    conv.linkedResourceType === 'tag' ? '#F87171' : '#FBBF24'}}
-                                                        >
-                                                            {conv.linkedResourceType}
-                                                        </span>
-                                                    </div>
+                                                {conv.name || (conv.type === 'direct' ? conv.otherUserId : 'Hangout')}
+                                                {isSecure && <Lock size={12} className="text-[#F59E0B] ml-1 shrink-0" />}
+                                                {!isSecure && conv.linkedResourceType && (
+                                                    <span className="px-2 py-0.5 rounded border text-[9px] font-black font-mono uppercase tracking-wider" style={{ backgroundColor: alpha(conv.linkedResourceType === 'project' ? '#6366F1' : conv.linkedResourceType === 'task' ? '#10B981' : conv.linkedResourceType === 'event' ? '#EC4899' : conv.linkedResourceType === 'form' ? '#8B5CF6' : conv.linkedResourceType === 'tag' ? '#EF4444' : '#F59E0B', 0.1), borderColor: alpha(conv.linkedResourceType === 'project' ? '#818CF8' : conv.linkedResourceType === 'task' ? '#34D399' : conv.linkedResourceType === 'event' ? '#F472B6' : conv.linkedResourceType === 'form' ? '#A78BFA' : conv.linkedResourceType === 'tag' ? '#F87171' : '#FBBF24', 0.2), color: conv.linkedResourceType === 'project' ? '#818CF8' : conv.linkedResourceType === 'task' ? '#34D399' : conv.linkedResourceType === 'event' ? '#F472B6' : conv.linkedResourceType === 'form' ? '#A78BFA' : conv.linkedResourceType === 'tag' ? '#F87171' : '#FBBF24' }}>{conv.linkedResourceType}</span>
                                                 )}
-                                            </div>
-                                            <span className="text-[#9B9691] font-medium text-sm truncate">
-                                                {conv.lastMessageText}
+                                            </span>
+                                            <span className="text-[#9B9691] font-medium text-sm truncate flex items-center gap-1.5">
+                                                {isSecure ? (() => {
+                                                    const memoryPreview = ChatService.getConversationPreviewSnapshot(conv.$id);
+                                                    const memoryAt = memoryPreview?.lastMessageAt ? new Date(memoryPreview.lastMessageAt).getTime() : -1;
+                                                    const rowAt = conv.lastMessageAt ? new Date(conv.lastMessageAt).getTime() : -1;
+                                                    const memoryText = memoryPreview && (memoryAt >= rowAt || !conv.lastMessageText) ? memoryPreview.lastMessageText : null;
+                                                    const resolvedPreview = livePreviewByConversation[conv.$id]?.lastMessageText || memoryText || conv.lastMessageText || 'No messages yet';
+                                                    return (conv.isEncrypted && isLikelyEncrypted(resolvedPreview)) ? (
+                                                        <span className="flex items-center gap-1"><Lock size={12} className="text-[#9B9691]" /><span>Secured Payload</span></span>
+                                                    ) : (<span>{resolvedPreview}</span>);
+                                                })() : (<span>{conv.lastMessageText}</span>)}
                                             </span>
                                         </div>
                                         <div className="flex-shrink-0 flex flex-col items-end gap-1.5 ml-2">
                                             {conv.lastMessageAt && (
-                                                <span className="text-[11px] text-[#9B9691] font-black font-mono">
-                                                    {new Date(conv.lastMessageAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                                                </span>
+                                                <span className="text-[11px] text-[#9B9691] font-black font-mono">{new Date(conv.lastMessageAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
                                             )}
+                                            {conv.lastMessageAt && conv.lastMessageId && !conv.isSelf && isSecure && (() => {
+                                                const readAt = getConversationReadAt(user?.$id, conv.$id);
+                                                const isUnread = unreadConversations.has(conv.$id) || (conv.lastMessageSenderId !== user?.$id && new Date(conv.lastMessageAt).getTime() > readAt);
+                                                return isUnread ? (<span className="w-2.5 h-2.5 bg-[#F59E0B] rounded-full shadow-[0_0_12px_rgba(245,158,11,0.4)]" />) : null;
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                                )})}
                             </div>
-                            {hasMoreGhosts && (
-                              <div ref={ghostSentinelRef} className="flex justify-center py-6">
+                            {unifiedHasMore && (
+                              <div ref={chatSentinelRef} className="flex justify-center py-6">
                                 <span className="text-xs font-bold tracking-widest uppercase text-white/25">Loading more…</span>
                               </div>
                             )}
                             </>
-                    )
-                )}
+                    )}
             </div>
 
             <ConversationActionsSheet

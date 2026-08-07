@@ -8,7 +8,8 @@ import {
   Target as GoalsIcon,
   Lock as VaultIcon,
   GitFork as FlowIcon,
-  MessageCircle as ConnectIcon,
+  Users as MomentsIcon,
+  MessageCircleMore as HangoutIcon,
 } from 'lucide-react';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -19,7 +20,7 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { useAuth } from '@/context/auth/AuthContext';
 
-type NavId = 'note' | 'goal' | 'vault' | 'connect' | 'flow';
+type NavId = 'note' | 'goal' | 'vault' | 'connect' | 'moments' | 'hangout' | 'flow';
 
 /** Same order + accents as UnifiedBottomBar: ideas → goals → vault → connect → flows */
 const NAV_COLORS: Record<NavId, string> = {
@@ -27,6 +28,8 @@ const NAV_COLORS: Record<NavId, string> = {
   goal: '#A855F7',
   vault: '#10B981',
   connect: '#F59E0B',
+  moments: '#F59E0B',
+  hangout: '#F59E0B',
   flow: '#A855F7',
 };
 
@@ -77,7 +80,9 @@ export function UnifiedLeftSidebar() {
     if (pathname?.startsWith('/app')) return 'note';
     if (pathname?.startsWith('/goals') || pathname?.startsWith('/events') || pathname?.startsWith('/goal')) return 'goal';
     if (pathname?.startsWith('/vault')) return 'vault';
-    if (pathname?.startsWith('/connect')) return 'connect';
+    // Desktop split: /connect → moments, /connect/chats (+ calls/chat) → hangout
+    if (pathname?.startsWith('/connect/chats') || pathname?.startsWith('/connect/chat') || pathname?.startsWith('/connect/calls') || pathname?.startsWith('/connect/call')) return 'hangout';
+    if (pathname?.startsWith('/connect')) return 'moments';
     if (isFlowPath(pathname)) return 'flow';
     return null;
   };
@@ -94,6 +99,8 @@ export function UnifiedLeftSidebar() {
       goal: '/goals',
       vault: '/vault',
       connect: '/connect',
+      moments: '/connect',
+      hangout: '/connect/chats',
       flow: '/flows',
     };
     navPush(routes[navId] || '/app');
@@ -108,7 +115,8 @@ export function UnifiedLeftSidebar() {
     { id: 'note', label: 'Ideas', icon: NotesIcon },
     { id: 'goal', label: 'Goals', icon: GoalsIcon },
     { id: 'vault', label: 'Vault', icon: VaultIcon },
-    { id: 'connect', label: 'Connect', icon: ConnectIcon },
+    { id: 'moments', label: 'Moments', icon: MomentsIcon },
+    { id: 'hangout', label: 'Hangout', icon: HangoutIcon },
     { id: 'flow', label: 'Flows', icon: FlowIcon },
   ];
 

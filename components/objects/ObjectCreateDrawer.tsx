@@ -132,7 +132,8 @@ export function ObjectCreateDrawer({
     });
   }, [formOnlyFull, isDesktop]);
 
-  const { openSidebar } = useDynamicSidebar();
+  const { openSidebar, activeContentKey: dynamicKey } = useDynamicSidebar();
+  const lastCreateKeyRef = React.useRef<string | null>(null);
 
   const propsRef = React.useRef({
     initialContent,
@@ -164,6 +165,10 @@ export function ObjectCreateDrawer({
 
   useEffect(() => {
     if (!open || !mounted || !isDesktop) return;
+    const key = `create-${kind}`;
+    // Guard: same create drawer already bridged — avoid re-pushing stack on every effect run
+    if (lastCreateKeyRef.current === key && dynamicKey === key) return;
+    lastCreateKeyRef.current = key;
     const {
       initialContent: initContent,
       onNoteCreated: onNoteC,
@@ -235,8 +240,13 @@ export function ObjectCreateDrawer({
       </div>
     );
 
-    openSidebar(body, `create-${kind}`, { hideHeader: true });
-  }, [open, mounted, isDesktop, kind, openSidebar]);
+    openSidebar(body, key, { hideHeader: true });
+  }, [open, mounted, isDesktop, kind, openSidebar, dynamicKey]);
+
+  // Reset guard when closed so next open can push again
+  useEffect(() => {
+    if (!open) lastCreateKeyRef.current = null;
+  }, [open]);
 
   if (!open || !mounted || isDesktop) return null;
 

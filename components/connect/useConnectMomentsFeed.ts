@@ -29,6 +29,10 @@ const PAGE_SIZE = 16;
 const UNIFIED_CACHE = 'f_unified_moments_feed';
 const MAX_FEED = 240;
 
+// Memory mirrors for instant paint (0ms) before IndexedDB resolves
+let memoryUnified: UnifiedFeedItem[] | null = null;
+let memoryEco: any[] | null = null;
+
 function buildItems(
   ecosystemMoments: any[],
   nostrFeed: { id: string; pubkey: string; content: string; created_at: number; tags?: string[][] }[],
@@ -151,13 +155,15 @@ function silentMerge(prev: UnifiedFeedItem[], incoming: UnifiedFeedItem[]): Unif
 }
 
 function persistUnified(rows: UnifiedFeedItem[]) {
-  void LocalEngine.cacheSet(UNIFIED_CACHE, rows.slice(0, MAX_FEED));
+  const sliced = rows.slice(0, MAX_FEED);
+  memoryUnified = sliced;
+  void LocalEngine.cacheSet(UNIFIED_CACHE, sliced);
 }
 
 export function useConnectMomentsFeed() {
   const { user } = useAuth();
   const { feed: nostrFeed } = useNostrFeed();
-  const [ecosystemMoments, setEcosystemMoments] = useState<any[]>([]);
+  const [ecosystemMoments, setEcosystemMoments] = useState<any[]>(() => (memoryEco ? [...memoryEco] : []));
   const [resolvedProfiles, setResolvedProfiles] = useState<
     Record<string, { username: string; avatarUrl?: string }>
   >({});
@@ -165,9 +171,9 @@ export function useConnectMomentsFeed() {
     replyCount: Record<string, number>;
     likeCount: Record<string, number>;
   }>({ replyCount: {}, likeCount: {} });
-  const [displayItems, setDisplayItems] = useState<UnifiedFeedItem[]>([]);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [hydrated, setHydrated] = useState(false);
+  const [displayItems, setDisplayItems] = useState<UnifiedFeedItem[]>(() => (memoryUnified ? [...memoryUnified] : []));
+  const [visibleCount, setVisibleCount] = useState(() => (memoryUnified?.length ? Math.min(PAGE_SIZE, memoryUnified.length) : PAGE_SIZE));
+  const [hydrated, setHydrated] = useState(() => !!memoryUnified?.length);
   const [refreshing, setRefreshing] = useState(false);
 
   const displayRef = useRef(displayItems);
@@ -199,19 +205,38 @@ export function useConnectMomentsFeed() {
     });
   }, []);
 
-  // 1) Hydrate unified feed from LocalEngine first — never flash empty.
+  // 1) Hydrate unified feed from LocalEngine first — never flash empty. Use local copy engine directly.
+  // Instant paint: memory already set above; this just confirms from IndexedDB.
   useEffect(() => {
     let cancelled = false;
+    // If memory already painted, mark hydrated immediately so background merges start
+    if (memoryUnified?.length) setHydrated(true);
     void (async () => {
       try {
-        const cached = await LocalEngine.cacheGet<UnifiedFeedItem[]>(UNIFIED_CACHE);
-        if (!cancelled && Array.isArray(cached) && cached.length) {
-          setDisplayItems(cached);
-          setVisibleCount(Math.min(PAGE_SIZE, cached.length));
+        // Read both caches in parallel for speed
+        const [cached, ecoCached] = await Promise.all([
+          LocalEngine.cacheGet<UnifiedFeedItem[]>(UNIFIED_CACHE).catch(() => null),
+          LocalEngine.cacheGet<any[]>('f_moments_list').catch(() => null),
+        ]);
+        if (cancelled) return;
+        if (Array.isArray(cached) && cached.length) {
+          memoryUnified = cached;
+          // Only set if memory didn't already paint same content
+          setDisplayItems((prev) => (prev.length ? prev : cached));
+          setVisibleCount((prev) => (prev !== PAGE_SIZE ? prev : Math.min(PAGE_SIZE, cached.length)));
         }
-        const ecoCached = await LocalEngine.cacheGet<any[]>('f_moments_list');
-        if (!cancelled && Array.isArray(ecoCached) && ecoCached.length) {
-          setEcosystemMoments(ecoCached);
+        if (Array.isArray(ecoCached) && ecoCached.length) {
+          memoryEco = ecoCached;
+          setEcosystemMoments((prev) => (prev.length ? prev : ecoCached));
+          // If no unified cache, build display immediately from local moments (no network wait)
+          if (!Array.isArray(cached) || !cached.length) {
+            const built = buildItems(ecoCached, [], {}, { replyCount: {}, likeCount: {} });
+            if (built.length) {
+              memoryUnified = built;
+              setDisplayItems((prev) => (prev.length ? prev : built));
+              setVisibleCount((prev) => (prev !== PAGE_SIZE ? prev : Math.min(PAGE_SIZE, built.length)));
+            }
+          }
         }
       } finally {
         if (!cancelled) setHydrated(true);
@@ -222,9 +247,9 @@ export function useConnectMomentsFeed() {
     };
   }, []);
 
-  // 2) Background ecosystem fetch — merge only, never wipe.
+  // 2) Background ecosystem fetch — merge only, never wipe. Runs even before hydrated if memory exists.
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated && !memoryUnified?.length && !memoryEco?.length) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -251,6 +276,7 @@ export function useConnectMomentsFeed() {
           }
           if (!changed && prev.length === byId.size) return prev;
           const next = Array.from(byId.values());
+          memoryEco = next;
           void LocalEngine.cacheSet('f_moments_list', next);
           return next;
         });
@@ -265,7 +291,7 @@ export function useConnectMomentsFeed() {
 
   // 3) When sources update, silently add / patch — never replace the visible feed.
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated && !memoryUnified?.length) return;
     const incoming = buildItems(
       ecosystemMoments,
       nostrFeed,

@@ -24,6 +24,9 @@ import { formatSecureChatStartError } from '@/lib/crypto/public-key';
 import {
     discoverRecipientSecureReady,
     resolveChatChannelKind,
+    canonicalDirectParticipants,
+    directParticipantsEqual,
+    extractGhostParticipantIds,
 } from '@/lib/chat/recipient-secure-ready';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -106,19 +109,23 @@ export function NewChatDrawer({
 
         toast.loading('Checking secure setup…', { id: 'ghost-init' });
 
-        const discovery = await discoverRecipientSecureReady(
-            targetUserId,
-            typeof targetUser.publicKey === 'string' ? targetUser.publicKey : null,
-        );
+        const [selfDiscovery, discovery] = await Promise.all([
+            discoverRecipientSecureReady(user.$id),
+            discoverRecipientSecureReady(
+                targetUserId,
+                typeof targetUser.publicKey === 'string' ? targetUser.publicKey : null,
+            ),
+        ]);
 
         const channel = resolveChatChannelKind({
             recipientReady: discovery.ready,
+            selfReady: selfDiscovery.ready,
             explicitThread: mode === 'thread',
         });
 
         if (channel === 'thread') {
             try {
-                if (mode !== 'thread' && !discovery.ready) {
+                if (mode !== 'thread' && (!discovery.ready || !selfDiscovery.ready)) {
                     toast(
                         "This person hasn't set up secure chat yet. Starting a standard chat instead.",
                         { id: 'ghost-init' },
@@ -127,13 +134,10 @@ export function NewChatDrawer({
                     toast.loading(copy.loading, { id: 'ghost-init' });
                 }
                 const existingGhosts = await listGhostNoteChats();
+                const targetSet = canonicalDirectParticipants([user.$id, targetUserId]);
                 const foundGhost = existingGhosts.find((c: any) => {
-                    let metadataObj: any = {};
-                    try {
-                        metadataObj = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata || {});
-                    } catch {}
-                    const participants = c.collaborators || metadataObj.participants || [];
-                    return participants.includes(targetUserId);
+                    const participants = extractGhostParticipantIds(c);
+                    return directParticipantsEqual(participants, targetSet);
                 });
 
                 if (foundGhost) {
@@ -156,11 +160,16 @@ export function NewChatDrawer({
         const openSecure = async () => {
             try {
                 await ecosystemSecurity.ensureE2EIdentity(user.$id);
+                const targetSet = canonicalDirectParticipants([user.$id, targetUserId]);
                 try {
                     const existing = await ChatService.getConversations(user.$id);
-                    const found = existing.rows.find((c: any) =>
-                        c.type === 'direct' && c.participants.includes(targetUserId)
-                    );
+                    const found = existing.rows.find((c: any) => {
+                        if (c.type !== 'direct' || !Array.isArray(c.participants)) return false;
+                        return directParticipantsEqual(
+                            canonicalDirectParticipants(c.participants),
+                            targetSet,
+                        );
+                    });
                     if (found) {
                         toast.dismiss('ghost-init');
                         openConversation(found.$id, 'chat');

@@ -28,6 +28,7 @@ Supported: **17.4.0+** (tables-db). Current ecosystem often **21.x+**.
 ### Client / session guardrails (STRICT)
 
 - **NEVER** mutate CLI client config: no `appwrite client --endpoint`, `--key`, `--project-id`, or `--reset`. That wipes the user's local session/prefs.
+- **NEVER** run `appwrite whoami` — it is unnecessary noise; assume authenticated and use read-only `get-row`/`list-rows` for verification.
 - Assume the user is already authenticated. On "Session not found" / auth errors: **stop** and ask them to run `appwrite login`. Do not improvise with keys in ways that rewrite prefs.
 
 ---

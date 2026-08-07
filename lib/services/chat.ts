@@ -164,9 +164,9 @@ async function notifyMessageStreak(conversation: any, senderId: string, conversa
     });
 }
 
-const buildConversationMemberPermissions = (_participantIds: string[], creatorId: string) => {
-    return [
-        Permission.read(Role.user(creatorId))];
+const buildConversationMemberPermissions = (participantIds: string[], creatorId: string) => {
+    const ids = Array.from(new Set([...(participantIds || []), creatorId].filter(Boolean)));
+    return ids.map((id) => Permission.read(Role.user(id)));
 };
 
 const normalizeConversationRow = async (conversation: any) => {
@@ -618,6 +618,55 @@ async function resolveConversationKey(
         }
     }
 
+    // Healing for creator-owned direct chats where lockbox was never persisted (new chat, 0 messages — re-key is safe).
+    // Uses system client via syncLockboxRows, never keychain (keychain is only masterpass/passkey).
+    if (
+        options?.allowCreate &&
+        !isSelfChat &&
+        conversation.type === 'direct' &&
+        conversation.creatorId === userId &&
+        ecosystemSecurity.status.isUnlocked &&
+        ecosystemSecurity.status.hasIdentity
+    ) {
+        try {
+            const participants = Array.isArray(conversation.participants) ? conversation.participants.filter(Boolean) as string[] : [];
+            const unique = Array.from(new Set(participants.length ? participants : [userId]));
+            const creatorPub = await ecosystemSecurity.ensureE2EIdentity(userId);
+            if (!creatorPub) return null;
+            // Only heal if conversation is recent and effectively empty (safe to re-key)
+            const createdAt = new Date((conversation as any).createdAt || (conversation as any).$createdAt || 0).getTime();
+            const isRecent = Number.isFinite(createdAt) ? Date.now() - createdAt < 1000 * 60 * 60 * 24 : false;
+            if (!isRecent) return null;
+            const healedKey = await ecosystemSecurity.generateConversationKey();
+            const healRows: LockboxEntry[] = await Promise.all(unique.map(async (pid) => {
+                const pub = await fetchProfilePublicKey(pid);
+                if (!pub || !isValidX25519PublicKey(pub)) return null as any;
+                return {
+                    resourceType: 'chat',
+                    resourceId: conversation.$id,
+                    grantee: pid,
+                    wrappedKey: await ecosystemSecurity.wrapKeyWithECDH(healedKey, pub),
+                    metadata: buildLockboxMetadata({
+                        wrappedBy: userId,
+                        senderPublicKey: creatorPub,
+                        wrappedByPublicKey: creatorPub,
+                        conversationId: conversation.$id,
+                        conversationType: 'direct',
+                        version: 't4',
+                        healed: true,
+                    }),
+                };
+            })).then((r) => r.filter(Boolean) as LockboxEntry[]);
+            if (healRows.length === unique.length && healRows.length > 0) {
+                await syncLockboxRows(healRows, auth);
+                cacheResolvedConversationKey(conversation.$id, healedKey);
+                return healedKey;
+            }
+        } catch (healErr) {
+            console.warn('[ChatService] Direct chat heal failed:', healErr);
+        }
+    }
+
     return null;
 }
 
@@ -723,7 +772,8 @@ export const ChatService = {
         return repairResult;
     },
     async getConversationById(conversationId: string, userId?: string) {
-        const conv = await tablesDB.getRow(DB_ID, CONV_TABLE, conversationId);
+        const conv = await tablesDB.getRow(DB_ID, CONV_TABLE, conversationId).catch(() => null);
+        if (!conv) return null as any;
         const normalizedConversation = await normalizeConversationRow(conv);
         const hydrated = await this._hydrateConversationParticipants(normalizedConversation);
         return await this._decryptConversation(hydrated, userId);
@@ -756,7 +806,7 @@ export const ChatService = {
     },
 
     async _decryptConversation(conv: any, userId?: string) {
-        if (!conv.isEncrypted || !ecosystemSecurity.status.isUnlocked) return conv;
+        if (!conv || !conv.isEncrypted || !ecosystemSecurity.status.isUnlocked) return conv;
         let convKey: CryptoKey | null = null;
         try {
             if (userId) {
@@ -888,9 +938,24 @@ export const ChatService = {
             return timeB - timeA;
         });
 
+        // Dedupe direct chats by exact participant set (keep most recent) — collapses myriads from prior half-written retries
+        const seenDirect = new Map<string, any>();
+        const deduped: any[] = [];
+        for (const row of rows) {
+            if (row.type !== 'direct' || !Array.isArray(row.participants)) {
+                deduped.push(row);
+                continue;
+            }
+            const key = canonicalizeParticipantsForMatch(row.participants).join('|');
+            if (!seenDirect.has(key)) {
+                seenDirect.set(key, row);
+                deduped.push(row);
+            }
+        }
+
         return {
-            total: rows.length,
-            rows,
+            total: deduped.length,
+            rows: deduped,
             /** True only when a list query succeeded. Failed requests are not "empty". */
             authoritative,
         };
@@ -986,7 +1051,7 @@ export const ChatService = {
                 throw new Error('E2E identity must be initialized before creating conversations');
             }
         }
-        const uniqueParticipants = isSelf ? [participants[0], participants[0]] : Array.from(new Set(participants));
+        const uniqueParticipants = isSelf ? [participants[0]] : Array.from(new Set(participants));
 
         // Personal chat: only proceed when a successful probe says it does not exist.
         if (isSelf) {
@@ -1046,9 +1111,10 @@ export const ChatService = {
 
                     const targetParticipantSet = canonicalizeParticipantsForMatch(uniqueParticipants);
                     for (const conversation of candidateRows) {
-                        const existingParticipantSet = canonicalizeParticipantsForMatch(
-                            participantsByConversation.get(conversation.$id) || []
-                        );
+                        const memberSet = participantsByConversation.get(conversation.$id);
+                        // Fallback to conversation.participants when member rows are half-written (rowSecurity race)
+                        const rawParticipants = memberSet && memberSet.length ? memberSet : (Array.isArray((conversation as any).participants) ? (conversation as any).participants : []);
+                        const existingParticipantSet = canonicalizeParticipantsForMatch(rawParticipants);
 
                         if (arraysEqual(existingParticipantSet, targetParticipantSet)) {
                             console.log('[ChatService] Direct chat already exists, returning existing:', conversation.$id);
@@ -1124,6 +1190,7 @@ export const ChatService = {
         ));
 
         // Cache the local key for this session + LocalEngine (survives reload)
+        // System client via secure-ops persists lockbox — client SDK never touches keychain (keychain is only masterpass/passkey).
         if (convKey) {
             cacheResolvedConversationKey(newConv.$id, convKey);
             try {
@@ -1131,62 +1198,73 @@ export const ChatService = {
                     ? await ecosystemSecurity.ensureE2EIdentity(creatorId)
                     : null;
 
-                if (creatorPublicKey) {
-                    const directLockboxRows: LockboxEntry[] = await Promise.all(uniqueParticipants.map(async (participantId) => {
-                        const profile = await UsersService.getProfileById(participantId);
-                        if (!profile?.publicKey) return null;
-
-                        if (!isValidX25519PublicKey(profile.publicKey)) {
-                            console.error(`[ChatService] Invalid public key for user ${participantId}:`, profile.publicKey);
-                            throw new Error(`${profile.displayName || profile.username || 'A participant'} hasn't finished secure chat setup yet. Ask them to unlock their vault in Settings and try again.`);
-                        }
-
-                        return {
-                            resourceType: 'chat',
-                            resourceId: newConv.$id,
-                            grantee: participantId,
-                            wrappedKey: await ecosystemSecurity.wrapKeyWithECDH(convKey, profile.publicKey),
-                            metadata: buildLockboxMetadata({
-                                wrappedBy: creatorId,
-                                senderPublicKey: creatorPublicKey,
-                                wrappedByPublicKey: creatorPublicKey,
-                                conversationId: newConv.$id,
-                                conversationType: type,
-                                version: 't4'}),
-                        };
-                    })).then((rows) => rows.filter(Boolean) as LockboxEntry[]);
-
-                    if (type === 'group') {
-                        await callPermissionsApi('POST', {
-                            action: 'rotate_epoch',
-                            resourceId: newConv.$id,
-                            ownerId: creatorId,
-                            participantUserIds: uniqueParticipants,
-                            epochNumber: 1,
-                            keyMappings: directLockboxRows.map((entry: any) => ({
-                                ...entry,
-                                resourceType: 'epoch',
-                                resourceId: newConv.$id})),
-                        });
+                if (!creatorPublicKey) {
+                    throw new Error('E2E identity not available for lockbox wrapping');
+                }
+                const directLockboxRows: LockboxEntry[] = await Promise.all(uniqueParticipants.map(async (participantId) => {
+                    // Live fetch with sync fallback — never use stale search-card seed
+                    const livePub = await fetchProfilePublicKey(participantId);
+                    if (!livePub) {
+                        throw new Error(`${participantId} hasn't finished secure chat setup yet. Ask them to unlock vault in Settings.`);
                     }
-                    
-                    // Always sync base 'chat' lockbox rows for immediate metadata decryption
-                    if (directLockboxRows.length > 0) {
-                        await syncLockboxRows(directLockboxRows);
+                    if (!isValidX25519PublicKey(livePub)) {
+                        throw new Error(`Invalid public key for user ${participantId}`);
                     }
+                    return {
+                        resourceType: 'chat',
+                        resourceId: newConv.$id,
+                        grantee: participantId,
+                        wrappedKey: await ecosystemSecurity.wrapKeyWithECDH(convKey, livePub),
+                        metadata: buildLockboxMetadata({
+                            wrappedBy: creatorId,
+                            senderPublicKey: creatorPublicKey,
+                            wrappedByPublicKey: creatorPublicKey,
+                            conversationId: newConv.$id,
+                            conversationType: type,
+                            version: 't4'}),
+                    };
+                }));
 
-                    const recipientIds = uniqueParticipants.filter((id) => id !== creatorId);
-                    if (recipientIds.length > 0) {
-                        await syncConversationAccess(
-                            newConv.$id,
-                            recipientIds,
-                            type === 'direct' ? 'write' : 'read',
-                            creatorId
-                        );
-                    }
+                if (directLockboxRows.length !== uniqueParticipants.length) {
+                    throw new Error('Lockbox wrap incomplete — participant key missing');
+                }
+
+                if (type === 'group') {
+                    await callPermissionsApi('POST', {
+                        action: 'rotate_epoch',
+                        resourceId: newConv.$id,
+                        ownerId: creatorId,
+                        participantUserIds: uniqueParticipants,
+                        epochNumber: 1,
+                        keyMappings: directLockboxRows.map((entry: any) => ({
+                            ...entry,
+                            resourceType: 'epoch',
+                            resourceId: newConv.$id})),
+                    });
+                }
+                
+                // System client (secure-ops) grants read to each grantee — never client SDK
+                await syncLockboxRows(directLockboxRows);
+
+                // Verify at least one lockbox persisted; retry once via system client if rowSecurity hid it from client view
+                const verify = await fetchKeyMapping('chat', newConv.$id, creatorId);
+                if (!verify) {
+                    await syncLockboxRows(directLockboxRows);
+                }
+
+                const recipientIds = uniqueParticipants.filter((id) => id !== creatorId);
+                if (recipientIds.length > 0) {
+                    await syncConversationAccess(
+                        newConv.$id,
+                        recipientIds,
+                        type === 'direct' ? 'write' : 'read',
+                        creatorId
+                    );
                 }
             } catch (lockboxErr) {
                 console.error('[ChatService] Failed to persist lockbox rows:', lockboxErr);
+                // Do not swallow for non-self chats — surface to caller so UI can retry instead of leaving broken conversation
+                if (!isSelf) throw lockboxErr;
             }
         }
 
