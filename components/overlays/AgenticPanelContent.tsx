@@ -1903,7 +1903,19 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       titleText = visibleChatContent('user', firstUser.content).slice(0, 72) || titleText;
                     }
                     if (lastMsg) {
-                      const body = visibleChatContent(lastMsg.role, lastMsg.content);
+                      let body = visibleChatContent(lastMsg.role, lastMsg.content);
+                      // Sidekick sessions store JSON with oneLiner — show hint only, not full JSON
+                      if (isObjectSession) {
+                        try {
+                          const j = JSON.parse(body);
+                          if (j?.oneLiner) body = j.oneLiner;
+                          else if (j?.response) body = String(j.response).slice(0, 80);
+                          else if (typeof j === 'object') body = j.oneLiner || j.title || 'Sidekick session';
+                        } catch {
+                          // if body is already plain text, keep it
+                        }
+                      }
+                      body = body.replace(/\s+/g, ' ').trim().slice(0, 96);
                       previewText = `${lastMsg.role === 'user' ? 'You' : 'Kylie'}: ${body}`;
                     }
                   } catch {}
@@ -1937,18 +1949,18 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       onTouchEnd={clearSessionLongPress}
                       onTouchMove={clearSessionLongPress}
                       onTouchCancel={clearSessionLongPress}
-                      className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl border transition cursor-pointer text-left group ${isObjectSession ? 'bg-[#A855F7]/10 border-[#A855F7]/20 hover:bg-[#A855F7]/15 hover:border-[#A855F7]/30' : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.05] hover:border-white/10'}`}
+                      className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl border transition cursor-pointer text-left group max-h-[72px] overflow-hidden ${isObjectSession ? 'bg-[#A855F7]/10 border-[#A855F7]/20 hover:bg-[#A855F7]/15 hover:border-[#A855F7]/30' : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.05] hover:border-white/10'}`}
                     >
-                      <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                      <div className="min-w-0 flex-1 flex flex-col gap-0.5 overflow-hidden">
                         <span className="text-white text-xs font-bold leading-tight truncate flex items-center gap-2">
                           {isObjectSession && <span className="shrink-0 text-[11px]">{objectIcon}</span>}
                           <span className="truncate">{titleText}</span>
                           {isObjectSession && <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-[#A855F7]/20 text-[#E9D5FF] text-[9px] font-black uppercase tracking-wider">{String((sess as any).targetType)}</span>}
                           {sess.isPinned === true && <span className="text-[10px] text-[#F59E0B] font-black">PINNED</span>}
                         </span>
-                        <span className="text-[#9B9691] text-[10px] leading-snug line-clamp-1 flex items-center gap-1">
+                        <span className="text-[#9B9691] text-[10px] leading-snug line-clamp-1 flex items-center gap-1 max-h-[20px] overflow-hidden">
                           {isObjectSession && <span className="shrink-0">↗</span>}
-                          {previewText}
+                          <span className="truncate">{previewText}</span>
                         </span>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
