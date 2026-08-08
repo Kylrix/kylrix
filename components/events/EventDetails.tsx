@@ -423,8 +423,8 @@ export default function EventDetails({ eventId, initialData, onBack, onClose, hi
           )}
 
           <div className="flex items-center gap-2 mt-1.5 shrink-0">
-            <SyncStatusDot resourceId={`event:${eventIdValue}`} />
-            <SyncStatusLabel resourceId={`event:${eventIdValue}`} />
+            <SyncStatusDot resourceId={`event:${eventIdValue}`} kind="event" />
+            <SyncStatusLabel resourceId={`event:${eventIdValue}`} kind="event" />
           </div>
         </div>
 

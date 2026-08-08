@@ -19,6 +19,218 @@ import SudoModal from '@/components/overlays/SudoModal';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import type { TotpSecrets as TotpItem } from '@/types/appwrite';
+import { looksEncrypted } from '@/lib/masterpass-crypto';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
+
+
+// Stable TOTPCard - defined outside parent to prevent remount on every currentTime tick (1s).
+// Previously defined inside TOTPPageContent, its function identity changed each second, causing
+// React to unmount/mount cards and reset displayTotp from decrypted back to encrypted -> flash.
+function TOTPCardStable({
+  totp,
+  folders,
+  currentTime: _currentTime,
+  getTimeRemaining,
+  getFaviconUrl,
+  selectedTotp,
+  setSelectedTotp,
+  requireUnlock,
+  openEditDialog,
+  openDeleteDialog,
+  copyToClipboard,
+}: {
+  totp: TotpItem;
+  folders: Map<string, string>;
+  currentTime: number;
+  getTimeRemaining: (period?: number) => number;
+  getFaviconUrl: (url: string | null | undefined) => string | null;
+  selectedTotp: TotpItem | null;
+  setSelectedTotp: (t: TotpItem | null) => void;
+  requireUnlock: (cb: () => void) => void;
+  openEditDialog: (t: TotpItem) => void;
+  openDeleteDialog: (id: string) => void;
+  copyToClipboard: (text: string) => void;
+}) {
+  const { user, isVaultBlurEnabled } = useAppwriteVault();
+  const contextMenu = useContextMenu();
+  const openMenu = contextMenu?.openMenu;
+  const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
+  const [displayTotp, setDisplayTotp] = useState<TotpItem>(totp);
+  const [isVaultUnlockedState, setIsVaultUnlockedState] = useState(() => {
+    try {
+      const { masterPassCrypto } = require('@/lib/masterpass-crypto');
+      return !!(ecosystemSecurity.status.isUnlocked || masterPassCrypto.isVaultUnlocked());
+    } catch { return !!ecosystemSecurity.status.isUnlocked; }
+  });
+  useEffect(() => {
+    setDisplayTotp((prev) => (prev.$id === totp.$id ? prev : totp));
+  }, [totp.$id]);
+  useEffect(() => {
+    if (!isVaultUnlockedState && (looksEncrypted(totp.issuer) || looksEncrypted(totp.accountName) || looksEncrypted(totp.secretKey))) {
+      setDisplayTotp(totp);
+    }
+  }, [totp.issuer, totp.accountName, totp.secretKey, isVaultUnlockedState]);
+  useEffect(() => {
+    const syncUnlock = () => {
+      try {
+        const { masterPassCrypto } = require('@/lib/masterpass-crypto');
+        setIsVaultUnlockedState(!!(ecosystemSecurity.status.isUnlocked || masterPassCrypto.isVaultUnlocked()));
+      } catch { setIsVaultUnlockedState(!!ecosystemSecurity.status.isUnlocked); }
+    };
+    const unsub = ecosystemSecurity.onStatusChange((s: any) => setIsVaultUnlockedState(!!s.isUnlocked));
+    const onUnlock = () => setIsVaultUnlockedState(true);
+    const onLock = () => setIsVaultUnlockedState(false);
+    window.addEventListener('vault-unlocked', onUnlock);
+    window.addEventListener('kylrix:vault-unlocked', onUnlock);
+    window.addEventListener('vault-locked', onLock);
+    syncUnlock();
+    return () => {
+      unsub();
+      window.removeEventListener('vault-unlocked', onUnlock);
+      window.removeEventListener('kylrix:vault-unlocked', onUnlock);
+      window.removeEventListener('vault-locked', onLock);
+    };
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    const tryDecrypt = async () => {
+      const isEncrypted = looksEncrypted(totp.issuer) || looksEncrypted(totp.accountName) || looksEncrypted(totp.secretKey) || looksEncrypted((totp as any).dek);
+      if (!isEncrypted) { if (!cancelled) setDisplayTotp(totp); return; }
+      if (!isVaultUnlockedState) return;
+      try {
+        const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
+        if (!masterPassCrypto.isVaultUnlocked()) return;
+        const { decryptField } = await import('@/lib/masterpass-crypto');
+        const updated: any = { ...totp };
+        let changed = false;
+        let dekKey: any = null;
+        if ((totp as any).dek && looksEncrypted((totp as any).dek)) {
+          try {
+            const dekBase64 = await decryptField((totp as any).dek);
+            const rawKey = new Uint8Array(atob(dekBase64).split('').map((c: any) => c.charCodeAt(0)));
+            dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+          } catch {}
+        }
+        for (const field of ['issuer','accountName','secretKey','url'] as const) {
+          const val = (totp as any)[field];
+          if (val && typeof val === 'string' && looksEncrypted(val)) {
+            try {
+              let plain: string | null = null;
+              if (dekKey) plain = await ecosystemSecurity.decryptWithKey(val, dekKey);
+              else plain = await decryptField(val);
+              if (plain && plain !== val) { updated[field] = plain; changed = true; }
+            } catch {}
+          }
+        }
+        if (changed && !cancelled) setDisplayTotp(updated);
+      } catch {}
+    };
+    void tryDecrypt();
+    return () => { cancelled = true; };
+  }, [totp.$id, totp.issuer, totp.accountName, totp.secretKey, (totp as any).dek, isVaultUnlockedState]);
+  const isLockedEncrypted = !isVaultUnlockedState && looksEncrypted(displayTotp.secretKey);
+  const code = isLockedEncrypted ? '--- ---' : generateTOTP(displayTotp.secretKey, { step: displayTotp.period || 30, digits: displayTotp.digits || 6 });
+  const timeRemaining = getTimeRemaining(displayTotp.period || 30);
+  const progress = (timeRemaining / (displayTotp.period || 30)) * 100;
+  const folderName = displayTotp.folderId ? folders.get(displayTotp.folderId) : null;
+  const faviconUrl = !looksEncrypted(displayTotp.url) ? getFaviconUrl(displayTotp.url) : null;
+  const issuerInitials = !looksEncrypted(displayTotp.issuer) && displayTotp.issuer ? displayTotp.issuer.trim().charAt(0).toUpperCase() : "?";
+  const isSelected = selectedTotp?.$id === totp.$id;
+  const ownerId = totp.userId || user?.$id || '';
+  const pinned = isResourcePinned('totp', totp.$id, ownerId, totp.isPinned);
+  const handlePinToggle = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!user?.$id) return;
+    const currentlyPinned = isResourcePinned('totp', totp.$id, ownerId, totp.isPinned);
+    const isOwner = user.$id === ownerId;
+    try {
+      const nextPinned = await togglePin({ resourceType: 'totp', resourceId: totp.$id, ownerId, rowIsPinned: totp.isPinned, setOwnerRowPin: async (pinned) => { const { setTotpPinned } = await import('@/lib/appwrite'); await setTotpPinned(totp.$id, pinned); }});
+      if (!isOwner) setLocalPin('totp', totp.$id, currentlyPinned);
+      toast.success(nextPinned ? 'Pinned to top' : 'Unpinned');
+    } catch (err: unknown) {
+      if (!isOwner) setLocalPin('totp', totp.$id, currentlyPinned);
+      console.error('Failed to toggle pin:', err);
+      toast.error('Failed to toggle pin');
+    }
+  };
+  const handleShareDecryptedKey = async () => {
+    try {
+      if (!totp.isPublic) {
+        const { toggleResourcePublicGuest } = await import('@/lib/actions/client-ops');
+        const res = await toggleResourcePublicGuest({ resourceType: 'totp', resourceId: totp.$id, mode: 'publish' });
+        if (!res?.success) { toast.error('Failed to make TOTP public.'); return; }
+        totp.isPublic = true;
+      }
+      let currentDek = (totp as any).dek;
+      if (!currentDek) {
+        const { decryptField, encryptField } = await import('@/lib/masterpass-crypto');
+        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
+        const { VaultService } = await import('@/lib/appwrite/vault');
+        const newDek = await ecosystemSecurity.generateRandomMEK();
+        const rawKey = await crypto.subtle.exportKey("raw", newDek);
+        const dekBase64 = btoa(String.fromCharCode(...new Uint8Array(rawKey)));
+        const wrappedDek = await encryptField(dekBase64);
+        let decryptedSecret = totp.secretKey; if (looksEncrypted(decryptedSecret)) decryptedSecret = await decryptField(decryptedSecret);
+        let decryptedIssuer = totp.issuer; if (looksEncrypted(decryptedIssuer)) decryptedIssuer = await decryptField(decryptedIssuer);
+        let decryptedAccount = totp.accountName; if (looksEncrypted(decryptedAccount)) decryptedAccount = await decryptField(decryptedAccount);
+        await VaultService.updateTOTPSecret(totp.$id, { dek: wrappedDek, secretKey: decryptedSecret, issuer: decryptedIssuer ?? undefined, accountName: decryptedAccount ?? undefined});
+        totp.dek = wrappedDek; totp.secretKey = decryptedSecret; currentDek = wrappedDek;
+      }
+      let keyFragment = '';
+      if (currentDek) { const { decryptField } = await import('@/lib/masterpass-crypto'); const dekBase64 = await decryptField(currentDek); const urlSafeDek = dekBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); keyFragment = `/${urlSafeDek}`; }
+      const { buildPublicResourceUrl } = await import('@/lib/share/public-url'); const baseUrl = buildPublicResourceUrl('totp', totp.$id); const fullUrl = keyFragment ? `${baseUrl}${keyFragment}` : baseUrl;
+      await navigator.clipboard.writeText(fullUrl); toast.success('Public seed sharing link copied.');
+    } catch (err: any) { toast.error('Failed to share: ' + err.message); }
+  };
+  const handleShareSixtySeconds = async () => {
+    try {
+      if (!totp.isPublic) {
+        const { toggleResourcePublicGuest } = await import('@/lib/actions/client-ops');
+        const res = await toggleResourcePublicGuest({ resourceType: 'totp', resourceId: totp.$id, mode: 'publish' });
+        if (!res?.success) { toast.error('Failed to make TOTP public.'); return; }
+        totp.isPublic = true;
+      }
+      const now = Math.floor(Date.now() / 1000);
+      const seedValue = totp.secretKey;
+      const options = { start: now, digits: totp.digits || 6, step: totp.period || 30, algo: totp.algorithm || 'SHA1' };
+      const encodedParams = btoa(JSON.stringify({ seed: seedValue, ...options })).replace(/=/g, '');
+      const { buildPublicResourceUrl } = await import('@/lib/share/public-url'); const baseUrl = buildPublicResourceUrl('totp', totp.$id); const fullUrl = `${baseUrl}/temp/${encodedParams}`;
+      await navigator.clipboard.writeText(fullUrl); toast.success('Temporary sixty second sharing link copied.');
+    } catch (err: any) { toast.error('Failed to copy sixty second link: ' + err.message); }
+  };
+  const contextMenuItems = useMemo(() => [
+      { label: pinned ? 'Unpin Code' : 'Pin Code', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: handlePinToggle },
+      { label: 'Share Options', icon: <LinkIcon size={16} className="text-emerald-500" />, submenu: [
+          { label: 'Share Seed (DEK)', icon: <LinkIcon size={14} />, onClick: handleShareDecryptedKey },
+          { label: 'Share Sixty Seconds Only', icon: <LinkIcon size={14} className="text-[#F59E0B]" />, onClick: handleShareSixtySeconds }
+        ]},
+      { label: 'Edit', icon: <Pencil size={16} />, onClick: () => openEditDialog(totp) },
+      { label: 'Delete', icon: <Trash2 size={16} />, variant: 'destructive' as const, onClick: () => openDeleteDialog(totp.$id) }
+  ], [pinned, totp]);
+  const handleContextMenu = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); if (openMenu) openMenu({ x: e.clientX, y: e.clientY, items: contextMenuItems, appType: 'vault' }); };
+  const radius = 10; const circumference = 2 * Math.PI * radius; const strokeDashoffset = circumference - (progress / 100) * circumference;
+  return (
+    <div onClick={() => requireUnlock(() => setSelectedTotp(displayTotp))} onContextMenu={handleContextMenu} className={`h-full p-5 rounded-3xl transition-all duration-300 flex flex-col gap-4 cursor-pointer border ${isSelected ? 'bg-[#1C1A18] border-emerald-500/40' : 'bg-[#161412] border-[#1C1A18] hover:bg-[#1C1A18] hover:border-emerald-500/20'} hover:-translate-y-0.5 shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),0_2px_3px_-3px_rgba(37,35,33,0.9)]`}>
+      <div className="flex items-center gap-3.5 min-w-0 w-full">
+        {faviconUrl ? (<div className="w-[52px] h-[52px] rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center flex-shrink-0 transition-colors"><img src={faviconUrl} alt={totp.issuer || 'app favicon'} onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} className="w-7 h-7 rounded-md" /></div>) : (<div className="w-[52px] h-[52px] rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center flex-shrink-0 transition-colors"><span className="font-black text-emerald-500 text-xl font-clash">{issuerInitials}</span></div>)}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+            <div className="text-[1.05rem] font-extrabold text-white font-clash leading-tight truncate flex-1 min-w-0">{looksEncrypted((displayTotp as any).issuer) ? "Encrypted Code" : ((displayTotp as any).issuer || "Smart Code")}</div>
+            <SyncStatusDot resourceId={displayTotp.$id} kind="totp" row={displayTotp as unknown as Record<string, unknown>} />
+          </div>
+          <div className="text-sm font-medium text-[#9B9691] font-satoshi mt-0.5 truncate transition-[filter] duration-300" style={{ filter: isVaultBlurEnabled ? 'blur(4.5px)' : 'none' }}>{looksEncrypted((displayTotp as any).accountName) ? "••••••••" : ((displayTotp as any).accountName || "No account info")}</div>
+          <div className="flex flex-wrap gap-1 mt-2">{folderName && (<span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.6rem] font-black bg-white/4 text-[#9B9691] uppercase tracking-wider">{folderName}</span>)}{totp.sharedFrom && (<span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.6rem] font-black bg-emerald-500/10 text-emerald-500 uppercase tracking-wider">Received</span>)}</div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-4 w-full mt-auto pt-4 border-t border-white/5">
+        <div className="flex items-center gap-3"><span className="text-xl font-black font-mono tracking-wider text-emerald-500 transition-[filter] duration-300" style={{ filter: isVaultBlurEnabled || isLockedEncrypted ? 'blur(6px)' : 'none' }}>{isLockedEncrypted ? '••• •••' : `${code.substring(0, 3)} ${code.substring(3)}`}</span><button onClick={(e) => { e.stopPropagation(); copyToClipboard(code); }} className="p-2 text-emerald-500 bg-emerald-500/5 border border-emerald-500/10 rounded-xl hover:bg-emerald-500/10 transition-colors"><Copy className="h-[15px] w-[15px]" /></button></div>
+        <div className="flex items-center gap-3"><span className={`text-xs font-black min-w-[22px] text-right ${timeRemaining <= 5 ? 'text-red-500' : 'text-[#9B9691]'}`}>{timeRemaining}s</span><div className="relative inline-flex items-center justify-center"><svg className="w-7 h-7 transform -rotate-90"><circle cx="14" cy="14" r={radius} className="stroke-white/5 fill-transparent" strokeWidth="2.5" /><circle cx="14" cy="14" r={radius} className={`fill-transparent transition-[stroke-dashoffset] duration-1000 ${timeRemaining <= 5 ? 'stroke-[#EF4444]' : 'stroke-[#10B981]'}`} strokeWidth="2.5" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" /></svg></div></div>
+        <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}><button onClick={handlePinToggle} className={`p-1.5 rounded-lg transition-all duration-200 ${pinned ? 'text-[#F59E0B] bg-[#F59E0B]/5' : 'text-white/20 hover:text-[#F59E0B] hover:bg-[#F59E0B]/5'}`} title={pinned ? 'Unpin' : 'Pin'}><Pin size={16} className={pinned ? 'fill-[#F59E0B]' : ''} /></button><ShareLockButton resourceType="totp" resourceId={totp.$id} isPublic={!!totp.isPublic} isGuest={!!totp.isGuest} accentColor="#10B981" canPublish={true} getCustomShareUrl={async () => { let currentDek = (totp as any).dek; if (!currentDek) { const { decryptField, encryptField } = await import('@/lib/masterpass-crypto'); const { ecosystemSecurity } = await import('@/lib/ecosystem/security'); const { VaultService } = await import('@/lib/appwrite/vault'); const newDek = await ecosystemSecurity.generateRandomMEK(); const rawKey = await crypto.subtle.exportKey("raw", newDek); const dekBase64 = btoa(String.fromCharCode(...new Uint8Array(rawKey))); const wrappedDek = await encryptField(dekBase64); let decryptedSecret = totp.secretKey; if (looksEncrypted(decryptedSecret)) decryptedSecret = await decryptField(decryptedSecret); let decryptedIssuer = totp.issuer; if (looksEncrypted(decryptedIssuer)) decryptedIssuer = await decryptField(decryptedIssuer); let decryptedAccount = totp.accountName; if (looksEncrypted(decryptedAccount)) decryptedAccount = await decryptField(decryptedAccount); await VaultService.updateTOTPSecret(totp.$id, { dek: wrappedDek, secretKey: decryptedSecret, issuer: decryptedIssuer ?? undefined, accountName: decryptedAccount ?? undefined}); totp.dek = wrappedDek; totp.secretKey = decryptedSecret; currentDek = wrappedDek; } let keyFragment = ''; if (currentDek) { const { decryptField } = await import('@/lib/masterpass-crypto'); const dekBase64 = await decryptField(currentDek); const urlSafeDek = dekBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); keyFragment = `/${urlSafeDek}`; } const { buildPublicResourceUrl } = await import('@/lib/share/public-url'); const baseUrl = buildPublicResourceUrl('totp', totp.$id); return keyFragment ? `${baseUrl}${keyFragment}` : baseUrl; }} /></div>
+      </div>
+    </div>
+  );
+}
+
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +238,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   const [search, setSearch] = useState("");
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, needsMasterPassword, isVaultUnlocked, isVaultBlurEnabled } = useAppwriteVault();
+  const { user, needsMasterPassword, isVaultUnlocked } = useAppwriteVault();
   const { setConfiguration, resetConfiguration } = useFAB();
   const [totpCodes, setTotpCodes] = useState<TotpItem[]>([]);
   const { filteredItems: scopedTotpCodes } = useWorkspaceFilteredItems(totpCodes, 'totp');
@@ -244,391 +456,8 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     }
   };
 
-  const contextMenu = useContextMenu();
-  const openMenu = contextMenu?.openMenu;
-  const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
-
-  const TOTPCard = ({ totp }: { totp: TotpItem }) => {
-    const code = generateTOTP(
-      totp.secretKey,
-      {
-        step: totp.period || 30,
-        digits: totp.digits || 6
-      }
-    );
-
-    const timeRemaining = getTimeRemaining(totp.period || 30);
-    const progress = (timeRemaining / (totp.period || 30)) * 100;
-    const folderName = totp.folderId ? folders.get(totp.folderId) : null;
-    const faviconUrl = getFaviconUrl(totp.url);
-    const issuerInitials = totp.issuer ? totp.issuer.trim().charAt(0).toUpperCase() : "?";
-
-    const isSelected = selectedTotp?.$id === totp.$id;
-    const ownerId = totp.userId || user?.$id || '';
-    const pinned = isResourcePinned('totp', totp.$id, ownerId, totp.isPinned);
-
-    const handlePinToggle = async (e?: React.MouseEvent) => {
-      if (e) e.stopPropagation();
-      if (!user?.$id) return;
-      const currentlyPinned = isResourcePinned('totp', totp.$id, ownerId, totp.isPinned);
-      const isOwner = user.$id === ownerId;
-
-      try {
-        const nextPinned = await togglePin({
-          resourceType: 'totp',
-          resourceId: totp.$id,
-          ownerId,
-          rowIsPinned: totp.isPinned,
-          setOwnerRowPin: async (pinned) => {
-            const { setTotpPinned } = await import('@/lib/appwrite');
-            await setTotpPinned(totp.$id, pinned);
-          }});
-        if (isOwner) {
-          setTotpCodes((prev) =>
-            prev.map((t) => (t.$id === totp.$id ? { ...t, isPinned: nextPinned } : t)));
-        }
-        toast.success(nextPinned ? 'Pinned to top' : 'Unpinned');
-      } catch (err: unknown) {
-        if (!isOwner) {
-          setLocalPin('totp', totp.$id, currentlyPinned);
-        }
-        console.error('Failed to toggle pin:', err);
-        toast.error('Failed to toggle pin');
-      }
-    };
-
-    const handleShareDecryptedKey = async () => {
-      try {
-        if (!totp.isPublic) {
-          const { toggleResourcePublicGuest } = await import('@/lib/actions/client-ops');
-          const res = await toggleResourcePublicGuest({
-            resourceType: 'totp',
-            resourceId: totp.$id,
-            mode: 'publish'
-          });
-          if (!res?.success) {
-            toast.error('Failed to make TOTP public.');
-            return;
-          }
-          totp.isPublic = true;
-        }
-
-        let currentDek = (totp as any).dek;
-        if (!currentDek) {
-          const { decryptField, encryptField } = await import('@/lib/masterpass-crypto');
-          const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
-          const { VaultService } = await import('@/lib/appwrite/vault');
-          
-          const newDek = await ecosystemSecurity.generateRandomMEK();
-          const rawKey = await crypto.subtle.exportKey("raw", newDek);
-          const dekBase64 = btoa(String.fromCharCode(...new Uint8Array(rawKey)));
-          const wrappedDek = await encryptField(dekBase64);
-          
-          let decryptedSecret = totp.secretKey;
-          if (decryptedSecret && typeof decryptedSecret === 'string' && decryptedSecret.length > 20 && /^[A-Za-z0-9+/=]+$/.test(decryptedSecret)) {
-            decryptedSecret = await decryptField(decryptedSecret);
-          }
-          
-          let decryptedIssuer = totp.issuer;
-          if (decryptedIssuer && typeof decryptedIssuer === 'string' && decryptedIssuer.length > 20 && /^[A-Za-z0-9+/=]+$/.test(decryptedIssuer)) {
-            decryptedIssuer = await decryptField(decryptedIssuer);
-          }
-
-          let decryptedAccount = totp.accountName;
-          if (decryptedAccount && typeof decryptedAccount === 'string' && decryptedAccount.length > 20 && /^[A-Za-z0-9+/=]+$/.test(decryptedAccount)) {
-            decryptedAccount = await decryptField(decryptedAccount);
-          }
-          
-          // Pass plaintext fields + wrappedDek; VaultService will encrypt with new DEK
-          await VaultService.updateTOTPSecret(totp.$id, {
-            dek: wrappedDek,
-            secretKey: decryptedSecret,
-            issuer: decryptedIssuer ?? undefined,
-            accountName: decryptedAccount ?? undefined});
-          
-          totp.dek = wrappedDek;
-          totp.secretKey = decryptedSecret;
-          currentDek = wrappedDek;
-        }
-
-        let keyFragment = '';
-        if (currentDek) {
-          const { decryptField } = await import('@/lib/masterpass-crypto');
-          const dekBase64 = await decryptField(currentDek);
-          const urlSafeDek = dekBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-          keyFragment = `/${urlSafeDek}`;
-        }
-        const { buildPublicResourceUrl } = await import('@/lib/share/public-url');
-        const baseUrl = buildPublicResourceUrl('totp', totp.$id);
-        const fullUrl = keyFragment ? `${baseUrl}${keyFragment}` : baseUrl;
-        await navigator.clipboard.writeText(fullUrl);
-        toast.success('Public seed sharing link copied.');
-      } catch (err: any) {
-        toast.error('Failed to share: ' + err.message);
-      }
-    };
-
-    const handleShareSixtySeconds = async () => {
-      try {
-        if (!totp.isPublic) {
-          const { toggleResourcePublicGuest } = await import('@/lib/actions/client-ops');
-          const res = await toggleResourcePublicGuest({
-            resourceType: 'totp',
-            resourceId: totp.$id,
-            mode: 'publish'
-          });
-          if (!res?.success) {
-            toast.error('Failed to make TOTP public.');
-            return;
-          }
-          totp.isPublic = true;
-        }
-
-        // Build sixty seconds TOTP share parameters containing key metrics: start unix timestamp, digits, step, algorithm
-        const now = Math.floor(Date.now() / 1000);
-        const seedValue = totp.secretKey; // Already client-decrypted in list mapping
-        const options = {
-          start: now,
-          digits: totp.digits || 6,
-          step: totp.period || 30,
-          algo: totp.algorithm || 'SHA1'
-        };
-        const encodedParams = btoa(JSON.stringify({
-          seed: seedValue,
-          ...options
-        })).replace(/=/g, ''); // Trim base64 padding for url safety
-        
-        const { buildPublicResourceUrl } = await import('@/lib/share/public-url');
-        const baseUrl = buildPublicResourceUrl('totp', totp.$id);
-        const fullUrl = `${baseUrl}/temp/${encodedParams}`;
-        await navigator.clipboard.writeText(fullUrl);
-        toast.success('Temporary sixty second sharing link copied.');
-      } catch (err: any) {
-        toast.error('Failed to copy sixty second link: ' + err.message);
-      }
-    };
-
-    const contextMenuItems = useMemo(() => [
-        { label: pinned ? 'Unpin Code' : 'Pin Code', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: handlePinToggle },
-        { 
-          label: 'Share Options', 
-          icon: <LinkIcon size={16} className="text-emerald-500" />,
-          submenu: [
-            { label: 'Share Seed (DEK)', icon: <LinkIcon size={14} />, onClick: handleShareDecryptedKey },
-            { label: 'Share Sixty Seconds Only', icon: <LinkIcon size={14} className="text-[#F59E0B]" />, onClick: handleShareSixtySeconds }
-          ]
-        },
-        { label: 'Edit', icon: <Pencil size={16} />, onClick: () => openEditDialog(totp) },
-        { label: 'Delete', icon: <Trash2 size={16} />, variant: 'destructive' as const, onClick: () => openDeleteDialog(totp.$id) }
-    ], [pinned, totp]);
-
-    const handleContextMenu = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (openMenu) {
-            openMenu({
-                x: e.clientX,
-                y: e.clientY,
-                items: contextMenuItems,
-                appType: 'vault'
-            });
-        }
-    };
-
-    // SVG variables
-    const radius = 10;
-    const circumference = 2 * Math.PI * radius;
-    const strokeDashoffset = circumference - (progress / 100) * circumference;
-
-    return (
-      <div
-        onClick={() => requireUnlock(() => setSelectedTotp(totp))}
-        onContextMenu={handleContextMenu}
-        className={`h-full p-5 rounded-3xl transition-all duration-300 flex flex-col gap-4 cursor-pointer border ${
-          isSelected 
-            ? 'bg-[#1C1A18] border-emerald-500/40' 
-            : 'bg-[#161412] border-[#1C1A18] hover:bg-[#1C1A18] hover:border-emerald-500/20'
-        } hover:-translate-y-0.5 shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),0_2px_3px_-3px_rgba(37,35,33,0.9)]`}
-      >
-        {/* Left Side: Logo/Avatar & Info */}
-        <div className="flex items-center gap-3.5 min-w-0 w-full">
-          {faviconUrl ? (
-            <div className="w-[52px] h-[52px] rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center flex-shrink-0 transition-colors">
-              <img 
-                src={faviconUrl} 
-                alt={totp.issuer || 'app favicon'}
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-                className="w-7 h-7 rounded-md" 
-              />
-            </div>
-          ) : (
-            <div className="w-[52px] h-[52px] rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center flex-shrink-0 transition-colors">
-              <span className="font-black text-emerald-500 text-xl font-clash">
-                {issuerInitials}
-              </span>
-            </div>
-          )}
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <div className="text-[1.05rem] font-extrabold text-white font-clash leading-tight truncate">
-                {totp.issuer && (totp.issuer.startsWith('{"iv"') || totp.issuer.startsWith('{"ct"') || (totp.issuer.includes('::') && totp.issuer.length > 20))
-                  ? "Encrypted Code"
-                  : (totp.issuer || "Smart Code")}
-              </div>
-              <SyncStatusDot resourceId={totp.$id} />
-            </div>
-            <div 
-              className="text-sm font-medium text-[#9B9691] font-satoshi mt-0.5 truncate transition-[filter] duration-300"
-              style={{ filter: isVaultBlurEnabled ? 'blur(4.5px)' : 'none' }}
-            >
-              {totp.accountName && (totp.accountName.startsWith('{"iv"') || totp.accountName.startsWith('{"ct"') || (totp.accountName.includes('::') && totp.accountName.length > 20))
-                ? "••••••••"
-                : (totp.accountName || "No account info")}
-            </div>
-            
-            <div className="flex flex-wrap gap-1 mt-2">
-              {folderName && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.6rem] font-black bg-white/4 text-[#9B9691] uppercase tracking-wider">
-                  {folderName}
-                </span>
-              )}
-              {totp.sharedFrom && (
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.6rem] font-black bg-emerald-500/10 text-emerald-500 uppercase tracking-wider">
-                  Received
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Side: Code, Timer & Actions */}
-        <div className="flex items-center justify-between gap-4 w-full mt-auto pt-4 border-t border-white/5">
-          {/* 6-Digit Code & Copy Button */}
-          <div className="flex items-center gap-3">
-            <span 
-              className="text-xl font-black font-mono tracking-wider text-emerald-500 transition-[filter] duration-300"
-              style={{ filter: isVaultBlurEnabled ? 'blur(6px)' : 'none' }}
-            >
-              {code.substring(0, 3)} {code.substring(3)}
-            </span>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                copyToClipboard(code);
-              }} 
-              className="p-2 text-emerald-500 bg-emerald-500/5 border border-emerald-500/10 rounded-xl hover:bg-emerald-500/10 transition-colors"
-            >
-              <Copy className="h-[15px] w-[15px]" />
-            </button>
-          </div>
-
-          {/* Time Countdown Indicator */}
-          <div className="flex items-center gap-3">
-            <span className={`text-xs font-black min-w-[22px] text-right ${
-              timeRemaining <= 5 ? 'text-red-500' : 'text-[#9B9691]'
-            }`}>
-              {timeRemaining}s
-            </span>
-            <div className="relative inline-flex items-center justify-center">
-              <svg className="w-7 h-7 transform -rotate-90">
-                <circle
-                  cx="14"
-                  cy="14"
-                  r={radius}
-                  className="stroke-white/5 fill-transparent"
-                  strokeWidth="2.5"
-                />
-                <circle
-                  cx="14"
-                  cy="14"
-                  r={radius}
-                  className={`fill-transparent transition-[stroke-dashoffset] duration-1000 ${
-                    timeRemaining <= 5 ? 'stroke-[#EF4444]' : 'stroke-[#10B981]'
-                  }`}
-                  strokeWidth="2.5"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={strokeDashoffset}
-                  strokeLinecap="round"
-                />
-              </svg>
-            </div>
-          </div>
-
-          {/* Action Buttons (Pin, Lock/Link) */}
-          <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-            <button 
-              onClick={handlePinToggle}
-              className={`p-1.5 rounded-lg transition-all duration-200 ${pinned ? 'text-[#F59E0B] bg-[#F59E0B]/5' : 'text-white/20 hover:text-[#F59E0B] hover:bg-[#F59E0B]/5'}`}
-              title={pinned ? 'Unpin' : 'Pin'}
-            >
-              <Pin size={16} className={pinned ? 'fill-[#F59E0B]' : ''} />
-            </button>
-            <ShareLockButton 
-                resourceType="totp"
-                resourceId={totp.$id}
-                isPublic={!!totp.isPublic}
-                isGuest={!!totp.isGuest}
-                accentColor="#10B981"
-                canPublish={true}
-                getCustomShareUrl={async () => {
-                  let currentDek = (totp as any).dek;
-                  if (!currentDek) {
-                    const { decryptField, encryptField } = await import('@/lib/masterpass-crypto');
-                    const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
-                    const { VaultService } = await import('@/lib/appwrite/vault');
-                    
-                    const newDek = await ecosystemSecurity.generateRandomMEK();
-                    const rawKey = await crypto.subtle.exportKey("raw", newDek);
-                    const dekBase64 = btoa(String.fromCharCode(...new Uint8Array(rawKey)));
-                    const wrappedDek = await encryptField(dekBase64);
-                    
-                    let decryptedSecret = totp.secretKey;
-                    if (decryptedSecret && typeof decryptedSecret === 'string' && decryptedSecret.length > 20 && /^[A-Za-z0-9+/=]+$/.test(decryptedSecret)) {
-                      decryptedSecret = await decryptField(decryptedSecret);
-                    }
-                    
-                    let decryptedIssuer = totp.issuer;
-                    if (decryptedIssuer && typeof decryptedIssuer === 'string' && decryptedIssuer.length > 20 && /^[A-Za-z0-9+/=]+$/.test(decryptedIssuer)) {
-                      decryptedIssuer = await decryptField(decryptedIssuer);
-                    }
-
-                    let decryptedAccount = totp.accountName;
-                    if (decryptedAccount && typeof decryptedAccount === 'string' && decryptedAccount.length > 20 && /^[A-Za-z0-9+/=]+$/.test(decryptedAccount)) {
-                      decryptedAccount = await decryptField(decryptedAccount);
-                    }
-                    
-                    // Pass plaintext fields + wrappedDek; VaultService will encrypt with new DEK
-                    await VaultService.updateTOTPSecret(totp.$id, {
-                      dek: wrappedDek,
-                      secretKey: decryptedSecret,
-                      issuer: decryptedIssuer ?? undefined,
-                      accountName: decryptedAccount ?? undefined});
-                    
-                    totp.dek = wrappedDek;
-                    totp.secretKey = decryptedSecret;
-                    currentDek = wrappedDek;
-                  }
-
-                  let keyFragment = '';
-                  if (currentDek) {
-                    const { decryptField } = await import('@/lib/masterpass-crypto');
-                    const dekBase64 = await decryptField(currentDek);
-                    const urlSafeDek = dekBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-                    keyFragment = `/${urlSafeDek}`;
-                  }
-                  const { buildPublicResourceUrl } = await import('@/lib/share/public-url');
-                  const baseUrl = buildPublicResourceUrl('totp', totp.$id);
-                  return keyFragment ? `${baseUrl}${keyFragment}` : baseUrl;
-                }}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
+  // TOTPCard moved to TOTPCardStable (outside) to prevent per-second remount flash
+  const { isPinned: isResourcePinned } = useResourcePins();
 
   const innerContent = (
     <>
@@ -697,7 +526,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
                 return 0;
               })
               .map((totp) => (
-                <TOTPCard key={totp.$id} totp={totp} />
+                <TOTPCardStable key={totp.$id} totp={totp} folders={folders} currentTime={currentTime} getTimeRemaining={getTimeRemaining} getFaviconUrl={getFaviconUrl} selectedTotp={selectedTotp} setSelectedTotp={setSelectedTotp} requireUnlock={requireUnlock} openEditDialog={openEditDialog} openDeleteDialog={openDeleteDialog} copyToClipboard={copyToClipboard} />
               ))}
           </div>
         )}

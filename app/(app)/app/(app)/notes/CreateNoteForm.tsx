@@ -1187,8 +1187,8 @@ export default function CreateNoteForm({
                 }
               </span>
               <div className="flex items-center gap-1.5 mt-0.5 select-none">
-                <SyncStatusDot noteId={resolvedNoteId} />
-                <SyncStatusLabel noteId={resolvedNoteId} />
+                <SyncStatusDot noteId={resolvedNoteId} kind="note" />
+                <SyncStatusLabel noteId={resolvedNoteId} kind="note" />
                 <span className="text-[10px] font-mono text-white/40 border-l border-white/10 pl-2">
                    {content.length}/{isArticle ? '655,300,000' : '65,535'}
                 </span>

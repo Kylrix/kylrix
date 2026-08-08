@@ -11,16 +11,26 @@ import { useSudo } from '@/context/SudoContext';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
 
-const DRAWER_SX = {
+const DRAWER_SX_MOBILE = {
   borderTopLeftRadius: '24px',
   borderTopRightRadius: '24px',
-  bgcolor: '#161412',
-  borderTop: '1px solid #34322F',
+  bgcolor: '#0A0908',
+  borderTop: '1px solid rgba(255,255,255,0.05)',
   backgroundImage: 'none',
   maxWidth: 720,
   width: '100%',
   mx: 'auto'};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _DRAWER_SX_DESKTOP = {
+  bgcolor: '#0A0908',
+  borderLeft: '1px solid rgba(255,255,255,0.05)',
+  backgroundImage: 'none',
+  width: 600,
+  maxWidth: '100%',
+  height: '100dvh'};
 
 export default function NewTotpDialog({
   open,
@@ -54,6 +64,13 @@ export default function NewTotpDialog({
     period: 30});
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     setIsDrawerOpen(open);
@@ -138,28 +155,8 @@ export default function NewTotpDialog({
     }
   };
 
-  return (
-    <Drawer
-      anchor="bottom"
-      open={open}
-      onClose={handleClose}
-      PaperProps={{
-        sx: {
-          ...DRAWER_SX,
-          height: '65dvh',
-          pointerEvents: 'auto'}
-      }}
-      ModalProps={{
-        keepMounted: false,
-        disableScrollLock: false,
-        disablePortal: true}}
-    >
-      {/* Drag handle decoration */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 1.5 }}>
-        <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} />
-      </Box>
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6 px-6 pb-6 select-none h-[calc(100%-24px)] overflow-y-auto">
+  const totpForm = (
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6 px-6 pb-6 select-none h-full overflow-y-auto pt-2">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-[#1C1A18]">
           <div className="flex items-center gap-3">
@@ -287,6 +284,43 @@ export default function NewTotpDialog({
           </button>
         </div>
       </form>
+  );
+
+  if (!open) return null;
+
+  // Desktop: true native right sidebar that pushes extended primary left sidebar (like CreateGoalComposer)
+  if (!isMobile) {
+    return (
+      <NativeSidebarMount active={open} sidebarKey={initialData?.$id ? `edit-totp-${initialData.$id}` : "create-totp"} width={560} title={initialData ? "Edit Smart Code" : "New Smart Code"}>
+        <div className="h-full bg-[#0A0908] flex flex-col overflow-hidden">
+          {totpForm}
+        </div>
+      </NativeSidebarMount>
+    );
+  }
+
+  // Mobile: bottom drawer ecosystem standard (opaque, handle, z above bottom navbar)
+  return (
+    <Drawer
+      anchor="bottom"
+      open={open}
+      onClose={handleClose}
+      PaperProps={{
+        sx: {
+          ...DRAWER_SX_MOBILE,
+          height: '65dvh',
+          pointerEvents: 'auto',
+          zIndex: 1401}
+      }}
+      ModalProps={{
+        keepMounted: false,
+        disablePortal: true,
+        sx: { zIndex: 1400 } as any}}
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 1.5 }}>
+        <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} />
+      </Box>
+      {totpForm}
     </Drawer>
   );
 }

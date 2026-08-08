@@ -30,6 +30,7 @@ import { useSection } from '@/context/SectionContext';
 import { useSudo } from '@/context/SudoContext';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
 
 
 export default function CredentialDialog({
@@ -418,33 +419,7 @@ export default function CredentialDialog({
 
   const currentType = initial?.itemType || defaultType;
 
-  // Global Unmount Policy: conditionally render overlay content
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end items-end md:items-stretch overflow-hidden">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/80 transition-opacity duration-300 animate-in fade-in"
-        onClick={handleClose}
-      />
-      
-      {/* Drawer sheet */}
-      <div 
-        className={`
-          relative z-10 bg-[#0A0908] border-t md:border-t-0 md:border-l border-white/[0.05] flex flex-col transition-all duration-300 ease-in-out
-          w-full md:w-[600px] md:max-w-full
-          ${isMobile 
-            ? (isExpanded ? 'h-[100dvh] rounded-none' : 'h-[60dvh] rounded-t-[24px]') 
-            : 'h-full'
-          }
-          animate-in
-          ${isMobile 
-            ? 'slide-in-from-bottom duration-300' 
-            : 'slide-in-from-right duration-300'
-          }
-        `}
-      >
+  const credentialForm = (
         <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
           {/* Header */}
           <div className="px-6 py-5 flex items-center justify-between border-b border-white/[0.05] shrink-0 font-space-grotesk">
@@ -820,6 +795,31 @@ export default function CredentialDialog({
             </button>
           </div>
         </form>
+  );
+
+  // Global Unmount Policy: conditional mount, desktop uses native right sidebar that pushes content (like goal/idea create)
+  if (!open) return null;
+
+  // Desktop: true native right sidebar (pushes extended primary left sidebar, no overlay blur, like CreateGoalComposer)
+  if (!isMobile) {
+    return (
+      <NativeSidebarMount active={open} sidebarKey="create-secret" width={600} title={initial ? "Edit Secret" : "New Secret"}>
+        <div className="h-full bg-[#0A0908] flex flex-col overflow-hidden">
+          {credentialForm}
+        </div>
+      </NativeSidebarMount>
+    );
+  }
+
+  // Mobile: bottom drawer ecosystem standard (opaque, handle, z-[1400] above bottom navbar z:1300)
+  return (
+    <div className="fixed inset-0 z-[1400] flex justify-end items-end overflow-hidden">
+      <div className="absolute inset-0 bg-black/80 animate-in fade-in z-0" onClick={handleClose} />
+      <div className={`relative z-[1401] bg-[#0A0908] border-t border-white/[0.05] flex flex-col w-full ${isExpanded ? 'h-[100dvh] rounded-none' : 'h-[60dvh] rounded-t-[24px]'} animate-in slide-in-from-bottom duration-300`}>
+        <div className="flex justify-center py-3 shrink-0">
+          <div className="w-10 h-1 rounded-full bg-[#3D3A36]" />
+        </div>
+        {credentialForm}
       </div>
     </div>
   );

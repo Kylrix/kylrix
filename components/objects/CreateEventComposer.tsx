@@ -278,8 +278,8 @@ export function CreateEventComposer({
               New Event
             </span>
             <div className="flex items-center gap-1.5 mt-0.5 select-none">
-              <SyncStatusDot resourceId={resourceId} />
-              <SyncStatusLabel resourceId={resourceId} />
+              <SyncStatusDot resourceId={resourceId} kind="event" />
+              <SyncStatusLabel resourceId={resourceId} kind="event" />
             </div>
           </div>
         </div>

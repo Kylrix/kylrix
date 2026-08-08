@@ -243,11 +243,11 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
 
       <div className="flex-grow p-5 flex flex-col justify-between gap-3">
         <div>
-          <div className="flex items-center gap-1.5 min-w-0 mb-2">
-            <h2 className="text-base font-bold font-clash text-white tracking-tight leading-snug line-clamp-2">
+          <div className="flex items-center gap-1.5 min-w-0 mb-2 overflow-hidden">
+            <h2 className="text-base font-bold font-clash text-white tracking-tight leading-snug line-clamp-2 flex-1 min-w-0">
               {event.title || 'Untitled'}
             </h2>
-            <SyncStatusDot resourceId={event.id} />
+            <SyncStatusDot resourceId={event.id} kind="event" row={event as unknown as Record<string, unknown>} />
           </div>
           <div className="flex items-center gap-2 text-[#9B9691] mb-1.5">
             <Clock size={14} className="shrink-0" />

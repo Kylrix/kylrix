@@ -697,8 +697,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             </h2>
           )}
           <div className="flex items-center gap-1.5 shrink-0">
-            <SyncStatusDot resourceId={goalPendingKey(task.id)} />
-            <SyncStatusLabel resourceId={goalPendingKey(task.id)} />
+            <SyncStatusDot resourceId={goalPendingKey(task.id)} kind="goal" />
+            <SyncStatusLabel resourceId={goalPendingKey(task.id)} kind="goal" />
           </div>
         </div>
 

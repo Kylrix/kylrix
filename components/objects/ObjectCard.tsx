@@ -177,7 +177,7 @@ export function ObjectCard({
               >
                 {item.title || 'Untitled'}
               </span>
-              <SyncStatusDot resourceId={pendingResourceId(item.kind, item.id)} />
+              <SyncStatusDot resourceId={pendingResourceId(item.kind, item.id)} kind={item.kind} />
             </div>
           </div>
 

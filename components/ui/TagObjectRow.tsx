@@ -6,6 +6,7 @@ import type { Tags } from '@/types/appwrite';
 import { ObjectCard } from '@/components/objects/ObjectCard';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import { formatDateWithFallback } from '@/lib/date-utils';
+import { getMissingRequiredColumns, TABLE_ID_FOR_KIND } from '@/lib/sync/required-columns';
 
 type TagObjectRowProps = {
   tag: Tags;
@@ -46,7 +47,12 @@ export function TagObjectRow({ tag, onClick, onContextMenu, onEdit, onDelete }: 
           <span className="text-[9px] font-black uppercase tracking-wider text-white/30 font-mono">
             {(tag as any).usageCount || 0} items
           </span>
-          <SyncStatusDot resourceId={tag.$id} />
+          <SyncStatusDot
+            resourceId={tag.$id}
+            kind="tag"
+            row={tag as unknown as Record<string, unknown>}
+            missingColumns={getMissingRequiredColumns(TABLE_ID_FOR_KIND.tag, tag as unknown as Record<string, unknown>)}
+          />
         </div>
       }
       footer={

@@ -505,7 +505,7 @@ export default function FormsDashboard() {
                                                                  >
                                                                      {(form.status || 'draft').toUpperCase()}
                                                                  </span>
-                                                                 <SyncStatusDot resourceId={form.$id} />
+                                                                 <SyncStatusDot resourceId={form.$id} kind="form" row={form as unknown as Record<string, unknown>} />
                                                                  {formDraftStatus[form.$id] && (
                                                                      <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded border bg-[#1C1A18] text-[#FFB020] border-[#FFB020] tracking-wider">
                                                                          UNSYNCED

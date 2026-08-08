@@ -375,8 +375,8 @@ export function CreateGoalComposer({
               Create Goal
             </span>
             <div className="flex items-center gap-1.5 mt-0.5 select-none">
-              <SyncStatusDot resourceId={resourceId} />
-              <SyncStatusLabel resourceId={resourceId} />
+              <SyncStatusDot resourceId={resourceId} kind="goal" />
+              <SyncStatusLabel resourceId={resourceId} kind="goal" />
             </div>
           </div>
         </div>

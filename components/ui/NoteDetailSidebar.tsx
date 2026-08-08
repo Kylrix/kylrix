@@ -1225,8 +1225,8 @@ export function NoteDetailSidebar({
               </span>
               {!readOnly && (
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <SyncStatusDot noteId={liveNote.$id} />
-                  <SyncStatusLabel noteId={liveNote.$id} />
+                  <SyncStatusDot noteId={liveNote.$id} kind="note" row={liveNote as unknown as Record<string, unknown>} />
+                  <SyncStatusLabel noteId={liveNote.$id} kind="note" row={liveNote as unknown as Record<string, unknown>} />
                 </div>
               )}
             </div>

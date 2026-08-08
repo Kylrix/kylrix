@@ -110,15 +110,22 @@ const databasesProxy = new Proxy(originalDatabases, {
                 return await updateRowSecure(databaseId, tableId, rowId, data, permissions, jwt);
             };
         }
-        if (prop === 'listRows' || prop === 'listRows') {
+        if (prop === 'listRows' || prop === 'listRows' || prop === 'listDocuments' || prop === 'listDocuments') {
             return async (...args: any[]) => {
                 // Reads via client SDK only — high frequency, uses row ACL (read) + isPublic/isGuest columns
-                return await (target as any).listRows(...args);
+                // Databases (legacy) uses listDocuments/getDocument, TablesDB uses listRows/getRow — handle both
+                const t: any = target as any;
+                if (typeof t.listRows === 'function') return await t.listRows(...args);
+                if (typeof t.listDocuments === 'function') return await t.listDocuments(...args);
+                throw new Error('listRows/listDocuments not available on Databases client');
             };
         }
-        if (prop === 'getRow' || prop === 'getRow') {
+        if (prop === 'getRow' || prop === 'getRow' || prop === 'getDocument' || prop === 'getDocument') {
             return async (...args: any[]) => {
-                return await (target as any).getRow(...args);
+                const t: any = target as any;
+                if (typeof t.getRow === 'function') return await t.getRow(...args);
+                if (typeof t.getDocument === 'function') return await t.getDocument(...args);
+                throw new Error('getRow/getDocument not available on Databases client');
             };
         }
         if (prop === 'deleteRow' || prop === 'deleteRow') {
@@ -156,14 +163,20 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
                 return await updateRowSecure(databaseId, tableId, rowId, data, permissions, jwt);
             };
         }
-        if (prop === 'listRows') {
+        if (prop === 'listRows' || prop === 'listDocuments') {
             return async (...args: any[]) => {
-                return await (target as any).listRows(...args);
+                const t: any = target as any;
+                if (typeof t.listRows === 'function') return await t.listRows(...args);
+                if (typeof t.listDocuments === 'function') return await t.listDocuments(...args);
+                throw new Error('listRows/listDocuments not available on TablesDB client');
             };
         }
-        if (prop === 'getRow') {
+        if (prop === 'getRow' || prop === 'getDocument') {
             return async (...args: any[]) => {
-                return await (target as any).getRow(...args);
+                const t: any = target as any;
+                if (typeof t.getRow === 'function') return await t.getRow(...args);
+                if (typeof t.getDocument === 'function') return await t.getDocument(...args);
+                throw new Error('getRow/getDocument not available on TablesDB client');
             };
         }
         if (prop === 'deleteRow') {

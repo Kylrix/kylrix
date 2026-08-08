@@ -488,6 +488,13 @@ function DashboardPageContent() {
                     </h1>
                     
                     <div className="ml-auto flex items-center gap-2">
+                      <button
+                        onClick={handleAdd}
+                        className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-[#10B981] hover:bg-[#059669] text-black font-black rounded-xl transition-colors text-xs shadow-[0_4px_12px_rgba(16,185,129,0.25)]"
+                      >
+                        <Plus size={16} />
+                        Add Secret
+                      </button>
                       {isSelectMode && selectedIds.length > 0 && (
                         <button
                           onClick={() => requestSudo({ onSuccess: () => handleDelete() })}

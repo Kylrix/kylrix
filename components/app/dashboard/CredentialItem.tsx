@@ -7,6 +7,7 @@ import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuItems';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import { looksEncrypted } from '@/lib/masterpass-crypto';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
 
 export default function CredentialItem({
   credential,
@@ -39,11 +40,88 @@ export default function CredentialItem({
   const openMenu = contextMenu?.openMenu;
   const [localIsPublic, setLocalIsPublic] = useState(!!credential.isPublic);
   const [localIsGuest, setLocalIsGuest] = useState(!!credential.isGuest);
+  const [displayCredential, setDisplayCredential] = useState<Credentials>(credential);
+  const [isVaultUnlockedState, setIsVaultUnlockedState] = useState(() => {
+    try {
+      const { masterPassCrypto } = require('@/lib/masterpass-crypto');
+      return !!(ecosystemSecurity.status.isUnlocked || masterPassCrypto.isVaultUnlocked());
+    } catch { return !!ecosystemSecurity.status.isUnlocked; }
+  });
+
+  useEffect(() => {
+    setDisplayCredential(credential);
+  }, [credential]);
 
   useEffect(() => {
     setLocalIsPublic(!!credential.isPublic);
     setLocalIsGuest(!!credential.isGuest);
   }, [credential.isPublic, credential.isGuest]);
+
+  // Self-heal: subscribe to masterpass unlock and re-evaluate whenever visited or sitting with encrypted placeholder
+  useEffect(() => {
+    const syncUnlock = () => {
+      try {
+        const { masterPassCrypto } = require('@/lib/masterpass-crypto');
+        setIsVaultUnlockedState(!!(ecosystemSecurity.status.isUnlocked || masterPassCrypto.isVaultUnlocked()));
+      } catch { setIsVaultUnlockedState(!!ecosystemSecurity.status.isUnlocked); }
+    };
+    const unsub = ecosystemSecurity.onStatusChange((s) => setIsVaultUnlockedState(!!s.isUnlocked));
+    const onUnlock = () => setIsVaultUnlockedState(true);
+    const onLock = () => setIsVaultUnlockedState(false);
+    window.addEventListener('vault-unlocked', onUnlock);
+    window.addEventListener('kylrix:vault-unlocked', onUnlock);
+    window.addEventListener('vault-locked', onLock);
+    // evaluate on mount/visit
+    syncUnlock();
+    return () => {
+      unsub();
+      window.removeEventListener('vault-unlocked', onUnlock);
+      window.removeEventListener('kylrix:vault-unlocked', onUnlock);
+      window.removeEventListener('vault-locked', onLock);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const tryDecrypt = async () => {
+      const isEncrypted = looksEncrypted(credential.name) || looksEncrypted(credential.username) || looksEncrypted(credential.url);
+      if (!isEncrypted) {
+        if (!cancelled) setDisplayCredential(credential);
+        return;
+      }
+      // Only decrypt when vault is unlocked and we are currently sitting with placeholder
+      if (!isVaultUnlockedState) return;
+      try {
+        const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
+        if (!masterPassCrypto.isVaultUnlocked()) return;
+        const { decryptField } = await import('@/lib/masterpass-crypto');
+        const updated: any = { ...credential };
+        let changed = false;
+        let dekKey: CryptoKey | null = null;
+        if (credential.dek && looksEncrypted(credential.dek)) {
+          try {
+            const dekBase64 = await decryptField(credential.dek);
+            const rawKey = new Uint8Array(atob(dekBase64).split('').map((c) => c.charCodeAt(0)));
+            dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+          } catch {}
+        }
+        for (const field of ['name', 'username', 'url'] as const) {
+          const val = (credential as any)[field];
+          if (val && typeof val === 'string' && looksEncrypted(val)) {
+            try {
+              let plain: string | null = null;
+              if (dekKey) plain = await ecosystemSecurity.decryptWithKey(val, dekKey);
+              else plain = await decryptField(val);
+              if (plain && plain !== val) { updated[field] = plain; changed = true; }
+            } catch {}
+          }
+        }
+        if (changed && !cancelled) setDisplayCredential(updated);
+      } catch {}
+    };
+    void tryDecrypt();
+    return () => { cancelled = true; };
+  }, [credential, isVaultUnlockedState]);
 
   const handleCopy = (value: string) => {
     onCopy(value);
@@ -59,7 +137,7 @@ export default function CredentialItem({
     }
   };
 
-  const faviconUrl = getFaviconUrl(credential.url);
+  const faviconUrl = getFaviconUrl((displayCredential as any).url ?? credential.url);
 
   const accessControlItems = useAccessControlMenuItems({
     resourceType: 'credential',
@@ -196,29 +274,29 @@ export default function CredentialItem({
           <img src={faviconUrl} className="w-8 h-8 object-contain" alt="" />
         ) : (
           <span className="font-black text-[#10B981] text-[1.3rem] font-clash">
-            {credential.name?.charAt(0)?.toUpperCase() || "?"}
+            {(displayCredential as any).name?.charAt(0)?.toUpperCase() || "?"}
           </span>
         )}
       </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0 flex flex-col gap-[3px] pr-2">
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
           {pinned && <Pin className="w-3.5 h-3.5 text-[#F59E0B] shrink-0 fill-[#F59E0B]" />}
-          <span className="font-black text-white leading-tight font-clash text-base truncate">
-            {looksEncrypted(credential.name)
+          <span className="font-black text-white leading-tight font-clash text-base truncate flex-1 min-w-0">
+            {looksEncrypted((displayCredential as any).name)
               ? 'Encrypted Secret'
-              : credential.name}
+              : (displayCredential as any).name}
           </span>
-          <SyncStatusDot resourceId={credential.$id} />
+          <SyncStatusDot resourceId={credential.$id} kind="secret" row={displayCredential as unknown as Record<string, unknown>} />
         </div>
         <span 
           className="text-[#9B9691] font-medium text-[0.85rem] leading-[1.35] font-satoshi truncate transition-[filter] duration-300"
           style={{ filter: isBlurEnabled ? 'blur(4.5px)' : 'none' }}
         >
-          {looksEncrypted(credential.username)
+          {looksEncrypted((displayCredential as any).username)
             ? '••••••••'
-            : credential.username}
+            : (displayCredential as any).username}
         </span>
         {(credential as any).sharedFrom && (
           <div className="mt-1 h-5 text-[0.62rem] font-black bg-[#10B981]/10 text-[#10B981] rounded-[6px] px-2 py-0.5 uppercase tracking-[0.02em] inline-flex items-center w-fit">

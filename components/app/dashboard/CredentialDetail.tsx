@@ -347,8 +347,8 @@ export default function CredentialDetail({
             {looksEncrypted(liveCredential.name) ? 'Encrypted Secret' : liveCredential.name}
           </h2>
           <div className="flex items-center gap-2 shrink-0">
-            <SyncStatusDot resourceId={liveCredential.$id} />
-            <SyncStatusLabel resourceId={liveCredential.$id} />
+            <SyncStatusDot resourceId={liveCredential.$id} kind="secret" row={liveCredential as unknown as Record<string, unknown>} />
+            <SyncStatusLabel resourceId={liveCredential.$id} kind="secret" row={liveCredential as unknown as Record<string, unknown>} />
           </div>
         </div>
       </div>
