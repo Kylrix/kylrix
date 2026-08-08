@@ -180,10 +180,14 @@ export function FlowDetailDrawer({
             <div>
               <h3 className="text-sm font-bold text-white">Flow Status</h3>
               <p className="text-[11px] text-white/40">
-                {installed ? 'Installed on this device' : 'Available for installation'}
+                {(flow as any).preInstalled ? 'Pre-installed on this device' : installed ? 'Installed on this device' : 'Available for installation'}
               </p>
             </div>
-            {installed ? (
+            {(flow as any).preInstalled ? (
+              <span className="text-xs font-bold text-[#A855F7] bg-[#A855F7]/10 border border-[#A855F7]/20 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                <BadgeCheck size={12} /> Pre installed
+              </span>
+            ) : installed ? (
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg flex items-center gap-1">
                   <Check size={12} /> Installed
@@ -210,6 +214,25 @@ export function FlowDetailDrawer({
               </button>
             )}
           </div>
+          {(flow as any).preInstalled && flow.id === 'kylrix-custom-prompt' && (
+            <div className="rounded-xl bg-[#161412] border border-white/5 p-3 space-y-2">
+              <p className="text-xs font-bold text-white">Prompt templates (read-only)</p>
+              <div className="grid gap-2">
+                {[
+                  { name: 'Sidekick — per-object companion', file: 'lib/agentic/prompts/sidekick.ts', desc: 'One-liner + sections + mindMap, focused 80% on this object' },
+                  { name: 'Agentic — system + tool registry', file: 'lib/agentic/prompt-framework.ts', desc: 'Kylie workspace partner, tool catalog, navigation, search' },
+                  { name: 'Vault organizer / audit', file: 'lib/actions/ai.ts', desc: 'VAULT_ORGANIZE, PASSWORD_AUDIT, URL_SAFETY modes' },
+                ].map((p) => (
+                  <div key={p.file} className="rounded-lg bg-[#0A0908] border border-white/5 px-3 py-2">
+                    <div className="text-xs font-bold text-white">{p.name}</div>
+                    <div className="text-[11px] text-white/40">{p.file}</div>
+                    <div className="text-[11px] text-white/30">{p.desc}</div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-white/30">View-only for now — editing coming soon. This is the powerful extension that surfaces every system prompt.</p>
+            </div>
+          )}
         </section>
 
         <section className="rounded-[18px] bg-[#0A0908] border border-white/[0.05] p-4 space-y-3">

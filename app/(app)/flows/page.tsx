@@ -221,10 +221,14 @@ export default function FlowsPage() {
 
   const yours = useMemo(() => Object.values(savedWorkflows), [savedWorkflows]);
 
+  const PREINSTALLED_IDS = ['kylrix-sidekick', 'kylrix-custom-prompt'] as const;
+  const isPreInstalled = (id: string) => (PREINSTALLED_IDS as readonly string[]).includes(id);
+
   const discoverList: DiscoverFlow[] = useMemo(() => {
-    const builtins = BUILTIN_FLOWS.map((f) => ({
+    const builtins = BUILTIN_FLOWS.map((f: any) => ({
       ...f,
-      installed: installedIds.includes(f.id) || isFlowInstalled(f.id),
+      installed: f.preInstalled ? true : (installedIds.includes(f.id) || isFlowInstalled(f.id)),
+      preInstalled: !!f.preInstalled,
     }));
     const seen = new Set(builtins.map((b) => b.id));
     const fromCommunity: DiscoverFlow[] = community
@@ -284,6 +288,13 @@ export default function FlowsPage() {
       });
     });
 
+    // Pre-installed flows are always in Installed — no install/uninstall
+    BUILTIN_FLOWS.forEach((b: any) => {
+      if (b.preInstalled && !byId.has(b.id)) {
+        byId.set(b.id, { ...b, installed: true, preInstalled: true } as DiscoverFlow);
+      }
+    });
+
     return Array.from(byId.values());
   }, [yours, installedIds, community]);
 
@@ -311,6 +322,10 @@ export default function FlowsPage() {
   }, []);
 
   const handleUninstall = useCallback(async (flow: DiscoverFlow) => {
+    if ((flow as any).preInstalled) {
+      toast('Pre-installed — cannot remove');
+      return;
+    }
     if (flow.source === 'yours') {
       await deleteWorkflowAction(flow.id);
       const nextSaved = { ...savedWorkflows };
