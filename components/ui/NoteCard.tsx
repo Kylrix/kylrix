@@ -12,6 +12,9 @@ import {
 } from 'lucide-react';
 
 import { useContextMenu } from './ContextMenuContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { openHangoutShare } from '@/lib/hangout/openHangoutShare';
 import { useNotes } from '@/context/NotesContext';
 import type { Notes } from '@/types/appwrite';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -55,6 +58,8 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   );
   const { user } = useAuth();
   const { setActiveDetail } = useSection();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { openOverlay, closeOverlay } = useOverlay();
   
   // Decouple from frequent state changes in UnifiedDrawerContext
   const unifiedDrawer = useUnifiedDrawer();
@@ -310,13 +315,31 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       }
     ] : []),
     { label: 'Collaborators', icon: <ShareIcon size={16} />, onClick: openShare },
+    {
+      label: 'Send',
+      icon: <ShareIcon size={16} className="text-[#F59E0B]" />,
+      onClick: () => {
+        openHangoutShare({
+          id: note.$id,
+          title: note.title || 'Untitled Idea',
+          kind: 'idea',
+          resourceType: 'note',
+          isPublic: !!liveNote.isPublic,
+          isGuest: !!liveNote.isGuest,
+          openSidebar,
+          openOverlay,
+          closeSidebar,
+          closeOverlay,
+        });
+      },
+    },
     { 
       label: 'Delete', 
       icon: <TrashIcon size={16} className="text-red-500" />, 
       variant: 'destructive' as const,
       onClick: openDelete,
     }
-  ], [pinned, accessControlItems, isPro, handlePinToggle, isLocked, handleLockToggle, handleAIAction, handleCreateTodo, openShare, openDelete, liveNote, note, onUpdate, resolveNoteShareUrl, showError, showSuccess, upsertNote]);
+  ], [pinned, accessControlItems, isPro, handlePinToggle, isLocked, handleLockToggle, handleAIAction, handleCreateTodo, openShare, openDelete, liveNote, note, onUpdate, resolveNoteShareUrl, showError, showSuccess, upsertNote, openSidebar, openOverlay, closeSidebar, closeOverlay]);
 
   const cardTitle = React.useMemo(
     () => (isLocked ? 'Locked' : isEncryptedNote ? 'Encrypted' : resolveNoteCardTitle(liveNote.title, liveNote.content) || 'Untitled'),

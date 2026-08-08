@@ -36,6 +36,18 @@ export function ChatMessageContent({
         };
 
         let displayedContent = msg.content as string;
+        // Thread leak fix: older thread messages stored as JSON {"text":"...","type":"text","sendToGeneral":true}
+        // Render only the text, drop sendToGeneral/type wrapper.
+        if (typeof displayedContent === 'string' && displayedContent.trim().startsWith('{')) {
+          try {
+            const parsed = JSON.parse(displayedContent);
+            if (parsed && typeof parsed.text === 'string' && parsed.text.trim()) {
+              displayedContent = parsed.text;
+            } else if (parsed && typeof parsed.content === 'string') {
+              displayedContent = parsed.content;
+            }
+          } catch {}
+        }
         const isEncrypted = isLikelyEncrypted(displayedContent);
 
         if (msg.type === MessagesType.TEXT && isEncrypted) {

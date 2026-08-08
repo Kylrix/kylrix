@@ -4,8 +4,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ObjectDetailHost } from '@/components/objects/ObjectDetailHost';
 import { ChatWindow } from '@/components/chat/ChatWindow';
-import { HuddleChatWindow } from '@/components/chat/HuddleChatWindow';
-import { useAuth } from '@/context/auth/AuthContext';
 import { getNote } from '@/lib/appwrite/note';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { chatConversationCacheKey } from '@/lib/chat/local-chat-cache';
@@ -35,9 +33,8 @@ export function CommObjectDetail({
   embedded = false,
   title,
 }: Props) {
-  const { user } = useAuth();
   const router = useRouter();
-  const [isHuddle, setIsHuddle] = useState(kind === 'thread');
+  const [_isHuddle, setIsHuddle] = useState(kind === 'thread');
   const [huddleTitle, setHuddleTitle] = useState(title || 'Thread');
 
   const handleClose = useCallback(() => {
@@ -134,20 +131,13 @@ export function CommObjectDetail({
     [conversationId, huddleTitle, kind, title],
   );
 
-  // Instant mural — ChatWindow / Huddle own their loading states.
+  // All hangouts — secure (padlock) and threads/discussions (no padlock) — reuse the same secure ChatWindow UI.
+  // HuddleChatWindow is deprecated (outdated threads UI) and no longer rendered.
   const body =
     kind === 'call' ? (
       <div className="flex h-full items-center justify-center bg-[#0A0908] text-white/50 text-sm font-bold">
         Call surface uses this same shell next.
       </div>
-    ) : isHuddle ? (
-      <HuddleChatWindow
-        chatNoteId={conversationId}
-        user={user}
-        title={huddleTitle}
-        onBack={handleClose}
-        layout="fill"
-      />
     ) : (
       <ChatWindow conversationId={conversationId} onBack={handleClose} layout="fill" />
     );

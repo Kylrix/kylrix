@@ -19,7 +19,7 @@ import {
   ArrowLeft,
   Trash2,
   MessageSquare,
-  Globe,
+  Lock,
   Mic,
   Square,
   X,
@@ -569,7 +569,7 @@ export function HuddleChatWindow({
         sx={{ 
           p: { xs: 1.5, sm: 2 }, 
           borderBottom: '1px solid rgba(255,255,255,0.06)', 
-          bgcolor: '#0E0C0A',
+          bgcolor: '#0A0908',
           zIndex: 10,
           position: 'absolute',
           top: 0,
@@ -603,9 +603,9 @@ export function HuddleChatWindow({
               {title}
             </Typography>
             <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.25 }}>
-              <Globe size={10} color="#F59E0B" />
+              <Lock size={10} color="#F59E0B" />
               <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 800, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Thread
+                Hangout
               </Typography>
               {expiresAt && (
                 <>
@@ -653,7 +653,7 @@ export function HuddleChatWindow({
         </Stack>
       </Stack>
 
-      {/* Main Viewport Container */}
+      {/* Main Viewport Container — unified panel, same as secure hangouts */}
       <Box sx={{ 
         flex: 1, 
         minHeight: 0, 
@@ -663,8 +663,8 @@ export function HuddleChatWindow({
         overflow: 'hidden',
         m: { xs: 1, sm: 2 },
         borderRadius: '24px',
-        border: '1px solid rgba(255,255,255,0.05)',
-        bgcolor: '#080706',
+        border: '1px solid rgba(255,255,255,0.06)',
+        bgcolor: '#161412',
         pt: '72px'
       }}>
         <MuralPattern />
@@ -736,21 +736,18 @@ export function HuddleChatWindow({
                         onTouchEnd={handleTouchEnd}
                         sx={{
                           p: parsed.type === 'voice' ? 1.25 : 1.75,
-                          borderRadius: isSelf ? '20px 4px 20px 20px' : '4px 20px 20px 20px',
-                          bgcolor: isSelf ? '#1C1A18' : '#161412', 
+                          borderRadius: isSelf ? '18px 4px 18px 18px' : '4px 18px 18px 18px',
+                          bgcolor: '#161412', 
                           backgroundImage: 'none',
-                          border: '1px solid #23211F',
-                          borderRight: isSelf ? '3px solid #F59E0B' : '1px solid #23211F',
-                          borderLeft: !isSelf ? '3px solid #34322F' : '1px solid #23211F',
-                          color: isSelf ? '#FFFFFF' : '#F5F2ED',
-                          boxShadow: '0 4px 12px -4px rgba(0,0,0,0.8)',
+                          border: '1px solid rgba(255,255,255,0.06)',
+                          color: '#F5F2ED',
+                          boxShadow: '0 4px 12px -4px rgba(0,0,0,0.3)',
                           position: 'relative',
                           zIndex: 2,
                           cursor: 'context-menu',
-                          transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                          transition: 'all 0.2s ease',
                           '&:hover': {
-                              transform: 'translateY(-1px)',
-                              boxShadow: '0 6px 16px -4px rgba(0,0,0,0.9)'}
+                              borderColor: 'rgba(255,255,255,0.08)'}
                         }}
                       >
                         {parsed.type === 'voice' && parsed.voiceFileId ? (
@@ -922,14 +919,14 @@ export function HuddleChatWindow({
             )}
           </Box>
 
-          {/* Right Side: Active Thread Panel */}
+          {/* Right Side: Active Thread Panel — same secure surfaces */}
           {activeThreadParent && (
             <Box sx={{ 
               flex: { xs: 1, md: 0.4 }, 
               display: 'flex', 
               flexDirection: 'column', 
               minHeight: 0,
-              bgcolor: '#0E0C0A', 
+              bgcolor: '#161412', 
               borderLeft: '1px solid rgba(255,255,255,0.06)',
               position: 'relative',
               zIndex: 2
@@ -941,7 +938,7 @@ export function HuddleChatWindow({
                 sx={{ 
                   p: 1.5, 
                   borderBottom: '1px solid rgba(255,255,255,0.06)',
-                  bgcolor: 'rgba(10, 9, 8, 0.5)' 
+                  bgcolor: '#0A0908' 
                 }}
               >
                 <Stack direction="row" spacing={1} alignItems="center">
@@ -993,14 +990,13 @@ export function HuddleChatWindow({
                       onTouchEnd={handleTouchEnd}
                       sx={{
                         p: 1.5,
-                        borderRadius: '4px 20px 20px 20px',
+                        borderRadius: '4px 18px 18px 18px',
                         bgcolor: '#161412',
-                        border: '1px solid #23211F',
-                        borderLeft: '3px solid #F59E0B',
+                        border: '1px solid rgba(255,255,255,0.06)',
                         color: '#F5F2ED',
                         cursor: 'context-menu',
                         transition: 'all 0.2s ease',
-                        '&:hover': { bgcolor: '#1C1A18' }
+                        '&:hover': { borderColor: 'rgba(255,255,255,0.08)' }
                       }}
                     >
                       {(() => {
@@ -1365,9 +1361,8 @@ function HuddleMainInput({
         px: { xs: 1.5, md: 2 },
         pb: 'max(1rem, env(safe-area-inset-bottom))', 
         pt: 1.5,
-        bgcolor: '#161412', 
-        borderTop: '1px solid #1C1A18',
-        borderRadius: '24px 24px 0 0',
+        bgcolor: '#0A0908', 
+        borderTop: '1px solid rgba(255,255,255,0.06)',
         boxShadow: '0 -4px 24px rgba(0,0,0,0.6)',
         zIndex: 20 
       }}
@@ -1428,7 +1423,7 @@ function HuddleMainInput({
             value={inputText}
             disabled={isRecording}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputText(e.target.value)}
-            placeholder={isRecording ? "Recording..." : "Type unencrypted huddle message..."}
+            placeholder={isRecording ? "Recording..." : "Type a message..."}
             onKeyDown={async (e: React.KeyboardEvent) => {
               if (e.key === 'g' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();

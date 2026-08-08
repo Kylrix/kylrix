@@ -84,7 +84,9 @@ import {
 } from './chat-message-utils';
 import { ChatDraftInput } from './ChatDraftInput';
 import { ChatMessageContent } from './ChatMessageContent';
-import { ProfilePeekDrawer } from '@/components/profile/ProfilePeekDrawer';
+import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
 
 export const ChatWindow = ({
     conversationId,
@@ -127,7 +129,6 @@ export const ChatWindow = ({
     const [messageAnchorEl, setMessageAnchorEl] = useState<{ el: HTMLElement, msg: ChatMessage } | null>(null);
     const [partnerProfile, setPartnerProfile] = useState<any | null>(null);
     const [partnerVerification, setPartnerVerification] = useState(() => getVerificationState(null));
-    const [profilePeekOpen, setProfilePeekOpen] = useState(false);
     const [conversationReadAt, setConversationReadAt] = useState(0);
     const [senderProfiles, setSenderProfiles] = useState<Record<string, SenderProfile>>({});
     const [messageReactions, setMessageReactions] = useState<Record<string, ChatReaction[]>>({});
@@ -135,6 +136,8 @@ export const ChatWindow = ({
     const [reactionPopoverMessageId, setReactionPopoverMessageId] = useState<string | null>(null);
     const initialLoadRef = useRef<string | null>(null);
     const { openFileDrawer } = useUnifiedFileDrawer();
+    const { openSidebar, closeSidebar } = useDynamicSidebar();
+    const { openOverlay, closeOverlay } = useOverlay();
     const [_isPending, startTransition] = useTransition();
     const isProPlan = hasPaidKylrixPlan(user);
     const { openWalletWithIntent } = useWalletOverlay();
@@ -255,7 +258,53 @@ export const ChatWindow = ({
             if (ecosystemSecurity.status.isUnlocked) {
                 void UsersService.forceSyncProfileWithIdentity(user);
             }
-            const conv = await ChatService.getConversationById(conversationId, user.$id);
+            let conv: any = null;
+            try {
+              conv = await ChatService.getConversationById(conversationId, user.$id);
+            } catch (e) {
+              // Not a secure conversation — maybe a thread/discussion hangout. Fallback to thread + local roster cache.
+              try {
+                const rosterHit = (await import('@/lib/chat/local-chat-cache')).peekChatsListMemory?.().find((c: any) => c.$id === conversationId || c.id === conversationId)
+                  || (await import('@/lib/chat/local-chat-cache')).peekThreadsListMemory?.().find((c: any) => c.$id === conversationId || c.id === conversationId)
+                  || null;
+                if (rosterHit) {
+                  const fallbackName = rosterHit.name || rosterHit.title || rosterHit.lastMessageText || 'Thread';
+                  const fallback = {
+                    $id: conversationId,
+                    id: conversationId,
+                    name: fallbackName,
+                    title: fallbackName,
+                    type: rosterHit.type || 'thread',
+                    participants: rosterHit.participants || [],
+                    isEncrypted: false,
+                    avatarUrl: rosterHit.avatarUrl || rosterHit.avatar || null,
+                    isThreadFallback: true,
+                  };
+                  startTransition(() => setConversation(fallback as any));
+                  void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), fallback);
+                  return;
+                }
+                const { ThreadService } = await import('@/lib/services/threads');
+                const t = await (ThreadService as any).getById?.(conversationId).catch(() => null);
+                if (t) {
+                  const fallbackName = t.title || 'Thread';
+                  const fallback = {
+                    $id: t.id,
+                    id: t.id,
+                    name: fallbackName,
+                    title: fallbackName,
+                    type: 'thread',
+                    participants: [],
+                    isEncrypted: !!t.isEncrypted,
+                    isThreadFallback: true,
+                  };
+                  startTransition(() => setConversation(fallback as any));
+                  void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), fallback);
+                  return;
+                }
+              } catch {}
+              throw e;
+            }
             if (conv.type === 'direct') {
                 const otherId = conv.participants.find((p: string) => p !== user.$id);
                 if (otherId) {
@@ -1192,7 +1241,25 @@ export const ChatWindow = ({
                     <Box
                         onClick={() => {
                             if (conversation?.type === 'direct' && !isSelf) {
-                                setProfilePeekOpen(true);
+                                const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
+                                const uid = partnerId;
+                                const node = (
+                                  <ProfileSidebar
+                                    userId={uid}
+                                    username={partnerProfile?.username}
+                                    conversationId={conversationId}
+                                    seed={{
+                                      displayName: partnerProfile?.displayName || conversation?.name,
+                                      username: partnerProfile?.username,
+                                      bio: partnerProfile?.bio,
+                                      avatar: partnerProfile?.avatar || conversation?.avatarUrl,
+                                    }}
+                                    onClose={isDesktop ? closeSidebar : closeOverlay}
+                                  />
+                                );
+                                const key = `profile-${uid || partnerProfile?.username || conversationId}`;
+                                if (isDesktop) openSidebar(node, key, { hideHeader: true });
+                                else openOverlay(node);
                                 return;
                             }
                             // Groups / self — keep actions menu from header chrome via more button
@@ -1813,20 +1880,6 @@ export const ChatWindow = ({
                     </MenuItem>
                 )}
             </Menu>
-
-            <ProfilePeekDrawer
-                open={profilePeekOpen}
-                onClose={() => setProfilePeekOpen(false)}
-                userId={isSelf ? user?.$id : partnerId}
-                username={partnerProfile?.username}
-                conversationId={conversationId}
-                seed={{
-                    displayName: partnerProfile?.displayName || conversation?.name,
-                    username: partnerProfile?.username,
-                    bio: partnerProfile?.bio,
-                    avatar: partnerProfile?.avatar || conversation?.avatarUrl,
-                }}
-            />
         </Box>
     );
 };

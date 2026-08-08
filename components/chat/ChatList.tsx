@@ -39,7 +39,7 @@ import { useSudo } from '@/context/SudoContext';
 import { getConversationReadAt } from '@/lib/chat-read-state';
 import { useChatNotifications } from '../providers/ChatNotificationProvider';
 import ConversationActionsSheet from './ConversationActionsSheet';
-import { ProfilePeekDrawer } from '@/components/profile/ProfilePeekDrawer';
+import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import {
@@ -145,12 +145,6 @@ export const ChatList = ({
         isUnlockedRef.current = isUnlocked;
     }, [isUnlocked]);
     const [selectedConversation, setSelectedConversation] = useState<any | null>(null);
-    const [peekProfile, setPeekProfile] = useState<{
-      userId?: string;
-      username?: string;
-      conversationId?: string;
-      seed?: { displayName?: string; username?: string; avatar?: string };
-    } | null>(null);
     const conversationsRef = React.useRef<any[]>(initialChats);
     const loadRequestRef = React.useRef(0);
     const loadConversationsInflightRef = React.useRef<Promise<void> | null>(null);
@@ -208,7 +202,7 @@ export const ChatList = ({
             Array.isArray(conv?.participants) && user?.$id
                 ? conv.participants.find((p: string) => p !== user.$id)
                 : null;
-        setPeekProfile({
+        const profile = {
             userId: otherId || conv?.otherUserId || (conv?.isSelf ? user?.$id : undefined),
             username: conv?.username || conv?.otherUsername,
             conversationId: conv?.$id,
@@ -217,8 +211,21 @@ export const ChatList = ({
                 username: conv?.username || conv?.otherUsername,
                 avatar: conv?.avatarUrl || conv?.avatar,
             },
-        });
-    }, [user?.$id]);
+        };
+        const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
+        const node = (
+          <ProfileSidebar
+            userId={profile.userId}
+            username={profile.username}
+            conversationId={profile.conversationId}
+            seed={profile.seed}
+            onClose={isDesktop ? closeSidebar : closeOverlay}
+          />
+        );
+        const key = `profile-${profile.userId || profile.username || conv?.$id}`;
+        if (isDesktop) openSidebar(node, key, { hideHeader: true });
+        else openOverlay(node);
+    }, [user?.$id, openSidebar, openOverlay, closeSidebar, closeOverlay]);
 
     const sortConversations = useCallback((rows: any[]) => {
         const pinned = pinSets.conversation;
@@ -1714,15 +1721,6 @@ export const ChatList = ({
                 onClose={() => setSelectedConversation(null)}
                 onConversationUpdated={handleConversationUpdated}
                 onConversationDeleted={handleConversationDeleted}
-            />
-
-            <ProfilePeekDrawer
-                open={Boolean(peekProfile)}
-                onClose={() => setPeekProfile(null)}
-                userId={peekProfile?.userId}
-                username={peekProfile?.username}
-                conversationId={peekProfile?.conversationId}
-                seed={peekProfile?.seed}
             />
 
             {showCountdownDrawer ? (
