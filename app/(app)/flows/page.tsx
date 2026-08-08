@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { useLocalContext } from '@/lib/context-engine';
 import {
-  saveWorkflowAction,
   listWorkflowsAction,
   listDiscoverFlowsAction,
   deleteWorkflowAction,
@@ -209,8 +208,8 @@ export default function FlowsPage() {
   const yours = useMemo(() => Object.values(savedWorkflows), [savedWorkflows]);
 
   const PREINSTALLED_IDS = ['kylrix-sidekick', 'kylrix-custom-agent'] as const;
-  const LEGACY_PRE = 'kylrix-custom-prompt';
-  const isPreInstalled = (id: string) => (PREINSTALLED_IDS as readonly string[]).includes(id) || id === LEGACY_PRE;
+  // legacy alias still treated as pre-installed
+  const _preInstalledCheck = (id: string) => (PREINSTALLED_IDS as readonly string[]).includes(id) || id === 'kylrix-custom-prompt';
 
   const discoverList: DiscoverFlow[] = useMemo(() => {
     const builtins = BUILTIN_FLOWS.map((f: any) => ({

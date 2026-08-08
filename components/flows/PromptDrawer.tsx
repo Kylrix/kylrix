@@ -1,6 +1,6 @@
 'use client';
 import React, { useMemo, useState } from 'react';
-import { FileText, Target, Boxes, Lock, Search, Navigation, Tag, FormInput, Calculator, Sparkles, Bot, Shield, Zap, X, Eye, Copy, ChevronDown } from 'lucide-react';
+import { FileText, Target, Boxes, Lock, Search, Navigation, Tag, FormInput, Calculator, Sparkles, Bot, Shield, X, Eye, Copy } from 'lucide-react';
 import type { DiscoverFlow } from '@/lib/flows/types';
 import type { WorkflowChain } from '@/lib/workflow-engine';
 import { buildSidekickSystemInstruction } from '@/lib/agentic/prompts/sidekick';
@@ -110,7 +110,7 @@ export function PromptDrawer({ flow, onClose }: PromptDrawerProps) {
                 <p className="text-xs font-bold text-white">Flow: {flow.name}</p>
                 <p className="text-[11px] text-white/50">Niche: {(flow as any).niche}</p>
                 <div className="h-px bg-white/[0.06]" />
-                <p className="text-xs text-white/70 leading-relaxed whitespace-pre-wrap">You are an agent for "{flow.name}". Use the tools above to fulfill the flow. Follow step order, emit one toolCall at a time, keep mutations scoped to the signed-in user.</p>
+                <p className="text-xs text-white/70 leading-relaxed whitespace-pre-wrap">You are an agent for &quot;{flow.name}&quot;. Use the tools above to fulfill the flow. Follow step order, emit one toolCall at a time, keep mutations scoped to the signed-in user.</p>
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {(flow.steps||[]).slice(0,6).map((s,i)=>(<span key={i} className="text-[10px] font-mono px-2 py-1 rounded-lg bg-[#161412] border border-white/[0.06] text-white/50">{s.actionId}</span>))}
                 </div>
