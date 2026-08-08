@@ -215,7 +215,7 @@ export default function ProSuccessPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
             {[
-              { icon: <ShieldCheck />, title: 'Advanced Security', desc: 'Zero-knowledge DMs and vault isolation' },
+              { icon: <ShieldCheck />, title: 'Advanced Security', desc: 'Encrypted Hangouts and vault isolation' },
               { icon: <Zap />, title: 'Intelligence', desc: 'Neural Knowledge Graph and AI expansion' },
               { icon: <Globe />, title: 'Universal', desc: 'Active across all Kylrix applications' }].map((feature, i) => (
                 <div key={i} className="p-6 rounded-[24px] bg-white/[0.02] border border-white/[0.03] flex flex-col items-center text-center">

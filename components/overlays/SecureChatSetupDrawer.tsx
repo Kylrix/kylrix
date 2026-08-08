@@ -103,7 +103,7 @@ export function SecureChatSetupDrawer() {
       </Stack>
 
       <Typography sx={{ color: 'rgba(255,255,255,0.6)', mb: 4, fontSize: '0.95rem', lineHeight: 1.6 }}>
-        To enable secure chatting, your account must be properly configured. This ensures zero-knowledge encryption for all your messages.
+        To enable hangouts, your account must be properly configured. This ensures private encryption for all your messages.
       </Typography>
 
       <Stack spacing={2} sx={{ mb: 6 }}>
