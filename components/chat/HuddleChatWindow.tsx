@@ -1476,7 +1476,7 @@ function HuddleMainInput({
                   }
                   
                   setInputText(url);
-                  showSuccess('Message secured as Zero-Knowledge Ghost Note!');
+                  showSuccess('Message secured as Hangout Note!');
                 } catch (err) {
                   console.error('Failed to secure message:', err);
                   setInputText(val);
@@ -1619,7 +1619,7 @@ function HuddleThreadInput({
                   }
                   
                   setThreadInputText(url);
-                  showSuccess('Message secured as Zero-Knowledge Ghost Note!');
+                  showSuccess('Message secured as Hangout Note!');
                 } catch (err) {
                   console.error('Failed to secure message:', err);
                   setThreadInputText(val);

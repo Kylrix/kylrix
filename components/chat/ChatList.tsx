@@ -1565,7 +1565,7 @@ export const ChatList = ({
                     ) : unifiedItems.length === 0 && !showGlobalResults ? (
                         <div className="p-12 text-center">
                             <span className="font-black text-white text-lg mb-1 font-clash block">No conversations yet</span>
-                            <span className="text-sm text-[#9B9691] font-medium block">Start a secret chat or thread to see it here.</span>
+                            <span className="text-sm text-[#9B9691] font-medium block">Start a hangout to see it here.</span>
                         </div>
                     ) : (
                         <>
