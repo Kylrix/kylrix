@@ -196,17 +196,52 @@ const nextConfig = {
       },
       {
         source: '/projects',
-        destination: '/workspaces',
+        destination: '/app',
         permanent: true,
       },
       {
         source: '/projects/:projectId',
-        destination: '/workspaces/:projectId',
+        destination: '/workspace/:projectId',
         permanent: true,
       },
       {
         source: '/projects/:projectId/:path*',
-        destination: '/workspaces/:projectId/:path*',
+        destination: '/workspace/:projectId',
+        permanent: true,
+      },
+      {
+        source: '/project/:projectId',
+        destination: '/workspace/:projectId',
+        permanent: true,
+      },
+      {
+        source: '/project/:projectId/:path*',
+        destination: '/workspace/:projectId',
+        permanent: true,
+      },
+      {
+        source: '/workspaces',
+        destination: '/app',
+        permanent: true,
+      },
+      {
+        source: '/workspaces/:projectId',
+        destination: '/workspace/:projectId',
+        permanent: true,
+      },
+      {
+        source: '/workspaces/:projectId/:path*',
+        destination: '/workspace/:projectId',
+        permanent: true,
+      },
+      {
+        source: '/workspace',
+        destination: '/app',
+        permanent: true,
+      },
+      {
+        source: '/workspace/:projectId/:path*',
+        destination: '/workspace/:projectId',
         permanent: true,
       },
       {

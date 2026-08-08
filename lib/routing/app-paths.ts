@@ -2,7 +2,8 @@
  * Canonical routes:
  * - Flow (= workflows): /flows list, /flow/[id] share
  * - Goals/forms/events: their own prefixes (not Flow)
- * - Workspaces (projects table): /workspaces
+ * - Workspaces: singular share link /workspace/[id] sets active workspace and redirects to /app
+ *   (List and detail at /workspaces/** are deprecated — use /app filtered by active workspace)
  */
 
 export function isFlowPath(pathname: string | null | undefined): boolean {
@@ -33,5 +34,11 @@ export function isGoalsSurfacePath(pathname: string | null | undefined): boolean
 
 export function isWorkspacesPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
-  return pathname === '/workspaces' || pathname.startsWith('/workspaces/');
+  return pathname === '/workspace' || pathname.startsWith('/workspace/');
+}
+
+/** @deprecated Workspaces list/detail is removed — use /app with active workspace or /workspace/[id] share */
+export function isWorkspaceSharePath(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  return /^\/workspace\/[^/]+$/.test(pathname);
 }

@@ -81,8 +81,6 @@ const DEFAULT_LAYOUTS: Record<string, PanelType[]> = {
   '/vault/totp': ['secrets', 'secret_chat'],
   '/connect/chats': ['projects', 'huddles', 'note'],
   '/connect/calls': ['projects', 'threads'],
-  '/workspaces': ['projects_stats', 'projects_templates'],
-  '/workspaces/[projectId]': ['note', 'huddles', 'goals'],
   '/send': ['stash'],
 };
 
@@ -305,8 +303,8 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
       return ['stash'];
     }
 
-    // /workspaces/[projectId] fallback: display relevant execution panels
-    if (cleanRoute.startsWith('/workspaces/')) {
+    // Workspace share link /workspace/[id] redirects to /app — no dedicated layout
+    if (cleanRoute.startsWith('/workspace/')) {
       return ['note', 'huddles', 'goals'];
     }
 

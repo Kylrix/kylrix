@@ -98,7 +98,7 @@ function resolveZone(pathname: string): AgenticZone {
   if (isFlowPath(pathname)) return 'flow';
   if (pathname.startsWith('/vault')) return 'vault';
   if (pathname.startsWith('/connect')) return 'connect';
-  if (pathname.startsWith('/workspaces')) return 'projects';
+  if (pathname.startsWith('/workspace')) return 'projects';
   if (pathname.startsWith('/accounts')) return 'accounts';
   if (pathname.startsWith('/settings/agents') || pathname.startsWith('/settings/agents')) return 'agents';
   if (pathname.startsWith('/settings')) return 'settings';
@@ -108,7 +108,7 @@ function resolveZone(pathname: string): AgenticZone {
 
 function extractResourceId(pathname: string, zone: AgenticZone): string | undefined {
   const segments = pathname.split('/').filter(Boolean);
-  if (zone === 'projects' && segments[0] === 'projects' && segments[1]) return segments[1];
+  if (zone === 'projects' && segments[0] === 'workspace' && segments[1]) return segments[1];
   if (zone === 'note' && segments[0] === 'app' && segments[1] && !['shared', 'landing', 'admin'].includes(segments[1])) {
     return segments[1];
   }
@@ -425,14 +425,14 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           description: 'Notes, tasks, secrets',
           icon: 'link-2',
           kind: 'navigate',
-          href: resourceId ? `/workspaces/${resourceId}` : '/workspaces'},
+          href: resourceId ? `/workspace/${resourceId}` : '/app'},
         {
           id: 'project-new',
           label: 'New project',
           description: 'Start a workspace',
           icon: 'folder-kanban',
           kind: 'navigate',
-          href: '/workspaces'},
+          href: '/app'},
       ];
 
     case 'settings':
@@ -581,7 +581,7 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           description: 'Delivery rooms',
           icon: 'folder-kanban',
           kind: 'navigate',
-          href: '/workspaces'},
+          href: '/app'},
       ];
   }
 }

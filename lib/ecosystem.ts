@@ -16,7 +16,7 @@ const APP_BASE_PATHS: Record<string, string> = {
   vault: '/vault',
   flow: '/flows',
   connect: '/connect',
-  projects: '/workspaces',
+  projects: '/app',
   kylrix: '/',
   send: '/app'};
 
@@ -38,7 +38,7 @@ export function getEcosystemUrl(subdomain: string, path = '') {
       vault: '/vault',
       flow: '/flows',
       connect: '/connect',
-      projects: '/workspaces',
+      projects: '/app',
       kylrix: '/'};
     basePath = rawPaths[subdomain] || `/${subdomain}`;
   } else {

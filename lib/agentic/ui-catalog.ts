@@ -73,7 +73,7 @@ export const UI_DESTINATIONS: UiDestination[] = [
     id: 'projects.home',
     label: 'Projects',
     description: 'Project workspaces',
-    route: '/workspaces',
+    route: '/app',
     zone: 'projects',
     aliases: ['projects', 'workspaces']},
   {

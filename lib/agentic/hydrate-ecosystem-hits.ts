@@ -187,7 +187,7 @@ export function hydrateEcosystemHitsSync(
         id: ref.id,
         title: project?.title || 'Project',
         snippet: project?.summary ? plainSnippet(String(project.summary)) : undefined,
-        route: `/workspaces/${ref.id}`,
+        route: `/workspace/${ref.id}`,
         accent};
     }
 

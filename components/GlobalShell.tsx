@@ -29,7 +29,7 @@ import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useCallLauncher } from '@/context/CallLauncherContext';
 import { useServiceWorker } from '@/hooks/useServiceWorker';
-import { isFlowPath, isWorkspacesPath, isGoalsSurfacePath } from '@/lib/routing/app-paths';
+import { isFlowPath, isGoalsSurfacePath } from '@/lib/routing/app-paths';
 
 import { UnifiedLeftSidebar } from '@/components/UnifiedLeftSidebar';
 
@@ -84,7 +84,6 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     isFlowPath(pathname) ||
     isGoalsSurfacePath(pathname) ||
     pathname?.startsWith('/vault') ||
-    isWorkspacesPath(pathname) ||
     pathname?.startsWith('/connect') ||
     pathname?.startsWith('/tags') ||
     pathname?.startsWith('/trash') ||
@@ -141,7 +140,7 @@ const isSpecificPostPage = useMemo(
       ),
     [pathname],
   );
-  const isProjectDetailPage = useMemo(() => Boolean(pathname?.match(/^\/workspaces\/[^/]+$/)), [pathname]);
+  const isProjectDetailPage = useMemo(() => Boolean(pathname?.match(/^\/workspace\/[^/]+$/)), [pathname]);
 
   const showLeftSidebar = useMemo(() => Boolean(
     isAppRoute &&

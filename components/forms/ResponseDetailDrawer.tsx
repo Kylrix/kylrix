@@ -135,8 +135,8 @@ export function ResponseDetailDrawer({ isOpen, onClose, submission, schemaMap }:
       }
 
       onClose();
-      // Redirect to target huddle discussion page directly
-      window.location.href = `/workspaces/${project.$id}?openHuddle=true`;
+      // Redirect to workspace share link (sets active workspace then /app)
+      window.location.href = `/workspace/${project.$id}`;
     } catch (err: any) {
       showError('Failed to convert to project discussion', err.message);
     } finally {

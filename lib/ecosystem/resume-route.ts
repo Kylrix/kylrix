@@ -25,7 +25,6 @@ const APP_PREFIXES = [
   '/vault',
   '/flows',
   '/connect',
-  '/workspaces',
   '/goals',
   '/forms',
   '/events',

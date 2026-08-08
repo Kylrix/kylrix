@@ -26,8 +26,8 @@ function buildPublicResourcePath(
   const { projectId } = options;
 
   if (projectId) {
-    const kind = getProjectKind(type);
-    return `/workspaces/${projectId}/${kind}/${id}`;
+    // Workspace prefix is singular share link — nested kind sub-routes are deprecated
+    return `/workspace/${projectId}`;
   }
 
   switch (type) {
@@ -45,7 +45,7 @@ function buildPublicResourcePath(
     case 'event':
       return `/events/${id}`;
     case 'project':
-      return `/workspaces/${id}`;
+      return `/workspace/${id}`;
     case 'huddle':
     case 'call':
       return `/connect/call/${id}`;

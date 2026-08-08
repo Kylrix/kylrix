@@ -62,7 +62,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       if (isPublic) return;
 
       const protectedDashboardPrefixes = [
-        '/workspaces',
+        '/workspace',
         '/billing',
         '/settings',
         '/settings/agents'

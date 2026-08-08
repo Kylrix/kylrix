@@ -115,7 +115,7 @@ export default function ConnectTopbar({
     if (pathname?.startsWith('/connect')) return 'connect';
     if (pathname?.startsWith('/accounts')) return 'accounts';
     if (pathname?.startsWith('/send')) return 'send';
-    if (pathname?.startsWith('/workspaces')) return 'projects';
+    if (pathname?.startsWith('/workspace')) return 'projects';
     return 'kylrix';
   }, [pathname]);
 
@@ -376,7 +376,7 @@ export default function ConnectTopbar({
         { id: 'view-settings', title: 'Security Preferences', description: 'Adjust your ideas security & encryption rules', href: '/settings', kind: 'system', accent: '#6366F1' }
       ],
       projects: [
-        { id: 'create-proj', title: 'Start Fresh Project', description: 'Spin up outcome-aware container', href: '/workspaces', kind: 'flow', accent: '#6366F1' },
+        { id: 'create-proj', title: 'Start Fresh Project', description: 'Spin up outcome-aware container', href: '/app', kind: 'flow', accent: '#6366F1' },
         { id: 'view-wf', title: 'Manage Action Workflows', description: 'Automate repetitive workflows', href: '/flows', kind: 'note', accent: '#A855F7' }
       ],
       flow: [
@@ -552,7 +552,7 @@ export default function ConnectTopbar({
         k: 'agent',
         s: 'apps',
         m: 'profile',
-        p: '/workspaces',
+        p: '/app',
         n: '/app',
         t: '/tags',
         x: '/settings',
@@ -1775,7 +1775,7 @@ export default function ConnectTopbar({
             size="small"
             onClick={() => {
               handleCloseAll();
-              router.push('/workspaces');
+              router.push('/app');
             }}
             sx={{ color: '#6366F1', fontWeight: 800, fontSize: '0.75rem', textTransform: 'none', minWidth: 0 }}
           >

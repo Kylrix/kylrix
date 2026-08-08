@@ -104,7 +104,7 @@ export function searchLocalEngine(qRaw: string, ctx: GlobalSearchCtx): GlobalRes
         id: w.$id || w.id,
         title,
         subtitle: w.description?.slice(0, 60) || '',
-        href: `/workspaces/${encodeURIComponent(w.$id || w.id)}`,
+        href: `/workspace/${encodeURIComponent(w.$id || w.id)}`,
         accent: ACCENT.workspace,
         raw: w,
       });

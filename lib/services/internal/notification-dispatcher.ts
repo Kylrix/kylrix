@@ -36,8 +36,8 @@ export async function dispatchSecureNotification(input: SecureNotificationInput)
   let ctaUrl = input.ctaUrl;
   if (!ctaUrl && input.resourceId) {
     if (input.resourceType === 'project') {
-      // Invite link for project is /project/[id] (not /workspaces/[id])
-      ctaUrl = `${appBaseUrl}/project/${input.resourceId}`;
+      // Canonical workspace share link is /workspace/[id] (singular)
+      ctaUrl = `${appBaseUrl}/workspace/${input.resourceId}`;
     } else if (input.resourceType === 'note') {
       ctaUrl = `${appBaseUrl}/idea/${input.resourceId}`;
     } else if (input.resourceType === 'task') {

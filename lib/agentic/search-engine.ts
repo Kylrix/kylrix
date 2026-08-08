@@ -210,7 +210,7 @@ export async function executeEcosystemSearch(
               domain: 'project',
               id: (row as any).$id,
               title,
-              route: `/workspaces/${(row as any).$id}`,
+              route: `/workspace/${(row as any).$id}`,
               score});
           }
         }
