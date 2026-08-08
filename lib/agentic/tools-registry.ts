@@ -18,16 +18,16 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     key: 'update_note',
     name: 'Update Idea (Note)',
     description:
-      'Edit an existing Idea. Specifier REQUIRED: note $id. Args may include title, content, tags, isPublic (only fields to change). Use session objects list or prior create_note results for the id.',
+      'Edit an existing Idea. Preferred: args.id (note $id) + fields to change (title, content, tags, isPublic). Legacy specifier note_$id still works. Use [SESSION OBJECTS] for ids.',
     requiresAuthorization: false,
-    parameters: ['title', 'content', 'tags', 'isPublic']},
+    parameters: ['id', 'title', 'content', 'tags', 'isPublic']},
   {
     key: 'get_note',
     name: 'Get Idea (Note)',
     description:
-      'Load one Idea by $id for continued editing. Specifier REQUIRED: note $id. No args. Prefer ids from [SESSION OBJECTS].',
+      'Load one Idea by $id for continued reading. Preferred: args.id (note $id). Legacy specifier note_$id still accepted. Prefer ids from [SESSION OBJECTS].',
     requiresAuthorization: false,
-    parameters: []},
+    parameters: ['id']},
   {
     key: 'create_goal',
     name: 'Create Goal/Task',
@@ -39,9 +39,9 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     key: 'update_goal',
     name: 'Update Goal/Task',
     description:
-      'Modify status, priority, or details of a goal. Specifiers: goal_id. Sub-specifier syntax: update_goal.[goal_id].[field_name].',
+      'Modify status/priority/details of a goal. Preferred: args.id (goal $id) + fields. Legacy specifier goal_id still works.',
     requiresAuthorization: false,
-    parameters: ['title', 'status', 'priority', 'dueDate']},
+    parameters: ['id', 'title', 'status', 'priority', 'dueDate']},
   {
     key: 'create_project',
     name: 'Create Project',
@@ -80,14 +80,14 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     key: 'toggle_privacy',
     name: 'Toggle Visibility',
     description:
-      'Toggle resource public or guest access status. Specifiers: object_id (note_id or project_id). Sub-specifier syntax: toggle_privacy.[object_id].[isPublic].',
+      'Toggle resource public/guest. Preferred: args.id (resource $id) + isPublic/isGuest. Legacy specifier object_id still works.',
     requiresAuthorization: true,
-    parameters: ['isPublic', 'isGuest']},
+    parameters: ['id', 'isPublic', 'isGuest']},
   {
     key: 'navigate_workspace',
-    name: 'Navigate Workspace',
+    name: 'Navigate Workspace (Deprecated alias — use ui.navigate)',
     description:
-      'Navigate user to a page. Prefer args.target (semantic id from UI catalog, e.g. settings.passkeys, goals.home) over raw routes. Args: target (string id) OR route (path). Resolves aliases like "passkeys", "goals", "assistant settings".',
+      'Alias of ui.navigate — same impl. Prefer ui.navigate at prompt layer. Args: target (semantic id) OR route (path).',
     requiresAuthorization: false,
     parameters: ['target', 'route']},
   {
@@ -99,9 +99,9 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     parameters: ['workspaceId', 'workspaceTitle']},
   {
     key: 'ui.navigate',
-    name: 'Navigate (Semantic)',
+    name: 'Navigate (Canonical)',
     description:
-      'Same as navigate_workspace. Use stable target ids from UI catalog (settings.passkeys, goals.home, forms.home, vault.totp, settings.agents).',
+      'Navigate via semantic target id (settings.passkeys, goals.home, etc.) or raw route. Canonical — prefer over navigate_workspace.',
     requiresAuthorization: false,
     parameters: ['target', 'route']},
   {
@@ -135,9 +135,9 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
     key: 'delete_resource',
     name: 'Delete Resource',
     description:
-      'Delete an Idea (Note), Goal (Task), or Project. Specifier REQUIRED: resource $id. Args REQUIRED: type ("note"|"goal"|"project").',
+      'Delete an Idea/Goal/Project. Preferred: args.id + type ("note"|"goal"|"project"). Legacy specifier resource_$id still works.',
     requiresAuthorization: true,
-    parameters: ['type']},
+    parameters: ['id', 'type']},
   {
     key: 'list_goals',
     name: 'List All Goals',
@@ -148,7 +148,7 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
 ];
 
 
-/** Exact create_note / update_note / next-step args the model must emit. */
+/** Exact create_note / update_note / next-step args the model must emit. Canonical: args.id for resource identity, specifier is legacy alias. */
 export const NOTE_TOOL_PAYLOAD_SCHEMA = `{
   "create_note": {
     "toolKey": "create_note",
@@ -162,8 +162,9 @@ export const NOTE_TOOL_PAYLOAD_SCHEMA = `{
   },
   "update_note": {
     "toolKey": "update_note",
-    "specifier": "note_$id — required",
+    "specifier": null, // legacy: note_$id — prefer args.id
     "args": {
+      "id": "string — required, note $id (preferred); legacy specifier still accepted",
       "title": "optional string",
       "content": "optional string markdown",
       "tags": ["optional string array"],
@@ -172,8 +173,10 @@ export const NOTE_TOOL_PAYLOAD_SCHEMA = `{
   },
   "get_note": {
     "toolKey": "get_note",
-    "specifier": "note_$id — required",
-    "args": {}
+    "specifier": null, // legacy: note_$id — prefer args.id
+    "args": {
+      "id": "string — required, note $id"
+    }
   },
   "suggest_next_steps": {
     "toolKey": "suggest_next_steps",
@@ -182,7 +185,7 @@ export const NOTE_TOOL_PAYLOAD_SCHEMA = `{
       "suggestions": [
         {
           "label": "short chip text the user sees",
-          "prompt": "full self-contained instruction Kylie auto-runs on click (must trigger real tools)"
+          "prompt": "natural-language trigger Kylie executes as tool call next turn (e.g. 'Create a goal to deploy backend' → create_goal)"
         }
       ]
     }
@@ -216,8 +219,9 @@ export const NOTE_TOOL_PAYLOAD_SCHEMA = `{
   },
   "delete_resource": {
     "toolKey": "delete_resource",
-    "specifier": "resource_$id — required",
+    "specifier": null, // legacy: resource_$id — prefer args.id
     "args": {
+      "id": "string — required, resource $id (preferred)",
       "type": "note|goal|project — required"
     }
   }

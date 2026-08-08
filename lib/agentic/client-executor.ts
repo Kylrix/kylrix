@@ -209,9 +209,10 @@ async function executeAgenticToolCall(
       return { success: true, summary: `Created idea: ${saved.title || title}` };
     }
 
-    if ((key === 'update_note' || key === 'objects.idea.update') && call.specifier) {
+    if ((key === 'update_note' || key === 'objects.idea.update') && (call.specifier || (args as any).id)) {
+      const noteId = (call.specifier || (args as any).id) as string;
       const { updateNote } = await import('@/lib/actions/client-ops');
-      const saved = await updateNote(call.specifier, {
+      const saved = await updateNote(noteId, {
         title: args.title as string | undefined,
         content: args.content as string | undefined,
         tags:
@@ -230,20 +231,21 @@ async function executeAgenticToolCall(
             : undefined});
       ctx.pushLiveNote?.(saved, { pending: false });
       const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
-      autonomicSyncEngine.ack(saved.$id || call.specifier);
+      autonomicSyncEngine.ack(saved.$id || noteId);
       await ctx.recordSessionObject?.({
-        objectId: saved.$id || call.specifier,
+        objectId: saved.$id || noteId,
         objectType: 'idea',
         title: (saved as any).title || (args.title as string) || null,
         toolKey: key});
       return {
         success: true,
-        summary: `Updated idea: ${(saved as any).title || args.title || call.specifier}`};
+        summary: `Updated idea: ${(saved as any).title || args.title || noteId}`};
     }
 
-    if ((key === 'get_note' || key === 'objects.idea.read') && call.specifier) {
+    if ((key === 'get_note' || key === 'objects.idea.read') && (call.specifier || (args as any).id)) {
+      const nid = (call.specifier || (args as any).id) as string;
       const { getNote } = await import('@/lib/appwrite/note');
-      const note = await getNote(call.specifier);
+      const note = await getNote(nid);
       ctx.pushLiveNote?.(note, { pending: false });
       await ctx.recordSessionObject?.({
         objectId: note.$id,
@@ -312,13 +314,14 @@ async function executeAgenticToolCall(
       return { success: true, summary: `Listed ${filtered.length} goals`, skipToast: true };
     }
 
-    if ((key === 'update_goal' || key === 'objects.goal.update') && call.specifier) {
-      await ctx.updateTask?.(call.specifier, {
+    if ((key === 'update_goal' || key === 'objects.goal.update') && (call.specifier || (args as any).id)) {
+      const gid = (call.specifier || (args as any).id) as string;
+      await ctx.updateTask?.(gid, {
         title: args.title,
         status: args.status,
         priority: args.priority,
         dueDate: args.dueDate ? new Date(String(args.dueDate)) : undefined});
-      return { success: true, summary: `Updated goal: ${call.specifier}` };
+      return { success: true, summary: `Updated goal: ${gid}` };
     }
 
     // ── Projects ────────────────────────────────────────────────
@@ -383,7 +386,7 @@ async function executeAgenticToolCall(
 
     // ── Visibility ──────────────────────────────────────────────
     if (key === 'toggle_privacy' || key === 'objects.visibility.toggle') {
-      const resourceId = String(call.specifier || args.objectId || args.object_id || '');
+      const resourceId = String(call.specifier || (args as any).id || args.objectId || args.object_id || '');
       if (!resourceId) {
         return { success: false, summary: '', error: 'Missing resource id' };
       }
@@ -438,19 +441,20 @@ async function executeAgenticToolCall(
 
     // ── Delete ──────────────────────────────────────────────────
     if (key === 'delete_resource' || key.startsWith('objects.') && key.endsWith('.delete')) {
-      if (!call.specifier) return { success: false, summary: '', error: 'Missing resource id' };
+      const delId = (call.specifier || (args as any).id) as string;
+      if (!delId) return { success: false, summary: '', error: 'Missing resource id' };
       const type = String(args.type || 'note');
       if (type === 'note') {
         const { deleteNote } = await import('@/lib/actions/client-ops');
-        await deleteNote(call.specifier);
-        ctx.removeNote?.(call.specifier);
+        await deleteNote(delId);
+        ctx.removeNote?.(delId);
       } else if (type === 'goal' || type === 'task') {
-        await ctx.deleteTask?.(call.specifier);
+        await ctx.deleteTask?.(delId);
       } else if (type === 'project') {
         const { deleteProject } = await import('@/lib/actions/client-ops');
-        await deleteProject(call.specifier);
+        await deleteProject(delId);
       }
-      return { success: true, summary: `Deleted ${type}: ${call.specifier}` };
+      return { success: true, summary: `Deleted ${type}: ${delId}` };
     }
 
     return { success: false, summary: '', error: `Unhandled tool: ${key}` };

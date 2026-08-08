@@ -6,22 +6,32 @@ import { AGENTIC_TOOLS_REGISTRY, NOTE_TOOL_PAYLOAD_SCHEMA } from './tools-regist
 import { buildUiCatalogPrompt } from './ui-catalog';
 
 function buildToolsPromptSnippet(): string {
-  return AGENTIC_TOOLS_REGISTRY.map(
-    (t) =>
-      `- Key: "${t.key}" (${t.name}): ${t.description}. Params: ${t.parameters.join(', ')}. Auth: ${t.requiresAuthorization ? 'yes' : 'no'}`).join('\n');
+  // Deduplicate alias: navigate_workspace is silent alias of ui.navigate — list once to save tokens
+  return AGENTIC_TOOLS_REGISTRY.filter((t) => {
+    if (t.key === 'navigate_workspace') return false;
+    return true;
+  })
+    .map((t) => {
+      const aliasNote = t.key === 'ui.navigate' ? ' (alias: navigate_workspace — same impl, prefer this key)' : '';
+      return `- Key: "${t.key}"${aliasNote} (${t.name}): ${t.description}. Params: ${t.parameters.join(', ')}. Auth: ${t.requiresAuthorization ? 'yes' : 'no'}`;
+    })
+    .join('\n');
 }
 
 function buildNavigationGuide(): string {
   return `
-[NAVIGATION — SEMANTIC UI CATALOG]
-Use ui.navigate (or navigate_workspace) with args.target = stable id OR args.route = path.
-Prefer target over raw routes — survives route moves.
+[NAVIGATION]
+Canonical tool: \`ui.navigate\` (args: \`{ target: "stable_id" }\` or \`{ route: "/path" }\`). Prefer semantic targets over raw routes. Alias \`navigate_workspace\` is identical — prefer \`ui.navigate\`; do not list both.
+Catalog:
+- ideas.home (/app) | goals.home (/goals) | events.home (/events)
+- forms.home (/forms) | vault.home (/vault) | vault.totp (/vault/totp)
+- connect.home (/connect) | projects.home (/app) | settings.home (/settings)
+- settings.passkeys (/settings#passkeys-setup) | settings.agents (/settings/agents)
+Full catalog detail:
 ${buildUiCatalogPrompt()}
-
 Examples:
 - "take me to passkeys" → ui.navigate { target: "settings.passkeys" }
 - "open goals" → ui.navigate { target: "goals.home" }
-- "settings > agents" → ui.navigate { target: "settings.agents" }
 `;
 }
 
@@ -31,24 +41,25 @@ function buildSearchGuide(): string {
 For vague queries ("what's for today", "find my backend tasks", "look through my notes", "summarize my personality from goals/ideas", "pull up my experience with tanstack", "latest idea", "web CAD idea", "what I've been working on"):
 1. IMMEDIATELY emit search_ecosystem with args.query = user phrase (IDs only returned to engine). Do NOT ask the user to clarify or to confirm.
 2. The client renders rich local-copy cards automatically — do NOT paste raw search hit lists in response text.
-3. After search, pick one hit by id and explain it (use get_note for ideas) OR chain ui.navigate. If the user asked for personality summary, search goals+ideas then synthesize from the returned titles/snippets.
+3. After search, pick one hit by id and explain it (use get_note with args.id for ideas) OR chain ui.navigate. If the user asked for personality summary, search goals+ideas then synthesize from the returned titles/snippets.
 Domains: ideas, goals, events, forms, projects, UI destinations.
 Temporal hints: today → goals/events due today; overdue → late goals.
-When user asks to "explain an interesting note" or "pick this idea (ID)" or "what do you think about idea", ALWAYS call get_note with that ID in the SAME turn — never say "I need to access it first" without calling the tool.
+When user asks to "explain an interesting note" or "pick this idea (ID)" or "what do you think about idea", ALWAYS call get_note with args.id in the SAME turn — never say "I need to access it first" without calling the tool.
 When user literally types tool syntax like "search_ecosystem { query: \\"...\\" }" or "create_note { ... }", treat it as an instruction to execute that tool — emit the corresponding toolCall immediately.
+If search_ecosystem returns an empty array, inform the user directly and do NOT call get_note with a blank or guessed ID.
 `;
 }
 
 function buildMultiTurnGuide(): string {
   return `
 [MULTI-TURN, FULFILLMENT & HUMAN TERMINOLOGY]
-- ABSOLUTE MANDATE: Never reply with generic placeholder evasions like "I'm here to help... I need to access it first" or "I can help... Would you like me to...". If the user gives an ID or asks to inspect/analyze an item, ALWAYS call the corresponding tool (e.g. get_note, objects.form.read) and perform the full requested task in the SAME turn! Do not ask to "clarify what you mean by hahaha" when the user asks to pull up a note — just fetch it.
+- ABSOLUTE MANDATE: Never reply with generic placeholder evasions like "I'm here to help... I need to access it first" or "I can help... Would you like me to...". If the user gives an ID or asks to inspect/analyze an item, ALWAYS call the corresponding tool (e.g. get_note with args.id, objects.form.read) and perform the full requested task in the SAME turn! Do not ask to "clarify what you mean by hahaha" when the user asks to pull up a note — just fetch it.
 - HUMAN-FIRST REFERENCES: Always refer to notes, ideas, goals, forms, and projects by their human-readable Title (e.g. "Draft Roadmap"), NEVER by their internal raw ID (e.g. "6a66086c002bdeec6b65").
 - FULFILLMENT: Fulfill user requests completely across turns. Do not halt prematurely to ask for redundant confirmation when an instruction is clear. "Help me compose a note — ask one clarifying question then draft" means exactly one question, then on next user reply you MUST call create_note.
 - Carry session objects across turns; prefer update over recreate. After get_note succeeds, the next turn's sessionObjects includes that note — use its title/content to answer "what do you think" without asking to access again.
 - Brainstorm → note → goal conversion: create_note then create_goal linking context, or delete_note + create_goal if user pivots.
 - Chain toolCalls in ONE response when user asks multiple actions.
-- Use suggest_next_steps for executable follow-ups — 2 to 4 chips that are action-heavy and contextual.
+- Use suggest_next_steps for executable follow-ups — 2 to 4 chips where each prompt is a natural-language trigger Kylie will execute as a tool call on next turn (e.g. "Create a goal to deploy backend" → will emit create_goal). Prompts must be self-contained so one click completes the flow.
 `;
 }
 
