@@ -587,14 +587,14 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       .then((rows) => setAgentCount(rows.length))
       .catch(() => setAgentCount(0));
 
-    // Load session chat history on panel open (local copy first)
+    // Load session chat history on panel open (local copy first, general only — object sidekick sessions not default)
     const loadSessionHistory = async () => {
       if (!user?.$id) return;
       try {
         const activeId = await AgenticSessionLocalStore.getActiveSessionId(user.$id);
         if (activeId) {
-          const localSession = await AgenticSessionLocalStore.getSession(activeId);
-          if (localSession?.chatHistory?.length) {
+          const localSession: any = await AgenticSessionLocalStore.getSession(activeId);
+          if (localSession?.chatHistory?.length && !localSession?.targetType && !localSession?.targetId) {
             setActiveSessionId(activeId);
             setMessages(
               localSession.chatHistory.map((m) => ({
@@ -606,6 +606,32 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 isPublic: m.isPublic,
                 isGuest: m.isGuest,
                 nextSteps: m.nextSteps})));
+          } else if (localSession?.targetType) {
+            // Active is object sidekick — find latest general session instead
+            const list = await AgenticSessionLocalStore.getSessionsList(user.$id);
+            const general = list.find((s: any) => !s.targetType && !s.targetId);
+            if (general) {
+              const genSession: any = await AgenticSessionLocalStore.getSession(general.id);
+              if (genSession?.chatHistory?.length) {
+                setActiveSessionId(general.id);
+                setMessages(
+                  genSession.chatHistory.map((m) => ({
+                    id: m.id,
+                    role: m.role,
+                    content: m.content,
+                    blocks: m.blocks,
+                    syncStatus: m.syncStatus || 'synced',
+                    isPublic: m.isPublic,
+                    isGuest: m.isGuest,
+                    nextSteps: m.nextSteps})));
+                await AgenticSessionLocalStore.setActiveSessionId(user.$id, general.id);
+                try {
+                  const { account } = await import('@/lib/appwrite/client');
+                  const prefs = await account.getPrefs().catch(() => ({}));
+                  await account.updatePrefs({ ...prefs, activeAgentSessionId: general.id }).catch(() => {});
+                } catch {}
+              }
+            }
           }
         }
       } catch {
@@ -615,7 +641,12 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         const { account } = await import('@/lib/appwrite/client');
         const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
         const { getAgentSession, listAgentToolCallsAction } = await import('@/lib/actions/agentic');
-        const session = await getAgentSession(jwt);
+        const session: any = await getAgentSession(jwt);
+        // General Kylie sidebar must not auto-adopt object Sidekick session as default
+        if (session?.targetType || session?.targetId) {
+          // skip — keep current general messages, don't overwrite with Sidekick
+          return;
+        }
         if (session.rowId) setActiveSessionId(session.rowId);
         const historyArr = JSON.parse(session.chatHistory || '[]');
         if (Array.isArray(historyArr) && historyArr.length > 0) {
@@ -757,7 +788,16 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           userMessage: trimmed});
 
         if (res.success) {
-          if (res.sessionId) setActiveSessionId(res.sessionId);
+          if (res.sessionId) {
+            setActiveSessionId(res.sessionId);
+            if (user?.$id) {
+              void AgenticSessionLocalStore.setActiveSessionId(user.$id, res.sessionId);
+              void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+                void LocalEngine.cacheSet(`f_agent_active_session_${user.$id}`, res.sessionId).catch(() => {});
+              });
+              void account.getPrefs().then((p: any) => account.updatePrefs({ ...p, activeAgentSessionId: res.sessionId }).catch(() => {})).catch(() => {});
+            }
+          }
           const assistantId = res.conversationId || `${Date.now()}-a`;
           const executedTools: ToolCallDisplay[] = [];
           const sessionIdForObjects = res.sessionId as string | undefined;
@@ -1842,6 +1882,17 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 </div>
               ) : (
                 sessions.map((sess) => {
+                  const isObjectSession = Boolean((sess as any).targetType && (sess as any).targetId);
+                  const objectIcon = (() => {
+                    const t = String((sess as any).targetType || '');
+                    if (t === 'idea' || t === 'note') return '💡';
+                    if (t === 'goal' || t === 'task') return '🎯';
+                    if (t === 'project') return '📦';
+                    if (t === 'form') return '📝';
+                    if (t === 'vault' || t === 'credential') return '🔐';
+                    if (t === 'event') return '📅';
+                    return '🔗';
+                  })();
                   let previewText = 'Empty session thread';
                   let titleText = `Session ${new Date(sess.createdAt).toLocaleDateString()}`;
                   try {
@@ -1860,7 +1911,18 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                   return (
                     <div
                       key={sess.id}
-                      onClick={() => handleSelectSession(sess.id)}
+                      onClick={() => {
+                        if (isObjectSession) {
+                          const t = (sess as any).targetType as string;
+                          const id = (sess as any).targetId as string;
+                          setShowSessionsDrawer(false);
+                          onClose();
+                          // Open in Sidekick, not general sidebar — reuse same targetType/targetId session
+                          window.dispatchEvent(new CustomEvent('kylrix:open-sidekick', { detail: { type: t, id } }));
+                          return;
+                        }
+                        handleSelectSession(sess.id);
+                      }}
                       onContextMenu={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1875,14 +1937,17 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       onTouchEnd={clearSessionLongPress}
                       onTouchMove={clearSessionLongPress}
                       onTouchCancel={clearSessionLongPress}
-                      className="w-full flex items-center justify-between gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] hover:border-white/10 transition cursor-pointer text-left group"
+                      className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl border transition cursor-pointer text-left group ${isObjectSession ? 'bg-[#A855F7]/10 border-[#A855F7]/20 hover:bg-[#A855F7]/15 hover:border-[#A855F7]/30' : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.05] hover:border-white/10'}`}
                     >
                       <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                         <span className="text-white text-xs font-bold leading-tight truncate flex items-center gap-2">
-                          {titleText}
+                          {isObjectSession && <span className="shrink-0 text-[11px]">{objectIcon}</span>}
+                          <span className="truncate">{titleText}</span>
+                          {isObjectSession && <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-[#A855F7]/20 text-[#E9D5FF] text-[9px] font-black uppercase tracking-wider">{String((sess as any).targetType)}</span>}
                           {sess.isPinned === true && <span className="text-[10px] text-[#F59E0B] font-black">PINNED</span>}
                         </span>
-                        <span className="text-[#9B9691] text-[10px] leading-snug line-clamp-1">
+                        <span className="text-[#9B9691] text-[10px] leading-snug line-clamp-1 flex items-center gap-1">
+                          {isObjectSession && <span className="shrink-0">↗</span>}
                           {previewText}
                         </span>
                       </div>

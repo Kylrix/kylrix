@@ -6,6 +6,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { hasAuthSessionHint } from '@/lib/appwrite/client';
 import { EcosystemProviders } from './EcosystemProviders';
 import { GhostNoteClaimer } from '@/components/landing/GhostNoteClaimer';
+import { SidekickHistoryBridge } from '@/components/agentic/SidekickHistoryBridge';
 
 export default function AppLayout({
   children}: {
@@ -91,6 +92,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       <EcosystemProviders>
         <GhostNoteClaimer />
         {children}
+        <SidekickHistoryBridge />
         {/* Agentic/wallet/unified → NativeSidebarBridge; object details → Overlay/DynamicSidebar */}
       </EcosystemProviders>
     </Suspense>

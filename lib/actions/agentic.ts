@@ -198,9 +198,18 @@ async function executeInstantRequestActionInner(
     lifetimeMemoryContext = memoryLoad.context || "";
     try {
       const historyArr = JSON.parse(sessionData.chatHistory || '[]');
-      // Only append the last 15 chats for context to avoid overloading the model
       const tail = historyArr.slice(-15);
-      recentMessagesStr = tail.map((m: any) => `${m.role === 'user' ? 'User' : 'Agent'}: ${m.content}`).join('\n');
+      recentMessagesStr = tail
+        .map((m: any) => {
+          const blockText = Array.isArray(m.blocks)
+            ? m.blocks
+                .map((b: any) => (b.type === 'markdown' ? b.content : b.type === 'ecosystem_hits' ? `[hits for "${b.query}": ${Array.isArray(b.hits) ? b.hits.map((h: any) => h.id).join(', ') : ''}]` : ''))
+                .join('\n')
+            : '';
+          const combined = [m.content, blockText].filter(Boolean).join('\n');
+          return `${m.role === 'user' ? 'User' : 'Agent'}: ${combined}`;
+        })
+        .join('\n');
     } catch {}
 
     if (activeSessionId) {
@@ -342,6 +351,55 @@ If the target is ambiguous, ask the user to clarify or list the available titles
     }
   }
 
+  // Fast-path: user literally typed tool syntax (e.g. `search_ecosystem { query: "..." }`). Bypass LLM and emit that toolCall directly.
+  const explicitTool = (() => {
+    const raw = String(prompt || '').trim();
+    // pick this idea (ID)
+    const pickMatch = raw.match(/pick this idea\s*\(?\s*([a-f0-9]{24,})\s*\)?/i);
+    if (pickMatch) return { toolKey: 'get_note', specifier: pickMatch[1], args: {} };
+    // explicit get_note with id
+    const getMatch = raw.match(/get_note\s*[:\s]*([a-f0-9]{24,})/i);
+    if (getMatch) return { toolKey: 'get_note', specifier: getMatch[1], args: {} };
+    // search_ecosystem { query: "..." }  or  search_ecosystem query "..."
+    const searchMatch = raw.match(/search_ecosystem\s*\{[^}]*query\s*:\s*["']([^"']+)["'][^}]*\}/i) || raw.match(/search_ecosystem\s*\{[^}]*query\s*:\s*["']([^"']+)["']/i);
+    if (searchMatch) return { toolKey: 'search_ecosystem', args: { query: searchMatch[1] } };
+    // create_note { title: "...", content: "..." }
+    if (/create_note\s*\{/i.test(raw)) {
+      try {
+        const jsonPart = raw.slice(raw.indexOf('{'));
+        const parsed = JSON.parse(jsonPart);
+        if (parsed && typeof parsed.title === 'string') {
+          return { toolKey: 'create_note', args: { title: parsed.title, content: String(parsed.content || ''), tags: parsed.tags, isPublic: parsed.isPublic } };
+        }
+      } catch {}
+    }
+    return null;
+  })();
+  if (explicitTool) {
+    const userVisibleMessage = String(prompt || '').trim().slice(0, 500);
+    const userMessageId = `msg_u_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const conversationId = `msg_a_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    // Persist explicit user intent as history before returning toolCall
+    try {
+      if (historyEnabled) {
+        let historyArr: any[] = [];
+        try { historyArr = JSON.parse(sessionData?.chatHistory || '[]'); } catch {}
+        historyArr.push({ id: userMessageId, role: 'user', content: userVisibleMessage });
+        historyArr.push({ id: conversationId, role: 'assistant', content: '', nextSteps: [] });
+        let nextContext = sessionContext;
+        await TelemetryService.saveSession(user.$id, nextContext, JSON.stringify(historyArr), false, sessionData?.rowId || activeSessionId);
+      }
+    } catch {}
+    return {
+      success: true,
+      response: '',
+      toolCalls: [explicitTool],
+      nextSteps: [],
+      sessionId: sessionData?.rowId || activeSessionId || undefined,
+      conversationId,
+    };
+  }
+
   // Redact potentially sensitive details (passwords, PINs, auth keys) in prompt
   const redactedPrompt = prompt
     .replace(/(password|pass|pin|secret|key|private)\s*[:=]\s*[^\s]+/gi, '$1: [REDACTED]')
@@ -467,7 +525,13 @@ ${lifetimeMemoryContext}
 
   try {
     const parsed = JSON.parse(responseTextRaw);
-    visibleResponse = parsed.response || responseTextRaw;
+    const hasToolCalls = Array.isArray(parsed.toolCalls) && parsed.toolCalls.length > 0;
+    // When model emits only toolCalls (e.g. {"toolCalls": [...]}) with no response, don't store raw JSON as visible text
+    if (hasToolCalls && typeof parsed.response !== 'string') {
+      visibleResponse = '';
+    } else {
+      visibleResponse = typeof parsed.response === 'string' ? parsed.response : responseTextRaw;
+    }
     sessionUpdate = parsed.sessionContextUpdate || "";
     memoryUpdate = parsed.lifetimeMemoryUpdate || "";
     isThreadCompletedVal = parsed.isThreadCompleted;
@@ -478,7 +542,6 @@ ${lifetimeMemoryContext}
       parsedNextSteps = parsed.nextSteps;
     }
   } catch {
-    // Fallback if AI output doesn't match JSON structure perfectly
     visibleResponse = responseTextRaw;
   }
 
@@ -809,6 +872,8 @@ export async function listAgentSessions(jwt?: string) {
     isPublic: row.isPublic === true,
     isGuest: row.isGuest === true,
     isPinned: row.isPinned === true,
+    targetType: row.targetType || null,
+    targetId: row.targetId || null,
     createdAt: row.$createdAt,
     updatedAt: row.$updatedAt
   }));

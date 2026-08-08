@@ -27,6 +27,8 @@ export interface AgenticLocalSession {
   isPublic?: boolean;
   isGuest?: boolean;
   isPinned?: boolean;
+  targetType?: string | null;
+  targetId?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -39,6 +41,8 @@ export interface AgenticSessionListItem {
   isPublic?: boolean;
   isGuest?: boolean;
   isPinned?: boolean;
+  targetType?: string | null;
+  targetId?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -124,6 +128,8 @@ export const AgenticSessionLocalStore = {
       isPublic: session.isPublic,
       isGuest: session.isGuest,
       isPinned: session.isPinned,
+      targetType: (session as any).targetType || null,
+      targetId: (session as any).targetId || null,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt};
     if (idx >= 0) list[idx] = summary;

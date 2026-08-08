@@ -14,6 +14,8 @@ type SidekickResult = {
   oneLiner: string;
   sections: { heading: string; bullets: string[] }[];
   mindMap: { nodes: { id: string; label: string; kind: string }[]; edges: { from: string; to: string; label?: string }[] };
+  suggestions?: { label: string; prompt: string }[];
+  nextSteps?: { label: string; prompt: string }[];
 };
 
 type ChatMsg = { id: string; role: 'user' | 'assistant'; content: string; at?: string };
@@ -321,6 +323,18 @@ export function SidekickDrawer({
                     ))}
                   </div>
                 </div>
+                {(result.suggestions?.length || result.nextSteps?.length) ? (
+                  <div className="rounded-2xl bg-[#161412] border border-white/5 p-4 flex flex-col gap-2">
+                    <div className="text-xs font-black uppercase tracking-wider text-white">Quick actions</div>
+                    <div className="flex flex-wrap gap-2">
+                      {[...(result.suggestions || []), ...(result.nextSteps || [])].slice(0, 6).map((s, idx) => (
+                        <button key={idx} onClick={() => setInput(s.prompt)} className="px-3 py-1.5 rounded-full bg-[#A855F7]/10 border border-[#A855F7]/20 text-xs font-bold text-[#E9D5FF] hover:bg-[#A855F7]/15 hover:border-[#A855F7]/30 transition-colors">
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </>
             )}
 

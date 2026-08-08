@@ -2,6 +2,7 @@
 
 import { AgenticMarkdown } from './AgenticMarkdown';
 import { EcosystemHitCards } from './EcosystemHitCards';
+import { JsonRenderer, looksLikeJson } from './JsonRenderer';
 import type { AgenticMessageBlock } from '@/lib/agentic/message-blocks';
 import type { HydratedEcosystemHit } from '@/lib/agentic/hydrate-ecosystem-hits';
 
@@ -20,11 +21,19 @@ export function AgenticMessageBody({ content, blocks, onPickHit }: AgenticMessag
 
   if (!hasBlocks && !trimmed) return null;
 
+  // If content is raw JSON envelope (toolCalls), render via dedicated JsonRenderer, not markdown
+  const isJsonEnvelope = looksLikeJson(trimmed) && (trimmed.includes('"toolCalls"') || trimmed.includes('"response"'));
+  const shouldUseJsonRenderer = isJsonEnvelope && !hasBlocks;
+
   return (
     <div className="flex flex-col gap-3">
-      {trimmed ? <AgenticMarkdown content={trimmed} /> : null}
+      {trimmed ? (shouldUseJsonRenderer ? <JsonRenderer raw={trimmed} /> : <AgenticMarkdown content={trimmed} />) : null}
       {blocks?.map((block, idx) => {
         if (block.type === 'markdown') {
+          // If block content itself is JSON, use JsonRenderer
+          if (looksLikeJson(block.content) && block.content.trim().startsWith('{')) {
+            return <JsonRenderer key={`md-${idx}`} raw={block.content} collapsed />;
+          }
           return <AgenticMarkdown key={`md-${idx}`} content={block.content} />;
         }
         if (block.type === 'ecosystem_hits') {

@@ -251,8 +251,10 @@ async function executeAgenticToolCall(
         title: note.title || null,
         toolKey: key});
       ctx.openDetailOverlay?.('idea', note.$id);
-      ctx.appendMessage?.('assistant', `Loaded Idea **"${note.title || 'Untitled'}"**.`);
-      return { success: true, summary: `Loaded idea: "${note.title || 'Untitled'}"`, skipToast: true };
+      const snippet = String(note.content || '').slice(0, 2200);
+      const body = snippet ? `### ${note.title || 'Untitled'}\n\n${snippet}` : `Loaded Idea **"${note.title || 'Untitled'}"**.`;
+      ctx.appendMessage?.('assistant', body, { blocks: [{ type: 'markdown', content: body }] });
+      return { success: true, summary: `Loaded idea: "${note.title || 'Untitled'}"`, skipToast: true, messageBlocks: [{ type: 'markdown', content: body }] };
     }
 
     // ── Goals ───────────────────────────────────────────────────
