@@ -5,22 +5,26 @@ import type { WorkflowChain, WorkflowStep } from '@/lib/workflow-engine';
 import { KNOWN_ACTION_IDS, parseFlowJson, buildFlowJsonTemplate, suggestActionIds, autocorrectActionId, heuristicGenerateFlow, validateFlowStructure } from '@/lib/flows/syntax-engine';
 import toast from 'react-hot-toast';
 import { saveWorkflowAction } from '@/lib/actions/workflows';
+import { generateFlowFromPromptAction } from '@/lib/actions/flow-creator';
 
 const NICHES = ['workspace','productivity','security','connect','intelligence','billing','system'] as const;
 
 type Props = {
   onClose: () => void;
   onCreated: (wf: WorkflowChain) => void;
+  draftId?: string;
+  initialDraft?: import('@/lib/services/flow-drafts').FlowDraft | null;
 };
 
-export function CreateFlowDrawer({ onClose, onCreated }: Props) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [niche, setNiche] = useState<typeof NICHES[number]>('workspace');
-  const [steps, setSteps] = useState<WorkflowStep[]>([]);
+export function CreateFlowDrawer({ onClose, onCreated, draftId: draftIdProp, initialDraft }: Props) {
+  const [draftId] = useState(() => draftIdProp || `draft-${Date.now()}-${Math.random().toString(36).slice(2,6)}`);
+  const [title, setTitle] = useState(initialDraft?.title || '');
+  const [description, setDescription] = useState(initialDraft?.description || '');
+  const [niche, setNiche] = useState<typeof NICHES[number]>((initialDraft?.niche as any) || 'workspace');
+  const [steps, setSteps] = useState<WorkflowStep[]>(initialDraft?.steps || []);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [jsonText, setJsonText] = useState(() => buildFlowJsonTemplate('Untitled'));
-  const [jsonTouched, setJsonTouched] = useState(false);
+  const [jsonText, setJsonText] = useState(() => initialDraft?.jsonText || buildFlowJsonTemplate(initialDraft?.title || 'Untitled', { niche: (initialDraft?.niche as any) || 'workspace', description: initialDraft?.description || '', steps: initialDraft?.steps || [] }));
+  const [jsonTouched, setJsonTouched] = useState(!!initialDraft?.jsonText);
   const [agenticPrompt, setAgenticPrompt] = useState('');
   const [busy, setBusy] = useState(false);
   const [toolFilter, setToolFilter] = useState('');
@@ -39,6 +43,25 @@ export function CreateFlowDrawer({ onClose, onCreated }: Props) {
   const errorMsg = useMemo(() => diagnostics.find(d=>d.severity==='error')?.message, [diagnostics]);
 
   const suggestions = useMemo(() => suggestActionIds(toolFilter, 12), [toolFilter]);
+
+  // autosave to LocalEngine — drafts picked up via RxDB cache, synced instantly when ready
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const ready = title.trim().length >= 2 && steps.length > 0 && !hasError;
+    const hasContent = title.trim() || description.trim() || steps.length > 0 || jsonTouched;
+    if (!hasContent) return;
+    const handle = setTimeout(() => {
+      void import('@/lib/services/flow-drafts').then(({ FlowDraftsService }) => {
+        void FlowDraftsService.saveDraft(draftId, { title, description, niche, steps, jsonText, ready });
+      });
+      if (ready) {
+        void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+          void LocalEngine.cacheSet(`kylrix_flow_live_${draftId}`, { title, description, niche, steps, jsonText, ready, updatedAt: new Date().toISOString() });
+        });
+      }
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [title, description, niche, steps, jsonText, hasError, draftId, jsonTouched]);
 
   const handleJsonChange = (v: string) => {
     setJsonText(v);
@@ -82,14 +105,26 @@ export function CreateFlowDrawer({ onClose, onCreated }: Props) {
     setJsonTouched(false);
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     const p = agenticPrompt.trim();
     if (!p) { toast.error('Describe what the flow should do'); return; }
-    const wf = heuristicGenerateFlow(p, title.trim() || p.slice(0, 40));
-    setSteps(wf.steps);
-    setDescription(wf.description);
-    setJsonTouched(false);
-    toast.success(`Generated ${wf.steps.length} steps`);
+    setBusy(true);
+    try {
+      const res = await generateFlowFromPromptAction(p, title.trim());
+      if (!res.success || !res.flow) throw new Error(res.error || 'Generation failed');
+      const wf = res.flow;
+      setSteps(wf.steps);
+      setDescription(wf.description);
+      if (!title.trim() && (wf as any).name) setTitle((wf as any).name);
+      setJsonTouched(false);
+      toast.success(`Generated ${wf.steps.length} steps via ${res.mode}${res.error ? ` (fallback: ${res.error.slice(0, 60)})` : ''}`);
+    } catch (e: any) {
+      const wf = heuristicGenerateFlow(p, title.trim() || p.slice(0, 40));
+      setSteps(wf.steps);
+      setDescription(wf.description);
+      setJsonTouched(false);
+      toast.success(`Generated ${wf.steps.length} steps (heuristic fallback)`);
+    } finally { setBusy(false); }
   };
 
   const canCreate = title.trim().length >= 2 && !hasError && steps.length > 0;
@@ -127,6 +162,8 @@ export function CreateFlowDrawer({ onClose, onCreated }: Props) {
       const res = await saveWorkflowAction(payload);
       if (!res.success) throw new Error(res.error || 'Save failed');
       toast.success('Flow created');
+      void import('@/lib/services/flow-drafts').then(({ FlowDraftsService }) => { void FlowDraftsService.clearDraft(draftId); });
+      void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => { void LocalEngine.cacheDelete(`kylrix_flow_live_${draftId}`); });
       onCreated(payload);
       onClose();
     } catch (e:any) { toast.error(e?.message || 'Failed to create flow'); } finally { setBusy(false); }
@@ -170,7 +207,7 @@ export function CreateFlowDrawer({ onClose, onCreated }: Props) {
           </div>
           <div className="flex gap-2">
             <input value={agenticPrompt} onChange={e=>setAgenticPrompt(e.target.value)} placeholder='e.g. "When I save an idea, create a goal and search my notes"' className="flex-1 rounded-xl bg-[#161412] border border-white/[0.08] px-3 py-2.5 text-sm text-white placeholder:text-white/25 outline-none focus:border-[#A855F7]/30"/>
-            <button type="button" onClick={handleGenerate} className="px-4 py-2.5 rounded-xl bg-[#A855F7] hover:bg-[#9333EA] text-white text-xs font-extrabold flex items-center gap-1.5 cursor-pointer"><Sparkles size={14}/> Generate</button>
+            <button type="button" disabled={busy} onClick={handleGenerate} className="px-4 py-2.5 rounded-xl bg-[#A855F7] hover:bg-[#9333EA] disabled:opacity-50 text-white text-xs font-extrabold flex items-center gap-1.5 cursor-pointer"><Sparkles size={14}/> {busy ? 'Generating…' : 'Generate'}</button>
           </div>
           <p className="text-[11px] text-white/30">Generates steps + preview + JSON. Uses flowSyntaxEngine heuristic (client) — LLM path can be wired later.</p>
         </div>

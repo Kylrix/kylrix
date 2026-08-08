@@ -242,7 +242,7 @@ export function FlowDetailDrawer({
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-white/30">Tap “View prompt” above for beautifully sectioned rendering with tool icons, colors, and code highlights.</p>
+              <p className="text-[11px] text-white/30">Tap “View prompt” above to see the prompt with tool icons and colors.</p>
             </div>
           )}
         </section>
@@ -305,7 +305,7 @@ export function FlowDetailDrawer({
         <section className="rounded-[18px] bg-[#0A0908] border border-white/[0.05] p-4 space-y-2">
           <div className="flex items-center justify-between gap-2 mb-1">
             <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/45">
-              Steps — agent tools (beautifully sectioned)
+              Steps
             </h3>
             <span className="text-[10px] font-extrabold text-white/30">{local.steps.length} tools</span>
           </div>

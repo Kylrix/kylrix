@@ -86,9 +86,6 @@ function FlowRow({
                   Updated
                 </span>
               )}
-              {(flow as any).preInstalled && (
-                <span className="shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#A855F7]/15 text-[#A855F7] border border-[#A855F7]/20">Pre-installed</span>
-              )}
             </div>
             <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
               <span className="text-[11px] font-bold text-white/40 truncate">
@@ -396,6 +393,39 @@ export default function FlowsPage() {
     }
   };
 
+  const [drafts, setDrafts] = useState<import('@/lib/services/flow-drafts').FlowDraft[]>([]);
+
+  const refreshDrafts = useCallback(async () => {
+    try {
+      const { FlowDraftsService } = await import('@/lib/services/flow-drafts');
+      const list = await FlowDraftsService.listDrafts();
+      setDrafts(list);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    void refreshDrafts();
+    const iv = setInterval(() => { void refreshDrafts(); }, 1500);
+    const onVis = () => { if (document.visibilityState === 'visible') void refreshDrafts(); };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', onVis);
+    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis); };
+  }, [refreshDrafts]);
+
+  const handleResumeDraft = useCallback(async (draft: import('@/lib/services/flow-drafts').FlowDraft) => {
+    const panel = <CreateFlowDrawer draftId={draft.id} initialDraft={draft} onClose={() => { native?.close('flow-create'); closeOverlay(); setShowCreate(false); void refreshDrafts(); }} onCreated={(wf)=>{ updateWorkflow(wf.id, wf as any); setInstalledIds(installFlowLocal(wf.id)); setTab('installed'); void refreshDrafts(); }} />;
+    if (isDesktop && native) native.open(panel, { key:'flow-create', width: NATIVE_SIDEBAR_WIDTHS.detail, title: draft.title || 'Draft' });
+    else openOverlay(panel);
+    setShowCreate(true);
+  }, [isDesktop, native, openOverlay, closeOverlay, updateWorkflow, refreshDrafts]);
+
+  const handleDeleteDraft = useCallback(async (id: string) => {
+    const { FlowDraftsService } = await import('@/lib/services/flow-drafts');
+    await FlowDraftsService.clearDraft(id);
+    void refreshDrafts();
+    toast.success('Draft removed');
+  }, [refreshDrafts]);
+
   const list = tab === 'discover' ? discoverList : installedList;
 
   return (
@@ -443,6 +473,32 @@ export default function FlowsPage() {
             );
           })}
         </div>
+
+        {drafts.length > 0 && (
+          <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">Drafts</h3>
+              <span className="text-[10px] font-bold text-white/30">{drafts.length}</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {drafts.map((d) => (
+                <div key={d.id} className="rounded-2xl bg-[#0A0908] border border-white/[0.05] p-3.5 flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.06] text-white/40 shrink-0">
+                    <Workflow size={16} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white truncate">{d.title || 'Untitled'}</p>
+                    <p className="text-[11px] text-white/35 truncate">{d.niche} · {d.steps.length} steps{d.ready ? ' · ready' : ''}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button type="button" onClick={() => void handleResumeDraft(d)} className="px-3 py-1.5 rounded-lg bg-[#A855F7] text-white text-[11px] font-extrabold cursor-pointer">Resume</button>
+                    <button type="button" onClick={() => void handleDeleteDraft(d.id)} className="p-2 rounded-lg bg-[#161412] border border-white/[0.06] text-white/40 hover:text-white cursor-pointer"><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-4">
           <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">

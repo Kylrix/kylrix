@@ -6,7 +6,7 @@ import type { WorkflowChain } from '@/lib/workflow-engine';
 import { buildSidekickSystemInstruction } from '@/lib/agentic/prompts/sidekick';
 import { assembleSystemInstructionBlocks } from '@/lib/agentic/prompt-framework';
 
-// Per-tool visual mapping for beautiful prompt/tool formatting
+// Per-tool visual mapping for prompt/tool formatting
 const TOOL_VISUAL: Record<string, { icon: React.ElementType; color: string; bg: string; label: string }> = {
   'objects.idea.create': { icon: FileText, color:'#A855F7', bg:'rgba(168,85,247,0.12)', label:'Idea' },
   'objects.idea.read': { icon: FileText, color:'#A855F7', bg:'rgba(168,85,247,0.12)', label:'Idea' },
@@ -81,7 +81,7 @@ export function PromptDrawer({ flow, onClose }: PromptDrawerProps) {
         <div className="min-w-0">
           <p className="text-[10px] font-extrabold uppercase tracking-wider text-white/40 mb-1 flex items-center gap-1.5"><Bot size={12}/> Prompt</p>
           <h2 className="font-clash text-lg font-semibold truncate">{flow.name}</h2>
-          <p className="text-[11px] text-white/40 mt-1">Agents are prompts — system instructions + tools. Beautifully sectioned below.</p>
+          <p className="text-[11px] text-white/40 mt-1">Agents are prompts — system instructions + tools.</p>
         </div>
         <button type="button" onClick={onClose} className="p-2 rounded-xl bg-[#0A0908] border border-white/[0.06] text-white/45 hover:text-white cursor-pointer shrink-0"><X size={16}/></button>
       </header>
