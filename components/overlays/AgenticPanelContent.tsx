@@ -1847,7 +1847,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               <div className="flex items-center gap-2">
                 <History size={16} style={{ color: accent }} />
                 <h3 className="text-white font-extrabold text-[14px] font-clash tracking-tight">
-                  Chats with Kylie
+                  Agentic sessions
                 </h3>
               </div>
               <div className="flex items-center gap-2">
