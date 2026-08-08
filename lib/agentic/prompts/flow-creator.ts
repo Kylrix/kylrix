@@ -36,7 +36,7 @@ export function buildFlowCreatorUserPrompt(opts: { prompt: string; titleHint?: s
   ].join('\n\n');
 }
 
-export function heuristicFlowCreatorFallback(prompt: string, titleHint?: string) {
+export function heuristicFlowCreatorFallback(_prompt: string, _titleHint?: string) {
   // Kept for offline use — mirrored in syntax-engine heuristic
   return null as unknown as never;
 }

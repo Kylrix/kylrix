@@ -598,7 +598,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           if (localSession?.chatHistory?.length && !localSession?.targetType && !localSession?.targetId) {
             setActiveSessionId(activeId);
             setMessages(
-              localSession.chatHistory.map((m) => ({
+              localSession.chatHistory.map((m: any) => ({
                 id: m.id,
                 role: m.role,
                 content: m.content,
@@ -616,7 +616,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               if (genSession?.chatHistory?.length) {
                 setActiveSessionId(general.id);
                 setMessages(
-                  genSession.chatHistory.map((m) => ({
+                  genSession.chatHistory.map((m: any) => ({
                     id: m.id,
                     role: m.role,
                     content: m.content,

@@ -118,7 +118,7 @@ export function CreateFlowDrawer({ onClose, onCreated, draftId: draftIdProp, ini
       if (!title.trim() && (wf as any).name) setTitle((wf as any).name);
       setJsonTouched(false);
       toast.success(`Generated ${wf.steps.length} steps via ${res.mode}${res.error ? ` (fallback: ${res.error.slice(0, 60)})` : ''}`);
-    } catch (e: any) {
+    } catch (_e: any) {
       const wf = heuristicGenerateFlow(p, title.trim() || p.slice(0, 40));
       setSteps(wf.steps);
       setDescription(wf.description);
