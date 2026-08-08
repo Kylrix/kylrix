@@ -34,8 +34,7 @@ export async function uploadOAuthAppLogo(file: File): Promise<{
   const fileId = ID.unique();
   await storage.createFile(BUCKET, fileId, compressed, [
     Permission.read(Role.any()),
-    Permission.update(Role.user(user.$id)),
-    Permission.delete(Role.user(user.$id)),
+    Permission.read(Role.user(user.$id)),
   ]);
 
   const view = storage.getFileView(BUCKET, fileId);

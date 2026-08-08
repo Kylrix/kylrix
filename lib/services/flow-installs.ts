@@ -131,8 +131,6 @@ export const FlowInstallService = {
         },
         permissions: [
           Permission.read(Role.user(params.installerId)),
-          Permission.update(Role.user(params.installerId)),
-          Permission.delete(Role.user(params.installerId)),
         ],
       });
       row = created as unknown as FlowInstallRow;
@@ -227,9 +225,8 @@ export const FlowInstallService = {
         isGeneral: params.scope.type === 'all',
       },
       permissions: [
-        Permission.read(Role.user(params.installerId)),
-        Permission.write(Role.user(params.installerId)),
-      ],
+          Permission.read(Role.user(params.installerId)),
+        ],
     });
   },
 

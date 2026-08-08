@@ -210,10 +210,7 @@ export const Web3WalletService = {
         APPWRITE_CONFIG.TABLES.WEB3_TRANSACTIONS,
         rowId,
         data,
-        [
-          Permission.read(Role.user(input.userId)),
-          Permission.write(Role.user(input.userId))
-        ]
+        [Permission.read(Role.user(input.userId))]
       );
     } catch (e: any) {
       if (e?.code === 409) {

@@ -7,8 +7,6 @@ import toast from 'react-hot-toast';
 import UserSearch from '@/components/UserSearch';
 import { useAuth } from '@/lib/auth';
 import { useSudo } from '@/context/SudoContext';
-import { useProUpgrade } from '@/context/ProUpgradeContext';
-import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { ChatService } from '@/lib/services/chat';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { createGhostNoteChat, listGhostNoteChats } from '@/lib/actions/client-ops';
@@ -54,12 +52,8 @@ export function CreateChatComposer({
   const router = useRouter();
   const pathname = usePathname();
   const { requestSudo } = useSudo();
-  const { openProUpgrade } = useProUpgrade();
-  const { currentTier } = useSubscription();
   const { openOverlay, closeOverlay } = useOverlay();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
-  const isTeams =
-    currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
 
   const [mode, setMode] = useState<ChatCreateMode>(initialMode);
   const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
@@ -209,10 +203,6 @@ export function CreateChatComposer({
 
   const createHangout = useCallback(async () => {
     if (!user) return;
-    if (!isTeams) {
-      openProUpgrade('Hangouts');
-      return;
-    }
     if (!hangoutName.trim()) {
       toast.error('Name your hangout');
       return;
@@ -264,10 +254,8 @@ export function CreateChatComposer({
     });
   }, [
     user,
-    isTeams,
     hangoutName,
     selectedUsers,
-    openProUpgrade,
     requestSudo,
     openConversation,
   ]);
@@ -433,7 +421,7 @@ export function CreateChatComposer({
             onClick={() => void createHangout()}
             className="flex-1 h-12 rounded-xl bg-[#F59E0B] text-black font-extrabold text-sm disabled:opacity-40 hover:bg-amber-500 transition-colors"
           >
-            {busy ? 'Creating…' : isTeams ? 'Create hangout' : 'Create hangout (Pro)'}
+            {busy ? 'Creating…' : 'Create hangout'}
           </button>
         </div>
       ) : (

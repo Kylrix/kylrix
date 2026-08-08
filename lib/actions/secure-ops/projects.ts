@@ -208,8 +208,6 @@ export async function createProjectSecure(data: any, jwt?: string) {
 
   const permissions = [
     Permission.read(Role.user(actor.$id)),
-    Permission.update(Role.user(actor.$id)),
-    Permission.delete(Role.user(actor.$id)),
   ];
 
   const project = await tables.createRow({
@@ -926,8 +924,6 @@ export async function upsertSweptConfigSecure(
       updatedAt: now},
     permissions: [
       Permission.read(Role.user(actor.$id)),
-      Permission.update(Role.user(actor.$id)),
-      Permission.delete(Role.user(actor.$id)),
     ]});
   return JSON.parse(JSON.stringify(row));
 }

@@ -69,8 +69,6 @@ export const BYOKManager = {
 
     const permissions = [
       Permission.read(Role.user(userId)),
-      Permission.update(Role.user(userId)),
-      Permission.delete(Role.user(userId))
     ];
 
     if (existingRow) {

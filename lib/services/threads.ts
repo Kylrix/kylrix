@@ -38,8 +38,6 @@ function previewOf(content: string, max = 200): string {
 function ownerPerms(userId: string, extraReadUserIds: string[] = []) {
   const perms = [
     Permission.read(Role.user(userId)),
-    Permission.update(Role.user(userId)),
-    Permission.delete(Role.user(userId)),
   ];
   for (const id of extraReadUserIds) {
     if (id && id !== userId) perms.push(Permission.read(Role.user(id)));

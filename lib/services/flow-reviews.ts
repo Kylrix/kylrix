@@ -42,7 +42,6 @@ export const FlowReviewService = {
       },
       permissions: [
         Permission.read(Role.user(params.actorId)),
-        Permission.update(Role.user(params.actorId)),
       ],
     });
   },

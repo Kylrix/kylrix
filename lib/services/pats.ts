@@ -109,8 +109,6 @@ export const PatService = {
       },
       permissions: [
         Permission.read(Role.user(params.userId)),
-        Permission.update(Role.user(params.userId)),
-        Permission.delete(Role.user(params.userId)),
       ],
     });
 
@@ -135,7 +133,6 @@ export const PatService = {
         },
         permissions: [
           Permission.read(Role.user(params.userId)),
-          Permission.write(Role.user(params.userId)),
         ],
       });
     } catch {

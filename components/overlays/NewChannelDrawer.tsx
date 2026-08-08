@@ -23,8 +23,6 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import toast from 'react-hot-toast';
 import UserSearch from '@/components/UserSearch';
 import { discoverRecipientSecureReady } from '@/lib/chat/recipient-secure-ready';
-import { useProUpgrade } from '@/context/ProUpgradeContext';
-import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
@@ -47,10 +45,6 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
     const router = useRouter();
     const pathname = usePathname();
     const { requestSudo } = useSudo();
-    const { openProUpgrade } = useProUpgrade();
-    const { currentTier } = useSubscription();
-    const isTeams = currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
-
     const theme = useTheme();
     const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
     const { setIsDrawerOpen } = useDrawerState();
@@ -89,10 +83,6 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
 
     const handleCreateChannel = async () => {
         if (!user) return;
-        if (!isTeams) {
-            openProUpgrade('New Channel');
-            return;
-        }
         if (!channelName.trim()) {
             toast.error("Please enter a channel name.");
             return;
@@ -239,7 +229,7 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
                             '&.Mui-disabled': { bgcolor: 'rgba(245,158,11,0.2)', color: 'rgba(0,0,0,0.4)' }
                         }}
                     >
-                        {creating ? <CircularProgress size={22} sx={{ color: '#000' }} /> : isTeams ? 'Create hangout' : 'Create hangout (Pro)'}
+                        {creating ? <CircularProgress size={22} sx={{ color: '#000' }} /> : 'Create hangout'}
                     </Button>
                 </Stack>
             </Box>

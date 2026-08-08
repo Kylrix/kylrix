@@ -20,20 +20,23 @@ Internal services (like `permissionsInternal`) must be decoupled from session di
 - **Step 3**: The service uses the **Admin SDK** (Full privilege API key) to execute the mutation.
 - **Benefit**: Mathematically bypasses the unreliable "forwarding" of session cookies through multiple layers of server logic.
 
-## 3. Permission Level Mapping
-Kylrix maps its human-readable levels to Appwrite primitives as follows:
+## 3. Permission Level Mapping (Read-Only ACL + Collaborators Table)
+Kylrix enforces **read-only Appwrite ACLs**. At `create`, the creator (and any initial collaborators) receive **only** `read("user:<id>")`. No `update`/`delete`/`create` is ever granted via ACL. Write levels are virtualized:
 
-| Kylrix Level | Appwrite Role | Functional Access |
+| Kylrix Level | Appwrite ACL | Functional Access (checked via `collaborators` table + `verifyResourcePermissionSecure`) |
 | :--- | :--- | :--- |
-| **Viewer** | `read` | Can only view the document. |
-| **Editor** | `update` (+ `read`) | Can view and modify content. |
-| **Admin** | `delete` (+ `update`, `read`) | Full lifecycle control. |
+| **Viewer** | `read` | Can only view (read via client SDK). |
+| **Editor** | `read` (ACL) + `permission='editor'` row in `Collaborators` table | Can view and modify (server checks `editor`/`admin`). |
+| **Admin** | `read` (ACL) + `permission='admin'` row | Full lifecycle control (server checks `admin`). |
 
-## 4. Single Source of Truth: $permissions
-Collaborator listing must NEVER rely on a duplicate database column (like a `collaborators` string array). 
-- **The Rule**: If a user is named in the Appwrite `$permissions` array, they are a collaborator.
-- **Extraction**: User IDs are parsed from raw strings like `read("user:67fe...")` using the `extractCollaboratorsFromPermissions` regex.
-- **Hydration**: Profiles are fetched by ID on-demand in the UI (Note Detail or Share Drawer) to ensure zero data desynchronization.
+Public sharing uses `isPublic`/`isGuest` columns as server-side escape hatches, not `read("any")` ACL (except optional read-any for public notes where needed for direct client reads).
+
+## 4. Single Source of Truth: `collaborators` table + `isPublic`/`isGuest`
+Collaborator listing must NEVER rely on `$permissions` array.
+- **The Rule**: `read` in `$permissions` only tells “has access”. **Which kind** of access lives in the `collaborators` table (`resourceId`, `userId`, `permission='viewer'|'editor'|'admin'`) and legacy `metadata.collaborators` fallback.
+- **Extraction**: Roles are read from `Collaborators` table via `listRowsSecure` filtered by `resourceId`+`userId`, not from `$permissions` regex.
+- **Hydration**: Profiles are fetched by ID on-demand in the UI to ensure zero desynchronization.
+- **Reads via client SDK**: `listRows`/`getRow` use client SDK directly (frequent path); writes via `createRowSecure`/`updateRowSecure`/`deleteRowSecure` with `actor` JWT + `forceSystem` and `verifyResourcePermissionSecure` checks.
 
 ## 5. Security Guardrails
 - **ID Overwrite**: Client-provided user IDs are ignored; the verified `actorId` from the session is always injected as the source of authority.

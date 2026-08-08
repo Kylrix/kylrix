@@ -404,7 +404,7 @@ export async function createSendGhostObjectSecure(data: {
       isThread: false},
     permissions: [
       Permission.read(Role.any()),
-      ...(actor ? [Permission.write(Role.user(actor.$id)), Permission.delete(Role.user(actor.$id))] : [])
+      ...(actor ? [Permission.read(Role.user(actor.$id))] : [])
     ]});
 
   return JSON.parse(JSON.stringify(result));
@@ -1087,9 +1087,6 @@ export async function promoteGhostResourceThreadToStorySecure(
     },
     permissions: [
       Permission.read(Role.user(actor.$id)),
-      Permission.write(Role.user(actor.$id)),
-      Permission.update(Role.user(actor.$id)),
-      Permission.delete(Role.user(actor.$id))
     ]
   });
 
@@ -1414,8 +1411,6 @@ export async function attachObjectSecure(params: {
     },
     permissions: [
       Permission.read(Role.user(actor.$id)),
-      Permission.write(Role.user(actor.$id)),
-      Permission.delete(Role.user(actor.$id))
     ]
   });
 
@@ -1569,11 +1564,7 @@ export async function createStandaloneTagSecure(tagName: string, jwt?: string) {
       usageCount: 0,
       metadata: JSON.stringify({ version: 'v2' })
     },
-    [
-      Permission.read(Role.user(actor.$id)),
-      Permission.write(Role.user(actor.$id)),
-      Permission.delete(Role.user(actor.$id))
-    ]
+    [Permission.read(Role.user(actor.$id))]
   );
 }
 

@@ -117,8 +117,7 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
       if (bucketId === APPWRITE_CONFIG.BUCKETS.APP_LOGOS) {
         // Consent screens and marketplaces need to show logos to any visitor.
         permissions.push(Permission.read(Role.any()));
-        permissions.push(Permission.update(Role.user(actor.$id)));
-        permissions.push(Permission.delete(Role.user(actor.$id)));
+        /* update/delete gated via collaborators table + server checks, not ACL */
       } else {
         permissions.push(Permission.read(Role.user(actor.$id)));
       }

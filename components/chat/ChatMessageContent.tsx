@@ -48,23 +48,47 @@ export function ChatMessageContent({
                         </Typography>
                     </Box>
                 );
-            } else {
-                // Dynamically decrypt using conversation key to prevent render loop execution bottlenecks
-                const cacheKey = `decrypted_msg_${msg.$id || msg.id}`;
-                const cachedDecrypted = decryptedMessageCache.get(cacheKey);
-                if (cachedDecrypted) {
-                    displayedContent = cachedDecrypted;
-                } else {
-                    const convKey = ecosystemSecurity.getConversationKey(conversationId);
-                    if (convKey) {
-                        ecosystemSecurity.decryptWithKey(displayedContent, convKey)
-                            .then((decrypted) => {
-                                decryptedMessageCache.set(cacheKey, decrypted);
-                                onDecrypted(String(msg.$id || msg.id), decrypted);
-                            })
-                            .catch(() => {});
-                    }
+            }
+            // Decrypted plaintext lives only in transient RAM — never persist or render ciphertext
+            const cacheKey = `decrypted_msg_${msg.$id || msg.id}`;
+            const cachedDecrypted = decryptedMessageCache.get(cacheKey);
+            if (cachedDecrypted) {
+                displayedContent = cachedDecrypted;
+                // Fall through to render plaintext below
+                if (!isLikelyEncrypted(displayedContent)) {
+                    // plaintext ready
                 }
+            } else {
+                const convKey = ecosystemSecurity.getConversationKey(conversationId);
+                if (convKey) {
+                    ecosystemSecurity.decryptWithKey(displayedContent, convKey)
+                        .then((decrypted) => {
+                            decryptedMessageCache.set(cacheKey, decrypted);
+                            onDecrypted(String(msg.$id || msg.id), decrypted);
+                        })
+                        .catch(() => {});
+                }
+                // While async decrypt resolves or key is transient-missing, never render raw ciphertext (gibberish)
+                // ChatService.decryptMessageRows already hydrates plaintext in RAM for hangouts; this is fallback for direct render
+                return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, opacity: 0.6 }}>
+                        <Lock size={14} strokeWidth={2.5} />
+                        <Typography variant="body2" sx={{ fontStyle: 'italic', fontWeight: 500 }}>
+                            Encrypted message
+                        </Typography>
+                    </Box>
+                );
+            }
+            // Safety: if still looks like ciphertext after cache lookup, mask it
+            if (isLikelyEncrypted(displayedContent)) {
+                return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5, opacity: 0.6 }}>
+                        <Lock size={14} strokeWidth={2.5} />
+                        <Typography variant="body2" sx={{ fontStyle: 'italic', fontWeight: 500 }}>
+                            Encrypted message
+                        </Typography>
+                    </Box>
+                );
             }
         }
 

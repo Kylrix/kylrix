@@ -115,7 +115,6 @@ async function ensurePatRateRow(patId: string, userId: string) {
       },
       permissions: [
         Permission.read(Role.user(userId)),
-        Permission.update(Role.user(userId)),
       ],
     });
   } catch {
@@ -153,7 +152,6 @@ async function ensureUserRateRow(userId: string) {
       },
       permissions: [
         Permission.read(Role.user(userId)),
-        Permission.update(Role.user(userId)),
       ],
     });
   } catch {

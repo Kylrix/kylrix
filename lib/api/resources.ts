@@ -252,8 +252,6 @@ export const ApiResources = {
       },
       permissions: [
         Permission.read(Role.user(actor.userId)),
-        Permission.update(Role.user(actor.userId)),
-        Permission.delete(Role.user(actor.userId)),
       ],
     });
     return shapeGoal(row);
@@ -584,8 +582,6 @@ export const ApiResources = {
       },
       permissions: [
         Permission.read(Role.user(actor.userId)),
-        Permission.update(Role.user(actor.userId)),
-        Permission.delete(Role.user(actor.userId)),
       ],
     });
     return {
@@ -744,8 +740,6 @@ export const ApiResources = {
       },
       permissions: [
         Permission.read(Role.user(actor.userId)),
-        Permission.update(Role.user(actor.userId)),
-        Permission.delete(Role.user(actor.userId)),
       ],
     });
     return {
@@ -782,8 +776,6 @@ export const ApiResources = {
       },
       permissions: [
         Permission.read(Role.user(actor.userId)),
-        Permission.update(Role.user(actor.userId)),
-        Permission.delete(Role.user(actor.userId)),
       ],
     });
     return {
@@ -903,10 +895,8 @@ export const ApiResources = {
             isPinned: false,
           },
           permissions: [
-            Permission.read(Role.user(actor.userId)),
-            Permission.update(Role.user(actor.userId)),
-            Permission.delete(Role.user(actor.userId)),
-          ],
+        Permission.read(Role.user(actor.userId)),
+      ],
         });
         calendarId = (cal as any).$id;
       }
@@ -934,8 +924,6 @@ export const ApiResources = {
       },
       permissions: [
         Permission.read(Role.user(actor.userId)),
-        Permission.update(Role.user(actor.userId)),
-        Permission.delete(Role.user(actor.userId)),
       ],
     });
     return this.getEvent(actor, (row as any).$id);
@@ -1002,8 +990,6 @@ export const ApiResources = {
       },
       permissions: [
         Permission.read(Role.user(actor.userId)),
-        Permission.update(Role.user(actor.userId)),
-        Permission.delete(Role.user(actor.userId)),
       ],
     });
     return this.getForm(actor, (row as any).$id);
@@ -1287,8 +1273,6 @@ export const ApiResources = {
       permissions: [
         Permission.read(Role.user(actor.userId)),
         Permission.read(Role.any()),
-        Permission.update(Role.user(actor.userId)),
-        Permission.delete(Role.user(actor.userId)),
       ],
     });
     return {
@@ -1327,8 +1311,6 @@ export const ApiResources = {
       permissions: [
         Permission.read(Role.user(actor.userId)),
         ...(body.isPublic !== false ? [Permission.read(Role.any())] : []),
-        Permission.update(Role.user(actor.userId)),
-        Permission.delete(Role.user(actor.userId)),
       ],
     });
     return shapeMoment(row);

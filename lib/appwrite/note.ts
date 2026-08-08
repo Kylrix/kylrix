@@ -231,14 +231,12 @@ function hydrateVirtualAttributes(doc: any): any {
 }
 
 export function getNotePermissions(userId: string, isPublic: boolean) {
+  // Paradigm: create grants read-only to owner (and isPublic read to any). Update/delete are gated via collaborators table + verifyResourcePermissionSecure, not ACL.
   const permissions = [
     Permission.read(Role.user(userId)),
-    Permission.update(Role.user(userId)),
-    Permission.delete(Role.user(userId)),
   ];
 
   if (isPublic) {
-    // Role.any() includes guests, so Role.guests() is redundant.
     permissions.push(Permission.read(Role.any()));
   }
 

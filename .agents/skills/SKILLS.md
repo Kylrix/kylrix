@@ -145,7 +145,6 @@ _Catalog covers 86 skills._
 | `why.engagement-audit-views` | Deep dive into the dynamic engagement views and metric rollup architecture in Kylrix. Explains the SHA-256 salted IP/UserAgent anonymization, daily/monthly buck |
 | `why.exportability-data-sovereignty` | Explain why all user data is completely portable (importable/exportable) and how our Google integration promotes ultimate user data sovereignty. |
 | `why.free-tier-limits-8-collaborators` | Explain why databases, notes, passwords, forms, and TOTPs are completely free and unlimited, but capped at 8 collaborators per resource to avoid undocumented re |
-| `why.group-calls-cap-16` | Explain the strict 16-member limit on Hangouts (groups) and Calls to prevent Appwrite read-permission bloat, WebSocket lag, and typing indicator overhead, along |
 | `why.ispublic-isguest-escape-hatches` | Detail the isPublic, isGuest, and isGeneral columns that serve as secure server-side escape hatches to manage resource access for public, guest, and project con |
 | `why.scrapped-byok-ai` | Document the architectural decision to scrap the Bring Your Own Key (BYOK) AI model in Kylrix, explaining the conflicts with E2EE boundaries, decryption key UX, |
 | `why.telegram-notification-bridge` | Explain using Telegram as a push notification outlet to remain completely detached from Apple/Google developer platform constraints and fee structures. |

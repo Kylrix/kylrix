@@ -106,7 +106,6 @@ export class WebRTCManager {
           }, [
               Permission.read(Role.user(senderId)),
               Permission.read(Role.user(targetId)),
-              Permission.write(Role.user(senderId)),
           ]);
       } catch (err) {
           console.error('[WebRTCManager] Failed to send Appwrite signal:', err);
