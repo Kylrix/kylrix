@@ -1,15 +1,15 @@
 ---
 name: security.wesp-security-context
-description: Deep dive into the Web Ecosystem Security Protocol (WESP) in Kylrix. Explains tab-specific RAM-only secrets, system-wide lock broadcasts, and key isolation to block XSS and memory-injection attacks.
+description: Companion for the open source productivity suite Kylrix. Explains optional privacy module for private notes and secure hangouts using transient session secrets and respectful key handling.
 ---
 
-# Why: WESP (Web Ecosystem Security Protocol) Context & Tab Secrets
+# WESP — Privacy-Respecting Session Handling for Private Notes and Secure Hangouts
 
-Client-side cryptographic applications are extremely vulnerable to Cross-Site Scripting (XSS). If a malicious script runs, it can access browser storage (like `localStorage` or `sessionStorage`) and steal Master Keys. The **Kylrix Ecosystem Security Protocol (WESP)** in `lib/ecosystem/security.ts` blocks this vector.
+Kylrix is an open source productivity suite that respects user privacy with an optional privacy module for private notes and secure hangouts. The **Web Ecosystem Security Protocol (WESP)** in `lib/ecosystem/security.ts` supports this by handling private content with care and keeping it in transient memory.
 
-## 1. RAM-Only Tab Session Secrets
+## 1. Transient Tab Session Secrets
 
-To prevent high-severity credential scraping from cookies or browser persistence, WESP stores cryptographic keys **only in the active Javascript execution thread's memory (RAM)**. 
+To respect user privacy and provide a pleasant experience for private notes and secure hangouts, WESP keeps privacy-related keys **only in transient memory during the active session**. 
 We also generate a unique, cryptographically random **tabSessionSecret** that lives purely in-memory:
 
 ```typescript
@@ -26,9 +26,9 @@ private getOrCreateSessionSecret(): Uint8Array {
 
 Since this secret is never saved to the disk or session storage, any other tab, browser process, or external execution context cannot read or reconstruct the derived Master Keys.
 
-## 2. Dynamic Mesh Broadcasts and Lock Sync
+## 2. Coordinated Lock Sync Across Tabs
 
-When a security event occurs (e.g., user hits a global "Lock" button), all open tabs and active ecosystem nodes must lock instantly to protect data. We use a P2P browser mesh (`MeshProtocol`) to broadcast and receive lock commands.
+When the user chooses to lock, all open tabs are notified to respect that preference. A lightweight browser mesh (`MeshProtocol`) shares the preference to keep the experience consistent:
 
 ```typescript
 private listenForMeshDirectives() {
@@ -41,9 +41,9 @@ private listenForMeshDirectives() {
 }
 ```
 
-## 3. Strict Encryption/Decryption Lifecycles
+## 3. Respectful Session Lifecycle
 
-Decrypted values are kept in memory using a strict caching policy. When `lock()` is triggered, all keys, cached plaintexts, and active cryptographic configurations are overwritten with zeroes or purged entirely to free up RAM memory and defend against memory-dumper exploits:
+Decrypted values are kept in transient memory for convenience. When the user chooses to lock, keys and cached content are cleared to free up memory and respect privacy:
 
 ```typescript
 lock() {

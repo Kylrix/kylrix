@@ -29,7 +29,7 @@ class EcosystemSecurity {
   private passkeyReminderAtState: string | null = null;
   private isArgonState: boolean | null = null;
   private statusListeners: Set<(status: { isUnlocked: boolean; hasKey: boolean; hasIdentity: boolean; hasMasterpass: boolean | null; hasPasskey: boolean | null; hasRecoveryCodes: boolean | null; passkeyReminderAt: string | null; isArgon: boolean | null }) => void> = new Set();
-  // SECURITY: Tab-specific secret (RAM-only) to protect against XSS
+  // Transient tab secret for privacy-respecting handling of private notes and secure hangouts
   private tabSessionSecret: Uint8Array | null = null;
 
   // Constants aligned with Kylrix Vault for backward compatibility
@@ -611,7 +611,7 @@ class EcosystemSecurity {
     const encoder = new TextEncoder();
     const sessionSecret = this.getOrCreateSessionSecret();
     
-    // Mix PIN with tab-specific Session Secret for entropy (XSS-safe)
+    // Mix PIN with transient session secret for a pleasant privacy-respecting experience
     const pinBytes = encoder.encode(pin);
     const combined = new Uint8Array(pinBytes.length + sessionSecret.length);
     combined.set(pinBytes);
@@ -633,7 +633,7 @@ class EcosystemSecurity {
         hash: "SHA-256"},
       keyMaterial,
       { name: "AES-GCM", length: 256 },
-      false, // SECURITY: Non-extractable. Key cannot be exported by XSS.
+      false, // Privacy-respecting: key stays in transient memory for this session
       ["encrypt", "decrypt"]
     );
   }

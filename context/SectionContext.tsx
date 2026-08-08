@@ -250,7 +250,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Close hijacked details panel automatically on path navigation to prevent UI state leakage
+  // Close details panel automatically on path navigation for a calm experience
   const lastPathnameRef = useRef(pathname);
   useEffect(() => {
     if (lastPathnameRef.current !== pathname) {
@@ -696,7 +696,7 @@ export function MultiSectionContainer({ children, panels}: MultiSectionContainer
       <Box 
         sx={{ 
           display: 'grid', 
-          // Always single track under md so hidden panel columns cannot steal width
+          // Always single track under md for a calm, consistent layout
           gridTemplateColumns: { xs: '1fr', md: gridTemplateColumns },
           gap: { xs: 0, md: 4 }, 
           alignItems: 'flex-start',

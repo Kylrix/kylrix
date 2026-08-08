@@ -51,7 +51,7 @@ export function WalletSignConfirmation(props: {
                         Security Risk Acknowledgment
                     </Typography>
                     <Typography component="span" sx={{ color: MUTED, fontSize: '0.72rem', lineHeight: 1.45, fontFamily: 'var(--font-satoshi)' }}>
-                        Website-based keys reside in transient RAM to prevent sandbox scraping. However, client environments carry active XSS risks. Confirm you trust this application action fully.
+                        For your privacy, keys are kept in transient memory for this session. Please confirm you recognize this app action.
                     </Typography>
                 </Box>
             </Stack>

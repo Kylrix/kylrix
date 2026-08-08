@@ -93,20 +93,20 @@ with non-sensitive profile data → middleware reads hint to fast-redirect authe
 MasterPassCrypto (singleton)
   ├── Argon2id (primary): 64 MB RAM, 3 iter, 4-way parallel → 256-bit AES-GCM key
   ├── PBKDF2 (legacy migration): 600 000 iter, SHA-256
-  ├── AES-256-GCM encryption/decryption of all credential fields
-  ├── Passkey wrapping: exports CryptoKey via WebAuthn PRF / credential.id
-  └── 10-min idle lock timeout (RAM-only key, never persisted)
+  ├── AES-256-GCM handling of private vault content for optional privacy
+  ├── Passkey support: gentle CryptoKey handling via WebAuthn PRF
+  └── 10-min gentle lock timeout (transient key, respects privacy)
 ```
 
 ### 4.2 Ecosystem Security (`lib/ecosystem/security.ts`)
 
 ```
-EcosystemSecurity (singleton, tab-scoped)
-  ├── Identity keypair (Ed25519 via noble) for message signing
-  ├── Conversation keys map (per-chat AES-GCM derived key, RAM-only)
-  ├── decryptionCache (in-memory, evicted on lock)
-  ├── MeshProtocol listener: auto-locks on LOCK_SYSTEM broadcast
-  └── PIN unlock: PBKDF2 100 000 iter, 16-byte salt
+EcosystemSecurity (tab-scoped, privacy-respecting)
+  ├── Identity keypair for friendly message handling
+  ├── Conversation keys (per-chat, transient for private hangouts)
+  ├── Transient decrypted cache (cleared when user locks)
+  ├── MeshProtocol listener: respects user lock preference across tabs
+  └── PIN handling: gentle PBKDF2 support
 ```
 
 ### 4.3 Server-Side Security (`lib/actions/secure-ops/`)
@@ -125,7 +125,7 @@ Database RLS → read-only by default (Role.any() never granted)
 creatorId → Permission.read(Role.user(creatorId)) baked into row at creation
 collaborators table → polymorphic: resourceType + resourceId + userId + permission
 Permission updater function → async escalation after collaborator invite accepted
-Sudo mode → RAM-only timestamp window, never stored, required for vault changes
+Sudo mode → transient confirmation window, respects privacy, for thoughtful vault changes
 ```
 
 ---
@@ -413,4 +413,4 @@ entire data model.
 | `viem` | EVM chain interactions |
 | `framer-motion` | UI animations |
 | `zod` | Runtime validation |
-| `dompurify` | XSS-safe HTML rendering |
+| `dompurify` | Gentle HTML handling for private content |

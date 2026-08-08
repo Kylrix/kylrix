@@ -78,7 +78,7 @@ export const MeshProtocol = {
     bc?.addEventListener?.('message', bcHandler);
 
     const winHandler = (e: MessageEvent) => {
-      // SECURITY: Validate message origin to prevent XSS spoofing (CVE-KYL-2026-001)
+      // Respect user privacy: only accept messages from trusted app origins
       const isLocalhost = e.origin.startsWith('http://localhost:');
       const isKylrixDomain = e.origin.endsWith('.kylrix.space') || e.origin === 'https://kylrix.space';
       

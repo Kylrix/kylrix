@@ -168,7 +168,7 @@ export async function resetMasterpassAndWipe(userId: string): Promise<void> {
         const isSelf = participants.length === 1 || participants.every((p: string) => p === userId);
 
         if (isSelf) {
-          // Nuclear wipe messages in this self-chat
+          // Cascade delete messages in this self-chat (irreversible)
           await deleteTableDocs(CHAT_COLLECTION_MESSAGES_ID, CHAT_DATABASE_ID, [Query.equal("conversationId", conv.$id)]);
           // Delete the conversation itself
           await appwriteDatabases.deleteRow(CHAT_DATABASE_ID, CHAT_COLLECTION_CONVERSATIONS_ID, conv.$id).catch(() => null);

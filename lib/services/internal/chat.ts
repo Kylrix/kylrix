@@ -335,7 +335,7 @@ export async function nuclearWipeConversationInternal(payload: {
   }
 
   if (String(conversation?.type || '').toLowerCase() !== 'direct') {
-    throw new Error('Forbidden: Nuclear wipe is direct chats only');
+    throw new Error('Critical cascade delete is available for direct conversations only and cannot be undone');
   }
 
   return await deleteConversationFullyInternal(payload);

@@ -67,7 +67,6 @@ _Catalog covers 86 skills._
 | `system.chat-relay-relay` | Deep dive into the server-side real-time chat sync and event propagation. Explains conversation member permission mappings, SHA-256 base64url reaction indexing, |
 | `system.cross-app-linking` | Maintains cross-app pointers and metadata links between notes, tasks, calls, and secure objects. Use when connecting features across domain surfaces without dup |
 | `system.domain-canonicalization` | Enforce using the canonical www.kylrix.space subdomain for all outgoing URLs, email CTAs, Telegram push messages, share links, and public metadata assets. Use w |
-| `system.ghost-send` | Intricacies and architectural mandates for the Unified Send (Ghost Relay) system. Explains the 7-day auto-clearing polymorphic relay, zero-idle onboarding, and  |
 | `system.hexagonal-registry` | Deep dive into the dynamic Dependency Injection (DI) registry in Kylrix. Explains port/adapter decoupling, lazy instantiation, and run-time mock overrides for t |
 | `system.join-request-gating` | Deep dive into the Group Join Request system in Kylrix. Explains the composite-key SHA-256 ID derivation, invite link expiration verification, and admin-only no |
 | `system.query-expression-mapping` | Deep dive into the database query mapper in Kylrix. Explains how clean QueryExpressions (e.g. equal, contains, limit) are mapped to database-specific formats to |

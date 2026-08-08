@@ -164,7 +164,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
         items.push(
           { label: 'Notes Vault', icon: <FolderIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/app') },
           { label: 'Connect Hub', icon: <ChatIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/connect') },
-          { label: 'Vault Crypt', icon: <LockIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/vault') },
+          { label: 'Vault', icon: <LockIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/vault') },
           { label: 'Settings', icon: <SettingsIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/settings') }
         );
       } else if (isTopbar) {
@@ -189,7 +189,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
           );
         } else if (appType === 'vault') {
           items.push(
-            { label: 'Lock Crypt Vault', icon: <LockIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/vault/lock') },
+            { label: 'Vault', icon: <LockIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/vault/lock') },
             { label: 'Quick Capture Note', icon: <NoteAddIcon sx={{ fontSize: 16 }} />, onClick: triggerQuickNote },
             { label: 'Sync Engine', icon: <SyncIcon sx={{ fontSize: 16 }} />, onClick: () => showSuccess('Engine Synced', 'Active rows successfully validated.') }
           );

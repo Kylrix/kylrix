@@ -784,9 +784,9 @@ export const ChatWindow = ({
                 confirmLabel: 'Wipe Footprint'
             },
             nuclear: {
-                title: 'NUCLEAR WIPE: Purge Chat?',
-                description: 'CRITICAL: This will delete the entire direct chat, including members, keys, and the conversation itself for BOTH parties. All context will be lost.',
-                confirmLabel: 'Nuclear Purge'
+                title: 'Permanently delete conversation for everyone?',
+                description: 'Critical: This will permanently delete the conversation, members, encryption keys, messages and reactions for all participants. This cascade cannot be undone.',
+                confirmLabel: 'Permanently delete'
             }
         }[mode];
 
@@ -804,7 +804,7 @@ export const ChatWindow = ({
                         toast.success(`Removed ${res.count} messages and ${res.reactionsDeleted || 0} reactions for everyone`);
                     } else if (mode === 'nuclear') {
                         await ChatService.nuclearWipe(conversationId);
-                        toast.success("Conversation fully purged");
+                        toast.success("Conversation permanently deleted for everyone");
                         router.push('/connect/chats');
                         return;
                     }
@@ -1322,7 +1322,7 @@ export const ChatWindow = ({
 
                 {conversation?.type === 'direct' && (
                     <MenuItem onClick={() => handleClearChat('nuclear')} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem', color: '#ff4d4d' }}>
-                        <Zap size={18} strokeWidth={1.5} style={{ opacity: 0.9 }} /> Nuclear Wipe
+                        <Zap size={18} strokeWidth={1.5} style={{ opacity: 0.9 }} /> Permanently delete for everyone
                     </MenuItem>
                 )}
             </Menu>
@@ -1387,7 +1387,7 @@ export const ChatWindow = ({
                                 onClick={() => handleClearChat('nuclear')}
                                 sx={{ color: '#ff4d4d', textTransform: 'none', fontWeight: 800, mt: 0.5 }}
                             >
-                                Nuclear Wipe
+                                Permanently delete for everyone
                             </Button>
                         )}
                         <Button

@@ -132,9 +132,8 @@ export const isViewerTokenValid = (token: string) => {
  */
 
 /**
- * MASTER PURGE: Wipes all Tier 2 (Zero-Knowledge) data for the authenticated actor.
- * Triggered upon Master Password Reset.
- * Replaces legacy POST /api/reset-purge.
+ * Reset helper: clears private Tier 2 data for the account when the user resets.
+ * Part of the optional privacy module for private notes and secure hangouts.
  */
 
 /**

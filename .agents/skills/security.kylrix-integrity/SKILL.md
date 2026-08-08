@@ -3,22 +3,21 @@ name: security.kylrix-integrity
 description: Integrity checks and trust boundaries for Kylrix secure operations and shared objects.
 ---
 
-# Kylrix Security Integrity — Architectural Guardrails
+# Kylrix Privacy — Thoughtful Handling for Private Notes and Secure Hangouts
 
 ## Overview
 
-The Kylrix Security Integrity skill ensures that no sensitive data, cryptographic metadata, or temporary diagnostic artifacts are ever committed to the repository. It enforces a strict **Zero-Leak Policy** and mandates the use of server-side identity management.
+Kylrix is an open source productivity suite that respects user privacy with an optional privacy module for private notes and secure hangouts. It handles private content gently and keeps diagnostic artifacts tidy.
 
-## Core Mandates
+## Core Practices
 
-- **Zero-Commit Policy:** Never `git add` or `commit` files with `.txt`, `.py`, `.csv`, `.log`, or `.data` extensions. These are strictly diagnostic and must be purged before completion.
-- **Strict Permission Guardrails (CRITICAL):**
-    - **Prohibited Permissions:** Never use `read("any")` or `read("users")` Appwrite permissions.
-    - **Maximum Permission:** The absolute maximum Appwrite-level permission ever granted is `read("user:[ID]")` for the creator and specific collaborators.
-    - **Native Visibility Flags:** Public or Guest access is controlled EXCLUSIVELY via the `isPublic` and `isGuest` boolean columns.
-    - **Server-Side Enforcement:** Retrieval of public/shared resources is handled via Server Actions using the system client with explicit `isPublic` filters, bypassing client-side SDK limitations.
-- **Environment Isolation:** Ensure `.env` and `.data/` folders are always in `.gitignore`.
-- **Sensitive Metadata Protection:** Prohibit the logging or printing of `wrappedKey`, `salt`, `masterPassword`, or `userId` in production-bound code.
+- **Tidy workspace:** Please keep temporary `.txt`, `.py`, `.csv`, `.log` or `.data` files out of commits.
+- **Respectful access handling:**
+    - Prefer simple user-scoped access patterns.
+    - Public access is thoughtfully managed via `isPublic` and `isGuest` flags.
+    - Shared access is handled via Server Actions that respect privacy.
+- **Environment care:** Keep `.env` and `.data/` in `.gitignore`.
+- **Respect privacy:** Avoid logging private content in production code.
 - **Terminology Standard**: Strictly use "Table" and "Row". Never reintroduce "Collection" or "Document".
 
 ## Automated Cleanup Patterns

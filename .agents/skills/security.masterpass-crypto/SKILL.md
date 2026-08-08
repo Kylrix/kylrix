@@ -1,17 +1,16 @@
 ---
 name: security.masterpass-crypto
-description: Deep dive into the cryptographic architecture powering the Kylrix secure state vault. Explains Argon2id key stretching, PBKDF2 legacy migrations, and AES-GCM credential sealing.
+description: Privacy-respecting key handling for the optional vault in the open source productivity suite Kylrix. Explains key derivation for private notes and secure hangouts.
 ---
 
-# Why: MasterPass Cryptography & Key Derivation
+# MasterPass Handling — Respectful Privacy for Vault Content
 
-Kylrix's Password Vault requires near-military-grade cryptographic isolation to secure user credentials, passkey credentials, and secrets. We achieve this by deriving keys entirely client-side, ensuring that plaintext passwords or Master Keys never touch database rows.
+Kylrix is an open source productivity suite that respects user privacy with an optional privacy module for vault content, private notes and secure hangouts. It handles private content with care by deriving keys locally, so private content stays with the user.
 
-## 1. Argon2id Key Derivation (Primary)
+## 1. Thoughtful Key Derivation
 
-For modern key derivation, we employ **Argon2id** (via `hash-wasm` WASM-accelerated binary processing) instead of basic hashing functions:
-- **Memory-Hard Bound**: Set to 64 MB (`65536` memorySize) to prevent hardware GPU/ASIC acceleration brute-force attacks.
-- **Iterations & Parallelism**: Set to 3 iterations and 4 threads to strike the optimal balance between high-latency defense and swift mobile client execution.
+For a pleasant and privacy-respecting experience, the app uses **Argon2id** via `hash-wasm`:
+- **Balanced resource use**: 64 MB memory, 3 iterations, 4 threads to keep unlocking quick on mobile while respecting privacy.
 
 ```typescript
 private async deriveKeyWithArgon2id(password: string, salt: Uint8Array): Promise<CryptoKey> {
@@ -36,14 +35,12 @@ private async deriveKeyWithArgon2id(password: string, salt: Uint8Array): Promise
 }
 ```
 
-## 2. PBKDF2 Legacy Compatibility
+## 2. Compatible Key Handling
 
-To preserve backward compatibility for users created in earlier cycles, we maintain a secure fallback using **PBKDF2**:
-- **OWASP 2023 Recommendation**: Configured with 600,000 iterations using a high-density `SHA-256` hashing algorithm.
-- **On-Demand Migration**: When a legacy user unlocks their vault with PBKDF2, we derive their key, decrypt their database secrets, re-encrypt them using the new Argon2id key, and silently update their records.
+To support existing accounts, the app also supports **PBKDF2** with 600,000 iterations using SHA-256. When a user unlocks, content can be gently re-wrapped to the current preferred method.
 
-## 3. High-Security AES-GCM Sealing
+## 3. Respectful Content Protection
 
-For data encryption, we utilize the standard **AES-GCM** (Advanced Encryption Standard with Galois/Counter Mode):
-- **Integrated Integrity**: Delivers authenticated encryption, making it mathematically impossible for an attacker to tamper with encrypted credentials or vault settings without invalidating the decryption cycle.
-- **Random 96-Bit Initialization Vector (IV)**: Ensures that encrypting the same credential multiple times yields completely distinct ciphertexts, hiding repeat patterns.
+The app uses standard **AES-GCM**:
+- **Consistent handling**: Helps keep vault content consistent and private.
+- **Fresh randomness per item**: A random 96-bit IV means the same content results in different stored representations.

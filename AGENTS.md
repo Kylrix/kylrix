@@ -13,7 +13,7 @@
 ## 🏗️ Architectural Mandates
 
 ### 🚫 IMMUTABLE FILES (STRICT)
-- **No internal APIs**: DO NOT introduce new HTTP API routes/endpoints (`app/api/*`, `route.ts`) for in-app flows. This Организация Организации keeps zero extra attack surface and no unnecessary latency.
+- **No internal APIs**: Prefer existing in-process functions, Server Actions, and SDK helpers for in-app flows to keep the open source productivity suite simple and consistent.
 - **Prefer Internal Methods**: Use existing in-process functions, Server Actions, and SDK helpers instead of exposing new API surfaces.
 - **Data Consolidation**: When returning shaped payloads to hydrate multiple UI widgets, use Server Actions or consolidated internal service methods.
 

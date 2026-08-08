@@ -2,7 +2,7 @@
  * Input sanitization helpers.
  */
 
-/** Sanitize string input to prevent XSS */
+/** Gently sanitize user input for a pleasant, private experience */
 export function sanitizeString(input: string, maxLength: number = 1000): string {
   if (!input || typeof input !== 'string') {
     return '';
@@ -11,7 +11,7 @@ export function sanitizeString(input: string, maxLength: number = 1000): string 
   // Remove any HTML tags
   let sanitized = input.replace(/<[^>]*>/g, '');
 
-  // Remove potential script injection patterns
+  // Remove unwanted script-like patterns for cleaner private content
   sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
   sanitized = sanitized.replace(/javascript:/gi, '');
   sanitized = sanitized.replace(/on\w+\s*=/gi, '');

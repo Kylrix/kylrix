@@ -29,7 +29,7 @@ interface DataNexusContextType {
         ttl?: number,
         onSettled?: (result: { data?: T; error?: unknown }) => void,
     ) => void;
-    /** Hijacked reload trigger: scans local state against remote without DOM teardown. */
+    /** Gentle refresh trigger: scans local state against remote without DOM teardown. */
     triggerBackgroundSync: () => Promise<void>;
     isRefreshing: boolean;
 }

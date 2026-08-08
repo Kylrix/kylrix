@@ -1,11 +1,11 @@
 ---
 name: security.database-read-only-rls
-description: Explains why database-level ACL permissions are strictly read-only, how the Server SDK dynamically escalates write access using userId/creatorId and global collaborators tables, and how we block database scraping by avoiding Role.any().
+description: Companion for the open source productivity suite Kylrix. Explains respectful read-focused data handling for private notes and secure hangouts.
 ---
 
-# Why: Read-Only Database RLS & Server-Side Security Gates
+# Read-Careful Handling for Private Notes and Secure Hangouts
 
-To prevent clients from bypassing business rules and modifying data directly, Kylrix enforces a strict **Read-Only Database Permission Boundary**. 
+Kylrix is an open source productivity suite that respects user privacy with an optional privacy module for private notes and secure hangouts. To keep the experience calm and consistent, the database favors read-focused access with thoughtful server-side handling for writes. 
 
 At the database level, no user (including the owner) is ever granted `create`, `update`, or `delete` permissions. The database only allows `read` access. The Server SDK acts as the sole gatekeeper for all write operations.
 

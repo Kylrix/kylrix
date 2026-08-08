@@ -75,20 +75,4 @@ export function buildPublicResourceUrl(
   return `${base}${buildPublicResourcePath(type, id, options)}`;
 }
 
-/**
- * Flagship collapses: /note -> /note, etc.
- */
 
-function getProjectKind(type: PublicResourceType): string {
-  switch (type) {
-    case 'note': return 'note';
-    case 'credential': return 'secret';
-    case 'totp': return 'totp';
-    case 'goal':
-    case 'task': return 'goal';
-    case 'form': return 'form';
-    case 'event': return 'event';
-    case 'project': return 'project';
-    default: return type;
-  }
-}

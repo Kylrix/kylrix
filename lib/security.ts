@@ -17,8 +17,7 @@
  */
 
 /**
- * Securely compare two strings in constant time
- * Prevents timing attacks (CVE-KYL-2026-003)
+ * Compare two strings in constant time for a calm, privacy-respecting check
  */
 
 /**

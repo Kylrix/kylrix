@@ -1,6 +1,6 @@
 /**
- * Ecosystem-wide Security Primitives.
- * Implements Zero-Knowledge AES-256-GCM encryption/decryption.
+ * Privacy-respecting helpers for the open source productivity suite.
+ * Provides optional privacy-preserving encryption for private notes and secure hangouts.
  */
 
 export class KylrixSecurity {
