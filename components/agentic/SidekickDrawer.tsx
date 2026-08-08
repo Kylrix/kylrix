@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { X, Sparkles, FileText, ListChecks, Map as MapIcon, Lightbulb, Send, Paperclip, Link2, Image as ImageIcon } from 'lucide-react';
-import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
 import { Drawer, Box } from '@/lib/openbricks/primitives';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 
@@ -258,11 +257,38 @@ export function SidekickDrawer({
         {!target ? (
           <div className="text-sm text-white/40">No object selected.</div>
         ) : loading ? (
-          <Skeleton />
+          <div className="flex flex-col gap-4">
+            {/* Instant skeleton while background fetch (LocalEngine → DB) runs — drawer already open */}
+            <Skeleton />
+            <div className="rounded-2xl bg-[#161412] border border-white/5 p-4">
+              <div className="text-xs font-black uppercase tracking-wider text-white/60 mb-2">Quick actions</div>
+              <div className="flex flex-wrap gap-2">
+                {['Suggest tags', 'Create goal', 'Attach object'].map((label) => (
+                  <button key={label} onClick={() => setInput(label + ' for ' + (target.title || target.id))} className="px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-xs font-bold text-white/70 hover:bg-[#A855F7]/10 hover:border-[#A855F7]/20 hover:text-[#A855F7] transition-colors">
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="text-[11px] text-white/20 mt-2">Uses same tag logic as create-idea drawer • LocalEngine cache first</div>
+            </div>
+          </div>
         ) : error ? (
           <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-300">{error}</div>
         ) : (
           <>
+            {/* Reuse agentic runtime quick suggestions — same logic as create-idea drawer */}
+            {!result && messages.length === 0 && (
+              <div className="rounded-2xl bg-[#161412] border border-white/5 p-4">
+                <div className="text-xs font-black uppercase tracking-wider text-white mb-2">Quick actions</div>
+                <div className="flex flex-wrap gap-2">
+                  {(['Add tags: ' + (target.title || '').split(' ').slice(0, 2).join(', ') || 'Add tags', 'Summarize again', 'Create goal from this'].map((label) => (
+                    <button key={label} onClick={() => setInput(label)} className="px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-xs font-bold text-white/70 hover:bg-[#A855F7]/10 hover:border-[#A855F7]/20 hover:text-white transition-colors">
+                      {label}
+                    </button>
+                  )))}
+                </div>
+              </div>
+            )}
             {result && (
               <>
                 <div className="rounded-2xl bg-[#161412] border border-white/5 p-4 flex gap-3">

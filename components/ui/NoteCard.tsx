@@ -6,8 +6,6 @@ import {
   Trash2 as TrashIcon,
   Share2 as ShareIcon,
   Lock as PrivateIcon,
-  FileText as SummarizeIcon,
-  CheckSquare as GrammarIcon,
   PlusSquare as TodoIcon,
   Unlock,
   Sparkles

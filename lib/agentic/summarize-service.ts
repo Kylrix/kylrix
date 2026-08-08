@@ -1,7 +1,6 @@
 'use client';
 
 import { account } from '@/lib/appwrite/client';
-import { Query } from 'appwrite';
 
 export type SummarizeTarget = {
   type: string;
@@ -16,8 +15,8 @@ export type SummarizeTarget = {
  * Persists via targetType/targetId so reopening same note shows same conversation.
  */
 export async function getOrCreateSummarizeSession(target: SummarizeTarget): Promise<{ sessionId: string; isNew: boolean; chatHistory?: any[] }> {
-  const jwt = await account.createJWT().then((r: any) => r.jwt || '').catch(() => undefined);
-  const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
+  const _jwt = await account.createJWT().then((r: any) => r.jwt || '').catch(() => undefined);
+  void _jwt;
   // We go via PAT API for DOGFOOD — but for summarize we use client-side AgenticService pattern
   // Instead, call via lib/actions/agentic helpers that already wrap server actions
   const { listAgentSessions } = await import('@/lib/actions/agentic');

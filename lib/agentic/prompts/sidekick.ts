@@ -1,50 +1,63 @@
 /**
- * Summarize prompt template — dedicated to Kylie Assist > Summarize flow.
- * Separate from standard assembleSystemInstructionBlocks; has extra hooks for
- * one-liners, sections, and object mind-map.
+ * Sidekick prompt template — flagship per-object companion.
+ * Focuses strictly on the object itself (not generic workspace). Separate from standard
+ * assembleSystemInstructionBlocks. Extra hooks for one-liners, sections, mind-map, chat continuity.
+ * One session per object via agentic_sessions.targetType/targetId so you can return months later.
  */
-export type SummarizeTarget = {
+export type SidekickTarget = {
   id: string;
-  type: 'note' | 'idea' | 'goal' | 'event' | 'form' | 'vault' | 'totp' | 'credential';
+  type: 'note' | 'idea' | 'goal' | 'event' | 'form' | 'vault' | 'totp' | 'credential' | 'project' | 'moment';
   title?: string;
   content?: string;
   metadata?: Record<string, unknown>;
   tags?: string[];
   createdAt?: string;
+  updatedAt?: string;
+  attachments?: { name: string; mime?: string; size?: number }[];
+  linkedIds?: string[];
 };
 
-export function buildSummarizeSystemInstruction(target: SummarizeTarget): string {
+export function buildSidekickSystemInstruction(target: SidekickTarget): string {
   return [
-    'You are Kylie — summarizing for the Kylrix workspace. You speak as Kylie, concise and friendly.',
-    'TASK: Summarize the provided object. Never mutate it. Use ONLY the object content given in the context block.',
-    'OUTPUT CONTRACT — return strict JSON (no prose outside JSON) with shape:',
+    'You are Sidekick — the per-object research companion inside Kylrix. You stay with this exact object (type + id) for its lifetime. One session per object, persistent for months.',
+    'SCOPE: Focus 80% on THIS object’s title/content/metadata/tags you are given. Only 20% may reference broader workspace if user explicitly asks. Never hallucinate other objects.',
+    'OUTPUT CONTRACT — first turn must return strict JSON (no prose outside JSON):',
     '{',
-    '  "oneLiner": "≤22 words, plain English, no jargon",',
-    '  "sections": [{ "heading": string, "bullets": string[] /* 2-4 bullets per section, each ≤18 words */ }],',
+    '  "oneLiner": "≤22 words, plain English, no jargon, what this object is",',
+    '  "sections": [{ "heading": string, "bullets": string[] }], // 2-4 sections, each 2-4 bullets ≤18 words',
     '  "mindMap": { "nodes": [{ "id": string, "label": string, "kind": "central|branch|leaf" }], "edges": [{ "from": string, "to": string, "label"?: string }] }',
     '}',
-    'SECTIONS GUIDE — pick 2-4 most relevant from: Overview, Key Points, Action Items, Risks, Next Steps, Context, Decisions. Keep bullets tight.',
-    'MIND MAP — central node = object title; branch nodes = major themes; leaf nodes = supporting details. 5-10 nodes, 4-9 edges. Labels ≤ 14 chars.',
-    'STYLE — layman English, no E2EE/crypto jargon, no markdown, no code fences inside JSON strings.',
-    'HOOKS — if note has tags/attachments/createdAt, weave them into Context/Overview but do not invent data.',
-    `[TARGET] type=${target.type} id=${target.id} title=${JSON.stringify(target.title || 'Untitled')}`,
-  ].join('\n');
+    'SECTIONS — choose 2-4 most relevant: Overview, Key Points, Action Items, Risks, Next Steps, Context, Decisions, Questions. Tight bullets.',
+    'MIND MAP — central = object title; branches = major themes; leaves = details. 5-10 nodes, 4-9 edges, labels ≤14 chars. This powers the Flow Map layer the UI renders.',
+    'FOLLOW-UP CHAT — after the first JSON, you switch to normal chat about THIS object. Keep referencing this object, allow file uploads / attached objects later (the UI will inject them as context). Maintain mental model map across turns.',
+    'STYLE — layman English, no crypto jargon, no code fences inside JSON strings, no markdown tables.',
+    'PERSISTENCE — this is an agentic session with targetType/targetId. Conversation must read as continuous; if user returns months later, you recall prior turns via chatHistory.',
+    `HOOKS — object type=${target.type} id=${target.id} title=${JSON.stringify(target.title || 'Untitled')}`,
+    target.tags?.length ? `TAGS: ${target.tags.join(', ')}` : '',
+    target.attachments?.length ? `ATTACHMENTS: ${target.attachments.map(a=>a.name).join(', ')}` : '',
+    target.linkedIds?.length ? `LINKED OBJECTS: ${target.linkedIds.join(', ')}` : '',
+  ].filter(Boolean).join('\n');
 }
 
-export function buildSummarizeUserPrompt(target: SummarizeTarget): string {
-  const body = (target.content || '').slice(0, 12000);
+export function buildSidekickUserPrompt(target: SidekickTarget): string {
+  const body = (target.content || '').slice(0, 14000);
   return [
-    `Summarize this ${target.type} (id ${target.id}):`,
+    `Sidekick, analyze this ${target.type} (id ${target.id}) and return the JSON described in system.`,
     `Title: ${target.title || 'Untitled'}`,
-    `Body:\n${body || '(empty)'}`,
+    `Body:\n${body || '(empty — still give oneLiner + empty sections + single central node)'}`,
     target.tags?.length ? `Tags: ${target.tags.join(', ')}` : '',
-    target.metadata ? `Metadata: ${JSON.stringify(target.metadata).slice(0, 2000)}` : '',
-    'Return ONLY the JSON described in the system instruction.',
-  ]
-    .filter(Boolean)
-    .join('\n\n');
+    target.metadata ? `Metadata: ${JSON.stringify(target.metadata).slice(0, 3000)}` : '',
+    target.attachments?.length ? `Attachments: ${JSON.stringify(target.attachments).slice(0, 2000)}` : '',
+    'Return ONLY JSON on first turn.',
+  ].filter(Boolean).join('\n\n');
 }
 
-export function buildSummarizeContextBlock(target: SummarizeTarget): string {
-  return `[SUMMARIZE TARGET]\n${JSON.stringify({ type: target.type, id: target.id, title: target.title, content: (target.content || '').slice(0, 8000) }, null, 2)}`;
+export function buildSidekickContextBlock(target: SidekickTarget): string {
+  return `[SIDEKICK TARGET] type=${target.type} id=${target.id}\n${JSON.stringify({ title: target.title, content: (target.content || '').slice(0, 9000), tags: target.tags, metadata: target.metadata, attachments: target.attachments }, null, 2)}`;
 }
+
+// Back-compat aliases for summarize -> sidekick migration
+export type SummarizeTarget = SidekickTarget;
+export const buildSummarizeSystemInstruction = buildSidekickSystemInstruction;
+export const buildSummarizeUserPrompt = buildSidekickUserPrompt;
+export const buildSummarizeContextBlock = buildSidekickContextBlock;
