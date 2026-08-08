@@ -39,6 +39,7 @@ import {
   Settings,
   Share2,
   Shield,
+  MoreHorizontal,
   ShieldCheck,
   Smartphone,
   Sparkles,
@@ -1956,6 +1957,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                           {isObjectSession && <span className="shrink-0 text-[11px]">{objectIcon}</span>}
                           <span className="truncate">{titleText}</span>
                           {isObjectSession && <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-[#A855F7]/20 text-[#E9D5FF] text-[9px] font-black uppercase tracking-wider">{String((sess as any).targetType)}</span>}
+                          {(sess as any).isPublic === true || (sess as any).isGuest === true ? <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-indigo-500/15 text-[#818CF8] text-[9px] font-black border border-indigo-500/20">SHARED</span> : null}
                           {sess.isPinned === true && <span className="text-[10px] text-[#F59E0B] font-black">PINNED</span>}
                         </span>
                         <span className="text-[#9B9691] text-[10px] leading-snug line-clamp-1 flex items-center gap-1 max-h-[20px] overflow-hidden">
@@ -1967,14 +1969,25 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                         <button
                           type="button"
                           onClick={(e) => handleShareSession(e, sess.id, sess.isPublic === true || sess.isGuest === true)}
-                          title={sess.isPublic || sess.isGuest ? 'Session is shared' : 'Share session'}
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center border border-transparent transition ${
+                          title={sess.isPublic || sess.isGuest ? 'Session is shared — tap to make private' : 'Share session'}
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center border transition ${
                             sess.isPublic || sess.isGuest
-                              ? 'text-[#818CF8] bg-indigo-500/10'
-                              : 'text-white/30 hover:text-white hover:bg-white/[0.06]'
+                              ? 'text-[#818CF8] bg-indigo-500/15 border-indigo-500/20'
+                              : 'text-white/30 hover:text-white hover:bg-white/[0.06] border-transparent'
                           }`}
                         >
                           <Share2 size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openSessionActionsDrawer(sess);
+                          }}
+                          title="More options"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/[0.06] border border-transparent"
+                        >
+                          <MoreHorizontal size={13} />
                         </button>
                       </div>
                     </div>
