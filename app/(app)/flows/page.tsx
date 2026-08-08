@@ -5,12 +5,10 @@ import {
   Download,
   Layers,
   Plus,
-  Square,
   Trash2,
   Workflow,
 } from 'lucide-react';
 import { useLocalContext } from '@/lib/context-engine';
-import { WorkflowChain } from '@/lib/workflow-engine';
 import {
   saveWorkflowAction,
   listWorkflowsAction,
@@ -24,6 +22,8 @@ import {
 } from '@/context/RightRailContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { FlowDetailDrawer, VerifiedMark } from '@/components/flows/FlowDetailDrawer';
+import { PromptDrawer } from '@/components/flows/PromptDrawer';
+import { CreateFlowDrawer } from '@/components/flows/CreateFlowDrawer';
 import { BUILTIN_FLOWS } from '@/lib/flows/builtins';
 import type { DiscoverFlow, FlowPublisher } from '@/lib/flows/types';
 import {
@@ -44,7 +44,7 @@ import {
 
 type Tab = 'discover' | 'installed';
 
-function communityPublisher(wf: WorkflowChain & { metadata?: unknown }): FlowPublisher {
+function communityPublisher(wf: any): FlowPublisher {
   const meta = wf.metadata;
   let handle = '@user';
   let verified: FlowPublisher['verified'] = null;
@@ -53,9 +53,7 @@ function communityPublisher(wf: WorkflowChain & { metadata?: unknown }): FlowPub
     if (parsed?.publisherHandle) handle = String(parsed.publisherHandle);
     if (parsed?.verified === 'ecosystem' || parsed?.verified === true) verified = 'ecosystem';
     if (parsed?.verified === 'kylrix') verified = 'kylrix';
-  } catch {
-    /* ignore */
-  }
+  } catch {}
   return { handle, verified };
 }
 
@@ -89,6 +87,9 @@ function FlowRow({
                   Updated
                 </span>
               )}
+              {(flow as any).preInstalled && (
+                <span className="shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#A855F7]/15 text-[#A855F7] border border-[#A855F7]/20">Pre-installed</span>
+              )}
             </div>
             <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
               <span className="text-[11px] font-bold text-white/40 truncate">
@@ -113,16 +114,15 @@ export default function FlowsPage() {
   const { openOverlay, closeOverlay } = useOverlay();
   const { setIsDrawerOpen } = useDrawerState();
   const [confirmFlow, setConfirmFlow] = useState<DiscoverFlow | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [promptFlow, setPromptFlow] = useState<DiscoverFlow | null>(null);
 
-  // Signal the bottom navbar to hide when the confirm drawer is open
   useEffect(() => {
-    setIsDrawerOpen(!!confirmFlow);
+    setIsDrawerOpen(!!confirmFlow || !!showCreate || !!promptFlow);
     return () => setIsDrawerOpen(false);
-  }, [confirmFlow, setIsDrawerOpen]);
+  }, [confirmFlow, showCreate, promptFlow, setIsDrawerOpen]);
+
   const {
-    isRecording,
-    startRecording,
-    stopRecording,
     savedWorkflows,
     updateWorkflow,
     clearSavedWorkflows,
@@ -131,7 +131,7 @@ export default function FlowsPage() {
   const [tab, setTab] = useState<Tab>('discover');
   const [installedIds, setInstalledIds] = useState<string[]>([]);
   const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<string>>(new Set());
-  const [community, setCommunity] = useState<WorkflowChain[]>([]);
+  const [community, setCommunity] = useState<any[]>([]);
   const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
@@ -139,17 +139,12 @@ export default function FlowsPage() {
     autonomicSyncEngine.requestObjectFreshness('flows', undefined, (synced) => {
       setInstalledIds(synced);
     });
-
-    const handleFlowsChanged = () => {
-      setInstalledIds(listInstalledFlowIds());
-    };
+    const handleFlowsChanged = () => setInstalledIds(listInstalledFlowIds());
     window.addEventListener('kylrix:flows-changed', handleFlowsChanged);
-
     const handleFlowsUpdated = (e: Event) => {
       const ids = Object.keys((e as CustomEvent).detail?.updates ?? {});
       if (!ids.length) return;
       setRecentlyUpdatedIds((prev) => new Set([...prev, ...ids]));
-      // Auto-clear badges after 8 s
       setTimeout(() => {
         setRecentlyUpdatedIds((prev) => {
           const next = new Set(prev);
@@ -159,7 +154,6 @@ export default function FlowsPage() {
       }, 8000);
     };
     window.addEventListener('kylrix:flows-updated', handleFlowsUpdated);
-
     const check = () => setIsDesktop(window.innerWidth >= 1024);
     check();
     window.addEventListener('resize', check);
@@ -186,18 +180,15 @@ export default function FlowsPage() {
     void syncDb();
   }, [updateWorkflow]);
 
-  const handleRecordToggle = useCallback(() => {
-    if (isRecording) {
-      const wf = stopRecording('New flow', 'Recorded steps', 'workspace');
-      if (wf) {
-        void saveWorkflowAction(wf);
-        setInstalledIds(installFlowLocal(wf.id));
-        setTab('installed');
-      }
-      return;
+  const openCreateDrawer = useCallback(() => {
+    const panel = <CreateFlowDrawer onClose={() => { native?.close('flow-create'); closeOverlay(); setShowCreate(false); }} onCreated={(wf)=>{ updateWorkflow(wf.id, wf as any); setInstalledIds(installFlowLocal(wf.id)); setTab('installed'); }} />;
+    if (isDesktop && native) {
+      native.open(panel, { key:'flow-create', width: NATIVE_SIDEBAR_WIDTHS.detail, title: 'Create Flow' });
+    } else {
+      openOverlay(panel);
     }
-    startRecording();
-  }, [isRecording, startRecording, stopRecording]);
+    setShowCreate(true);
+  }, [isDesktop, native, openOverlay, closeOverlay, updateWorkflow]);
 
   useEffect(() => {
     if (isDesktop) {
@@ -206,23 +197,20 @@ export default function FlowsPage() {
     }
     setConfiguration({
       isVisible: true,
-      mainColor: isRecording ? '#EF4444' : '#A855F7',
-      mainIcon: isRecording ? (
-        <Square size={28} strokeWidth={3} fill="currentColor" />
-      ) : (
-        <Plus size={32} strokeWidth={3} />
-      ),
-      onMainClick: handleRecordToggle,
+      mainColor: '#A855F7',
+      mainIcon: <Plus size={32} strokeWidth={3} />,
+      onMainClick: openCreateDrawer,
       suppressWorkflow: true,
       actions: [],
     });
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, isRecording, handleRecordToggle, isDesktop]);
+  }, [setConfiguration, resetConfiguration, openCreateDrawer, isDesktop]);
 
   const yours = useMemo(() => Object.values(savedWorkflows), [savedWorkflows]);
 
-  const PREINSTALLED_IDS = ['kylrix-sidekick', 'kylrix-custom-prompt'] as const;
-  const isPreInstalled = (id: string) => (PREINSTALLED_IDS as readonly string[]).includes(id);
+  const PREINSTALLED_IDS = ['kylrix-sidekick', 'kylrix-custom-agent'] as const;
+  const LEGACY_PRE = 'kylrix-custom-prompt';
+  const isPreInstalled = (id: string) => (PREINSTALLED_IDS as readonly string[]).includes(id) || id === LEGACY_PRE;
 
   const discoverList: DiscoverFlow[] = useMemo(() => {
     const builtins = BUILTIN_FLOWS.map((f: any) => ({
@@ -244,21 +232,19 @@ export default function FlowsPage() {
 
   const installedList: DiscoverFlow[] = useMemo(() => {
     const byId = new Map<string, DiscoverFlow>();
-
     yours.forEach((wf) => {
       byId.set(wf.id, {
         ...wf,
         publisher: { handle: '@you', verified: null },
         source: 'yours',
         installed: true,
-      });
+      } as any);
     });
-
     installedIds.forEach((id) => {
       if (byId.has(id)) return;
       const builtin = BUILTIN_FLOWS.find((b) => b.id === id);
       if (builtin) {
-        byId.set(id, { ...builtin, installed: true });
+        byId.set(id, { ...builtin, installed: true } as any);
         return;
       }
       const pub = community.find((c) => c.id === id);
@@ -268,11 +254,9 @@ export default function FlowsPage() {
           publisher: communityPublisher(pub),
           source: 'community',
           installed: true,
-        });
+        } as any);
         return;
       }
-
-      // Installed remote flow not yet in discover list
       byId.set(id, {
         id,
         name: id,
@@ -285,22 +269,21 @@ export default function FlowsPage() {
         publisher: { handle: '@community', verified: 'ecosystem' },
         source: 'community',
         installed: true,
-      });
+      } as any);
     });
-
-    // Pre-installed flows are always in Installed — no install/uninstall
     BUILTIN_FLOWS.forEach((b: any) => {
       if (b.preInstalled && !byId.has(b.id)) {
-        byId.set(b.id, { ...b, installed: true, preInstalled: true } as DiscoverFlow);
+        byId.set(b.id, { ...b, installed: true, preInstalled: true } as any);
       }
     });
-
     return Array.from(byId.values());
   }, [yours, installedIds, community]);
 
   const closeDetail = useCallback(() => {
     native?.close(`flow-detail`);
+    native?.close(`flow-prompt`);
     closeOverlay();
+    setPromptFlow(null);
   }, [native, closeOverlay]);
 
   const handleInstall = useCallback(async (id: string) => {
@@ -338,6 +321,7 @@ export default function FlowsPage() {
   }, [savedWorkflows, updateWorkflow, clearSavedWorkflows]);
 
   const triggerInstallWithConfirmation = useCallback((flow: DiscoverFlow) => {
+    if ((flow as any).preInstalled) return;
     if (!isFlowConfirmPromptEnabled()) {
       void handleInstall(flow.id);
       return;
@@ -345,9 +329,28 @@ export default function FlowsPage() {
     setConfirmFlow(flow);
   }, [handleInstall]);
 
+  const openPrompt = useCallback((flow: DiscoverFlow) => {
+    const panel = <PromptDrawer flow={flow} onClose={closeDetail} />;
+    if (isDesktop && native) {
+      native.open(panel, { key:'flow-prompt', width: NATIVE_SIDEBAR_WIDTHS.detail, title: flow.name });
+    } else {
+      openOverlay(panel);
+    }
+    setPromptFlow(flow);
+  }, [isDesktop, native, openOverlay, closeDetail]);
+
   const openDetail = useCallback(
     (flow: DiscoverFlow, isOwner: boolean) => {
-      const isInst = installedIds.includes(flow.id) || isOwner;
+      // Custom Agent flows open the prompt drawer directly
+      if (flow.id === 'kylrix-custom-agent' || flow.id === 'kylrix-sidekick') {
+        // Still open detail but with prompt tab? Spec: directly open prompt system for custom agent
+        // For sidekick also show prompt drawer (prompt template), but keep detail for sidekick? We'll route custom-agent to PromptDrawer, sidekick to detail+prompt reachable.
+        if (flow.id === 'kylrix-custom-agent') {
+          openPrompt(flow);
+          return;
+        }
+      }
+      const isInst = installedIds.includes(flow.id) || isOwner || !!(flow as any).preInstalled;
       const panel = (
         <FlowDetailDrawer
           flow={flow}
@@ -357,6 +360,7 @@ export default function FlowsPage() {
           onClose={closeDetail}
           onInstall={() => triggerInstallWithConfirmation(flow)}
           onUninstall={() => void handleUninstall(flow)}
+          onOpenPrompt={() => openPrompt(flow)}
           onChanged={(next) => {
             updateWorkflow(next.id, next);
             if (next.isPublic) {
@@ -370,7 +374,6 @@ export default function FlowsPage() {
           }}
         />
       );
-
       if (isDesktop && native) {
         native.open(panel, {
           key: 'flow-detail',
@@ -381,7 +384,7 @@ export default function FlowsPage() {
         openOverlay(panel);
       }
     },
-    [isDesktop, native, openOverlay, closeDetail, updateWorkflow, installedIds, triggerInstallWithConfirmation, handleUninstall]
+    [isDesktop, native, openOverlay, closeDetail, updateWorkflow, installedIds, triggerInstallWithConfirmation, handleUninstall, openPrompt]
   );
 
   const handleShareCopy = async (id: string) => {
@@ -406,36 +409,13 @@ export default function FlowsPage() {
           </h1>
           <button
             type="button"
-            onClick={handleRecordToggle}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold cursor-pointer transition-colors ${
-              isRecording
-                ? 'bg-red-500 text-white hover:bg-red-600'
-                : 'bg-[#A855F7] text-white hover:bg-[#9333EA]'
-            }`}
+            onClick={openCreateDrawer}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold cursor-pointer transition-colors bg-[#A855F7] text-white hover:bg-[#9333EA]"
           >
-            {isRecording ? (
-              <>
-                <Square size={14} fill="currentColor" />
-                Stop
-              </>
-            ) : (
-              <>
-                <Plus size={14} strokeWidth={3} />
-                New
-              </>
-            )}
+            <Plus size={14} strokeWidth={3} />
+            New
           </button>
         </div>
-
-        {isRecording && (
-          <div className="rounded-xl bg-[#161412] border border-red-500/25 px-4 py-3 flex items-center gap-3">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-60" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
-            </span>
-            <p className="text-xs font-bold text-white/70">Recording</p>
-          </div>
-        )}
 
         <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#161412] border border-white/[0.06] w-fit">
           {(
@@ -492,7 +472,8 @@ export default function FlowsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 items-stretch">
               {list.map((flow) => {
               const isOwner = flow.source === 'yours';
-              const installed = installedIds.includes(flow.id) || isOwner;
+              const installed = installedIds.includes(flow.id) || isOwner || !!(flow as any).preInstalled;
+              const pre = !!(flow as any).preInstalled;
               return (
                 <FlowRow
                   key={flow.id}
@@ -501,7 +482,7 @@ export default function FlowsPage() {
                   recentlyUpdated={recentlyUpdatedIds.has(flow.id)}
                   trailing={
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {tab === 'discover' && !installed && (
+                      {tab === 'discover' && !installed && !pre && (
                         <button
                           type="button"
                           title="Install"
@@ -511,7 +492,7 @@ export default function FlowsPage() {
                           <Download size={14} />
                         </button>
                       )}
-                      {tab === 'installed' && (
+                      {tab === 'installed' && !pre && (
                         <>
                           <button
                             type="button"
@@ -530,6 +511,16 @@ export default function FlowsPage() {
                             <Trash2 size={14} />
                           </button>
                         </>
+                      )}
+                      {pre && tab === 'installed' && (
+                        <button
+                          type="button"
+                          title="Share link"
+                          onClick={() => void handleShareCopy(flow.id)}
+                          className="px-2.5 py-2 rounded-lg bg-[#161412] border border-white/[0.06] text-[10px] font-extrabold uppercase tracking-wider text-white/40 hover:text-white cursor-pointer"
+                        >
+                          Share
+                        </button>
                       )}
                     </div>
                   }

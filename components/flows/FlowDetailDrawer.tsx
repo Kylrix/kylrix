@@ -35,7 +35,7 @@ export function VerifiedMark({ kind }: { kind: FlowVerifyKind }) {
   );
 }
 
-import { Download, Check, Trash2 } from 'lucide-react';
+import { Download, Check, Trash2, Eye, Bot, FileText, Target, Boxes, Lock, Search, Tag } from 'lucide-react';
 
 type Props = {
   flow: WorkflowChain;
@@ -46,6 +46,7 @@ type Props = {
   onChanged?: (flow: WorkflowChain) => void;
   onInstall?: () => void;
   onUninstall?: () => void;
+  onOpenPrompt?: () => void;
 };
 
 export function FlowDetailDrawer({
@@ -57,6 +58,7 @@ export function FlowDetailDrawer({
   onChanged,
   onInstall,
   onUninstall,
+  onOpenPrompt,
 }: Props) {
   const [local, setLocal] = useState(flow);
   const [installed, setInstalled] = useState(!!initialInstalled);
@@ -214,14 +216,24 @@ export function FlowDetailDrawer({
               </button>
             )}
           </div>
-          {(flow as any).preInstalled && flow.id === 'kylrix-custom-prompt' && (
+          {(flow as any).preInstalled && (
+            <button
+              type="button"
+              onClick={() => onOpenPrompt?.()}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#A855F7]/10 border border-[#A855F7]/20 text-xs font-extrabold text-[#A855F7] hover:bg-[#A855F7]/15 cursor-pointer"
+            >
+              <Eye size={14}/> View prompt — agent = prompt + tools
+            </button>
+          )}
+          {(flow as any).preInstalled && flow.id === 'kylrix-custom-agent' && (
             <div className="rounded-xl bg-[#161412] border border-white/5 p-3 space-y-2">
-              <p className="text-xs font-bold text-white">Prompt templates (read-only)</p>
+              <p className="text-xs font-bold text-white">Custom Agent — every agent is its prompt</p>
               <div className="grid gap-2">
                 {[
                   { name: 'Sidekick — per-object companion', file: 'lib/agentic/prompts/sidekick.ts', desc: 'One-liner + sections + mindMap, focused 80% on this object' },
                   { name: 'Agentic — system + tool registry', file: 'lib/agentic/prompt-framework.ts', desc: 'Kylie workspace partner, tool catalog, navigation, search' },
                   { name: 'Vault organizer / audit', file: 'lib/actions/ai.ts', desc: 'VAULT_ORGANIZE, PASSWORD_AUDIT, URL_SAFETY modes' },
+                  { name: 'Flow Syntax Engine', file: 'lib/flows/syntax-engine.ts', desc: 'KNOWN_ACTION_IDS, live validation, autocorrect, autocomplete' },
                 ].map((p) => (
                   <div key={p.file} className="rounded-lg bg-[#0A0908] border border-white/5 px-3 py-2">
                     <div className="text-xs font-bold text-white">{p.name}</div>
@@ -230,7 +242,7 @@ export function FlowDetailDrawer({
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-white/30">View-only for now — editing coming soon. This is the powerful extension that surfaces every system prompt.</p>
+              <p className="text-[11px] text-white/30">Tap “View prompt” above for beautifully sectioned rendering with tool icons, colors, and code highlights.</p>
             </div>
           )}
         </section>
@@ -293,29 +305,40 @@ export function FlowDetailDrawer({
         <section className="rounded-[18px] bg-[#0A0908] border border-white/[0.05] p-4 space-y-2">
           <div className="flex items-center justify-between gap-2 mb-1">
             <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-white/45">
-              Steps
+              Steps — agent tools (beautifully sectioned)
             </h3>
-            <span className="text-[10px] font-extrabold text-white/30">{local.steps.length}</span>
+            <span className="text-[10px] font-extrabold text-white/30">{local.steps.length} tools</span>
           </div>
           {local.steps.length === 0 ? (
             <p className="text-xs text-white/35">No steps yet</p>
           ) : (
-            local.steps.map((step, idx) => (
-              <div
-                key={`${step.actionId}-${idx}`}
-                className="flex items-center gap-2.5 rounded-xl bg-[#161412] border border-white/[0.05] px-3 py-2"
-              >
-                <Circle
-                  size={8}
-                  className={
-                    step.importance === 'high'
-                      ? 'text-[#A855F7] fill-[#A855F7] shrink-0'
-                      : 'text-white/20 fill-white/20 shrink-0'
-                  }
-                />
-                <span className="text-[11px] font-mono text-white/55 truncate">{step.actionId}</span>
-              </div>
-            ))
+            local.steps.map((step, idx) => {
+              const id = step.actionId;
+              let Icon: any = Circle;
+              let color = '#A855F7';
+              let bg = 'rgba(168,85,247,0.10)';
+              if (id.includes('idea') || id.includes('note')) { Icon = FileText; color='#A855F7'; bg='rgba(168,85,247,0.12)'; }
+              else if (id.includes('goal')) { Icon = Target; color='#22C55E'; bg='rgba(34,197,94,0.12)'; }
+              else if (id.includes('workspace')) { Icon = Boxes; color='#6366F1'; bg='rgba(99,102,241,0.12)'; }
+              else if (id.includes('vault')) { Icon = Lock; color='#F59E0B'; bg='rgba(245,158,11,0.12)'; }
+              else if (id.includes('search')) { Icon = Search; color='#06B6D4'; bg='rgba(6,182,214,0.12)'; }
+              else if (id.includes('tag')) { Icon = Tag; color='#EAB308'; bg='rgba(234,179,8,0.12)'; }
+              else if (id.includes('prompt') || id.includes('agent') || id.includes('sidekick')) { Icon = Bot; color='#A855F7'; bg='rgba(168,85,247,0.12)'; }
+              return (
+                <div
+                  key={`${step.actionId}-${idx}`}
+                  className="flex items-center gap-2.5 rounded-xl border px-3 py-2"
+                  style={{ background: bg, borderColor: `${color}18` }}
+                >
+                  <div className="p-1 rounded-lg shrink-0" style={{ background: `${color}18`, color }}><Icon size={12} /></div>
+                  <span className="text-[11px] font-mono truncate" style={{ color }}>{step.actionId}</span>
+                  <span className="ml-auto text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full shrink-0" style={{ background: `${color}15`, color, border: `1px solid ${color}25` }}>{step.importance}</span>
+                </div>
+              );
+            })
+          )}
+          {onOpenPrompt && (
+            <button type="button" onClick={onOpenPrompt} className="w-full mt-2 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06] text-xs font-bold text-white/50 hover:text-white cursor-pointer"><Eye size={12}/> Open prompt view</button>
           )}
         </section>
       </div>
