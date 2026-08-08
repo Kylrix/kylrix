@@ -1335,8 +1335,11 @@ export async function getSharedNotes(): Promise<{ rows: Notes[], total: number }
     );
 
     const sharedNotes: Notes[] = [];
-    
-    for (const doc of notesRes.rows as any[]) {
+    const safeRows = (notesRes as any)?.rows ?? (notesRes as any)?.documents ?? [];
+    if (!Array.isArray(safeRows)) {
+      return { rows: [], total: 0 };
+    }
+    for (const doc of safeRows as any[]) {
       const note = doc as any;
       
       // 2. STRICT VALIDATION: 

@@ -20,6 +20,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useSection } from '@/context/SectionContext';
 import { ShareLockButton } from '../share/ShareLockButton';
 import { useAccessControlMenuItems } from '../share/AccessControlMenuItems';
+import { SidekickDrawer } from '@/components/agentic/SidekickDrawer';
 
 import { resolveNoteCardTitle } from '@/constants/noteTitle';
 import { createTaskFromNote, getNotePublicState, lockNote, unlockNote } from '@/lib/appwrite';
@@ -45,6 +46,7 @@ interface NoteCardProps {
 const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete, onNoteSelect }) => {
   const [mounted, setMounted] = React.useState(false);
   const [isAIProcessing, setIsAIProcessing] = React.useState(false);
+  const [showSidekick, setShowSidekick] = React.useState(false);
 
   const contextMenu = useContextMenu();
   const openMenu = contextMenu?.openMenu;
@@ -297,12 +299,9 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     
     ...(isPro ? [
       { 
-        label: 'Kylie Assist', 
+        label: 'Sidekick', 
         icon: <Sparkles size={16} className="text-[#A855F7]" />, 
-        submenu: [
-            { label: 'Summarize', icon: <SummarizeIcon size={16} className="text-[#A855F7]" />, onClick: () => { handleAIAction('summarize'); } },
-            { label: 'Fix Grammar', icon: <GrammarIcon size={16} className="text-[#A855F7]" />, onClick: () => { handleAIAction('grammar'); } },
-        ]
+        onClick: () => { setShowSidekick(true); },
       },
       {
         label: 'Integrate',
@@ -417,6 +416,11 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           </ObjectCard>
         </div>
       )}
+      <SidekickDrawer
+        open={showSidekick}
+        onClose={() => setShowSidekick(false)}
+        target={showSidekick ? { type: 'note', id: note.$id, title: liveNote.title || cardTitle, content: liveNote.content || '' } : null}
+      />
     </>
   );
 });

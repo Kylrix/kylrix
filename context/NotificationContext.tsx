@@ -61,7 +61,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   };
 
   const calculateUnread = useCallback((logs: ActivityLog[]) => {
-    return logs.filter(log => !parseMetadata(log.details).read).length;
+    const safeLogs = Array.isArray(logs) ? logs : [];
+    return safeLogs.filter(log => !parseMetadata(log.details).read).length;
   }, []);
 
   const fetchNotifications = useCallback(async () => {
@@ -69,8 +70,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     
     setIsLoading(true);
     try {
-      const res = await listActivityLogs();
-      const logs = res.rows as unknown as ActivityLog[];
+      const res = await listActivityLogs() as any;
+      const logs = (Array.isArray(res?.rows) ? res.rows : Array.isArray(res) ? res : []) as unknown as ActivityLog[];
       setNotifications(logs);
       setUnreadCount(calculateUnread(logs));
     } catch (error: any) {

@@ -67,17 +67,20 @@ export function ResourcePinProvider({ children }: { children: ReactNode }) {
     }
     setIsLoading(true);
     try {
-      const rows = await UserResourcePinService.listForUser(user.$id, resourceType);
+      const rows = (await UserResourcePinService.listForUser(user.$id, resourceType)) ?? [];
+      const safeRows = Array.isArray(rows) ? rows : [];
       if (resourceType) {
         setPinSets((prev) => ({
           ...prev,
-          [resourceType]: new Set(rows.map((row) => row.resourceId))}));
+          [resourceType]: new Set(safeRows.map((row) => row.resourceId))}));
         return;
       }
 
       const next = defaultPinSets();
-      for (const row of rows) {
-        next[row.resourceType].add(row.resourceId);
+      for (const row of safeRows) {
+        if (row?.resourceType && next[row.resourceType]) {
+          next[row.resourceType].add(row.resourceId);
+        }
       }
       setPinSets(next);
     } catch (error) {

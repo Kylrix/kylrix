@@ -41,8 +41,9 @@ export const UserResourcePinService = {
     if (resourceType) {
       queries.unshift(Query.equal('resourceType', resourceType));
     }
-    const res = await databases.listRows(DATABASE_ID, TABLE_ID, queries);
-    return res.rows;
+    const res: any = await databases.listRows(DATABASE_ID, TABLE_ID, queries).catch(() => ({ rows: [] }));
+    const rows = res?.rows ?? res?.documents ?? [];
+    return Array.isArray(rows) ? rows : [];
   },
 
   async pin(userId: string, resourceType: PinnableResourceType, resourceId: string): Promise<UserResourcePinRow> {

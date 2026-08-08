@@ -1260,6 +1260,8 @@ export type AgenticSessions = Models.Row & {
     isGuest: boolean;
     isPinned: boolean;
     harness: string | null;
+    targetType: string | null;
+    targetId: string | null;
 }
 
 export type Swept = Models.Row & {
