@@ -1,9 +1,12 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { RefreshCw, Sparkles } from 'lucide-react';
+import { RefreshCw, Sparkles, Sliders } from 'lucide-react';
 import { MomentCard } from '@/components/connect/MomentCard';
 import { useConnectMomentsFeed } from '@/components/connect/useConnectMomentsFeed';
+import { ConnectFeedSettingsPanel } from '@/components/connect/ConnectFeedSettingsPanel';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
 
 interface ConnectMomentsPanelProps {
   onCreateMoment?: () => void;
@@ -14,6 +17,8 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
     useConnectMomentsFeed();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [manualSpin, setManualSpin] = useState(false);
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { openOverlay, closeOverlay } = useOverlay();
 
   const handleRefresh = async () => {
     setManualSpin(true);
@@ -54,18 +59,33 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
             <span className="font-mono font-bold text-[#F59E0B]">{total}</span> updates
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void handleRefresh()}
-          disabled={manualSpin || refreshing}
-          className="w-10 h-10 shrink-0 rounded-xl bg-[#161412] border border-[#34322F] flex items-center justify-center disabled:opacity-40 hover:border-white/15 transition-colors"
-          aria-label="Refresh moments"
-        >
-          <RefreshCw
-            size={16}
-            className={manualSpin || refreshing ? 'text-[#F59E0B] animate-spin' : 'text-white'}
-          />
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
+              const node = <ConnectFeedSettingsPanel onClose={isDesktop ? closeSidebar : closeOverlay} />;
+              if (isDesktop) openSidebar(node, 'connect-feed-settings', { hideHeader: true });
+              else openOverlay(node);
+            }}
+            className="w-10 h-10 shrink-0 rounded-xl bg-[#161412] border border-[#34322F] flex items-center justify-center hover:border-white/15 hover:bg-white/5 transition-colors"
+            aria-label="Live feed settings"
+          >
+            <Sliders size={16} className="text-white" />
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleRefresh()}
+            disabled={manualSpin || refreshing}
+            className="w-10 h-10 shrink-0 rounded-xl bg-[#161412] border border-[#34322F] flex items-center justify-center disabled:opacity-40 hover:border-white/15 transition-colors"
+            aria-label="Refresh moments"
+          >
+            <RefreshCw
+              size={16}
+              className={manualSpin || refreshing ? 'text-[#F59E0B] animate-spin' : 'text-white'}
+            />
+          </button>
+        </div>
       </header>
 
       {loading ? (

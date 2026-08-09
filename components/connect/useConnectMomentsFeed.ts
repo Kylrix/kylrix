@@ -163,6 +163,7 @@ function persistUnified(rows: UnifiedFeedItem[]) {
 export function useConnectMomentsFeed() {
   const { user } = useAuth();
   const { feed: nostrFeed } = useNostrFeed();
+  const [feedSettings, setFeedSettings] = useState<any>(null);
   const [ecosystemMoments, setEcosystemMoments] = useState<any[]>(() => (memoryEco ? [...memoryEco] : []));
   const [resolvedProfiles, setResolvedProfiles] = useState<
     Record<string, { username: string; avatarUrl?: string }>
@@ -203,6 +204,21 @@ export function useConnectMomentsFeed() {
       persistUnified(merged);
       return merged;
     });
+  }, []);
+
+  // Feed settings — local-first synced to live prefs, instant adapt, offline cached
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { getConnectFeedSettings, subscribeConnectFeedSettings } = await import('@/lib/connect/feed-settings');
+        const s = await getConnectFeedSettings();
+        if (!cancelled) setFeedSettings(s);
+        const unsub = subscribeConnectFeedSettings((next) => { if (!cancelled) setFeedSettings(next); });
+        return unsub;
+      } catch {}
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // 1) Hydrate unified feed from LocalEngine first — never flash empty. Use local copy engine directly.
@@ -289,15 +305,39 @@ export function useConnectMomentsFeed() {
     };
   }, [hydrated, user?.$id]);
 
-  // 3) When sources update, silently add / patch — never replace the visible feed.
+  // 3) When sources update, silently add / patch — never replace the visible feed. Respects live settings.
   useEffect(() => {
     if (!hydrated && !memoryUnified?.length) return;
-    const incoming = buildItems(
+    let incoming = buildItems(
       ecosystemMoments,
       nostrFeed,
       resolvedProfiles,
       nostrEngagement,
     );
+    if (!incoming.length) return;
+    // Respect live settings — source toggles, curated topics/interests phrase search (tightly curated, adapt live, offline cached)
+    if (feedSettings) {
+      const s: any = feedSettings;
+      if (s.showEcosystem === false) incoming = incoming.filter(i => i.source !== 'ecosystem');
+      if (s.showNostr === false) incoming = incoming.filter(i => i.source !== 'nostr');
+      if (s.showReplies === false) incoming = incoming.filter(i => (i.repliesCount || 0) === 0);
+      const phrases: string[] = [
+        ...((s.topics as string[]) || []),
+        ...((s.interests as string[]) || []),
+      ].map(t => String(t).toLowerCase()).filter(Boolean);
+      if (phrases.length) {
+        const before = incoming.length;
+        const filtered = incoming.filter(i => {
+          const hay = `${i.content || ''} ${i.authorName || ''} ${i.authorUsername || ''}`.toLowerCase();
+          return phrases.some(p => hay.includes(p));
+        });
+        // If curated filter would empty feed, keep unfiltered to avoid dead feed (gradual adapt)
+        if (filtered.length) incoming = filtered;
+        else if (before > 0 && filtered.length === 0) {
+          // keep before
+        }
+      }
+    }
     if (!incoming.length) return;
     applySilent(incoming);
   }, [
@@ -307,7 +347,33 @@ export function useConnectMomentsFeed() {
     resolvedProfiles,
     nostrEngagement,
     applySilent,
+    feedSettings,
   ]);
+
+  // Instant live adapt — when settings toggle, re-filter current feed without waiting for network
+  useEffect(() => {
+    if (!hydrated || !feedSettings) return;
+    setDisplayItems(prev => {
+      if (!prev.length) return prev;
+      let next = [...prev];
+      const s: any = feedSettings;
+      if (s.showEcosystem === false) next = next.filter(i => i.source !== 'ecosystem');
+      if (s.showNostr === false) next = next.filter(i => i.source !== 'nostr');
+      if (s.showReplies === false) next = next.filter(i => (i.repliesCount || 0) === 0);
+      const phrases: string[] = [...((s.topics as string[]) || []), ...((s.interests as string[]) || [])].map(t => String(t).toLowerCase()).filter(Boolean);
+      if (phrases.length) {
+        const filtered = next.filter(i => {
+          const hay = `${i.content || ''} ${i.authorName || ''} ${i.authorUsername || ''}`.toLowerCase();
+          return phrases.some(p => hay.includes(p));
+        });
+        if (filtered.length) next = filtered;
+      }
+      // Never empty instantly — keep at least previous if filter would wipe; do NOT persist filtered view over canonical cache (local-first)
+      if (!next.length && prev.length) return prev;
+      if (next === prev) return prev;
+      return next;
+    });
+  }, [feedSettings, hydrated]);
 
   // Resolve Nostr handles quietly.
   useEffect(() => {

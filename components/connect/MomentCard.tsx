@@ -57,6 +57,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
   const [likes, setLikes] = useState(item.likesCount || 0);
   const [liked, setLiked] = useState(Boolean(item.isLiked));
   const [busy, setBusy] = useState(false);
+  const [feedSettings, setFeedSettings] = useState<any>(null);
 
   const { text: bodyText, images } = useMemo(
     () => extractPostImages(item.content || ''),
@@ -64,6 +65,22 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
   );
   const preview = truncateMomentBody(bodyText || '');
   const isNostr = item.source === 'nostr';
+  // Respect live settings — auto-preview off → hide media, auto-play off → never autoplay
+  React.useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { getConnectFeedSettings, subscribeConnectFeedSettings } = await import('@/lib/connect/feed-settings');
+        const s = await getConnectFeedSettings();
+        if (!cancelled) setFeedSettings(s);
+        const unsub = subscribeConnectFeedSettings((next) => { if (!cancelled) setFeedSettings(next); });
+        return unsub;
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  const autoPreview = feedSettings ? (feedSettings as any).autoPreviewMedia !== false : true;
+  const autoPlay = feedSettings ? !!(feedSettings as any).autoPlayMedia : false;
   const momentId =
     item.source === 'ecosystem'
       ? item.rawEvent?.$id || item.rawEvent?.id
@@ -74,6 +91,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     : item.authorName;
 
   const open = () => {
+    openWithAffinity();
     if (!momentId) return;
     openMomentObjectDetail({
       momentId,
@@ -90,6 +108,14 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     });
   };
 
+  const openWithAffinity = () => {
+    try {
+      const words = `${item.content || ''}`.toLowerCase().match(/#?\w{3,}/g) || [];
+      const topics = Array.from(new Set(words.slice(0, 5)));
+      const mediaKind = images.length ? 'image' : bodyText ? 'text' : 'other';
+      void import('@/lib/connect/feed-settings').then(({ recordFeedInteraction }) => recordFeedInteraction({ topics, mediaKind }));
+    } catch {}
+  };
   const onLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!momentId || busy) return;
@@ -110,6 +136,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     const prevLikes = likes;
     setLiked(!prevLiked);
     setLikes(prevLiked ? Math.max(0, prevLikes - 1) : prevLikes + 1);
+    openWithAffinity();
     try {
       await toggleMomentLike({
         source: item.source,
@@ -202,7 +229,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
             </p>
           ) : null}
 
-          {images.length > 0 ? (
+          {autoPreview && images.length > 0 ? (
             <div
               className={`mt-3 w-full max-w-full ${IMAGE_BAND_H} rounded-xl overflow-hidden border border-white/[0.06] bg-[#0A0908] grid ${
                 images.length > 1 ? 'grid-cols-2 gap-0.5' : 'grid-cols-1'
@@ -217,11 +244,18 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
                   alt=""
                   className="w-full h-full max-w-full object-cover"
                   loading="lazy"
+                  decoding={autoPlay ? 'auto' : 'async'}
+                  // Never autoplay media when user disabled it — static preview only
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
               ))}
+            </div>
+          ) : autoPreview === false && images.length > 0 ? (
+            <div className="mt-3 w-full rounded-xl border border-dashed border-white/[0.12] bg-[#0A0908] px-3 py-2.5 flex items-center justify-between">
+              <span className="text-xs text-white/40">Media hidden — auto preview off</span>
+              <button type="button" onClick={(e) => { e.stopPropagation(); setFeedSettings((prev:any) => prev ? {...prev, autoPreviewMedia: true} as any : prev); }} className="text-xs font-bold text-[#F59E0B]">Show</button>
             </div>
           ) : null}
 

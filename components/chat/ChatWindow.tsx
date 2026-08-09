@@ -261,6 +261,7 @@ export const ChatWindow = ({
             let conv: any = null;
             try {
               conv = await ChatService.getConversationById(conversationId, user.$id);
+              if (!conv) throw new Error('Conversation not found');
             } catch (e) {
               // Not a secure conversation — maybe a thread/discussion hangout. Fallback to thread + local roster cache.
               try {
@@ -276,7 +277,7 @@ export const ChatWindow = ({
                     title: fallbackName,
                     type: rosterHit.type || 'thread',
                     participants: rosterHit.participants || [],
-                    isEncrypted: false,
+                    isEncrypted: !!(rosterHit as any).isEncrypted,
                     avatarUrl: rosterHit.avatarUrl || rosterHit.avatar || null,
                     isThreadFallback: true,
                   };
@@ -304,6 +305,10 @@ export const ChatWindow = ({
                 }
               } catch {}
               throw e;
+            }
+            if (!conv || conv.type === undefined) {
+              console.error('Failed to load conversation: null conv after fallback', { conversationId });
+              return;
             }
             if (conv.type === 'direct') {
                 const otherId = conv.participants.find((p: string) => p !== user.$id);
@@ -366,6 +371,11 @@ export const ChatWindow = ({
                     setConversation(conv);
                 });
                 void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), conv);
+            }
+
+            // Pre-warm & self-heal keys automatically when opening chat
+            if (conv && conv.isEncrypted && ecosystemSecurity.status.isUnlocked) {
+                void ChatService.getConversationKey(conv.$id, user.$id, null, { allowCreate: true });
             }
         } catch (error: unknown) {
             console.error('Failed to load conversation:', error);
@@ -432,19 +442,65 @@ export const ChatWindow = ({
             if (user?.$id && ecosystemSecurity.status.isUnlocked) {
                 void UsersService.forceSyncProfileWithIdentity(user);
             }
-            const conv = await ChatService.getConversationById(conversationId, user?.$id);
-            console.log('[ChatWindow] loadMessages: conversation fetched:', conv?.$id);
-
-            const response = await ChatService.getMessages(conversationId, 50, 0, user?.$id, {
-                prefetchedConversation: conv});
-            console.log('[ChatWindow] loadMessages: getMessages returned rows:', response.rows?.length);
+            let conv: any = null;
+            try {
+              conv = await ChatService.getConversationById(conversationId, user?.$id);
+            } catch {}
+            // WESP transient secret + decrypt guard — conv may be null (thread) or settings may be plaintext/empty
+            let response: any = null;
+            if (conv) {
+              console.log('[ChatWindow] loadMessages: conversation fetched:', conv?.$id);
+              try {
+                response = await ChatService.getMessages(conversationId, 50, 0, user?.$id, {
+                    prefetchedConversation: conv});
+              } catch (e) {
+                console.warn('[ChatWindow] getMessages failed, will try thread fallback', e);
+              }
+              console.log('[ChatWindow] loadMessages: getMessages returned rows:', response?.rows?.length);
+            }
+            // Thread fallback — canonical threads substrate (secure + discussion hangouts both usable)
+            if (!response || !Array.isArray(response.rows)) {
+              try {
+                const { ThreadService } = await import('@/lib/services/threads');
+                const t = await (ThreadService as any).getById?.(conversationId).catch(() => null);
+                if (t) {
+                  const threadMessages = await (ThreadService as any).listMessages?.(conversationId, { limit: 50 }).catch(() => []) as any[];
+                  // Shape thread messages to ChatMessage-like for unified rendering (no decrypt needed for threads; handle JSON leak separately)
+                  const rows = (threadMessages || []).map((m: any) => ({
+                    $id: m.id,
+                    id: m.id,
+                    conversationId,
+                    senderId: m.userId,
+                    content: m.content,
+                    type: 'text',
+                    attachments: [],
+                    $createdAt: m.createdAt,
+                    createdAt: m.createdAt,
+                  }));
+                  response = { rows, atRestRows: rows };
+                  if (!conv) {
+                    conv = { $id: t.id, id: t.id, settings: null, isEncrypted: !!t.isEncrypted, isThreadFallback: true } as any;
+                    console.log('[ChatWindow] loadMessages: thread fallback fetched:', conv.$id, 'rows:', rows.length);
+                  }
+                }
+              } catch {}
+            }
+            if (!response || !Array.isArray(response.rows)) {
+              console.warn('[ChatWindow] loadMessages: no response rows for', conversationId);
+              setMessagesLoading(false);
+              setLoading(false);
+              return;
+            }
 
             // Filter by clearedAt if exists in settings
             let displayMessages = response.rows;
             let atRest = (response as any).atRestRows || response.rows;
-            if (user && conv.settings) {
+            if (user && conv?.settings) {
                 try {
-                    const decryptedSettings = await ecosystemSecurity.decrypt(conv.settings);
+                    // Guard: settings may be plaintext JSON or empty; decrypt only if looks encrypted and vault unlocked
+                    const settingsRaw: string = String(conv.settings);
+                    const looksEncrypted = settingsRaw.length > 40 && !settingsRaw.includes(' ') && ecosystemSecurity.status.isUnlocked;
+                    const decryptedSettings = looksEncrypted ? await ecosystemSecurity.decrypt(settingsRaw) : settingsRaw;
                     const settings = JSON.parse(decryptedSettings);
                     const myClearedAt = settings.clearedAt?.[user.$id];
                     if (myClearedAt) {

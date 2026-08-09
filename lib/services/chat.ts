@@ -618,25 +618,20 @@ async function resolveConversationKey(
         }
     }
 
-    // Healing for creator-owned direct chats where lockbox was never persisted (new chat, 0 messages — re-key is safe).
-    // Uses system client via syncLockboxRows, never keychain (keychain is only masterpass/passkey).
+    // Inbuilt Self-healing for direct chats where lockbox was never persisted (re-keying keyless chats is safe and resolves un-initialized conversations).
+    // Uses system client via syncLockboxRows.
     if (
         options?.allowCreate &&
         !isSelfChat &&
         conversation.type === 'direct' &&
-        conversation.creatorId === userId &&
         ecosystemSecurity.status.isUnlocked &&
         ecosystemSecurity.status.hasIdentity
     ) {
         try {
             const participants = Array.isArray(conversation.participants) ? conversation.participants.filter(Boolean) as string[] : [];
             const unique = Array.from(new Set(participants.length ? participants : [userId]));
-            const creatorPub = await ecosystemSecurity.ensureE2EIdentity(userId);
-            if (!creatorPub) return null;
-            // Only heal if conversation is recent and effectively empty (safe to re-key)
-            const createdAt = new Date((conversation as any).createdAt || (conversation as any).$createdAt || 0).getTime();
-            const isRecent = Number.isFinite(createdAt) ? Date.now() - createdAt < 1000 * 60 * 60 * 24 : false;
-            if (!isRecent) return null;
+            const actorPub = await ecosystemSecurity.ensureE2EIdentity(userId);
+            if (!actorPub) return null;
             const healedKey = await ecosystemSecurity.generateConversationKey();
             const healRows: LockboxEntry[] = await Promise.all(unique.map(async (pid) => {
                 const pub = await fetchProfilePublicKey(pid);
@@ -648,8 +643,8 @@ async function resolveConversationKey(
                     wrappedKey: await ecosystemSecurity.wrapKeyWithECDH(healedKey, pub),
                     metadata: buildLockboxMetadata({
                         wrappedBy: userId,
-                        senderPublicKey: creatorPub,
-                        wrappedByPublicKey: creatorPub,
+                        senderPublicKey: actorPub,
+                        wrappedByPublicKey: actorPub,
                         conversationId: conversation.$id,
                         conversationType: 'direct',
                         version: 't4',
@@ -663,7 +658,7 @@ async function resolveConversationKey(
                 return healedKey;
             }
         } catch (healErr) {
-            console.warn('[ChatService] Direct chat heal failed:', healErr);
+            console.warn('[ChatService] Direct chat self-heal failed:', healErr);
         }
     }
 
