@@ -724,7 +724,13 @@ async function revokeConversationAvatarAccess(
 
 export const ChatService = {
     async getConversationKey(convOrId: any, userId: string, messageCreatedAt?: string | null, options?: { allowCreate?: boolean }): Promise<CryptoKey | null> {
-        const conv = typeof convOrId === 'string' ? { $id: convOrId } : convOrId;
+        let conv = typeof convOrId === 'string' ? { $id: convOrId } : convOrId;
+        if ((!conv?.type || !conv?.participants) && conv?.$id) {
+            try {
+                const fullConv = await ChatService.getConversationById(conv.$id, userId);
+                if (fullConv) conv = fullConv;
+            } catch {}
+        }
         return resolveConversationKey(conv, userId, messageCreatedAt, undefined, false, options);
     },
 
