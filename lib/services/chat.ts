@@ -720,6 +720,8 @@ async function revokeConversationAvatarAccess(
         targetUserIds: targets,
         permission: 'read',
         action: 'revoke'}, auth);
+}
+
 export const ChatService = {
     async getConversationKey(convOrId: any, userId: string, messageCreatedAt?: string | null, options?: { allowCreate?: boolean }): Promise<CryptoKey | null> {
         const conv = typeof convOrId === 'string' ? { $id: convOrId } : convOrId;
