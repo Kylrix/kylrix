@@ -634,7 +634,12 @@ async function resolveConversationKey(
             if (!actorPub) return null;
             const healedKey = await ecosystemSecurity.generateConversationKey();
             const healRows: LockboxEntry[] = await Promise.all(unique.map(async (pid) => {
-                const pub = await fetchProfilePublicKey(pid);
+                let pub = await fetchProfilePublicKey(pid);
+                if (!pub || !isValidX25519PublicKey(pub)) {
+                    // Force refresh identity from user profile
+                    await UsersService.forceSyncProfileWithIdentity({ $id: pid }).catch(() => null);
+                    pub = await fetchProfilePublicKey(pid);
+                }
                 if (!pub || !isValidX25519PublicKey(pub)) return null as any;
                 return {
                     resourceType: 'chat',
