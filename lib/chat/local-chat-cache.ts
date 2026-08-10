@@ -112,4 +112,8 @@ export function clearChatsListMemory(): void {
   memoryChatsList = null;
 }
 
+export function clearThreadsListMemory(): void {
+  memoryThreadsList = null;
+}
+
 export { isLikelyCiphertext as isLikelyChatCiphertext };

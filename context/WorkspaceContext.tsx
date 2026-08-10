@@ -93,9 +93,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (lastUserIdRef.current !== userId) {
       hydratedRef.current = false;
       lastUserIdRef.current = userId;
+      setActiveWorkspaceIdState(userId);
+      setWorkspaces([personalWorkspace]);
+      void refreshWorkspaces();
+    } else {
+      setActiveWorkspaceIdState((prev) => (prev === 'guest' && userId !== 'guest' ? userId : prev));
     }
-    setActiveWorkspaceIdState((prev) => (prev === 'guest' && userId !== 'guest' ? userId : prev));
-  }, [userId]);
+  }, [userId, personalWorkspace]);
 
   const refreshWorkspaces = useCallback(async () => {
     setLoadingWorkspaces(true);
@@ -117,7 +121,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     void (async () => {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const mapped = mapProjectRows(await LocalEngine.cacheGet('f_projects_list'));
+        const mapped = mapProjectRows(await LocalEngine.cacheGet(`f_projects_list_${userId}`));
         if (!mapped.length) return;
         setWorkspaces((prev) => {
           const byId = new Map(prev.map((w) => [w.id, w]));
@@ -129,7 +133,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         /* optional */
       }
     })();
-  }, [personalWorkspace, mapProjectRows]);
+  }, [personalWorkspace, mapProjectRows, userId]);
 
   const ACTIVE_WORKSPACE_CACHE_KEY = `kylrix_active_workspace_${userId}`;
 

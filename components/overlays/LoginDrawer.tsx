@@ -308,8 +308,14 @@ export function LoginDrawer() {
       // flip partition pointer — 1:1 mirror, no rows moved
       setActivePartitionId(`_acc_${targetId}` as any);
       // clear volatile in-memory caches (RxDB already segregated per _acc_<id>)
-      try { sessionStorage.clear(); } catch {}
-      // For now Appwrite single-session: vault holds identities, session swap happens on next login.
+      try { 
+        sessionStorage.clear(); 
+        const { clearChatsListMemory, clearThreadsListMemory } = await import('@/lib/chat/local-chat-cache');
+        clearChatsListMemory();
+        if (typeof clearThreadsListMemory === 'function') (clearThreadsListMemory as any)();
+        const { clearSessionProjectsList } = await import('@/lib/projects/projects-cache');
+        clearSessionProjectsList();
+      } catch {}
       // Instant UX: reload to rehydrate from new partition; future WebSocket per-partition keeps realtime.
       toast.success('Switched account');
       setTimeout(() => window.location.reload(), 220);

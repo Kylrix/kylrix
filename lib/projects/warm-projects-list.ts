@@ -31,7 +31,7 @@ export async function warmProjectsList(deps: NexusDeps): Promise<Projects[]> {
 
   try {
     const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    const local = normalizeProjectsList(await LocalEngine.cacheGet('f_projects_list'));
+    const local = normalizeProjectsList(await LocalEngine.cacheGet(`f_projects_list_${deps.userId}`));
     if (local.length) {
       setSessionProjectsList(local);
       return local;
@@ -57,7 +57,7 @@ export async function warmProjectsList(deps: NexusDeps): Promise<Projects[]> {
   setSessionProjectsList(rows);
   try {
     const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    void LocalEngine.cacheSet('f_projects_list', rows);
+    void LocalEngine.cacheSet(`f_projects_list_${deps.userId}`, rows);
   } catch {
     /* optional */
   }
