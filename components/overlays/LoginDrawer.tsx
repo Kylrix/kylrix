@@ -387,12 +387,9 @@ export function LoginDrawer() {
         if (!freshSecret) {
           const minted = await (mintSessionForUserAction as any)(targetId, cached.jwt).catch(() => null);
           if (minted?.success && minted?.secret) freshSecret = minted.secret;
-          else {
-            const fallback = await (mintSessionForUserAction as any)(targetId).catch(() => null);
-            if (fallback?.success && fallback?.secret) freshSecret = fallback.secret;
-          }
         }
       } catch {}
+
       if (freshSecret) {
         try { await account.deleteSession('current').catch(() => {}); } catch {}
         await account.createSession({ userId: targetId, secret: freshSecret });
@@ -414,10 +411,25 @@ export function LoginDrawer() {
             await storeAccountSession(targetId, { secret: cached.secret, jwt: freshJwt, sessionId: cached.sessionId });
           }
         } catch {}
-      } else if (cached.jwt) {
-        throw new Error('Unauthorized: cached session expired and server mint failed');
       } else {
-        throw new Error('No cached credentials');
+        // Final server fallback without JWT
+        try {
+          const { mintSessionForUserAction } = await import('@/lib/actions/account-switch');
+          const fallback = await (mintSessionForUserAction as any)(targetId).catch(() => null);
+          if (fallback?.success && fallback?.secret) {
+            try { await account.deleteSession('current').catch(() => {}); } catch {}
+            await account.createSession({ userId: targetId, secret: fallback.secret });
+            const freshJwt = await account.createJWT().then((r: any) => r.jwt).catch(() => null);
+            if (freshJwt) {
+              const { storeAccountSession } = await import('@/lib/account/vault');
+              await storeAccountSession(targetId, { secret: fallback.secret, jwt: freshJwt, sessionId: `minted_${targetId}` });
+            }
+          } else {
+            throw new Error('Unauthorized: cached session expired and server mint failed');
+          }
+        } catch (e: any) {
+          throw new Error(e?.message || 'Account switch failed');
+        }
       }
 
       // 2. Flip partition pointer in localStorage
