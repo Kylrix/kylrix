@@ -1631,7 +1631,7 @@ export const ChatList = ({
                                                 className="relative"
                                             >
                                                 {conv.isKylie ? (
-                                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#6366F1]/10 border border-[#6366F1]/30 text-[#6366F1] shadow-lg shadow-[#6366F1]/10">
+                                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#F59E0B]/10 border border-[#F59E0B]/30 text-[#F59E0B] shadow-lg shadow-[#F59E0B]/10">
                                                         <Sparkles size={22} strokeWidth={2.2} />
                                                     </div>
                                                 ) : isSecure ? (

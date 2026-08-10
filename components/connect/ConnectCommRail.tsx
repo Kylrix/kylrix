@@ -378,7 +378,7 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
                   >
                     <span className="relative inline-flex shrink-0">
                       {item.isKylie ? (
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#6366F1]/10 border border-[#6366F1]/30 text-[#6366F1]">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#F59E0B]/10 border border-[#F59E0B]/30 text-[#F59E0B]">
                           <Sparkles size={18} strokeWidth={2.2} />
                         </div>
                       ) : (
