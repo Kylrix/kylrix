@@ -404,39 +404,88 @@ export function LoginDrawer() {
         clearSessionProjectsList();
       } catch {}
 
-      // 3.5 Resolve and pre-write the target user's active workspace before reload.
-      //     Priority: (a) their stored last-known workspace → (b) their Appwrite prefs.activeWorkspaceId
-      //     verified against their project list → (c) personal workspace (userId)
+      // 3.5 Account → Workspace cascading (top-down, single no-gap flow):
+      // As soon as incoming lands, prompt incoming's local copy which also queries remote if none listed
+      // or been long since fetch, get workspaces first, then check default prefs, fallback to personal.
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const { warmProjectsList } = await import('@/lib/projects/warm-projects-list');
+        const { getSessionProjectsList } = await import('@/lib/projects/projects-cache');
         const workspaceCacheKey = `kylrix_active_workspace_${targetId}`;
         const storedWorkspace = await LocalEngine.cacheGet<string>(workspaceCacheKey);
 
         if (storedWorkspace && typeof storedWorkspace === 'string' && storedWorkspace.trim()) {
-          // (a) Returning user — already have their last workspace stored, nothing to do
+          // (a) Returning user — verify stored workspace still exists in their workspace list
+          try {
+            const rows = await warmProjectsList({
+              userId: targetId,
+              getCachedDataAsync: async (k: string) => (await LocalEngine.cacheGet(k)) as any,
+              fetchOptimized: async (k: string, fetcher: () => Promise<any>) => fetcher(),
+            }).catch(() => []);
+            const list = Array.isArray(rows) ? rows : (rows as any)?.rows || [];
+            const stillExists = list.some((p: any) => String(p.$id || p.id) === storedWorkspace);
+            if (!stillExists && list.length) {
+              // Stored points to deleted workspace — reset to prefs/personal below
+              await LocalEngine.cacheDelete(workspaceCacheKey);
+            } else {
+              // valid stored workspace — keep it, but ensure workspace list is warm for next step
+            }
+          } catch {}
+          const refreshedStored = await LocalEngine.cacheGet<string>(workspaceCacheKey);
+          if (refreshedStored && refreshedStored.trim()) {
+            // still valid — cascade will pick it up, nothing more to do
+          } else {
+            // was deleted — fall through to prefs/personal
+            let resolvedWorkspaceId: string | null = null;
+            try {
+              const prefs = await account.getPrefs();
+              const prefWorkspaceId = prefs?.activeWorkspaceId || prefs?.defaultWorkspaceId;
+              if (prefWorkspaceId && typeof prefWorkspaceId === 'string' && prefWorkspaceId.trim()) {
+                const { ProjectsService } = await import('@/lib/appwrite/projects');
+                const { rows } = await ProjectsService.listProjects(true);
+                const found = rows.some((p: any) => String(p.$id || p.id) === prefWorkspaceId);
+                if (found) resolvedWorkspaceId = prefWorkspaceId;
+                else resolvedWorkspaceId = prefWorkspaceId;
+              }
+            } catch {}
+            await LocalEngine.cacheSet(workspaceCacheKey, resolvedWorkspaceId || targetId);
+          }
         } else {
-          // (b) New/fresh account — fetch their prefs live (session is active right now)
+          // (b) First ensure we have the incoming account's workspaces (local copy → remote if none/stale)
+          let rows: any[] = [];
+          try {
+            rows = await warmProjectsList({
+              userId: targetId,
+              getCachedDataAsync: async (k: string) => (await LocalEngine.cacheGet(k)) as any,
+              fetchOptimized: async (k: string, fetcher: () => Promise<any>) => fetcher(),
+            });
+            if (!Array.isArray(rows)) rows = (rows as any)?.rows || [];
+          } catch {
+            try {
+              const { ProjectsService } = await import('@/lib/appwrite/projects');
+              const res = await ProjectsService.listProjects(true);
+              rows = res.rows || [];
+            } catch { rows = []; }
+          }
+          // Seed DataNexus session list so WorkspaceContext sees workspaces instantly post-reload
+          try {
+            const { setSessionProjectsList } = await import('@/lib/projects/projects-cache');
+            if (rows.length) setSessionProjectsList(rows);
+          } catch {}
+
+          // (c) Then check default workspace from incoming user settings
           let resolvedWorkspaceId: string | null = null;
           try {
             const prefs = await account.getPrefs();
             const prefWorkspaceId = prefs?.activeWorkspaceId || prefs?.defaultWorkspaceId;
             if (prefWorkspaceId && typeof prefWorkspaceId === 'string' && prefWorkspaceId.trim()) {
-              // Verify this workspace actually exists in their projects list
-              const { ProjectsService } = await import('@/lib/appwrite/projects');
-              try {
-                const { rows } = await ProjectsService.listProjects(true);
-                const found = rows.some((p: any) => (p.$id || p.id) === prefWorkspaceId);
-                if (found) {
-                  resolvedWorkspaceId = prefWorkspaceId;
-                }
-              } catch {
-                // Can't verify — still trust the pref since they configured it
-                resolvedWorkspaceId = prefWorkspaceId;
-              }
+              const found = rows.some((p: any) => String(p.$id || p.id) === prefWorkspaceId);
+              if (found) resolvedWorkspaceId = prefWorkspaceId;
+              else if (prefWorkspaceId) resolvedWorkspaceId = prefWorkspaceId; // trust pref even if not yet in list
             }
-          } catch { /* prefs fetch failed — fall through to personal */ }
+          } catch {}
 
-          // (c) Fall back to personal workspace (userId is the personal workspace ID)
+          // (d) Fall back to personal virtual workspace "{username}'s Workspace" (id = userId)
           await LocalEngine.cacheSet(workspaceCacheKey, resolvedWorkspaceId || targetId);
         }
       } catch {}
