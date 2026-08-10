@@ -319,6 +319,17 @@ export function LoginDrawer() {
     }
   }, [user?.$id, isSwitching]);
 
+  const handleStartAddAccount = useCallback(async () => {
+    try {
+      const { clearStatelessSessions } = await import('@/lib/utils');
+      clearStatelessSessions();
+      try {
+        await account.deleteSession('current').catch(() => {});
+      } catch {}
+    } catch {}
+    setShowAddAccount(true);
+  }, []);
+
   const handleContinueCurrent = useCallback(() => {
     handleClose();
   }, []);
@@ -573,7 +584,7 @@ export function LoginDrawer() {
               <div className="h-px bg-white/[0.06]" />
               <button
                 type="button"
-                onClick={() => setShowAddAccount(true)}
+                onClick={handleStartAddAccount}
                 className="w-full h-[52px] rounded-2xl bg-white text-black font-black text-sm hover:bg-white/90 transition-colors"
               >
                 Add account
