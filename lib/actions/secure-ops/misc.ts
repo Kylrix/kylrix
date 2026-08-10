@@ -1202,11 +1202,49 @@ export async function deleteGhostThreadSecure(threadId: string, jwt?: string) {
         throw new Error('Forbidden: Insufficient permissions to delete this thread');
     }
 
-    // 2. Cascade delete children (comments, reactions, voice files)
+    // 2. Cascade delete children (comments, reactions, voice files, linked objects, key mappings)
     try {
         await executeCascadeDeleteSecure(dbId, tableId, threadId);
     } catch (err) {
         console.error('[deleteGhostThreadSecure] Cascade cleanup failed:', err);
+    }
+
+    // 2b. Wipe project_objects and key_mapping for discussion ghost thread
+    try {
+        const polyCollabs = await tables.listRows({
+            databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+            tableId: 'Collaborators',
+            queries: [Query.equal('resourceId', threadId), Query.limit(1000)] as any
+        }).catch(() => ({ rows: [] }));
+        await Promise.all((polyCollabs.rows || []).map((row: any) => tables.deleteRow({
+            databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+            tableId: 'Collaborators',
+            rowId: row.$id
+        }).catch(() => null)));
+
+        const keyMappings = await tables.listRows({
+            databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
+            tableId: 'key_mapping',
+            queries: [Query.equal('resourceId', threadId), Query.limit(1000)] as any
+        }).catch(() => ({ rows: [] }));
+        await Promise.all((keyMappings.rows || []).map((row: any) => tables.deleteRow({
+            databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
+            tableId: 'key_mapping',
+            rowId: row.$id
+        }).catch(() => null)));
+
+        const projObjects = await tables.listRows({
+            databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+            tableId: 'project_objects',
+            queries: [Query.equal('entityId', threadId), Query.limit(1000)] as any
+        }).catch(() => ({ rows: [] }));
+        await Promise.all((projObjects.rows || []).map((row: any) => tables.deleteRow({
+            databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+            tableId: 'project_objects',
+            rowId: row.$id
+        }).catch(() => null)));
+    } catch (cleanErr) {
+        console.warn('[deleteGhostThreadSecure] Secondary cleanup non-fatal warning:', cleanErr);
     }
 
     // 3. Delete the thread row itself
