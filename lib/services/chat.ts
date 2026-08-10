@@ -562,13 +562,11 @@ async function resolveConversationKey(
             console.warn('[ChatService] Self-chat lockbox retry failed:', error);
         }
 
-        // Send path only: seed a key when lockbox is empty. Decrypt path never mints
-        // (that orphaned prior ciphertext → gibberish on reload).
-        if (options?.allowCreate) {
+        // Automatic Lockbox Seeding for self-chats: ensure self-chat keys are always initialized and persisted
+        try {
             const publicKey = await ecosystemSecurity.ensureE2EIdentity(userId);
-            if (!publicKey) return null;
-            const seededKey = await ecosystemSecurity.generateConversationKey();
-            try {
+            if (publicKey) {
+                const seededKey = await ecosystemSecurity.generateConversationKey();
                 await syncLockboxRows([
                     {
                         resourceType: 'chat',
@@ -582,23 +580,16 @@ async function resolveConversationKey(
                             conversationId: conversation.$id,
                             conversationType: 'direct',
                             version: 't4',
-                            seededForSend: true,
+                            seededSelfChat: true,
                         }),
                     },
-                ], auth);
-            } catch (error) {
-                console.warn('[ChatService] Failed to write self-chat lockbox seed:', error);
+                ], auth).catch(() => null);
+                cacheResolvedConversationKey(conversation.$id, seededKey);
+                return seededKey;
             }
-            cacheResolvedConversationKey(conversation.$id, seededKey);
-            return seededKey;
+        } catch (seedErr) {
+            console.warn('[ChatService] Failed to auto-seed missing self-chat key:', seedErr);
         }
-
-        console.warn(
-            '[ChatService] Self-chat key missing for',
-            conversation.$id,
-            '— refusing silent rekey to protect existing messages',
-        );
-        return null;
     }
 
     if (!repairAttempted && !isSelfChat) {

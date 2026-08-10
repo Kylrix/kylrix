@@ -359,7 +359,58 @@ export async function nuclearWipeConversationInternal(payload: {
     throw new Error('Forbidden: Not a participant');
   }
 
-  return await deleteConversationFullyInternal(payload);
+  const wipeResult: any = await deleteConversationFullyInternal(payload);
+
+  const isSelfChat = participantIds.length === 1 && participantIds[0] === verifiedActorId;
+
+  // Self-chat (notes to self): immediately regenerate clean fresh self-chat
+  if (isSelfChat) {
+    try {
+      const now = new Date().toISOString();
+      const conversationData: any = {
+        type: 'direct',
+        participants: [verifiedActorId],
+        creatorId: verifiedActorId,
+        name: conversation?.name || 'Notes to self',
+        description: conversation?.description || null,
+        avatarUrl: conversation?.avatarUrl || null,
+        avatar: conversation?.avatar || null,
+        isEncrypted: Boolean(conversation?.isEncrypted),
+        createdAt: now,
+        updatedAt: now,
+        lastMessageAt: null,
+        lastMessageId: null,
+        lastMessageText: null,
+      };
+      const permissions = [Permission.read(Role.user(verifiedActorId))];
+      const newConversationId = ID.unique();
+      await databases.createRow(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, newConversationId, conversationData, permissions).catch(async () => {
+        await databases.createRow(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, newConversationId, conversationData).catch(() => null);
+      });
+      await databases.createRow(
+        CHAT_DB_ID,
+        CONVERSATION_MEMBERS_TABLE_ID,
+        ID.unique(),
+        {
+          conversationId: newConversationId,
+          userId: verifiedActorId,
+          role: 'owner',
+          joinedAt: now,
+        },
+        permissions
+      ).catch(() => null);
+
+      return {
+        ...wipeResult,
+        regeneratedConversationId: newConversationId,
+        regeneratedIsSelf: true,
+      };
+    } catch (regenErr) {
+      console.warn('[nuclearWipe] Self-chat regeneration failed:', (regenErr as any)?.message);
+    }
+  }
+
+  return wipeResult;
 }
 
 export async function toggleReactionInternal(payload: {

@@ -910,15 +910,27 @@ export const ChatWindow = ({
                         const res = await ChatService.wipeMyFootprint(conversationId, currentUserId);
                         toast.success(`Removed ${res.count} messages and ${res.reactionsDeleted || 0} reactions for everyone`);
                     } else if (mode === 'nuclear') {
-                        await ChatService.nuclearWipe(conversationId);
-                        toast.success("Conversation permanently wiped");
-                        try {
-                          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-                          const { chatConversationCacheKey, chatMessagesCacheKey } = await import('@/lib/chat/local-chat-cache');
-                          await LocalEngine.cacheSet(chatConversationCacheKey(conversationId), null as any).catch(() => null);
-                          await LocalEngine.cacheSet(chatMessagesCacheKey(conversationId), []).catch(() => null);
-                        } catch {}
-                        router.push('/connect/chats');
+                        const wipeRes: any = await ChatService.nuclearWipe(conversationId);
+                        const newId = wipeRes?.regeneratedConversationId;
+                        if (newId) {
+                          toast.success("Self-chat wiped & fresh room regenerated");
+                          try {
+                            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+                            const { chatConversationCacheKey, chatMessagesCacheKey } = await import('@/lib/chat/local-chat-cache');
+                            await LocalEngine.cacheSet(chatConversationCacheKey(conversationId), null as any).catch(() => null);
+                            await LocalEngine.cacheSet(chatMessagesCacheKey(conversationId), []).catch(() => null);
+                          } catch {}
+                          router.push(`/connect/chats?c=${encodeURIComponent(newId)}`);
+                        } else {
+                          toast.success("Conversation permanently wiped");
+                          try {
+                            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+                            const { chatConversationCacheKey, chatMessagesCacheKey } = await import('@/lib/chat/local-chat-cache');
+                            await LocalEngine.cacheSet(chatConversationCacheKey(conversationId), null as any).catch(() => null);
+                            await LocalEngine.cacheSet(chatMessagesCacheKey(conversationId), []).catch(() => null);
+                          } catch {}
+                          router.push('/connect/chats');
+                        }
                         return;
                     }
                     await loadMessages();
