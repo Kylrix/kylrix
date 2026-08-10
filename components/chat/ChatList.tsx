@@ -190,19 +190,17 @@ export const ChatList = ({
     );
 
     const openAvatarPeek = useCallback((conv: any) => {
-        if (conv?.type === 'group') {
-            setSelectedConversation(conv);
-            return;
-        }
+        const isGroup = Boolean(conv?.type === 'group' || conv?.type === 'channel');
         const otherId =
-            Array.isArray(conv?.participants) && user?.$id
+            !isGroup && Array.isArray(conv?.participants) && user?.$id
                 ? conv.participants.find((p: string) => p !== user.$id)
                 : null;
         const profile = {
             userId: otherId || conv?.otherUserId || (conv?.isSelf ? user?.$id : undefined),
             username: conv?.username || conv?.otherUsername,
             conversationId: conv?.$id,
-            seed: {
+            conversation: conv,
+            seed: isGroup ? null : {
                 displayName: conv?.name,
                 username: conv?.username || conv?.otherUsername,
                 avatar: conv?.avatarUrl || conv?.avatar,
@@ -214,6 +212,7 @@ export const ChatList = ({
             userId={profile.userId}
             username={profile.username}
             conversationId={profile.conversationId}
+            conversation={profile.conversation}
             seed={profile.seed}
             onClose={isDesktop ? closeSidebar : closeOverlay}
           />

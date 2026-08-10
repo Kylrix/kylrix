@@ -139,7 +139,13 @@ function ConnectHomeContent() {
           <button
             key={tab}
             type="button"
-            onClick={() => setActiveTab(tab)}
+            onClick={() => {
+              if (tab === 'chats') {
+                router.push('/connect/chats');
+                return;
+              }
+              setActiveTab(tab);
+            }}
             className={`px-5 py-2.5 rounded-xl text-xs font-extrabold capitalize transition-colors ${
               activeTab === tab
                 ? 'bg-[#F59E0B] text-black'
