@@ -4,7 +4,6 @@
 // Default single session maps to virtual partition acc_default -> _acc_<currentUserId>
 // New accounts lazily create _acc_<newId> DBs. Switch = pointer flip + RAM purge.
 const PARTITION_KEY = 'kylrix:activePartition';
-const LEGACY_DB_KEY = 'kylrix_db';
 
 export type PartitionId = string; // _acc_<userId> | acc_default
 

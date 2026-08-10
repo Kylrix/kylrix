@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { account } from '@/lib/appwrite/client';
 import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction, checkEmailAuthStatusAction } from '@/lib/actions/auth-actions';
 import { performNativePasskeyAuthentication } from '@/lib/webauthn-utils';
-import { listOtherAccounts, upsertAccount, getActiveAccountId } from '@/lib/account/vault';
+import { listOtherAccounts, upsertAccount } from '@/lib/account/vault';
 import { setActivePartitionId } from '@/lib/account/partition';
 
 type LoginStep = 'initial' | 'email' | 'otp';
