@@ -287,13 +287,36 @@ export async function deleteConversationFullyInternal(payload: {
     [Query.equal('resourceId', payload.conversationId)]);
   const joinRequests = await listAllDocuments(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, [
     Query.equal('resourceId', payload.conversationId)]);
+  const projectObjects = await listAllDocuments(databases, CHAT_DB_ID, 'project_objects', [
+    Query.equal('entityId', payload.conversationId)]).catch(() => []);
+  const callLinks = await listAllDocuments(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CONNECT.CALL_LINKS || 'calls', [
+    Query.equal('conversationId', payload.conversationId)]).catch(() => []);
 
+  // Wipe storage files, media attachments, and message reactions
   await deleteConversationArtifacts(databases, storage, payload.conversationId, messages);
 
-  const avatarFileIds = typeof conversation?.avatarFileId === 'string' && conversation.avatarFileId
-    ? [conversation.avatarFileId]
-    : [];
+  // Wipe avatar file if stored in storage bucket
+  const avatarFileIds = [
+    typeof conversation?.avatarFileId === 'string' ? conversation.avatarFileId : '',
+    typeof conversation?.avatar === 'string' && !conversation.avatar.startsWith('http') ? conversation.avatar : '',
+  ].filter(Boolean);
   await Promise.all(avatarFileIds.map((fileId: string) => storage.deleteFile(APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS, fileId).catch(() => null)));
+
+  // Wipe linked call links files/records
+  if (callLinks.length) {
+    await deleteRowsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CONNECT.CALL_LINKS || 'calls', callLinks.map((row: any) => row.$id));
+  }
+
+  // Wipe linked project object bindings
+  if (projectObjects.length) {
+    await deleteRowsInBatches(databases, CHAT_DB_ID, 'project_objects', projectObjects.map((row: any) => row.$id));
+  }
+
+  // Wipe linked discussion ghost note if any exist with the same id
+  try {
+    const { NOTE_DATABASE_ID, TABLES } = APPWRITE_CONFIG;
+    await databases.deleteRow(NOTE_DATABASE_ID, TABLES.NOTES, payload.conversationId).catch(() => null);
+  } catch {}
 
   await Promise.all([
     deleteRowsInBatches(databases, CHAT_DB_ID, CONVERSATIONS_TABLE_ID, [conversation.$id]),
@@ -310,7 +333,9 @@ export async function deleteConversationFullyInternal(payload: {
     membersDeleted: members.length,
     epochsDeleted: epochs.length,
     keyMappingsDeleted: keyMappings.length,
-    joinRequestsDeleted: joinRequests.length};
+    joinRequestsDeleted: joinRequests.length,
+    callLinksDeleted: callLinks.length,
+    projectObjectsDeleted: projectObjects.length};
 }
 
 export async function nuclearWipeConversationInternal(payload: {
