@@ -2,14 +2,13 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronUp, MessageSquare, PhoneCall, X, Repeat2 } from 'lucide-react';
+import { ChevronUp, MessageSquare, PhoneCall, X } from 'lucide-react';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import { UsersService } from '@/lib/services/users';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getCachedIdentityById } from '@/lib/identity-cache';
 import { useAuth } from '@/lib/auth';
 import { useCallLauncher } from '@/context/CallLauncherContext';
-import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 /**
  * Native right-sidebar profile peek — same data as ProfilePeekDrawer
@@ -32,7 +31,6 @@ export function ProfileSidebar({
   const router = useRouter();
   const { user } = useAuth();
   const { openCallLauncher } = useCallLauncher();
-  const { open: openDrawer } = useUnifiedDrawer();
   const [profile, setProfile] = useState<any>(seed || null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
     seed?.avatar?.startsWith?.('http') ? seed.avatar : null,
@@ -111,28 +109,11 @@ export function ProfileSidebar({
     });
   };
 
-  const handleSwitchAccount = useCallback(() => {
-    if (onClose) onClose();
-    // hand off to login drawer in switch-account state
-    setTimeout(() => openDrawer('login', { mode: 'switch' }), 120);
-  }, [onClose, openDrawer]);
-
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#0A0908]">
       <div className="flex items-center justify-between border-b border-white/[0.06] bg-[#0A0908] px-5 md:px-6 py-4 md:py-5 shrink-0">
         <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-mono m-0">Profile</p>
         <div className="flex items-center gap-1">
-          {/* Switch account — desktop: icon+text, mobile: icon-only via responsive */}
-          <button
-            type="button"
-            onClick={handleSwitchAccount}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-white/80 hover:text-white hover:bg-white/[0.08] hover:border-white/20 text-xs font-bold transition-colors"
-            aria-label="Switch account"
-            title="Switch account"
-          >
-            <Repeat2 className="w-4 h-4 shrink-0" />
-            <span className="hidden md:inline">Switch</span>
-          </button>
           <button
             type="button"
             onClick={goFullProfile}
