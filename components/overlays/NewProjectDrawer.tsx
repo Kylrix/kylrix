@@ -313,26 +313,31 @@ export function NewProjectDrawer() {
                           type="button"
                           onClick={() => setSelectedResourceId(isSelected ? '' : item.$id)}
                           sx={{
-                            display: 'grid',
-                            placeItems: 'center',
-                            flexShrink: 0,
-                            bgcolor: 'rgba(255,255,255,0.03)',
-                            border: '1px solid rgba(255,255,255,0.05)'}}
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            p: 1.5,
+                            borderRadius: RADIUS_SMALL,
+                            bgcolor: isSelected ? 'rgba(99, 102, 241, 0.1)' : VOID,
+                            border: '1px solid',
+                            borderColor: isSelected ? SYSTEM_PRIMARY : BORDER_HAIRLINE,
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            '&:hover': { bgcolor: isSelected ? 'rgba(99, 102, 241, 0.15)' : HOVER }
+                          }}
                         >
-                          {visibility === 'private' ? <Lock size={16} color={TEXT_MUTED} /> : <Globe size={16} color="#10B981" />}
-                        </Box>
-                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                          <Typography component="span" sx={{ fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.25, color: '#fff', textTransform: 'capitalize' }}>
-                            {visibility}
+                          <Typography component="span" sx={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600 }} noWrap>
+                            {item.title || item.name || 'Untitled'}
                           </Typography>
-                          <Typography component="span" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
-                            {visibility === 'private' ? 'Only you and collaborators' : 'Public to the ecosystem and guests'}
-                          </Typography>
+                          {isSelected && <Check size={16} color={SYSTEM_PRIMARY} />}
                         </Box>
-                      </Box>
-                      <ChevronRight size={18} color={TEXT_MUTED} style={{ flexShrink: 0 }} />
-                    </Box>
-                </Box>
+                      );
+                    })}
+                  </Stack>
+                )}
+            </Box>
+        )}
 
                 <Box sx={{ mt: 'auto', pt: 2 }}>
                     <Button 
