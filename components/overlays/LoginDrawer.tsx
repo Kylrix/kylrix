@@ -212,7 +212,8 @@ export function LoginDrawer() {
       setCheckingSession(true);
       try {
         const current = await refreshUser(true);
-        if (!cancelled && current) {
+        // Do not auto-close when explicitly opened in switch mode
+        if (!cancelled && current && !isSwitchMode) {
           close();
         }
       } finally {
@@ -225,7 +226,7 @@ export function LoginDrawer() {
     return () => {
       cancelled = true;
     };
-  }, [isOpen, close, refreshUser]);
+  }, [isOpen, isSwitchMode, close, refreshUser]);
 
   const handleSendOTP = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -526,7 +527,7 @@ export function LoginDrawer() {
                 </button>
               )}
               <h3 className="font-clash font-black text-white text-xl tracking-tight leading-tight">
-                Continue to Kylrix
+                {isSwitchMode && !showAddAccount ? 'Switch Account' : 'Continue to Kylrix'}
               </h3>
             </div>
             <button 
