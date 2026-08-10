@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronUp, MessageSquare, PhoneCall, X } from 'lucide-react';
+import { ChevronUp, Copy, MessageSquare, PhoneCall, X } from 'lucide-react';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import { UsersService } from '@/lib/services/users';
 import { fetchProfilePreview } from '@/lib/profile-preview';
