@@ -46,30 +46,14 @@ export function useWorkspaceFilteredItems<T extends WorkspaceItemLike>(
       return list.filter(isDefaultWorkspaceObject);
     }
 
-    // While project_objects are still loading for this workspace/entityKind, don't hide items
-    // that might belong — keep optimistic items. While we have no join rows yet,
-    // don't filter by join at all (prevents "only new card" flash when cache is
-    // still truncated and remote hasn't merged). Local copy is SoT per sync.
+    // While project_objects are still loading, keep stale objects hidden — show only
+    // objects that are explicitly linked to the new workspace via projectId/pending.
+    // This prevents "all workspace objects" flash when switching workspaces.
     if (loadingWorkspaceObjects && workspaceProjectObjects.length === 0) {
-      // If we truly have no join rows, fall back to projectId/pending but don't
-      // hide everything — return the list's workspace-tagged items so older
-      // cards don't disappear during the replenish window.
-      const hasAnyWorkspaceTagged = list.some((it) => (it as any).isWorkspace);
-      if (!hasAnyWorkspaceTagged) {
-        return list.filter((item) => {
-          const pid = activeWorkspace.id;
-          const id = item.$id || item.id;
-          if (item.projectId === pid) return true;
-          if (id && isEntityPendingInActiveWorkspace(entityKind, id)) return true;
-          return false;
-        });
-      }
-      // At least one item is already marked isWorkspace — show those to avoid "only new" flash
       return list.filter((item) => {
         const pid = activeWorkspace.id;
         const id = item.$id || item.id;
         if (item.projectId === pid) return true;
-        if ((item as any).isWorkspace) return true;
         if (id && isEntityPendingInActiveWorkspace(entityKind, id)) return true;
         return false;
       });
