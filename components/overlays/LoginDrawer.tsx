@@ -306,7 +306,30 @@ export function LoginDrawer() {
       blanket.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#0A0908;opacity:1;transition:opacity 180ms';
       document.body.appendChild(blanket);
       // flip partition pointer — 1:1 mirror, no rows moved
-      setActivePartitionId(`_acc_${targetId}` as any);
+      const targetPid = `_acc_${targetId}`;
+      setActivePartitionId(targetPid as any);
+
+      // Hydrate target user snapshot into localStorage partition so AuthContext instantly adopts target account
+      const { getAccount } = await import('@/lib/account/vault');
+      const targetAcct = getAccount(targetId);
+      if (targetAcct) {
+        const syntheticUser = {
+          $id: targetAcct.id,
+          name: targetAcct.name || targetAcct.username || 'User',
+          email: targetAcct.email || null,
+          username: targetAcct.username || null,
+          isPulse: false
+        };
+        const cacheKey = `kylrix_flow_current_user_v2_${targetPid}`;
+        const lastUserKey = `kylrix_last_logged_in_user_${targetPid}`;
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ user: syntheticUser, expiresAt: Date.now() + 86400000 }));
+          localStorage.setItem(lastUserKey, JSON.stringify(syntheticUser));
+          const { setKylrixPulse } = await import('@/lib/appwrite/client');
+          setKylrixPulse(syntheticUser);
+        } catch {}
+      }
+
       // clear volatile in-memory caches (RxDB already segregated per _acc_<id>)
       try { 
         sessionStorage.clear(); 
@@ -316,7 +339,6 @@ export function LoginDrawer() {
         const { clearSessionProjectsList } = await import('@/lib/projects/projects-cache');
         clearSessionProjectsList();
       } catch {}
-      // Instant UX: reload to rehydrate from new partition; future WebSocket per-partition keeps realtime.
       toast.success('Switched account');
       setTimeout(() => window.location.reload(), 220);
     } catch (e: any) {

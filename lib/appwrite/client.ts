@@ -254,7 +254,7 @@ function readLastLoggedInUser(): any | null {
     if (!canUseStorage()) return null;
     try {
         const pid = localStorage.getItem('kylrix:activePartition') || 'acc_default';
-        const lastUserRaw = localStorage.getItem(`kylrix_last_logged_in_user_${pid}`) || localStorage.getItem('kylrix_last_logged_in_user');
+        const lastUserRaw = localStorage.getItem(`kylrix_last_logged_in_user_${pid}`);
         if (!lastUserRaw) return null;
         return JSON.parse(lastUserRaw);
     } catch {
@@ -267,9 +267,9 @@ function readCurrentUserSnapshot() {
     try {
         const pid = localStorage.getItem('kylrix:activePartition') || 'acc_default';
         const cacheKey = `${CURRENT_USER_CACHE_KEY}_${pid}`;
-        const raw = localStorage.getItem(cacheKey) || localStorage.getItem(CURRENT_USER_CACHE_KEY);
+        const raw = localStorage.getItem(cacheKey);
         if (!raw) {
-            // Local-first: always prefer last known user for instant hydration.
+            // Local-first: check partition-scoped last user
             const lastUser = readLastLoggedInUser();
             if (lastUser) {
                 return { user: lastUser, expiresAt: Date.now() + CURRENT_USER_CACHE_TTL };
@@ -283,7 +283,6 @@ function readCurrentUserSnapshot() {
             if (lastUser) {
                 return { user: lastUser, expiresAt: Date.now() + CURRENT_USER_CACHE_TTL };
             }
-            // Keep expired snapshot for local-first UI; network verify refreshes later.
             return parsed;
         }
         return parsed;
