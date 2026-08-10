@@ -280,10 +280,8 @@ export const ChatList = ({
         const handleNuclear = async () => {
             try {
               if (isSecure) {
-                const res: any = await ChatService.nuclearWipe(conv.$id);
-                const newId = res?.regeneratedConversationId || res?.newConversationId;
-                if (newId) toast.success('Wiped — fresh hangout regenerated');
-                else toast.success('Conversation deleted');
+                await ChatService.nuclearWipe(conv.$id);
+                toast.success('Conversation permanently wiped');
               } else {
                 await deleteGhostThread(conv.$id);
                 toast.success('Thread wiped');

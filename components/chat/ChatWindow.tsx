@@ -910,37 +910,15 @@ export const ChatWindow = ({
                         const res = await ChatService.wipeMyFootprint(conversationId, currentUserId);
                         toast.success(`Removed ${res.count} messages and ${res.reactionsDeleted || 0} reactions for everyone`);
                     } else if (mode === 'nuclear') {
-                        const res: any = await ChatService.nuclearWipe(conversationId);
-                        // Server now regenerates fresh a/b or self chat; navigate to regenerated if provided
-                        const newId = res?.regeneratedConversationId || res?.newConversationId;
-                        if (newId) {
-                          toast.success("Conversation wiped — fresh hangout regenerated for same participants");
-                          // Invalidate old caches for old id, prime new
-                          try {
-                            const { LocalEngine } = await import('@/lib/services/LocalEngine');
-                            const { chatConversationCacheKey, chatMessagesCacheKey } = await import('@/lib/chat/local-chat-cache');
-                            await LocalEngine.cacheSet(chatConversationCacheKey(conversationId), null as any).catch(() => null);
-                            await LocalEngine.cacheSet(chatMessagesCacheKey(conversationId), []).catch(() => null);
-                          } catch {}
-                          router.push(`/connect/chats?c=${encodeURIComponent(newId)}`);
-                        } else {
-                          toast.success("Conversation permanently deleted for everyone");
-                          // Fallback client-side regeneration for same participants a/b or self
-                          try {
-                            const participants: string[] = Array.isArray((conversation as any)?.participants) && (conversation as any).participants.length ? (conversation as any).participants : [currentUserId];
-                            const unique = Array.from(new Set(participants.filter(Boolean)));
-                            const isSelf = unique.length === 1 && unique[0] === currentUserId;
-                            // Self: [user], a/b: [user, other]
-                            if (isSelf || unique.length >= 2) {
-                              const created: any = await ChatService.createConversation(unique, 'direct').catch(() => null);
-                              if (created?.$id) {
-                                router.push(`/connect/chats?c=${encodeURIComponent(created.$id)}`);
-                                return;
-                              }
-                            }
-                          } catch {}
-                          router.push('/connect/chats');
-                        }
+                        await ChatService.nuclearWipe(conversationId);
+                        toast.success("Conversation permanently wiped");
+                        try {
+                          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+                          const { chatConversationCacheKey, chatMessagesCacheKey } = await import('@/lib/chat/local-chat-cache');
+                          await LocalEngine.cacheSet(chatConversationCacheKey(conversationId), null as any).catch(() => null);
+                          await LocalEngine.cacheSet(chatMessagesCacheKey(conversationId), []).catch(() => null);
+                        } catch {}
+                        router.push('/connect/chats');
                         return;
                     }
                     await loadMessages();

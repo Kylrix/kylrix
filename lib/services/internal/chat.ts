@@ -359,64 +359,7 @@ export async function nuclearWipeConversationInternal(payload: {
     throw new Error('Forbidden: Not a participant');
   }
 
-  const isGroupOrChannel = String(conversation?.type || '').toLowerCase() === 'group' || String(conversation?.type || '').toLowerCase() === 'channel';
-  const convType = String(conversation?.type || 'direct').toLowerCase();
-
-  const wipeResult: any = await deleteConversationFullyInternal(payload);
-
-  // Entirely regenerate for same participants (direct, group, channel)
-  try {
-    const uniqueParticipants = Array.from(new Set(participantIds.map((id: any) => String(id).trim()).filter(Boolean)));
-    const regenerateParticipants = uniqueParticipants.length ? uniqueParticipants : [verifiedActorId];
-    const isSelfRegen = regenerateParticipants.length === 1 && regenerateParticipants[0] === verifiedActorId;
-    const newConversationId = ID.unique();
-    const now = new Date().toISOString();
-    const conversationData: any = {
-      type: convType,
-      participants: regenerateParticipants,
-      creatorId: verifiedActorId,
-      name: conversation?.name || null,
-      description: conversation?.description || null,
-      avatarUrl: conversation?.avatarUrl || null,
-      avatar: conversation?.avatar || null,
-      isEncrypted: Boolean(conversation?.isEncrypted),
-      createdAt: now,
-      updatedAt: now,
-      lastMessageAt: null,
-      lastMessageId: null,
-      lastMessageText: null,
-    };
-    const permissions = regenerateParticipants.map((uid: string) => Permission.read(Role.user(uid)));
-    // Create fresh conversation row
-    await databases.createRow(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, newConversationId, conversationData, permissions).catch(async () => {
-      // Fallback without explicit permissions if RLS blocks
-      await databases.createRow(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, newConversationId, conversationData).catch(() => null);
-    });
-    // Recreate member rows (covers both self and a/b, Teams cap 16 not hit for direct)
-    for (const uid of regenerateParticipants) {
-      await databases.createRow(
-        CHAT_DB_ID,
-        CONVERSATION_MEMBERS_TABLE_ID,
-        ID.unique(),
-        {
-          conversationId: newConversationId,
-          userId: uid,
-          role: uid === verifiedActorId ? 'owner' : 'member',
-          joinedAt: now,
-        },
-        [Permission.read(Role.user(uid)), Permission.read(Role.user(verifiedActorId))]
-      ).catch(() => null);
-    }
-    return {
-      ...wipeResult,
-      regeneratedConversationId: newConversationId,
-      regeneratedParticipants: regenerateParticipants,
-      regeneratedIsSelf: isSelfRegen,
-    };
-  } catch (regenErr) {
-    console.warn('[nuclearWipe] regeneration failed, wipe still succeeded', (regenErr as any)?.message);
-    return wipeResult;
-  }
+  return await deleteConversationFullyInternal(payload);
 }
 
 export async function toggleReactionInternal(payload: {
