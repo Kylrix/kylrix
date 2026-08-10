@@ -312,6 +312,20 @@ export function LoginDrawer() {
       const { getAccount } = await import('@/lib/account/vault');
       const targetAcct = getAccount(targetId);
 
+      // 0. Persist the current user's active workspace before switching away so it's remembered on switch-back
+      if (user?.$id) {
+        try {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          // Read current active workspace from LocalEngine (WorkspaceContext keeps it in sync there)
+          const currentWorkspaceCacheKey = `kylrix_active_workspace_${user.$id}`;
+          const alreadyStored = await LocalEngine.cacheGet<string>(currentWorkspaceCacheKey);
+          // Only write the personal workspace as default if nothing is stored (don't overwrite a real preference)
+          if (!alreadyStored) {
+            await LocalEngine.cacheSet(currentWorkspaceCacheKey, user.$id);
+          }
+        } catch {}
+      }
+
       if (!targetAcct?.sessionSecret || !targetAcct?.sessionId) {
         // No stored session — need fresh login for target account
         document.body.removeChild(blanket);
@@ -338,6 +352,19 @@ export function LoginDrawer() {
         if (typeof clearThreadsListMemory === 'function') (clearThreadsListMemory as any)();
         const { clearSessionProjectsList } = await import('@/lib/projects/projects-cache');
         clearSessionProjectsList();
+      } catch {}
+
+      // 3.5 Resolve and pre-write the target user's active workspace before reload
+      //     so WorkspaceContext mounts instantly with the correct workspace, not the old user's
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const workspaceCacheKey = `kylrix_active_workspace_${targetId}`;
+        const storedWorkspace = await LocalEngine.cacheGet<string>(workspaceCacheKey);
+        if (!storedWorkspace || typeof storedWorkspace !== 'string' || !storedWorkspace.trim()) {
+          // No stored preference yet — pre-set to the user's own personal workspace (userId = personal workspace id)
+          await LocalEngine.cacheSet(workspaceCacheKey, targetId);
+        }
+        // If there IS a stored workspace, leave it as-is — that's the user's last known workspace
       } catch {}
 
       // 4. Full page reload — cleanest possible context flush
