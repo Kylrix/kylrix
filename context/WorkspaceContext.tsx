@@ -204,6 +204,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         void updatePreferences({ activeWorkspaceId: trimmed });
       }
     }, 800);
+    // Workspace → objects: bust DataNexus for 6 workspace-scoped kinds so cards re-filter
+    // (tags are global, excluded). Isolated from account switcher — no login drawer trigger.
+    void (async () => {
+      try {
+        const { projectObjectsKindCacheKey } = await import('@/lib/projects/projects-cache');
+        const { invalidateCache } = await import('@/lib/ecosystem/nexus-fetcher');
+        for (const k of ['note', 'form', 'goal', 'event', 'credential', 'totp'] as const) {
+          try { invalidateCache(projectObjectsKindCacheKey(trimmed, k)); } catch {}
+        }
+      } catch {}
+    })();
   }, [ACTIVE_WORKSPACE_CACHE_KEY, user?.$id, updatePreferences]);
 
   const activeWorkspace = useMemo<WorkspaceItem>(() => {

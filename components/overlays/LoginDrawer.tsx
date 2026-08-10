@@ -349,12 +349,20 @@ export function LoginDrawer() {
       if (!cached?.secret && !cached?.jwt) {
         // Fallback: try server-minted custom token via Admin SDK
         try {
-          const { mintSessionForUserAction } = await import('@/lib/actions/auth-actions');
+          const { mintSessionForUserAction } = await import('@/lib/actions/account-switch');
           const minted = await (mintSessionForUserAction as any)(targetId);
           if (minted?.success && minted?.secret) {
+            await account.deleteSession('current').catch(() => {});
             await account.createSession({ userId: targetId, secret: minted.secret });
             const { setActivePartitionId } = await import('@/lib/account/partition');
             setActivePartitionId(`_acc_${targetId}` as any);
+            try {
+              const freshJwt = await account.createJWT().then((r: any) => r.jwt).catch(() => null);
+              if (freshJwt) {
+                const { storeAccountSession } = await import('@/lib/account/vault');
+                await storeAccountSession(targetId, { secret: minted.secret, jwt: freshJwt, sessionId: `minted_${targetId}` });
+              }
+            } catch {}
             try { sessionStorage.clear(); const { invalidateCurrentUserCache } = await import('@/lib/appwrite/client'); invalidateCurrentUserCache(); } catch {}
             toast.success('Switched account');
             setTimeout(() => window.location.reload(), 180);
@@ -370,9 +378,40 @@ export function LoginDrawer() {
       // 1. Restore the target account's Appwrite session using cached secret/jwt
       // Use server-minted escalation pattern like settings mintDailyLoginSecure: fresh JWT via Admin SDK
       try { await account.deleteSession('current').catch(() => {}); } catch {}
-      if (cached.secret) {
+      // Always prefer minting fresh secret via Admin SDK (secret is one-time, JWT may be expired if reused)
+      let freshSecret: string | null = null;
+      let source: 'mint' | 'cached' = 'cached';
+      try {
+        const { mintSessionForUserAction, createSessionFromJWTAction } = await import('@/lib/actions/account-switch');
+        // Try JWT-based mint first if we have JWT (more secure, proves possession)
+        if (cached.jwt) {
+          const res = await (createSessionFromJWTAction as any)(cached.jwt).catch(() => null);
+          if (res?.success && res?.secret) {
+            freshSecret = res.secret;
+            source = 'mint';
+          }
+        }
+        // Fallback: direct Admin mint by userId (works even if JWT expired)
+        if (!freshSecret) {
+          const minted = await (mintSessionForUserAction as any)(targetId).catch(() => null);
+          if (minted?.success && minted?.secret) {
+            freshSecret = minted.secret;
+            source = 'mint';
+          }
+        }
+      } catch {}
+      if (freshSecret) {
+        await account.createSession({ userId: targetId, secret: freshSecret });
+        try {
+          const freshJwt = await account.createJWT().then((r: any) => r.jwt).catch(() => null);
+          if (freshJwt) {
+            const { storeAccountSession } = await import('@/lib/account/vault');
+            await storeAccountSession(targetId, { secret: freshSecret, jwt: freshJwt, sessionId: `minted_${targetId}` });
+          }
+        } catch {}
+      } else if (cached.secret) {
+        // Last resort: try cached one-time secret directly (may fail if already consumed)
         await account.createSession({ userId: targetId, secret: cached.secret });
-        // Immediately mint fresh JWT for new session (cached JWT is likely expired)
         try {
           const freshJwt = await account.createJWT().then((r: any) => r.jwt).catch(() => null);
           if (freshJwt) {
@@ -381,31 +420,7 @@ export function LoginDrawer() {
           }
         } catch {}
       } else if (cached.jwt) {
-        // Only JWT cached — try server Admin SDK to mint fresh secret, then createSession
-        let mintedSecret: string | null = null;
-        try {
-          const { createSessionFromJWTAction, mintSessionForUserAction } = await import('@/lib/actions/auth-actions');
-          // Prefer Admin SDK mint via stored jwt
-          const res = await (createSessionFromJWTAction as any)(cached.jwt).catch(() => null);
-          if (res?.success && res?.secret) mintedSecret = res.secret;
-          else {
-            const minted = await (mintSessionForUserAction as any)(targetId).catch(() => null);
-            if (minted?.success && minted?.secret) mintedSecret = minted.secret;
-          }
-        } catch {}
-        if (mintedSecret) {
-          await account.createSession({ userId: targetId, secret: mintedSecret });
-          try {
-            const freshJwt = await account.createJWT().then((r: any) => r.jwt).catch(() => null);
-            if (freshJwt) {
-              const { storeAccountSession } = await import('@/lib/account/vault');
-              await storeAccountSession(targetId, { secret: mintedSecret, jwt: freshJwt, sessionId: `minted_${targetId}` });
-            }
-          } catch {}
-        } else {
-          // Last resort: set JWT header for secure-ops (will still fail for cookie-based getActor, so throw)
-          throw new Error('Unauthorized: cached session expired and server mint failed');
-        }
+        throw new Error('Unauthorized: cached session expired and server mint failed');
       }
 
       // 2. Flip partition pointer in localStorage
