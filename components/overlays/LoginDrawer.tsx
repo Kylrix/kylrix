@@ -442,7 +442,6 @@ export function LoginDrawer() {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const { warmProjectsList } = await import('@/lib/projects/warm-projects-list');
-        const { getSessionProjectsList } = await import('@/lib/projects/projects-cache');
         const workspaceCacheKey = `kylrix_active_workspace_${targetId}`;
         const storedWorkspace = await LocalEngine.cacheGet<string>(workspaceCacheKey);
 
@@ -523,7 +522,11 @@ export function LoginDrawer() {
       } catch {}
 
       // 4. Full page reload — cleanest possible context flush
-      toast.success(`Switched to ${targetAcct.name || targetAcct.email || 'account'}`);
+      try {
+        const { getAccount } = await import('@/lib/account/vault');
+        const _acct = getAccount(targetId);
+        toast.success(`Switched to ${_acct?.name || _acct?.email || 'account'}`);
+      } catch { toast.success('Switched account'); }
       close();
       setTimeout(() => window.location.reload(), 120);
     } catch (_e: any) {

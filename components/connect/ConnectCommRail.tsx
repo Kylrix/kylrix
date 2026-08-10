@@ -35,8 +35,9 @@ type RailItem = {
   id: string;
   name: string;
   avatar?: string | null;
-  kind: 'secure' | 'thread';
+  kind: 'secure' | 'thread' | 'kylie';
   subtitle?: string;
+  isKylie?: boolean;
 };
 
 function mapSecure(rows: any[]): RailItem[] {

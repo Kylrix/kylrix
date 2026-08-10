@@ -1911,7 +1911,7 @@ export default function ConnectTopbar({
           slotProps={{
             backdrop: {
               sx: {
-                top: `${TOPBAR_LAYOUT.height}px`,
+                top: `88px`,
                 backdropFilter: 'none',
                 WebkitBackdropFilter: 'none',
                 bgcolor: 'rgba(0,0,0,0.4)'

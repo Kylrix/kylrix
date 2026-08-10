@@ -27,9 +27,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { FormsService } from '@/lib/services/forms';
-import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { hasPaidKylrixPlan } from '@/lib/utils';
 import { listNotesByUser } from '@/lib/appwrite/note';
 import { tasks } from '@/lib/kylrixflow';
 import { attachObjectToProject } from '@/lib/projects/object-attachment';
@@ -54,24 +52,10 @@ export function NewProjectDrawer() {
   const isOpen = activeContent === 'new-project';
   const { showSuccess, showError } = useToast();
   const { user } = useAuth();
-  const { openProUpgrade } = useProUpgrade();
   const { refreshWorkspaces } = useWorkspace();
 
   const template = drawerData?.template;
   const onSuccess = drawerData?.onCreated as ((project: any) => void) | undefined;
-
-  const [ownedProjectsCount, setOwnedProjectsCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (isOpen && user?.$id) {
-      ProjectsService.listProjects(true).then((res) => {
-        const owned = (res.rows || []).filter((p: any) => p.ownerId === user.$id).length;
-        setOwnedProjectsCount(owned);
-      }).catch(() => {});
-    } else if (!isOpen) {
-      setOwnedProjectsCount(null);
-    }
-  }, [isOpen, user?.$id]);
 
 
 
@@ -140,16 +124,6 @@ export function NewProjectDrawer() {
     }
   }, [isOpen, template, fetchResources, drawerData]);
 
-  const handleResourceSelect = (id: string) => {
-    setSelectedResourceId(id);
-    const selected = resources.find(r => r.$id === id);
-    if (selected) {
-        setTitle(selected.title || selected.name || template?.title);
-        setSummary(selected.description || selected.summary || template?.summary);
-    }
-    setStep(2);
-  };
-
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!title.trim() || !user?.$id) return;
@@ -217,7 +191,6 @@ export function NewProjectDrawer() {
     }
   };
 
-  const fontUi = 'var(--font-satoshi)';
   const fontDisplay = 'var(--font-clash)';
 
   if (!isOpen) return null;
@@ -347,7 +320,7 @@ export function NewProjectDrawer() {
               <TextField
                 fullWidth
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e: any) => setTitle(e.target.value)}
                 placeholder="e.g. Q3 Product Launch"
                 variant="outlined"
                 sx={{
@@ -372,7 +345,7 @@ export function NewProjectDrawer() {
                 multiline
                 rows={3}
                 value={summary}
-                onChange={(e) => setSummary(e.target.value)}
+                onChange={(e: any) => setSummary(e.target.value)}
                 placeholder="Brief description of this workspace's goals..."
                 variant="outlined"
                 sx={{

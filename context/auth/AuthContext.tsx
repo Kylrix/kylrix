@@ -326,12 +326,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const result = await account.createEmailToken(ID.unique(), email);
     return result.userId;
   }, []);
-  const verifyEmailOTP = useCallback(async (_email: string, userId: string, secret: string) => {
-    const session = await account.createSession({ userId, secret });
+  const verifyEmailOTP = useCallback(async (_email: string, userId: string, secret: string): Promise<void> => {
+    const session: any = await account.createSession({ userId, secret });
     // Store the session secret so this account can be restored on switch without re-auth
     try {
       const { storeAccountSession } = await import('@/lib/account/vault');
-      storeAccountSession(session.userId, session.$id, session.secret);
+      await storeAccountSession(session.userId, { secret: session.secret, sessionId: session.$id, jwt: await account.createJWT().then((r: any) => r.jwt).catch(() => undefined) });
     } catch {}
     try {
       await assertAuthenticatedAccount();
@@ -342,6 +342,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       throw error;
     }
+    return;
     return session;
   }, [refreshUser]);
 
