@@ -1644,8 +1644,8 @@ export const ChatList = ({
                                                         status={conv.type === 'direct' && conv.otherUserId ? globalPresence?.[conv.otherUserId]?.state : undefined}
                                                     />
                                                 ) : conv.linkedResourceType ? (
-                                                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#0A0908] border border-white/[0.06]">
-                                                        <span className="font-clash font-black text-white text-[13px] tracking-tight leading-none">
+                                                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#F59E0B]/10 border border-[#F59E0B]/30 text-[#F59E0B]">
+                                                        <span className="font-clash font-black text-[#F59E0B] text-[13px] tracking-tight leading-none">
                                                             {(() => {
                                                                 const src = conv.linkedResourceName || conv.name || conv.linkedResourceType || 'H';
                                                                 const parts = String(src).trim().split(/\s+/).filter(Boolean);
