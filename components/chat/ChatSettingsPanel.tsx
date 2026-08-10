@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Download, Trash2, Zap, Key, Users, Shield, X, Info } from 'lucide-react';
+import { Download, Trash2, Zap, Key, Users, Shield, X, Info, Copy } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '@/lib/auth';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 
@@ -159,9 +159,22 @@ export function ChatSettingsPanel({ conversation, conversationId, isSelf, messag
             <Info size={13} /> Hangout Metadata
           </h3>
           <div className="space-y-1.5 text-xs font-mono text-white/60">
-            <div className="flex justify-between gap-2">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-white/30">ID</span>
-              <span className="truncate max-w-[180px] text-white/80">{conversationId}</span>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="truncate max-w-[180px] text-white/80">{conversationId}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(conversationId);
+                    toast.success('Hangout ID copied');
+                  }}
+                  className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all"
+                  title="Copy Hangout ID"
+                >
+                  <Copy size={11} />
+                </button>
+              </div>
             </div>
             <div className="flex justify-between">
               <span className="text-white/30">Messages</span>

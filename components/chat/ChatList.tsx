@@ -280,13 +280,25 @@ export const ChatList = ({
         const handleNuclear = async () => {
             try {
               if (isSecure) {
-                await ChatService.nuclearWipe(conv.$id);
-                toast.success('Conversation permanently wiped');
+                const res: any = await ChatService.nuclearWipe(conv.$id);
+                ChatService.invalidateConversationsListCache(user?.$id);
+                try {
+                  const { LocalEngine } = await import('@/lib/services/LocalEngine');
+                  const { chatConversationCacheKey, chatMessagesCacheKey } = await import('@/lib/chat/local-chat-cache');
+                  await LocalEngine.cacheSet(chatConversationCacheKey(conv.$id), null as any).catch(() => null);
+                  await LocalEngine.cacheSet(chatMessagesCacheKey(conv.$id), []).catch(() => null);
+                } catch {}
+                if (res?.regeneratedConversationId) {
+                  toast.success('Self-chat wiped & fresh room ready');
+                } else {
+                  toast.success('Conversation permanently wiped');
+                }
               } else {
                 await deleteGhostThread(conv.$id);
                 toast.success('Thread wiped');
               }
               setConversations(prev => prev.filter(c => c.$id !== conv.$id));
+              void loadConversations({ forceRefresh: true });
             } catch (e: any) { toast.error(e?.message || 'Wipe failed'); }
         };
         if (isDesktop) {

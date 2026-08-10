@@ -361,6 +361,14 @@ export async function nuclearWipeConversationInternal(payload: {
 
   const wipeResult: any = await deleteConversationFullyInternal(payload);
 
+  // Clear internal/local caches for wiped conversation
+  try {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const { chatConversationCacheKey, chatMessagesCacheKey } = await import('@/lib/chat/local-chat-cache');
+    await LocalEngine.cacheSet(chatConversationCacheKey(payload.conversationId), null as any).catch(() => null);
+    await LocalEngine.cacheSet(chatMessagesCacheKey(payload.conversationId), []).catch(() => null);
+  } catch {}
+
   const isSelfChat = participantIds.length === 1 && participantIds[0] === verifiedActorId;
 
   // Self-chat (notes to self): immediately regenerate clean fresh self-chat
