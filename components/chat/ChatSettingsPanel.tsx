@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState } from 'react';
 import { Download, Trash2, Zap, Key, Users, Shield, X, Info, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/lib/auth';
