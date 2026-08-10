@@ -327,8 +327,8 @@ const isSpecificPostPage = useMemo(
       {!isDesktopShell && <AppDynamicSidebarPortal />}
 
       {/* --- LAYER 2: OVERLAYS --- */}
-      {/* Agentic / wallet / unified → NativeSidebarBridge; mobile details → Overlay/DynamicSidebar */}
-      {!isDesktopShell && unifiedDrawerActive !== 'navbar' && <UnifiedBottomDrawer />}
+      {/* Agentic / wallet / unified → NativeSidebarBridge; mobile / modal overlays → UnifiedBottomDrawer */}
+      {unifiedDrawerActive !== 'navbar' && (!isDesktopShell || unifiedDrawerActive === 'login') && <UnifiedBottomDrawer />}
       {unifiedDrawerActive === 'moment-composer' && (
         <MomentComposerDrawer onClose={() => closeUnified()} />
       )}
