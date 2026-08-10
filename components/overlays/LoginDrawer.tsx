@@ -13,6 +13,8 @@ import Link from 'next/link';
 import { account } from '@/lib/appwrite/client';
 import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction, checkEmailAuthStatusAction } from '@/lib/actions/auth-actions';
 import { performNativePasskeyAuthentication } from '@/lib/webauthn-utils';
+import { listOtherAccounts, upsertAccount, getActiveAccountId } from '@/lib/account/vault';
+import { setActivePartitionId } from '@/lib/account/partition';
 
 type LoginStep = 'initial' | 'email' | 'otp';
 
@@ -31,10 +33,11 @@ function useIsDesktop() {
 }
 
 export function LoginDrawer() {
-  const { activeContent, close } = useUnifiedDrawer();
-  const { loginWithEmailOTP, verifyEmailOTP, refreshUser } = useAuth();
+  const { activeContent, drawerData, close } = useUnifiedDrawer();
+  const { loginWithEmailOTP, verifyEmailOTP, refreshUser, user } = useAuth();
   const { setIsDrawerOpen } = useDrawerState();
   const isDesktop = useIsDesktop();
+  const isSwitchMode = drawerData?.mode === 'switch';
 
   const [step, setStep] = useState<LoginStep>('initial');
   const [email, setEmail] = useState('');
@@ -53,6 +56,8 @@ export function LoginDrawer() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [useOTPAlternative, setUseOTPAlternative] = useState(false);
+  const [showAddAccount, setShowAddAccount] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false);
 
   useEffect(() => {
     if (step !== 'email') {
@@ -173,6 +178,17 @@ export function LoginDrawer() {
 
   const isOpen = activeContent === 'login';
 
+  // keep vault in sync with current user (virtual partition)
+  useEffect(() => {
+    if (user?.$id) {
+      upsertAccount({ id: user.$id, name: user.name ?? null, email: user.email ?? null, username: (user as any).username ?? null, addedAt: Date.now() });
+    }
+  }, [user?.$id]);
+
+  useEffect(() => {
+    if (isOpen && isSwitchMode) setShowAddAccount(false);
+  }, [isOpen, isSwitchMode]);
+
   useEffect(() => {
     setIsDrawerOpen(isOpen);
     return () => setIsDrawerOpen(false);
@@ -275,10 +291,40 @@ export function LoginDrawer() {
 
   const handleClose = () => {
     handleReset();
+    setShowAddAccount(false);
     close();
   };
 
+  const handleSwitchTo = useCallback(async (targetId: string) => {
+    if (!targetId || targetId === user?.$id || isSwitching) return;
+    setIsSwitching(true);
+    try {
+      // opaque blanket prevents flash of stale partition
+      const blanket = document.createElement('div');
+      blanket.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#0A0908;opacity:1;transition:opacity 180ms';
+      document.body.appendChild(blanket);
+      // flip partition pointer — 1:1 mirror, no rows moved
+      setActivePartitionId(`_acc_${targetId}` as any);
+      // clear volatile in-memory caches (RxDB already segregated per _acc_<id>)
+      try { sessionStorage.clear(); } catch {}
+      // For now Appwrite single-session: vault holds identities, session swap happens on next login.
+      // Instant UX: reload to rehydrate from new partition; future WebSocket per-partition keeps realtime.
+      toast.success('Switched account');
+      setTimeout(() => window.location.reload(), 220);
+    } catch (e: any) {
+      toast.error(e?.message || 'Switch failed');
+      setIsSwitching(false);
+    }
+  }, [user?.$id, isSwitching]);
+
+  const handleContinueCurrent = useCallback(() => {
+    handleClose();
+  }, []);
+
   if (!isOpen) return null;
+
+  const currentLabel = user?.name || (user as any)?.username || user?.email || 'Current account';
+  const otherAccounts = isSwitchMode ? listOtherAccounts(user?.$id) : [];
 
   const renderStep = () => {
     switch (step) {
@@ -492,7 +538,62 @@ export function LoginDrawer() {
             </button>
           </div>
 
-          {renderStep()}
+          {isSwitchMode && !showAddAccount ? (
+            <div className="space-y-5 animate-fadeIn">
+              {/* Switch account list */}
+              {otherAccounts.length > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-white/50 font-mono m-0">Switch account</p>
+                  <div className="space-y-2">
+                    {otherAccounts.map(acct => (
+                      <button
+                        key={acct.id}
+                        type="button"
+                        onClick={() => handleSwitchTo(acct.id)}
+                        disabled={isSwitching}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:border-white/20 text-left transition-all disabled:opacity-50"
+                      >
+                        <div className="w-9 h-9 rounded-full bg-[#F59E0B] flex items-center justify-center text-black font-black text-sm shrink-0">
+                          {(acct.name || acct.username || acct.email || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-extrabold text-white truncate m-0">{acct.name || acct.username || acct.email}</p>
+                          {acct.email ? <p className="text-xs text-white/50 truncate m-0">{acct.email}</p> : null}
+                        </div>
+                        <span className="text-xs font-bold text-white/40">Switch</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-white/40 text-center py-2">No other accounts yet</p>
+              )}
+              <div className="h-px bg-white/[0.06]" />
+              <button
+                type="button"
+                onClick={() => setShowAddAccount(true)}
+                className="w-full h-[52px] rounded-2xl bg-white text-black font-black text-sm hover:bg-white/90 transition-colors"
+              >
+                Add account
+              </button>
+              <button
+                type="button"
+                onClick={handleContinueCurrent}
+                className="w-full h-[52px] rounded-2xl bg-white/[0.06] border border-white/[0.08] text-white font-bold text-sm hover:bg-white/[0.10] transition-colors"
+              >
+                Continue with {currentLabel}
+              </button>
+            </div>
+          ) : isSwitchMode && showAddAccount ? (
+            <div className="space-y-3">
+              <button type="button" onClick={() => setShowAddAccount(false)} className="text-xs font-bold text-white/60 hover:text-white flex items-center gap-1">
+                <ArrowLeft className="w-3.5 h-3.5" /> Back to switch
+              </button>
+              {renderStep()}
+            </div>
+          ) : (
+            renderStep()
+          )}
 
           {/* Footer policy links */}
           <p className="text-center text-[10px] text-[#9B9691] mt-8 font-medium font-satoshi leading-normal">
