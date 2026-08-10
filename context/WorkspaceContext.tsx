@@ -189,7 +189,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const trimmed = String(id || '').trim();
     if (!trimmed) return;
     if (trimmed === lastSetIdRef.current) return;
-    const previousId = lastSetIdRef.current;
     lastSetIdRef.current = trimmed;
     hydratedRef.current = true;
     setActiveWorkspaceIdState(trimmed);
@@ -205,55 +204,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         void updatePreferences({ activeWorkspaceId: trimmed });
       }
     }, 800);
-    // ── Cascading: workspace → workspace-scoped objects (fail-closed) ──
-    // 6 kinds: ideas(notes), forms, goals(tasks), events, vault credentials, totp
-    // tags are global (account-scoped) → excluded
-    void (async () => {
-      const workspaceScopedKinds = ['note', 'form', 'goal', 'event', 'credential', 'totp'] as const;
-      try {
-        const { projectObjectsKindCacheKey } = await import('@/lib/projects/projects-cache');
-        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-        // Prerequisite: ensure LocalEngine + RxDB can switch; if either fails, revert workspace
-        for (const kind of workspaceScopedKinds) {
-          const oldKey = previousId ? projectObjectsKindCacheKey(previousId, kind) : null;
-          const newKey = projectObjectsKindCacheKey(trimmed, kind);
-          try {
-            // Bust stale caches so next read hits new workspace's local copy
-            const { LocalEngine } = await import('@/lib/services/LocalEngine');
-            if (oldKey) {
-              // keep old cache intact for switch-back; just invalidate DataNexus view
-              void LocalEngine.cacheGet(newKey).catch(() => {});
-            }
-            // Prefetch new workspace's local copy (no throw if empty)
-            await LocalEngine.cacheGet(newKey).catch(() => null);
-          } catch {}
-          try {
-            const db = await getRxDB().catch(() => null);
-            if (db) {
-              // Ensure RxDB query for new workspace will not return stale rows from previous workspace
-              // (load-local-* already filters by userId; workspace filter is via projectObjects linking)
-              void db.notes?.find({ selector: { projectId: trimmed } } as any).exec().catch(() => {});
-            }
-          } catch {}
-        }
-        // Invalidate DataNexus entries for new workspace so hooks re-fetch
-        try {
-          const { invalidateCache } = await import('@/lib/ecosystem/nexus-fetcher');
-          for (const kind of workspaceScopedKinds) {
-            invalidateCache(projectObjectsKindCacheKey(trimmed, kind));
-          }
-        } catch {}
-      } catch (e) {
-        console.warn('[WorkspaceContext] Cascading object switch failed, reverting workspace:', e);
-        lastSetIdRef.current = previousId;
-        setActiveWorkspaceIdState(previousId || userId);
-        try {
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          if (previousId) await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, previousId);
-        } catch {}
-      }
-    })();
-  }, [ACTIVE_WORKSPACE_CACHE_KEY, user?.$id, updatePreferences, userId]);
+  }, [ACTIVE_WORKSPACE_CACHE_KEY, user?.$id, updatePreferences]);
 
   const activeWorkspace = useMemo<WorkspaceItem>(() => {
     const found = workspaces.find((w) => w.id === activeWorkspaceId);

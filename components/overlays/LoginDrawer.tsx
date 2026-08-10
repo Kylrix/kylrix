@@ -527,8 +527,6 @@ export function LoginDrawer() {
     handleClose();
   }, []);
 
-  if (!isOpen) return null;
-
   const currentLabel = user?.name || (user as any)?.username || user?.email || 'Current account';
   const otherAccounts = isSwitchMode ? listOtherAccounts(user?.$id) : [];
 
@@ -553,6 +551,8 @@ export function LoginDrawer() {
       toast.error(e?.message || 'Failed to remove account');
     }
   }, [user?.$id]);
+
+  if (!isOpen) return null;
 
   const renderStep = () => {
     switch (step) {
