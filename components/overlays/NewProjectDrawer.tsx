@@ -484,194 +484,240 @@ export function NewProjectDrawer() {
             </Stack>
           )}
         </Box>
-      </Box>;
+      </Box>
+    </Box>
+  );
 
-      {/* Visibility Selection Sub-Drawer */}
-      <Drawer
-        anchor="bottom"
-        open={isVisibilityDrawerOpen}
-        onClose={() => setIsVisibilityDrawerOpen(false)}
-        ModalProps={{ keepMounted: false, disableScrollLock: false }}
-        sx={{
-          '& .ob-drawer-panel': {
-            bgcolor: SURFACE_ASH,
-            borderTopLeftRadius: RADIUS_LARGE,
-            borderTopRightRadius: RADIUS_LARGE,
+  const visibilitySubDrawer = (
+    <Drawer
+      anchor="bottom"
+      open={isVisibilityDrawerOpen}
+      onClose={() => setIsVisibilityDrawerOpen(false)}
+      ModalProps={{ keepMounted: false, disableScrollLock: false }}
+      sx={{
+        '& .ob-drawer-panel': {
+          bgcolor: SURFACE_ASH,
+          borderTopLeftRadius: RADIUS_LARGE,
+          borderTopRightRadius: RADIUS_LARGE,
+          border: BORDER,
+          borderBottom: 0,
+          pb: 'max(24px, env(safe-area-inset-bottom))',
+          pt: 2,
+          px: { xs: 2.25, sm: 2.75 }}
+      }}
+    >
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+        <Typography component="span" sx={{ color: '#fff', fontWeight: 900, fontSize: '1.1rem', fontFamily: fontDisplay, letterSpacing: '-0.02em', lineHeight: 1.25 }}>
+          Project Visibility
+        </Typography>
+        <IconButton
+          onClick={() => setIsVisibilityDrawerOpen(false)}
+          sx={{
+            color: '#E8E6E3',
+            bgcolor: VOID,
             border: BORDER,
-            borderBottom: 0,
-            pb: 'max(24px, env(safe-area-inset-bottom))',
-            pt: 2,
-            px: { xs: 2.25, sm: 2.75 }}
-        }}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
-          <Typography component="span" sx={{ color: '#fff', fontWeight: 900, fontSize: '1.1rem', fontFamily: fontDisplay, letterSpacing: '-0.02em', lineHeight: 1.25 }}>
-            Project Visibility
-          </Typography>
-          <IconButton
-            onClick={() => setIsVisibilityDrawerOpen(false)}
-            sx={{
-              color: '#E8E6E3',
-              bgcolor: VOID,
-              border: BORDER,
-              '&:hover': { bgcolor: HOVER },
-              flexShrink: 0}}
-          >
-            <CloseIcon size={18} />
-          </IconButton>
-        </Stack>
+            '&:hover': { bgcolor: HOVER },
+            flexShrink: 0}}
+        >
+          <CloseIcon size={18} />
+        </IconButton>
+      </Stack>
 
-        <Stack spacing={2}>
-          {[
-            { id: 'private', label: 'Private', desc: 'Only you and explicitly added collaborators can access.', icon: Lock, color: TEXT_MUTED },
-            { id: 'public', label: 'Public', desc: 'Visible and searchable to the entire ecosystem and guests.', icon: Globe, color: '#10B981' }
-          ].map((opt) => {
-            const isSelected = visibility === opt.id;
-            return (
-              <Box
-                key={opt.id}
-                component="button"
-                type="button"
-                onClick={() => {
-                  setVisibility(opt.id as any);
-                  if (opt.id === 'public') {
-                    setIsGuest(true);
-                    setIsGuestExpanded(false);
-                  } else {
-                    setIsVisibilityDrawerOpen(false);
-                  }
-                }}
-                sx={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.5,
-                  px: 2.25,
-                  py: 1.75,
-                  borderRadius: '16px',
-                  bgcolor: isSelected ? 'rgba(99, 102, 241, 0.05)' : VOID,
-                  border: isSelected ? `1px solid ${SYSTEM_PRIMARY}` : BORDER,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  transition: BRAND_TRANSITION,
-                  '&:hover': { borderColor: isSelected ? SYSTEM_PRIMARY : '#4F4C49', bgcolor: isSelected ? 'rgba(99, 102, 241, 0.08)' : HOVER }}}
-              >
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: '12px',
-                    display: 'grid',
-                    placeItems: 'center',
-                    flexShrink: 0,
-                    bgcolor: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.05)'}}
-                >
-                  <opt.icon size={18} color={opt.color} />
-                </Box>
-                <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                  <Typography component="span" sx={{ fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.25, color: '#fff' }}>
-                    {opt.label}
-                  </Typography>
-                  <Typography component="span" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
-                    {opt.desc}
-                  </Typography>
-                </Box>
-                {isSelected && <Check size={20} color={SYSTEM_PRIMARY} style={{ flexShrink: 0 }} />}
-              </Box>
-            );
-          })}
-        </Stack>
-
-        {visibility === 'public' && (
-          <Box sx={{ border: BORDER, borderRadius: '16px', bgcolor: VOID, overflow: 'hidden', mt: 2 }}>
+      <Stack spacing={2}>
+        {[
+          { id: 'private', label: 'Private', desc: 'Only you and explicitly added collaborators can access.', icon: Lock, color: TEXT_MUTED },
+          { id: 'public', label: 'Public', desc: 'Visible and searchable to the entire ecosystem and guests.', icon: Globe, color: '#10B981' }
+        ].map((opt) => {
+          const isSelected = visibility === opt.id;
+          return (
             <Box
+              key={opt.id}
               component="button"
               type="button"
-              onClick={() => setIsGuestExpanded(!isGuestExpanded)}
+              onClick={() => {
+                setVisibility(opt.id as any);
+                if (opt.id === 'public') {
+                  setIsGuest(true);
+                  setIsGuestExpanded(false);
+                } else {
+                  setIsVisibilityDrawerOpen(false);
+                }
+              }}
               sx={{
                 width: '100%',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                p: 2,
-                bgcolor: 'transparent',
-                border: 0,
+                gap: 1.5,
+                px: 2.25,
+                py: 1.75,
+                borderRadius: '16px',
+                bgcolor: isSelected ? 'rgba(99, 102, 241, 0.05)' : VOID,
+                border: isSelected ? `1px solid ${SYSTEM_PRIMARY}` : BORDER,
+                textAlign: 'left',
                 cursor: 'pointer',
-                color: TEXT_MUTED,
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.01)' }
-              }}
+                transition: BRAND_TRANSITION,
+                '&:hover': { borderColor: isSelected ? SYSTEM_PRIMARY : '#4F4C49', bgcolor: isSelected ? 'rgba(99, 102, 241, 0.08)' : HOVER }}}
             >
-              <Typography component="span" sx={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: fontDisplay }}>
-                Advanced Access Control
-              </Typography>
-              {isGuestExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </Box>
-
-            {isGuestExpanded && (
-              <Box sx={{ p: 2, pt: 0, borderTop: `1px solid ${BORDER_HAIRLINE}`, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifySpace: 'space-between', gap: 2, mt: 2 }}>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography component="span" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#fff', display: 'block' }}>
-                      Anonymous Guest View
-                    </Typography>
-                    <Typography component="span" sx={{ fontSize: '0.68rem', color: TEXT_MUTED, display: 'block', mt: 0.5, maxWidth: 280, lineHeight: 1.4 }}>
-                      Allow anyone with the link to read project details without registering.
-                    </Typography>
-                  </Box>
-                  <Box
-                    component="button"
-                    type="button"
-                    onClick={() => setIsGuest(!isGuest)}
-                    sx={{
-                      width: 44,
-                      height: 24,
-                      borderRadius: 999,
-                      p: '2px',
-                      border: 0,
-                      cursor: 'pointer',
-                      bgcolor: isGuest ? SYSTEM_PRIMARY : 'rgba(255,255,255,0.08)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      transition: 'background-color 0.2s'}}
-                  >
-                    <Box
-                      sx={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: '50%',
-                        bgcolor: '#fff',
-                        boxShadow: 2,
-                        transform: isGuest ? 'translateX(20px)' : 'translateX(0px)',
-                        transition: 'transform 0.2s'}}
-                    />
-                  </Box>
-                </Box>
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '12px',
+                  display: 'grid',
+                  placeItems: 'center',
+                  flexShrink: 0,
+                  bgcolor: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.05)'}}
+              >
+                <opt.icon size={18} color={opt.color} />
               </Box>
-            )}
-          </Box>
-        )}
+              <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
+                <Typography component="span" sx={{ fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.25, color: '#fff' }}>
+                  {opt.label}
+                </Typography>
+                <Typography component="span" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                  {opt.desc}
+                </Typography>
+              </Box>
+              {isSelected && <Check size={20} color={SYSTEM_PRIMARY} style={{ flexShrink: 0 }} />}
+            </Box>
+          );
+        })}
+      </Stack>
 
-        {visibility === 'public' && (
-          <Button
-            fullWidth
-            onClick={() => setIsVisibilityDrawerOpen(false)}
+      {visibility === 'public' && (
+        <Box sx={{ border: BORDER, borderRadius: '16px', bgcolor: VOID, overflow: 'hidden', mt: 2 }}>
+          <Box
+            component="button"
+            type="button"
+            onClick={() => setIsGuestExpanded(!isGuestExpanded)}
             sx={{
-              mt: 3,
-              bgcolor: SYSTEM_PRIMARY,
-              color: '#fff',
-              fontWeight: 800,
-              fontSize: '0.88rem',
-              py: 1.5,
-              borderRadius: RADIUS_SMALL,
-              textTransform: 'none',
-              '&:hover': { bgcolor: SYSTEM_HOVER }
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              p: 2,
+              bgcolor: 'transparent',
+              border: 0,
+              cursor: 'pointer',
+              color: TEXT_MUTED,
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.01)' }
             }}
           >
-            Confirm Visibility
-          </Button>
-        )}
-      </Drawer>
+            <Typography component="span" sx={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: fontDisplay }}>
+              Advanced Access Control
+            </Typography>
+            {isGuestExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </Box>
+
+          {isGuestExpanded && (
+            <Box sx={{ p: 2, pt: 0, borderTop: `1px solid ${BORDER_HAIRLINE}`, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifySpace: 'space-between', gap: 2, mt: 2 }}>
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography component="span" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#fff', display: 'block' }}>
+                    Anonymous Guest View
+                  </Typography>
+                  <Typography component="span" sx={{ fontSize: '0.68rem', color: TEXT_MUTED, display: 'block', mt: 0.5, maxWidth: 280, lineHeight: 1.4 }}>
+                    Allow anyone with the link to read project details without registering.
+                  </Typography>
+                </Box>
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => setIsGuest(!isGuest)}
+                  sx={{
+                    width: 44,
+                    height: 24,
+                    borderRadius: 999,
+                    p: '2px',
+                    border: 0,
+                    cursor: 'pointer',
+                    bgcolor: isGuest ? SYSTEM_PRIMARY : 'rgba(255,255,255,0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    transition: 'background-color 0.2s'}}
+                >
+                  <Box
+                    sx={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      bgcolor: '#fff',
+                      boxShadow: 2,
+                      transform: isGuest ? 'translateX(20px)' : 'translateX(0px)',
+                      transition: 'transform 0.2s'}}
+                  />
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </Box>
+      )}
+
+      {visibility === 'public' && (
+        <Button
+          fullWidth
+          onClick={() => setIsVisibilityDrawerOpen(false)}
+          sx={{
+            mt: 3,
+            bgcolor: SYSTEM_PRIMARY,
+            color: '#fff',
+            fontWeight: 800,
+            fontSize: '0.88rem',
+            py: 1.5,
+            borderRadius: RADIUS_SMALL,
+            textTransform: 'none',
+            '&:hover': { bgcolor: SYSTEM_HOVER }
+          }}
+        >
+          Confirm Visibility
+        </Button>
+      )}
     </Drawer>
+  );
+
+  if (isDesktop) {
+    return (
+      <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', bgcolor: SURFACE_ASH }}>
+        {mainFormContent}
+        {visibilitySubDrawer}
+      </Box>
+    );
+  }
+
+  return (
+    <>
+      <Drawer
+        anchor="bottom"
+        open={isOpen}
+        onClose={close}
+        ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
+        sx={{
+          '& .ob-drawer-panel': {
+            height: isExpanded ? '92dvh' : '60dvh',
+            minHeight: '60dvh',
+            maxHeight: '92dvh',
+            transition: BRAND_TRANSITION,
+            borderTopLeftRadius: RADIUS_LARGE,
+            borderTopRightRadius: RADIUS_LARGE,
+            border: BORDER,
+            borderBottom: 0,
+            bgcolor: SURFACE_ASH,
+            boxShadow: 'none',
+            backgroundImage: 'none',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'}}}
+      >
+        <Box 
+            sx={{ display: 'flex', justifyContent: 'center', py: 1.5, cursor: 'pointer' }}
+            onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
+        </Box>
+        {mainFormContent}
+      </Drawer>
+      {visibilitySubDrawer}
+    </>
   );
 }
