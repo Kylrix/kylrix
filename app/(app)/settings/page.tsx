@@ -66,6 +66,7 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { useNativeSidebarOptional } from '@/context/RightRailContext';
+import { DeleteAccountFlow } from '@/components/settings/DeleteAccountFlow';
 
 // Inline Custom Telegram Icon SVG for lucide alignment
 function TelegramIcon({ className = "w-5 h-5" }: { className?: string }) {
@@ -506,19 +507,6 @@ function SettingsPageInner() {
         }
     };
 
-    const handleDeleteAccount = async () => {
-        try {
-            toast.loading('Purging identity data...', { id: 'delete-purge' });
-            const { executeMasterPurgeSecure } = await import('@/lib/actions/secure-ops');
-            await executeMasterPurgeSecure();
-            await account.deleteSession('current').catch(() => {});
-            toast.success('Identity purged. Redirecting...', { id: 'delete-purge' });
-            router.push('/');
-        } catch (err: any) {
-            toast.error(err.message || 'Purge failed.', { id: 'delete-purge' });
-        }
-    };
-
     const triggerExport = () => {
         openDrawer('delete-confirm', {
             title: 'Export Account Data',
@@ -529,12 +517,10 @@ function SettingsPageInner() {
     };
 
     const triggerDeleteAccount = () => {
-        openDrawer('delete-confirm', {
-            title: 'Delete Account?',
-            description: 'WARNING: This will permanently delete your account and all associated vault/metadata. This action cannot be undone. Are you sure you want to proceed?',
-            confirmLabel: 'Delete Permanently',
-            onConfirm: handleDeleteAccount
-        });
+        const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+        const node = <DeleteAccountFlow onClose={isDesktop ? closeSidebar : closeOverlay} />;
+        if (isDesktop) openSidebar(node, 'delete-account', { hideHeader: true });
+        else openOverlay(node);
     };
 
     return (

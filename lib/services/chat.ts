@@ -19,6 +19,8 @@ import {
     deleteConversationFullyAction,
     nuclearWipeConversationAction,
     getConversationsAction,
+    clearChatForMeAction,
+    updateConversationAction,
 } from '@/lib/actions/chat';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 
@@ -1560,7 +1562,8 @@ export const ChatService = {
      */
     async wipeMyFootprint(conversationId: string, userId: string) {
         console.log(`[ChatService] Wiping footprint for ${userId} in ${conversationId}`);
-        const res = await clearConversationFootprintAction({ conversationId });
+        const jwt = await getAuth();
+        const res = await clearConversationFootprintAction({ conversationId, jwt: jwt as any });
         this.clearConversationPreviewCache(conversationId);
         conversationKeyCache.delete(conversationId);
         return { success: true, count: res?.messagesDeleted || 0, reactionsDeleted: res?.reactionsDeleted || 0 };
@@ -1588,16 +1591,16 @@ export const ChatService = {
 
         const encryptedSettings = await ecosystemSecurity.encrypt(JSON.stringify(settings));
 
-        return await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, {
-            settings: encryptedSettings
-        });
+        const jwt = await getAuth();
+        return await clearChatForMeAction({ conversationId, encryptedSettings, jwt: jwt as any });
     },
 
     /**
      * Entirely deletes all messages in a conversation (Reserved for Saved Messages/Self-Chat)
      */
     async nuclearWipe(conversationId: string) {
-        const res = await nuclearWipeConversationAction({ conversationId });
+        const jwt = await getAuth();
+        const res = await nuclearWipeConversationAction({ conversationId, jwt: jwt as any });
         this.clearConversationPreviewCache(conversationId);
         conversationKeyCache.delete(conversationId);
         const { success: _ignoredSuccess, ...rest } = res || {};
@@ -1606,7 +1609,8 @@ export const ChatService = {
 
     async deleteConversationFully(conversationId: string) {
         const conversation = await this.getConversationById(conversationId).catch(() => null);
-        const res = await deleteConversationFullyAction({ conversationId });
+        const jwt = await getAuth();
+        const res = await deleteConversationFullyAction({ conversationId, jwt: jwt as any });
         this.clearConversationPreviewCache(conversationId);
         conversationKeyCache.delete(conversationId);
         const { success: _ignoredSuccess2, ...rest } = res || {};
@@ -1649,7 +1653,8 @@ export const ChatService = {
             patch.avatarFileId = typeof patch.avatarFileId === 'string' ? patch.avatarFileId : patch.avatarFileId ?? null;
         }
 
-        return await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, patch);
+        const jwt = await getAuth();
+        return await updateConversationAction({ conversationId, data: patch, jwt: jwt as any });
     },
 
     async addParticipant(conversationId: string, userId: string) {

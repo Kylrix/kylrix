@@ -21,12 +21,12 @@ import {
     Menu,
     MenuItem,
     Popover,
-    Divider,
     Drawer,
     Stack,
     useTheme,
     useMediaQuery,
 } from '@/lib/openbricks/primitives';
+import { ChatSettingsPanel } from '@/components/chat/ChatSettingsPanel';
 import {
     Phone,
     ChevronLeft,
@@ -38,8 +38,6 @@ import {
     X,
     Reply,
     Copy,
-    Coins,
-    Zap,
     Pin,
     Lock,
 } from 'lucide-react';
@@ -119,8 +117,8 @@ export const ChatWindow = ({
     const [sending, setSending] = useState(false);
     const [attachment, setAttachment] = useState<File | null>(null);
     const [isRecording, setIsRecording] = useState(false);
-    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const [attachAnchorEl, setAttachAnchorEl] = useState<null | HTMLElement>(null);
+    const [_anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [_attachAnchorEl, _setAttachAnchorEl] = useState<null | HTMLElement>(null);
     const [noteModalOpen, setNoteModalOpen] = useState(false);
     const [secretModalOpen, setSecretModalOpen] = useState(false);
     const [unlockModalOpen, setUnlockModalOpen] = useState(false);
@@ -162,7 +160,7 @@ export const ChatWindow = ({
         return conversation.participants.find((p: string) => p !== user.$id) || null;
     }, [conversation, user?.$id]);
 
-    const handleTip = () => {
+    const _handleTip = () => {
         if (!partnerId) return;
         setAnchorEl(null);
         openWalletWithIntent({
@@ -867,6 +865,7 @@ export const ChatWindow = ({
     }, [conversationId, user?.$id, startTransition]);
 
     const [clearOptionsOpen, setClearOptionsOpen] = useState(false);
+    const [chatSettingsOpen, setChatSettingsOpen] = useState(false);
 
     const { open: openUnified } = useUnifiedDrawer();
 
@@ -908,9 +907,37 @@ export const ChatWindow = ({
                         const res = await ChatService.wipeMyFootprint(conversationId, currentUserId);
                         toast.success(`Removed ${res.count} messages and ${res.reactionsDeleted || 0} reactions for everyone`);
                     } else if (mode === 'nuclear') {
-                        await ChatService.nuclearWipe(conversationId);
-                        toast.success("Conversation permanently deleted for everyone");
-                        router.push('/connect/chats');
+                        const res: any = await ChatService.nuclearWipe(conversationId);
+                        // Server now regenerates fresh a/b or self chat; navigate to regenerated if provided
+                        const newId = res?.regeneratedConversationId || res?.newConversationId;
+                        if (newId) {
+                          toast.success("Conversation wiped — fresh hangout regenerated for same participants");
+                          // Invalidate old caches for old id, prime new
+                          try {
+                            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+                            const { chatConversationCacheKey, chatMessagesCacheKey } = await import('@/lib/chat/local-chat-cache');
+                            await LocalEngine.cacheSet(chatConversationCacheKey(conversationId), null as any).catch(() => null);
+                            await LocalEngine.cacheSet(chatMessagesCacheKey(conversationId), []).catch(() => null);
+                          } catch {}
+                          router.push(`/connect/chats?c=${encodeURIComponent(newId)}`);
+                        } else {
+                          toast.success("Conversation permanently deleted for everyone");
+                          // Fallback client-side regeneration for same participants a/b or self
+                          try {
+                            const participants: string[] = Array.isArray((conversation as any)?.participants) && (conversation as any).participants.length ? (conversation as any).participants : [currentUserId];
+                            const unique = Array.from(new Set(participants.filter(Boolean)));
+                            const isSelf = unique.length === 1 && unique[0] === currentUserId;
+                            // Self: [user], a/b: [user, other]
+                            if (isSelf || unique.length >= 2) {
+                              const created: any = await ChatService.createConversation(unique, 'direct').catch(() => null);
+                              if (created?.$id) {
+                                router.push(`/connect/chats?c=${encodeURIComponent(created.$id)}`);
+                                return;
+                              }
+                            }
+                          } catch {}
+                          router.push('/connect/chats');
+                        }
                         return;
                     }
                     await loadMessages();
@@ -1399,56 +1426,46 @@ export const ChatWindow = ({
                             )}
                         </Box>
                     </Box>
-                    <Stack direction="row" spacing={0.5}>
+                    <Stack direction="row" spacing={0.5} sx={{ pointerEvents: 'auto' }}>
                         {!isSelf && (
                             <IconButton onClick={() => handleCall('audio')} sx={{ color: 'text.secondary' }}>
                                 <Phone size={20} strokeWidth={1.5} />
                             </IconButton>
                         )}
-                        <IconButton onClick={(e: React.MouseEvent<HTMLButtonElement>) => setAnchorEl(e.currentTarget)} sx={{ color: 'text.secondary' }}>
+                        <IconButton
+                            onClick={(e: React.MouseEvent) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+                                if (isDesktop) {
+                                  const node = (
+                                    <ChatSettingsPanel
+                                      conversation={conversation}
+                                      conversationId={conversationId}
+                                      isSelf={!!isSelf}
+                                      messages={messages}
+                                      onClose={closeSidebar}
+                                      onExport={handleExport}
+                                      onClearMe={() => handleClearChat('me')}
+                                      onClearEveryone={() => handleClearChat('everyone')}
+                                      onNuclear={() => handleClearChat('nuclear')}
+                                    />
+                                  );
+                                  openSidebar(node, `chat-settings-${conversationId}`, { hideHeader: true });
+                                } else {
+                                  // Mobile: bottom drawer z-[1401] per chrome-surfaces / openbricks opaque
+                                  setChatSettingsOpen(true);
+                                }
+                            }}
+                            sx={{ color: 'text.secondary', pointerEvents: 'auto', position: 'relative', zIndex: 2 }}
+                            aria-label="Hangout settings"
+                            // ensure hit area above AppBar stacking context trap
+                        >
                             <MoreVertical size={20} strokeWidth={1.5} />
                         </IconButton>
                     </Stack>
                 </Toolbar>
             </AppBar>
-
-            <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={() => setAnchorEl(null)}
-                PaperProps={{
-                    sx: {
-                        mt: 1,
-                        borderRadius: '16px',
-                        bgcolor: '#1F1D1B',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        backgroundImage: 'none',
-                        minWidth: 220
-                    }
-                }}
-            >
-                {conversation?.type === 'direct' && !isSelf && (
-                    <MenuItem onClick={handleTip} sx={{ gap: 1.5, py: 1.2, fontWeight: 700, fontSize: '0.85rem', color: '#F59E0B' }}>
-                        <Coins size={18} strokeWidth={2} style={{ opacity: 0.9 }} /> Tip {conversation?.name || 'User'}
-                    </MenuItem>
-                )}
-
-                <MenuItem onClick={handleExport} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
-                    <FileIcon size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Export Chat (.json)
-                </MenuItem>
-
-                <Divider sx={{ my: 1, opacity: 0.1 }} />
-
-                <MenuItem onClick={() => setClearOptionsOpen(true)} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
-                    <Trash2 size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Clear All Chat
-                </MenuItem>
-
-                {conversation?.type === 'direct' && (
-                    <MenuItem onClick={() => handleClearChat('nuclear')} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem', color: '#ff4d4d' }}>
-                        <Zap size={18} strokeWidth={1.5} style={{ opacity: 0.9 }} /> Permanently delete for everyone
-                    </MenuItem>
-                )}
-            </Menu>
 
             {/* Clear Options Drawer */}
             <Drawer
@@ -1523,6 +1540,42 @@ export const ChatWindow = ({
                     </Stack>
                 </Box>
             </Drawer>
+
+            {/* Hangout settings: mobile bottom drawer z-[1401] / desktop via NativeSidebarBridge */}
+            {chatSettingsOpen && (
+              <Drawer
+                anchor="bottom"
+                open={chatSettingsOpen}
+                onClose={() => setChatSettingsOpen(false)}
+                keepMounted={false}
+                disablePortal={true}
+                slotProps={{ backdrop: { sx: { bgcolor: 'rgba(0,0,0,0.5)' } } }}
+                PaperProps={{
+                  sx: {
+                    bgcolor: '#0A0908',
+                    borderTop: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: '24px 24px 0 0',
+                    maxHeight: '86dvh',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    zIndex: 1401,
+                  },
+                }}
+              >
+                <ChatSettingsPanel
+                  conversation={conversation}
+                  conversationId={conversationId}
+                  isSelf={!!isSelf}
+                  messages={messages}
+                  onClose={() => setChatSettingsOpen(false)}
+                  onExport={() => { handleExport(); setChatSettingsOpen(false); }}
+                  onClearMe={() => { setChatSettingsOpen(false); handleClearChat('me'); }}
+                  onClearEveryone={() => { setChatSettingsOpen(false); handleClearChat('everyone'); }}
+                  onNuclear={() => { setChatSettingsOpen(false); handleClearChat('nuclear'); }}
+                />
+              </Drawer>
+            )}
 
             {/* Messages Area */}
             <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: { xs: 2.5, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 2, pb: 'calc(128px + env(safe-area-inset-bottom))', pt: 'calc(84px + env(safe-area-inset-top))', position: 'relative', zIndex: 2 }}>

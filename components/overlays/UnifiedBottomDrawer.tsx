@@ -13,7 +13,7 @@ import {
  */
 export function UnifiedBottomDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
-  const [isDesktop, setIsDesktop] = React.useState(false);
+  const [isDesktop, setIsDesktop] = React.useState(() => typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)').matches : false);
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     const m = window.matchMedia('(min-width: 768px)');
@@ -24,8 +24,11 @@ export function UnifiedBottomDrawer() {
   }, []);
 
   if (!activeContent || (activeContent as string) === 'navbar' || (activeContent as string) === 'note') return null;
-  // Desktop new-chat is native right rail via ObjectCreateDrawer/DynamicSidebar — no bottom-drawer backdrop (prevents full-UI blur/dim)
-  if (isDesktop && (activeContent as string) === 'new-chat') return null;
+  // Desktop: native right rail only — never render bottom drawer for sidebar surfaces (nuclear wipe = right sidebar, not drawer)
+  if ((['new-chat', 'delete-confirm', 'delete-note', 'security-confirm', 'project-join-request-confirm'] as string[]).includes(activeContent as string)) {
+    if (isDesktop) return null;
+    // mobile stays as bottom drawer — fall through
+  }
 
   const content = (
     <UnifiedDrawerBody

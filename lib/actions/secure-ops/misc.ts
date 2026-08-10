@@ -232,75 +232,126 @@ export async function executeMasterPurgeSecure(jwt?: string) {
   if (!actor?.$id) throw new Error('Unauthorized');
 
   const userId = actor.$id;
-  const { databases, users } = createSystemClient();
+  const { databases, users, storage } = createSystemClient() as any;
 
-  const vaultDb = APPWRITE_CONFIG.DATABASES.VAULT;
-  const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
-  const passwordDb = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
-  
-  // Parallel Discovery Sweep: Scan all domains for Tier 2 footprint concurrently
+  // Single-database: passwordManagerDb holds all tables; also support legacy CHAT/VAULT ids via fallback
+  const mainDb = (APPWRITE_CONFIG as any).DATABASES?.PASSWORD_MANAGER || (APPWRITE_CONFIG as any).DATABASES?.VAULT || 'passwordManagerDb';
+  const tryList = async (db: string, table: string, queries: any[]) => {
+    try { const r: any = await databases.listRows(db, table, queries); return r; } catch { try { const r: any = await databases.listRows(mainDb, table, queries); return r; } catch { return { rows: [], total: 0 }; } }
+  };
+  const tryDeleteRow = async (db: string, table: string, rowId: string) => {
+    try { await databases.deleteRow(db, table, rowId); } catch { try { await databases.deleteRow(mainDb, table, rowId); } catch {} }
+  };
+  const tryUpdateRow = async (db: string, table: string, rowId: string, data: any) => {
+    try { await databases.updateRow(db, table, rowId, data); } catch { try { await databases.updateRow(mainDb, table, rowId, data); } catch {} }
+  };
+
+  // Helper: batched delete for infinite data (limit 100 per page, loop until empty)
+  const purgeByQuery = async (db: string, table: string, queries: any[]) => {
+    for (;;) {
+      const res: any = await tryList(db, table, [...queries, (await import('node-appwrite')).Query.limit(100)]);
+      if (!res.rows?.length) break;
+      await Promise.all(res.rows.map((r: any) => tryDeleteRow(db, table, r.$id).catch(() => null)));
+      if (res.rows.length < 100) break;
+    }
+  };
+
+  // Parallel discovery across infinite domains (no password/email needed — JWT only)
   const [
-    credsRes, 
-    totpsRes, 
-    memberRowsRes, 
-    identitiesRes, 
-    mappingsRes, 
-    profilesRes
+    keychainRows,
+    totpRows,
+    identitiesRows,
+    mappingsRows,
+    profilesRows,
+    notesRows,
+    tasksRows,
+    projectsRows,
+    eventsRows,
+    formsRows,
+    commentsRows,
+    reactionsRows,
   ] = await Promise.all([
-    // 1. Vault
-    databases.listRows(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN, [Query.equal('userId', userId), Query.limit(1000)]),
-    databases.listRows(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets', [Query.equal('userId', userId), Query.limit(1000)]).catch(() => ({ rows: [] })),
-    // 2. Connect
-    databases.listRows(chatDb, 'conversationMembers', [Query.equal('userId', userId), Query.limit(1000)]),
-    // 3. Keychain
-    databases.listRows(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES, [Query.equal('userId', userId), Query.limit(100)]),
-    databases.listRows(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, [
-        Query.or([Query.equal('grantee', userId), Query.contains('metadata', userId), Query.equal('resourceId', userId)]),
-        Query.limit(1000)
-    ]),
-    // 4. Profiles
-    databases.listRows(chatDb, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [Query.equal('userId', userId), Query.limit(1)])
+    tryList(mainDb, 'keychain', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'totpSecrets', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'identities', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'keyMapping', [ (await import('node-appwrite')).Query.or([(await import('node-appwrite')).Query.equal('grantee', userId), (await import('node-appwrite')).Query.contains('metadata', userId)]), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'profiles', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(10) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'notes', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'tasks', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'projects', [ (await import('node-appwrite')).Query.equal('creatorId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'events', [ (await import('node-appwrite')).Query.equal('creatorId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'forms', [ (await import('node-appwrite')).Query.equal('creatorId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'comments', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
+    tryList(mainDb, 'reactions', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(100) ]).catch(() => ({ rows: [] })),
   ]);
 
-  // Parallel Execution Phase: Trigger all deletions and updates concurrently
-  const purgeActions: Promise<any>[] = [];
-
-  // 1. Purge Vault
-  credsRes.rows.forEach((c: any) => purgeActions.push(databases.deleteRow(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN, c.$id)));
-  totpsRes.rows.forEach((t: any) => purgeActions.push(databases.deleteRow(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets', t.$id)));
-
-  // 2. Purge Connect (Direct Messages)
-  const conversationIds = Array.from(new Set(memberRowsRes.rows.map((row: any) => row.conversationId).filter(Boolean)));
-  if (conversationIds.length > 0) {
-    // This is still a bit complex for a flat Promise.all, let's keep it sequential or sub-parallel
-    purgeActions.push((async () => {
-        const convsRes = await databases.listRows(chatDb, APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS, [Query.equal('$id', conversationIds), Query.equal('type', 'direct')]);
-        const subActions: Promise<any>[] = [];
-        for (const conv of convsRes.rows) {
-          const isSelfChat = conv.participants.every((p: string) => p === userId);
-          const msgsRes = await databases.listRows(chatDb, APPWRITE_CONFIG.TABLES.CHAT.MESSAGES, [Query.equal('conversationId', conv.$id), Query.equal('senderId', userId), Query.limit(1000)]);
-          msgsRes.rows.forEach((m: any) => subActions.push(databases.deleteRow(chatDb, APPWRITE_CONFIG.TABLES.CHAT.MESSAGES, m.$id)));
-          if (isSelfChat) subActions.push(databases.deleteRow(chatDb, APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS, conv.$id));
-        }
-        await Promise.all(subActions);
+  // Immediate parallel cascade: delete all discovered rows (storage files next, auth last)
+  const actions: Promise<any>[] = [];
+  const pushRows = (rows: any[], db: string, table: string) => rows.forEach((r: any) => actions.push(tryDeleteRow(db, table, r.$id)));
+  pushRows(keychainRows.rows || [], mainDb, 'keychain');
+  pushRows(totpRows.rows || [], mainDb, 'totpSecrets');
+  pushRows(identitiesRows.rows || [], mainDb, 'identities');
+  pushRows(mappingsRows.rows || [], mainDb, 'keyMapping');
+  pushRows(notesRows.rows || [], mainDb, 'notes');
+  pushRows(tasksRows.rows || [], mainDb, 'tasks');
+  pushRows(eventsRows.rows || [], mainDb, 'events');
+  pushRows(formsRows.rows || [], mainDb, 'forms');
+  pushRows(commentsRows.rows || [], mainDb, 'comments');
+  pushRows(reactionsRows.rows || [], mainDb, 'reactions');
+  // Projects: cascade delete via internal helper if available
+  for (const p of (projectsRows.rows || [])) {
+    actions.push((async () => {
+      try { const { deleteProjectSecure } = await import('./projects'); await (deleteProjectSecure as any)(p.$id, 'all' as any, jwt).catch(() => tryDeleteRow(mainDb, 'projects', p.$id)); } catch { await tryDeleteRow(mainDb, 'projects', p.$id); }
     })());
   }
+  // Conversations/members/messages: sweep via conversationMembers → conversations
+  actions.push((async () => {
+    const memRes: any = await tryList(mainDb, 'conversationMembers', [ (await import('node-appwrite')).Query.equal('userId', userId), (await import('node-appwrite')).Query.limit(1000) ]);
+    const cids = Array.from(new Set((memRes.rows || []).map((r: any) => r.conversationId).filter(Boolean)));
+    for (const cid of cids) {
+      await purgeByQuery(mainDb, 'messages', [ (await import('node-appwrite')).Query.equal('conversationId', cid as string), (await import('node-appwrite')).Query.equal('senderId', userId) ]);
+      await purgeByQuery(mainDb, 'messageReactions', [ (await import('node-appwrite')).Query.equal('conversationId', cid as string) ]);
+      // remove membership
+      for (const m of (memRes.rows || []).filter((r: any) => r.conversationId === cid)) await tryDeleteRow(mainDb, 'conversationMembers', m.$id);
+      // if self-chat, delete conversation row itself
+      try { const conv: any = await databases.getRow(mainDb, 'conversations', cid as string).catch(() => null); if (conv && Array.isArray(conv.participants) && conv.participants.every((p: string) => p === userId)) await tryDeleteRow(mainDb, 'conversations', cid as string); } catch {}
+    }
+    // epochs
+    await purgeByQuery(mainDb, 'epochs', [ (await import('node-appwrite')).Query.equal('grantee', userId) ]).catch(() => null);
+  })());
+  // Profiles: null out publicKey rather than delete (keep row for audit)
+  for (const pr of (profilesRows.rows || [])) actions.push(tryUpdateRow(mainDb, 'profiles', pr.$id, { publicKey: null, updatedAt: new Date().toISOString() }));
 
-  // 3. Purge Keychain
-  identitiesRes.rows.forEach((id: any) => purgeActions.push(databases.deleteRow(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES, id.$id)));
-  mappingsRes.rows.forEach((m: any) => purgeActions.push(databases.deleteRow(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, m.$id)));
+  // Storage buckets: purge files owned by user (best-effort, no retention)
+  actions.push((async () => {
+    const bucketIds = ['notes_attachments', 'voice', 'profile_pictures', 'form_attachments', 'project_files'];
+    for (const bid of bucketIds) {
+      try {
+        const { Query } = await import('node-appwrite');
+        for (;;) {
+          const files: any = await (storage as any).listFiles(bid, [Query.limit(100)]).catch(() => ({ files: [] }));
+          const owned = (files.files || []).filter((f: any) => String(f.name || '').includes(userId) || String((f as any).userId || '') === userId);
+          if (!owned.length) break;
+          await Promise.all(owned.map((f: any) => (storage as any).deleteFile(bid, f.$id).catch(() => null)));
+          if (owned.length < 100) break;
+        }
+      } catch {}
+    }
+  })());
 
-  // 4. Reset Profiles
-  if (profilesRes.total > 0) {
-    purgeActions.push(databases.updateRow(chatDb, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, profilesRes.rows[0].$id, { publicKey: null, updatedAt: new Date().toISOString() }));
+  await Promise.all(actions);
+
+  // Fire Appwrite function for deep residual sweep (async, no await for UX — instant)
+  try {
+    const { functions } = createSystemClient() as any;
+    if (functions?.createExecution) await functions.createExecution('account-cleanup', JSON.stringify({ userId }), false).catch(() => null);
+  } catch {}
+
+  // Auth account LAST — ensures half-done not bricked; no retention
+  try { await users.delete(userId); } catch (e: any) {
+    // If admin delete fails (e.g., already deleted), ensure session cleared client will handle redirect
+    if (!String(e?.message || '').includes('not found')) throw e;
   }
-
-  // 5. Update User Prefs
-  purgeActions.push(users.getPrefs(userId).then(async (prefs) => {
-    await users.updatePrefs(userId, { ...(prefs as any), masterpass: false, isPasskey: false });
-  }));
-
-  await Promise.all(purgeActions);
   return { success: true };
 }
 

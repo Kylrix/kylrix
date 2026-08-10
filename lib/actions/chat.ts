@@ -7,7 +7,9 @@ import {
   nuclearWipeConversationInternal,
   toggleReactionInternal,
   repairConversationInternal,
-  joinRequestInternal
+  joinRequestInternal,
+  clearChatForMeInternal,
+  updateConversationInternal
 } from '@/lib/services/internal/chat';
 import { Query } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -148,6 +150,26 @@ export async function deleteConversationFullyAction(payload: {
   return await deleteConversationFullyInternal({
     conversationId: validatedConversationId,
     actorId: actor.$id});
+}
+
+export async function clearChatForMeAction(payload: { conversationId: string; encryptedSettings: string; jwt?: string; }) {
+  const validatedConversationId = IDSchema.parse(payload.conversationId);
+  if (typeof payload.encryptedSettings !== 'string') throw new Error('Invalid settings');
+  const validatedJwt = JWTSchema.parse(payload.jwt);
+  const { getActor } = await import('./secure-ops');
+  const actor = await getActor(validatedJwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+  return await clearChatForMeInternal({ conversationId: validatedConversationId, encryptedSettings: payload.encryptedSettings, actorId: actor.$id });
+}
+
+export async function updateConversationAction(payload: { conversationId: string; data: Record<string, unknown>; jwt?: string; }) {
+  const validatedConversationId = IDSchema.parse(payload.conversationId);
+  const validatedJwt = JWTSchema.parse(payload.jwt);
+  if (!payload.data || typeof payload.data !== 'object') throw new Error('Invalid data');
+  const { getActor } = await import('./secure-ops');
+  const actor = await getActor(validatedJwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+  return await updateConversationInternal({ conversationId: validatedConversationId, data: payload.data, actorId: actor.$id });
 }
 
 export async function joinRequestAction(payload: any) {

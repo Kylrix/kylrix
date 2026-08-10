@@ -17,18 +17,14 @@ import {
     directParticipantsEqual,
     extractGhostParticipantIds,
 } from '@/lib/chat/recipient-secure-ready';
-import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { openCommObjectDetail } from '@/components/objects/CommObjectDetail';
 import { 
-    Trash2, 
     ShieldCheck, 
     Lock, 
-    ExternalLink, 
-    Link as LinkIcon, 
-    Sliders,
     Pin,
+    RefreshCw,
 } from 'lucide-react';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar } from '../IdentityBadge';
@@ -40,8 +36,8 @@ import { getConversationReadAt } from '@/lib/chat-read-state';
 import { useChatNotifications } from '../providers/ChatNotificationProvider';
 import ConversationActionsSheet from './ConversationActionsSheet';
 import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
-import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
+import { ChatSettingsPanel } from '@/components/chat/ChatSettingsPanel';
 import {
     peekChatsListMemory,
     peekThreadsListMemory,
@@ -126,12 +122,9 @@ export const ChatList = ({
     const { unreadConversations } = useChatNotifications();
     const { globalPresence } = usePresence();
     const { requestSudo } = useSudo();
-    const contextMenu = useContextMenu();
-    const openMenu = contextMenu?.openMenu;
-    const { open: openUnified } = useUnifiedDrawer();
     const { openOverlay, closeOverlay } = useOverlay();
     const { openSidebar, closeSidebar } = useDynamicSidebar();
-    const { isPinned: isResourcePinned, togglePin, pinSets } = useResourcePins();
+    const { isPinned: isResourcePinned, togglePin: _togglePin, pinSets } = useResourcePins();
     const initialChats = peekChatsListMemory();
     const initialThreads = peekThreadsListMemory();
     const [conversations, setConversations] = useState<any[]>(() => initialChats);
@@ -241,21 +234,97 @@ export const ChatList = ({
         });
     }, [pinSets.conversation]);
 
-    const handleTogglePinConversation = useCallback(async (conv: any) => {
-        if (!user?.$id || !conv?.$id) return;
-        try {
-            const next = await togglePin({
-                resourceType: 'conversation',
-                resourceId: conv.$id,
-                ownerId: user.$id,
-                rowIsPinned: false,
-                setOwnerRowPin: async () => {},
-            });
-            toast.success(next ? 'Pinned chat' : 'Unpinned chat');
-        } catch (err: any) {
-            toast.error(err?.message || 'Could not update pin');
+    const [chatSettingsConv, setChatSettingsConv] = useState<any | null>(null);
+
+    // Unified hangout settings entry — desktop right sidebar / mobile bottom drawer z-[1401]
+    const openChatSettings = useCallback((conv: any) => {
+        const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+        const isSelf = conv?.isSelf || (Array.isArray(conv?.participants) && conv.participants.length === 1 && conv.participants[0] === user?.$id);
+        const isSecure = conv?._kind === 'secure' || !!conv?.isEncrypted || String(conv?.$id || '').length > 20 && !conv?.linkedResourceType;
+        const handleExport = async () => {
+            try {
+                if (isSecure) {
+                  const msgs = await ChatService.getMessages(conv.$id, 100, 0, user?.$id, { prefetchedConversation: conv }).then(r => r.rows || []).catch(() => []);
+                  const data = msgs.map((m: any) => ({ sender: m.senderId === user?.$id ? 'Me' : 'Partner', time: m.$createdAt || m.createdAt, content: m.content, type: m.type }));
+                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url; a.download = `chat_export_${conv.$id}.json`; a.click();
+                  URL.revokeObjectURL(url);
+                } else {
+                  const blob = new Blob([JSON.stringify(conv, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url; a.download = `thread_export_${conv.$id}.json`; a.click();
+                  URL.revokeObjectURL(url);
+                }
+                toast.success('Export downloaded');
+            } catch { toast.error('Export failed'); }
+        };
+        const handleClearMe = async () => {
+          try {
+            if (isSecure) await ChatService.clearChatForMe(conv.$id, user!.$id);
+            else await deleteGhostThread(conv.$id);
+            toast.success('Chat cleared');
+            if (!isSecure) setConversations(prev => prev.filter(x => x.$id !== conv.$id));
+          } catch (e: any) { toast.error(e?.message || 'Failed'); }
+        };
+        const handleClearEveryone = async () => {
+          try {
+            if (isSecure) { const r: any = await ChatService.wipeMyFootprint(conv.$id, user!.$id); toast.success(`Removed ${r.count || 0} messages`); }
+            else { await deleteGhostThread(conv.$id); toast.success('Thread cleared'); setConversations(prev => prev.filter(x => x.$id !== conv.$id)); }
+          } catch (e: any) { toast.error(e?.message || 'Failed'); }
+        };
+        const handleNuclear = async () => {
+            try {
+              if (isSecure) {
+                const res: any = await ChatService.nuclearWipe(conv.$id);
+                const newId = res?.regeneratedConversationId || res?.newConversationId;
+                if (newId) toast.success('Wiped — fresh hangout regenerated');
+                else toast.success('Conversation deleted');
+              } else {
+                await deleteGhostThread(conv.$id);
+                toast.success('Thread wiped');
+              }
+              setConversations(prev => prev.filter(c => c.$id !== conv.$id));
+            } catch (e: any) { toast.error(e?.message || 'Wipe failed'); }
+        };
+        if (isDesktop) {
+          const node = (
+            <ChatSettingsPanel
+              conversation={conv}
+              conversationId={conv.$id}
+              isSelf={!!isSelf}
+              messages={[]}
+              onClose={closeSidebar}
+              onExport={handleExport}
+              onClearMe={handleClearMe}
+              onClearEveryone={handleClearEveryone}
+              onNuclear={handleNuclear}
+            />
+          );
+          openSidebar(node, `chat-settings-${conv.$id}`, { hideHeader: true });
+        } else {
+          // Mobile: local bottom drawer — guarantees visible even when Overlay bridge is dormant
+          setChatSettingsConv(conv);
         }
-    }, [user?.$id, togglePin]);
+    }, [user?.$id, openSidebar, closeSidebar]);
+
+    // Long-press (mobile) → same hangout settings context as three-dots / right-click
+    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const longPressFiredRef = useRef(false);
+    const startLongPress = useCallback((conv: any) => {
+        longPressFiredRef.current = false;
+        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = setTimeout(() => {
+            longPressFiredRef.current = true;
+            if (typeof navigator !== 'undefined' && (navigator as any).vibrate) { try { (navigator as any).vibrate(28); } catch {} }
+            openChatSettings(conv);
+        }, 520);
+    }, [openChatSettings]);
+    const cancelLongPress = useCallback(() => {
+        if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+    }, []);
 
     const handleItemClick = useCallback((event: React.MouseEvent) => {
         if (isInitializing) {
@@ -274,130 +343,14 @@ export const ChatList = ({
 
     const handleConversationRightClick = useCallback((event: React.MouseEvent, conv: any) => {
         event.preventDefault();
-        if (openMenu) {
-            openMenu({
-                x: event.clientX,
-                y: event.clientY,
-                appType: 'connect',
-                title: conv.name || conv.title || 'Chat',
-                items: [
-                {
-                    label: 'Open Secure Chat',
-                    icon: <ExternalLink size={18} />,
-                    onClick: () => openConversation(conv.$id, 'chat')
-                },
-                {
-                    label: isResourcePinned('conversation', conv.$id, user?.$id, false)
-                        ? 'Unpin chat'
-                        : 'Pin chat',
-                    icon: <Pin size={18} />,
-                    onClick: () => void handleTogglePinConversation(conv),
-                },
-                {
-                    label: 'Copy Connection Link',
-                    icon: <LinkIcon size={18} />,
-                    onClick: () => {
-                        const link = `${window.location.origin}/connect/chats?c=${conv.$id}`;
-                        navigator.clipboard.writeText(link);
-                        toast.success('Connection link copied');
-                    }
-                },
-                {
-                    label: 'Manage Discussion',
-                    icon: <Sliders size={18} />,
-                    onClick: () => setSelectedConversation(conv)
-                },
-                {
-                    label: 'Wipe Conversation',
-                    icon: <Trash2 size={18} style={{ color: '#EF4444' }} />,
-                    onClick: () => {
-                        openUnified('delete-confirm', {
-                            title: `WIPE [ ${conv.name || 'CHAT'} ]`,
-                            description: 'This will permanently destroy all messages, reactions, and associated assets. This action cannot be reversed.',
-                            confirmLabel: 'Destroy Conversation',
-                            onConfirm: async () => {
-                                try {
-                                    // For normal chats, we need a slightly different wipe logic
-                                    // but if it's a ghost note thread (which many of these are),
-                                    // deleteGhostThread works perfectly.
-                                    await deleteGhostThread(conv.$id);
-                                    toast.success('Conversation wiped');
-                                    // Refresh the list
-                                    setConversations(prev => prev.filter(c => c.$id !== conv.$id));
-                                } catch (err: any) {
-                                    toast.error(`Wipe failed: ${err.message}`);
-                                }
-                            }
-                        });
-                    }
-                }
-            ]
-            });
-        }
-    }, [openMenu, openUnified, openConversation, handleTogglePinConversation, isResourcePinned, user?.$id]);
+        // Chrome-surfaces: right-click on chat item → same settings drawer/right-sidebar as three dots
+        openChatSettings(conv);
+    }, [openChatSettings]);
 
     const handleGhostConversationRightClick = useCallback((event: React.MouseEvent, conv: any) => {
         event.preventDefault();
-        if (openMenu) {
-            openMenu({
-                x: event.clientX,
-                y: event.clientY,
-                appType: 'connect',
-            items: [
-                {
-                    label: 'Open Discussion Thread',
-                    icon: <ExternalLink size={18} />,
-                    onClick: () => openConversation(conv.$id, 'thread')
-                },
-                {
-                    label: isResourcePinned('conversation', conv.$id, user?.$id, false)
-                        ? 'Unpin chat'
-                        : 'Pin chat',
-                    icon: <Pin size={18} />,
-                    onClick: () => void handleTogglePinConversation(conv),
-                },
-                {
-                    label: 'Copy Thread ID',
-                    icon: <LinkIcon size={18} />,
-                    onClick: () => {
-                        navigator.clipboard.writeText(conv.$id);
-                        toast.success('Thread ID copied');
-                    }
-                },
-                {
-                    label: 'Copy Discussion Link',
-                    icon: <LinkIcon size={18} />,
-                    onClick: () => {
-                        const link = `${window.location.origin}/connect/chats?c=${conv.$id}`;
-                        navigator.clipboard.writeText(link);
-                        toast.success('Discussion link copied');
-                    }
-                },
-                {
-                    label: 'Wipe Conversation',
-                    icon: <Trash2 size={18} style={{ color: '#EF4444' }} />,
-                    onClick: () => {
-                        openUnified('delete-confirm', {
-                            title: `WIPE [ ${conv.name || 'THREAD'} ]`,
-                            description: 'This will permanently destroy the ghost note, all messages, reactions, and any associated voice note files. This action cannot be reversed.',
-                            confirmLabel: 'Destroy Conversation',
-                            onConfirm: async () => {
-                                try {
-                                    await deleteGhostThread(conv.$id);
-                                    toast.success('Conversation wiped');
-                                    // Refresh the list
-                                    setConversations(prev => prev.filter(c => c.$id !== conv.$id));
-                                } catch (err: any) {
-                                    toast.error(`Wipe failed: ${err.message}`);
-                                }
-                            }
-                        });
-                    }
-                }
-            ]
-            });
-        }
-    }, [openMenu, openUnified, openConversation, handleTogglePinConversation, isResourcePinned, user?.$id]);
+        openChatSettings(conv);
+    }, [openChatSettings]);
 
     const handleCancelRedirect = useCallback(() => {
         setShowCountdownDrawer(false);
@@ -1557,6 +1510,26 @@ export const ChatList = ({
                     </div>
                 )}
 
+                <div className="flex items-center justify-end px-1 pb-2">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            // Live refresh via permission-safe relay: force network, bypass local cache, keep realtime subscription alive
+                            ChatService.invalidateConversationsListCache(user?.$id);
+                            void loadConversations({ forceRefresh: true });
+                            void loadGhostConversations({ forceRefresh: true } as any);
+                            toast.success('Chat refreshed');
+                        }}
+                        disabled={loading || loadingGhost}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-white/[0.06] bg-[#161412] px-3 py-1.5 text-xs font-bold text-white/70 hover:text-white hover:bg-[#1C1A18] hover:border-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Refresh chat"
+                        title="Refresh chat live"
+                    >
+                        <RefreshCw size={12} className={loading || loadingGhost ? 'animate-spin' : ''} />
+                        Refresh
+                    </button>
+                </div>
+
                 {(loading || loadingGhost) && unifiedItems.length === 0 && !showGlobalResults ? (
                         <div className="p-4 space-y-3 animate-pulse">
                             {[1, 2, 3].map((i) => (
@@ -1587,12 +1560,17 @@ export const ChatList = ({
                                         role="button"
                                         tabIndex={0}
                                         onClick={(e: React.MouseEvent) => {
+                                            if (longPressFiredRef.current) { longPressFiredRef.current = false; e.preventDefault(); return; }
                                             handleItemClick(e);
                                             if (!isInitializing) {
                                                 openConversation(conv.$id, openKind);
                                             }
                                         }}
                                         onContextMenu={handler}
+                                        onTouchStart={() => startLongPress(conv)}
+                                        onTouchEnd={cancelLongPress}
+                                        onTouchMove={cancelLongPress}
+                                        onTouchCancel={cancelLongPress}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
                                                 e.preventDefault();
@@ -1722,6 +1700,68 @@ export const ChatList = ({
                 onConversationUpdated={handleConversationUpdated}
                 onConversationDeleted={handleConversationDeleted}
             />
+
+            {/* Mobile hangout settings — bottom drawer z-[1401] opaque per openbricks/chrome-surfaces */}
+            {chatSettingsConv && (
+              <div className="fixed inset-0 z-[1401] flex items-end justify-center bg-black/50 backdrop-blur-[2px]" onClick={() => setChatSettingsConv(null)}>
+                <div className="w-full max-w-[560px] max-h-[86dvh] overflow-hidden rounded-t-[24px] border-t border-white/[0.06] bg-[#0A0908] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                  <ChatSettingsPanel
+                    conversation={chatSettingsConv}
+                    conversationId={chatSettingsConv.$id}
+                    isSelf={!!chatSettingsConv?.isSelf}
+                    messages={[]}
+                    onClose={() => setChatSettingsConv(null)}
+                    onExport={async () => {
+                      try {
+                        const isSecure = chatSettingsConv._kind === 'secure';
+                        if (isSecure) {
+                          const msgs = await ChatService.getMessages(chatSettingsConv.$id, 100, 0, user?.$id, { prefetchedConversation: chatSettingsConv }).then(r => r.rows || []).catch(() => []);
+                          const data = msgs.map((m: any) => ({ sender: m.senderId === user?.$id ? 'Me' : 'Partner', time: m.$createdAt || m.createdAt, content: m.content, type: m.type }));
+                          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                          const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `chat_export_${chatSettingsConv.$id}.json`; a.click(); URL.revokeObjectURL(url);
+                        } else {
+                          const blob = new Blob([JSON.stringify(chatSettingsConv, null, 2)], { type: 'application/json' });
+                          const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `thread_export_${chatSettingsConv.$id}.json`; a.click(); URL.revokeObjectURL(url);
+                        }
+                        setChatSettingsConv(null);
+                        toast.success('Export downloaded');
+                      } catch { toast.error('Export failed'); }
+                    }}
+                    onClearMe={async () => {
+                      const c = chatSettingsConv; setChatSettingsConv(null);
+                      try {
+                        if (c._kind === 'secure') await ChatService.clearChatForMe(c.$id, user!.$id);
+                        else await deleteGhostThread(c.$id);
+                        toast.success('Chat cleared');
+                        setConversations(prev => prev.filter(x => x.$id !== c.$id));
+                      } catch (e: any) { toast.error(e?.message || 'Failed'); }
+                    }}
+                    onClearEveryone={async () => {
+                      const c = chatSettingsConv; setChatSettingsConv(null);
+                      try {
+                        if (c._kind === 'secure') { const r: any = await ChatService.wipeMyFootprint(c.$id, user!.$id); toast.success(`Removed ${r.count || 0} messages`); }
+                        else { await deleteGhostThread(c.$id); toast.success('Thread cleared'); setConversations(prev => prev.filter(x => x.$id !== c.$id)); }
+                      } catch (e: any) { toast.error(e?.message || 'Failed'); }
+                    }}
+                    onNuclear={async () => {
+                      const c = chatSettingsConv; setChatSettingsConv(null);
+                      try {
+                        if (c._kind === 'secure') {
+                          const res: any = await ChatService.nuclearWipe(c.$id);
+                          const newId = res?.regeneratedConversationId || res?.newConversationId;
+                          if (newId) toast.success('Wiped — fresh hangout regenerated');
+                          else toast.success('Conversation deleted');
+                        } else {
+                          await deleteGhostThread(c.$id);
+                          toast.success('Thread wiped');
+                        }
+                        setConversations(prev => prev.filter(x => x.$id !== c.$id));
+                      } catch (e: any) { toast.error(e?.message || 'Wipe failed'); }
+                    }}
+                  />
+                </div>
+              </div>
+            )}
 
             {showCountdownDrawer ? (
                 <div className="mx-2 mb-4 rounded-2xl border border-[#F59E0B]/25 bg-[#161412] p-5 text-center">

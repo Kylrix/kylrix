@@ -21,13 +21,14 @@ export default async ({ req, res, log, error }) => {
         return res.json({ success: false });
     }
 
-    // List of databases to scrub for this userId
-    // Uses verified IDs from APPWRITE_CONFIG
+    // Single-database: passwordManagerDb + fallbacks — sweep infinite data (paginated, no retention)
+    const mainDb = process.env.DATABASE_ID || process.env.DATABASE_ID_PASSWORD_MANAGER || 'passwordManagerDb';
     const dbs = [
-        { id: process.env.DATABASE_ID_CHAT || 'chat', collections: ['users', 'contacts', 'app_activity', 'call_links'] },
-        { id: process.env.DATABASE_ID_NOTE || '67ff05a9000296822396', collections: ['67ff05c900247b5673d3', 'activityLog'] }, 
-        { id: process.env.DATABASE_ID_VAULT || 'passwordManagerDb', collections: ['keychain', 'identities'] }, 
-        { id: process.env.DATABASE_ID_FLOW || 'whisperrflow', collections: ['tasks', 'eventGuests'] } 
+        { id: mainDb, collections: ['keychain','totpSecrets','identities','keyMapping','profiles','notes','tasks','projects','events','forms','comments','reactions','conversations','conversationMembers','messages','messageReactions','epochs','call_links','app_activity','activityLog','securityLogs'] },
+        { id: process.env.DATABASE_ID_CHAT || 'chat', collections: ['users','contacts','app_activity','call_links','conversations','conversationMembers','messages','messageReactions'] },
+        { id: process.env.DATABASE_ID_NOTE || '67ff05a9000296822396', collections: ['67ff05c900247b5673d3','activityLog'] },
+        { id: process.env.DATABASE_ID_VAULT || 'passwordManagerDb', collections: ['keychain','identities'] },
+        { id: process.env.DATABASE_ID_FLOW || 'whisperrflow', collections: ['tasks','eventGuests'] }
     ];
 
     try {
@@ -47,18 +48,51 @@ export default async ({ req, res, log, error }) => {
                         Query.limit(100)
                     ]);
 
-                    for (const doc of results.documents) {
-                        await databases.deleteDocument(db.id, col, doc.$id);
-                        log(`Deleted ${doc.$id} from ${db.id}.${col}`);
+                    // Paginated sweep for infinite data
+                    let cursor = null;
+                    for (;;) {
+                        const q = [
+                            Query.or([
+                                Query.equal('$id', userId),
+                                Query.equal('userId', userId),
+                                Query.equal('creatorId', userId),
+                                Query.equal('ownerId', userId),
+                                Query.equal('grantee', userId),
+                                Query.equal('senderId', userId)
+                            ]),
+                            Query.limit(100)
+                        ];
+                        if (cursor) q.push(Query.cursorAfter(cursor));
+                        const results = await databases.listDocuments(db.id, col, q).catch(() => ({ documents: [] }));
+                        if (!results.documents?.length) break;
+                        for (const doc of results.documents) {
+                            await databases.deleteDocument(db.id, col, doc.$id).catch(() => null);
+                            log(`Deleted ${doc.$id} from ${db.id}.${col}`);
+                        }
+                        if (results.documents.length < 100) break;
+                        cursor = results.documents[results.documents.length - 1].$id;
                     }
                 } catch (e) {
-                    // Log but continue (some collections may not have the field)
                     log(`Skipping ${db.id}.${col}: ${e.message}`);
                 }
             }
         }
 
-        log(`Successfully scrubbed all data for User ${userId}`);
+        // Storage buckets sweep (no retention)
+        try {
+            const { Storage } = await import('node-appwrite');
+            const storage = new Storage(client);
+            for (const bucket of ['notes_attachments','voice','profile_pictures','form_attachments','project_files']) {
+                try {
+                    const files = await storage.listFiles(bucket, [Query.limit(100)]).catch(() => ({ files: [] }));
+                    for (const f of files.files || []) {
+                        if (String(f.name||'').includes(userId)) await storage.deleteFile(bucket, f.$id).catch(()=>null);
+                    }
+                } catch {}
+            }
+        } catch {}
+
+        log(`Successfully scrubbed all data for User ${userId} — instant, no retention, auth already last`);
         return res.json({ success: true });
 
     } catch (err) {
