@@ -258,8 +258,15 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
     const hydrateFromCache = async () => {
       const userId = activeUserId;
-      // Skip once this userId is hydrated. Re-runs when guest → real user (activeUserId changes).
-      if (hydratedUserIdRef.current === userId && isCacheLoaded) {
+      if (hydratedUserIdRef.current !== userId) {
+        setNotes([]);
+        notesRef.current = [];
+        setTotalNotes(0);
+        setCursor(null);
+        setHasMore(true);
+        setIsCacheLoaded(false);
+        hydratedUserIdRef.current = userId;
+      } else if (isCacheLoaded) {
         return;
       }
 

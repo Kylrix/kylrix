@@ -392,6 +392,9 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       }
 
     case 'SET_USER':
+      if (state.userId && state.userId !== action.payload) {
+        return { ...state, userId: action.payload, tasks: [], projects: [], selectedTaskId: null, selectedProjectId: null };
+      }
       return { ...state, userId: action.payload };
 
     case 'ADD_TASK':
@@ -1025,7 +1028,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
             getCachedDataAsync<any>(tasksKey, COLD_START_TTL),
             getCachedDataAsync<any>(calsKey, COLD_START_TTL),
             userId !== 'guest' ? getCachedDataAsync<any>('f_tasks_guest', COLD_START_TTL) : Promise.resolve(null),
-            LocalEngine.cacheGet<any[]>('f_goals_list'),
+            LocalEngine.cacheGet<any[]>(`f_goals_list_${userId}`),
             db?.tasks ? db.tasks.find().exec().then((docs: any[]) => docs.map((d) => d.toJSON())).catch(() => []) : Promise.resolve([]),
         ]);
 

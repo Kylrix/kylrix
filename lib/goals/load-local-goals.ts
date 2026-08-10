@@ -77,7 +77,7 @@ export async function loadGoalsFromLocalCopy(opts: {
 
   try {
     const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    const goalsList = await LocalEngine.cacheGet<any[]>('f_goals_list');
+    const goalsList = await LocalEngine.cacheGet<any[]>(`f_goals_list_${opts.userId}`);
     if (goalsList?.length) {
       const cached = goalsList.map(normalizeGoalRow).filter((t): t is Task => !!t);
       if (cached.length) return cached;
