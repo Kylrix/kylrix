@@ -55,7 +55,13 @@ const Overlay: React.FC = () => {
     return <>{content}</>;
   }
 
-  const isFlapover = React.isValidElement(content) && (
+  const isProfileSidebar = React.isValidElement(content) && (
+    (content.type as any).name === 'ProfileSidebar' ||
+    (content.props as any).isProfilePeek === true ||
+    ((content.props as any).conversationId !== undefined && (content.props as any).seed !== undefined)
+  );
+
+  const isFlapover = !isProfileSidebar && React.isValidElement(content) && (
     (content.props as any).note !== undefined ||
     (content.props as any).taskId !== undefined ||
     (content.props as any).eventId !== undefined ||
@@ -69,12 +75,6 @@ const Overlay: React.FC = () => {
     (content.type as any).name === 'MomentObjectDetail' ||
     (content.type as any).name === 'EventDetails' ||
     (content.type as any).name === 'AgenticPanelContent'
-  );
-
-  const isProfileSidebar = React.isValidElement(content) && (
-    (content.type as any).name === 'ProfileSidebar' ||
-    (content.props as any).username !== undefined ||
-    (content.props as any).userId !== undefined
   );
 
   const drawerHeight = isMobile && !isFlapover ? (isProfileSidebar ? '60vh' : '85vh') : '100dvh';
