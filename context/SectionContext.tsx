@@ -1,9 +1,8 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Box, CircularProgress, Typography, Drawer, alpha } from '@/lib/openbricks/primitives';
+import { Box, Typography, Drawer, alpha } from '@/lib/openbricks/primitives';
 import { usePathname } from 'next/navigation';
-import { recordAnonymizedTelemetry } from '@/lib/actions/client-ops';
 import { PanelType } from '@/components/layout/panel-types';
 
 // Object detail components imports
@@ -16,17 +15,15 @@ import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
 import { TagNotesListSidebar } from '@/components/ui/TagNotesListSidebar';
 import { PublicCall } from '@/app/(app)/connect/call/[id]/PublicCall';
 import { ChatWindow } from '@/components/chat/ChatWindow';
-import { HuddleChatWindow } from '@/components/chat/HuddleChatWindow';
 
 // Helper imports for note detail (live-copy plugin — no open-path getNote)
+import { useAuth } from '@/context/auth/AuthContext';
 import { Notes } from '@/types/appwrite';
 import { deleteNote } from '@/lib/actions/client-ops';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { useToast } from '@/components/ui/Toast';
 import CommentsSection from '@/app/(app)/app/(app)/notes/Comments';
 import NoteReactions from '@/app/(app)/app/(app)/notes/NoteReactions';
-import { useAuth } from '@/context/auth/AuthContext';
-import { getNote as getChatNote } from '@/lib/appwrite/note';
 import { useNotes } from '@/context/NotesContext';
 
 export interface ActiveDetail {
@@ -91,54 +88,23 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
   const [activeDetail, setActiveDetail] = useState<ActiveDetail | null>(null);
   const { user } = useAuth();
 
-  const [pageState, setPageState] = useState<PageState>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('kylrix:pageState');
-        return saved ? JSON.parse(saved) : {
-          activeDetail: null,
-          scrollPositions: {},
-          activeDrawers: {},
-          routePaths: {},
-          extra: {},
-        };
-      } catch {
-        // Fallback
-      }
-    }
-    return {
-      activeDetail: null,
-      scrollPositions: {},
-      activeDrawers: {},
-      routePaths: {},
-      extra: {},
-    };
+  const [pageState, setPageState] = useState<PageState>({
+    activeDetail: null,
+    scrollPositions: {},
+    activeDrawers: {},
+    routePaths: {},
+    extra: {},
   });
 
   const updatePageState = useCallback((updater: Partial<PageState> | ((prev: PageState) => PageState)) => {
-    setPageState(prev => {
-      const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('kylrix:pageState', JSON.stringify(next));
-      }
-      return next;
-    });
+    setPageState(prev => (typeof updater === 'function' ? updater(prev) : { ...prev, ...updater }));
   }, []);
 
   const persistScrollPosition = useCallback((key: string, scrollY: number) => {
-    setPageState(prev => {
-      const next = {
-        ...prev,
-        scrollPositions: {
-          ...prev.scrollPositions,
-          [key]: scrollY
-        }
-      };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('kylrix:pageState', JSON.stringify(next));
-      }
-      return next;
-    });
+    setPageState(prev => ({
+      ...prev,
+      scrollPositions: { ...prev.scrollPositions, [key]: scrollY },
+    }));
   }, []);
 
   const getScrollPosition = useCallback((key: string) => {
@@ -170,9 +136,6 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
                 routePaths: { ...prev.routePaths, ...config.pageState.routePaths },
                 extra: { ...prev.extra, ...config.pageState.extra },
               };
-              if (typeof window !== 'undefined') {
-                localStorage.setItem('kylrix:pageState', JSON.stringify(merged));
-              }
               return merged;
             });
             if (config.pageState.activeDetail) {
@@ -227,17 +190,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
   
-  const [overrides, setOverrides] = useState<Record<string, Partial<SectionConfig>>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('kylrix:sections:overrides');
-        return saved ? JSON.parse(saved) : {};
-      } catch {
-        return {};
-      }
-    }
-    return {};
-  });
+  const [overrides, setOverrides] = useState<Record<string, Partial<SectionConfig>>>({});
 
   // Mobile-first default — never SSR a desktop multi-column shell that squishes content.
   const [screenWidth, setScreenWidth] = useState(() =>
@@ -260,35 +213,11 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
   }, [pathname, handleSetActiveDetail]);
 
   const updateRouteOverride = useCallback((route: string, override: Partial<SectionConfig>) => {
-    setOverrides((prev) => {
-      const updated = { ...prev, [route]: { ...prev[route], ...override } };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('kylrix:sections:overrides', JSON.stringify(updated));
-        
-        // 1% discretionary telemetry dispatch to optimize sections globally
-        if (Math.random() < 0.01) {
-          void recordAnonymizedTelemetry({
-            niche: 'system',
-            app: 'sections',
-            action: 'layout_override',
-            intent: 'optimize_columns',
-            metadata: {
-              route,
-              screenWidth,
-              columnsCount: override.columnsCount,
-              overriddenAt: new Date().toISOString()}
-          }).catch(err => console.warn('[SectionProvider] Telemetry failed:', err));
-        }
-      }
-      return updated;
-    });
-  }, [screenWidth]);
+    setOverrides((prev) => ({ ...prev, [route]: { ...prev[route], ...override } }));
+  }, []);
 
   const resetOverrides = useCallback(() => {
     setOverrides({});
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('kylrix:sections:overrides');
-    }
   }, []);
 
   // Intelligent fallback: auto-partitions data/sections for non-configured routes
@@ -503,49 +432,9 @@ function NoteDetailContainer({
  * Unified loader for Chats / Huddle chats thread routing inside E2E and public flows.
  */
 function ChatDetailContainer({ conversationId, onBack }: { conversationId: string; onBack: () => void }) {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [isHuddleChat, setIsHuddleChat] = useState(false);
-  const [huddleTitle, setHuddleTitle] = useState('');
-
-  useEffect(() => {
-    if (!conversationId) return;
-    const checkChatType = async () => {
-      try {
-        const note = await getChatNote(conversationId) as any;
-        if (note && (note.isChat || note.isThread || note.isGhost)) {
-          setIsHuddleChat(true);
-          setHuddleTitle(note.title || 'Huddle Chat');
-        }
-      } catch (_e) {
-        setIsHuddleChat(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-    checkChatType();
-  }, [conversationId]);
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'grid', placeItems: 'center', height: '100%', py: 8 }}>
-        <CircularProgress sx={{ color: '#F59E0B' }} />
-      </Box>
-    );
-  }
-
   return (
     <Box sx={{ pointerEvents: 'auto', height: '100%' }}>
-      {isHuddleChat ? (
-        <HuddleChatWindow 
-          chatNoteId={conversationId} 
-          user={user} 
-          title={huddleTitle} 
-          onBack={onBack}
-        />
-      ) : (
-        <ChatWindow conversationId={conversationId} onBack={onBack} />
-      )}
+      <ChatWindow conversationId={conversationId} onBack={onBack} />
     </Box>
   );
 }

@@ -679,17 +679,15 @@ function registerCoreTools() {
     domain: 'markdown',
     action: 'custom',
     name: 'Render chart or graph',
-    description: 'Render a chart or function graph block to SVG.',
+    description: 'Render a chart or function graph block to SVG. (Charts layer removed — returns placeholder.)',
     parameters: {
       kind: { type: 'string', description: 'chart | graph', required: true },
       body: { type: 'string', description: 'Block body (key: value lines)', required: true },
     },
     execute: async (params) => {
-      const { renderChartSvg, renderGraphSvg } = await import('@/lib/markdown/charts');
       const kind = String(params.kind || 'chart').toLowerCase();
       const body = String(params.body || '');
-      const html = kind === 'graph' ? renderGraphSvg(body) : renderChartSvg(body);
-      return { success: true, data: { html } };
+      return { success: true, data: { html: `<pre>${kind}: ${body.slice(0, 200)}</pre>` } };
     },
   });
 

@@ -17,8 +17,9 @@ type Props = {
   onNuclear: () => void;
 };
 
-export function ChatSettingsPanel({ conversation, conversationId, isSelf, messages, onClose, onExport, onClearMe: _onClearMe, onClearEveryone: _onClearEveryone, onNuclear }: Props) {
-  const { user: _user } = useAuth();
+export function ChatSettingsPanel({ conversation, conversationId, isSelf, messages, onClose, onExport, onClearMe, onClearEveryone, onNuclear }: Props) {
+  const { user } = useAuth();
+  void onClearEveryone; void user;
   const [showKeys, setShowKeys] = useState(false);
   const [keysDetail, setKeysDetail] = useState<string | null>(null);
 

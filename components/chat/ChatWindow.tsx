@@ -117,8 +117,10 @@ export const ChatWindow = ({
     const [sending, setSending] = useState(false);
     const [attachment, setAttachment] = useState<File | null>(null);
     const [isRecording, setIsRecording] = useState(false);
-    const [_anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const [_attachAnchorEl, _setAttachAnchorEl] = useState<null | HTMLElement>(null);
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const [attachAnchorEl, setAttachAnchorEl] = useState<null | HTMLElement>(null);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    void anchorEl; void attachAnchorEl;
     const [noteModalOpen, setNoteModalOpen] = useState(false);
     const [secretModalOpen, setSecretModalOpen] = useState(false);
     const [unlockModalOpen, setUnlockModalOpen] = useState(false);
@@ -160,7 +162,8 @@ export const ChatWindow = ({
         return conversation.participants.find((p: string) => p !== user.$id) || null;
     }, [conversation, user?.$id]);
 
-    const _handleTip = () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const handleTip = () => {
         if (!partnerId) return;
         setAnchorEl(null);
         openWalletWithIntent({

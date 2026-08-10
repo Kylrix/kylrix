@@ -9,20 +9,12 @@ import {
   type MarkdownTransformContext,
 } from '@/lib/markdown/pipeline';
 import { registerMathTransforms } from '@/lib/markdown/math';
-import { registerChartTransforms } from '@/lib/markdown/charts';
-import { registerHtmlPreviewTransform } from '@/lib/markdown/html-preview';
-import { registerQuoteCopyTransforms } from '@/lib/markdown/quote-copy';
-import { registerImageLinkTransforms } from '@/lib/markdown/image-link';
 
 let layersReady = false;
 
 export function ensureMarkdownLayers() {
   if (layersReady) return;
   registerMathTransforms();
-  registerChartTransforms();
-  registerQuoteCopyTransforms();
-  registerImageLinkTransforms();
-  registerHtmlPreviewTransform();
   layersReady = true;
 }
 
