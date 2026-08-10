@@ -157,6 +157,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           void getCurrentUser(true).then((verified) => {
             if (seq !== sessionVerifySeq.current) return;
             if (!verified) return;
+            // Only adopt background verified user if it belongs to current active user partition
+            const currentActiveId = (typeof window !== 'undefined' ? localStorage.getItem('kylrix:activePartition') : null)?.replace('_acc_', '');
+            if (currentActiveId && verified.$id !== currentActiveId) {
+              console.warn('[AuthContext] Background verify returned session for non-active partition user, ignoring override.');
+              return;
+            }
             setUser(verified as any);
             setKylrixPulse(verified);
           });

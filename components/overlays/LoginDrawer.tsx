@@ -121,6 +121,18 @@ export function LoginDrawer() {
         console.warn('Failed to auto-unlock vault with master password:', vaultErr);
       }
 
+      // In switch mode: snap partition to newly logged-in user and reload to flush all stale state
+      if (isSwitchMode) {
+        const { setActivePartitionId: setPid } = await import('@/lib/account/partition');
+        const { ensureCurrentAccountInVault } = await import('@/lib/account/vault');
+        ensureCurrentAccountInVault({ $id: session.userId, name: session.providerUid || '', email });
+        setPid(`_acc_${session.userId}` as any);
+        toast.success('Account switched!');
+        close();
+        setTimeout(() => window.location.reload(), 100);
+        return;
+      }
+
       toast.success('Logged in successfully!');
       await refreshUser(true);
       close();
@@ -212,9 +224,10 @@ export function LoginDrawer() {
     const verifySession = async () => {
       setCheckingSession(true);
       try {
+        // In switch mode the session may already be gone (we deleted it) — don't auto-close
+        if (isSwitchMode) return;
         const current = await refreshUser(true);
-        // Do not auto-close when explicitly opened in switch mode
-        if (!cancelled && current && !isSwitchMode) {
+        if (!cancelled && current) {
           close();
         }
       } finally {
@@ -252,7 +265,23 @@ export function LoginDrawer() {
     if (!code || code.length < 6) return;
     setLoading(true);
     try {
-      await verifyEmailOTP(email, userId, code);
+      const session = await verifyEmailOTP(email, userId, code);
+
+      // In switch mode: snap partition to newly logged-in user and reload to flush all stale state
+      if (isSwitchMode) {
+        const loggedInUserId = (session as any)?.userId || userId;
+        if (loggedInUserId) {
+          const { setActivePartitionId: setPid } = await import('@/lib/account/partition');
+          const { ensureCurrentAccountInVault } = await import('@/lib/account/vault');
+          ensureCurrentAccountInVault({ $id: loggedInUserId, email });
+          setPid(`_acc_${loggedInUserId}` as any);
+        }
+        toast.success('Account switched!');
+        close();
+        setTimeout(() => window.location.reload(), 100);
+        return;
+      }
+
       close();
     } catch (err: unknown) {
       if (isMfaRequiredError(err)) {
@@ -267,7 +296,7 @@ export function LoginDrawer() {
     } finally {
       setLoading(false);
     }
-  }, [email, userId, verifyEmailOTP, close]);
+  }, [email, userId, verifyEmailOTP, close, isSwitchMode]);
 
   // Auto-submit effects for 6-digit completion
   useEffect(() => {
@@ -301,46 +330,45 @@ export function LoginDrawer() {
     if (!targetId || targetId === user?.$id || isSwitching) return;
     setIsSwitching(true);
     try {
-      // opaque blanket prevents flash of stale partition
-      const blanket = document.createElement('div');
-      blanket.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#0A0908;opacity:1;transition:opacity 180ms';
-      document.body.appendChild(blanket);
-      // flip partition pointer — 1:1 mirror, no rows moved
-      const targetPid = `_acc_${targetId}`;
-      setActivePartitionId(targetPid as any);
-
-      // Hydrate target user snapshot into localStorage partition so AuthContext instantly adopts target account
+      // Look up target account identity from vault
       const { getAccount } = await import('@/lib/account/vault');
       const targetAcct = getAccount(targetId);
-      if (targetAcct) {
-        const syntheticUser = {
-          $id: targetAcct.id,
-          name: targetAcct.name || targetAcct.username || 'User',
-          email: targetAcct.email || null,
-          username: targetAcct.username || null,
-          isPulse: false
-        };
-        const cacheKey = `kylrix_flow_current_user_v2_${targetPid}`;
-        const lastUserKey = `kylrix_last_logged_in_user_${targetPid}`;
-        try {
-          localStorage.setItem(cacheKey, JSON.stringify({ user: syntheticUser, expiresAt: Date.now() + 86400000 }));
-          localStorage.setItem(lastUserKey, JSON.stringify(syntheticUser));
-          const { setKylrixPulse } = await import('@/lib/appwrite/client');
-          setKylrixPulse(syntheticUser);
-        } catch {}
-      }
 
-      // clear volatile in-memory caches (RxDB already segregated per _acc_<id>)
-      try { 
-        sessionStorage.clear(); 
+      // Clear all in-memory / session caches
+      try {
+        sessionStorage.clear();
         const { clearChatsListMemory, clearThreadsListMemory } = await import('@/lib/chat/local-chat-cache');
         clearChatsListMemory();
         if (typeof clearThreadsListMemory === 'function') (clearThreadsListMemory as any)();
         const { clearSessionProjectsList } = await import('@/lib/projects/projects-cache');
         clearSessionProjectsList();
+        const { invalidateCurrentUserCache } = await import('@/lib/appwrite/client');
+        invalidateCurrentUserCache();
       } catch {}
-      toast.success('Switched account');
-      setTimeout(() => window.location.reload(), 220);
+
+      // Flip partition pointer BEFORE killing session so sub-components stop fetching old partition data
+      const targetPid = `_acc_${targetId}`;
+      setActivePartitionId(targetPid as any);
+
+      // Destroy the current Appwrite server-side session (kills the auth cookie)
+      // Do this AFTER partition flip so any in-flight requests get cancelled by context teardown
+      try {
+        await account.deleteSession('current');
+      } catch {}
+
+      // If we have the target's email, pre-fill and go straight to email step for re-auth
+      if (targetAcct?.email) {
+        setEmail(targetAcct.email);
+        setStep('email');
+        setIsSwitching(false);
+        // Stay open in switch mode showing the login form for the target account
+        toast(`Sign in as ${targetAcct.name || targetAcct.email} to continue`, { icon: '🔄' });
+      } else {
+        // No email on record — go to initial step for fresh login
+        setStep('initial');
+        setIsSwitching(false);
+        toast('Sign in to the other account to continue', { icon: '🔄' });
+      }
     } catch (e: any) {
       toast.error(e?.message || 'Switch failed');
       setIsSwitching(false);
