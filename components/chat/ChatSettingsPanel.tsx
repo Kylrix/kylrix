@@ -45,69 +45,194 @@ export function ChatSettingsPanel({ conversation, conversationId, isSelf, messag
     }
   };
 
+  const [showNuclearConfirm, setShowNuclearConfirm] = useState(false);
+
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#0A0908]">
-      <div className="flex items-center justify-between border-b border-white/[0.06] bg-[#0A0908] px-5 py-4 shrink-0">
+    <div className="flex h-full min-h-0 flex-col bg-[#0F0E0D] text-white font-satoshi overflow-hidden">
+      {/* Top Header */}
+      <div className="flex items-center justify-between border-b border-white/8 bg-[#151311] px-5 py-3.5 shrink-0">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-mono m-0">Hangout settings</p>
-          <h2 className="text-sm font-black font-clash text-white m-0 mt-1 truncate max-w-[260px]">{conversation?.name || 'Hangout'}</h2>
-          <p className="text-xs text-white/40 font-satoshi m-0 truncate">{isSelf ? 'Personal' : conversation?.type === 'group' ? `${conversation?.participants?.length || 0} members` : 'Direct'} • {conversation?.isEncrypted ? 'End-to-end encrypted' : 'Not encrypted'}</p>
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-white/40 font-mono m-0">
+            {isSelf ? 'Personal' : conversation?.type === 'group' ? 'Group Hangout' : 'Chat'}
+          </p>
+          <h2 className="text-sm font-black font-clash text-white m-0 mt-0.5 truncate max-w-[260px]">
+            {conversation?.name || 'Settings'}
+          </h2>
         </div>
-        <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-[#8E8A86] hover:text-white hover:bg-[#161412]"><X size={18} /></button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all"
+        >
+          <X size={18} />
+        </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-        <div className="rounded-xl bg-[#161412] border border-white/[0.06] p-3">
-          <p className="text-xs text-white/50 font-satoshi m-0">Manage this hangout. Nuclear wipe permanently deletes the conversation, messages, members, keys and reactions for everyone — no trace remains.</p>
+      <div className="flex-1 overflow-y-auto p-4 space-y-3.5 min-h-0">
+        {/* Banner Card */}
+        <div className="rounded-2xl bg-[#181614] border border-white/8 p-3.5">
+          <p className="text-xs text-white/70 font-satoshi leading-relaxed m-0">
+            Manage options for this hangout. Nuclear wiping deletes all conversation records, messages, attachments, members, and keys permanently.
+          </p>
         </div>
 
-        <button type="button" onClick={() => { void onExport(); onClose?.(); }} className="w-full flex items-center gap-3 rounded-xl bg-[#161412] border border-white/[0.06] px-4 py-3 text-left hover:bg-[#1C1A18] hover:border-white/10 transition-colors">
-          <span className="h-9 w-9 rounded-lg bg-white/[0.04] border border-white/[0.06] grid place-items-center shrink-0"><Download size={16} className="text-white" /></span>
-          <span className="min-w-0 flex-1"><span className="text-sm font-bold text-white block">Export Chat</span><span className="text-xs text-white/40 block">Download JSON transcript</span></span>
-        </button>
+        {/* Action List */}
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => { void onExport(); onClose?.(); }}
+            className="w-full flex items-center gap-3 rounded-2xl bg-[#181614] border border-white/8 px-4 py-3 text-left hover:bg-white/5 transition-all"
+          >
+            <span className="h-9 w-9 rounded-xl bg-white/5 border border-white/8 grid place-items-center shrink-0">
+              <Download size={16} className="text-white" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="text-xs font-bold text-white block">Export Chat</span>
+              <span className="text-[11px] text-white/40 block">Download JSON transcript</span>
+            </span>
+          </button>
 
-        <button type="button" onClick={() => { onClearMe(); }} className="w-full flex items-center gap-3 rounded-xl bg-[#161412] border border-white/[0.06] px-4 py-3 text-left hover:bg-[#1C1A18] transition-colors">
-          <span className="h-9 w-9 rounded-lg bg-white/[0.04] border border-white/[0.06] grid place-items-center shrink-0"><Trash2 size={16} className="text-white/70" /></span>
-          <span className="min-w-0 flex-1"><span className="text-sm font-bold text-white block">Clear All Chat</span><span className="text-xs text-white/40 block">Choose: for me / for everyone</span></span>
-        </button>
+          <button
+            type="button"
+            onClick={() => { onClearMe(); }}
+            className="w-full flex items-center gap-3 rounded-2xl bg-[#181614] border border-white/8 px-4 py-3 text-left hover:bg-white/5 transition-all"
+          >
+            <span className="h-9 w-9 rounded-xl bg-white/5 border border-white/8 grid place-items-center shrink-0">
+              <Trash2 size={16} className="text-white/70" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="text-xs font-bold text-white block">Clear Chat Messages</span>
+              <span className="text-[11px] text-white/40 block">Purge messages for me or everyone</span>
+            </span>
+          </button>
 
-        <button type="button" onClick={() => { onNuclear(); }} className="w-full flex items-center gap-3 rounded-xl bg-[#1C0F0F] border border-[#ff4d4d]/20 px-4 py-3 text-left hover:bg-[#2A1515] transition-colors">
-          <span className="h-9 w-9 rounded-lg bg-[#ff4d4d]/15 border border-[#ff4d4d]/20 grid place-items-center shrink-0"><Zap size={16} className="text-[#ff4d4d]" /></span>
-          <span className="min-w-0 flex-1"><span className="text-sm font-extrabold text-[#ff4d4d] block">Nuclear Wipe</span><span className="text-xs text-white/40 block">Delete conversation + messages + keys + reactions for everyone</span></span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setShowNuclearConfirm(true)}
+            className="w-full flex items-center gap-3 rounded-2xl bg-[#241212] border border-[#ff4d4d]/30 px-4 py-3 text-left hover:bg-[#2F1717] transition-all"
+          >
+            <span className="h-9 w-9 rounded-xl bg-[#ff4d4d]/15 border border-[#ff4d4d]/30 grid place-items-center shrink-0">
+              <Zap size={16} className="text-[#ff4d4d]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="text-xs font-extrabold text-[#ff4d4d] block">Nuclear Wipe</span>
+              <span className="text-[11px] text-white/40 block">Permanently delete hangout & all data</span>
+            </span>
+          </button>
 
-        <button type="button" onClick={handleViewKeys} className="w-full flex items-center gap-3 rounded-xl bg-[#161412] border border-white/[0.06] px-4 py-3 text-left hover:bg-[#1C1A18] transition-colors">
-          <span className="h-9 w-9 rounded-lg bg-[#F59E0B]/10 border border-[#F59E0B]/20 grid place-items-center shrink-0"><Key size={16} className="text-[#F59E0B]" /></span>
-          <span className="min-w-0 flex-1"><span className="text-sm font-bold text-white block">View Keys</span><span className="text-xs text-white/40 block">Encryption details & key state</span></span>
-        </button>
+          <button
+            type="button"
+            onClick={handleViewKeys}
+            className="w-full flex items-center gap-3 rounded-2xl bg-[#181614] border border-white/8 px-4 py-3 text-left hover:bg-white/5 transition-all"
+          >
+            <span className="h-9 w-9 rounded-xl bg-[#F59E0B]/10 border border-[#F59E0B]/20 grid place-items-center shrink-0">
+              <Key size={16} className="text-[#F59E0B]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="text-xs font-bold text-white block">View Security Keys</span>
+              <span className="text-[11px] text-white/40 block">Encryption key state & verification</span>
+            </span>
+          </button>
+        </div>
 
         {showKeys && keysDetail ? (
-          <div className="rounded-xl bg-[#0A0908] border border-[#F59E0B]/20 p-3">
-            <div className="flex items-start gap-2">
-              <Shield size={14} className="text-[#F59E0B] mt-0.5 shrink-0" />
-              <p className="text-xs text-white/70 whitespace-pre-wrap break-words flex-1">{keysDetail}</p>
+          <div className="rounded-2xl bg-[#151311] border border-[#F59E0B]/30 p-3.5 space-y-2">
+            <div className="flex items-start gap-2.5">
+              <Shield size={15} className="text-[#F59E0B] mt-0.5 shrink-0" />
+              <p className="text-xs text-white/80 whitespace-pre-wrap break-words flex-1 leading-relaxed m-0 font-mono">
+                {keysDetail}
+              </p>
             </div>
-            <button type="button" onClick={() => setShowKeys(false)} className="mt-2 text-xs font-bold text-white/60 hover:text-white">Hide</button>
+            <button
+              type="button"
+              onClick={() => setShowKeys(false)}
+              className="text-xs font-extrabold text-[#F59E0B] hover:underline"
+            >
+              Hide
+            </button>
           </div>
         ) : null}
 
-        <div className="rounded-xl bg-[#161412] border border-white/[0.06] p-3 space-y-2">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5"><Info size={12} /> Details</h3>
-          <div className="space-y-1 text-xs font-mono text-white/60">
-            <div className="flex justify-between gap-2"><span className="text-white/30">ID</span><span className="truncate max-w-[180px] text-white/80">{conversationId}</span></div>
-            <div className="flex justify-between"><span className="text-white/30">Messages</span><span className="text-white/80">{messages.length}</span></div>
-            <div className="flex justify-between"><span className="text-white/30">Type</span><span className="text-white/80">{conversation?.type || 'thread'}</span></div>
-            <div className="flex justify-between"><span className="text-white/30">Encrypted</span><span className={conversation?.isEncrypted ? 'text-emerald-400' : 'text-white/50'}>{conversation?.isEncrypted ? 'Yes' : 'No'}</span></div>
+        {/* Details Card */}
+        <div className="rounded-2xl bg-[#181614] border border-white/8 p-3.5 space-y-2">
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/50 flex items-center gap-1.5 font-clash">
+            <Info size={13} /> Hangout Metadata
+          </h3>
+          <div className="space-y-1.5 text-xs font-mono text-white/60">
+            <div className="flex justify-between gap-2">
+              <span className="text-white/30">ID</span>
+              <span className="truncate max-w-[180px] text-white/80">{conversationId}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white/30">Messages</span>
+              <span className="text-white/80">{messages.length}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white/30">Type</span>
+              <span className="text-white/80">{conversation?.type || 'thread'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white/30">Security</span>
+              <span className={conversation?.isEncrypted ? 'text-emerald-400 font-bold' : 'text-white/50'}>
+                {conversation?.isEncrypted ? 'End-to-End Encrypted' : 'Standard'}
+              </span>
+            </div>
           </div>
         </div>
 
         {conversation?.type === 'group' ? (
-          <div className="rounded-xl bg-[#161412] border border-white/[0.06] p-3">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5"><Users size={12} /> Members</h3>
-            <p className="text-xs text-white/40 mt-2">{(conversation?.participants || []).slice(0, 8).join(', ') || 'No participants list'}</p>
+          <div className="rounded-2xl bg-[#181614] border border-white/8 p-3.5">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/50 flex items-center gap-1.5 font-clash">
+              <Users size={13} /> Participants
+            </h3>
+            <p className="text-xs text-white/60 mt-2 font-mono">
+              {(conversation?.participants || []).slice(0, 8).join(', ') || 'No participants list'}
+            </p>
           </div>
         ) : null}
       </div>
+
+      {/* Confirmation Modal overlay for Nuclear Wipe */}
+      {showNuclearConfirm ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-2xl bg-[#151311] border border-[#ff4d4d]/30 p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-[#ff4d4d]/15 border border-[#ff4d4d]/30 grid place-items-center shrink-0">
+                <Zap size={20} className="text-[#ff4d4d]" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-white font-clash m-0">Confirm Nuclear Wipe</h3>
+                <p className="text-xs text-white/50 m-0">This action cannot be undone.</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-white/80 leading-relaxed font-satoshi m-0">
+              Are you sure you want to permanently wipe this conversation? Every message, attachment, member record, and encryption key will be recursively deleted.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowNuclearConfirm(false)}
+                className="h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/8 text-white font-bold text-xs transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNuclearConfirm(false);
+                  onNuclear();
+                  onClose?.();
+                }}
+                className="h-9 rounded-xl bg-[#ff4d4d] hover:bg-[#e63939] text-white font-extrabold text-xs transition-all shadow-lg"
+              >
+                Wipe Permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

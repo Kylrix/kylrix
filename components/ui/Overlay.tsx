@@ -57,6 +57,7 @@ const Overlay: React.FC = () => {
 
   const isProfileSidebar = React.isValidElement(content) && (
     (content.type as any).name === 'ProfileSidebar' ||
+    (content.type as any).name === 'ChatSettingsPanel' ||
     (content.props as any).isProfilePeek === true ||
     ((content.props as any).conversationId !== undefined && (content.props as any).seed !== undefined)
   );
