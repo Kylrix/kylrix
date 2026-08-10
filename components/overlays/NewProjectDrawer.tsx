@@ -73,14 +73,7 @@ export function NewProjectDrawer() {
     }
   }, [isOpen, user?.$id]);
 
-  useEffect(() => {
-    if (isOpen && user?.$id && ownedProjectsCount !== null) {
-      if (!hasPaidKylrixPlan(user) && ownedProjectsCount >= 1) {
-        close();
-        openProUpgrade('New Project');
-      }
-    }
-  }, [isOpen, user?.$id, ownedProjectsCount, close, openProUpgrade, user]);
+
 
   const [step, setStep] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -229,250 +222,97 @@ export function NewProjectDrawer() {
 
   if (!isOpen) return null;
 
-  return (
-    <Drawer
-      anchor={isDesktop ? 'right' : 'bottom'}
-      open={isOpen}
-      onClose={close}
-      ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
+  const mainFormContent = (
+    <Box
       sx={{
-        '& .ob-drawer-panel': {
-          ...(isDesktop
-            ? {
-                top: '88px',
-                right: 0,
-                height: 'calc(100vh - 88px)',
-                width: 'min(500px, 94vw)',
-                maxWidth: 'min(500px, 94vw)',
-                borderTopLeftRadius: RADIUS_LARGE,
-                borderTopRightRadius: 0,
-                borderBottomLeftRadius: 0,
-                borderBottomRightRadius: 0,
-                borderLeft: BORDER,
-                borderTop: BORDER,
-                borderBottom: 0,
-                borderRight: 0}
-            : {
-                height: isExpanded ? '92dvh' : '60dvh',
-                minHeight: '60dvh',
-                maxHeight: '92dvh',
-                transition: BRAND_TRANSITION,
-                borderTopLeftRadius: RADIUS_LARGE,
-                borderTopRightRadius: RADIUS_LARGE,
-                border: BORDER,
-                borderBottom: 0}),
-          bgcolor: SURFACE_ASH,
-          boxShadow: 'none',
-          backgroundImage: 'none',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column'}}}
+        px: { xs: 2.25, sm: 2.75 },
+        pb: 'max(20px, env(safe-area-inset-bottom))',
+        pt: isDesktop ? 2.5 : 0,
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+        bgcolor: SURFACE_ASH
+      }}
     >
-      {!isDesktop && (
-        <Box 
-            sx={{ display: 'flex', justifyContent: 'center', py: 1.5, cursor: 'pointer' }}
-            onClick={() => setIsExpanded(!isExpanded)}
-        >
-          <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
-        </Box>
-      )}
-
-      <Box
-        sx={{
-          px: { xs: 2.25, sm: 2.75 },
-          pb: 'max(20px, env(safe-area-inset-bottom))',
-          pt: 0,
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0}}
-      >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
-          <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: RADIUS_SMALL,
-                display: 'grid',
-                placeItems: 'center',
-                bgcolor: VOID,
-                border: BORDER,
-                flexShrink: 0}}
-            >
-              {template?.icon ? <template.icon size={20} color={template.color} strokeWidth={2.5} /> : <ProjectIcon size={20} color={SYSTEM_PRIMARY} strokeWidth={2} />}
-            </Box>
-            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                <Typography component="span" sx={{ color: '#fff', fontWeight: 900, fontSize: '1.1rem', fontFamily: fontDisplay, letterSpacing: '-0.02em', lineHeight: 1.25 }} noWrap>
-                    {template?.title || 'New Workspace'}
-                </Typography>
-                <Typography component="span" sx={{ color: TEXT_MUTED, fontWeight: 700, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', fontSize: '0.65rem', lineHeight: 1.35 }} noWrap>
-                    {step === 1 ? 'Step 1: Link Context' : 'Step 2: Finalize Workspace'}
-                </Typography>
-            </Box>
-          </Stack>
-          <IconButton
-            onClick={close}
-            aria-label="Close"
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0, flex: 1 }}>
+          <Box
             sx={{
-              color: '#E8E6E3',
+              width: 40,
+              height: 40,
+              borderRadius: RADIUS_SMALL,
+              display: 'grid',
+              placeItems: 'center',
               bgcolor: VOID,
               border: BORDER,
-              '&:hover': { bgcolor: HOVER },
-              flexShrink: 0,
-              ml: 2}}
+              flexShrink: 0}}
           >
-            <CloseIcon size={18} />
-          </IconButton>
+            {template?.icon ? <template.icon size={20} color={template.color} strokeWidth={2.5} /> : <ProjectIcon size={20} color={SYSTEM_PRIMARY} strokeWidth={2} />}
+          </Box>
+          <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
+              <Typography component="span" sx={{ color: '#fff', fontWeight: 900, fontSize: '1.1rem', fontFamily: fontDisplay, letterSpacing: '-0.02em', lineHeight: 1.25 }} noWrap>
+                  {template?.title || 'New Workspace'}
+              </Typography>
+              <Typography component="span" sx={{ color: TEXT_MUTED, fontWeight: 700, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', fontSize: '0.65rem', lineHeight: 1.35 }} noWrap>
+                  {step === 1 ? 'Step 1: Link Context' : 'Step 2: Finalize Workspace'}
+              </Typography>
+          </Box>
         </Stack>
-
-        <Box 
-          component="form" 
-          onSubmit={handleSubmit}
-          sx={{ 
-            flex: 1, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: 2,
-            overflowY: 'auto',
-            pr: 0.5
-          }}
+        <IconButton
+          onClick={close}
+          aria-label="Close"
+          sx={{
+            color: '#E8E6E3',
+            bgcolor: VOID,
+            border: BORDER,
+            '&:hover': { bgcolor: HOVER },
+            flexShrink: 0,
+            ml: 2}}
         >
-          {step === 1 && (
-              <Box>
-                  <Typography component="span" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', lineHeight: 1.35 }}>
-                      Select existing {template?.id?.includes('form') ? 'Form' : 'Note'} to link
-                  </Typography>
-                  
-                  {loadingResources ? (
-                      <Stack direction="row" justifyContent="center" py={4}>
-                          <CircularProgress size={24} sx={{ color: template?.color || SYSTEM_PRIMARY }} />
-                      </Stack>
-                  ) : resources.length === 0 ? (
-                      <Box sx={{ p: 3, bgcolor: VOID, borderRadius: '16px', border: BORDER, textAlign: 'center' }}>
-                          <Typography component="span" sx={{ color: TEXT_MUTED, mb: 2, display: 'block', lineHeight: 1.5 }}>You don&apos;t have any {template?.id?.includes('form') ? 'forms' : 'notes'} to link yet.</Typography>
-                          <Button variant="outlined" size="small" onClick={() => setStep(2)} sx={{ color: '#fff', borderColor: BORDER_HAIRLINE }}>Skip & Create Manual</Button>
-                      </Box>
-                  ) : (
-                      <Stack spacing={1}>
-                          {resources.map((res) => (
-                              <Box
-                                  key={res.$id}
-                                  onClick={() => handleResourceSelect(res.$id)}
-                                  sx={{
-                                      p: 2,
-                                      borderRadius: '16px',
-                                      bgcolor: VOID,
-                                      border: '1px solid',
-                                      borderColor: BORDER_HAIRLINE,
-                                      cursor: 'pointer',
-                                      transition: 'all 0.2s ease',
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      gap: 0.35,
-                                      '&:hover': { borderColor: template?.color || SYSTEM_PRIMARY, bgcolor: HOVER }
-                                  }}
-                              >
-                                  <Typography component="span" sx={{ fontWeight: 800, color: '#fff', fontSize: '0.88rem', lineHeight: 1.25 }}>{res.title || res.name}</Typography>
-                                  <Typography component="span" sx={{ color: TEXT_MUTED, fontSize: '0.76rem', fontWeight: 600, lineHeight: 1.35 }}>{new Date(res.$createdAt).toLocaleDateString()}</Typography>
-                              </Box>
-                          ))}
-                          <Button variant="text" size="small" onClick={() => setStep(2)} sx={{ color: TEXT_MUTED, mt: 1 }}>Skip to manual setup</Button>
-                      </Stack>
-                  )}
-              </Box>
-          )}
+          <CloseIcon size={18} />
+        </IconButton>
+      </Stack>
 
-          {step === 2 && (
-              <>
-                <Box>
-                    <Typography component="span" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', lineHeight: 1.35 }}>
-                    Workspace Title
+      <Box 
+        component="form" 
+        onSubmit={handleSubmit}
+        sx={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: 2,
+          overflowY: 'auto',
+          pr: 0.5
+        }}
+      >
+        {step === 1 && (
+            <Box>
+                <Typography component="span" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', lineHeight: 1.35 }}>
+                    Select existing {template?.id?.includes('form') ? 'Form' : 'Note'} to link
+                </Typography>
+                
+                {loadingResources ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <CircularProgress size={24} sx={{ color: SYSTEM_PRIMARY }} />
+                  </Box>
+                ) : resources.length === 0 ? (
+                  <Box sx={{ p: 2, borderRadius: RADIUS_SMALL, bgcolor: VOID, border: BORDER, textAlign: 'center' }}>
+                    <Typography component="span" sx={{ color: TEXT_MUTED, fontSize: '0.82rem' }}>
+                      No {template?.id?.includes('form') ? 'forms' : 'notes'} found. Proceeding without linking.
                     </Typography>
-                    <TextField
-                    fullWidth
-                    required
-                    value={title}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
-                    placeholder="e.g. Q3 Roadmap"
-                    variant="standard"
-                    InputProps={{
-                        disableUnderline: true,
-                        sx: {
-                        bgcolor: VOID,
-                        borderRadius: '16px',
-                        color: 'white',
-                        px: 2,
-                        py: 1.5,
-                        fontFamily: fontUi,
-                        fontWeight: 600,
-                        border: BORDER,
-                        '&:hover': { borderColor: '#4F4C49' },
-                        '&.ob-focused': { borderColor: SYSTEM_PRIMARY }
-                        }
-                    }}
-                    />
-                </Box>
-
-                <Box>
-                    <Typography component="span" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', lineHeight: 1.35 }}>
-                    Summary
-                    </Typography>
-                    <TextField
-                    fullWidth
-                    multiline
-                    rows={2}
-                    value={summary}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSummary(e.target.value)}
-                    placeholder="Optional workspace overview..."
-                    variant="standard"
-                    InputProps={{
-                        disableUnderline: true,
-                        sx: {
-                        bgcolor: VOID,
-                        borderRadius: '16px',
-                        color: 'white',
-                        px: 2,
-                        py: 1.5,
-                        fontFamily: fontUi,
-                        fontWeight: 500,
-                        border: BORDER,
-                        '&:hover': { borderColor: '#4F4C49' },
-                        '&.ob-focused': { borderColor: SYSTEM_PRIMARY }
-                        }
-                    }}
-                    />
-                </Box>
-
-                <Box>
-                    <Typography component="span" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', lineHeight: 1.35 }}>
-                    Visibility
-                    </Typography>
-                    <Box
-                      component="button"
-                      type="button"
-                      onClick={() => setIsVisibilityDrawerOpen(true)}
-                      sx={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        px: 2.25,
-                        py: 1.5,
-                        borderRadius: '16px',
-                        bgcolor: VOID,
-                        border: BORDER,
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        transition: BRAND_TRANSITION,
-                        '&:hover': { borderColor: '#4F4C49', bgcolor: HOVER }}}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0, flex: 1 }}>
+                  </Box>
+                ) : (
+                  <Stack spacing={1}>
+                    {resources.map((item) => {
+                      const isSelected = selectedResourceId === item.$id;
+                      return (
                         <Box
+                          key={item.$id}
+                          component="button"
+                          type="button"
+                          onClick={() => setSelectedResourceId(isSelected ? '' : item.$id)}
                           sx={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: '10px',
                             display: 'grid',
                             placeItems: 'center',
                             flexShrink: 0,
