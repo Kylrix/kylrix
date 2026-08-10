@@ -317,9 +317,10 @@ export function LoginDrawer() {
       toast.error(e?.message || 'Switch failed');
       setIsSwitching(false);
     }
-  }, [user?.$id, isSwitching]);
+  const [stashedActiveUser, setStashedActiveUser] = useState<any>(null);
 
   const handleStartAddAccount = useCallback(async () => {
+    if (user?.$id) setStashedActiveUser(user);
     try {
       const { clearStatelessSessions } = await import('@/lib/utils');
       clearStatelessSessions();
@@ -328,7 +329,14 @@ export function LoginDrawer() {
       } catch {}
     } catch {}
     setShowAddAccount(true);
-  }, []);
+  }, [user]);
+
+  const handleCancelAddAccount = useCallback(() => {
+    setShowAddAccount(false);
+    if (stashedActiveUser?.$id) {
+      setActivePartitionId(`_acc_${stashedActiveUser.$id}` as any);
+    }
+  }, [stashedActiveUser]);
 
   const handleContinueCurrent = useCallback(() => {
     handleClose();
@@ -599,7 +607,7 @@ export function LoginDrawer() {
             </div>
           ) : isSwitchMode && showAddAccount ? (
             <div className="space-y-3">
-              <button type="button" onClick={() => setShowAddAccount(false)} className="text-xs font-bold text-white/60 hover:text-white flex items-center gap-1">
+              <button type="button" onClick={handleCancelAddAccount} className="text-xs font-bold text-white/60 hover:text-white flex items-center gap-1">
                 <ArrowLeft className="w-3.5 h-3.5" /> Back to switch
               </button>
               {renderStep()}

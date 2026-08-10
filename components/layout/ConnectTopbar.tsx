@@ -2198,9 +2198,15 @@ export default function ConnectTopbar({
                       />
                     </ButtonBase>
                   </>
-                ) : (
-                  <Button onClick={() => openUnified('login')} sx={{ bgcolor: '#6366F1', color: 'white', fontWeight: 900, borderRadius: '12px', px: 2.5, py: 1, '&:hover': { bgcolor: '#5254E8' } }}>{isAuthenticating ? <CircularProgress size={16} color="inherit" /> : 'Sync'}</Button>
-                )}
+                  <Button onClick={() => {
+                    const { listAccounts } = require('@/lib/account/vault');
+                    const saved = listAccounts();
+                    if (saved && saved.length > 0) {
+                      openUnified('login', { mode: 'switch' });
+                    } else {
+                      openUnified('login');
+                    }
+                  }} sx={{ bgcolor: '#6366F1', color: 'white', fontWeight: 900, borderRadius: '12px', px: 2.5, py: 1, '&:hover': { bgcolor: '#5254E8' } }}>{isAuthenticating ? <CircularProgress size={16} color="inherit" /> : 'Sync'}</Button>
               </Stack>
             </Box>
           </Box>
