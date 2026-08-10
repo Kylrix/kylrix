@@ -2,7 +2,7 @@
 
 import { ChatList } from '@/components/chat/ChatList';
 import { useFAB } from '@/context/FABContext';
-import { Plus, MessageCircle } from 'lucide-react';
+import { Plus, MessageCircle, ChevronLeft } from 'lucide-react';
 import { useCallback, useEffect, useRef, Suspense, useState } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { ChatService } from '@/lib/services/chat';
@@ -296,14 +296,34 @@ function ConnectChatsBody() {
           </div>
         </div>
       ) : (
-        <div className="flex flex-col w-full max-w-2xl mx-auto pt-3 pb-28 px-3 sm:px-4">
-          <header className="mb-5 px-1">
-            <h1 className="text-2xl font-black font-clash text-white m-0 tracking-tight">
-              Chats
-            </h1>
-            <p className="text-white/45 text-xs font-semibold mt-1 font-satoshi">
-              Messages and hangouts
-            </p>
+        <div className="flex flex-col w-full max-w-2xl mx-auto pt-4 md:pt-6 pb-28 px-3 sm:px-4">
+          <header className="mb-5 px-1 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="p-2 rounded-xl bg-[#161412] border border-[#34322F] text-white/70 hover:text-white transition-colors"
+                aria-label="Back"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl font-black font-clash text-white m-0 tracking-tight truncate">
+                  Chats
+                </h1>
+                <p className="text-white/45 text-xs font-semibold mt-0.5 font-satoshi truncate">
+                  Messages and hangouts
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={openCreate}
+              className="h-9 px-3 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold inline-flex items-center gap-1.5 shrink-0"
+            >
+              <Plus size={14} strokeWidth={3} />
+              <span>New</span>
+            </button>
           </header>
           <ChatList
             activeTab={activeTab}
