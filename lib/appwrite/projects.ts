@@ -19,15 +19,32 @@ export const ProjectsService = {
   async listProjects(force = false) {
     if (typeof window !== 'undefined') {
       try {
-        const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const cached = await LocalEngine.cacheGet<any[]>('f_projects_list');
-        if (cached && cached.length > 0 && !force) {
-          this.fetchRemoteProjects(force).then(async (remoteRows) => {
-            if (remoteRows && remoteRows.length > 0) {
-              await LocalEngine.cacheSet('f_projects_list', remoteRows);
-            }
-          }).catch(() => {});
-          return { rows: cached };
+        const user = await getCurrentUser().catch(() => null);
+        const uid = user?.$id;
+        if (uid && uid !== 'guest') {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          const cached = await LocalEngine.cacheGet<any[]>(`f_projects_list_${uid}`);
+          if (cached && cached.length > 0 && !force) {
+            this.fetchRemoteProjects(force).then(async (remoteRows) => {
+              if (remoteRows && remoteRows.length > 0) {
+                await LocalEngine.cacheSet(`f_projects_list_${uid}`, remoteRows);
+                // also keep legacy shared key in sync for fallback readers
+                await LocalEngine.cacheSet('f_projects_list', remoteRows).catch(() => {});
+              }
+            }).catch(() => {});
+            return { rows: cached };
+          }
+        } else {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          const cached = await LocalEngine.cacheGet<any[]>('f_projects_list');
+          if (cached && cached.length > 0 && !force) {
+            this.fetchRemoteProjects(force).then(async (remoteRows) => {
+              if (remoteRows && remoteRows.length > 0) {
+                await LocalEngine.cacheSet('f_projects_list', remoteRows);
+              }
+            }).catch(() => {});
+            return { rows: cached };
+          }
         }
       } catch {}
     }
@@ -36,7 +53,14 @@ export const ProjectsService = {
     if (typeof window !== 'undefined' && rows && rows.length > 0) {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        void LocalEngine.cacheSet('f_projects_list', rows);
+        const user = await getCurrentUser().catch(() => null);
+        const uid = user?.$id;
+        if (uid && uid !== 'guest') {
+          void LocalEngine.cacheSet(`f_projects_list_${uid}`, rows);
+          void LocalEngine.cacheSet('f_projects_list', rows).catch(() => {});
+        } else {
+          void LocalEngine.cacheSet('f_projects_list', rows);
+        }
       } catch {}
     }
     return { rows };

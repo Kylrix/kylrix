@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { X, Mail, ArrowLeft, Fingerprint } from 'lucide-react';
+import { X, Mail, ArrowLeft, Fingerprint, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import OAuthButtons from '@/components/OAuthButtons';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -478,6 +478,29 @@ export function LoginDrawer() {
     handleClose();
   }, []);
 
+  const handleDeleteAccount = useCallback(async (targetId: string) => {
+    const acct = listOtherAccounts(user?.$id).find(a => a.id === targetId) || otherAccounts.find(a => a.id === targetId);
+    const label = acct?.name || acct?.email || 'this account';
+    if (!window.confirm(`Remove ${label}? Session will be removed and you will have to sign in again.`)) return;
+    try {
+      const { removeAccount, clearAccountSession } = await import('@/lib/account/vault');
+      removeAccount(targetId);
+      await clearAccountSession(targetId);
+      // also clear per-account workspace cache
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        await LocalEngine.cacheDelete(`kylrix_active_workspace_${targetId}`);
+        await LocalEngine.cacheDelete(`f_projects_list_${targetId}`);
+        await LocalEngine.cacheDelete(`f_notes_list_${targetId}`);
+      } catch {}
+      toast.success(`Removed ${label}`);
+      // force re-render by closing and reopening switch view
+      setShowAddAccount(false);
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to remove account');
+    }
+  }, [user?.$id, otherAccounts]);
+
   if (!isOpen) return null;
 
   const currentLabel = user?.name || (user as any)?.username || user?.email || 'Current account';
@@ -703,22 +726,35 @@ export function LoginDrawer() {
                   <p className="text-[11px] font-bold uppercase tracking-wider text-white/50 font-mono m-0">Switch account</p>
                   <div className="space-y-2">
                     {otherAccounts.map(acct => (
-                      <button
+                      <div
                         key={acct.id}
-                        type="button"
-                        onClick={() => handleSwitchTo(acct.id)}
-                        disabled={isSwitching}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:border-white/20 text-left transition-all disabled:opacity-50"
+                        className="w-full flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] hover:border-white/20 transition-all"
                       >
-                        <div className="w-9 h-9 rounded-full bg-[#F59E0B] flex items-center justify-center text-black font-black text-sm shrink-0">
-                          {(acct.name || acct.username || acct.email || '?').charAt(0).toUpperCase()}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-extrabold text-white truncate m-0">{acct.name || acct.username || acct.email}</p>
-                          {acct.email ? <p className="text-xs text-white/50 truncate m-0">{acct.email}</p> : null}
-                        </div>
-                        <span className="text-xs font-bold text-white/40">Switch</span>
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSwitchTo(acct.id)}
+                          disabled={isSwitching}
+                          className="flex-1 flex items-center gap-3 text-left min-w-0 disabled:opacity-50"
+                        >
+                          <div className="w-9 h-9 rounded-full bg-[#F59E0B] flex items-center justify-center text-black font-black text-sm shrink-0">
+                            {(acct.name || acct.username || acct.email || '?').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-extrabold text-white truncate m-0">{acct.name || acct.username || acct.email}</p>
+                            {acct.email ? <p className="text-xs text-white/50 truncate m-0">{acct.email}</p> : null}
+                          </div>
+                          <span className="text-xs font-bold text-white/40 shrink-0">Switch</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAccount(acct.id)}
+                          className="p-2 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-colors shrink-0"
+                          aria-label={`Remove ${acct.name || acct.email || 'account'}`}
+                          title="Remove account"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
