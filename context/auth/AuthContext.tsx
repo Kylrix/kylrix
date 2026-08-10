@@ -366,15 +366,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ...(user?.prefs || {}),
         ...prefs
       });
-      // Invalidate cache and trigger local updates
-      invalidateCurrentUserCache();
-      await refreshUser(true);
+      // Locally update user object preferences without triggering heavy auth re-verification
+      setUser((prev: any) => (prev ? { ...prev, prefs: res } : prev));
       return res;
     } catch (e) {
       console.error('Failed to update user preferences:', e);
       throw e;
     }
-  }, [user, refreshUser]);
+  }, [user]);
 
   const value = useMemo(() => ({
     user,
