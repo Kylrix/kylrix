@@ -70,6 +70,21 @@ export function NativeSidebarBridge() {
 
   useEffect(() => {
     if (agentic.isOpen) {
+      if (!isDesktop) {
+        if (lastKeyRef.current === 'agentic_mobile') return;
+        lastKeyRef.current = 'agentic_mobile';
+        overlay.openOverlay(
+          <AgenticPanelContent
+            isDesktop={false}
+            onClose={() => {
+              agentic.closeAgenticDrawer();
+              overlay.closeOverlay();
+            }}
+          />
+        );
+        return;
+      }
+
       if (lastKeyRef.current === 'agentic') return;
       lastKeyRef.current = 'agentic';
       openRef.current(

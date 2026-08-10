@@ -67,7 +67,8 @@ const Overlay: React.FC = () => {
     (content.type as any).name === 'GoalObjectDetail' ||
     (content.type as any).name === 'CommObjectDetail' ||
     (content.type as any).name === 'MomentObjectDetail' ||
-    (content.type as any).name === 'EventDetails'
+    (content.type as any).name === 'EventDetails' ||
+    (content.type as any).name === 'AgenticPanelContent'
   );
 
   const drawerHeight = '100dvh';
