@@ -105,12 +105,14 @@ export function LoginDrawer() {
     setLastUsedMethod('password');
 
     try {
+      const session = await account.createEmailPasswordSession(email, password);
+
+      // Store session secret for seamless multi-account switching
       try {
-        await account.deleteSession('current');
+        const { storeAccountSession } = await import('@/lib/account/vault');
+        storeAccountSession(session.userId, session.$id, session.secret);
       } catch {}
 
-      const session = await account.createEmailPasswordSession(email, password);
-      
       try {
         const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
         const unlockSuccess = await masterPassCrypto.unlock(password, session.userId, false);
@@ -119,18 +121,6 @@ export function LoginDrawer() {
         }
       } catch (vaultErr) {
         console.warn('Failed to auto-unlock vault with master password:', vaultErr);
-      }
-
-      // In switch mode: snap partition to newly logged-in user and reload to flush all stale state
-      if (isSwitchMode) {
-        const { setActivePartitionId: setPid } = await import('@/lib/account/partition');
-        const { ensureCurrentAccountInVault } = await import('@/lib/account/vault');
-        ensureCurrentAccountInVault({ $id: session.userId, name: session.providerUid || '', email });
-        setPid(`_acc_${session.userId}` as any);
-        toast.success('Account switched!');
-        close();
-        setTimeout(() => window.location.reload(), 100);
-        return;
       }
 
       toast.success('Logged in successfully!');
@@ -224,10 +214,9 @@ export function LoginDrawer() {
     const verifySession = async () => {
       setCheckingSession(true);
       try {
-        // In switch mode the session may already be gone (we deleted it) — don't auto-close
-        if (isSwitchMode) return;
         const current = await refreshUser(true);
-        if (!cancelled && current) {
+        // Do not auto-close when explicitly opened in switch mode
+        if (!cancelled && current && !isSwitchMode) {
           close();
         }
       } finally {
@@ -265,23 +254,7 @@ export function LoginDrawer() {
     if (!code || code.length < 6) return;
     setLoading(true);
     try {
-      const session = await verifyEmailOTP(email, userId, code);
-
-      // In switch mode: snap partition to newly logged-in user and reload to flush all stale state
-      if (isSwitchMode) {
-        const loggedInUserId = (session as any)?.userId || userId;
-        if (loggedInUserId) {
-          const { setActivePartitionId: setPid } = await import('@/lib/account/partition');
-          const { ensureCurrentAccountInVault } = await import('@/lib/account/vault');
-          ensureCurrentAccountInVault({ $id: loggedInUserId, email });
-          setPid(`_acc_${loggedInUserId}` as any);
-        }
-        toast.success('Account switched!');
-        close();
-        setTimeout(() => window.location.reload(), 100);
-        return;
-      }
-
+      await verifyEmailOTP(email, userId, code);
       close();
     } catch (err: unknown) {
       if (isMfaRequiredError(err)) {
@@ -296,7 +269,7 @@ export function LoginDrawer() {
     } finally {
       setLoading(false);
     }
-  }, [email, userId, verifyEmailOTP, close, isSwitchMode]);
+  }, [email, userId, verifyEmailOTP, close]);
 
   // Auto-submit effects for 6-digit completion
   useEffect(() => {
@@ -329,51 +302,55 @@ export function LoginDrawer() {
   const handleSwitchTo = useCallback(async (targetId: string) => {
     if (!targetId || targetId === user?.$id || isSwitching) return;
     setIsSwitching(true);
+
+    // Opaque blanket to prevent flash of stale UI
+    const blanket = document.createElement('div');
+    blanket.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#0A0908';
+    document.body.appendChild(blanket);
+
     try {
-      // Look up target account identity from vault
       const { getAccount } = await import('@/lib/account/vault');
       const targetAcct = getAccount(targetId);
 
-      // Clear all in-memory / session caches
+      if (!targetAcct?.sessionSecret || !targetAcct?.sessionId) {
+        // No stored session — need fresh login for target account
+        document.body.removeChild(blanket);
+        toast.error(`No stored session for this account. Please add it again.`);
+        setIsSwitching(false);
+        return;
+      }
+
+      // 1. Restore the target account's Appwrite session using stored secret
+      //    This replaces the current httpOnly session cookie with target's cookie
+      await account.createSession({ userId: targetAcct.id, secret: targetAcct.sessionSecret });
+
+      // 2. Flip partition pointer in localStorage
+      const targetPid = `_acc_${targetId}`;
+      setActivePartitionId(targetPid as any);
+
+      // 3. Clear all stale in-memory caches
       try {
         sessionStorage.clear();
+        const { invalidateCurrentUserCache } = await import('@/lib/appwrite/client');
+        invalidateCurrentUserCache();
         const { clearChatsListMemory, clearThreadsListMemory } = await import('@/lib/chat/local-chat-cache');
         clearChatsListMemory();
         if (typeof clearThreadsListMemory === 'function') (clearThreadsListMemory as any)();
         const { clearSessionProjectsList } = await import('@/lib/projects/projects-cache');
         clearSessionProjectsList();
-        const { invalidateCurrentUserCache } = await import('@/lib/appwrite/client');
-        invalidateCurrentUserCache();
       } catch {}
 
-      // Flip partition pointer BEFORE killing session so sub-components stop fetching old partition data
-      const targetPid = `_acc_${targetId}`;
-      setActivePartitionId(targetPid as any);
-
-      // Destroy the current Appwrite server-side session (kills the auth cookie)
-      // Do this AFTER partition flip so any in-flight requests get cancelled by context teardown
-      try {
-        await account.deleteSession('current');
-      } catch {}
-
-      // If we have the target's email, pre-fill and go straight to email step for re-auth
-      if (targetAcct?.email) {
-        setEmail(targetAcct.email);
-        setStep('email');
-        setIsSwitching(false);
-        // Stay open in switch mode showing the login form for the target account
-        toast(`Sign in as ${targetAcct.name || targetAcct.email} to continue`, { icon: '🔄' });
-      } else {
-        // No email on record — go to initial step for fresh login
-        setStep('initial');
-        setIsSwitching(false);
-        toast('Sign in to the other account to continue', { icon: '🔄' });
-      }
+      // 4. Full page reload — cleanest possible context flush
+      toast.success(`Switched to ${targetAcct.name || targetAcct.email || 'account'}`);
+      close();
+      setTimeout(() => window.location.reload(), 120);
     } catch (e: any) {
-      toast.error(e?.message || 'Switch failed');
+      try { document.body.removeChild(blanket); } catch {}
+      // Session secret may be expired — tell user to re-add account
+      toast.error('Session expired for this account. Please add it again via "Add Account".');
       setIsSwitching(false);
     }
-  }, [user?.$id, isSwitching]);
+  }, [user?.$id, isSwitching, close]);
 
   const [stashedActiveUser, setStashedActiveUser] = useState<any>(null);
 

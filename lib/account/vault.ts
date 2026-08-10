@@ -9,6 +9,9 @@ export type StoredAccount = {
   username?: string | null;
   avatar?: string | null;
   addedAt: number;
+  // Appwrite session token stored per-account for seamless switching
+  sessionSecret?: string | null;
+  sessionId?: string | null;
 };
 
 const ACCOUNTS_KEY = 'kylrix:accounts';
@@ -50,6 +53,19 @@ export function removeAccount(id: string) {
 
 export function getAccount(id: string): StoredAccount | null {
   return readAccounts().find(a => a.id === id) || null;
+}
+
+/**
+ * Store the Appwrite session secret for an account so it can be restored on switch.
+ * Called right after successful login while the session is fresh.
+ */
+export function storeAccountSession(userId: string, sessionId: string, sessionSecret: string) {
+  const all = readAccounts();
+  const idx = all.findIndex(a => a.id === userId);
+  if (idx >= 0) {
+    all[idx] = { ...all[idx], sessionId, sessionSecret };
+    writeAccounts(all);
+  }
 }
 
 // Called on successful login: ensure vault has current user

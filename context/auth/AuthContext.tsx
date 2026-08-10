@@ -321,7 +321,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return result.userId;
   }, []);
   const verifyEmailOTP = useCallback(async (_email: string, userId: string, secret: string) => {
-    await account.createSession({ userId, secret });
+    const session = await account.createSession({ userId, secret });
+    // Store the session secret so this account can be restored on switch without re-auth
+    try {
+      const { storeAccountSession } = await import('@/lib/account/vault');
+      storeAccountSession(session.userId, session.$id, session.secret);
+    } catch {}
     try {
       await assertAuthenticatedAccount();
       await refreshUser(true);
@@ -331,6 +336,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       throw error;
     }
+    return session;
   }, [refreshUser]);
 
   const verifyMFA = useCallback(async (challengeId: string, otp: string) => {
