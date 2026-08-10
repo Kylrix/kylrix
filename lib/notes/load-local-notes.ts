@@ -70,31 +70,31 @@ export async function loadNotesFromLocalCopy(opts: {
     }
   }
 
-  // 2) RxDB notes collection (attach-drawer path)
-  try {
-    const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-    const db = await getRxDB().catch(() => null);
-    if (db?.notes) {
-      const rxRows = (await db.notes.find().exec()).map((d: any) => d.toJSON());
-      const notes = rxRows.map(normalizeNoteRow).filter((n): n is Notes => !!n);
-      if (notes.length) {
-        return {
-          notes,
-          totalNotes: notes.length,
-          cursor: null,
-          hasMore: true};
+  // 2) RxDB notes collection — filter by userId to prevent cross-account contamination
+  if (userId && userId !== 'guest') {
+    try {
+      const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+      const db = await getRxDB().catch(() => null);
+      if (db?.notes) {
+        const rxRows = (await db.notes.find({ selector: { userId: { $eq: userId } } }).exec()).map((d: any) => d.toJSON());
+        const notes = rxRows.map(normalizeNoteRow).filter((n): n is Notes => !!n);
+        if (notes.length) {
+          return {
+            notes,
+            totalNotes: notes.length,
+            cursor: null,
+            hasMore: true};
+        }
       }
+    } catch {
+      /* non-fatal */
     }
-  } catch {
-    /* non-fatal */
   }
 
-  // 3) LocalEngine flat list
+  // 3) LocalEngine flat list — only use userId-keyed cache, never fall back to shared key
   try {
     const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    const list =
-      (await LocalEngine.cacheGet<any[]>(`f_notes_list_${userId}`)) ||
-      (await LocalEngine.cacheGet<any[]>('f_notes_list'));
+    const list = await LocalEngine.cacheGet<any[]>(`f_notes_list_${userId}`);
     const notes = (list || []).map(normalizeNoteRow).filter((n): n is Notes => !!n);
     if (notes.length) {
       return {
@@ -137,8 +137,8 @@ export async function warmNotesLocalCopy(userId: string, notes: Notes[]): Promis
   if (!userId || !notes?.length) return;
   try {
     const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    // Only write to userId-keyed cache — never write to shared 'f_notes_list' to prevent cross-account bleed
     await LocalEngine.cacheSet(`f_notes_list_${userId}`, notes);
-    await LocalEngine.cacheSet('f_notes_list', notes);
   } catch {
     /* non-fatal */
   }

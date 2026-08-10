@@ -63,16 +63,18 @@ export async function loadGoalsFromLocalCopy(opts: {
     return opts.existingTasks;
   }
 
-  try {
-    const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-    const db = await getRxDB().catch(() => null);
-    if (db?.tasks) {
-      const rxRows = (await db.tasks.find().exec()).map((d: any) => d.toJSON());
-      const rxTasks = rxRows.map(normalizeGoalRow).filter((t): t is Task => !!t);
-      if (rxTasks.length) return rxTasks;
+  if (opts.userId && opts.userId !== 'guest') {
+    try {
+      const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+      const db = await getRxDB().catch(() => null);
+      if (db?.tasks) {
+        const rxRows = (await db.tasks.find({ selector: { userId: { $eq: opts.userId } } }).exec()).map((d: any) => d.toJSON());
+        const rxTasks = rxRows.map(normalizeGoalRow).filter((t): t is Task => !!t);
+        if (rxTasks.length) return rxTasks;
+      }
+    } catch {
+      /* non-fatal */
     }
-  } catch {
-    /* non-fatal */
   }
 
   try {
