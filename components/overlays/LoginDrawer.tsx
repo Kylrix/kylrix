@@ -354,17 +354,41 @@ export function LoginDrawer() {
         clearSessionProjectsList();
       } catch {}
 
-      // 3.5 Resolve and pre-write the target user's active workspace before reload
-      //     so WorkspaceContext mounts instantly with the correct workspace, not the old user's
+      // 3.5 Resolve and pre-write the target user's active workspace before reload.
+      //     Priority: (a) their stored last-known workspace → (b) their Appwrite prefs.activeWorkspaceId
+      //     verified against their project list → (c) personal workspace (userId)
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const workspaceCacheKey = `kylrix_active_workspace_${targetId}`;
         const storedWorkspace = await LocalEngine.cacheGet<string>(workspaceCacheKey);
-        if (!storedWorkspace || typeof storedWorkspace !== 'string' || !storedWorkspace.trim()) {
-          // No stored preference yet — pre-set to the user's own personal workspace (userId = personal workspace id)
-          await LocalEngine.cacheSet(workspaceCacheKey, targetId);
+
+        if (storedWorkspace && typeof storedWorkspace === 'string' && storedWorkspace.trim()) {
+          // (a) Returning user — already have their last workspace stored, nothing to do
+        } else {
+          // (b) New/fresh account — fetch their prefs live (session is active right now)
+          let resolvedWorkspaceId: string | null = null;
+          try {
+            const prefs = await account.getPrefs();
+            const prefWorkspaceId = prefs?.activeWorkspaceId || prefs?.defaultWorkspaceId;
+            if (prefWorkspaceId && typeof prefWorkspaceId === 'string' && prefWorkspaceId.trim()) {
+              // Verify this workspace actually exists in their projects list
+              const { ProjectsService } = await import('@/lib/appwrite/projects');
+              try {
+                const { rows } = await ProjectsService.listProjects(true);
+                const found = rows.some((p: any) => (p.$id || p.id) === prefWorkspaceId);
+                if (found) {
+                  resolvedWorkspaceId = prefWorkspaceId;
+                }
+              } catch {
+                // Can't verify — still trust the pref since they configured it
+                resolvedWorkspaceId = prefWorkspaceId;
+              }
+            }
+          } catch { /* prefs fetch failed — fall through to personal */ }
+
+          // (c) Fall back to personal workspace (userId is the personal workspace ID)
+          await LocalEngine.cacheSet(workspaceCacheKey, resolvedWorkspaceId || targetId);
         }
-        // If there IS a stored workspace, leave it as-is — that's the user's last known workspace
       } catch {}
 
       // 4. Full page reload — cleanest possible context flush
