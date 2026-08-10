@@ -527,8 +527,13 @@ export function LoginDrawer() {
     handleClose();
   }, []);
 
+  if (!isOpen) return null;
+
+  const currentLabel = user?.name || (user as any)?.username || user?.email || 'Current account';
+  const otherAccounts = isSwitchMode ? listOtherAccounts(user?.$id) : [];
+
   const handleDeleteAccount = useCallback(async (targetId: string) => {
-    const acct = listOtherAccounts(user?.$id).find(a => a.id === targetId) || otherAccounts.find(a => a.id === targetId);
+    const acct = listOtherAccounts(user?.$id).find(a => a.id === targetId);
     const label = acct?.name || acct?.email || 'this account';
     if (!window.confirm(`Remove ${label}? Session will be removed and you will have to sign in again.`)) return;
     try {
@@ -543,17 +548,11 @@ export function LoginDrawer() {
         await LocalEngine.cacheDelete(`f_notes_list_${targetId}`);
       } catch {}
       toast.success(`Removed ${label}`);
-      // force re-render by closing and reopening switch view
       setShowAddAccount(false);
     } catch (e: any) {
       toast.error(e?.message || 'Failed to remove account');
     }
-  }, [user?.$id, otherAccounts]);
-
-  if (!isOpen) return null;
-
-  const currentLabel = user?.name || (user as any)?.username || user?.email || 'Current account';
-  const otherAccounts = isSwitchMode ? listOtherAccounts(user?.$id) : [];
+  }, [user?.$id]);
 
   const renderStep = () => {
     switch (step) {
