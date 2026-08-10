@@ -71,9 +71,13 @@ const Overlay: React.FC = () => {
     (content.type as any).name === 'AgenticPanelContent'
   );
 
-  const isProfileSidebar = React.isValidElement(content) && (content.type as any).name === 'ProfileSidebar';
+  const isProfileSidebar = React.isValidElement(content) && (
+    (content.type as any).name === 'ProfileSidebar' ||
+    (content.props as any).username !== undefined ||
+    (content.props as any).userId !== undefined
+  );
 
-  const drawerHeight = isMobile && !isFlapover ? (isProfileSidebar ? '65vh' : '85vh') : '100dvh';
+  const drawerHeight = isMobile && !isFlapover ? (isProfileSidebar ? '60vh' : '85vh') : '100dvh';
   const paperWidth = isFlapover ? '100%' : isMobile ? '100%' : 'min(100vw, 720px)';
 
   return (
