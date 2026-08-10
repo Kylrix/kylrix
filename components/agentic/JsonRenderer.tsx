@@ -47,12 +47,13 @@ export function JsonRenderer({ raw, collapsed = false }: { raw: string; collapse
 export function looksLikeJson(s: string): boolean {
   const t = String(s || '').trim();
   if (!t) return false;
-  if (!(t.startsWith('{') || t.startsWith('['))) return false;
-  try {
-    JSON.parse(t);
-    return true;
-  } catch {
-    // also detect toolCalls envelope without outer parse
-    return t.includes('"toolCalls"') && t.includes('"toolKey"');
+  if (t.startsWith('{') || t.startsWith('[')) {
+    try {
+      JSON.parse(t);
+      return true;
+    } catch {
+      return t.includes('"toolCalls"') || t.includes('"toolKey"') || t.includes('"specifier"');
+    }
   }
+  return (t.includes('"toolCalls"') && t.includes('"toolKey"')) || (t.includes('"response"') && t.includes('"toolCalls"'));
 }

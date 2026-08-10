@@ -1526,7 +1526,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             <div
               role="button"
               tabIndex={0}
-              className={`max-w-[88%] rounded-[16px] px-4 py-3 select-none ${
+              className={`max-w-[88%] min-w-0 rounded-[16px] px-4 py-3 select-none break-words [word-break:break-word] overflow-hidden ${
                 msg.role === 'user'
                   ? 'bg-[#1C1A18] border border-white/8 text-white'
                   : 'bg-[#0B0A09] border border-white/5 text-white/92'

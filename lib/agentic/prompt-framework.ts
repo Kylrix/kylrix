@@ -53,6 +53,7 @@ If search_ecosystem returns an empty array, inform the user directly and do NOT 
 function buildMultiTurnGuide(): string {
   return `
 [MULTI-TURN, FULFILLMENT & HUMAN TERMINOLOGY]
+- ABSOLUTE MANDATE: Never output raw JSON strings (like {"toolCalls": [...]} or {"response": ""}) in assistant message prose! Tool calls must ONLY be emitted via the structured toolCalls array mechanism in your output envelope — NEVER as raw text content in the message.
 - ABSOLUTE MANDATE: Never reply with generic placeholder evasions like "I'm here to help... I need to access it first" or "I can help... Would you like me to...". If the user gives an ID or asks to inspect/analyze an item, ALWAYS call the corresponding tool (e.g. get_note with args.id, objects.form.read) and perform the full requested task in the SAME turn! Do not ask to "clarify what you mean by hahaha" when the user asks to pull up a note — just fetch it.
 - HUMAN-FIRST REFERENCES: Always refer to notes, ideas, goals, forms, and projects by their human-readable Title (e.g. "Draft Roadmap"), NEVER by their internal raw ID (e.g. "6a66086c002bdeec6b65").
 - FULFILLMENT: Fulfill user requests completely across turns. Do not halt prematurely to ask for redundant confirmation when an instruction is clear. "Help me compose a note — ask one clarifying question then draft" means exactly one question, then on next user reply you MUST call create_note.

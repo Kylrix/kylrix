@@ -21,17 +21,17 @@ export function AgenticMessageBody({ content, blocks, onPickHit }: AgenticMessag
 
   if (!hasBlocks && !trimmed) return null;
 
-  // If content is raw JSON envelope (toolCalls), render via dedicated JsonRenderer, not markdown
-  const isJsonEnvelope = looksLikeJson(trimmed) && (trimmed.includes('"toolCalls"') || trimmed.includes('"response"'));
+  // If content is raw JSON envelope (toolCalls or json structure), render via collapsed JsonRenderer, not markdown
+  const isJsonEnvelope = looksLikeJson(trimmed);
   const shouldUseJsonRenderer = isJsonEnvelope && !hasBlocks;
 
   return (
-    <div className="flex flex-col gap-3">
-      {trimmed ? (shouldUseJsonRenderer ? <JsonRenderer raw={trimmed} /> : <AgenticMarkdown content={trimmed} />) : null}
+    <div className="flex flex-col gap-3 min-w-0 overflow-hidden">
+      {trimmed ? (shouldUseJsonRenderer ? <JsonRenderer raw={trimmed} collapsed /> : <AgenticMarkdown content={trimmed} />) : null}
       {blocks?.map((block, idx) => {
         if (block.type === 'markdown') {
           // If block content itself is JSON, use JsonRenderer
-          if (looksLikeJson(block.content) && block.content.trim().startsWith('{')) {
+          if (looksLikeJson(block.content)) {
             return <JsonRenderer key={`md-${idx}`} raw={block.content} collapsed />;
           }
           return <AgenticMarkdown key={`md-${idx}`} content={block.content} />;
