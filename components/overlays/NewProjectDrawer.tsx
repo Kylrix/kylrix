@@ -338,49 +338,153 @@ export function NewProjectDrawer() {
                 )}
             </Box>
         )}
+        {step === 2 && (
+          <Stack spacing={2.5}>
+            <Box>
+              <Typography component="span" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', lineHeight: 1.35 }}>
+                Workspace Name
+              </Typography>
+              <TextField
+                fullWidth
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Q3 Product Launch"
+                variant="outlined"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: VOID,
+                    color: '#fff',
+                    borderRadius: RADIUS_SMALL,
+                    '& fieldset': { borderColor: BORDER_HAIRLINE },
+                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                    '&.Mui-focused fieldset': { borderColor: SYSTEM_PRIMARY }
+                  }
+                }}
+              />
+            </Box>
 
-                <Box sx={{ mt: 'auto', pt: 2 }}>
-                    <Button 
-                        fullWidth
-                        type="submit"
-                        variant="contained"
-                        disabled={loading || !title.trim()}
-                        sx={{
-                            bgcolor: template?.color || SYSTEM_PRIMARY,
-                            color: '#fff',
-                            fontWeight: 800,
-                            fontSize: '0.9rem',
-                            py: 1.75,
-                            borderRadius: RADIUS_SMALL,
-                            textTransform: 'none',
-                            boxShadow: 'none',
-                            transition: BRAND_TRANSITION,
-                            '&:hover': { bgcolor: template?.color || SYSTEM_HOVER, filter: 'brightness(0.9)' },
-                            '&.ob-disabled': { bgcolor: HOVER, color: TEXT_MUTED }
-                        }}
-                    >
-                        {loading ? <CircularProgress size={20} color="inherit" /> : `Activate ${template?.title || 'Project'}`}
-                    </Button>
-                    
-                    <Button 
-                        fullWidth
-                        onClick={() => ['form-to-project', 'idea-to-execution'].includes(template?.id) ? setStep(1) : close()}
-                        sx={{ 
-                            mt: 1.5,
-                            color: TEXT_MUTED, 
-                            fontWeight: 700, 
-                            fontSize: '0.85rem',
-                            textTransform: 'none',
-                            '&:hover': { color: '#fff', bgcolor: 'transparent' }
-                        }}
-                    >
-                        {['form-to-project', 'idea-to-execution'].includes(template?.id) ? 'Back' : 'Dismiss'}
-                    </Button>
-                </Box>
-              </>
+            <Box>
+              <Typography component="span" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', lineHeight: 1.35 }}>
+                Summary / Purpose
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                placeholder="Brief description of this workspace's goals..."
+                variant="outlined"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    bgcolor: VOID,
+                    color: '#fff',
+                    borderRadius: RADIUS_SMALL,
+                    '& fieldset': { borderColor: BORDER_HAIRLINE },
+                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+                    '&.Mui-focused fieldset': { borderColor: SYSTEM_PRIMARY }
+                  }
+                }}
+              />
+            </Box>
+
+            <Box>
+              <Typography component="span" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)', lineHeight: 1.35 }}>
+                Access Level
+              </Typography>
+              <Box
+                component="button"
+                type="button"
+                onClick={() => setIsVisibilityDrawerOpen(true)}
+                sx={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  p: 1.75,
+                  borderRadius: RADIUS_SMALL,
+                  bgcolor: VOID,
+                  border: BORDER,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  '&:hover': { bgcolor: HOVER }
+                }}
+              >
+                <Stack direction="row" alignItems="center" spacing={1.5}>
+                  {visibility === 'public' ? <Globe size={18} color={SYSTEM_PRIMARY} /> : <Lock size={18} color={TEXT_MUTED} />}
+                  <Box>
+                    <Typography component="span" sx={{ color: '#fff', fontSize: '0.88rem', fontWeight: 700, display: 'block' }}>
+                      {visibility === 'public' ? 'Public Workspace' : 'Private Workspace'}
+                    </Typography>
+                    <Typography component="span" sx={{ color: TEXT_MUTED, fontSize: '0.75rem', display: 'block' }}>
+                      {visibility === 'public' ? (isGuest ? 'Anyone can view without login' : 'Public to authenticated members') : 'Only invited members'}
+                    </Typography>
+                  </Box>
+                </Stack>
+                <ChevronRight size={16} color={TEXT_MUTED} />
+              </Box>
+            </Box>
+          </Stack>
+        )}
+
+        <Box sx={{ mt: 'auto', pt: 2 }}>
+          {step === 1 ? (
+            <Button
+              fullWidth
+              onClick={() => setStep(2)}
+              sx={{
+                bgcolor: SYSTEM_PRIMARY,
+                color: '#fff',
+                fontWeight: 800,
+                fontSize: '0.9rem',
+                py: 1.5,
+                borderRadius: RADIUS_SMALL,
+                textTransform: 'none',
+                '&:hover': { bgcolor: SYSTEM_HOVER }
+              }}
+            >
+              Continue to Details
+            </Button>
+          ) : (
+            <Stack direction="row" spacing={1.5}>
+              <Button
+                onClick={() => setStep(1)}
+                sx={{
+                  px: 2.5,
+                  bgcolor: VOID,
+                  color: '#fff',
+                  border: BORDER,
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  borderRadius: RADIUS_SMALL,
+                  textTransform: 'none',
+                  '&:hover': { bgcolor: HOVER }
+                }}
+              >
+                Back
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading || !title.trim()}
+                sx={{
+                  flex: 1,
+                  bgcolor: SYSTEM_PRIMARY,
+                  color: '#fff',
+                  fontWeight: 800,
+                  fontSize: '0.9rem',
+                  py: 1.5,
+                  borderRadius: RADIUS_SMALL,
+                  textTransform: 'none',
+                  '&:hover': { bgcolor: SYSTEM_HOVER },
+                  '&.Mui-disabled': { bgcolor: 'rgba(99, 102, 241, 0.4)', color: 'rgba(255,255,255,0.4)' }
+                }}
+              >
+                {loading ? <CircularProgress size={20} sx={{ color: '#fff' }} /> : 'Create Workspace'}
+              </Button>
+            </Stack>
           )}
         </Box>
-      </Box>
+      </Box>;
 
       {/* Visibility Selection Sub-Drawer */}
       <Drawer
