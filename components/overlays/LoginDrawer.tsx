@@ -157,6 +157,7 @@ export function LoginDrawer() {
       // Complete Appwrite session creation using the minted token
       await account.createSession({ userId: verifyRes.userId, secret: verifyRes.token });
       
+      setActivePartitionId(`_acc_${verifyRes.userId}` as any);
       localStorage.setItem('kylrix_last_auth_method', 'passkey');
       localStorage.setItem(`kylrix_has_passkey_${verifyRes.userId}`, 'true');
 

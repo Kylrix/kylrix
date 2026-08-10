@@ -176,7 +176,7 @@ export function clearStatelessSessions() {
         document.cookie = `${name}=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
       }
     });
-    sessionStorage.clear();
+    // Keep sessionStorage partition pointers intact
   } catch (e) {
     console.warn("Stateless cleanup warning:", e);
   }

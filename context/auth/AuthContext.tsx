@@ -203,20 +203,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [user?.$id, user?.isPulse]);
 
-  // 4. Centralized User Profile & Username Bootstrapping
+  // 4. Centralized User Profile & Username Bootstrapping & Vault Account Sync
   useEffect(() => {
     if (user?.$id && !user.isPulse) {
       const initProfile = async () => {
         try {
           const { UsersService } = await import('@/lib/services/users');
           await UsersService.ensureProfileForUser(user);
+          const { ensureCurrentAccountInVault } = await import('@/lib/account/vault');
+          ensureCurrentAccountInVault(user);
         } catch (err) {
           console.warn('[AuthContext] Background profile bootstrapping failed:', err);
         }
       };
       void initProfile();
     }
-  }, [user?.$id, user?.isPulse]);
+  }, [user?.$id, user?.isPulse, user]);
 
   useEffect(() => {
     if (initAuthStarted.current) return;
