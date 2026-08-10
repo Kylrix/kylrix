@@ -1796,9 +1796,9 @@ export default function ConnectTopbar({
             size="small"
             onClick={() => {
               handleCloseAll();
-              router.push('/app');
+              openUnified('new-project');
             }}
-            sx={{ color: '#6366F1', fontWeight: 800, fontSize: '0.75rem', textTransform: 'none', minWidth: 0 }}
+            sx={{ color: '#6366F1', fontWeight: 800, fontSize: '0.75rem', textTransform: 'none', minWidth: 0, px: 1, py: 0.25, borderRadius: '8px', bgcolor: 'rgba(99, 102, 241, 0.1)', '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.2)' } }}
           >
             + New
           </Button>
@@ -1887,6 +1887,20 @@ export default function ConnectTopbar({
     );
 
     if (isDesktop) {
+      if (nativeSidebar) {
+        return (
+          <NativeSidebarMount
+            active={Boolean(appMenuAnchorEl)}
+            sidebarKey="topbar-ecosystem"
+            width={380}
+            title="Ecosystem"
+          >
+            <Box sx={{ p: 2 }}>
+              {ecosystemBody}
+            </Box>
+          </NativeSidebarMount>
+        );
+      }
       return (
         <Drawer
           anchor="left"
@@ -1894,11 +1908,20 @@ export default function ConnectTopbar({
           onClose={() => setAppMenuAnchorEl(null)}
           keepMounted={false}
           disablePortal={true}
-          slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
+          slotProps={{
+            backdrop: {
+              sx: {
+                top: `${TOPBAR_LAYOUT.height}px`,
+                backdropFilter: 'none',
+                WebkitBackdropFilter: 'none',
+                bgcolor: 'rgba(0,0,0,0.4)'
+              }
+            }
+          }}
           PaperProps={{
             sx: {
               bgcolor: '#161412',
-              width: 320,
+              width: 340,
               height: '100vh',
               borderRight: '1px solid rgba(255, 255, 255, 0.06)',
               p: 2.75,
