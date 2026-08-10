@@ -334,28 +334,27 @@ export async function nuclearWipeConversationInternal(payload: {
     throw new Error('Forbidden: Not a participant');
   }
 
-  if (String(conversation?.type || '').toLowerCase() !== 'direct') {
-    throw new Error('Critical cascade delete is available for direct conversations only and cannot be undone');
-  }
+  const isGroupOrChannel = String(conversation?.type || '').toLowerCase() === 'group' || String(conversation?.type || '').toLowerCase() === 'channel';
+  const convType = String(conversation?.type || 'direct').toLowerCase();
 
   const wipeResult: any = await deleteConversationFullyInternal(payload);
 
-  // Entirely regenerate for same participants a/b or self (intra-personal self chat maps to same user)
+  // Entirely regenerate for same participants (direct, group, channel)
   try {
     const uniqueParticipants = Array.from(new Set(participantIds.map((id: any) => String(id).trim()).filter(Boolean)));
-    // Self case: single participant is the actor; interpersonal: a/b
     const regenerateParticipants = uniqueParticipants.length ? uniqueParticipants : [verifiedActorId];
     const isSelfRegen = regenerateParticipants.length === 1 && regenerateParticipants[0] === verifiedActorId;
     const newConversationId = ID.unique();
     const now = new Date().toISOString();
     const conversationData: any = {
-      type: 'direct',
+      type: convType,
       participants: regenerateParticipants,
       creatorId: verifiedActorId,
-      name: null,
-      avatarUrl: null,
-      avatar: null,
-      isEncrypted: false,
+      name: conversation?.name || null,
+      description: conversation?.description || null,
+      avatarUrl: conversation?.avatarUrl || null,
+      avatar: conversation?.avatar || null,
+      isEncrypted: Boolean(conversation?.isEncrypted),
       createdAt: now,
       updatedAt: now,
       lastMessageAt: null,
