@@ -317,6 +317,8 @@ export function LoginDrawer() {
       toast.error(e?.message || 'Switch failed');
       setIsSwitching(false);
     }
+  }, [user?.$id, isSwitching]);
+
   const [stashedActiveUser, setStashedActiveUser] = useState<any>(null);
 
   const handleStartAddAccount = useCallback(async () => {

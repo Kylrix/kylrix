@@ -25,7 +25,9 @@ import {
     Lock, 
     Pin,
     RefreshCw,
+    Sparkles,
 } from 'lucide-react';
+import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar } from '../IdentityBadge';
 import { seedIdentityCache, getCachedIdentityById, resolveIdentityById  } from '@/lib/identity-cache';
@@ -124,6 +126,7 @@ export const ChatList = ({
     const { requestSudo } = useSudo();
     const { openOverlay, closeOverlay } = useOverlay();
     const { openSidebar, closeSidebar } = useDynamicSidebar();
+    const { openAgenticDrawer } = useAgenticDrawer();
     const { isPinned: isResourcePinned, togglePin: _togglePin, pinSets } = useResourcePins();
     const initialChats = peekChatsListMemory();
     const initialThreads = peekThreadsListMemory();
@@ -1414,19 +1417,32 @@ export const ChatList = ({
     const filteredGhostConversations = useMemo(() => filteredGhostConversationsAll.slice(0, ghostPage * CHAT_PAGE_SIZE), [filteredGhostConversationsAll, ghostPage]);
     const hasMoreChats = filteredConversations.length < filteredConversationsAll.length;
     const hasMoreGhosts = filteredGhostConversations.length < filteredGhostConversationsAll.length;
-    // Unified feed: secret chats + threads together, sorted by recency, pinned first. Secret shows lock on avatar.
+    // Unified feed: secret chats + threads together + default Kylie assistant chat
     const unifiedItems = useMemo(() => {
+        const kylieItem = {
+            $id: 'kylie_assistant_chat',
+            name: 'Kylie Assist',
+            isKylie: true,
+            _kind: 'thread' as const,
+            _sortAt: '9999-12-31T23:59:59.999Z',
+            lastMessageText: 'Ask Kylie for help...',
+            avatarUrl: null,
+        };
+        const matchesKylie = !searchQuery || 'kylie assist'.includes(searchQuery.toLowerCase()) || 'ask kylie for help'.includes(searchQuery.toLowerCase());
+
         const secureMapped = filteredConversations.map((c: any) => ({ ...c, _kind: 'secure' as const, _sortAt: c.lastMessageAt || c.createdAt }));
         const threadMapped = filteredGhostConversations.map((c: any) => ({ ...c, _kind: 'thread' as const, _sortAt: c.lastMessageAt || c.$createdAt || c.createdAt }));
         const combined = [...secureMapped, ...threadMapped];
         const pinned = pinSets.conversation;
-        return combined.sort((a: any, b: any) => {
+        const sorted = combined.sort((a: any, b: any) => {
             const ap = pinned.has(a.$id) ? 1 : 0;
             const bp = pinned.has(b.$id) ? 1 : 0;
             if (ap !== bp) return bp - ap;
             return new Date(b._sortAt || 0).getTime() - new Date(a._sortAt || 0).getTime();
         });
-    }, [filteredConversations, filteredGhostConversations, pinSets.conversation]);
+
+        return matchesKylie ? [kylieItem, ...sorted] : sorted;
+    }, [filteredConversations, filteredGhostConversations, pinSets.conversation, searchQuery]);
     useEffect(() => { setChatPage(1); setGhostPage(1); }, [searchQuery, conversations.length, ghostConversations.length]);
     useEffect(() => {
       if (!chatSentinelRef.current || !hasMoreChats) return;
@@ -1561,6 +1577,11 @@ export const ChatList = ({
                                         tabIndex={0}
                                         onClick={(e: React.MouseEvent) => {
                                             if (longPressFiredRef.current) { longPressFiredRef.current = false; e.preventDefault(); return; }
+                                            if (conv.isKylie) {
+                                                e.preventDefault();
+                                                openAgenticDrawer();
+                                                return;
+                                            }
                                             handleItemClick(e);
                                             if (!isInitializing) {
                                                 openConversation(conv.$id, openKind);
@@ -1609,7 +1630,11 @@ export const ChatList = ({
                                                 }}
                                                 className="relative"
                                             >
-                                                {isSecure ? (
+                                                {conv.isKylie ? (
+                                                    <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#6366F1]/10 border border-[#6366F1]/30 text-[#6366F1] shadow-lg shadow-[#6366F1]/10">
+                                                        <Sparkles size={22} strokeWidth={2.2} />
+                                                    </div>
+                                                ) : isSecure ? (
                                                     <IdentityAvatar
                                                         userId={conv.isSelf ? user?.$id : conv.otherUserId}
                                                         src={conv.avatarUrl || conv.avatar || null}

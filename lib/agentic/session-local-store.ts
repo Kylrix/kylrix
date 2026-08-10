@@ -228,8 +228,37 @@ export const AgenticSessionLocalStore = {
     await this.setSessionsList(userId, next);
   },
 
+  async getOrCreateKylieHangoutSession(userId: string): Promise<AgenticLocalSession> {
+    const list = await this.getSessionsList(userId);
+    const existingSummary = list.find((s) => s.targetType === 'kylieHangout');
+    if (existingSummary) {
+      const full = await this.getSession(existingSummary.id);
+      if (full) return full;
+    }
+
+    const sessionId = `kylie_hangout_${userId}_${Date.now()}`;
+    const newSession: AgenticLocalSession = {
+      id: sessionId,
+      userId,
+      targetType: 'kylieHangout',
+      context: 'Kylie Assistant — Ecosystem AI assistant with full tool access, note/task management, and natural guidance.',
+      chatHistory: [
+        {
+          id: `msg_welcome_${Date.now()}`,
+          role: 'assistant',
+          content: "Hey there! I'm **Kylie**, your AI assistant for Kylrix. I can help you write notes, organize tasks, run system workflows, search your workspace, or answer questions. What are we working on today?",
+          syncStatus: 'synced',
+        },
+      ],
+    };
+
+    await this.upsertSession(newSession);
+    return newSession;
+  },
+
   isMessagePending(message?: AgenticLocalMessage | null): boolean {
     if (!message) return false;
     return message.syncStatus === 'pending' || message.syncStatus === 'error';
-  }};
+  }
+};
 

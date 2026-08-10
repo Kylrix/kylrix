@@ -9,46 +9,47 @@ import {
   Stack,
   useTheme,
   useMediaQuery,
-  alpha} from '@/lib/openbricks/primitives';
-import { Zap, ExternalLink } from 'lucide-react';
+  alpha
+} from '@/lib/openbricks/primitives';
+import { Zap, ArrowRight, ShieldCheck, Sparkles, Check } from 'lucide-react';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 const featureDescriptions: Record<string, { desc: string; fix: string }> = {
   'Voice recording': {
-    desc: 'Voice capture needs more storage and upload room.',
-    fix: 'Upgrade to Pro to record and attach audio to your ideas.'
+    desc: 'Voice capture requires higher storage limits.',
+    fix: 'Upgrade to Pro to record and store high-fidelity audio.'
   },
   'Discussions': {
-    desc: 'Comments on goals need a Pro plan.',
-    fix: 'Upgrade to Pro to discuss and collaborate on goals in real time.'
+    desc: 'Real-time discussions need a Pro plan.',
+    fix: 'Upgrade to Pro to collaborate on ideas in real time.'
   },
   'New Project': {
-    desc: 'Free plans are limited to 1 active project.',
-    fix: 'Upgrade to Pro for more projects, or Teams for unlimited workspaces.'
+    desc: 'Free tier limits workspace projects.',
+    fix: 'Upgrade to Pro for more projects, or Teams for unlimited.'
   },
   'New Channel': {
-    desc: 'Custom group channels need a Teams plan.',
-    fix: 'Upgrade to Teams to create group channels across your workspace.'
+    desc: 'Custom channels need a Teams plan.',
+    fix: 'Upgrade to Teams to create group channels across your team.'
   },
   'Collaborators': {
-    desc: 'Sharing with others needs a paid plan.',
-    fix: 'Upgrade to Pro to invite collaborators, or Teams for larger groups.'
+    desc: 'Sharing with collaborators needs a paid plan.',
+    fix: 'Upgrade to Pro to invite collaborators, or Teams for groups.'
   },
   'Project Collaboration': {
     desc: 'Project-level invites need a Teams plan.',
-    fix: 'Upgrade to Teams to collaborate on whole projects with your group.'
+    fix: 'Upgrade to Teams to collaborate on entire projects.'
   },
   'Pinned Notes': {
-    desc: 'You have reached the free pin limit.',
-    fix: 'Upgrade to Pro to pin more ideas for quick access.'
+    desc: 'You reached the free pin limit.',
+    fix: 'Upgrade to Pro to pin unlimited notes for instant access.'
   },
   'Article Mode': {
-    desc: 'Long-form writing tools need Pro.',
-    fix: 'Upgrade to Pro to unlock article mode and richer writing tools.'
+    desc: 'Long-form tools need Pro.',
+    fix: 'Upgrade to Pro to unlock article mode and rich editing.'
   },
   'Kylie Assist': {
-    desc: 'Smart assist tools need Pro.',
-    fix: 'Upgrade to Pro to summarize, fix grammar, and speed up your work.'
+    desc: 'AI Assistant features require a Pro subscription.',
+    fix: 'Upgrade to Pro to chat with Kylie and automate your workflow.'
   },
 };
 
@@ -56,14 +57,14 @@ const TEAMS_ONLY_FEATURES = new Set(['Project Collaboration', 'New Channel']);
 
 const TEAMS_BENEFITS = [
   'Unlimited projects and team workspaces',
-  'Invite members to whole projects',
-  'Group channels for coordination',
+  'Invite collaborators to full projects',
+  'Group channels and workflow routing',
 ];
 
 const PRO_BENEFITS = [
-  'More storage for files and media',
-  'Higher limits on pins, projects, and collaborators',
-  'Smart tools across the ecosystem',
+  'Unlimited AI Assistant (Kylie) chat & tools',
+  'Higher storage & file upload limits',
+  'Unlimited pins, projects & workspace sharing',
 ];
 
 export function ProUpgradeDrawer() {
@@ -81,10 +82,8 @@ export function ProUpgradeDrawer() {
 
   const goCheckout = () => {
     closeProUpgrade();
-    // Hard navigation so checkout always starts even if the drawer tree unmounts mid-route.
     if (typeof window !== 'undefined') {
       window.location.assign(checkoutHref);
-      return;
     }
   };
 
@@ -100,122 +99,180 @@ export function ProUpgradeDrawer() {
         '& .ob-drawer-panel': {
           bgcolor: '#161412',
           backgroundImage: 'none',
-          borderTop: isMobile ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-          borderLeft: !isMobile ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-          maxHeight: isMobile ? '70vh' : '100vh',
-          width: isMobile ? '100%' : 420}}}
+          borderTop: isMobile ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
+          borderLeft: !isMobile ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
+          maxHeight: isMobile ? '80vh' : '100vh',
+          width: isMobile ? '100%' : 420,
+          borderRadius: isMobile ? '24px 24px 0 0' : 0,
+        }
+      }}
     >
       <Box
         sx={{
-          p: { xs: 2.5, md: 3.5 },
+          p: { xs: 3, md: 4 },
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
           maxWidth: 420,
           mx: 'auto',
-          justifyContent: 'space-between'}}
+          justifyContent: 'space-between',
+        }}
       >
         <Box>
           <Box
             sx={{
-              width: 44,
-              height: 44,
-              borderRadius: '12px',
-              bgcolor: alpha(accent, 0.1),
-              border: `1px solid ${alpha(accent, 0.3)}`,
+              width: 48,
+              height: 48,
+              borderRadius: '16px',
+              bgcolor: alpha(accent, 0.12),
+              border: `1px solid ${alpha(accent, 0.25)}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              mb: 2}}
+              mb: 3,
+            }}
           >
-            <Zap size={22} color={accent} />
+            <Zap size={24} color={accent} strokeWidth={2.2} />
           </Box>
+
           <Typography
             sx={{
-              fontSize: '1.35rem',
+              fontSize: '1.5rem',
               fontWeight: 900,
-              color: '#fff',
-              mb: 1.5,
+              color: '#FFFFFF',
+              mb: 1,
               letterSpacing: '-0.02em',
-              fontFamily: 'var(--font-clash), sans-serif'}}
+              fontFamily: 'var(--font-clash), sans-serif',
+            }}
           >
             {upgradeLabel}
           </Typography>
+
           <Typography
             sx={{
-              fontSize: '0.9rem',
-              color: 'rgba(255, 255, 255, 0.6)',
-              lineHeight: 1.5,
-              mb: 2.5}}
+              fontSize: '0.875rem',
+              color: 'rgba(255, 255, 255, 0.65)',
+              lineHeight: 1.6,
+              mb: 3,
+              fontFamily: 'var(--font-satoshi), sans-serif',
+            }}
           >
             {spec ? (
               <>
-                <strong style={{ display: 'block', color: '#fff', marginBottom: '6px' }}>{spec.desc}</strong>
+                <strong style={{ display: 'block', color: '#FFFFFF', fontWeight: 800, marginBottom: '4px' }}>
+                  {spec.desc}
+                </strong>
                 <span>{spec.fix}</span>
               </>
             ) : (
               <>
                 {featureName
-                  ? `${featureName.trim()} needs a ${isTeamsUpgrade ? 'Teams' : 'Pro'} plan.`
-                  : `This feature needs a ${isTeamsUpgrade ? 'Teams' : 'Pro'} plan.`}{' '}
-                Unlock higher limits and more tools.
+                  ? `${featureName.trim()} requires a ${isTeamsUpgrade ? 'Teams' : 'Pro'} plan.`
+                  : `Unlock advanced productivity tools and AI agents with ${isTeamsUpgrade ? 'Teams' : 'Pro'}.`}
               </>
             )}
           </Typography>
 
-          <Stack spacing={1.5} sx={{ mb: 2 }}>
-            {benefits.map((benefit) => (
-              <Box key={benefit} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Box
-                  sx={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    bgcolor: accent,
-                    flexShrink: 0}}
-                />
-                <Typography sx={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: '0.85rem', fontWeight: 600 }}>
-                  {benefit}
-                </Typography>
-              </Box>
-            ))}
-          </Stack>
+          <Box
+            sx={{
+              p: 2.5,
+              borderRadius: '18px',
+              bgcolor: '#0B0A09',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              mb: 3,
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: '0.725rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                tracking: '0.08em',
+                color: 'rgba(255, 255, 255, 0.45)',
+                mb: 2,
+                fontFamily: 'var(--font-mono), monospace',
+              }}
+            >
+              Included in {isTeamsUpgrade ? 'Teams' : 'Pro'}
+            </Typography>
+
+            <Stack spacing={2}>
+              {benefits.map((benefit) => (
+                <Box key={benefit} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                  <Box
+                    sx={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      bgcolor: alpha(accent, 0.2),
+                      border: `1px solid ${alpha(accent, 0.4)}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      mt: 0.2,
+                    }}
+                  >
+                    <Check size={10} color={accent} strokeWidth={3} />
+                  </Box>
+                  <Typography
+                    sx={{
+                      color: 'rgba(255, 255, 255, 0.85)',
+                      fontSize: '0.85rem',
+                      fontWeight: 700,
+                      lineHeight: 1.4,
+                      fontFamily: 'var(--font-satoshi), sans-serif',
+                    }}
+                  >
+                    {benefit}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Box>
         </Box>
 
         <Stack spacing={1.5} sx={{ mt: 'auto' }}>
           <Button
             fullWidth
-            variant="contained"
+            onClick={goCheckout}
             sx={{
               bgcolor: accent,
-              color: isTeamsUpgrade ? '#111' : '#fff',
+              color: isTeamsUpgrade ? '#000000' : '#FFFFFF',
               fontWeight: 900,
-              py: 1.25,
+              py: 1.5,
               fontSize: '0.9rem',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              borderRadius: '12px',
+              borderRadius: '14px',
+              textTransform: 'none',
+              fontFamily: 'var(--font-satoshi), sans-serif',
+              boxShadow: `0 8px 20px ${alpha(accent, 0.3)}`,
               '&:hover': {
-                bgcolor: isTeamsUpgrade ? '#D97706' : '#818CF8'}}}
-            onClick={goCheckout}
-            endIcon={<ExternalLink size={16} />}
+                bgcolor: isTeamsUpgrade ? '#D97706' : '#5254E8',
+                transform: 'translateY(-1px)',
+              },
+              transition: 'all 0.2s ease',
+            }}
+            endIcon={<ArrowRight size={18} />}
           >
-            {isTeamsUpgrade ? 'View Teams Plans' : 'Upgrade Now'}
+            {isTeamsUpgrade ? 'Upgrade to Teams' : 'Upgrade to Pro'}
           </Button>
+
           <Button
             fullWidth
-            variant="text"
-            sx={{
-              color: 'rgba(255, 255, 255, 0.5)',
-              fontWeight: 700,
-              py: 1,
-              fontSize: '0.85rem',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              '&:hover': {
-                bgcolor: 'rgba(99, 102, 241, 0.08)',
-                color: '#fff'}}}
             onClick={closeProUpgrade}
+            sx={{
+              color: 'rgba(255, 255, 255, 0.45)',
+              fontWeight: 700,
+              py: 1.2,
+              fontSize: '0.85rem',
+              borderRadius: '14px',
+              textTransform: 'none',
+              fontFamily: 'var(--font-satoshi), sans-serif',
+              '&:hover': {
+                bgcolor: 'rgba(255, 255, 255, 0.04)',
+                color: '#FFFFFF',
+              },
+            }}
           >
             Maybe Later
           </Button>
