@@ -11,7 +11,7 @@ import {
   useMediaQuery,
   alpha
 } from '@/lib/openbricks/primitives';
-import { Zap, ArrowRight, ShieldCheck, Sparkles, Check } from 'lucide-react';
+import { Zap, ArrowRight, Check } from 'lucide-react';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 const featureDescriptions: Record<string, { desc: string; fix: string }> = {
