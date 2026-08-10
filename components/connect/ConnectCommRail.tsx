@@ -2,8 +2,9 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, ShieldCheck, Lock } from 'lucide-react';
+import { Plus, ShieldCheck, Lock, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { ChatService } from '@/lib/services/chat';
 import { listGhostNoteChats } from '@/lib/actions/client-ops';
 import {
@@ -80,6 +81,7 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
   const router = useRouter();
   const { open: openUnified } = useUnifiedDrawer();
   const { requestSudo } = useSudo();
+  const { openAgenticDrawer } = useAgenticDrawer();
   const [_tab, _setTab] = useState<RailTab>(
     ecosystemSecurity.status.isUnlocked ? 'secure' : 'public',
   );
@@ -93,13 +95,17 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
 
   const openItem = useCallback(
     (id: string) => {
+      if (id === 'kylie_assistant_chat') {
+        openAgenticDrawer();
+        return;
+      }
       if (onSelect) {
         onSelect(id);
         return;
       }
       router.replace(`/connect/chats?c=${encodeURIComponent(id)}`, { scroll: false });
     },
-    [onSelect, router],
+    [onSelect, router, openAgenticDrawer],
   );
 
   useEffect(() => {
@@ -223,9 +229,16 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
   }, [user?.$id]);
 
   const items = (() => {
+    const kylieRailItem: RailItem = {
+      id: 'kylie_assistant_chat',
+      name: 'Kylie Assist',
+      avatar: null,
+      kind: 'thread',
+      subtitle: 'Ask Kylie for help...',
+      isKylie: true,
+    } as any;
     const combined = [...secure, ...threads];
-    // pinned first, then recency (secure uses _viewerId, threads use lastMessageAt)
-    return combined;
+    return [kylieRailItem, ...combined];
   })();
 
   return (
@@ -364,13 +377,19 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
                     }`}
                   >
                     <span className="relative inline-flex shrink-0">
-                      <IdentityAvatar
-                        userId={item.id}
-                        fileId={item.avatar}
-                        alt={item.name}
-                        fallback={item.name.replace(/^@/, '').charAt(0).toUpperCase() || 'C'}
-                        size={40}
-                      />
+                      {item.isKylie ? (
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#6366F1]/10 border border-[#6366F1]/30 text-[#6366F1]">
+                          <Sparkles size={18} strokeWidth={2.2} />
+                        </div>
+                      ) : (
+                        <IdentityAvatar
+                          userId={item.id}
+                          fileId={item.avatar}
+                          alt={item.name}
+                          fallback={item.name.replace(/^@/, '').charAt(0).toUpperCase() || 'C'}
+                          size={40}
+                        />
+                      )}
                       {item.kind === 'secure' && (
                         <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#0A0908] border border-[#34322F] flex items-center justify-center">
                           <Lock size={10} className="text-[#F59E0B]" />
