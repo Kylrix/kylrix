@@ -9,9 +9,6 @@ export type StoredAccount = {
   username?: string | null;
   avatar?: string | null;
   addedAt: number;
-  // Appwrite session token stored per-account for seamless switching
-  sessionSecret?: string | null;
-  sessionId?: string | null;
 };
 
 const ACCOUNTS_KEY = 'kylrix:accounts';
@@ -55,17 +52,33 @@ export function getAccount(id: string): StoredAccount | null {
   return readAccounts().find(a => a.id === id) || null;
 }
 
-/**
- * Store the Appwrite session secret for an account so it can be restored on switch.
- * Called right after successful login while the session is fresh.
- */
-export function storeAccountSession(userId: string, sessionId: string, sessionSecret: string) {
-  const all = readAccounts();
-  const idx = all.findIndex(a => a.id === userId);
-  if (idx >= 0) {
-    all[idx] = { ...all[idx], sessionId, sessionSecret };
-    writeAccounts(all);
-  }
+// ── Session cache (device-local, plaintext for instant UX) ─────────────────
+// Stored in RxDB IndexedDB via LocalEngine (not localStorage) — intentional exception
+// to encrypted-only: these are device sessions, low-risk, must survive logout/login
+// without masterpass. Tradeoff: convenient vs WESP purge; handled on explicit remove.
+const SESSION_CACHE_PREFIX = 'kylrix_session_';
+
+export async function storeAccountSession(userId: string, payload: { jwt?: string; secret?: string; sessionId?: string }) {
+  if (!userId) return;
+  try {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    await LocalEngine.cacheSet(`${SESSION_CACHE_PREFIX}${userId}`, { ...payload, updatedAt: Date.now() });
+  } catch {}
+}
+
+export async function getAccountSession(userId: string): Promise<{ jwt?: string; secret?: string; sessionId?: string } | null> {
+  try {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const v = await LocalEngine.cacheGet<{ jwt?: string; secret?: string; sessionId?: string }>(`${SESSION_CACHE_PREFIX}${userId}`);
+    return v || null;
+  } catch { return null; }
+}
+
+export async function clearAccountSession(userId: string) {
+  try {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    await LocalEngine.cacheDelete(`${SESSION_CACHE_PREFIX}${userId}`);
+  } catch {}
 }
 
 // Called on successful login: ensure vault has current user

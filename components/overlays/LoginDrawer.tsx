@@ -105,12 +105,13 @@ export function LoginDrawer() {
     setLastUsedMethod('password');
 
     try {
-      const session = await account.createEmailPasswordSession(email, password);
+      const session: any = await account.createEmailPasswordSession(email, password);
 
-      // Store session secret for seamless multi-account switching
+      // Cache device session in RxDB (plaintext, instant, no masterpass)
       try {
         const { storeAccountSession } = await import('@/lib/account/vault');
-        storeAccountSession(session.userId, session.$id, session.secret);
+        const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => null);
+        await storeAccountSession(session.userId, { jwt: jwt || undefined, secret: session.secret || undefined, sessionId: session.$id });
       } catch {}
 
       try {
@@ -159,6 +160,12 @@ export function LoginDrawer() {
       // Complete Appwrite session creation using the minted token
       await account.createSession({ userId: verifyRes.userId, secret: verifyRes.token });
       
+      // Cache session in RxDB for instant switching (no encryption)
+      try {
+        const { storeAccountSession } = await import('@/lib/account/vault');
+        const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => null);
+        await storeAccountSession(verifyRes.userId, { jwt: jwt || undefined, secret: verifyRes.token, sessionId: `passkey_${verifyRes.userId}` });
+      } catch {}
       setActivePartitionId(`_acc_${verifyRes.userId}` as any);
       localStorage.setItem('kylrix_last_auth_method', 'passkey');
       localStorage.setItem(`kylrix_has_passkey_${verifyRes.userId}`, 'true');
@@ -255,6 +262,16 @@ export function LoginDrawer() {
     setLoading(true);
     try {
       await verifyEmailOTP(email, userId, code);
+      // Cache session for switching (plaintext device cache, no masterpass)
+      try {
+        const { storeAccountSession } = await import('@/lib/account/vault');
+        const { account } = await import('@/lib/appwrite/client');
+        const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => null);
+        // verifyEmailOTP creates session internally; use email as id fallback
+        const { getCurrentUser } = await import('@/lib/appwrite/client');
+        const cur = await getCurrentUser().catch(() => null);
+        if (cur?.$id) await storeAccountSession(cur.$id, { jwt: jwt || undefined });
+      } catch {}
       close();
     } catch (err: unknown) {
       if (isMfaRequiredError(err)) {
@@ -309,34 +326,67 @@ export function LoginDrawer() {
     document.body.appendChild(blanket);
 
     try {
-      const { getAccount } = await import('@/lib/account/vault');
-      const targetAcct = getAccount(targetId);
+      const { getAccountSession } = await import('@/lib/account/vault');
+      const cached = await getAccountSession(targetId);
 
       // 0. Persist the current user's active workspace before switching away so it's remembered on switch-back
+      // Also cache current JWT for instant return (no masterpass)
       if (user?.$id) {
         try {
           const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          // Read current active workspace from LocalEngine (WorkspaceContext keeps it in sync there)
           const currentWorkspaceCacheKey = `kylrix_active_workspace_${user.$id}`;
           const alreadyStored = await LocalEngine.cacheGet<string>(currentWorkspaceCacheKey);
-          // Only write the personal workspace as default if nothing is stored (don't overwrite a real preference)
           if (!alreadyStored) {
             await LocalEngine.cacheSet(currentWorkspaceCacheKey, user.$id);
           }
+          // Refresh current session JWT in cache before leaving
+          const { storeAccountSession } = await import('@/lib/account/vault');
+          const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => null);
+          if (jwt) await storeAccountSession(user.$id, { jwt });
         } catch {}
       }
 
-      if (!targetAcct?.sessionSecret || !targetAcct?.sessionId) {
-        // No stored session — need fresh login for target account
+      if (!cached?.secret && !cached?.jwt) {
+        // Fallback: try server-minted custom token via Admin SDK
+        try {
+          const { mintSessionForUserAction } = await import('@/lib/actions/auth-actions');
+          const minted = await (mintSessionForUserAction as any)(targetId);
+          if (minted?.success && minted?.secret) {
+            await account.createSession({ userId: targetId, secret: minted.secret });
+            const { setActivePartitionId } = await import('@/lib/account/partition');
+            setActivePartitionId(`_acc_${targetId}` as any);
+            try { sessionStorage.clear(); const { invalidateCurrentUserCache } = await import('@/lib/appwrite/client'); invalidateCurrentUserCache(); } catch {}
+            toast.success('Switched account');
+            setTimeout(() => window.location.reload(), 180);
+            return;
+          }
+        } catch {}
         document.body.removeChild(blanket);
         toast.error(`No stored session for this account. Please add it again.`);
         setIsSwitching(false);
         return;
       }
 
-      // 1. Restore the target account's Appwrite session using stored secret
-      //    This replaces the current httpOnly session cookie with target's cookie
-      await account.createSession({ userId: targetAcct.id, secret: targetAcct.sessionSecret });
+      // 1. Restore the target account's Appwrite session using cached secret/jwt
+      if (cached.secret) {
+        await account.createSession({ userId: targetId, secret: cached.secret });
+      } else if (cached.jwt) {
+        // JWT stored — create session via server-mint if possible, else set client JWT
+        try {
+          const { createSessionFromJWTAction } = await import('@/lib/actions/auth-actions');
+          const res = await (createSessionFromJWTAction as any)(cached.jwt);
+          if (res?.success && res?.secret) {
+            await account.createSession({ userId: targetId, secret: res.secret });
+          } else {
+            // Fallback: set JWT header for secure-ops (live-copy still works)
+            const { client } = await import('@/lib/appwrite/client');
+            (client as any).setJWT?.(cached.jwt);
+          }
+        } catch {
+          const { client } = await import('@/lib/appwrite/client');
+          (client as any).setJWT?.(cached.jwt);
+        }
+      }
 
       // 2. Flip partition pointer in localStorage
       const targetPid = `_acc_${targetId}`;
@@ -395,7 +445,7 @@ export function LoginDrawer() {
       toast.success(`Switched to ${targetAcct.name || targetAcct.email || 'account'}`);
       close();
       setTimeout(() => window.location.reload(), 120);
-    } catch (e: any) {
+    } catch (_e: any) {
       try { document.body.removeChild(blanket); } catch {}
       // Session secret may be expired — tell user to re-add account
       toast.error('Session expired for this account. Please add it again via "Add Account".');

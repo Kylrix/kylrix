@@ -209,15 +209,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [user?.$id, user?.isPulse]);
 
-  // 4. Centralized User Profile & Username Bootstrapping & Vault Account Sync
+  // 4. Centralized User Profile & Username Bootstrapping & Vault Account Sync + JWT cache (device-local, no masterpass)
   useEffect(() => {
     if (user?.$id && !user.isPulse) {
       const initProfile = async () => {
         try {
           const { UsersService } = await import('@/lib/services/users');
           await UsersService.ensureProfileForUser(user);
-          const { ensureCurrentAccountInVault } = await import('@/lib/account/vault');
+          const { ensureCurrentAccountInVault, storeAccountSession } = await import('@/lib/account/vault');
           ensureCurrentAccountInVault(user);
+          // Cache JWT for instant switch (plaintext device cache, intentional UX exception)
+          try {
+            const { account } = await import('@/lib/appwrite/client');
+            const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => null);
+            if (jwt) await storeAccountSession(user.$id, { jwt });
+          } catch {}
         } catch (err) {
           console.warn('[AuthContext] Background profile bootstrapping failed:', err);
         }
