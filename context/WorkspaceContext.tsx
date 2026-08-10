@@ -105,6 +105,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const refreshWorkspaces = useCallback(async () => {
     setLoadingWorkspaces(true);
     try {
+      const { clearSessionProjectsList } = await import('@/lib/projects/projects-cache');
+      clearSessionProjectsList();
       const rows = await warmProjectsList({
         userId: userId || 'guest',
         getCachedDataAsync,

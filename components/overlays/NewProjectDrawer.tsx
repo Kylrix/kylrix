@@ -28,6 +28,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { FormsService } from '@/lib/services/forms';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { listNotesByUser } from '@/lib/appwrite/note';
 import { tasks } from '@/lib/kylrixflow';
@@ -54,6 +55,7 @@ export function NewProjectDrawer() {
   const { showSuccess, showError } = useToast();
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
+  const { refreshWorkspaces } = useWorkspace();
 
   const template = drawerData?.template;
   const onSuccess = drawerData?.onCreated as ((project: any) => void) | undefined;
@@ -212,6 +214,7 @@ export function NewProjectDrawer() {
       }
 
       showSuccess('Workspace created');
+      void refreshWorkspaces();
       if (onSuccess) onSuccess(project);
       close();
     } catch (err: any) {
