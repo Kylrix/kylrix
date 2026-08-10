@@ -1,49 +1,111 @@
-'use server';
-
 import { generateAuthenticationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server';
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_KEYCHAIN_ID } from '@/lib/appwrite';
 import { Query } from 'node-appwrite';
 import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
+import { headers } from 'next/headers';
+
+function getAppwriteSecret(): string {
+  const secret = process.env.APPWRITE_API;
+  if (!secret) {
+    throw new Error('FATAL: APPWRITE_API environment variable is not defined.');
+  }
+  return secret;
+}
+
+async function resolveOrigin(overrideHostname?: string, overrideHostHeader?: string): Promise<{ rpID: string; origin: string }> {
+  let hostname = overrideHostname;
+  let host = overrideHostHeader;
+
+  if (!hostname || !host) {
+    try {
+      const headerStore = await headers();
+      const headerHost = headerStore.get('host');
+      if (headerHost) {
+        host = headerHost;
+        hostname = headerHost.split(':')[0];
+      }
+    } catch {
+      // Fallback if headers() is unavailable
+    }
+  }
+
+  hostname = hostname || 'localhost';
+  host = host || 'localhost';
+
+  const rpID = resolvePasskeyRpId(hostname);
+  const protocol = hostname === 'localhost' || hostname.startsWith('127.') ? 'http' : 'https';
+
+  return { rpID, origin: `${protocol}://${host}` };
+}
+
+function verifyChallengeToken(challengeToken: string): { valid: boolean; challenge?: string; expired?: boolean } {
+  const parts = challengeToken.split('.');
+  if (parts.length !== 2) return { valid: false };
+
+  const [payloadB64, sig] = parts;
+  let secret: string;
+  try {
+    secret = getAppwriteSecret();
+  } catch {
+    return { valid: false };
+  }
+
+  const expectedSig = createHmac('sha256', secret).update(payloadB64).digest('base64url');
+
+  const sigBuf = Buffer.from(sig, 'utf8');
+  const expectedBuf = Buffer.from(expectedSig, 'utf8');
+
+  if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
+    return { valid: false };
+  }
+
+  try {
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
+    if (Date.now() > payload.e) {
+      return { valid: false, expired: true };
+    }
+    return { valid: true, challenge: payload.c };
+  } catch {
+    return { valid: false };
+  }
+}
 
 /**
  * Generates WebAuthn login options (assertion options) for passkey sign-in.
  */
-export async function getPasskeyLoginOptionsAction(email?: string, hostname: string = 'localhost') {
+export async function getPasskeyLoginOptionsAction(email?: string, hostname?: string) {
   try {
     const systemClient = createSystemClient();
     const db = systemClient.databases;
 
-    let queries: any[] = [
-      Query.equal('type', 'passkey'),
-      Query.equal('authPasskey', true),
-    ];
+    let allowCredentials: { id: string; type: 'public-key' }[] = [];
 
     if (email) {
-      // Find the user ID by email first
       const usersList = await systemClient.users.list([
         Query.equal('email', email),
         Query.limit(1)
       ]);
+
       if (usersList.total > 0) {
-        queries.push(Query.equal('userId', usersList.users[0].$id));
-      } else {
-        queries.push(Query.equal('userId', 'non-existent-user-id'));
+        const res = await db.listRows(
+          APPWRITE_DATABASE_ID,
+          APPWRITE_COLLECTION_KEYCHAIN_ID,
+          [
+            Query.equal('type', 'passkey'),
+            Query.equal('authPasskey', true),
+            Query.equal('userId', usersList.users[0].$id)
+          ]
+        );
+        allowCredentials = res.rows.map((row: any) => ({
+          id: row.credentialId,
+          type: 'public-key' as const
+        }));
       }
     }
 
-    const res = await db.listRows(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_COLLECTION_KEYCHAIN_ID,
-      queries
-    );
-
-    const allowCredentials = res.rows.map((row: any) => ({
-      id: row.credentialId,
-      type: 'public-key' as const}));
-
-    const rpID = resolvePasskeyRpId(hostname);
+    const { rpID } = await resolveOrigin(hostname);
 
     const options = await generateAuthenticationOptions({
       rpID,
@@ -53,7 +115,7 @@ export async function getPasskeyLoginOptionsAction(email?: string, hostname: str
     // Generate stateless challenge token using our APPWRITE_API secret
     const exp = Date.now() + 300000; // 5 minutes
     const payload = JSON.stringify({ c: options.challenge, e: exp });
-    const secret = process.env.APPWRITE_API || 'fallback-dev-secret';
+    const secret = getAppwriteSecret();
     const sig = createHmac('sha256', secret).update(payload).digest('base64url');
     const challengeToken = Buffer.from(payload).toString('base64url') + '.' + sig;
 
@@ -72,7 +134,12 @@ export async function getPasskeyLoginOptionsAction(email?: string, hostname: str
 /**
  * Verifies WebAuthn assertion response and returns an Appwrite custom token.
  */
-export async function verifyPasskeyLoginAction(authResp: any, challengeToken: string, hostname: string = 'localhost', hostHeader: string = 'localhost') {
+export async function verifyPasskeyLoginAction(
+  authResp: any, 
+  challengeToken: string, 
+  hostname?: string, 
+  hostHeader?: string
+) {
   try {
     const systemClient = createSystemClient();
     const db = systemClient.databases;
@@ -98,36 +165,20 @@ export async function verifyPasskeyLoginAction(authResp: any, challengeToken: st
       return { success: false, error: 'This passkey is not authorized for login' };
     }
 
-    const rpID = resolvePasskeyRpId(hostname);
-    
-    // Support http for localhost dev, https for production
-    const protocol = hostname === 'localhost' || hostname.startsWith('127.') ? 'http' : 'https';
-    const origin = `${protocol}://${hostHeader}`;
+    const { rpID, origin } = await resolveOrigin(hostname, hostHeader);
 
-    // Verify stateless challenge token
-    const parts = challengeToken.split('.');
-    if (parts.length !== 2) {
-      return { success: false, error: 'Malformed challenge token' };
-    }
-    const payloadJson = Buffer.from(parts[0], 'base64url').toString();
-    const sig = parts[1];
-    const secret = process.env.APPWRITE_API || 'fallback-dev-secret';
-    const expectedSig = createHmac('sha256', secret).update(payloadJson).digest('base64url');
-
-    if (sig !== expectedSig) {
-      return { success: false, error: 'Invalid challenge signature' };
+    // Verify stateless challenge token with timing-safe comparison
+    const challengeCheck = verifyChallengeToken(challengeToken);
+    if (!challengeCheck.valid) {
+      return { success: false, error: challengeCheck.expired ? 'Login session expired. Please retry.' : 'Invalid challenge token' };
     }
 
-    const parsed = JSON.parse(payloadJson);
-    if (Date.now() > parsed.e) {
-      return { success: false, error: 'Login session expired. Please retry.' };
-    }
-    const expectedChallenge = parsed.c;
+    const expectedChallenge = challengeCheck.challenge;
 
     // 2. Verify Authentication Response
     const verification = await verifyAuthenticationResponse({
       response: authResp,
-      expectedChallenge,
+      expectedChallenge: expectedChallenge!,
       expectedOrigin: origin,
       expectedRPID: rpID,
       credential: {
@@ -158,7 +209,7 @@ export async function verifyPasskeyLoginAction(authResp: any, challengeToken: st
       const token = await systemClient.users.createToken(row.userId);
 
       // Generate secure HMAC fallback seed for clients lacking WebAuthn PRF
-      const fallbackSeed = createHmac('sha256', process.env.APPWRITE_API || 'fallback-dev-secret')
+      const fallbackSeed = createHmac('sha256', getAppwriteSecret())
         .update(row.credentialId + row.userId)
         .digest('base64');
 
@@ -187,7 +238,7 @@ export async function getPasskeyRegisterFallbackSeedAction(credentialId: string)
     const { account } = await createServerClient();
     const user = await account.get();
 
-    const fallbackSeed = createHmac('sha256', process.env.APPWRITE_API || 'fallback-dev-secret')
+    const fallbackSeed = createHmac('sha256', getAppwriteSecret())
       .update(credentialId + user.$id)
       .digest('base64');
 
@@ -252,13 +303,11 @@ export async function checkEmailAuthStatusAction(email: string) {
 export async function verifyPasskeyRegistrationAction(
   registrationResponse: any,
   expectedChallenge: string,
-  hostname: string = 'localhost',
-  hostHeader: string = 'localhost'
+  hostname?: string,
+  hostHeader?: string
 ) {
   try {
-    const rpID = resolvePasskeyRpId(hostname);
-    const protocol = hostname === 'localhost' || hostname.startsWith('127.') ? 'http' : 'https';
-    const origin = `${protocol}://${hostHeader}`;
+    const { rpID, origin } = await resolveOrigin(hostname, hostHeader);
 
     const verification = await verifyRegistrationResponse({
       response: registrationResponse,
