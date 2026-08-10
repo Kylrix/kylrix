@@ -92,6 +92,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (lastUserIdRef.current !== userId) {
       hydratedRef.current = false;
+      lastSetIdRef.current = userId;
       lastUserIdRef.current = userId;
       setActiveWorkspaceIdState(userId);
       setWorkspaces([personalWorkspace]);
