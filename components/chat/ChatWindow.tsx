@@ -1326,31 +1326,29 @@ export const ChatWindow = ({
                     </IconButton>
                     <Box
                         onClick={() => {
-                            if (conversation?.type === 'direct' && !isSelf) {
-                                const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
-                                const uid = partnerId;
-                                const node = (
-                                  <ProfileSidebar
-                                    userId={uid}
-                                    username={partnerProfile?.username}
-                                    conversationId={conversationId}
-                                    seed={{
-                                      displayName: partnerProfile?.displayName || conversation?.name,
-                                      username: partnerProfile?.username,
-                                      bio: partnerProfile?.bio,
-                                      avatar: partnerProfile?.avatar || conversation?.avatarUrl,
-                                    }}
-                                    onClose={isDesktop ? closeSidebar : closeOverlay}
-                                  />
-                                );
-                                const key = `profile-${uid || partnerProfile?.username || conversationId}`;
-                                if (isDesktop) openSidebar(node, key, { hideHeader: true });
-                                else openOverlay(node);
-                                return;
-                            }
-                            // Groups / self — keep actions menu from header chrome via more button
+                            const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
+                            const isGroup = conversation?.type === 'group' || conversation?.type === 'channel';
+                            const uid = isGroup ? null : partnerId;
+                            const node = (
+                              <ProfileSidebar
+                                userId={uid}
+                                username={partnerProfile?.username}
+                                conversationId={conversationId}
+                                conversation={conversation}
+                                seed={isGroup ? null : {
+                                  displayName: partnerProfile?.displayName || conversation?.name,
+                                  username: partnerProfile?.username,
+                                  bio: partnerProfile?.bio,
+                                  avatar: partnerProfile?.avatar || conversation?.avatarUrl,
+                                }}
+                                onClose={isDesktop ? closeSidebar : closeOverlay}
+                              />
+                            );
+                            const key = `profile-${uid || partnerProfile?.username || conversationId}`;
+                            if (isDesktop) openSidebar(node, key, { hideHeader: true });
+                            else openOverlay(node);
                         }}
-                        sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, cursor: conversation?.type === 'direct' && !isSelf ? 'pointer' : 'default', '&:hover': { opacity: conversation?.type === 'direct' && !isSelf ? 0.8 : 1 } }}
+                        sx={{ display: 'flex', items: 'center', gap: 1.5, flex: 1, cursor: 'pointer', '&:hover': { opacity: 0.85 } }}
                     >
                         <IdentityAvatar 
                             userId={isSelf ? user?.$id : partnerId}
