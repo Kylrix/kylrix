@@ -376,31 +376,25 @@ export function LoginDrawer() {
       }
 
       // 1. Restore the target account's Appwrite session using cached secret/jwt
-      // Use server-minted escalation pattern like settings mintDailyLoginSecure: fresh JWT via Admin SDK
-      try { await account.deleteSession('current').catch(() => {}); } catch {}
-      // Always prefer minting fresh secret via Admin SDK (secret is one-time, JWT may be expired if reused)
+      // Use server-minted escalation (secret one-time) — mint BEFORE deleting old session so we never leave no-session state
       let freshSecret: string | null = null;
-      let source: 'mint' | 'cached' = 'cached';
       try {
         const { mintSessionForUserAction, createSessionFromJWTAction } = await import('@/lib/actions/account-switch');
-        // Try JWT-based mint first if we have JWT (more secure, proves possession)
         if (cached.jwt) {
           const res = await (createSessionFromJWTAction as any)(cached.jwt).catch(() => null);
-          if (res?.success && res?.secret) {
-            freshSecret = res.secret;
-            source = 'mint';
-          }
+          if (res?.success && res?.secret) freshSecret = res.secret;
         }
-        // Fallback: direct Admin mint by userId (works even if JWT expired)
         if (!freshSecret) {
-          const minted = await (mintSessionForUserAction as any)(targetId).catch(() => null);
-          if (minted?.success && minted?.secret) {
-            freshSecret = minted.secret;
-            source = 'mint';
+          const minted = await (mintSessionForUserAction as any)(targetId, cached.jwt).catch(() => null);
+          if (minted?.success && minted?.secret) freshSecret = minted.secret;
+          else {
+            const fallback = await (mintSessionForUserAction as any)(targetId).catch(() => null);
+            if (fallback?.success && fallback?.secret) freshSecret = fallback.secret;
           }
         }
       } catch {}
       if (freshSecret) {
+        try { await account.deleteSession('current').catch(() => {}); } catch {}
         await account.createSession({ userId: targetId, secret: freshSecret });
         try {
           const freshJwt = await account.createJWT().then((r: any) => r.jwt).catch(() => null);
@@ -410,7 +404,8 @@ export function LoginDrawer() {
           }
         } catch {}
       } else if (cached.secret) {
-        // Last resort: try cached one-time secret directly (may fail if already consumed)
+        // Last resort: try cached one-time secret directly (may fail if already consumed) — only after mint fails
+        try { await account.deleteSession('current').catch(() => {}); } catch {}
         await account.createSession({ userId: targetId, secret: cached.secret });
         try {
           const freshJwt = await account.createJWT().then((r: any) => r.jwt).catch(() => null);
@@ -421,6 +416,8 @@ export function LoginDrawer() {
         } catch {}
       } else if (cached.jwt) {
         throw new Error('Unauthorized: cached session expired and server mint failed');
+      } else {
+        throw new Error('No cached credentials');
       }
 
       // 2. Flip partition pointer in localStorage
@@ -540,10 +537,19 @@ export function LoginDrawer() {
   const [stashedActiveUser, setStashedActiveUser] = useState<any>(null);
 
   const handleStartAddAccount = useCallback(async () => {
-    if (user?.$id) setStashedActiveUser(user);
+    if (user?.$id) {
+      setStashedActiveUser(user);
+      // Cache current JWT before suspending so cancel can restore without re-login
+      try {
+        const { storeAccountSession } = await import('@/lib/account/vault');
+        const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => null);
+        if (jwt) await storeAccountSession(user.$id, { jwt });
+      } catch {}
+    }
     try {
       const { clearStatelessSessions } = await import('@/lib/utils');
       clearStatelessSessions();
+      // Suspend current session but keep vault entry — cancel will restore via cached JWT/secret
       try {
         await account.deleteSession('current').catch(() => {});
       } catch {}
@@ -551,10 +557,36 @@ export function LoginDrawer() {
     setShowAddAccount(true);
   }, [user]);
 
-  const handleCancelAddAccount = useCallback(() => {
+  const handleCancelAddAccount = useCallback(async () => {
     setShowAddAccount(false);
     if (stashedActiveUser?.$id) {
       setActivePartitionId(`_acc_${stashedActiveUser.$id}` as any);
+      // Restore stashed account's session from cache if we suspended it
+      try {
+        const { getAccountSession } = await import('@/lib/account/vault');
+        const cached = await getAccountSession(stashedActiveUser.$id);
+        if (cached?.secret || cached?.jwt) {
+          const { account } = await import('@/lib/appwrite/client');
+          // Try mint then create to avoid one-time secret reuse
+          let freshSecret: string | null = null;
+          try {
+            const { mintSessionForUserAction, createSessionFromJWTAction } = await import('@/lib/actions/account-switch');
+            if (cached.jwt) {
+              const res = await (createSessionFromJWTAction as any)(cached.jwt).catch(() => null);
+              if (res?.success && res?.secret) freshSecret = res.secret;
+            }
+            if (!freshSecret) {
+              const minted = await (mintSessionForUserAction as any)(stashedActiveUser.$id, cached.jwt).catch(() => null);
+              if (minted?.success && minted?.secret) freshSecret = minted.secret;
+            }
+          } catch {}
+          if (freshSecret) await account.createSession({ userId: stashedActiveUser.$id, secret: freshSecret }).catch(() => {});
+          else if (cached.secret) await account.createSession({ userId: stashedActiveUser.$id, secret: cached.secret }).catch(() => {});
+          const { invalidateCurrentUserCache } = await import('@/lib/appwrite/client');
+          invalidateCurrentUserCache();
+          setTimeout(() => window.location.reload(), 120);
+        }
+      } catch {}
     }
   }, [stashedActiveUser]);
 
