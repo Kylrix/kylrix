@@ -1,10 +1,11 @@
+'use server';
+
 import { generateAuthenticationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server';
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_KEYCHAIN_ID } from '@/lib/appwrite';
 import { Query } from 'node-appwrite';
 import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { headers } from 'next/headers';
 
 function getAppwriteSecret(): string {
   const secret = process.env.APPWRITE_API;
@@ -20,6 +21,7 @@ async function resolveOrigin(overrideHostname?: string, overrideHostHeader?: str
 
   if (!hostname || !host) {
     try {
+      const { headers } = await import('next/headers');
       const headerStore = await headers();
       const headerHost = headerStore.get('host');
       if (headerHost) {
