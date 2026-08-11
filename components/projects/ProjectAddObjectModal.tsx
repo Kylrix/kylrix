@@ -375,9 +375,9 @@ export default function ProjectAddObjectModal({
         if (!projectId) throw new Error('Project id is required');
         await attachObjectToProject({ projectId, entityKind: kind, entityId });
         
-        // Mark row as workspace-scoped so default views hide it
+        // Mark row as workspace-scoped so default views hide it — batched via LocalEngine (high activity)
         try {
-          const { databases } = await import('@/lib/appwrite/client');
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
           const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
           const tableByKind: Record<string, string> = {
             note: APPWRITE_CONFIG.TABLES.NOTES,
@@ -391,12 +391,13 @@ export default function ProjectAddObjectModal({
           };
           const tableId = tableByKind[kind];
           if (tableId) {
-            await databases.updateRow(
-              APPWRITE_CONFIG.DATABASE_ID,
-              tableId,
-              entityId,
-              { isWorkspace: true },
-            );
+            const cacheKey = `isWorkspace:${tableId}:${entityId}`;
+            await LocalEngine.batchedWrite(cacheKey, { isWorkspace: true }, async (jwt) => {
+              const { createRowSecure, updateRowSecure } = await import('@/lib/actions/secure-ops');
+              // Use LocalEngine's batched path — increases write frequency but coalesces under high activity
+              const { databases } = await import('@/lib/appwrite/client');
+              return databases.updateRow(APPWRITE_CONFIG.DATABASE_ID, tableId, entityId, { isWorkspace: true });
+            });
           }
         } catch (flagErr) {
           console.warn('[ProjectAddObjectModal] isWorkspace flag update failed:', flagErr);
