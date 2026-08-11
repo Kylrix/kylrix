@@ -158,7 +158,11 @@ export async function getRxDB(): Promise<RxDatabase> {
             });
         } catch (addErr: any) {
             console.warn('[RxDBManager] Schema mismatch or DB6 error, purging outdated partition DB:', partitionedDbName, addErr?.message);
-            await db.destroy().catch(() => {});
+            if (db && typeof (db as any).remove === 'function') {
+                await (db as any).remove().catch(() => {});
+            } else if (db && typeof (db as any).destroy === 'function') {
+                await (db as any).destroy().catch(() => {});
+            }
             if (typeof window !== 'undefined' && window.indexedDB) {
                 await new Promise<void>((resolve) => {
                     const req = indexedDB.deleteDatabase(partitionedDbName);
