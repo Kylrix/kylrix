@@ -459,28 +459,48 @@ export const ChatWindow = ({
               }
               console.log('[ChatWindow] loadMessages: getMessages returned rows:', response?.rows?.length);
             }
-            // Thread fallback — canonical threads substrate (secure + discussion hangouts both usable)
+            // Thread fallback — canonical threads substrate (notes → threads/thread_messages, not conversations)
+            // Use client-ops (server actions via Registry/JWT), NOT direct ThreadService (which needs APPWRITE_API system client)
+            // Bookmarks/discussion hangouts are ghost notes (isGhostChat) bridged to threads via scopeKey parentKind:parentId:channel + legacyNoteId
             if (!response || !Array.isArray(response.rows)) {
               try {
-                const { ThreadService } = await import('@/lib/services/threads');
-                const t = await (ThreadService as any).getById?.(conversationId).catch(() => null);
-                if (t) {
-                  const threadMessages = await (ThreadService as any).listMessages?.(conversationId, { limit: 50 }).catch(() => []) as any[];
-                  // Shape thread messages to ChatMessage-like for unified rendering (no decrypt needed for threads; handle JSON leak separately)
+                const { getOrCreateThread, listThreadMessages } = await import('@/lib/actions/client-ops');
+                let t: any = null;
+                let threadId: string | null = null;
+                const isSelfBookmarks = !!(conversation as any)?.isSelfBookmarks || (!!(conversation as any)?.isGhostChat && Array.isArray((conversation as any)?.collaborators) && (conversation as any).collaborators.length===1);
+                const fallbackIsSelf = !isSelfBookmarks && !conv && conversationId && (() => {
+                  try {
+                    const mem: any[] = ((): any[] => { try { return (require('@/lib/chat/local-chat-cache') as any).peekThreadsListMemory?.() || []; } catch { return []; } })();
+                    const hit = mem.find((c: any) => c.$id===conversationId || c.id===conversationId);
+                    return !!hit?.isSelfBookmarks;
+                  } catch { return false; }
+                })();
+                const useSelf = isSelfBookmarks || fallbackIsSelf;
+                try {
+                  const parentKind: any = useSelf ? 'user' : 'chat';
+                  const parentId: any = useSelf ? (user?.$id || conversationId) : conversationId;
+                  const channel: any = useSelf ? 'bookmarks' : 'general';
+                  const title: any = (conversation as any)?.name || (conversation as any)?.title || (useSelf ? 'Bookmarks' : 'Huddle');
+                  const ensured: any = await getOrCreateThread({ parentKind, parentId, channel, title, legacyNoteId: conversationId } as any);
+                  t = ensured?.thread || null;
+                  threadId = t?.id || null;
+                } catch {}
+                if (t && threadId) {
+                  const threadMessages: any[] = await listThreadMessages(threadId, { limit: 50 }).catch(() => []) as any[];
                   const rows = (threadMessages || []).map((m: any) => ({
-                    $id: m.id,
-                    id: m.id,
+                    $id: m.id || m.$id,
+                    id: m.id || m.$id,
                     conversationId,
-                    senderId: m.userId,
+                    senderId: m.userId || m.senderId,
                     content: m.content,
                     type: 'text',
                     attachments: [],
-                    $createdAt: m.createdAt,
-                    createdAt: m.createdAt,
+                    $createdAt: m.createdAt || m.$createdAt,
+                    createdAt: m.createdAt || m.$createdAt,
                   }));
                   response = { rows, atRestRows: rows };
                   if (!conv) {
-                    conv = { $id: t.id, id: t.id, settings: null, isEncrypted: !!t.isEncrypted, isThreadFallback: true } as any;
+                    conv = { $id: threadId, id: threadId, settings: null, isEncrypted: !!t?.isEncrypted, isThreadFallback: true, isGhostChat: true, isSelfBookmarks: useSelf } as any;
                     console.log('[ChatWindow] loadMessages: thread fallback fetched:', conv.$id, 'rows:', rows.length);
                   }
                 }
@@ -1069,6 +1089,54 @@ export const ChatWindow = ({
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
         try {
+            const isThreadHangout = !!(conversation as any)?.isThreadFallback || (conversation as any)?.type === 'thread' || !!(conversation as any)?.isGhostChat || !!(conversation as any)?.isSelfBookmarks || (()=>{ try { const mem:any[]=(require('@/lib/chat/local-chat-cache') as any).peekThreadsListMemory?.()||[]; return !!mem.find((c:any)=>c.$id===conversationId||c.id===conversationId); } catch { return false; } })() || !conversation;
+            if (isThreadHangout) {
+                // Thread/discussion hangout — NOT conversations/messages table.
+                // Underlying substrate is notes/idea → threads/thread_messages (canonical) with legacy comments fallback.
+                // Mirrors project discussion: ensure thread then post (bottom-up: thread_messages, not conversations).
+                let actualAttachments = initialAttachments;
+                if (file) {
+                    const bucketId = StorageService.getBucketForType(type);
+                    const uploaded = await StorageService.uploadFile(file, bucketId);
+                    actualAttachments = [uploaded.$id];
+                }
+                const { getOrCreateThread, postThreadMessage } = await import('@/lib/actions/client-ops');
+                let threadId = conversationId;
+                try {
+                    const isSelfForSend = !!(conversation as any)?.isSelfBookmarks || (()=>{ try { const mem:any[]=(require('@/lib/chat/local-chat-cache') as any).peekThreadsListMemory?.()||[]; const hit=mem.find((c:any)=>c.$id===conversationId||c.id===conversationId); return !!hit?.isSelfBookmarks; } catch { return false; } })();
+                    const parentKind: any = isSelfForSend ? 'user' : 'chat';
+                    const parentId: any = isSelfForSend ? user.$id : conversationId;
+                    const channel: any = isSelfForSend ? 'bookmarks' : 'general';
+                    const ensured: any = await getOrCreateThread({
+                        parentKind,
+                        parentId,
+                        channel,
+                        title: (conversation as any)?.name || (conversation as any)?.title || (isSelfForSend ? 'Bookmarks' : 'Huddle'),
+                        legacyNoteId: conversationId,
+                    } as any);
+                    threadId = ensured?.thread?.id || threadId;
+                } catch {}
+                const sent: any = await postThreadMessage({ threadId, content: text });
+                const messageForState = {
+                    $id: sent.id || sent.$id,
+                    id: sent.id || sent.$id,
+                    conversationId,
+                    senderId: user.$id,
+                    content: text,
+                    type,
+                    attachments: actualAttachments,
+                    $createdAt: sent.createdAt || sent.$createdAt || new Date().toISOString(),
+                    createdAt: sent.createdAt || sent.$createdAt || new Date().toISOString(),
+                    status: 'sent',
+                } as unknown as ChatMessage;
+                startTransition(() => {
+                    setMessages(prev => prev.map(m => m.$id === optimisticId ? messageForState : m));
+                });
+                // also persist to thread_messages cache if needed via loadMessages refresh
+                void loadMessages();
+                return true;
+            }
+
             let actualAttachments = initialAttachments;
             if (file) {
                 const bucketId = StorageService.getBucketForType(type);
@@ -1183,11 +1251,25 @@ export const ChatWindow = ({
                     // Stop all tracks to release microphone
                     stream.getTracks().forEach(track => track.stop());
 
-                    // Send the audio file
+                    // Send the audio file — branch on substrate (thread ghost vs secure conversation)
                     setSending(true);
                     try {
                         const uploaded = await StorageService.uploadFile(audioFile, StorageService.getBucketForType('audio'));
-                        await ChatService.sendMessage(conversationId, user?.$id || '', 'Voice Message', 'audio', [uploaded.$id]);
+                        const isThreadHangoutVoice = !!(conversation as any)?.isThreadFallback || (conversation as any)?.type === 'thread' || !!(conversation as any)?.isGhostChat || !!(conversation as any)?.isSelfBookmarks;
+                        if (isThreadHangoutVoice) {
+                            const { getOrCreateThread, postThreadMessage } = await import('@/lib/actions/client-ops');
+                            let threadId: any = conversationId;
+                            try {
+                                const parentKind: any = (conversation as any)?.isSelfBookmarks ? 'user' : 'chat';
+                                const parentId: any = (conversation as any)?.isSelfBookmarks ? user?.$id : conversationId;
+                                const channel: any = (conversation as any)?.isSelfBookmarks ? 'bookmarks' : 'general';
+                                const ensured: any = await getOrCreateThread({ parentKind, parentId, channel, title: (conversation as any)?.name || 'Bookmarks', legacyNoteId: conversationId } as any);
+                                threadId = ensured?.thread?.id || threadId;
+                            } catch {}
+                            await postThreadMessage({ threadId, content: `__voice_note__:${uploaded.$id}` } as any);
+                        } else {
+                            await ChatService.sendMessage(conversationId, user?.$id || '', 'Voice Message', 'audio', [uploaded.$id]);
+                        }
                     } catch (error) {
                         console.error('Failed to send voice note:', error);
                     } finally {

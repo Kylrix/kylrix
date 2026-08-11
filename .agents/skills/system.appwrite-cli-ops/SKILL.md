@@ -31,6 +31,11 @@ Supported: **17.4.0+** (tables-db). Current ecosystem often **21.x+**.
 - **NEVER** run `appwrite whoami` — it is unnecessary noise; assume authenticated and use read-only `get-row`/`list-rows` for verification.
 - Assume the user is already authenticated. On "Session not found" / auth errors: **stop** and ask them to run `appwrite login`. Do not improvise with keys in ways that rewrite prefs.
 
+### CLI admin capability (STRICT)
+
+- The Appwrite CLI runs with full admin access to every account and the backend itself; row-level security has nothing to do with server SDK/Actions and never limits the CLI. Do not use RLS as an excuse for missing rows — missing data means truly missing, not permission-hidden, when queried via CLI.
+- **NEVER** mention user PAT in CLI ops — PAT is a completely unrelated product surface that clashes with CLI ops; keep scopes separate.
+
 ---
 
 ## Ecosystem policy (STRICT — never bypass)

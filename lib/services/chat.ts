@@ -672,10 +672,15 @@ async function syncConversationAccess(
     conversationId: string,
     participantIds: string[],
     permission: 'read' | 'write' = 'read',
-    ownerId?: string
+    ownerId?: string,
+    jwt?: string
 ) {
     const targets = Array.from(new Set(participantIds.filter(Boolean)));
     if (!conversationId || targets.length === 0) return;
+    let _jwtSA = jwt;
+    if (!_jwtSA) {
+        try { const { account: _acc } = await import('../appwrite/client'); _jwtSA = await _acc.createJWT().then((r:any)=>r.jwt).catch(()=>undefined); } catch {}
+    }
     return callPermissionsApi('POST', {
         databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
         tableId: CONV_TABLE,
@@ -683,7 +688,7 @@ async function syncConversationAccess(
         targetUserIds: targets,
         permission,
         ownerId,
-        action: 'grant'});
+        action: 'grant'}, _jwtSA ? { jwt: _jwtSA } as any : undefined);
 }
 
 async function syncConversationAvatarAccess(
@@ -1147,7 +1152,13 @@ export const ChatService = {
 
         const now = new Date().toISOString();
 
-        const newConv = await tablesDB.createRow(DB_ID, CONV_TABLE, ID.unique(), {
+        // SERVER-ONLY writes via secure-ops + system SDK (read-only client SDK rule). Reuse single JWT pattern like mintDailyLoginSecure.
+        const { account: _chatAccount } = await import('../appwrite/client');
+        const _jwt = await _chatAccount.createJWT().then((r: any) => r.jwt).catch(() => undefined);
+        const { createRowSecure: _createRowSecure } = await import('@/lib/actions/secure-ops');
+        // Reuse single system SDK instance — no new client spinning, single codebase single instance via secure-ops
+        const newConv = await _createRowSecure(DB_ID, CONV_TABLE, {
+            $id: ID.unique(),
             participants: uniqueParticipants,
             participantCount: uniqueParticipants.length,
             type: type || 'direct',
@@ -1165,20 +1176,22 @@ export const ChatService = {
             encryptionVersion: convKey ? 'T4' : '1.0',
             createdAt: now,
             updatedAt: now,
-        }, conversationPermissions);
+        } as any, conversationPermissions, _jwt) as any;
 
         const memberRows = await Promise.all(uniqueParticipants.map((participantId: any) =>
-            tablesDB.createRow(
+            _createRowSecure(
                 DB_ID,
                 CONV_MEMBERS_TABLE,
-                ID.unique(),
                 {
+                    $id: ID.unique(),
                     conversationId: newConv.$id,
-                    userId: participantId},
-                buildConversationMemberPermissions(uniqueParticipants, creatorId)
-            ).catch(() => null)
+                    userId: participantId} as any,
+                buildConversationMemberPermissions(uniqueParticipants, creatorId),
+                _jwt
+            ).catch(() => null) as any
         ));
 
+        // Explicit JWT like mintDailyLoginSecure — prevents Unauthorized getActor failure
         await Promise.all(memberRows.filter(Boolean).map((memberRow: any) =>
             callPermissionsApi('POST', {
                 databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
@@ -1187,7 +1200,8 @@ export const ChatService = {
                 ownerId: creatorId,
                 targetUserIds: uniqueParticipants,
                 permission: 'read',
-                action: 'grant'}).catch((error: any) => {
+                action: 'grant',
+                jwt: _jwt} as any).catch((error: any) => {
                 console.error('[ChatService] Failed to grant conversation member access:', error);
                 throw error;
             })
@@ -1244,16 +1258,16 @@ export const ChatService = {
                             ...entry,
                             resourceType: 'epoch',
                             resourceId: newConv.$id})),
-                    });
+                        jwt: _jwt} as any);
                 }
                 
-                // System client (secure-ops) grants read to each grantee — never client SDK
-                await syncLockboxRows(directLockboxRows);
+                // System client (secure-ops) grants read to each grantee — never client SDK, explicit JWT like mintDailyLoginSecure
+                await syncLockboxRows(directLockboxRows, { jwt: _jwt } as any);
 
                 // Verify at least one lockbox persisted; retry once via system client if rowSecurity hid it from client view
                 const verify = await fetchKeyMapping('chat', newConv.$id, creatorId);
                 if (!verify) {
-                    await syncLockboxRows(directLockboxRows);
+                    await syncLockboxRows(directLockboxRows, { jwt: _jwt } as any);
                 }
 
                 const recipientIds = uniqueParticipants.filter((id) => id !== creatorId);
@@ -1262,7 +1276,8 @@ export const ChatService = {
                         newConv.$id,
                         recipientIds,
                         type === 'direct' ? 'write' : 'read',
-                        creatorId
+                        creatorId,
+                        _jwt
                     );
                 }
             } catch (lockboxErr) {
@@ -1353,17 +1368,18 @@ export const ChatService = {
             });
         }
 
-        // 2. Best-effort conversation preview update.
-        // In a client-only model only the creator can mutate the shared row, so list UIs must
-        // derive freshness from message activity instead of depending on this always succeeding.
+        // 2. Best-effort conversation preview update via secure-ops (read-only client rule).
         if (conversation?.creatorId === senderId) {
             try {
                 const now = new Date().toISOString();
-                await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, {
+                let _jwtPreview = permissionSyncAuth?.jwt;
+                if (!_jwtPreview) { try { const { account: _accPrev } = await import('../appwrite/client'); _jwtPreview = await _accPrev.createJWT().then((r:any)=>r.jwt).catch(()=>undefined); } catch {} }
+                const { updateRowSecure: _upd } = await import('@/lib/actions/secure-ops');
+                await _upd(DB_ID, CONV_TABLE, conversationId, {
                     lastMessageId: message.$id,
                     lastMessageAt: now,
                     lastMessageText: type === 'text' ? finalContent : `[${type}]`,
-                });
+                } as any, undefined, _jwtPreview);
             } catch (_e) {
                 console.warn('[ChatService] Conversation preview update skipped');
             }
@@ -1672,10 +1688,14 @@ export const ChatService = {
             ]).catch(() => ({ rows: [] as any[] }));
 
             if (!memberRows.rows.length) {
-                const memberRow = await tablesDB.createRow(DB_ID, CONV_MEMBERS_TABLE, ID.unique(), {
+                const { account: _accInvite } = await import('../appwrite/client');
+                const _jwtInvite = await _accInvite.createJWT().then((r:any)=>r.jwt).catch(()=>undefined);
+                const { createRowSecure: _createRowSecureInvite } = await import('@/lib/actions/secure-ops');
+                const memberRow = await _createRowSecureInvite(DB_ID, CONV_MEMBERS_TABLE, {
+                    $id: ID.unique(),
                     conversationId,
                     userId
-                }, buildConversationMemberPermissions([...participants, userId], conv.creatorId || participants[0] || userId)).catch(() => null);
+                } as any, buildConversationMemberPermissions([...participants, userId], conv.creatorId || participants[0] || userId), _jwtInvite).catch(() => null) as any;
 
                 if (memberRow?.$id) {
                     await callPermissionsApi('POST', {
@@ -1685,7 +1705,8 @@ export const ChatService = {
                         ownerId: conv.creatorId || participants[0] || userId,
                         targetUserIds: [...participants, userId],
                         permission: 'read',
-                        action: 'grant'});
+                        action: 'grant',
+                        jwt: _jwtInvite} as any);
                 }
             }
 
@@ -1742,13 +1763,15 @@ export const ChatService = {
                     });
                 }
 
+                const _jwtRewrap = await (async () => { try { const { account: _a } = await import('../appwrite/client'); return await _a.createJWT().then((r:any)=>r.jwt).catch(()=>undefined);} catch { return undefined; } })();
                 await callPermissionsApi('POST', {
                     action: 'rotate_epoch',
                     resourceId: conversationId,
                     ownerId: conv.creatorId || participants[0] || userId,
                     participantUserIds: updatedParticipants,
                     epochNumber: nextEpochNumber,
-                    keyMappings});
+                    keyMappings,
+                    jwt: _jwtRewrap} as any);
 
                 // Also sync base 'chat' lockbox rows for the newly added participant/everyone
                 // This ensures conversation metadata (name/preview) remains decryptable
@@ -1757,7 +1780,7 @@ export const ChatService = {
                         ...entry,
                         resourceType: 'chat',
                         resourceId: conversationId
-                    })));
+                    })), { jwt: _jwtRewrap } as any);
                 }
             }
             return updated;
@@ -1781,7 +1804,10 @@ export const ChatService = {
             Query.limit(1)
         ]).catch(() => ({ rows: [] as any[] }));
         if (memberRows.rows[0]?.$id) {
-            await tablesDB.deleteRow(DB_ID, CONV_MEMBERS_TABLE, memberRows.rows[0].$id).catch(() => null);
+            const { account: _accLeave } = await import('../appwrite/client');
+            const _jwtLeave = await _accLeave.createJWT().then((r:any)=>r.jwt).catch(()=>undefined);
+            const { deleteRowSecure: _delMember } = await import('@/lib/actions/secure-ops');
+            await _delMember(DB_ID, CONV_MEMBERS_TABLE, memberRows.rows[0].$id, _jwtLeave).catch(() => null);
         }
 
         const updatedParticipants = await getConversationMemberSnapshot(conversationId, participants);
@@ -1900,13 +1926,19 @@ export const ChatService = {
     },
 
     async deleteMessage(messageId: string) {
-        return await tablesDB.deleteRow(DB_ID, MSG_TABLE, messageId);
+        const { account: _accDel } = await import('../appwrite/client');
+        const _jwtDel = await _accDel.createJWT().then((r:any)=>r.jwt).catch(()=>undefined);
+        const { deleteRowSecure: _delMsg } = await import('@/lib/actions/secure-ops');
+        return await _delMsg(DB_ID, MSG_TABLE, messageId, _jwtDel);
     },
 
     async updateMessage(messageId: string, data: Partial<{ content: string; type: string; readBy: string[] }>) {
-        return await tablesDB.updateRow(DB_ID, MSG_TABLE, messageId, {
+        const { account: _accUpd } = await import('../appwrite/client');
+        const _jwtUpd = await _accUpd.createJWT().then((r:any)=>r.jwt).catch(()=>undefined);
+        const { updateRowSecure: _updMsg } = await import('@/lib/actions/secure-ops');
+        return await _updMsg(DB_ID, MSG_TABLE, messageId, {
             ...data
-        });
+        } as any, undefined, _jwtUpd);
     },
 
     async markAsRead(messageId: string, userId: string) {
@@ -1914,9 +1946,12 @@ export const ChatService = {
             const message = await tablesDB.getRow(DB_ID, MSG_TABLE, messageId);
             const readBy = message.readBy || [];
             if (!readBy.includes(userId)) {
-                return await tablesDB.updateRow(DB_ID, MSG_TABLE, messageId, {
+                const { account: _accRead } = await import('../appwrite/client');
+                const _jwtRead = await _accRead.createJWT().then((r:any)=>r.jwt).catch(()=>undefined);
+                const { updateRowSecure: _updRead } = await import('@/lib/actions/secure-ops');
+                return await _updRead(DB_ID, MSG_TABLE, messageId, {
                     readBy: [...readBy, userId]
-                });
+                } as any, undefined, _jwtRead);
             }
             return message;
         } catch (error: unknown) {
