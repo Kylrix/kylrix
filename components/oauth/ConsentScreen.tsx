@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { ShieldCheck, ShieldX, Loader2 } from 'lucide-react';
+import { ShieldCheck, ShieldX, Loader2, UserCheck, Users } from 'lucide-react';
 import { account } from '@/lib/appwrite/client';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { getApp, type OauthApp } from '@/lib/oauth2/apps';
@@ -27,8 +27,27 @@ export function ConsentScreen() {
   const [error, setError] = useState<string | null>(null);
   const [needsSignIn, setNeedsSignIn] = useState(false);
   const [grant, setGrant] = useState<Oauth2Grant | null>(null);
-  const [app, setApp] = useState<OauthApp | null>(null);
-  const [selected, setSelected] = useState<string[]>([]);
+  const prompts = useMemo(() => {
+    const raw = searchParams.get('prompt') || '';
+    return raw.split(/\s+/).filter(Boolean);
+  }, [searchParams]);
+
+  const forceAccountSelect = prompts.includes('select_account');
+
+  useEffect(() => {
+    if (forceAccountSelect && isAuthenticated && !grantIdParam) {
+      setNeedsSignIn(true);
+    }
+  }, [forceAccountSelect, isAuthenticated, grantIdParam]);
+
+  const [savedAccounts, setSavedAccounts] = useState<any[]>([]);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('@/lib/account/vault').then(({ listAccounts }) => {
+        setSavedAccounts(listAccounts());
+      }).catch(() => null);
+    }
+  }, []);
 
   const grantIdParam = searchParams.get('grant_id') || searchParams.get('grantId');
 
@@ -234,6 +253,29 @@ export function ConsentScreen() {
           </div>
         ) : grant ? (
           <>
+            {/* OIDC Account Selector Bar */}
+            <div className="rounded-2xl bg-[#0A0908] border border-white/[0.06] p-3.5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="h-8 w-8 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 grid place-items-center shrink-0">
+                  <UserCheck size={15} className="text-[#6366F1]" />
+                </span>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-white/40 block">Signed in as</span>
+                  <span className="text-xs font-extrabold text-white truncate block">{grant.userId}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setNeedsSignIn(true);
+                  openDrawer('login');
+                }}
+                className="text-xs font-bold text-[#6366F1] hover:underline cursor-pointer flex items-center gap-1 shrink-0"
+              >
+                <Users size={13} />
+                Switch account
+              </button>
+            </div>
             <div className="space-y-2">
               <p className="text-[11px] font-extrabold uppercase tracking-wider text-white/40">
                 Permissions
