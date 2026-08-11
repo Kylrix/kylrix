@@ -110,7 +110,8 @@ export function FlowDetailDrawer({
   const doPublish = async () => {
     if (!aware) return;
     setBusy(true);
-    const res = await publishFlowAction(local.id, { confirmAware: true });
+    const jwt = await import('@/lib/appwrite/client').then(m => m.account.createJWT()).then(r => r?.jwt).catch(() => undefined);
+    const res = await publishFlowAction(local.id, { confirmAware: true }, jwt);
     setBusy(false);
     if (!res.success) {
       toast.error(res.error || 'Could not publish');
@@ -119,7 +120,7 @@ export function FlowDetailDrawer({
     const next = { ...local, isPublic: !!res.isPublic };
     setLocal(next);
     onChanged?.(next);
-    if (res.isPublic) void saveWorkflowAction(next);
+    if (res.isPublic) void saveWorkflowAction(next, jwt);
     setConfirmOpen(false);
     if (res.needsAgent) {
       toast.success('Sent for review — not public yet');
@@ -135,7 +136,8 @@ export function FlowDetailDrawer({
 
   const doUnpublish = async () => {
     setBusy(true);
-    const res = await unpublishFlowAction(local.id);
+    const jwt = await import('@/lib/appwrite/client').then(m => m.account.createJWT()).then(r => r?.jwt).catch(() => undefined);
+    const res = await unpublishFlowAction(local.id, jwt);
     setBusy(false);
     if (!res.success) {
       toast.error(res.error || 'Could not unpublish');
@@ -144,7 +146,7 @@ export function FlowDetailDrawer({
     const next = { ...local, isPublic: false };
     setLocal(next);
     onChanged?.(next);
-    void saveWorkflowAction(next);
+    void saveWorkflowAction(next, jwt);
     toast.success('Removed from Discover');
   };
 
