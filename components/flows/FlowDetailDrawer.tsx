@@ -111,7 +111,7 @@ export function FlowDetailDrawer({
     if (!aware) return;
     setBusy(true);
     const jwt = await import('@/lib/appwrite/client').then(m => m.account.createJWT()).then(r => r?.jwt).catch(() => undefined);
-    const res = await publishFlowAction(local.id, { confirmAware: true }, jwt);
+    const res = await publishFlowAction(local.id, { confirmAware: true, jwt });
     setBusy(false);
     if (!res.success) {
       toast.error(res.error || 'Could not publish');

@@ -542,7 +542,8 @@ function FormCard({
     onUpdate: () => void;
 }) {
     const { isPinned: isResourcePinned } = useResourcePins();
-    const { openMenu } = useContextMenu();
+    const contextMenu = useContextMenu();
+    const openMenu = contextMenu?.openMenu;
     const { open: openDrawer } = useUnifiedDrawer();
 
     const pinned = isResourcePinned('form', form.$id, form.userId, form.isPinned);

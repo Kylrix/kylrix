@@ -371,24 +371,41 @@ export async function nuclearWipeConversationInternal(payload: {
 
   const isSelfChat = participantIds.length === 1 && participantIds[0] === verifiedActorId;
 
-  // Self-chat (notes to self): immediately regenerate clean fresh self-chat
+  // Self-chat (notes to self): nuclear wipe must fully delete then regenerate a
+  // completely fresh room — no reuse of old conversationId, no stale key mappings,
+  // no carried messages/reactions/members. New room starts plaintext (isEncrypted:
+  // false); client auto-seeds a fresh T4 chat key on next open via
+  // resolveConversationKey self-chat seeding (generateConversationKey +
+  // wrapKeyWithECDH + syncLockboxRows), minting a new key_mapping for new ID.
   if (isSelfChat) {
     try {
       const now = new Date().toISOString();
+      // Fresh self-chat is intentionally plaintext — client mints new key_mapping
+      // for newConversationId on next resolveConversationKey (seededSelfChat).
       const conversationData: any = {
         type: 'direct',
         participants: [verifiedActorId],
+        participantCount: 1,
         creatorId: verifiedActorId,
-        name: conversation?.name || 'Notes to self',
-        description: conversation?.description || null,
-        avatarUrl: conversation?.avatarUrl || null,
-        avatar: conversation?.avatar || null,
-        isEncrypted: Boolean(conversation?.isEncrypted),
+        name: 'Notes to self',
+        description: null,
+        avatarUrl: null,
+        avatar: null,
+        isEncrypted: false,
+        encryptionVersion: '1.0',
         createdAt: now,
         updatedAt: now,
         lastMessageAt: null,
         lastMessageId: null,
         lastMessageText: null,
+        inviteMeta: null,
+        inviteLink: null,
+        inviteLinkExpiry: null,
+        admins: [verifiedActorId],
+        isPinned: [],
+        isMuted: [],
+        isArchived: [],
+        tags: [],
       };
       const permissions = [Permission.read(Role.user(verifiedActorId))];
       const newConversationId = ID.unique();
@@ -407,6 +424,13 @@ export async function nuclearWipeConversationInternal(payload: {
         },
         permissions
       ).catch(() => null);
+
+      // Clear LocalEngine key cache for old id so new room never reuses old wrapped key
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        await LocalEngine.cacheSet(`f_chat_conv_key_${payload.conversationId}`, null as any).catch(() => null);
+        await LocalEngine.cacheSet(`f_chat_conv_key_${newConversationId}`, null as any).catch(() => null);
+      } catch {}
 
       return {
         ...wipeResult,

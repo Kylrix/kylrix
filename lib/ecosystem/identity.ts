@@ -42,8 +42,39 @@ export async function searchGlobalUsers(query: string, limit = 10) {
         }
     }
 
+    // Primary: secure directory search via system client (bypasses RLS, respects isPublic)
+    // This fixes "no results" where client-side listRows is blocked by rowSecurity.
     try {
-        // 1. Primary search: ONLY username (indexed)
+        const { searchGlobalUsersSecure } = await import('@/lib/actions/secure-ops');
+        const secureRows = await searchGlobalUsersSecure(cleaned, limit);
+        if (Array.isArray(secureRows) && secureRows.length > 0) {
+            // Normalize secure rows to same shape as direct search
+            const mapped = secureRows.map((doc: any) => ({
+                id: doc.$id || doc.id || doc.userId,
+                userId: doc.$id || doc.userId || doc.id,
+                type: 'user' as const,
+                displayName: doc.displayName || null,
+                title: doc.displayName || (doc.username ? `@${doc.username}` : 'Kylrix User'),
+                subtitle: doc.username ? `@${doc.username}` : doc.email || '',
+                icon: 'person',
+                avatar: doc.avatar || null,
+                createdAt: doc.$createdAt || doc.createdAt || null,
+                lastUsernameEdit: doc.last_username_edit || null,
+                username: doc.username || null,
+                bio: doc.bio || null,
+                tier: doc.tier || null,
+                publicKey: doc.publicKey || null,
+                email: doc.email || null,
+                apps: doc.appsActive || [],
+            }));
+            if (mapped.length >= 1) return mapped;
+        }
+    } catch (e: any) {
+        console.warn('[Identity] Secure search failed, falling back to client query:', e?.message);
+    }
+
+    try {
+        // Fallback client-side search: ONLY username (indexed)
         let results: any[] = [];
         try {
             const queries = [
@@ -79,7 +110,6 @@ export async function searchGlobalUsers(query: string, limit = 10) {
             }));
         } catch (e: any) {
             console.warn('[Identity] Username search failed:', e);
-            // Fallback for older Appwrite versions that don't support Query.or if needed
             if (e.message?.includes('Query.or')) {
                 const res = await databases.listRows(
                     CONNECT_DATABASE_ID,
@@ -110,7 +140,6 @@ export async function searchGlobalUsers(query: string, limit = 10) {
             }
         }
 
-        // 2. Secondary Fallback: Search by 'name' (Fulltext index in note table)
         if (results.length < 5) {
             try {
                 const noteRes = await databases.listRows(
@@ -121,7 +150,6 @@ export async function searchGlobalUsers(query: string, limit = 10) {
                         Query.limit(5)
                     ]
                 );
-
                 for (const doc of noteRes.rows) {
                     if (!results.find((r: any) => r.id === doc.$id)) {
                         results.push({
@@ -143,9 +171,7 @@ export async function searchGlobalUsers(query: string, limit = 10) {
                         });
                     }
                 }
-            } catch (_err: any) {
-                // Ignore fallback errors
-            }
+            } catch (_err: any) {}
         }
 
         return results;

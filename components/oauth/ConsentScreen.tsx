@@ -27,6 +27,8 @@ export function ConsentScreen() {
   const [error, setError] = useState<string | null>(null);
   const [needsSignIn, setNeedsSignIn] = useState(false);
   const [grant, setGrant] = useState<Oauth2Grant | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [app, setApp] = useState<any>(null);
   const grantIdParam = searchParams.get('grant_id') || searchParams.get('grantId');
   const prompts = useMemo(() => {
     const raw = searchParams.get('prompt') || '';

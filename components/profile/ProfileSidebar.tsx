@@ -9,6 +9,7 @@ import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getCachedIdentityById } from '@/lib/identity-cache';
 import { useAuth } from '@/lib/auth';
 import { useCallLauncher } from '@/context/CallLauncherContext';
+import toast from 'react-hot-toast';
 
 /**
  * Native right-sidebar profile peek — same data as ProfilePeekDrawer
