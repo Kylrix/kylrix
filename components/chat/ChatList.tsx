@@ -327,8 +327,10 @@ export const ChatList = ({
                 await deleteGhostThread(conv.$id);
                 if (isSelfBookmarks) {
                   try {
+                    if (!user?.$id) throw new Error('No user');
                     const created = await createGhostNoteChat('Bookmarks', [user.$id]);
-                    const selfMapped: any = { ...created, name: 'Bookmarks', isSelfBookmarks: true, isGhostChat: true, otherUserId: undefined, avatarUrl: null, lastMessageText: 'Bookmarks', lastMessageAt: created.updatedAt || created.$createdAt };
+                    const cachedMeBookmarks = getCachedIdentityById(user.$id);
+                    const selfMapped: any = { ...created, name: 'Bookmarks (you)', isSelfBookmarks: true, isGhostChat: true, otherUserId: user.$id, avatarUrl: (cachedMeBookmarks?.avatar as string) || null, lastMessageText: 'Bookmarks', lastMessageAt: created.updatedAt || created.$createdAt };
                     setGhostConversations(prev => {
                       const filtered = prev.filter(c => c.$id !== conv.$id);
                       const next = [...filtered, selfMapped].sort((a: any, b: any) => {
@@ -592,7 +594,9 @@ export const ChatList = ({
                 let avatarUrl: string | null = null;
 
                 if (isSelfBookmarksGhost) {
-                    otherName = 'Bookmarks';
+                    const cachedMe = getCachedIdentityById(user.$id);
+                    otherName = 'Bookmarks (you)';
+                    avatarUrl = (cachedMe?.avatar as string) || null;
                 } else if (cleanLinkedResourceType) {
                     otherName = note.title || linkedResourceName || `${cleanLinkedResourceType.charAt(0).toUpperCase() + cleanLinkedResourceType.slice(1)} Huddle`;
                 } else if (otherId) {
@@ -605,7 +609,7 @@ export const ChatList = ({
 
                 return {
                     ...note,
-                    otherUserId: otherId,
+                    otherUserId: isSelfBookmarksGhost ? user.$id : otherId,
                     name: otherName,
                     avatarUrl,
                     isGhostChat: true,
@@ -623,12 +627,13 @@ export const ChatList = ({
             if (!hasSelfBookmarks && user?.$id) {
                 void (async () => {
                     try {
-                        const created = await createGhostNoteChat('Bookmarks', [user.$id]);
+                        const created = await createGhostNoteChat('Bookmarks', [user!.$id]);
+                        const cachedMeHeal = getCachedIdentityById(user!.$id);
                         const selfMapped = {
                             ...created,
-                            otherUserId: undefined,
-                            name: 'Bookmarks',
-                            avatarUrl: null,
+                            otherUserId: user!.$id,
+                            name: 'Bookmarks (you)',
+                            avatarUrl: (cachedMeHeal?.avatar as string) || null,
                             isGhostChat: true,
                             isSelfBookmarks: true,
                             linkedResourceType: null,
@@ -1743,14 +1748,14 @@ export const ChatList = ({
                                                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#F59E0B]/10 border border-[#F59E0B]/30 text-[#F59E0B] shadow-lg shadow-[#F59E0B]/10">
                                                         <Sparkles size={22} strokeWidth={2.2} />
                                                     </div>
-                                                ) : isSecure ? (
+                                                ) : (isSecure || (conv as any).isSelfBookmarks) ? (
                                                     <IdentityAvatar
-                                                        userId={conv.isSelf ? user?.$id : conv.otherUserId}
-                                                        src={conv.avatarUrl || conv.avatar || null}
+                                                        userId={(conv as any).isSelfBookmarks ? user?.$id : (conv.isSelf ? user?.$id : conv.otherUserId)}
+                                                        src={conv.avatarUrl || (conv as any).avatar || null}
                                                         alt={conv.name}
                                                         fallback={conv.name?.replace(/\(You\)/gi, '').replace(/^@/, '').trim().charAt(0).toUpperCase() || 'U'}
                                                         size={48}
-                                                        status={conv.type === 'direct' && conv.otherUserId ? globalPresence?.[conv.otherUserId]?.state : undefined}
+                                                        status={(conv as any).isSelfBookmarks ? undefined : (conv.type === 'direct' && conv.otherUserId ? globalPresence?.[conv.otherUserId]?.state : undefined)}
                                                     />
                                                 ) : conv.linkedResourceType ? (
                                                     <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#F59E0B]/10 border border-[#F59E0B]/30 text-[#F59E0B]">
@@ -1924,6 +1929,7 @@ export const ChatList = ({
                           await deleteGhostThread(c.$id);
                           if (isSelfBookmarks) {
                             try {
+                              if (!user?.$id) throw new Error('No user');
                               const created = await createGhostNoteChat('Bookmarks', [user.$id]);
                               const selfMapped: any = { ...created, name: 'Bookmarks', isSelfBookmarks: true, isGhostChat: true, otherUserId: undefined, avatarUrl: null, lastMessageText: 'Bookmarks', lastMessageAt: created.updatedAt || created.$createdAt };
                               setGhostConversations(prev => {
