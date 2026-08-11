@@ -376,6 +376,9 @@ agent:
   default_task: verify
   safe_tasks: [setup, test, lint, build, verify]
   verify_after_changes: [verify]
+  refusal_canaries:
+    - task: selfhost:up
+    - workflow: selfhost
   writable_paths:
     - .env
     - .next
