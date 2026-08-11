@@ -135,6 +135,10 @@ tasks:
       network: true
       network_kind: dependency_hydration
     safe_for_agent: true
+    execution:
+      modes:
+        container:
+          context: contributor:container
 
   test:
     context: host
