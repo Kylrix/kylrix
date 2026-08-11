@@ -158,6 +158,7 @@ export function CreateFlowDrawer({ onClose, onCreated, draftId: draftIdProp, ini
           isAnonymized: true,
           createdAt: new Date().toISOString(),
         };
+      }
       const jwt = await import('@/lib/appwrite/client').then(m => m.account.createJWT()).then(r => r?.jwt).catch(() => undefined);
       const res = await saveWorkflowAction(payload, jwt);
       if (!res.success) throw new Error(res.error || 'Save failed');
