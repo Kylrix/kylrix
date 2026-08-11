@@ -87,7 +87,7 @@ const TaskSchema = {
         updatedAt: { type: 'string', format: 'date-time' },
         _deleted: { type: 'boolean' }
     },
-    required: ['id', 'title', 'userId'],
+    required: ['id', 'title', 'userId', 'projectId'],
     indexes: ['userId', 'projectId', ['userId', 'projectId']]
 };
 
