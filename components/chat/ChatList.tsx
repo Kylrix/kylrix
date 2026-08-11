@@ -265,16 +265,37 @@ export const ChatList = ({
         };
         const handleClearMe = async () => {
           try {
-            if (isSecure) await ChatService.clearChatForMe(conv.$id, user!.$id);
-            else await deleteGhostThread(conv.$id);
-            toast.success('Chat cleared');
-            if (!isSecure) setConversations(prev => prev.filter(x => x.$id !== conv.$id));
+            if (isSecure) {
+              await ChatService.clearChatForMe(conv.$id, user!.$id);
+              toast.success('Chat cleared');
+            } else {
+              await deleteGhostThread(conv.$id);
+              toast.success('Thread cleared');
+              setGhostConversations(prev => {
+                const next = prev.filter(x => x.$id !== conv.$id);
+                writeThreadsListLocal(next);
+                return next;
+              });
+              ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== conv.$id);
+              // explicit local-copy signal → force network fetch; UI hook can re-request if cache empty
+              void loadGhostConversations({ forceRefresh: true } as any);
+            }
           } catch (e: any) { toast.error(e?.message || 'Failed'); }
         };
         const handleClearEveryone = async () => {
           try {
             if (isSecure) { const r: any = await ChatService.wipeMyFootprint(conv.$id, user!.$id); toast.success(`Removed ${r.count || 0} messages`); }
-            else { await deleteGhostThread(conv.$id); toast.success('Thread cleared'); setConversations(prev => prev.filter(x => x.$id !== conv.$id)); }
+            else {
+              await deleteGhostThread(conv.$id);
+              toast.success('Thread cleared');
+              setGhostConversations(prev => {
+                const next = prev.filter(x => x.$id !== conv.$id);
+                writeThreadsListLocal(next);
+                return next;
+              });
+              ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== conv.$id);
+              void loadGhostConversations({ forceRefresh: true } as any);
+            }
           } catch (e: any) { toast.error(e?.message || 'Failed'); }
         };
         const handleNuclear = async () => {
@@ -293,12 +314,54 @@ export const ChatList = ({
                 } else {
                   toast.success('Conversation permanently wiped');
                 }
+                // local-copy signal: filter memory+disk and explicit network refresh hook
+                setConversations(prev => {
+                  const next = prev.filter(c => c.$id !== conv.$id);
+                  writeChatsListLocal(next);
+                  return next;
+                });
+                conversationsRef.current = conversationsRef.current.filter(c => c.$id !== conv.$id);
+                void loadConversations({ forceRefresh: true });
               } else {
+                const isSelfBookmarks = !!(conv.isSelfBookmarks || (Array.isArray(conv.collaborators) && conv.collaborators.length===1 && conv.collaborators[0]===user?.$id));
                 await deleteGhostThread(conv.$id);
-                toast.success('Thread wiped');
+                if (isSelfBookmarks) {
+                  try {
+                    const created = await createGhostNoteChat('Bookmarks', [user.$id]);
+                    const selfMapped: any = { ...created, name: 'Bookmarks', isSelfBookmarks: true, isGhostChat: true, otherUserId: undefined, avatarUrl: null, lastMessageText: 'Bookmarks', lastMessageAt: created.updatedAt || created.$createdAt };
+                    setGhostConversations(prev => {
+                      const filtered = prev.filter(c => c.$id !== conv.$id);
+                      const next = [...filtered, selfMapped].sort((a: any, b: any) => {
+                        const ap = pinSets.conversation.has(a.$id) ? 1 : 0;
+                        const bp = pinSets.conversation.has(b.$id) ? 1 : 0;
+                        if (ap !== bp) return bp - ap;
+                        return new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime();
+                      });
+                      writeThreadsListLocal(next);
+                      ghostConversationsRef.current = next;
+                      return next;
+                    });
+                    toast.success('Bookmarks wiped & fresh bookmarks ready');
+                  } catch {
+                    toast.success('Thread wiped');
+                    setGhostConversations(prev => {
+                      const next = prev.filter(c => c.$id !== conv.$id);
+                      writeThreadsListLocal(next);
+                      return next;
+                    });
+                    ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== conv.$id);
+                  }
+                } else {
+                  toast.success('Thread wiped');
+                  setGhostConversations(prev => {
+                    const next = prev.filter(c => c.$id !== conv.$id);
+                    writeThreadsListLocal(next);
+                    return next;
+                  });
+                  ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== conv.$id);
+                }
+                void loadGhostConversations({ forceRefresh: true } as any);
               }
-              setConversations(prev => prev.filter(c => c.$id !== conv.$id));
-              void loadConversations({ forceRefresh: true });
             } catch (e: any) { toast.error(e?.message || 'Wipe failed'); }
         };
         if (isDesktop) {
@@ -523,11 +586,14 @@ export const ChatList = ({
 
                 const participants = note.collaborators || metadataObj.participants || [];
                 const otherId = participants.find((p: string) => p !== user.$id);
+                const isSelfBookmarksGhost = isChat && participants.length === 1 && participants[0] === user.$id;
 
                 let otherName = note.title || 'Huddle';
                 let avatarUrl: string | null = null;
 
-                if (cleanLinkedResourceType) {
+                if (isSelfBookmarksGhost) {
+                    otherName = 'Bookmarks';
+                } else if (cleanLinkedResourceType) {
                     otherName = note.title || linkedResourceName || `${cleanLinkedResourceType.charAt(0).toUpperCase() + cleanLinkedResourceType.slice(1)} Huddle`;
                 } else if (otherId) {
                     const cachedOther = getCachedIdentityById(otherId);
@@ -543,12 +609,46 @@ export const ChatList = ({
                     name: otherName,
                     avatarUrl,
                     isGhostChat: true,
+                    isSelfBookmarks: isSelfBookmarksGhost,
                     linkedResourceType: cleanLinkedResourceType,
                     linkedResourceId,
                     linkedResourceName,
                     lastMessageText: note.content || 'Huddle discussion initialized',
                     lastMessageAt: note.updatedAt || note.$createdAt};
             });
+
+            // Self-healing for discussion self-chat "Bookmarks" — mirrors secure self-chat healing.
+            // Ensures at least one ghost self bookmarks exists; creates on its own, wipes bottom-up then recreates.
+            const hasSelfBookmarks = mapped.some((m: any) => m.isSelfBookmarks);
+            if (!hasSelfBookmarks && user?.$id) {
+                void (async () => {
+                    try {
+                        const created = await createGhostNoteChat('Bookmarks', [user.$id]);
+                        const selfMapped = {
+                            ...created,
+                            otherUserId: undefined,
+                            name: 'Bookmarks',
+                            avatarUrl: null,
+                            isGhostChat: true,
+                            isSelfBookmarks: true,
+                            linkedResourceType: null,
+                            linkedResourceId: null,
+                            linkedResourceName: null,
+                            lastMessageText: 'Bookmarks',
+                            lastMessageAt: created.updatedAt || created.$createdAt,
+                        };
+                        const next = [...mapped, selfMapped].sort((a: any, b: any) => {
+                            const ap = pinSets.conversation.has(a.$id) ? 1 : 0;
+                            const bp = pinSets.conversation.has(b.$id) ? 1 : 0;
+                            if (ap !== bp) return bp - ap;
+                            return new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime();
+                        });
+                        writeThreadsListLocal(next);
+                        startTransition(() => setGhostConversations(next));
+                        ghostConversationsRef.current = next;
+                    } catch (e) { console.warn('[ChatList] bookmarks self-heal create failed', (e as any)?.message); }
+                })();
+            }
 
             mapped.sort((a: any, b: any) => {
                 const ap = pinSets.conversation.has(a.$id) ? 1 : 0;
@@ -1764,17 +1864,37 @@ export const ChatList = ({
                     onClearMe={async () => {
                       const c = chatSettingsConv; setChatSettingsConv(null);
                       try {
-                        if (c._kind === 'secure') await ChatService.clearChatForMe(c.$id, user!.$id);
-                        else await deleteGhostThread(c.$id);
-                        toast.success('Chat cleared');
-                        setConversations(prev => prev.filter(x => x.$id !== c.$id));
+                        if (c._kind === 'secure') {
+                          await ChatService.clearChatForMe(c.$id, user!.$id);
+                          toast.success('Chat cleared');
+                        } else {
+                          await deleteGhostThread(c.$id);
+                          toast.success('Thread cleared');
+                          setGhostConversations(prev => {
+                            const next = prev.filter(x => x.$id !== c.$id);
+                            writeThreadsListLocal(next);
+                            return next;
+                          });
+                          ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== c.$id);
+                          void loadGhostConversations({ forceRefresh: true } as any);
+                        }
                       } catch (e: any) { toast.error(e?.message || 'Failed'); }
                     }}
                     onClearEveryone={async () => {
                       const c = chatSettingsConv; setChatSettingsConv(null);
                       try {
                         if (c._kind === 'secure') { const r: any = await ChatService.wipeMyFootprint(c.$id, user!.$id); toast.success(`Removed ${r.count || 0} messages`); }
-                        else { await deleteGhostThread(c.$id); toast.success('Thread cleared'); setConversations(prev => prev.filter(x => x.$id !== c.$id)); }
+                        else {
+                          await deleteGhostThread(c.$id);
+                          toast.success('Thread cleared');
+                          setGhostConversations(prev => {
+                            const next = prev.filter(x => x.$id !== c.$id);
+                            writeThreadsListLocal(next);
+                            return next;
+                          });
+                          ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== c.$id);
+                          void loadGhostConversations({ forceRefresh: true } as any);
+                        }
                       } catch (e: any) { toast.error(e?.message || 'Failed'); }
                     }}
                     onNuclear={async () => {
@@ -1782,14 +1902,63 @@ export const ChatList = ({
                       try {
                         if (c._kind === 'secure') {
                           const res: any = await ChatService.nuclearWipe(c.$id);
+                          ChatService.invalidateConversationsListCache(user?.$id);
+                          try {
+                            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+                            const { chatConversationCacheKey, chatMessagesCacheKey } = await import('@/lib/chat/local-chat-cache');
+                            await LocalEngine.cacheSet(chatConversationCacheKey(c.$id), null as any).catch(() => null);
+                            await LocalEngine.cacheSet(chatMessagesCacheKey(c.$id), []).catch(() => null);
+                          } catch {}
                           const newId = res?.regeneratedConversationId || res?.newConversationId;
                           if (newId) toast.success('Wiped — fresh hangout regenerated');
                           else toast.success('Conversation deleted');
+                          setConversations(prev => {
+                            const next = prev.filter(x => x.$id !== c.$id);
+                            writeChatsListLocal(next);
+                            return next;
+                          });
+                          conversationsRef.current = conversationsRef.current.filter(x => x.$id !== c.$id);
+                          void loadConversations({ forceRefresh: true });
                         } else {
+                          const isSelfBookmarks = !!(c.isSelfBookmarks || (Array.isArray(c.collaborators) && c.collaborators.length===1 && c.collaborators[0]===user?.$id));
                           await deleteGhostThread(c.$id);
-                          toast.success('Thread wiped');
+                          if (isSelfBookmarks) {
+                            try {
+                              const created = await createGhostNoteChat('Bookmarks', [user.$id]);
+                              const selfMapped: any = { ...created, name: 'Bookmarks', isSelfBookmarks: true, isGhostChat: true, otherUserId: undefined, avatarUrl: null, lastMessageText: 'Bookmarks', lastMessageAt: created.updatedAt || created.$createdAt };
+                              setGhostConversations(prev => {
+                                const filtered = prev.filter(x => x.$id !== c.$id);
+                                const next = [...filtered, selfMapped].sort((a: any, b: any) => {
+                                  const ap = pinSets.conversation.has(a.$id) ? 1 : 0;
+                                  const bp = pinSets.conversation.has(b.$id) ? 1 : 0;
+                                  if (ap !== bp) return bp - ap;
+                                  return new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime();
+                                });
+                                writeThreadsListLocal(next);
+                                ghostConversationsRef.current = next;
+                                return next;
+                              });
+                              toast.success('Bookmarks wiped & fresh bookmarks ready');
+                            } catch {
+                              toast.success('Thread wiped');
+                              setGhostConversations(prev => {
+                                const next = prev.filter(x => x.$id !== c.$id);
+                                writeThreadsListLocal(next);
+                                return next;
+                              });
+                              ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== c.$id);
+                            }
+                          } else {
+                            toast.success('Thread wiped');
+                            setGhostConversations(prev => {
+                              const next = prev.filter(x => x.$id !== c.$id);
+                              writeThreadsListLocal(next);
+                              return next;
+                            });
+                            ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== c.$id);
+                          }
+                          void loadGhostConversations({ forceRefresh: true } as any);
                         }
-                        setConversations(prev => prev.filter(x => x.$id !== c.$id));
                       } catch (e: any) { toast.error(e?.message || 'Wipe failed'); }
                     }}
                   />

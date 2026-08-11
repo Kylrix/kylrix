@@ -51,9 +51,13 @@ export function CreateChatComposer({
   const [missingKeyIds, setMissingKeyIds] = useState<Set<string>>(new Set());
 
   const isUnlocked = ecosystemSecurity.status.isUnlocked;
-  // Auto-off if any selected participant lacks public key, or user explicitly turned off
+  // Thread/discussion huddles are NOT encrypted and never use conversation keys /
+  // epochs / key_mapping — they are ghost notes (isGhost/isThread/isChat) powered
+  // by comments + reactions. Only secure chats/hangouts use conversation keys.
+  // Toggle ON by default (transient, not persisted); auto-off only if user
+  // explicitly turned off OR any selected participant lacks X25519 publicKey.
   const hasMissingKeys = missingKeyIds.size > 0;
-  const encryptedEnabled = isUnlocked && !userToggledOff && !hasMissingKeys;
+  const encryptedEnabled = !userToggledOff && !hasMissingKeys;
 
   useEffect(() => {
     onRegisterClose?.(() => onClose());
@@ -132,7 +136,11 @@ export function CreateChatComposer({
 
     setBusy(true);
 
-    // Discussion path — no encryption, works for any participant count
+    // Discussion huddle — NOT encrypted, never uses conversation keys/epochs/key_mapping.
+    // Substrate: NOTE DB `notes` with isGhost/isThread/isChat + Collaborators; messages
+    // are `comments`, reactions are `reactions`. Deletion is deleteGhostThread ->
+    // executeCascadeDeleteSecure (comments/reactions/storage) — completely separate
+    // from CHAT DB conversations. Same power for 1:1 and group.
     if (!encryptedEnabled) {
       try {
         const participantIds = [user.$id, ...selectedUsers.map((u) => u.id || (u as any).$id)];
@@ -249,26 +257,25 @@ export function CreateChatComposer({
             type="button"
             role="switch"
             aria-checked={encryptedEnabled}
-            disabled={hasMissingKeys || !isUnlocked}
+            disabled={hasMissingKeys}
             onClick={() => {
               if (hasMissingKeys) {
                 toast('Turn off encryption is automatic — a participant lacks secure setup', { id: 'e2e-disabled-reason' });
                 return;
               }
-              if (!isUnlocked && !encryptedEnabled) {
-                requestSudo({ onSuccess: () => setUserToggledOff(false) });
-                return;
-              }
               setUserToggledOff((v) => !v);
             }}
-            title={hasMissingKeys ? 'Disabled — participant without public key' : !isUnlocked ? 'Unlock vault to enable encryption' : encryptedEnabled ? 'Tap to turn off' : 'Tap to turn on'}
-            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${encryptedEnabled ? 'bg-[#F59E0B] border-[#F59E0B]' : 'bg-white/10 border-white/10'} ${(hasMissingKeys || !isUnlocked) && !encryptedEnabled ? 'opacity-60' : ''}`}
+            title={hasMissingKeys ? 'Disabled — participant without public key' : encryptedEnabled ? 'Tap to turn off — will create unencrypted discussion' : 'Tap to turn on'}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${encryptedEnabled ? 'bg-[#F59E0B] border-[#F59E0B]' : 'bg-white/10 border-white/10'} ${hasMissingKeys && !encryptedEnabled ? 'opacity-60' : ''}`}
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${encryptedEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
           </button>
         </div>
-        {!isUnlocked ? (
-          <p className="text-[10px] font-semibold text-amber-400/80 mt-2 px-1">Vault locked — encryption will prompt unlock, or turn it off for a standard discussion.</p>
+        {encryptedEnabled && !isUnlocked ? (
+          <p className="text-[10px] font-semibold text-amber-400/80 mt-2 px-1">Vault locked — creating encrypted hangout will prompt unlock.</p>
+        ) : null}
+        {!encryptedEnabled && hasMissingKeys ? (
+          <p className="text-[10px] font-semibold text-white/35 mt-2 px-1">No conversation keys — discussion will use notes/comments (no encryption).</p>
         ) : null}
       </div>
 
