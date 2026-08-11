@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { AppwriteService } from '@/lib/appwrite';
 import { account } from '@/lib/appwrite/client';
 import { useTheme } from '@/lib/theme-context';
+import { useDevMode } from '@/lib/dev-mode';
 import Link from 'next/link';
 import { SyncToNostrSettings } from '@/components/settings/SyncToNostrSettings';
 
@@ -69,6 +70,7 @@ function Switch({ checked, onChange }: { checked: boolean; onChange: (checked: b
 
 export default function PreferencesManager({ onSave }: PreferencesManagerProps) {
   const { setTheme } = useTheme();
+  const { devMode, toggleDevMode } = useDevMode();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [allPrefs, setAllPrefs] = useState<Record<string, any>>({});
@@ -218,7 +220,31 @@ export default function PreferencesManager({ onSave }: PreferencesManagerProps) 
 
         <div className="h-px bg-white/5 w-full" />
 
-        <SyncToNostrSettings />
+        {/* Developer Mode */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-black font-clash text-white tracking-tight leading-tight flex items-center justify-between">
+            <span>Developer Mode</span>
+            {devMode && (
+              <span className="px-2.5 py-0.5 rounded-md bg-[#6366F1]/20 border border-[#6366F1]/40 text-[#6366F1] text-[10px] font-extrabold uppercase font-mono tracking-wider">
+                Active
+              </span>
+            )}
+          </h3>
+          <div className="flex items-center justify-between gap-4 p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:bg-[#1F1D1B] hover:border-white/10 transition-all">
+            <div className="space-y-1">
+              <h4 className="text-sm font-extrabold text-white">
+                Developer Mode & Experimental Tools
+              </h4>
+              <p className="text-xs text-[#9B9691]">
+                Enable Flows engine, advanced action logs, and experimental developer features
+              </p>
+            </div>
+            <Switch
+              checked={devMode}
+              onChange={(checked) => void toggleDevMode(checked)}
+            />
+          </div>
+        </div>
 
         <div className="h-px bg-white/5 w-full" />
 

@@ -1662,26 +1662,7 @@ export default function ConnectTopbar({
                   >
                     Wallet
                   </Button>
-                  <Button
-                    onClick={() => {
-                      handleCloseAll();
-                      openUnified('login', { mode: 'switch' });
-                    }}
-                    sx={{
-                      minWidth: 0,
-                      flex: '1 1 120px',
-                      borderRadius: '14px',
-                      bgcolor: 'rgba(255,255,255,0.04)',
-                      color: 'white',
-                      px: 1.25,
-                      py: 1,
-                      fontSize: '0.84rem',
-                      textTransform: 'none',
-                      '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' }}}
-                    startIcon={<Repeat2 size={14} />}
-                  >
-                    Switch
-                  </Button>
+                  {/* Account switching disabled */}
                   <Button
                     onClick={() => {
                       handleCloseAll();

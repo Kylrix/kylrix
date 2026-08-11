@@ -41,6 +41,9 @@ import {
   isFlowConfirmPromptEnabled,
 } from '@/components/flows/FlowInstallConfirmDrawer';
 
+import { useDevMode } from '@/lib/dev-mode';
+import Link from 'next/link';
+
 type Tab = 'discover' | 'installed';
 
 function communityPublisher(wf: any): FlowPublisher {
@@ -105,6 +108,7 @@ function FlowRow({
 }
 
 export default function FlowsPage() {
+  const { devMode } = useDevMode();
   const { setConfiguration, resetConfiguration } = useFAB();
   const native = useNativeSidebarApiOptional();
   const { openOverlay, closeOverlay } = useOverlay();
@@ -112,6 +116,28 @@ export default function FlowsPage() {
   const [confirmFlow, setConfirmFlow] = useState<DiscoverFlow | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [promptFlow, setPromptFlow] = useState<DiscoverFlow | null>(null);
+
+  if (!devMode) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center font-satoshi">
+        <div className="w-16 h-16 rounded-2xl bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center mb-4 text-[#6366F1]">
+          <Workflow size={32} />
+        </div>
+        <h2 className="text-2xl font-black font-clash text-white tracking-tight mb-2">
+          Developer Mode Required
+        </h2>
+        <p className="text-sm text-white/50 max-w-md mb-6 leading-relaxed">
+          The Flows engine and action automation are restricted to Developer Mode. Enable Developer Mode in Settings to unlock this feature.
+        </p>
+        <Link
+          href="/settings"
+          className="px-5 py-2.5 rounded-xl bg-[#6366F1] hover:bg-[#575CF0] text-white text-xs font-extrabold transition-all"
+        >
+          Go to Settings
+        </Link>
+      </div>
+    );
+  }
 
   useEffect(() => {
     setIsDrawerOpen(!!confirmFlow || !!showCreate || !!promptFlow);
