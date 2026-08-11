@@ -12,7 +12,10 @@ import { buildPublicResourceUrl } from '@/lib/share/public-url';
 export async function saveWorkflowAction(wf: WorkflowChain, jwt?: string) {
   try {
     const actor = await getActor(jwt);
-    if (!actor?.$id) throw new Error('Unauthorized');
+    if (!actor?.$id) {
+      console.error('[saveWorkflowAction] Authentication check failed: actor not resolved via JWT or session cookies');
+      throw new Error('Unauthorized');
+    }
     const userId = actor.$id;
 
     if (!wf || !wf.id) throw new Error('Invalid workflow chain');
@@ -20,7 +23,7 @@ export async function saveWorkflowAction(wf: WorkflowChain, jwt?: string) {
     await WorkflowDbService.saveWorkflow(wf, userId);
     return { success: true };
   } catch (err: any) {
-    console.error('[saveWorkflowAction] Exception:', err);
+    console.error('[saveWorkflowAction] Exception saving workflow:', err);
     return { success: false, error: err?.message || 'Failed to persist workflow' };
   }
 }

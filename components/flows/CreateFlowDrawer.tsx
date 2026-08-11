@@ -167,7 +167,10 @@ export function CreateFlowDrawer({ onClose, onCreated, draftId: draftIdProp, ini
       void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => { void LocalEngine.cacheDelete(`kylrix_flow_live_${draftId}`); });
       onCreated(payload);
       onClose();
-    } catch (e:any) { toast.error(e?.message || 'Failed to create flow'); } finally { setBusy(false); }
+    } catch (e:any) {
+      console.error('[CreateFlowDrawer] Error creating flow:', e);
+      toast.error(e?.message || 'Failed to create flow');
+    } finally { setBusy(false); }
   };
 
   return (
