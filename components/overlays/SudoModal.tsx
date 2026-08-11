@@ -694,50 +694,71 @@ export default function SudoModal({
                         </div>
                     ) : mode === "initialize" ? (
                         <form onSubmit={handleInitialize} className="space-y-4 animate-fadeIn">
-                            <div className="p-4 bg-[#161412] border border-white/[0.06] rounded-2xl flex gap-3.5 items-start">
-                                <div className="w-10 h-10 rounded-xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center shrink-0">
+                            <div className="p-4 bg-white/[0.02] border border-white/[0.06] rounded-2xl flex gap-3.5 items-start">
+                                <div className="w-10 h-10 rounded-xl bg-[#0A0908] border border-white/[0.08] flex items-center justify-center shrink-0">
                                     <Shield className="w-5 h-5 text-[#6366F1]" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <h4 className="font-extrabold text-white text-sm font-clash">Create Master Password</h4>
-                                    <p className="text-xs text-[#9B9691] font-satoshi leading-relaxed mt-1">
+                                    <p className="text-xs text-white/45 font-satoshi leading-relaxed mt-1">
                                         Set a password to encrypt your vault. Write this password down; it cannot be recovered.
                                     </p>
                                 </div>
                             </div>
                             <div className="space-y-3.5">
                                 <div className="space-y-1.5">
-                                    <span className="text-[10px] text-white/55 font-extrabold tracking-wider uppercase block font-mono">
-                                        PASSWORD
+                                    <span className="text-[10px] text-white/40 font-bold tracking-wider uppercase block">
+                                        CREATE MASTER PASSWORD
                                     </span>
-                                    <input
-                                        type="password"
-                                        placeholder="Create Master Password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        required
-                                        autoFocus
-                                        className="w-full bg-[#0A0908] px-4 py-3 rounded-xl border border-white/[0.06] text-white text-sm font-semibold font-satoshi focus:outline-none focus:border-[#6366F1] hover:border-white/20 transition-all"
-                                    />
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                            <Lock className="w-4 h-4 text-white/30" />
+                                        </div>
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            placeholder="Create master password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            required
+                                            autoFocus
+                                            className="w-full bg-white/[0.03] pl-11 pr-12 py-3.5 rounded-xl border border-white/10 text-white text-sm font-semibold focus:outline-none focus:border-[#6366F1] hover:border-white/20 transition-all font-satoshi"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute inset-y-0 right-4 flex items-center text-white/30 hover:text-white transition-all cursor-pointer"
+                                        >
+                                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <span className="text-[10px] text-white/55 font-extrabold tracking-wider uppercase block font-mono">
-                                        CONFIRM PASSWORD
+                                    <span className="text-[10px] text-white/40 font-bold tracking-wider uppercase block">
+                                        CONFIRM MASTER PASSWORD
                                     </span>
-                                    <input
-                                        type="password"
-                                        placeholder="Confirm Master Password"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        required
-                                        className="w-full bg-[#0A0908] px-4 py-3 rounded-xl border border-white/[0.06] text-white text-sm font-semibold font-satoshi focus:outline-none focus:border-[#6366F1] hover:border-white/20 transition-all"
-                                    />
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                            <Lock className="w-4 h-4 text-white/30" />
+                                        </div>
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            placeholder="Confirm master password"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            required
+                                            className="w-full bg-white/[0.03] pl-11 pr-12 py-3.5 rounded-xl border border-white/10 text-white text-sm font-semibold focus:outline-none focus:border-[#6366F1] hover:border-white/20 transition-all font-satoshi"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full py-3.5 rounded-xl bg-[#6366F1] hover:bg-[#575CF0] text-white font-extrabold text-sm font-satoshi transition-all cursor-pointer flex justify-center items-center disabled:opacity-50"
+                                style={{
+                                    background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}CC 100%)`,
+                                    boxShadow: loading ? 'none' : `0 8px 25px ${accentColor}40`
+                                }}
+                                className="w-full py-3.5 rounded-xl text-white font-extrabold text-sm hover:scale-[1.01] hover:shadow-lg active:scale-100 transition-all cursor-pointer flex justify-center items-center disabled:opacity-50"
                             >
                                 {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> : "Initialize Vault"}
                             </button>
