@@ -1138,137 +1138,56 @@ export const ChatService = {
 
         // E2E Layer: Only if vault is unlocked and identity is ready
         if (ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity) {
-            // 1. Generate unique Group/Conversation Key
             convKey = await ecosystemSecurity.generateConversationKey();
         }
 
-        // 3. Encrypt name and metadata if it's a group
         let encryptedName = name;
         if (name && convKey && ecosystemSecurity.status.isUnlocked) {
             encryptedName = await ecosystemSecurity.encryptWithKey(name, convKey);
         }
 
-        const conversationPermissions = buildConversationMemberPermissions(uniqueParticipants, creatorId);
-
-        const now = new Date().toISOString();
-
-        // SERVER-ONLY writes via secure-ops + system SDK (read-only client SDK rule). Reuse single JWT pattern like mintDailyLoginSecure.
+        // TRANSACTIONAL: Stage conversation + members + key_mappings (+ epoch) atomically via system Transactions API.
+        // Modular withSystemTransaction ensures all-or-nothing; if any stage fails, entire transaction rolls back.
         const { account: _chatAccount } = await import('../appwrite/client');
         const _jwt = await _chatAccount.createJWT().then((r: any) => r.jwt).catch(() => undefined);
-        const { createRowSecure: _createRowSecure } = await import('@/lib/actions/secure-ops');
-        // Reuse single system SDK instance — no new client spinning, single codebase single instance via secure-ops
-        const newConv = await _createRowSecure(DB_ID, CONV_TABLE, {
-            $id: ID.unique(),
+        let lockboxRows: Array<{ resourceType: string; grantee: string; wrappedKey: string; metadata?: string }> = [];
+        let epochRows: Array<{ resourceType: string; grantee: string; wrappedKey: string; metadata?: string }> = [];
+        if (convKey) {
+            try {
+                const creatorPublicKey = ecosystemSecurity.status.hasIdentity ? await ecosystemSecurity.ensureE2EIdentity(creatorId) : null;
+                if (!creatorPublicKey) throw new Error('E2E identity not available for lockbox wrapping');
+                lockboxRows = await Promise.all(uniqueParticipants.map(async (pid) => {
+                    const livePub = await fetchProfilePublicKey(pid);
+                    if (!livePub) throw new Error(`${pid} hasn't finished secure chat setup yet.`);
+                    if (!isValidX25519PublicKey(livePub)) throw new Error(`Invalid public key for user ${pid}`);
+                    return { resourceType: 'chat', grantee: pid, wrappedKey: await ecosystemSecurity.wrapKeyWithECDH(convKey as CryptoKey, livePub), metadata: buildLockboxMetadata({ wrappedBy: creatorId, senderPublicKey: creatorPublicKey!, wrappedByPublicKey: creatorPublicKey!, conversationId: 'pending', conversationType: type, version: 't4' }) };
+                }));
+                if (type === 'group') {
+                    epochRows = lockboxRows.map((r) => ({ ...r, resourceType: 'epoch' }));
+                }
+            } catch (e) {
+                // If wrapping fails, abort before transaction — no partial conversation
+                throw e;
+            }
+        }
+
+        const { createConversationTransactionalAction } = await import('@/lib/actions/chat');
+        const newConv = await createConversationTransactionalAction({
             participants: uniqueParticipants,
-            participantCount: uniqueParticipants.length,
-            type: type || 'direct',
+            type,
             name: encryptedName || 'Direct Chat',
-            inviteMeta: null,
-            inviteLink: null,
-            inviteLinkExpiry: null,
-            creatorId,
-            admins: type === 'group' ? [creatorId] : uniqueParticipants,
-            isPinned: [],
-            isMuted: [],
-            isArchived: [],
-            tags: [],
             isEncrypted: !!convKey,
             encryptionVersion: convKey ? 'T4' : '1.0',
-            createdAt: now,
-            updatedAt: now,
-        } as any, conversationPermissions, _jwt) as any;
+            lockboxRows,
+            epochRows,
+            jwt: _jwt,
+        }) as any;
 
-        const memberRows = await Promise.all(uniqueParticipants.map((participantId: any) =>
-            _createRowSecure(
-                DB_ID,
-                CONV_MEMBERS_TABLE,
-                {
-                    $id: ID.unique(),
-                    conversationId: newConv.$id,
-                    userId: participantId} as any,
-                buildConversationMemberPermissions(uniqueParticipants, creatorId),
-                _jwt
-            ).catch(() => null) as any
-        ));
-
-        // Explicit JWT like mintDailyLoginSecure — prevents Unauthorized getActor failure
-        await Promise.all(memberRows.filter(Boolean).map((memberRow: any) =>
-            callPermissionsApi('POST', {
-                databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-                tableId: CONV_MEMBERS_TABLE,
-                rowId: memberRow.$id,
-                ownerId: creatorId,
-                targetUserIds: uniqueParticipants,
-                permission: 'read',
-                action: 'grant',
-                jwt: _jwt} as any).catch((error: any) => {
-                console.error('[ChatService] Failed to grant conversation member access:', error);
-                throw error;
-            })
-        ));
-
-        // Cache the local key for this session + LocalEngine (survives reload)
-        // System client via secure-ops persists lockbox — client SDK never touches keychain (keychain is only masterpass/passkey).
+        // Cache the local key — transactional withSystemTransaction already staged conversation+members+key_mappings atomically.
         if (convKey) {
             cacheResolvedConversationKey(newConv.$id, convKey);
+            // Transactional path already persisted lockboxRows/epochRows; no separate sync needed — atomic commit ensures all-or-nothing.
             try {
-                const creatorPublicKey = ecosystemSecurity.status.hasIdentity
-                    ? await ecosystemSecurity.ensureE2EIdentity(creatorId)
-                    : null;
-
-                if (!creatorPublicKey) {
-                    throw new Error('E2E identity not available for lockbox wrapping');
-                }
-                const directLockboxRows: LockboxEntry[] = await Promise.all(uniqueParticipants.map(async (participantId) => {
-                    // Live fetch with sync fallback — never use stale search-card seed
-                    const livePub = await fetchProfilePublicKey(participantId);
-                    if (!livePub) {
-                        throw new Error(`${participantId} hasn't finished secure chat setup yet. Ask them to unlock vault in Settings.`);
-                    }
-                    if (!isValidX25519PublicKey(livePub)) {
-                        throw new Error(`Invalid public key for user ${participantId}`);
-                    }
-                    return {
-                        resourceType: 'chat',
-                        resourceId: newConv.$id,
-                        grantee: participantId,
-                        wrappedKey: await ecosystemSecurity.wrapKeyWithECDH(convKey, livePub),
-                        metadata: buildLockboxMetadata({
-                            wrappedBy: creatorId,
-                            senderPublicKey: creatorPublicKey,
-                            wrappedByPublicKey: creatorPublicKey,
-                            conversationId: newConv.$id,
-                            conversationType: type,
-                            version: 't4'}),
-                    };
-                }));
-
-                if (directLockboxRows.length !== uniqueParticipants.length) {
-                    throw new Error('Lockbox wrap incomplete — participant key missing');
-                }
-
-                if (type === 'group') {
-                    await callPermissionsApi('POST', {
-                        action: 'rotate_epoch',
-                        resourceId: newConv.$id,
-                        ownerId: creatorId,
-                        participantUserIds: uniqueParticipants,
-                        epochNumber: 1,
-                        keyMappings: directLockboxRows.map((entry: any) => ({
-                            ...entry,
-                            resourceType: 'epoch',
-                            resourceId: newConv.$id})),
-                        jwt: _jwt} as any);
-                }
-                
-                // System client (secure-ops) grants read to each grantee — never client SDK, explicit JWT like mintDailyLoginSecure
-                await syncLockboxRows(directLockboxRows, { jwt: _jwt } as any);
-
-                // Verify at least one lockbox persisted; retry once via system client if rowSecurity hid it from client view
-                const verify = await fetchKeyMapping('chat', newConv.$id, creatorId);
-                if (!verify) {
-                    await syncLockboxRows(directLockboxRows, { jwt: _jwt } as any);
-                }
 
                 const recipientIds = uniqueParticipants.filter((id) => id !== creatorId);
                 if (recipientIds.length > 0) {

@@ -1,14 +1,17 @@
 import { createServerClient } from '@/lib/appwrite/server';
 import { ID, Permission, Role, Query } from 'node-appwrite';
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { createHash } from 'node:crypto';
+import { withSystemTransaction } from './transaction';
 
 const CHAT_DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const CONVERSATIONS_TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
 const MESSAGES_TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
 const MESSAGE_REACTIONS_TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.MESSAGE_REACTIONS;
 const CONVERSATION_MEMBERS_TABLE_ID = 'conversationMembers';
+const KEY_MAPPING_TABLE_ID = 'key_mapping';
+const EPOCHS_TABLE_ID = 'epochs';
 
 function uniqueIds(ids: Array<string | null | undefined>) {
   return Array.from(new Set(ids.map((value: any) => String(value || '').trim()).filter(Boolean)));
@@ -890,4 +893,79 @@ export async function updateConversationInternal(payload: {
     data: payload.data as any,
   });
   return JSON.parse(JSON.stringify(res));
+}
+
+/**
+ * Transactional conversation creation — stages conversation + members + key_mappings (+ epoch for groups) atomically.
+ * Uses withSystemTransaction (system TablesDB transaction). If any stage fails or commit conflicts, entire transaction rolls back.
+ * Server SDK only, invoked via Server Action with explicit JWT (Actor ID/JWT fail-safe pattern).
+ */
+export async function createConversationTransactionalInternal(payload: {
+  actorId?: string;
+  jwt?: string;
+  participants: string[];
+  type: 'direct' | 'group';
+  name?: string | null;
+  isEncrypted: boolean;
+  encryptionVersion: string;
+  lockboxRows?: Array<{ resourceType: string; resourceId?: string; grantee: string; wrappedKey: string; metadata?: string }>;
+  epochRows?: Array<{ resourceType: string; resourceId?: string; grantee: string; wrappedKey: string; metadata?: string }>;
+}) {
+  let verifiedActorId = payload.actorId;
+  if (!verifiedActorId) {
+    const { account } = await createServerClient(payload.jwt);
+    const user = await account.get().catch(() => null);
+    if (!user) throw new Error('Unauthorized');
+    verifiedActorId = user.$id;
+  }
+  const uniqueParticipants = Array.from(new Set((payload.participants || []).map((v) => String(v || '').trim()).filter(Boolean)));
+  if (!uniqueParticipants.includes(verifiedActorId!)) uniqueParticipants.unshift(verifiedActorId!);
+  const now = new Date().toISOString();
+  const convId = ID.unique();
+  const convData: Record<string, unknown> = {
+    participants: uniqueParticipants,
+    participantCount: uniqueParticipants.length,
+    type: payload.type || 'direct',
+    name: payload.name || 'Direct Chat',
+    creatorId: verifiedActorId,
+    admins: payload.type === 'group' ? [verifiedActorId] : uniqueParticipants,
+    isPinned: [],
+    isMuted: [],
+    isArchived: [],
+    tags: [],
+    isEncrypted: payload.isEncrypted,
+    encryptionVersion: payload.encryptionVersion,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const convPerms = [Permission.read(Role.user(verifiedActorId!)), ...uniqueParticipants.filter((id) => id !== verifiedActorId).map((id) => Permission.read(Role.user(id)))];
+  // Normalize lockbox rows to target convId
+  const lockbox = (payload.lockboxRows || []).map((r) => ({ ...r, resourceId: convId, resourceType: r.resourceType || 'chat' }));
+  const epochs = (payload.epochRows || []).map((r) => ({ ...r, resourceId: convId, resourceType: 'epoch' }));
+
+  const result = await withSystemTransaction(async (txId) => {
+    const tables: any = createSystemTablesDB();
+    // Stage conversation
+    await tables.createRow({ databaseId: CHAT_DB_ID, tableId: CONVERSATIONS_TABLE_ID, rowId: convId, data: convData, permissions: convPerms, transactionId: txId });
+    // Stage members
+    for (const pid of uniqueParticipants) {
+      const memberPerms = [Permission.read(Role.user(verifiedActorId!)), ...uniqueParticipants.filter((id) => id !== verifiedActorId).map((id) => Permission.read(Role.user(id)))];
+      await tables.createRow({ databaseId: CHAT_DB_ID, tableId: CONVERSATION_MEMBERS_TABLE_ID, rowId: ID.unique(), data: { conversationId: convId, userId: pid, role: pid === verifiedActorId ? 'owner' : 'member', joinedAt: now }, permissions: memberPerms, transactionId: txId });
+    }
+    // Stage key_mappings (direct & group lockbox)
+    for (const row of lockbox) {
+      const perms = [Permission.read(Role.user(row.grantee))];
+      await tables.createRow({ databaseId: CHAT_DB_ID, tableId: KEY_MAPPING_TABLE_ID, rowId: ID.unique(), data: { resourceId: row.resourceId, resourceType: row.resourceType, grantee: row.grantee, wrappedKey: row.wrappedKey, metadata: row.metadata || null }, permissions: perms, transactionId: txId });
+    }
+    for (const row of epochs) {
+      const perms = [Permission.read(Role.user(row.grantee))];
+      await tables.createRow({ databaseId: CHAT_DB_ID, tableId: EPOCHS_TABLE_ID, rowId: ID.unique(), data: { resourceId: row.resourceId, resourceType: row.resourceType, grantee: row.grantee, wrappedKey: row.wrappedKey, metadata: row.metadata || null }, permissions: perms, transactionId: txId });
+    }
+    return { $id: convId, ...convData } as any;
+  }, { ttl: 60 });
+
+  // Fetch back via system to return canonical row
+  const { databases } = createSystemClient();
+  const fresh = await databases.getRow(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, convId).catch(() => result);
+  return JSON.parse(JSON.stringify(fresh));
 }

@@ -9,7 +9,8 @@ import {
   repairConversationInternal,
   joinRequestInternal,
   clearChatForMeInternal,
-  updateConversationInternal
+  updateConversationInternal,
+  createConversationTransactionalInternal
 } from '@/lib/services/internal/chat';
 import { Query } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -288,4 +289,30 @@ export async function getConversationsAction(payload: {
     console.error('[getConversationsAction] Failed:', error?.message);
     throw error;
   }
+}
+
+export async function createConversationTransactionalAction(payload: {
+  participants: string[];
+  type?: 'direct' | 'group';
+  name?: string | null;
+  isEncrypted?: boolean;
+  encryptionVersion?: string;
+  lockboxRows?: Array<{ resourceType: string; grantee: string; wrappedKey: string; metadata?: string }>;
+  epochRows?: Array<{ resourceType: string; grantee: string; wrappedKey: string; metadata?: string }>;
+  jwt?: string;
+}) {
+  const { getActor } = await import('./secure-ops');
+  const actor = await getActor(payload.jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+  return await createConversationTransactionalInternal({
+    actorId: actor.$id,
+    jwt: payload.jwt,
+    participants: payload.participants,
+    type: payload.type || 'direct',
+    name: payload.name,
+    isEncrypted: !!payload.isEncrypted,
+    encryptionVersion: payload.encryptionVersion || (payload.isEncrypted ? 'T4' : '1.0'),
+    lockboxRows: payload.lockboxRows,
+    epochRows: payload.epochRows,
+  });
 }
