@@ -23,6 +23,7 @@ import { useResourcePins } from '@/context/ResourcePinContext';
 import { useRouter } from 'next/navigation';
 import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuItems';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
+import { MultiSectionContainer } from '@/context/SectionContext';
 
 export default function FormsDashboard() {
     const { user } = useAuth();
