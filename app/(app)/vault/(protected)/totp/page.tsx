@@ -368,7 +368,8 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
 
         if (foldersResult.status === "fulfilled") {
           const folderMap = new Map<string, string>();
-          foldersResult.value.forEach((f) => folderMap.set(f.$id, f.name));
+          const folderItems = Array.isArray(foldersResult.value) ? foldersResult.value : [];
+          folderItems.forEach((f: any) => folderMap.set(f.$id, f.name));
           setFolders(folderMap);
         }
       })

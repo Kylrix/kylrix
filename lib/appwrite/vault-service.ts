@@ -608,7 +608,8 @@ export class VaultService {
       Query.equal("grantee", userId),
       Query.notEqual("isShared", true),
       Query.orderDesc("$createdAt")]);
-    return response.rows as unknown as KeyMapping[];
+    const rows = Array.isArray(response?.rows) ? response.rows : [];
+    return rows as unknown as KeyMapping[];
   }
 
   static async deleteKeyMapping(id: string): Promise<void> {
@@ -1422,8 +1423,9 @@ export class VaultService {
         APPWRITE_DATABASE_ID,
         APPWRITE_COLLECTION_TOTPSECRETS_ID,
         [filterQuery, ...queries]);
+      const rows = Array.isArray(response?.rows) ? response.rows : [];
       const decryptedSecrets = await Promise.all(
-        response.rows.map(
+        rows.map(
           (doc: Models.Row) =>
             this.decryptRowFields(
               doc,
@@ -1445,7 +1447,8 @@ export class VaultService {
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_FOLDERS_ID,
       [Query.equal("userId", userId), ...queries]);
-    return response.rows as unknown as Folders[];
+    const rows = Array.isArray(response?.rows) ? response.rows : [];
+    return rows as unknown as Folders[];
   }
 
   static async listSecurityLogs(
@@ -1455,7 +1458,8 @@ export class VaultService {
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_SECURITYLOGS_ID,
       [Query.equal("userId", userId), Query.orderDesc("timestamp"), ...queries]);
-    return response.rows as unknown as SecurityLogs[];
+    const rows = Array.isArray(response?.rows) ? response.rows : [];
+    return rows as unknown as SecurityLogs[];
   }
 
   // Update with automatic encryption
@@ -1835,9 +1839,10 @@ export class VaultService {
                 Query.equal("resourceId", result.$id as string),
                 Query.limit(1)
               ]);
+              const mappingRows = Array.isArray(mappings?.rows) ? mappings.rows : [];
 
-              if (mappings.rows.length > 0) {
-                const mapping = mappings.rows[0] as KeyMapping;
+              if (mappingRows.length > 0) {
+                const mapping = mappingRows[0] as KeyMapping;
                 const metadata = readShareMetadata(mapping.metadata);
                 const senderPublicKey = String(metadata.senderPublicKey ?? "");
                 if (senderPublicKey) {
