@@ -147,14 +147,40 @@ export async function getRxDB(): Promise<RxDatabase> {
             storage: getRxStorageDexie()
         });
 
-        await db.addCollections({
-            notes: { schema: NoteSchema },
-            tags: { schema: TagSchema },
-            tasks: { schema: TaskSchema },
-            forms: { schema: FormSchema },
-            events: { schema: EventSchema },
-            cache: { schema: GenericCacheSchema }
-        });
+        try {
+            await db.addCollections({
+                notes: { schema: NoteSchema },
+                tags: { schema: TagSchema },
+                tasks: { schema: TaskSchema },
+                forms: { schema: FormSchema },
+                events: { schema: EventSchema },
+                cache: { schema: GenericCacheSchema }
+            });
+        } catch (addErr: any) {
+            console.warn('[RxDBManager] Schema mismatch or DB6 error, purging outdated partition DB:', partitionedDbName, addErr?.message);
+            await db.destroy().catch(() => {});
+            if (typeof window !== 'undefined' && window.indexedDB) {
+                await new Promise<void>((resolve) => {
+                    const req = indexedDB.deleteDatabase(partitionedDbName);
+                    req.onsuccess = () => resolve();
+                    req.onerror = () => resolve();
+                    req.onblocked = () => resolve();
+                });
+            }
+            const freshDb = await createRxDatabase({
+                name: partitionedDbName,
+                storage: getRxStorageDexie()
+            });
+            await freshDb.addCollections({
+                notes: { schema: NoteSchema },
+                tags: { schema: TagSchema },
+                tasks: { schema: TaskSchema },
+                forms: { schema: FormSchema },
+                events: { schema: EventSchema },
+                cache: { schema: GenericCacheSchema }
+            });
+            return freshDb;
+        }
 
         return db;
     })();
