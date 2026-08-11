@@ -37,44 +37,6 @@ Built for **high-agency builders** who want depth without clutter.
 
 Details on security, sync, and internals: [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## Screenshots
-
-Kylrix product demos and screenshots
-
-<div align="center">
-  <table>
-    <tr>
-      <td width="50%" align="center">
-        <img src="https://via.placeholder.com/600x340/161412/EC4899?text=/app" width="100%" alt="/app" />
-        <br><strong>Ideas</strong>
-      </td>
-      <td width="50%" align="center">
-        <img src="https://via.placeholder.com/600x340/161412/F59E0B?text=/connect" width="100%" alt="/connect" />
-        <br><strong>Connect</strong>
-      </td>
-    </tr>
-    <tr>
-      <td width="50%" align="center">
-        <img src="https://via.placeholder.com/600x340/161412/6366F1?text=/projects" width="100%" alt="/projects" />
-        <br><strong>Projects</strong>
-      </td>
-      <td width="50%" align="center">
-        <img src="https://via.placeholder.com/600x340/161412/10B981?text=/flow" width="100%" alt="/flow" />
-        <br><strong>Flow</strong>
-      </td>
-    </tr>
-    <tr>
-      <td width="50%" align="center">
-        <img src="https://via.placeholder.com/600x340/161412/A855F7?text=/vault" width="100%" alt="/vault" />
-        <br><strong>Vault</strong>
-      </td>
-      <td width="50%" align="center">
-        <img src="https://via.placeholder.com/600x340/161412/6366F1?text=/agents" width="100%" alt="/agents" />
-        <br><strong>Agents</strong>
-      </td>
-    </tr>
-  </table>
-</div>
 
 ## Quick start
 
