@@ -40,8 +40,7 @@ export default function FormsDashboard() {
     const [selectedForm, setSelectedForm] = useState<Forms | null>(null);
     const [selectedDraft, setSelectedDraft] = useState<FormDraft | null>(null);
     
-    // UI States
-    const contextMenu = useContextMenu();
+
 
     useEffect(() => {
         setConfiguration({
