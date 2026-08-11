@@ -168,6 +168,20 @@ export function NoteDetailSidebar({
     allNotesRef.current = Array.isArray(allNotes) ? allNotes : [];
   }, [allNotes]);
 
+  // Realtime: detail view subscribes via LocalEngine — creator edits pull instantly while user looks at it
+  useEffect(() => {
+    if (!note?.$id || readOnly) return;
+    let unsub: (() => void) | null = null;
+    void (async () => {
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      const channel = `databases.${APPWRITE_CONFIG.DATABASE_ID}.collections.${APPWRITE_CONFIG.TABLES.NOTES}.documents.${note.$id}`;
+      unsub = await LocalEngine.subscribeRealtime(channel, (payload: any) => {
+        if (payload?.$id === note.$id) onUpdate(payload as Notes);
+      });
+    })();
+    return () => { try { unsub?.(); } catch {} };
+  }, [note?.$id, readOnly, onUpdate]);
+
   useEffect(() => {
     if (scrollContainerRef.current && liveNote?.$id) {
       const saved = getScrollPosition(`note_detail:${liveNote.$id}`);
