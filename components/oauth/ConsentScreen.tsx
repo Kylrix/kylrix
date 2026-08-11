@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { ShieldCheck, ShieldX, Loader2, UserCheck, Users } from 'lucide-react';
 import { account } from '@/lib/appwrite/client';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { getApp, type OauthApp } from '@/lib/oauth2/apps';
+import { getApp } from '@/lib/oauth2/apps';
 import {
   approveGrant,
   authorize,
@@ -27,6 +27,7 @@ export function ConsentScreen() {
   const [error, setError] = useState<string | null>(null);
   const [needsSignIn, setNeedsSignIn] = useState(false);
   const [grant, setGrant] = useState<Oauth2Grant | null>(null);
+  const grantIdParam = searchParams.get('grant_id') || searchParams.get('grantId');
   const prompts = useMemo(() => {
     const raw = searchParams.get('prompt') || '';
     return raw.split(/\s+/).filter(Boolean);
@@ -39,8 +40,6 @@ export function ConsentScreen() {
       setNeedsSignIn(true);
     }
   }, [forceAccountSelect, isAuthenticated, grantIdParam]);
-
-  const [savedAccounts, setSavedAccounts] = useState<any[]>([]);
   useEffect(() => {
     if (typeof window !== 'undefined') {
       import('@/lib/account/vault').then(({ listAccounts }) => {

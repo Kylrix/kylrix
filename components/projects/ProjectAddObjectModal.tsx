@@ -392,8 +392,7 @@ export default function ProjectAddObjectModal({
           const tableId = tableByKind[kind];
           if (tableId) {
             const cacheKey = `isWorkspace:${tableId}:${entityId}`;
-            await LocalEngine.batchedWrite(cacheKey, { isWorkspace: true }, async (jwt) => {
-              const { createRowSecure, updateRowSecure } = await import('@/lib/actions/secure-ops');
+            await LocalEngine.batchedWrite(cacheKey, { isWorkspace: true }, async (_jwt) => {
               // Use LocalEngine's batched path — increases write frequency but coalesces under high activity
               const { databases } = await import('@/lib/appwrite/client');
               return databases.updateRow(APPWRITE_CONFIG.DATABASE_ID, tableId, entityId, { isWorkspace: true });

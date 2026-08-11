@@ -4,7 +4,6 @@ import React from 'react';
 import { Share2, ShieldAlert } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { PublicResourceType } from '@/lib/share/resource-types';
-import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
 import { useToast } from '@/hooks/useToast';
 
 interface AccessControlMenuItemsProps {
@@ -60,7 +59,7 @@ export function useAccessControlMenuItems({
                 // Instant toggle via LocalEngine — local optimistic, surpasses direct UI→Appwrite
                 const { LocalEngine } = await import('@/lib/services/LocalEngine');
                 const cacheKey = `share:${resourceType}:${resourceId}`;
-                await LocalEngine.instantWrite(cacheKey, { isPublic: false, isGuest: false }, async (jwt) => {
+                await LocalEngine.instantWrite(cacheKey, { isPublic: false, isGuest: false }, async (_jwt) => {
                   const { toggleResourcePublicGuest } = await import('@/lib/actions/client-ops');
                   return toggleResourcePublicGuest({ resourceType, resourceId, mode: 'make_private', projectId });
                 }).then((res: any) => {

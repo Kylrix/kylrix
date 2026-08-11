@@ -3,7 +3,6 @@ import type { Projects } from '@/types/appwrite';
 import {
   getSessionProjectsList,
   setSessionProjectsList,
-  projectsListCacheKey,
   PROJECTS_LIST_TTL} from '@/lib/projects/projects-cache';
 
 type NexusDeps = {

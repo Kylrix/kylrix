@@ -6,7 +6,6 @@ import { account } from '@/lib/appwrite/client';
 import { useTheme } from '@/lib/theme-context';
 import { useDevMode } from '@/lib/dev-mode';
 import Link from 'next/link';
-import { SyncToNostrSettings } from '@/components/settings/SyncToNostrSettings';
 
 interface PrefsData {
   language?: string;

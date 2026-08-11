@@ -25,7 +25,7 @@ export const ProjectsService = {
     // Use LocalEngine unified query with Realtime for list blocks (idea/goals page cards)
     return LocalEngine.query<{ rows: any[] }>(
       cacheKey,
-      async (jwt) => {
+      async (_jwt) => {
         const rows = await this.fetchRemoteProjects(force);
         return { rows } as any;
       },

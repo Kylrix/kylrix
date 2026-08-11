@@ -39,7 +39,6 @@ import {
   Lock,
   MessageCircle,
   GitFork,
-  Repeat2,
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';

@@ -21,14 +21,6 @@ import FormSettingsDialog from '@/components/forms/FormSettingsDialog';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { useRouter } from 'next/navigation';
-import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
-import { toast } from 'react-hot-toast';
-import { LocalEngine } from '@/lib/services/LocalEngine';
-
-import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { useFAB } from '@/context/FABContext';
-import { useSection, MultiSectionContainer } from '@/context/SectionContext';
-import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuItems';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 
@@ -37,7 +29,6 @@ export default function FormsDashboard() {
     const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
     const router = useRouter();
     const { open: openDrawer } = useUnifiedDrawer();
-    const { setActiveDetail } = useSection();
     const { setConfiguration, resetConfiguration } = useFAB();
     const [forms, setForms] = useState<Forms[]>([]);
     const [offlineDrafts, setOfflineDrafts] = useState<FormDraft[]>([]);
@@ -47,12 +38,9 @@ export default function FormsDashboard() {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [selectedForm, setSelectedForm] = useState<Forms | null>(null);
     const [selectedDraft, setSelectedDraft] = useState<FormDraft | null>(null);
-    const [formDraftStatus, setFormDraftStatus] = useState<Record<string, boolean>>({});
     
     // UI States
     const contextMenu = useContextMenu();
-    const openMenu = contextMenu?.openMenu;
-    const [isDesktop, setIsDesktop] = useState(false);
 
     useEffect(() => {
         setConfiguration({
@@ -274,15 +262,6 @@ export default function FormsDashboard() {
     useEffect(() => {
         void fetchForms();
     }, [fetchForms]);
-
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'published': return '#10B981';
-            case 'draft': return '#FFB020';
-            case 'archived': return '#D14343';
-            default: return '#9B9691';
-        }
-    };
 
     const FORM_PAGE_SIZE = 20;
     const [formPage, setFormPage] = useState(1);
