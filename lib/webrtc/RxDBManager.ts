@@ -13,7 +13,18 @@ if (typeof window !== 'undefined') {
     addRxPlugin(RxDBLeaderElectionPlugin);
 }
 
-const DB_NAME = 'kylrix_nexus_db_v2';
+const DB_NAME = 'kylrix_nexus_db_v3';
+
+async function removeDatabaseSafely(dbName: string) {
+    if (typeof window !== 'undefined' && window.indexedDB) {
+        await new Promise<void>((resolve) => {
+            const req = indexedDB.deleteDatabase(dbName);
+            req.onsuccess = () => resolve();
+            req.onerror = () => resolve();
+            req.onblocked = () => resolve();
+        });
+    }
+}
 
 export interface NoteDocument {
     id: string;
@@ -163,26 +174,26 @@ export async function getRxDB(): Promise<RxDatabase> {
             } else if (db && typeof (db as any).destroy === 'function') {
                 await (db as any).destroy().catch(() => {});
             }
-            if (typeof window !== 'undefined' && window.indexedDB) {
-                await new Promise<void>((resolve) => {
-                    const req = indexedDB.deleteDatabase(partitionedDbName);
-                    req.onsuccess = () => resolve();
-                    req.onerror = () => resolve();
-                    req.onblocked = () => resolve();
-                });
-            }
+            await removeDatabaseSafely(partitionedDbName);
+            await removeDatabaseSafely(`kylrix_nexus_db_v2_${activePid}`);
+            await removeDatabaseSafely(`kylrix_nexus_db_v2`);
+
             const freshDb = await createRxDatabase({
                 name: partitionedDbName,
                 storage: getRxStorageDexie()
             });
-            await freshDb.addCollections({
-                notes: { schema: NoteSchema },
-                tags: { schema: TagSchema },
-                tasks: { schema: TaskSchema },
-                forms: { schema: FormSchema },
-                events: { schema: EventSchema },
-                cache: { schema: GenericCacheSchema }
-            });
+            try {
+                await freshDb.addCollections({
+                    notes: { schema: NoteSchema },
+                    tags: { schema: TagSchema },
+                    tasks: { schema: TaskSchema },
+                    forms: { schema: FormSchema },
+                    events: { schema: EventSchema },
+                    cache: { schema: GenericCacheSchema }
+                });
+            } catch {
+                // If secondary addCollections fails, return fresh database instance
+            }
             return freshDb;
         }
 
