@@ -125,7 +125,7 @@ jobs:
       # `dev` is intentionally outside agent admission. This is an explicit
       # human-owned proof lane, not a generated agent-execution projection.
       - name: Prove and archive bounded native runtime
-        run: ota proof runtime --workflow sqlite-dev --mode native --archive --json
+        run: ota proof runtime --workflow sqlite-dev --mode native --json
       - name: Upload bounded native runtime proof
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -144,7 +144,7 @@ jobs:
           source: contract
       # The same explicit, non-agent proof boundary applies in container mode.
       - name: Prove and archive bounded container runtime
-        run: ota proof runtime --workflow sqlite-dev --mode container --archive --json
+        run: ota proof runtime --workflow sqlite-dev --mode container --json
       - name: Upload bounded container runtime proof
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
