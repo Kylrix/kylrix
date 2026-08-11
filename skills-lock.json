@@ -17,7 +17,7 @@
       "source": "ota-run/skills",
       "sourceType": "github",
       "skillPath": "skills/ota/SKILL.md",
-      "computedHash": "0865bb205d1bdae2767b32c347a573f958f2045970eaaa9bd0b85193db5984ee"
+      "computedHash": "29eda00713fa8e0afa54496d0f563ba9a7efcc539ce731e3630066e223169a1a"
     },
     "upstash": {
       "source": "upstash/skills",

@@ -154,6 +154,41 @@ Always prefer using the real Ota binary when it is available.
      `agent.bootstrap.ota.source`, prefer the first-party
      `ota-run/setup@v1` action with `source: contract` over duplicating `OTA_VERSION`,
      `OTA_GIT_REV`, `OTA_GIT_BRANCH`, or `--from-git` in workflow YAML
+   - when a repository declares contract-owned CI bootstrap or verification truth, add a dedicated
+     pull-request gate with `ota-run/action@v1`, `command: doctor`, `source: contract`, and
+     `fail-on-ci-drift: true`; it fails only on Ota-established CI bootstrap or verification drift,
+     not ordinary Doctor warnings. Keep it separate from general readiness reporting so the blocking
+     reason stays explicit.
+   - when a repository wants Ota to own the CI verification lane itself, generate a dedicated
+     provider-neutral contract lane with `ota ci projection --workflow <name> --mode <mode> --target-os <linux|macos|windows> --json`,
+     then generate the GitHub reusable workflow with `ota ci github render --workflow <name> --mode <mode> --target-os <linux|macos|windows>` and use
+     `ota ci github check` and explicit `ota ci github sync` against an Ota-owned output and a
+     human-owned caller. Keep triggers, permissions, runners, secrets, environments, deployment,
+     and non-Ota jobs in the caller; never duplicate Ota bootstrap or verification commands there.
+     Generated lanes retain full workflow agent admission across prepare, setup, run, and attach
+     roots. A workflow that declares `proof` still must be agent-admitted; proof breadth is not
+     execution authority, and proof-required lanes use the runtime-proof wrapper as their sole
+     real execution path. Finite verification lanes use a dry-run `ota up` admission preview,
+     then execute their selected dependency closure directly through `ota run --agent`;
+     service-runtime lanes retain their single
+     runtime-owned execution path. Every declared
+     `agent.refusal_canaries` control is projected as its own generated provider check and executed
+     through Ota's `--expect-refusal` boundary. GitHub qualifies the check name by target OS and
+     mode while retaining its canonical merge identity; do not replace those checks with provider
+     shell/JQ glue. Required selected-closure toolchains are projected from `ota.yaml`; GitHub
+     carries `execution_scopes` per selected toolchain and renders immutable Go setup for native
+     `source: go`, translating supported lower-bound ranges into Go release selectors, native Node
+     setup for `toolchains.node` with `source: corepack`, native Ruby setup for
+     `toolchains.ruby` with `source: ruby`, native Python plus uv setup for
+     `toolchains.python` with `source: uv`, and native .NET setup for `toolchains.dotnet` with
+     `source: dotnet`. Container and remote toolchains remain owned by their
+     declared runtime boundary. It refuses unsupported native sources instead of trusting a hosted
+     runner image.
+     Ota also refuses any target OS that the selected executable closure or resolved context does
+     not support. Omit `--mode` only when the contract default is intended; an explicit unavailable
+     mode must be treated as a projection refusal. Read JSON refusal projections rather than scraping error
+     text. The caller must bind both the exact projection identity and the projection target OS;
+     Ota verifies the identity without relying on a provider shell.
    - once `agent.bootstrap.ota.source` exists, treat explicit workflow-owned Ota install truth as
      governance drift unless the lane is an intentional unreleased pressure path; `ota doctor`
      should be allowed to call out that duplication or conflict
@@ -175,6 +210,10 @@ Use the smallest real Ota workflow that fits the task:
   - use `ota doctor --fix` when the repo truth should allow safe deterministic repair such as
     repo-hygiene cleanup or native command-acquired tool activation; plain `ota doctor` should
     stay non-mutating
+  - do not use mutating `ota doctor --fix` to route around replay-input admission. When an active
+    replay-input policy is unavailable, evaluates to `deny` or `review`, or a declared hard pin is
+    unavailable or mismatched, Ota refuses before repo-hygiene or tool-activation mutation.
+    `ota doctor --fix --dry-run` remains a non-mutating preview
 - `ota init`
   - create a starter contract only when the user wants Ota adoption or no contract exists
   - prefer the emitted starter shapes Ota now owns directly: `toolchains.*`,
@@ -213,20 +252,97 @@ Use the smallest real Ota workflow that fits the task:
     `promoted` receipt history
   - read `summary.comparison.correlation` first, then `contract_changes[]`, then
     `likely_related_changes[]`
+  - read `baseline.evaluated_inputs[]`, `current.evaluated_inputs[]`, and
+    `summary.comparison.artifact_trust[]` only as receipt-authored evidence. A matching
+    typed Node lockfile currently acquits `declared_dependency_resolution` only. A static
+    digest-pinned Compose image for an explicitly selected service and its declared `depends_on`
+    closure in an explicitly declared file acquits only its `selected_runtime_artifact`. The paired
+    `runtime:node` version record only narrows `selected_runtime_version`; never replace any of
+    these with a later filesystem read or over-read them as environment or external-state proof
   - expect sharper declared owners such as reusable `surfaces.<name>` or
     `readiness.probes.<name>` to outrank weaker adjacent workflow references when Ota can recover
     them honestly
+  - use `tasks.<name>.replay_inputs` only for immutable repo files a deterministic selected lane
+    actually consumes; Ota captures their identities before the full closure starts and treats a
+    match as narrowing evidence, never as proof that runtime or external state was unchanged
+  - add `expected_identity: sha256:<64 lowercase hex characters>` only when that file must be
+    independently pinned. Ota blocks the selected closure before execution when the observed
+    content differs; never let Ota or an agent rewrite the pin automatically
+  - use `policies.replay_inputs.identity.tasks|workflows` when an org policy must require complete
+    pins for selected replay-sensitive closures. Task rules follow reachable execution closure,
+    including recursive `after_success`, `after_failure`, and `after_always` hooks; workflow and
+    reachable task rules are cumulative. Both `deny` and `review` refuse before native
+    provisioning, dependency hydration, or task startup today. Unavailable observations, active
+    policy load failures, and missing, unreadable, or mismatched declared pins always fail closed
+    and cannot be weakened to `review`. Mutating `ota doctor --fix` applies the same refusal before
+    repo-hygiene or native tool-activation mutation. Read `replay_input_policy` from Doctor,
+    dry-run, and admission-produced run/up execution or refusal receipts; hard-pin refusals retain
+    the active policy record, while generic readiness receipts do not reconstruct policy after
+    execution. Each task-qualified replay input is observed once for command admission, and that
+    command-scoped observation set drives findings, policy evaluation, hard-pin validation, and
+    receipts. Agent safety, claim assurance, replay admission,
+    Doctor/provisioning findings, proof, CI projection, and receipt policy evidence reuse one
+    loaded policy snapshot per command. Runtime proof pins that admitted authority for its
+    detached child and reuses the command-scoped preflight across readiness diagnosis and its
+    embedded Doctor artifact. CI projection carries
+    requirements and the canonical execution closure including recursive hooks, not render-host
+    observations, so the provider checkout recomputes observed identities
+  - use `artifacts.<name>.replay` when a generated fixture, store, model baseline, or existing
+    `generated_source` needs an explicit regeneration authority chain. Keep `kind: generated_source`
+    when that lineage already exists; do not duplicate output ownership. A `generated_source`
+    consumer with a top-level producer dependency remains ordinary generated-source execution;
+    omit that dependency only for an offline promoted-replay consumer. A dedicated
+    `replay_baseline` always consumes promoted authority. Run `ota baseline record --artifact <name>`
+    from a clean Git source tree to execute its declared producer through the explicit recording
+    boundary and issue a receipt-bound attestation. A dedicated `replay_baseline` producer is not
+    agent-safe; an additive `generated_source` producer keeps its ordinary task safety posture.
+    Review the generated output, then select that exact record with
+    `ota baseline promote --artifact <name> --attestation <path>`. The committed authority manifest
+    embeds the selected attestation and declares SCM review as its external trust root; Ota does not
+    verify reviewer inclusion or signer provenance. Never
+    hand-edit a digest or auto-promote the newest recording. Replay-baseline symlinks must resolve
+    within declared artifact outputs, never into the mutable worktree.
+    Use `consumption: read_only` only with an enforceable ephemeral container boundary for the
+    full selected closure; Ota mounts a run-scoped snapshot outside the writable workspace and
+    projects command-capable typed preparation through that same boundary without replacing it
+    with shell glue. Use
+    `consumption: verify_unchanged` when native replay must remain available: Ota detects a changed
+    baseline after the task and emits `replay_artifact_mutation_detected`, but does not claim it
+    refused the write or upgrade that posture to read-only enforcement.
+  - replay consumers must not depend on the baseline producer. `consumption: read_only` requires
+    an enforceable runner-owned ephemeral container boundary; native or persistent execution is
+    refused rather than approximated with mutable worktree checks or file permissions
+  - within `tasks.<name>.replay_inputs`, use `kind: static_file` for generic immutable repo files,
+    `kind: presentation_profile` for files that define output-shaping or normalization posture, and
+    `kind: comparator_profile` for files that define equivalence, tolerance, or comparison rules
+  - use `tasks.<name>.witnessed_observations.query_traces` for prior-run JSONL query evidence;
+    Ota preserves these as attested observations in the receipt, never as current-run evaluated
+    inputs. A divergent identity names changed query shape only; it does not establish causality.
 - `ota tasks`
   - discover named task surfaces
-  - prefer `ota tasks --use` when you need the runnable lane itself, including command preview,
-    default versus alternate modes, safety posture, effect surface, and the dry-run / receipt
-    follow-up commands that match that task
+  - prefer `ota tasks --use` when you need the runnable lane itself, including `Human Run`,
+    closure-aware `Agent Run`, `Agent Policy`, command preview, and modes in stable `Container`,
+    `Native`, then `Remote` order with the selected lane marked `(Default)`, plus effect surface
+    plus required inputs and dry-run / receipt follow-up commands; use plain `ota tasks` for the
+    full declaration view. Unavailable Container or Native planes must be shown explicitly, and a
+    declared-safe task is agent-callable only when its full dependency closure is callable
+  - for machine consumers, use `ota tasks --json` and read `tasks[].use.modes[]` as the canonical
+    per-mode human/agent capability matrix; `use.human` and `use.agent` remain compatibility
+    projections of the selected default mode, while `availability: unavailable` is contract
+    support truth rather than a substitute for environment readiness checks
   - prefer `ota tasks --safe --use` first for agent-oriented execution because it keeps the
     routine runnable surface bounded before you decide whether any non-safe lane needs review
 - `ota run <task>`
   - execute canonical task flows
+  - treat explicit mode, lifecycle, host-port, memory, and dependency overrides as capability
+    requests, not hints. If Ota refuses one, inspect `ota tasks --use` and the dry-run blocker;
+    never retry by assuming an unsupported override was approximately applied
+  - native or remote task paths without a managed shared backend cannot honor `--ephemeral` or
+    `--persistent`; use the declared native/remote path or select an advertised container mode
 - `ota up`
   - prepare the repo into a ready state
+  - task-backed workflow phases use the same execution-option admission as `ota run` and must
+    refuse unsupported overrides before prepare/setup/run execution starts
 
 If a contract already exists, start with `ota doctor` and `ota validate` before editing it.
 
@@ -244,14 +360,121 @@ When reading receipt/proof machine output, prefer explicit stage ownership over 
 labels:
 - `receipt.steps[*].stage_family` carries the broad governance family
 - `ota proof runtime --json` carries `stage_family: "proof"` alongside the finer proof `phase`
+- `ok` is execution/readiness success only. It is necessary but insufficient for proof breadth;
+  consumers must read `proof_verdict` with `not_proved[]`.
+- use `ota proof runtime --json --archive` when a runtime proof must later support a governance
+  claim. Then read `ota doctor --json` `claim_assurance[]`: proof breadth is supported only by a
+  content-addressed witness archive matching current semantic contract, clean source identity, and
+  resolved execution scope; a matching failed proof is contradicted and stale evidence is unknown.
+- use `ota proof lifecycle --workflow <name> --json --archive` only for a workflow that declares
+  `proof.lifecycle` over manager-owned services. The runner first executes the normal workflow
+  prerequisite closure, then either leases manager-observed inactive services or creates one
+  transaction-bound ephemeral container session for a declared `boundary_terminated` service.
+  It starts and readies the dependency closure, optionally runs one finite assertion, then
+  finalizes in reverse order even after a failed start, readiness failure, assertion failure, or
+  interrupted child.
+  When declared, the typed `assertion` record carries the terminal task state, exit code, and
+  bounded runner-captured output tails for diagnosis; it does not turn that output into broader
+  application proof. A manager-reported pre-existing or unknown-state service is never stopped.
+  The archive is local,
+  content-addressed evidence bound to the semantic contract snapshot, selected scope, transaction,
+  service records, and terminal verdict; it does not support claim assurance, CI projection, or a
+  broader runtime/application proof.
+- lifecycle proof reuses selected-workflow `--agent`, `--mode`, and `--member` admission. The
+  selected mode applies to prerequisite and assertion tasks. Replay-input admission evaluates the
+  exact workflow prerequisite-plus-assertion closure before any lifecycle task, service
+  transition, or assertion starts. Runtime proof similarly includes its post-readiness seam
+  observers and selected negative-control task, then admits before creating `.ota/proof` artifacts
+  or spawning its child runtime. A refused machine result carries
+  `execution_started: false` with the hard-pin and active policy evidence. A
+  `boundary_terminated` service requires structured
+  `manager.start` / `manager.stop` commands and `--mode container` resolving to an ephemeral
+  context; Ota runs those commands inside its session and attests removal of that exact session.
+  Machine consumers must require the same `boundary_identity` in archive scope and every isolated
+  service record. A failed removal is attested as incomplete cleanup, never promoted to
+  `boundary_terminated`, host-manager inactivity, or application output. Native generic host
+  start/stop remains ineligible until it has a typed state observer.
+- use `workflows.<name>.proof.claim: bounded` for a real archive-backed verification lane that has
+  no declared dependency seam, such as an offline replay, build, or deterministic test gate. It
+  creates a bounded `proof_breadth` claim, not a repo-wide pass: Doctor remains `unknown` until a
+  matching archive exists. Do not invent `seam_observations` or negative controls merely to opt in.
+- `proof_verdict` is the terminal selected-lane result: treat
+  `passed_with_unproven_boundaries` as a qualified proof, never as repo-global completion; parse
+  or contract-load failures do not enter that proof carrier
+- `proof_scope` is the canonical machine-readable boundary for the selected runtime path; do not
+  read a green runtime proof as repo-global success
+- `not_proved[]` is relative to `proof_scope`: treat entries with `source: contract_lane` and
+  `declared_by_workflows[]` as contract-declared adjacent paths, matched through declared external
+  state, that were not exercised; `source: proof_scope` is the generic broader-repo remainder for
+  that narrow proof
+- For governance previews, a preflight refusal remains `post_execution.state: not_run` because
+  execution never began. Read `post_execution.refusal_occurred`, its refusal record, and
+  `not_run_reason: preflight_refusal` together; do not infer that no refusal happened from a
+  non-executed lane.
+- `dependency_exercise_not_proved` names a `requires_services` seam in the selected proof closure
+  that Ota did not independently observe crossing. It is not a service failure or unused-service
+  claim; do not upgrade it to `exercised` from reachability, a caller trace, or a green proof.
+- A marker-bound `workflows.<name>.proof.seam_observations[]` observer is the first honest path to
+  `exercised`: Ota gives the opaque marker to a declared producer in the selected closure, never
+  to the finite observer. The observer must recover it through the dependency and write the
+  runner-owned transaction attestation. Ota records `exercised` only after verifying that
+  attestation before teardown. Keep producer and observer prerequisites inside the normal workflow
+  closure; do not claim exercise from an unrun, inert, or prose-only observer.
+- A `workflows.<name>.proof.negative_controls[]` entry is the only path to `fault_tested`. It must
+  reference one observed seam `obligation`, stay outside the normal closure, and declare a typed
+  `expected_failure`. The finite control receives transaction and attestation coordinates, not a
+  caller-authored verdict; a generic non-zero exit is `invalid` until Ota verifies the matching
+  same-obligation failure attestation.
+- Every marker-bound seam retains `dependency_output_shaping_not_proved`, whether its evidence is
+  `exercised` or `fault_tested`; absence is reserved for a future explicit output-proof carrier.
+  The nested dependency-level negative-control object is a self-describing
+  `evidence_class: derived` projection of the canonical control record, not a second authority.
+- Use the public `ota-run/examples/reference/runtime-proof-evidence` example when authors need a
+  copy-ready producer, observer, and negative-control pattern. Keep that evidence on
+  `ota proof runtime`; generic readiness and receipt lanes did not execute the proof obligation.
 - `artifact_routing[]` points to the next receipt/proof artifact or capture command with typed
   `role`, `kind`, and `stage_family`
+- receipt comparison `summary.comparison.artifact_trust[]` is runner-derived and scoped to the
+  named input class. A matching `semantic_contract_snapshot` is `acquitting` for
+  `contract_truth` only; it does not clear dependency, environment, runtime, or external-state
+  drift that the receipts did not capture
+- a matching receipt-authored typed Node lockfile is likewise `acquitting` only for
+  `declared_dependency_resolution`; it proves the declared lockfile identity matched between
+  receipts, not that ambient registry, runtime, env, or external-state inputs were unchanged
+- a matching receipt-authored static digest-pinned Compose image is `acquitting` only for its
+  named `selected_runtime_artifact`, including the selected service's declared `depends_on`
+  closure; mutable tags, interpolation, inferred Compose files, and unrelated stack services do
+  not produce this evidence
+- a matching receipt-authored `runtime:node` version is `narrowing` for
+  `selected_runtime_version`; it does not establish binary, image, host, environment, or
+  external-state identity
 For `ota run <task> --dry-run --json`, prefer top-level `provisioning` and `provisioning_request`
 when present instead of scraping `plan.requirement_lines`; that selected-path provisioning truth is
 the machine-readable host-fulfillment surface for direct tool acquisition.
+Full `ota run --dry-run --json` and `ota up --dry-run --json` previews carry
+`execution_started: false`. On run override refusal, read `overrides` together with
+`summary.primary_blocker.code`; on up refusal, read `blockers[].code`. Do not treat resolved
+execution metadata as evidence that the requested backend or lifecycle actually started.
 Also prefer the additive top-level `governance` block for the selected lane’s safety posture,
 review requirement, runnable mode commands, effect surface, and receipt follow-up command instead
 of reconstructing those facts from task text or from the raw `requested_task` payload by hand.
+For harness-facing callable truth, prefer `ota tasks --json` or `ota workflows --json`
+`capability_profile` over hand-built agent policy:
+- read `preflight` for the canonical callable vs refused decision
+- read `environment_boundary` for declared writable/protected path posture
+- read additive `sandbox_policy` for the first compiled runtime target, `codex_local`
+- treat `sandbox_policy.filesystem.state: "compiled"` as derived from declared
+  `agent.writable_paths` / `agent.protected_paths`
+- prefer canonical `runtime_boundary` truth when present on `execution`, `workflows.<name>`, or
+  `tasks.<name>`; `sandbox_policy.filesystem.source` / `network.source` tells you which selected
+  lane actually owns the compiled boundary
+- treat `sandbox_policy.filesystem.state: "unavailable"` as insufficient declared boundary truth,
+  not as an implicit allow
+- treat `sandbox_policy.network.default: "deny"` / `scope: "none"` and
+  `default: "allow"` / `scope: "broad"` as the current honest broad effect posture; do not invent
+  host or destination allowlists that the contract does not yet declare
+- when `sandbox_policy.network.scope: "targeted"`, consume declared `outbound_targets[]` directly
+  and keep `enforcement: "advisory_only"` honest until ota compiles a real sandbox target
 For dependency-plane truth, prefer preview `plan.dependency_steps[]`, executed
 `receipt.dependency_steps[]`, and validate `warning_details[].provenance` instead of inferring
 backend selection from task names or advisory prose.
@@ -294,6 +517,11 @@ Prefer these concrete shapes when repo truth matches them:
 - use `command.cwd` when the task truth is still one finite executable plus stable argv but it
   should run from a repo subdirectory instead of hiding `cd ... && ...` in shell
 - use `launch.kind: command` for long-running service processes instead of opaque `run`
+- when a supported long-running server adapter would otherwise duplicate bind flags already owned
+  by explicit `runtime.listeners`, use `launch.runtime_projection` so ota projects bind argv from
+  canonical runtime listener truth instead of repeating `--host` / `--port`, `-b` / `-p`, or
+  Next.js `--hostname` / `--port` in `launch.args`; use the `nextjs` adapter with a direct
+  structured `next dev` invocation rather than a package-script wrapper that owns those flags
 - use `tasks.<name>.compose` when the repo truth is a finite `docker|podman compose`
   lane ota should own directly, whether that is an in-service `exec`/`run`/`attach` command or a
   staged `compose up`, `compose build`, `compose restart`, `compose rm`, `compose logs`, or
@@ -332,11 +560,18 @@ Prefer these concrete shapes when repo truth matches them:
   native `prepare.kind: sequence` can be orchestrator-mediated until Ota has a step-level model
 - when `prepare.source.kind: docker_compose` owns image hydration, keep Compose file selection and
   interpolation input on `prepare.source.files` / `prepare.source.env_files` instead of burying
-  `docker compose -f ... --env-file ... pull ...` in raw shell
+  `docker compose -f ... --env-file ... pull ...` in raw shell; declare
+  `prepare.medium: container_images`, explicit image `targets`, `requirements.tools.docker`,
+  `effects.network: true`, and `effects.network_kind: container_image_hydration`. Use the same
+  effect kind for a Compose `up` or `launch.kind: compose` lane that may pull declared images, and
+  keep immutable image receipt evidence separate from the registry-access declaration
 - when that typed dependency lane truthfully runs inside a declared Compose service, keep the
   package-manager truth under `prepare.source.kind: ...` and add `prepare.source.compose` only as
   the service wrapper; in that shape the host requirement stays `requirements.tools.docker` or
   `requirements.tools.podman`, not a duplicate host language toolchain
+- if you need one concrete contract shape for that lane, point authors at the dedicated reference
+  example `reference/task-prepare-compose-hydration` instead of making them infer it from the
+  broader Compose adapter example
 - when the durable install state for that Compose-wrapped lane lives in a service volume instead
   of a repo path, declare it under `effects.adapter_state` with a token such as
   `compose_volume:node_modules` or `compose_volume:bundle_data` instead of faking repo writes
@@ -366,6 +601,9 @@ Prefer these concrete shapes when repo truth matches them:
 - use `effects.network_kind: integration_test` for live, staging, or remote-backed verification
   lanes that depend on real services or non-local credentials; keep `requirements.env` and any
   real `effects.external_state` explicit, and do not treat those paths as routine `agent.safe_tasks`
+- use `effects.network_kind: service_readiness` for a finite assertion against one declared
+  repo-managed service endpoint; pair it with `requires_services` and do not over-read it as
+  external integration coverage
 - use `prepare.kind: sequence` when one honest finite setup lane needs more than one typed setup
   step in order, including structural prepare steps (`dependency_hydration`, `tool_bootstrap`) and
   deterministic bootstrap steps such as `ensure_env_file`, `ensure_file`, `ensure_directory`,
@@ -381,6 +619,10 @@ Prefer these concrete shapes when repo truth matches them:
 - use `action.kind: ensure_container_network` when one honest setup lane owns shared external
   Docker network readiness as a standalone lane instead of shell `docker network inspect/create`
   glue
+- use `action.kind: build_container_image` when one direct task truthfully owns Dockerfile-backed
+  local image materialization for a declared container or Compose lane; keep `file`, `context`,
+  `tag`, Docker external state, and any network posture explicit instead of hiding `docker build`
+  in a shell command, and do not place image builds inside `prepare.steps` or `ensure_bundle`
 - use `action.kind: reset_compose_service_volume` when one destructive local recovery or reset
   lane truthfully owns stopping a Compose-managed service, removing one declared volume, and
   restarting the service instead of hiding `docker compose stop/rm` plus `docker volume rm`
@@ -405,7 +647,15 @@ Prefer these concrete shapes when repo truth matches them:
 - use `source.kind: cargo` under `prepare.kind: dependency_hydration` for Rust setup instead of
   raw `run: cargo fetch`
 - use `source.kind: dotnet_restore` under `prepare.kind: dependency_hydration` for .NET setup
-  instead of raw `run: dotnet restore`
+  instead of raw `run: dotnet restore`; when the repo owns NuGet feed selection in `NuGet.Config`,
+  declare `source.config_file` and let `ota up --json` recover resolved feed identities instead of
+  duplicating those URLs as `source.sources[]` command overrides. Read the resulting typed
+  `receipt.evaluated_inputs[]` `hydration_provenance` record rather than re-reading `NuGet.Config`
+  after the run. Treat `resolution: unavailable` as narrowing evidence, never a hermetic replay
+  anchor; when an ephemeral container
+  restore must feed later `dotnet build --no-restore` or `dotnet test --no-restore` tasks, declare
+  `attachments.isolated_paths: [.nuget/packages]` on that context so Ota owns one shared NuGet
+  package cache through derived `NUGET_PACKAGES`
 - use `source.kind: helm` under `prepare.kind: dependency_hydration` for Helm chart setup instead
   of raw `helm dependency build ...` command or shell glue
 - use `source.kind: composer` under `prepare.kind: dependency_hydration` for PHP setup instead of
@@ -421,7 +671,19 @@ Prefer these concrete shapes when repo truth matches them:
   bucket, apt sources list, `asset_by_platform` release URLs, or archive extraction metadata such
   as `archive.format: tar_gz` / `zip` plus `archive.executable_path`
 - use `source.kind: uv` under `prepare.kind: dependency_hydration` for uv-backed Python setup
-  instead of raw `run: uv sync`
+  instead of raw `run: uv sync` or raw `uv pip install -r requirements.txt` shell
+  - declare `default_index`, ordered `indexes[]`, and `offline: true` when package-source or
+    cache-only posture materially affects replay or supply-chain trust; do not let user/global uv
+    configuration silently stand in for contract-owned source truth
+  - use `mode: pip_local_project` with `local_project.path`, explicit `editable`, ordered
+    `extras[]` / `groups[]`, and optional `lockfile` when the repo installs one checked-out Python
+    package; Ota records manifest, lockfile, and clean local-project source identity rather than
+    preserving those installs as opaque shell glue. Treat the record as replay-acquitting only when
+    resolved hydration posture, declared lockfile identity, and clean source identity all exist;
+    otherwise matching evidence is narrowing only.
+- use `action.kind: ensure_virtualenv` when the repo truthfully owns deterministic creation of one
+  repo-local Python virtualenv such as `.venv`, and keep dependency installation itself under
+  `prepare.kind: dependency_hydration`
 - use `toolchains.python.package_managers.poetry` instead of standalone `tools.poetry` when Poetry
   owns Python dependency truth
 - use `${OTA_HOST_HOME}` when truthful instance or runtime input ownership depends on one host-home
@@ -460,6 +722,9 @@ Prefer these concrete shapes when repo truth matches them:
   shell-only variants just to express input drift
 - use `workflows.<name>.instances` when one workflow is really a named runtime family such as
   `ws0`, `ws1`, or `preview`; select it as `workflow@instance` instead of cloning pseudo-workflows
+- use `workflows.<name>.instances.generated.<family>` when that runtime family has a bounded
+  repeated selector range such as `ws1..ws8` and the repeated overlays should stay on the
+  existing instance boundary instead of being duplicated across many explicit named instances
 - use `workflows.<name>.instances.<instance>.topology.requires_instances` when one selected
   instance truthfully needs another instance up first, such as `ws1+` requiring `ws0`
 - use `workflows.<name>.instances.<instance>.env` for selected-instance host-clone or cache roots,
@@ -469,6 +734,9 @@ Prefer these concrete shapes when repo truth matches them:
   keeps the same runtime identity but needs instance-specific listener bind/project ports or
   readiness listener selection; treat it as a strict overlay on the base task runtime instead of
   inventing a workflow-local listener model
+- generated instance templates may interpolate `${OTA_WORKFLOW_INSTANCE}` and
+  `${OTA_WORKFLOW_INSTANCE_INDEX}` in string-valued overlay fields, and may derive repeated
+  surface/runtime ports with `port_stride` / `stride` instead of falling back to shell math
 - use `workflows.<name>.adapter_inputs.overlays.bake.*` when one workflow should own the adapter root
   or base Bake file stack across its selected `docker buildx bake` task closure instead of
   repeating that truth in task-local adapter inputs
@@ -616,6 +884,9 @@ For fuller holistic shapes, also use:
   `requires_services`, context-bound `execution`, and post-run hooks
 - `references/agent-and-governance-checklist.md` for `agent`, `checks`, `effects`, proof posture,
   and CI/version-floor governance
+- `references/pressure-testing-protocol.md` before selecting, modeling, or declaring a pressure
+  repo complete; it defines the required proof matrix, Ota-gap review, and first-party
+  propagation decision
 - the public examples repo when a compact copy-ready surface is better than prose alone:
   `reference/bake-adapter-inputs`, `reference/action-ensure-env-file`,
   `reference/action-ensure-bundle`, `reference/action-ensure-git-checkout`,
@@ -627,11 +898,15 @@ For fuller holistic shapes, also use:
 Watch for the concrete regressions we have repeatedly seen in pressure-test repos:
 
 - `runtime.kind: service` paired with opaque `run` instead of `launch.kind: command`
+- supported server launch adapters still duplicating bind flags in `launch.args` even though
+  explicit `runtime.listeners` already own the canonical bind host/port and
+  `launch.runtime_projection` should carry the translation
 - fake aggregate bodies such as `run: "true"` where `aggregate` should own the task shape
 - aggregate membership smuggled through `depends_on` instead of `aggregate.tasks`
 - Poetry declared under `tools.poetry` when it actually owns Python dependency truth
 - mixed-ecosystem setup script bodies where `prepare.kind: sequence` should own the lane instead
-- raw `uv sync` setup bodies in Python repos where first-class `prepare.source.kind: uv` now exists
+- raw `uv sync` or `uv pip install -r ...` setup bodies in Python repos where first-class
+  `prepare.source.kind: uv` now exists
 - raw `npm install` or non-lockfile setup when the repo truth is npm plus `package-lock.json`
 - invalid generic native package fields where explicit manager-owned package fields should own
   fulfillment or policy truth
@@ -666,6 +941,11 @@ serious OSS repo, evaluate these gates explicitly:
   supports them.
 - Bounded agent defaults: `agent.default_task`, `agent.safe_tasks`, and `verify_after_changes`
   prefer finite verification tasks over long-running dev loops.
+- Refusal controls: when a repo has an unsafe publish, deploy, or release lane, declare it under
+  `agent.refusal_canaries` and prove the real runner boundary with
+  `ota run --agent --expect-refusal <task>` or
+  `ota up --agent --expect-refusal --workflow <workflow>`. Do not model this as a shell test or
+  declare an expected reason: Ota must derive the refusal from the current closure.
 - Strong task-body modeling: aggregate verification is modeled with `aggregate`, and long-running
   services use `launch.kind: command` when Ota owns that surface.
 - Readiness truth: surfaces/checks prove the declared workflow is usable, not just that a process
@@ -810,8 +1090,8 @@ Read `references/official-sources.md` when you need canonical install links, off
 or public GitHub references for examples and contract behavior.
 
 Read `references/contract-patterns.md` when you want compact canonical shapes for service launch,
-aggregate verification, Poetry ownership, lockfile-strict npm hydration, env ownership, and
-minimum-version governance.
+aggregate verification, generated artifact producer/consumer lineage, Poetry ownership,
+lockfile-strict npm hydration, env ownership, and minimum-version governance.
 
 Read `references/review-checklist.md` when you want a compact review pass that focuses on modern
 contract-shape regressions rather than generic YAML validity.
@@ -821,6 +1101,10 @@ service ownership, env modeling, `requires_services`, `execution`, or post-run h
 
 Read `references/agent-and-governance-checklist.md` when you want a compact pass over `agent`,
 `checks`, `effects`, proof posture, and CI/version-floor governance.
+
+Read `references/pressure-testing-protocol.md` before pressure testing a repo. Do not call a
+pressure pass complete solely because existing Ota surfaces validated: it must also state whether
+the repo exposed a real Ota widening opportunity.
 
 ## Expected output style
 

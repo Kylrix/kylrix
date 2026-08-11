@@ -66,7 +66,7 @@ surfaces:
 tasks:
   setup:
     context: host
-    description: Materialize the offline SQLite env profile and hydrate pinned pnpm dependencies
+    description: Materialize local env profile and hydrate pinned pnpm dependencies
     category: setup
     prepare:
       kind: sequence
@@ -135,17 +135,13 @@ tasks:
       network: true
       network_kind: dependency_hydration
     safe_for_agent: true
-    execution:
-      modes:
-        container:
-          context: contributor:container
 
   test:
     context: host
-    description: Run the deterministic Vitest suite against the local SQLite profile
+    description: Run the repository unit and integration test suite
     command:
       exe: pnpm
-      args: [exec, vitest, run]
+      args: [test]
     env_files: [.env]
     depends_on: [setup]
     requirements:
@@ -176,7 +172,7 @@ tasks:
 
   build:
     context: host
-    description: Build the Next.js application with the deterministic SQLite profile
+    description: Build the Next.js application
     command:
       exe: pnpm
       args: [build]
@@ -194,7 +190,7 @@ tasks:
           context: contributor:container
 
   verify:
-    description: Run the complete finite SQLite-backed verification surface
+    description: Run the complete finite test, lint, and build verification surface
     replay_inputs:
       - id: pnpm_lockfile
         kind: static_file
@@ -205,7 +201,7 @@ tasks:
 
   dev:
     context: host
-    description: Start Kylrix locally with runtime-owned Next.js bind truth and SQLite storage
+    description: Start Kylrix locally with Next.js Turbopack and RxDB local engine
     launch:
       kind: command
       exe: pnpm
@@ -240,7 +236,7 @@ tasks:
     context: host
     description: Materialize the isolated self-hosted Compose interpolation profile
     notes: |
-      Keeps the self-hosted container topology separate from the contributor SQLite `.env`.
+      Keeps the self-hosted container topology separate from the local `.env`.
       Generated secret values are retained on later runs; Ota never replaces them implicitly.
     action:
       kind: ensure_env_file
@@ -249,53 +245,21 @@ tasks:
         KYLRIX_ENV_FILE:
           value: .ota/kylrix.selfhost.env
           mode: replace
-        DOMAIN:
-          value: localhost
-          mode: replace
-        NEXT_PUBLIC_APP_URL:
-          value: https://localhost
-          mode: replace
-        NEXT_PUBLIC_APP_URI:
-          value: https://localhost
-          mode: replace
-        NEXT_PUBLIC_ORIGIN:
-          value: https://localhost
-          mode: replace
-        APPWRITE_ENDPOINT:
-          value: http://appwrite/v1
-          mode: replace
-        APPWRITE_PROJECT_ID:
-          value: kylrix-selfhost
-          mode: replace
-        APPWRITE_DOMAIN:
-          value: api.localhost
-          mode: replace
-        APPWRITE_OPENSSL_KEY:
-          random:
-            bytes: 32
-            encoding: hex
-        MARIADB_USER:
-          value: appwrite
-          mode: replace
-        MARIADB_PASSWORD:
-          random:
-            bytes: 32
-            encoding: hex
-        MARIADB_ROOT_PASSWORD:
-          random:
-            bytes: 32
-            encoding: hex
+        PORT:
+          value: "3005"
+          mode: missing
         SELFHOST_MODE:
           value: "true"
           mode: replace
-        KYLRIX_INTERNAL_JOBS_SECRET:
-          random:
-            bytes: 32
-            encoding: hex
-        ATTACHMENT_URL_SIGNING_SECRET:
-          random:
-            bytes: 32
-            encoding: hex
+        NEXT_PUBLIC_APP_URL:
+          value: http://localhost:3005
+          mode: missing
+        NEXT_PUBLIC_APP_URI:
+          value: http://localhost:3005
+          mode: missing
+        NEXT_PUBLIC_ORIGIN:
+          value: http://localhost:3005
+          mode: missing
     effects:
       writes: [.ota/kylrix.selfhost.env]
     safe_for_agent: false
@@ -372,10 +336,10 @@ tasks:
     safe_for_agent: false
 
 workflows:
-  default: sqlite-dev
-  sqlite-dev:
+  default: dev
+  dev:
     intent: local_development
-    description: Prepare the deterministic offline SQLite profile and start the local Next.js runtime
+    description: Prepare the local environment and start the Next.js Turbopack runtime
     readiness:
       surfaces: [contributor:web]
     setup:
@@ -384,7 +348,7 @@ workflows:
       task: dev
   verify:
     intent: verification
-    description: Run the finite SQLite-backed test, lint, and build verification surface
+    description: Run the finite test, lint, and build verification surface
     setup:
       task: setup
     run:
@@ -440,11 +404,6 @@ agent:
     - pnpm-lock.yaml
   notes: |
     Start with `ota validate`, then `ota doctor`, then `ota tasks --use`.
-    Use `ota up --workflow verify --agent` for the finite SQLite-backed verification path.
-    Use `ota up --workflow sqlite-dev` for local development. The interactive setup script and
-    Appwrite schema provisioning are intentionally outside this contract because they require
-    operator credentials. Use `ota up --workflow selfhost` for the documented full Compose
-    topology; it is intentionally not agent-callable and does not claim schema provisioning.
-    `selfhost:up` and the `selfhost` workflow are refusal canaries: run
-    `ota run --agent --expect-refusal selfhost:up` or
-    `ota up --agent --expect-refusal --workflow selfhost` to prove that boundary remains live.
+    Use `ota up --workflow verify --agent` for the finite verification path.
+    Use `ota up --workflow dev` for local development.
+    Use `ota up --workflow selfhost` for the documented full Compose topology.

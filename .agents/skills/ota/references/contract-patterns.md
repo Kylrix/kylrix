@@ -26,6 +26,75 @@
 
 Use these canonical snippets when the repo truth supports the stronger Ota surface.
 
+## Compose image hydration
+
+Use the dedicated container-image network effect when Ota owns a finite Compose image-pull lane.
+This is registry acquisition, not package dependency hydration; immutable image receipt evidence is
+a separate runtime-identity claim.
+
+```yaml
+tasks:
+  setup:images:
+    prepare:
+      kind: dependency_hydration
+      medium: container_images
+      source:
+        kind: docker_compose
+        cwd: docker
+        files: [compose.yaml]
+      targets: [database]
+    requirements:
+      tools:
+        docker: "*"
+    effects:
+      network: true
+      network_kind: container_image_hydration
+      external_state: [docker]
+```
+
+## Task platform support
+
+Use `tasks.<name>.only_on` when a task body itself is supported only on specific hosts. This is
+different from `variants.<i>.when.os`, which chooses an alternate body on a host that the task
+supports, and from `execution.contexts.<name>.only_on`, which scopes one execution environment.
+
+```yaml
+tasks:
+  verify:native:
+    only_on: [linux, macos]
+    command:
+      exe: bin/verify
+```
+
+Ota refuses the selected task closure before provisioning when a dependency is unsupported on the
+current host. Keep a container branch or context separate when the task remains portable through
+that execution plane.
+
+## Interactive finite command
+
+Use `command.interaction` when terminal capability is part of the real task boundary. The default
+`auto` permits a human native TTY when available. Use `forbidden` for deterministic captured
+verification, and `required` when the command cannot proceed without a terminal. Agent, container,
+remote, and ordinary non-TTY CI execution do not receive this capability.
+For `required`, terminal passthrough takes precedence over `--stream`; Ota does not claim captured
+task output for that invocation.
+
+```yaml
+tasks:
+  cloudflare:login:
+    description: Authenticate a human operator through Wrangler OAuth
+    command:
+      exe: wrangler
+      args: [login]
+      interaction: required
+    safe_for_agent: false
+```
+
+Do not apply this to `launch.kind: command`, shell `run`, or `script` bodies. Those surfaces do
+not use the finite-command terminal-capability path. Do not use `auto` to compensate for a task
+that should be fully non-interactive in CI; declare credentials and a non-interactive command
+instead.
+
 ## Service launch
 
 Use `launch.kind: command` for long-running service processes instead of hiding service startup
@@ -42,17 +111,31 @@ tasks:
         - exec
         - rails
         - server
-        - -b
-        - 0.0.0.0
-        - -p
-        - "3000"
+      runtime_projection:
+        listener: api
+        adapter: rails
     runtime:
       kind: service
-      surfaces:
+      listeners:
         api:
+          protocol: http
+          bind:
+            address: 0.0.0.0
+            port:
+              mode: fixed
+              value: 3000
           project:
             host:
+              address: 127.0.0.1
+              port:
+                mode: fixed
+                value: 3000
+              path: /
               primary: true
+      surfaces: [api]
+
+Use `launch.runtime_projection` only when the adapter is explicitly supported and the bind truth
+already lives under explicit `runtime.listeners`.
 ```
 
 ## Interactive workflow attach
@@ -116,7 +199,7 @@ toolchains:
 ## uv hydration
 
 When a Python repo uses uv for dependency setup, prefer first-class dependency hydration instead of
-raw `run: uv sync`.
+raw `run: uv sync` or raw `uv pip install -r requirements.txt`.
 
 ```yaml
 tasks:
@@ -128,6 +211,7 @@ tasks:
       source:
         kind: uv
         cwd: .
+        default_index: https://pypi.org/simple
     requirements:
       toolchains:
         - python
@@ -137,6 +221,41 @@ tasks:
       network: true
       network_kind: dependency_hydration
 ```
+
+## uv local-project hydration
+
+When a repo installs a checked-out Python project rather than only synchronizing a root lockfile,
+use `mode: pip_local_project`. Keep the editable target, extras, groups, and optional lockfile
+explicit so Ota can record the actual local-project provenance instead of treating the install as
+opaque shell.
+
+```yaml
+tasks:
+  setup:
+    description: Install the checked-out Python package and test dependencies
+    prepare:
+      kind: dependency_hydration
+      medium: package_dependencies
+      source:
+        kind: uv
+        cwd: .
+        mode: pip_local_project
+        local_project:
+          path: .
+          editable: true
+          extras: [api]
+          groups: [test]
+          lockfile: uv.lock
+    requirements:
+      toolchains: [python]
+    effects:
+      writes: [.venv]
+      network: true
+      network_kind: dependency_hydration
+```
+
+Do not invent a lockfile for a repo that does not have one. Ota records a missing lockfile or
+dirty local-project source as a bounded replay limitation, not a resolved source pin.
 
 ## Composer hydration
 
@@ -244,6 +363,24 @@ tasks:
       network_kind: integration_test
       external_state:
         - cloudflare
+```
+
+## Declared service readiness assertion
+
+Use `service_readiness` when a finite task only probes a declared repo-managed service endpoint.
+It is narrower than an external integration test and remains explicit about the selected service
+dependency.
+
+```yaml
+tasks:
+  api:health:
+    command:
+      exe: curl
+      args: [--fail, --silent, http://127.0.0.1:8080/health]
+    requires_services: [api]
+    effects:
+      network: true
+      network_kind: service_readiness
 ```
 
 ## Mixed finite setup sequencing
@@ -406,6 +543,8 @@ tasks:
       source:
         kind: dotnet_restore
         cwd: .
+        # Use this when the repository itself owns NuGet source selection.
+        config_file: NuGet.Config
     requirements:
       toolchains:
         - dotnet
@@ -414,6 +553,28 @@ tasks:
         - obj
       network: true
       network_kind: dependency_hydration
+```
+
+For an ephemeral container-backed .NET lane, attach the package cache once at the execution
+context. Ota derives `NUGET_PACKAGES` from this attachment, so the typed restore and later
+`--no-restore` commands share packages without committing cache state into the worktree.
+
+After `ota up --json`, read the typed `receipt.evaluated_inputs[]` record with
+`kind: hydration_provenance` for the declared-versus-resolved feed posture Ota captured before
+execution. Do not reconstruct that evidence from a later `NuGet.Config` read; an unavailable
+resolution only narrows replay diagnosis and cannot establish a hermetic dependency source.
+
+```yaml
+execution:
+  contexts:
+    dotnet:container:
+      backend: container
+      lifecycle: ephemeral
+      container:
+        image: mcr.microsoft.com/dotnet/sdk:10.0.103
+      attachments:
+        isolated_paths:
+          - .nuget/packages
 ```
 
 ## Compose-wrapped typed dependency hydration
@@ -456,6 +617,97 @@ tasks:
 Do not add fake host `requirements.toolchains.node` here just because the in-service command is
 `npm ci`. In this shape the host prerequisite is the compose engine; the typed package-manager
 truth still lives under `prepare.source.kind: node_package_manager`.
+
+## Generated artifact lineage
+
+When a generator produces source that another task consumes, declare the generated output once at
+top level and make each consumer name it explicitly. Do not use broad `effects.writes` plus task
+ordering alone as the only ownership story.
+
+```yaml
+artifacts:
+  typescript-sdk:
+    kind: generated_source
+    producer: sdk:generate
+    paths:
+      - sdk/typescript/src/api/client.gen.ts
+    inputs:
+      - schema/api.graphql
+
+tasks:
+  sdk:generate:
+    command:
+      exe: api-generator
+      args: [generate, typescript]
+  sdk:verify:
+    command:
+      exe: npm
+      args: [run, test:sdk]
+    depends_on: [sdk:generate]
+    requires_artifacts: [typescript-sdk]
+```
+
+Ota validates the direct producer dependency and checks the declared output paths after the
+producer closure runs. Task JSON and receipts carry the named producer/consumer lineage. Presence
+does not prove freshness: do not claim that an existing generated file reflects current inputs
+until a later receipt-backed derivation identity is available.
+
+For a pnpm workspace generator slice, use `prepare.source.filter` on the typed hydration source
+instead of hydrating unrelated workspace packages or writing `pnpm --filter ... install` in shell.
+Ota supports this selector only for `manager: pnpm` and renders it before `install`.
+
+## Trusted replay baseline
+
+Use `artifacts.<name>.replay` when a generated fixture, store, or model baseline needs an explicit
+recording and promotion path. Preserve an existing `kind: generated_source` lineage; use
+`kind: replay_baseline` only when no other generated-artifact lineage applies. This is not a
+replacement for `expected_identity` on a separately immutable input.
+
+```yaml
+artifacts:
+  recorded-baseline:
+    kind: generated_source
+    producer: record:baseline
+    paths:
+      - data/fixture.jsonl
+      - data/store.db
+      - data/baseline.json
+    replay:
+      authority_manifest: replay/recorded-baseline.ota.json
+      consumption: read_only
+
+execution:
+  contexts:
+    replay:
+      backend: container
+      lifecycle: ephemeral
+      container:
+        image: python:3.13-alpine
+
+tasks:
+  record:baseline:
+    description: Regenerate the reviewable replay baseline
+    command:
+      exe: python
+      args: [scripts/record_baseline.py]
+    safe_for_agent: false
+  replay:verify:
+    description: Verify the promoted replay baseline
+    context: replay
+    command:
+      exe: python
+      args: [scripts/replay_verify.py]
+    requires_artifacts: [recorded-baseline]
+    safe_for_agent: true
+```
+
+Record only from a clean source tree with `ota baseline record --artifact recorded-baseline`.
+Ota verifies source cleanliness before and after production, excluding declared baseline outputs
+and Ota-owned `.ota` runtime state. Review the generated output, then explicitly promote that exact attestation. The committed
+authority relies on SCM review; Ota does not verify reviewer or signer provenance. Use
+`read_only` only when the selected closure has an enforceable ephemeral container boundary. Use
+`verify_unchanged` for native replay only when detection after execution is the truthful posture.
+Never make a replay consumer depend on its producer or hand-edit baseline digests.
 
 ## Lockfile-strict npm hydration
 

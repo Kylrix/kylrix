@@ -114,6 +114,40 @@ when a managed Compose service owns stable compose file selection, interpolation
 selection truth. Do not push that ownership back into shell `docker compose -f ...`,
 `--env-file ...`, or `--profile ...` flags.
 
+## Managed lifecycle proof
+
+Use `workflows.<name>.proof.lifecycle` only when Ota can observe manager state before and after
+the transaction. Reference existing manager-owned services; do not copy start, stop, status, or
+readiness shell into the workflow.
+
+```yaml
+services:
+  database:
+    manager:
+      kind: compose
+      file: compose.yaml
+      service: database
+    lifecycle:
+      teardown_assertion: manager_inactive
+
+workflows:
+  smoke:
+    run:
+      task: build
+    proof:
+      lifecycle:
+        services: [database]
+        assertion:
+          task: assert-database
+```
+
+Run `ota proof lifecycle --workflow smoke --json --archive` for that bounded transition. Ota
+leases only manager-observed inactive services, finalizes leased services in reverse order after
+all terminal outcomes, and preserves pre-existing or unknown-state services. Its archive is local
+transaction evidence, not CI eligibility or application-output proof; retain its emitted
+`not_proved[]` boundaries. Generic host command pairs remain ineligible without typed manager
+state or a runner-owned isolated-boundary absence attestation.
+
 ## Env modeling
 
 Prefer first-class env declaration before shell glue. Use `env.sources`, `env.vars`, and
