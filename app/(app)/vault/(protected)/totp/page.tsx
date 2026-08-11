@@ -323,7 +323,6 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
 
   useEffect(() => {
     if (!user?.$id) return;
-    if (!isVaultUnlocked() && !unlockOnDemand) return;
 
     const cacheKey = `vault_totp_${user.$id}`;
     let isCancelled = false;

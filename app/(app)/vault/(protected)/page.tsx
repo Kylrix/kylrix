@@ -288,10 +288,8 @@ function DashboardPageContent() {
 
   useEffect(() => {
     if (!user?.$id) return;
-    if (isVaultUnlocked() || unlockOnDemand) {
-      void hydrateVaultData();
-    }
-  }, [user, isVaultUnlocked, unlockOnDemand, hydrateVaultData]);
+    void hydrateVaultData();
+  }, [user, hydrateVaultData]);
 
   const openDeleteModal = (cred: Credentials) => {
     requireUnlock(() => {
