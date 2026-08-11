@@ -57,16 +57,15 @@ export function useAccessControlMenuItems({
             variant: 'destructive' as const,
             onClick: async () => {
               try {
-                const res = await toggleResourcePublicGuest({
-                  resourceType,
-                  resourceId,
-                  mode: 'make_private',
-                  projectId
+                // Instant toggle via LocalEngine — local optimistic, surpasses direct UI→Appwrite
+                const { LocalEngine } = await import('@/lib/services/LocalEngine');
+                const cacheKey = `share:${resourceType}:${resourceId}`;
+                await LocalEngine.instantWrite(cacheKey, { isPublic: false, isGuest: false }, async (jwt) => {
+                  const { toggleResourcePublicGuest } = await import('@/lib/actions/client-ops');
+                  return toggleResourcePublicGuest({ resourceType, resourceId, mode: 'make_private', projectId });
+                }).then((res: any) => {
+                  if (res?.success !== false) { showSuccess('Sharing stopped.'); onUpdate?.({ isPublic: false, isGuest: false }); }
                 });
-                if (res.success) {
-                  showSuccess('Sharing stopped.');
-                  onUpdate?.({ isPublic: false, isGuest: false });
-                }
               } catch (err: any) {
                 showError('Failed to stop sharing: ' + err.message);
               }
@@ -103,21 +102,17 @@ export function useAccessControlMenuItems({
       } : {
         onClick: async () => {
           try {
-            const res = await toggleResourcePublicGuest({
-              resourceType,
-              resourceId,
-              mode: 'publish',
-              projectId
-            });
-            if (res.success) {
-              try {
-                await copyShareUrl();
-                showSuccess('Published & Link copied');
-              } catch {
-                showSuccess('Published');
+            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+            const cacheKey = `share:${resourceType}:${resourceId}`;
+            await LocalEngine.instantWrite(cacheKey, { isPublic: true, isGuest: true }, async () => {
+              const { toggleResourcePublicGuest } = await import('@/lib/actions/client-ops');
+              return toggleResourcePublicGuest({ resourceType, resourceId, mode: 'publish', projectId });
+            }).then(async (res: any) => {
+              if (res?.success !== false) {
+                try { await copyShareUrl(); showSuccess('Published & Link copied'); } catch { showSuccess('Published'); }
+                onUpdate?.({ isPublic: true, isGuest: true });
               }
-              onUpdate?.({ isPublic: true, isGuest: true });
-            }
+            });
           } catch (err: any) {
             showError('Failed to publish: ' + err.message);
           }
