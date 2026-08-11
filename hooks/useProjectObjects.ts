@@ -33,7 +33,7 @@ export function useProjectObjects(
   projectId: string | null | undefined,
   entityKind: string,
 ): UseProjectObjectsResult {
-  const { fetchOptimized, invalidate: nexusInvalidate } = useDataNexus();
+  const { invalidate: nexusInvalidate } = useDataNexus();
   const [rows, setRows] = useState<ProjectObjects[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -72,18 +72,18 @@ export function useProjectObjects(
         setLoading(true);
       }
 
-      // 2. Background (or forced) remote fetch via DataNexus optimised fetcher
+      // 2. Unified LocalEngine query — single gateway with Realtime, no duplicate DataNexus tower
       try {
         const cacheKey = projectObjectsKindCacheKey(projectId, entityKind);
-        // When forced, bust the nexus cache first so fetchOptimized re-fetches
         if (force) nexusInvalidate(cacheKey);
-        const remote = await fetchOptimized<ProjectObjects[]>(
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const remote = await LocalEngine.query<ProjectObjects[]>(
           cacheKey,
           async () => {
             const result = await ProjectsService.listProjectObjectsByKind(projectId, entityKind);
             return result?.rows ?? [];
           },
-          PROJECT_OBJECTS_TTL,
+          { ttl: PROJECT_OBJECTS_TTL, realtimeChannel: `databases.${(await import('@/lib/appwrite/config')).APPWRITE_CONFIG.DATABASES.CHAT}.collections.project_objects.documents` }
         );
         if (mountedRef.current && remote) {
           setRows((prev) => {
@@ -114,7 +114,7 @@ export function useProjectObjects(
         if (mountedRef.current) setLoading(false);
       }
     },
-    [projectId, entityKind, fetchOptimized],
+    [projectId, entityKind],
   );
 
   // Reset and reload whenever projectId or entityKind changes

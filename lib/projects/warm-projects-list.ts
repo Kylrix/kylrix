@@ -22,42 +22,25 @@ export function normalizeProjectsList(raw: unknown): Projects[] {
 }
 
 /**
- * Session → RxDB f_projects_list → DataNexus → network.
- * Prefer LocalEngine cache used by attach-object so workspace switcher stays in sync.
+ * Collapsed: sole gateway is LocalEngine — warmProjectsList now delegates to LocalEngine.query
+ * Session → LocalEngine → network (with Realtime), DataNexus path removed to cut duplicate reads
  */
 export async function warmProjectsList(deps: NexusDeps): Promise<Projects[]> {
   const session = getSessionProjectsList();
   if (session?.length) return session;
 
-  try {
-    const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    const local = normalizeProjectsList(await LocalEngine.cacheGet(`f_projects_list_${deps.userId}`));
-    if (local.length) {
-      setSessionProjectsList(local);
-      return local;
-    }
-  } catch {
-    /* optional */
-  }
-
-  const cached = normalizeProjectsList(
-    await deps.getCachedDataAsync<Projects[]>(
-      projectsListCacheKey(deps.userId),
-      PROJECTS_LIST_TTL));
-  if (cached.length) {
-    setSessionProjectsList(cached);
-    return cached;
-  }
-
+  const { LocalEngine } = await import('@/lib/services/LocalEngine');
+  const cacheKey = `f_projects_list_${deps.userId}`;
   const rows = normalizeProjectsList(
-    await deps.fetchOptimized(
-      projectsListCacheKey(deps.userId),
-      async () => (await ProjectsService.listProjects(true)).rows,
-      PROJECTS_LIST_TTL));
+    await LocalEngine.query(
+      cacheKey,
+      async () => (await ProjectsService.listProjects(true)).rows as any,
+      { ttl: PROJECTS_LIST_TTL, realtimeChannel: `databases.${(await import('@/lib/appwrite/config')).APPWRITE_CONFIG.DATABASES.CHAT}.collections.projects.documents` }
+    )
+  );
   setSessionProjectsList(rows);
   try {
-    const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    void LocalEngine.cacheSet(`f_projects_list_${deps.userId}`, rows);
+    void LocalEngine.cacheSet(cacheKey, rows);
   } catch {
     /* optional */
   }

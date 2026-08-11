@@ -250,71 +250,10 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
         fetcher: () => Promise<T>, 
         ttl: number = DEFAULT_TTL
     ): Promise<T> {
-        // 1. Check Synchronous Mirror (even if stale, return immediately and revalidate in bg)
-        const memoryEntry = memoryCache.current.get(key);
-        if (memoryEntry) {
-            const isStale = Date.now() - memoryEntry.timestamp >= ttl;
-            if (isStale) {
-                (async () => {
-                    try {
-                        const data = await fetcher();
-                        if (JSON.stringify(data) !== JSON.stringify(memoryEntry.data)) {
-                            await setCachedData(key, data, ttl);
-                        }
-                    } catch (e) {
-                        console.warn(`[Nexus] Background refresh failed for ${key}:`, e);
-                    }
-                })();
-            }
-            return memoryEntry.data as T;
-        }
-
-        // 2. Check RxDB Substrate (if memory miss, return immediately and revalidate in bg)
-        try {
-            const db = await getRxDB();
-            const doc = await db.cache.findOne(key).exec();
-            
-            if (doc) {
-                const data = doc.data as T;
-                memoryCache.current.set(key, { data, timestamp: doc.timestamp });
-                
-                const isStale = Date.now() - doc.timestamp >= ttl;
-                if (isStale) {
-                    (async () => {
-                        try {
-                            const fresh = await fetcher();
-                            if (JSON.stringify(fresh) !== JSON.stringify(data)) {
-                                await setCachedData(key, fresh, ttl);
-                            }
-                        } catch (e) {
-                            console.warn(`[Nexus] Background refresh from RxDB failed for ${key}:`, e);
-                        }
-                    })();
-                }
-                return data;
-            }
-        } catch (e) {
-            console.warn(`[Nexus] RxDB Substrate read failed for ${key}`, e);
-        }
-
-        // 3. Deduplication (only run direct fetch if no cache is present)
-        const existingRequest = activeRequests.current.get(key);
-        if (existingRequest) return existingRequest;
-
-        // 4. Remote Fetch (Network Sensing)
-        const request = (async () => {
-            try {
-                const data = await fetcher();
-                await setCachedData(key, data, ttl);
-                return data;
-            } finally {
-                activeRequests.current.delete(key);
-            }
-        })();
-
-        activeRequests.current.set(key, request);
-        return request;
-    }, [setCachedData]);
+        // Collapsed: delegate to LocalEngine sole gateway — single TTL + Realtime, no duplicate tower
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        return LocalEngine.query<T>(key, fetcher, { ttl });
+    }, []);
 
     return (
         <DataNexusContext.Provider value={{ 

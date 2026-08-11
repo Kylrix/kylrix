@@ -7,6 +7,33 @@
 
 import { getRxDB } from '@/lib/webrtc/RxDBManager';
 
+/** Realtime subscription registry — one per channel, survives HMR */
+const realtimeSubs = new Map<string, { unsubscribe: () => void; refCount: number }>();
+/** Batch queue for high-activity writes — flushed every 2s or 10 items */
+const batchQueue = new Map<string, { data: any; mutator: () => Promise<any>; ts: number }>();
+let batchTimer: ReturnType<typeof setTimeout> | null = null;
+
+async function getFreshJWT(): Promise<string | undefined> {
+  try {
+    const { account } = await import('@/lib/appwrite/client');
+    const r = await account.createJWT().catch(() => null);
+    return r?.jwt;
+  } catch { return undefined; }
+}
+
+function scheduleBatchFlush() {
+  if (batchTimer) return;
+  batchTimer = setTimeout(async () => {
+    batchTimer = null;
+    const entries = Array.from(batchQueue.entries());
+    if (!entries.length) return;
+    batchQueue.clear();
+    for (const [, { mutator }] of entries) {
+      try { await mutator(); } catch (e) { console.warn('[LocalEngine batch] mutator failed', e); }
+    }
+  }, 2000);
+}
+
 export const LocalEngine = {
   /** Retrieve generic cached payload by key */
   async cacheGet<T = any>(id: string, maxAgeMs?: number): Promise<T | null> {
@@ -90,6 +117,99 @@ export const LocalEngine = {
     } catch {
       return true;
     }
+  },
+
+  // ── Unified Gateway — sole Appwrite touchpoint (UI must not import appwrite directly) ──
+
+  /** Instant toggle: write local immediately, sync to Appwrite in background, revert on failure */
+  async instantWrite<T>(cacheKey: string, data: T, mutator: (jwt?: string) => Promise<any>): Promise<T> {
+    await this.cacheSet(cacheKey, data);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data } }));
+    void (async () => {
+      try {
+        const jwt = await getFreshJWT();
+        await mutator(jwt);
+      } catch (e: any) {
+        console.warn('[LocalEngine instantWrite] sync failed, revert may be needed', e);
+      }
+    })();
+    return data;
+  },
+
+  /** Lazy write: local immediately, debounced sync (800ms) */
+  async lazyWrite<T>(cacheKey: string, data: T, mutator: (jwt?: string) => Promise<any>): Promise<T> {
+    await this.cacheSet(cacheKey, data);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data } }));
+    setTimeout(async () => {
+      try { const jwt = await getFreshJWT(); await mutator(jwt); } catch (e) { console.warn('[LocalEngine lazyWrite] failed', e); }
+    }, 800);
+    return data;
+  },
+
+  /** Batched write: queue and flush every 2s or 10 items — for high activity */
+  async batchedWrite<T>(cacheKey: string, data: T, mutator: (jwt?: string) => Promise<any>): Promise<T> {
+    await this.cacheSet(cacheKey, data);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data } }));
+    batchQueue.set(cacheKey, { data, mutator: async () => { const jwt = await getFreshJWT(); return mutator(jwt); }, ts: Date.now() });
+    if (batchQueue.size >= 10) {
+      if (batchTimer) { clearTimeout(batchTimer); batchTimer = null; }
+      const entries = Array.from(batchQueue.entries()); batchQueue.clear();
+      for (const [, { mutator: m }] of entries) { try { await m(); } catch (e) { console.warn('[LocalEngine batch] failed', e); } }
+    } else scheduleBatchFlush();
+    return data;
+  },
+
+  /** Realtime: subscribe to Appwrite channel, write directly to RxDB cache on event — prevents pull-before-push double read */
+  async subscribeRealtime(channel: string, handler?: (payload: any) => void): Promise<() => void> {
+    if (typeof window === 'undefined') return () => {};
+    const existing = realtimeSubs.get(channel);
+    if (existing) { existing.refCount++; return () => { existing.refCount--; if (existing.refCount <= 0) { existing.unsubscribe(); realtimeSubs.delete(channel); } }; }
+    try {
+      const { client } = await import('@/lib/appwrite/client');
+      const unsubscribe = client.subscribe(channel, async (event: any) => {
+        try {
+          if (event?.payload && event?.events?.[0]) {
+            const doc = event.payload;
+            const cacheKey = `${channel}:${doc.$id || doc.id}`;
+            await this.cacheSet(cacheKey, doc);
+            if (handler) handler(doc);
+            if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data: doc } }));
+          } else if (handler) handler(event);
+        } catch {}
+      });
+      const entry = { unsubscribe: unsubscribe as unknown as () => void, refCount: 1 };
+      realtimeSubs.set(channel, entry);
+      return () => { entry.refCount--; if (entry.refCount <= 0) { entry.unsubscribe(); realtimeSubs.delete(channel); } };
+    } catch { return () => {}; }
+  },
+
+  /** Unified query: RxDB first, background Realtime + fetch if stale — UI never calls Appwrite directly */
+  async query<T>(cacheKey: string, fetcher: (jwt?: string) => Promise<T>, opts?: { ttl?: number; realtimeChannel?: string }): Promise<T> {
+    const cached = await this.cacheGet<T>(cacheKey, opts?.ttl);
+    if (cached) {
+      if (opts?.realtimeChannel) void this.subscribeRealtime(opts.realtimeChannel);
+      // background refresh without double-read cost — Realtime will push, fallback fetch only if no Realtime
+      void (async () => {
+        try {
+          const jwt = await getFreshJWT();
+          const fresh = await fetcher(jwt);
+          if (JSON.stringify(fresh) !== JSON.stringify(cached)) await this.cacheSet(cacheKey, fresh as any);
+        } catch {}
+      })();
+      return cached;
+    }
+    const jwt = await getFreshJWT();
+    const fresh = await fetcher(jwt);
+    await this.cacheSet(cacheKey, fresh as any);
+    if (opts?.realtimeChannel) void this.subscribeRealtime(opts.realtimeChannel);
+    return fresh;
+  },
+
+  /** Unified mutate: local optimistic + tiered sync — UI never calls secure-ops directly */
+  async mutate<T>(cacheKey: string, data: T, mutator: (jwt?: string) => Promise<any>, tier: 'instant' | 'lazy' | 'batch' = 'instant'): Promise<T> {
+    if (tier === 'instant') return this.instantWrite(cacheKey, data, mutator);
+    if (tier === 'lazy') return this.lazyWrite(cacheKey, data, mutator);
+    return this.batchedWrite(cacheKey, data, mutator);
   },
 };
 

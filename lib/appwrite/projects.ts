@@ -16,54 +16,31 @@ const PROJECT_OBJECTS_COLLECTION_ID = 'project_objects';
 const projectsCache = getNamedListCache<any[]>('projects', 60000); // 1 minute cache
 
 export const ProjectsService = {
+  // Collapsed: sole gateway is LocalEngine.query — this is now a thin delegating shim
   async listProjects(force = false) {
-    if (typeof window !== 'undefined') {
-      try {
-        const user = await getCurrentUser().catch(() => null);
-        const uid = user?.$id;
-        if (uid && uid !== 'guest') {
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const cached = await LocalEngine.cacheGet<any[]>(`f_projects_list_${uid}`);
-          if (cached && cached.length > 0 && !force) {
-            this.fetchRemoteProjects(force).then(async (remoteRows) => {
-              if (remoteRows && remoteRows.length > 0) {
-                await LocalEngine.cacheSet(`f_projects_list_${uid}`, remoteRows);
-                // also keep legacy shared key in sync for fallback readers
-                await LocalEngine.cacheSet('f_projects_list', remoteRows).catch(() => {});
-              }
-            }).catch(() => {});
-            return { rows: cached };
-          }
-        } else {
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const cached = await LocalEngine.cacheGet<any[]>('f_projects_list');
-          if (cached && cached.length > 0 && !force) {
-            this.fetchRemoteProjects(force).then(async (remoteRows) => {
-              if (remoteRows && remoteRows.length > 0) {
-                await LocalEngine.cacheSet('f_projects_list', remoteRows);
-              }
-            }).catch(() => {});
-            return { rows: cached };
-          }
-        }
-      } catch {}
-    }
-
-    const rows = await this.fetchRemoteProjects(force);
-    if (typeof window !== 'undefined' && rows && rows.length > 0) {
-      try {
-        const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const user = await getCurrentUser().catch(() => null);
-        const uid = user?.$id;
-        if (uid && uid !== 'guest') {
-          void LocalEngine.cacheSet(`f_projects_list_${uid}`, rows);
-          void LocalEngine.cacheSet('f_projects_list', rows).catch(() => {});
-        } else {
-          void LocalEngine.cacheSet('f_projects_list', rows);
-        }
-      } catch {}
-    }
-    return { rows };
+    const user = await getCurrentUser().catch(() => null);
+    const uid = user?.$id && user.$id !== 'guest' ? user.$id : 'guest';
+    const cacheKey = uid !== 'guest' ? `f_projects_list_${uid}` : 'f_projects_list';
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    // Use LocalEngine unified query with Realtime for list blocks (idea/goals page cards)
+    return LocalEngine.query<{ rows: any[] }>(
+      cacheKey,
+      async (jwt) => {
+        const rows = await this.fetchRemoteProjects(force);
+        return { rows } as any;
+      },
+      { ttl: force ? 0 : 30 * 60 * 1000, realtimeChannel: `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.projects.documents` }
+    ).then((res: any) => {
+      // LocalEngine.query returns {rows} or raw array — normalize
+      if (Array.isArray(res)) return { rows: res };
+      if (res && Array.isArray(res.rows)) return res;
+      if (res && Array.isArray(res.data)) return { rows: res.data };
+      return res as { rows: any[] };
+    }).catch(async () => {
+      // Fallback to direct fetch if LocalEngine path fails (never double-read)
+      const rows = await this.fetchRemoteProjects(force);
+      return { rows };
+    });
   },
 
   async fetchRemoteProjects(_force = false) {
@@ -214,84 +191,38 @@ export const ProjectsService = {
   },
 
   /**
-   * Fetch project_objects filtered by entityKind (e.g. 'note', 'goal', 'credential').
-   * The unique index (projectId, entityKind, entityId) covers this query efficiently.
-   * Results are written to LocalEngine so subsequent calls resolve instantly from cache.
+   * Fetch project_objects filtered by entityKind — collapsed to LocalEngine gateway with Realtime for workspace cards
+   * UI never calls Appwrite directly; LocalEngine handles RxDB → Realtime → fetch
    */
   async listProjectObjectsByKind(projectId: string, entityKind: string) {
     const { projectObjectsKindCacheKey } = await import('@/lib/projects/projects-cache');
     const cacheKey = projectObjectsKindCacheKey(projectId, entityKind);
-
-    // Helper: paginated fetch all (Appwrite default 25 would truncate workspaces >25)
-    const fetchAllRemote = async (): Promise<any[]> => {
-      const all: any[] = [];
-      let cursor: string | null = null;
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const queries: string[] = [
-          Query.equal('projectId', projectId),
-          Query.equal('entityKind', entityKind),
-          Query.limit(100),
-          Query.orderDesc('$createdAt'),
-        ];
-        if (cursor) queries.push(Query.cursorAfter(cursor));
-        const page: any = await (databases as any).listRows(
-          DATABASE_ID,
-          PROJECT_OBJECTS_COLLECTION_ID,
-          queries,
-        );
-        const rows: any[] = page?.rows || [];
-        if (rows.length === 0) break;
-        all.push(...rows);
-        if (rows.length < 100) break;
-        cursor = rows[rows.length - 1].$id;
-        // Safety cap for workspaces — 500 objects per kind covers current caps
-        if (all.length >= 500) break;
-      }
-      return all;
-    };
-
-    // 1. Serve from local copy immediately (background refresh below — merge, never replace)
-    if (typeof window !== 'undefined') {
-      try {
-        const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const cached = await LocalEngine.cacheGet<any[]>(cacheKey);
-        if (cached && cached.length > 0) {
-          // Fire background refresh to keep local copy warm — merge into cache, never wipe
-          fetchAllRemote()
-            .then(async (remoteRows: any[]) => {
-              if (!remoteRows?.length) return;
-              const existing = (await LocalEngine.cacheGet<any[]>(cacheKey)) || cached;
-              const byId = new Map<string, any>();
-              existing.forEach((r: any) => {
-                const k = r.entityId || r.$id || (r as any).id;
-                if (k) byId.set(k, r);
-              });
-              remoteRows.forEach((r: any) => {
-                const k = r.entityId || r.$id || (r as any).id;
-                if (k) byId.set(k, r);
-              });
-              const merged = Array.from(byId.values());
-              await LocalEngine.cacheSet(cacheKey, merged);
-            })
-            .catch(() => {});
-          return { rows: cached };
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    return LocalEngine.query<{ rows: any[] }>(
+      cacheKey,
+      async () => {
+        const all: any[] = [];
+        let cursor: string | null = null;
+        while (true) {
+          const queries: string[] = [
+            Query.equal('projectId', projectId),
+            Query.equal('entityKind', entityKind),
+            Query.limit(100),
+            Query.orderDesc('$createdAt'),
+          ];
+          if (cursor) queries.push(Query.cursorAfter(cursor));
+          const page: any = await (databases as any).listRows(DATABASE_ID, PROJECT_OBJECTS_COLLECTION_ID, queries);
+          const rows: any[] = page?.rows || [];
+          if (rows.length === 0) break;
+          all.push(...rows);
+          if (rows.length < 100) break;
+          cursor = rows[rows.length - 1].$id;
+          if (all.length >= 500) break;
         }
-      } catch {}
-    }
-
-    // 2. No local copy — fetch remote (paginated) and persist
-    const allRows = await fetchAllRemote();
-    const result = { rows: allRows, total: allRows.length } as any;
-
-    if (typeof window !== 'undefined' && result?.rows?.length) {
-      try {
-        const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        void LocalEngine.cacheSet(cacheKey, result.rows);
-      } catch {}
-    }
-
-    return result;
+        return { rows: all } as any;
+      },
+      { realtimeChannel: `databases.${DATABASE_ID}.collections.${PROJECT_OBJECTS_COLLECTION_ID}.documents` }
+    );
   },
 
 

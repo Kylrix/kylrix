@@ -41,7 +41,8 @@ const NoteSchema = {
         crdt: getCRDTSchemaPart()
     },
     required: ['id', 'userId', 'updatedAt'],
-    crdt: { field: 'crdt' }
+    crdt: { field: 'crdt' },
+    indexes: ['userId', ['userId', 'updatedAt']]
 };
 
 const GenericCacheSchema = {
@@ -86,7 +87,8 @@ const TaskSchema = {
         updatedAt: { type: 'string', format: 'date-time' },
         _deleted: { type: 'boolean' }
     },
-    required: ['id', 'title', 'userId']
+    required: ['id', 'title', 'userId'],
+    indexes: ['userId', 'projectId', ['userId', 'projectId']]
 };
 
 const FormSchema = {
