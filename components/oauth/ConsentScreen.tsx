@@ -40,15 +40,6 @@ export function ConsentScreen() {
       setNeedsSignIn(true);
     }
   }, [forceAccountSelect, isAuthenticated, grantIdParam]);
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      import('@/lib/account/vault').then(({ listAccounts }) => {
-        setSavedAccounts(listAccounts());
-      }).catch(() => null);
-    }
-  }, []);
-
-  const grantIdParam = searchParams.get('grant_id') || searchParams.get('grantId');
 
   const authorizeParams = useMemo(
     () => ({

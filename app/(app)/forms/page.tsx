@@ -24,6 +24,10 @@ import { useRouter } from 'next/navigation';
 import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuItems';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { MultiSectionContainer } from '@/context/SectionContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useFAB } from '@/context/FABContext';
+import { LocalEngine } from '@/lib/services/LocalEngine';
+import toast from 'react-hot-toast';
 
 export default function FormsDashboard() {
     const { user } = useAuth();
@@ -39,7 +43,8 @@ export default function FormsDashboard() {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [selectedForm, setSelectedForm] = useState<Forms | null>(null);
     const [selectedDraft, setSelectedDraft] = useState<FormDraft | null>(null);
-    
+    const [formDraftStatus, setFormDraftStatus] = useState<Record<string, boolean>>({});
+    void formDraftStatus;
 
 
     useEffect(() => {
@@ -54,12 +59,7 @@ export default function FormsDashboard() {
         return () => resetConfiguration();
     }, [setConfiguration, resetConfiguration]);
 
-    useEffect(() => {
-        const checkSize = () => setIsDesktop(window.innerWidth >= 1024);
-        checkSize();
-        window.addEventListener('resize', checkSize);
-        return () => window.removeEventListener('resize', checkSize);
-    }, []);
+
 
     const formsRef = useRef<Forms[]>([]);
     useEffect(() => {
