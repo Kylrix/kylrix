@@ -140,6 +140,7 @@ function ChatHandler({ onResolved }: { onResolved: (id: string) => void }) {
 }
 
 function ConnectChatsBody() {
+  const router = useRouter();
   const isDesktop = useIsDesktop();
   const { selectedId, selectChat } = useSelectedChatId();
   const [activeTab, setActiveTab] = useState<'secure' | 'public'>(() => 'secure');

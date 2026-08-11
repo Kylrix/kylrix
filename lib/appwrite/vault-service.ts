@@ -158,11 +158,12 @@ async function listRowsMergedAcrossFilters(
           Query.offset(offset),
           ...extraQueries,
         ]);
-        for (const row of response.rows) {
+        const rows = Array.isArray(response?.rows) ? response.rows : [];
+        for (const row of rows) {
           byId.set(row.$id, row);
         }
         offset += pageSize;
-      } while (response.rows.length > 0 && offset < response.total);
+      } while (Array.isArray(response?.rows) && response.rows.length > 0 && offset < (response.total || 0));
     }));
 
   return Array.from(byId.values());
@@ -631,7 +632,8 @@ export class VaultService {
           Query.limit(100)
         ]
       );
-      return response.rows.map((row: any) => row.resourceId).filter(Boolean);
+      const rows = Array.isArray(response?.rows) ? response.rows : [];
+      return rows.map((row: any) => row.resourceId).filter(Boolean);
     } catch (error) {
       console.error(`[VaultService] Failed to list collaborated resource IDs for ${resourceType}:`, error);
       return [];
