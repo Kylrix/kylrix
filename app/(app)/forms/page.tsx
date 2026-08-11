@@ -427,143 +427,123 @@ export default function FormsDashboard() {
                                             <span>Start Building</span>
                                         </button>
                                     </div>
+function FormCard({
+    form,
+    onTogglePin,
+    onEdit,
+    onOpenSettings,
+    onDelete,
+    onUpdate
+}: {
+    form: any;
+    onTogglePin: (form: any) => void;
+    onEdit: (form: any) => void;
+    onOpenSettings: (form: any) => void;
+    onDelete: (form: any) => void;
+    onUpdate: () => void;
+}) {
+    const { isPinned: isResourcePinned } = useResourcePins();
+    const { openMenu } = useContextMenu();
+    const { open: openDrawer } = useUnifiedDrawer();
+
+    const pinned = isResourcePinned('form', form.$id, form.userId, form.isPinned);
+    const accessControlItems = useAccessControlMenuItems({
+        resourceType: 'form',
+        resourceId: form.$id,
+        isPublic: !!form.isPublic,
+        isGuest: !!form.isGuest,
+        resourceTitle: form.title,
+        onUpdate
+    });
+
+    const contextMenuItems = [
+        { label: pinned ? 'Unpin' : 'Pin', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: () => onTogglePin(form) },
+        ...accessControlItems,
+        { label: 'Edit Schema', icon: <Edit size={16} />, onClick: () => onEdit(form) },
+        { label: 'Settings', icon: <Settings size={16} />, onClick: () => onOpenSettings(form) },
+        { 
+            label: 'Project Workflow', 
+            icon: <FolderKanban size={16} />, 
+            onClick: () => openDrawer('new-project', {
+                template: {
+                    id: 'form-to-project',
+                    title: 'Analyze Responses', 
+                    summary: 'Convert intake forms into context and auto-spin execution tasks.',
+                    color: '#6366F1'
+                },
+                formId: form.$id,
+                selectedResourceId: form.$id,
+                formTitle: form.title,
+                formDescription: form.description || ''
+            })
+        },
+        { label: 'Delete', icon: <Trash2 size={16} />, variant: 'destructive' as const, onClick: () => onDelete(form) }
+    ];
+
+    const handleRightClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (openMenu) {
+            openMenu({
+                x: e.clientX,
+                y: e.clientY,
+                items: contextMenuItems,
+                appType: 'flow'
+            });
+        }
+    };
+
+    return (
+        <div 
+            onContextMenu={handleRightClick}
+            className="group relative bg-[#161412] hover:bg-[#1A1816] border border-[#34322F] hover:border-[#6366F1]/30 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between"
+        >
+            <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-clash font-extrabold text-white text-lg tracking-tight group-hover:text-[#6366F1] transition-colors line-clamp-1">
+                        {form.title}
+                    </h3>
+                    <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase font-mono tracking-wider border ${
+                            form.status === 'published' 
+                                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                                : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                        }`}>
+                            {form.status || 'draft'}
+                        </span>
+                        {pinned && <Pin size={14} className="rotate-45 text-[#F59E0B] fill-[#F59E0B]" />}
+                    </div>
+                </div>
+
+                <p className="text-xs text-[#9B9691] font-satoshi line-clamp-2 min-h-[2.5rem]">
+                    {form.description || 'No description provided.'}
+                </p>
+            </div>
+
+            <div className="pt-6 mt-6 border-t border-[#34322F]/50 flex items-center justify-between">
+                <div className="text-[11px] text-[#9B9691] font-satoshi">
+                    Updated {new Date(form.updatedAt || form.$createdAt).toLocaleDateString()}
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <button 
+                        type="button" 
+                        onClick={() => onEdit(form)}
+                        className="px-3 py-1.5 rounded-lg border border-[#34322F] hover:border-[#6366F1] text-xs font-bold text-white hover:bg-[#6366F1]/10 transition-colors font-satoshi"
+                    >
                                 ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {filteredForms.map((form) => {
-                                            const pinned = isResourcePinned('form', form.$id, form.userId, form.isPinned);
-                                            
-// eslint-disable-next-line react-hooks/rules-of-hooks
-                                            const accessControlItems = useAccessControlMenuItems({
-                                                resourceType: 'form',
-                                                resourceId: form.$id,
-                                                isPublic: !!form.isPublic,
-                                                isGuest: !!form.isGuest,
-                                                resourceTitle: form.title,
-                                                onUpdate: () => fetchForms(false)
-                                            });
-
-// eslint-disable-next-line react-hooks/rules-of-hooks
-                                            const contextMenuItems = [
-                                                { label: pinned ? 'Unpin' : 'Pin', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: () => handleTogglePin(form) },
-                                                ...accessControlItems,
-                                                { label: 'Edit Schema', icon: <Edit size={16} />, onClick: () => handleEdit(form) },
-                                                { label: 'Settings', icon: <Settings size={16} />, onClick: () => handleOpenSettings(form) },
-                                                { 
-                                                    label: 'Project Workflow', 
-                                                    icon: <FolderKanban size={16} />, 
-                                                    onClick: () => openDrawer('new-project', {
-                                                        template: {
-                                                            id: 'form-to-project',
-                                                            title: 'Analyze Responses', 
-                                                            summary: 'Convert intake forms into context and auto-spin execution tasks.',
-                                                            color: '#6366F1'
-                                                        },
-                                                        formId: form.$id,
-                                                        selectedResourceId: form.$id,
-                                                        formTitle: form.title,
-                                                        formDescription: form.description || ''
-                                                    })
-                                                },
-                                                { label: 'Delete', icon: <Trash2 size={16} />, variant: 'destructive' as const, onClick: () => handleDelete(form) }
-                                            ];
-
-                                            const handleRightClick = (e: React.MouseEvent) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                if (openMenu) {
-                                                    openMenu({
-                                                        x: e.clientX,
-                                                        y: e.clientY,
-                                                        items: contextMenuItems,
-                                                        appType: 'flow'
-                                                    });
-                                                }
-                                            };
-
-                                            return (
-                                                <div 
-                                                    key={form.$id}
-                                                    onClick={() => {
-                                                        if (isDesktop) {
-                                                            setActiveDetail({ type: 'form', id: form.$id, data: form });
-                                                        } else {
-                                                            router.push(`/forms/${form.$id}`);
-                                                        }
-                                                    }}
-                                                    onContextMenu={handleRightClick}
-                                                    className="bg-[#161412] border border-[#34322F] hover:border-[#6366F1] rounded-[28px] cursor-pointer p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.5)] flex flex-col justify-between h-full"
-                                                >
-                                                    <div>
-                                                        <div className="flex justify-between items-center mb-4">
-                                                             <div className="flex items-center gap-2">
-                                                                 <span 
-                                                                     className="text-[9px] font-bold font-mono px-2 py-0.5 rounded border tracking-wider" 
-                                                                     style={{ 
-                                                                         color: getStatusColor(form.status || 'draft'),
-                                                                         borderColor: getStatusColor(form.status || 'draft')
-                                                                     }}
-                                                                 >
-                                                                     {(form.status || 'draft').toUpperCase()}
-                                                                 </span>
-                                                                 <SyncStatusDot resourceId={form.$id} kind="form" row={form as unknown as Record<string, unknown>} />
-                                                                 {formDraftStatus[form.$id] && (
-                                                                     <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded border bg-[#1C1A18] text-[#FFB020] border-[#FFB020] tracking-wider">
-                                                                         UNSYNCED
-                                                                     </span>
-                                                                 )}
-                                                             </div>
-                                                            <div className="flex items-center gap-0.5">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleTogglePin(form);
-                                                                    }}
-                                                                    className={`p-1.5 rounded-lg transition-all duration-200 ${pinned ? 'text-[#F59E0B] bg-[#F59E0B]/5' : 'text-white/20 hover:text-[#F59E0B] hover:bg-[#F59E0B]/5'}`}
-                                                                >
-                                                                    <Pin size={16} className={pinned ? 'fill-[#F59E0B]' : ''} />
-                                                                </button>
-                                                                <ShareLockButton 
-                                                                    resourceType="form"
-                                                                    resourceId={form.$id}
-                                                                    isPublic={!!form.isPublic}
-                                                                    isGuest={!!form.isGuest}
-                                                                    accentColor="#10B981"
-                                                                    onPublished={() => fetchForms(false)}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <h2 className="text-lg font-bold mb-1 text-white font-clash tracking-tight truncate">
-                                                            {form.title}
-                                                        </h2>
-                                                        <p className="text-[#9B9691] text-xs sm:text-sm font-satoshi leading-relaxed mb-4 min-h-[3em] line-clamp-2">
-                                                            {form.description || 'No description provided.'}
-                                                        </p>
-                                                    </div>
-                                                    
-                                                    <div>
-                                                        <hr className="border-[#34322F] mb-4" />
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-[10px] font-bold text-white/20 font-mono">
-                                                                {new Date(form.$createdAt).toLocaleDateString()}
-                                                            </span>
-                                                            <div className="flex gap-2">
-                                                                <button 
-                                                                    type="button"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleEdit(form);
-                                                                    }} 
-                                                                    className="p-1.5 text-[#9B9691] bg-[#1C1A18] border border-[#34322F] hover:border-[#6366F1] hover:text-white rounded-xl transition-all"
-                                                                >
-                                                                    <Edit className="h-4 w-4" />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                        {filteredForms.map((form) => (
+                                            <FormCard
+                                                key={form.$id}
+                                                form={form}
+                                                onTogglePin={handleTogglePin}
+                                                onEdit={handleEdit}
+                                                onOpenSettings={handleOpenSettings}
+                                                onDelete={handleDelete}
+                                                onUpdate={() => fetchForms(false)}
+                                            />
+                                        ))}
                                     </div>
                                 )}
                                 {hasMoreForms && (
