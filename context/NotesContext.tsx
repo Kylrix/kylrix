@@ -508,27 +508,24 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     };
   }, [isAuthenticated, user?.$id, fetchBatch]);
 
-  // Initial fetch logic - decoupled from reload if cache exists
-  const hasInitiallyFetched = useRef(false);
+  // Initial fetch logic - reset flag on user change or when empty
+  const hasInitiallyFetchedForUserRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isAuthenticated && user?.$id && isCacheLoaded) {
-      if (notes.length > 0 && !hasInitiallyFetched.current) {
-        hasInitiallyFetched.current = true;
-        console.log('Instant reload: Using cached notes with background refresh');
-        setIsLoading(false);
+      if (hasInitiallyFetchedForUserRef.current !== user.$id) {
+        hasInitiallyFetchedForUserRef.current = user.$id;
         fetchBatch(true);
         return;
       }
 
-      if (!hasInitiallyFetched.current) {
+      if (notes.length === 0 && !isFetchingRef.current) {
         fetchBatch(true);
-        hasInitiallyFetched.current = true;
       }
     } else if (!isAuthLoading && !isAuthenticated) {
       setIsLoading(false);
       setHasMore(false);
-      hasInitiallyFetched.current = false;
+      hasInitiallyFetchedForUserRef.current = null;
     }
   }, [isAuthenticated, isAuthLoading, user?.$id, fetchBatch, isCacheLoaded, notes.length]);
 
