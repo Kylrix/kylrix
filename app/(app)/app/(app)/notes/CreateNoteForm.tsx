@@ -400,18 +400,23 @@ export default function CreateNoteForm({
     syncTimerRef.current = setTimeout(() => flushLiveNote(), 250);
   }, [flushLiveNote]);
 
-  // Protected-block content change interceptor — lightweight: React state only, debounced sync
+  // Protected-block — only when edit directly overlaps block, not when block shifts
   const handleContentChange = useCallback((nextValue: string) => {
-    // Cheap guard: only parse blocks if content actually contains a block marker
     if (content.includes('[[kylrix-object:')) {
       const blocks = parseObjectBlocks(content);
-      const changed = blocks.find(b => {
-        const prevBlock = content.slice(b.start, b.end);
-        const nextBlock = nextValue.slice(b.start, b.start + prevBlock.length);
-        return prevBlock !== nextBlock;
-      });
-      if (changed) {
-        setPendingBlockDelete(changed);
+      let overlapping: typeof blocks[0] | null = null;
+      if (blocks.length) {
+        let s = 0;
+        while (s < content.length && s < nextValue.length && content[s] === nextValue[s]) s++;
+        let ePrev = content.length - 1;
+        let eNext = nextValue.length - 1;
+        while (ePrev >= s && eNext >= s && content[ePrev] === nextValue[eNext]) { ePrev--; eNext--; }
+        const changedStart = s;
+        const changedEndPrev = ePrev + 1;
+        overlapping = blocks.find((b) => changedStart < b.end && changedEndPrev > b.start) || null;
+      }
+      if (overlapping) {
+        setPendingBlockDelete(overlapping);
         return;
       }
     }
@@ -1623,14 +1628,15 @@ export default function CreateNoteForm({
           />
         )}
 
-        {/* Protected-block delete confirmation */}
+        {/* Protected-block delete confirmation — portal to body so it appears above note detail */}
         {pendingBlockDelete && (
           <Drawer
             anchor="bottom"
             open={Boolean(pendingBlockDelete)}
             onClose={() => setPendingBlockDelete(null)}
-            ModalProps={{ keepMounted: false, disablePortal: true }}
-            PaperProps={{ sx: { bgcolor: '#161412', borderTop: '1px solid #34322F', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', p: 2 } }}
+            ModalProps={{ keepMounted: false, disablePortal: false }}
+            slotProps={{ backdrop: { sx: { bgcolor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' } } } as any}
+            PaperProps={{ sx: { bgcolor: '#161412', borderTop: '1px solid #34322F', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', p: 2, zIndex: 1400 } as any }}
           >
             <div className="space-y-3">
               <p className="text-sm font-bold text-white">Remove this {pendingBlockDelete.payload.childKind} attachment?</p>

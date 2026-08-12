@@ -1415,24 +1415,27 @@ export function NoteDetailSidebar({
                     value={content}
                     onChange={(e) => {
                       const nextValue = e.target.value;
-                      const caret = e.target.selectionStart;
+                      const caret = e.target.selectionStart ?? nextValue.length;
+                      // Proper block guard — only when edit directly overlaps a protected block
                       const blocks = parseObjectBlocks(content);
-                      const changed = blocks.find((b) => {
-                        const prevBlock = content.slice(b.start, b.end);
-                        const nextBlock = nextValue.slice(b.start, b.start + prevBlock.length);
-                        return prevBlock !== nextBlock;
-                      });
-                      if (changed) {
-                        setPendingBlockDelete(changed);
-                        // Revert DOM value on next render and keep caret at block edge
-                        pendingSelRef.current = { start: changed.start, end: changed.start };
-                        // Force React to keep controlled value (no content change) but restore selection
-                        e.target.value = content;
-                        try { e.target.setSelectionRange(changed.start, changed.start); } catch {}
+                      let changedBlock: typeof blocks[0] | null = null;
+                      if (blocks.length) {
+                        let s = 0;
+                        while (s < content.length && s < nextValue.length && content[s] === nextValue[s]) s++;
+                        let ePrev = content.length - 1;
+                        let eNext = nextValue.length - 1;
+                        while (ePrev >= s && eNext >= s && content[ePrev] === nextValue[eNext]) { ePrev--; eNext--; }
+                        const changedStart = s;
+                        const changedEndPrev = ePrev + 1; // exclusive in prev
+                        changedBlock = blocks.find((b) => changedStart < b.end && changedEndPrev > b.start) || null;
+                      }
+                      if (changedBlock) {
+                        setPendingBlockDelete(changedBlock);
+                        pendingSelRef.current = { start: changedBlock.start, end: changedBlock.start };
+                        try { e.target.setSelectionRange(changedBlock.start, changedBlock.start); } catch {}
                         return;
                       }
-                      // Preserve caret from event before handleContentChange overwrites
-                      pendingSelRef.current = { start: caret ?? nextValue.length, end: caret ?? nextValue.length };
+                      pendingSelRef.current = { start: caret, end: caret };
                       handleContentChange(nextValue);
                     }}
                     ref={contentTextareaRef}
@@ -2060,8 +2063,9 @@ export function NoteDetailSidebar({
           anchor="bottom"
           open={Boolean(pendingBlockDelete)}
           onClose={() => setPendingBlockDelete(null)}
-          ModalProps={{ keepMounted: false, disablePortal: true }}
-          PaperProps={{ sx: { bgcolor: '#161412', borderTop: '1px solid #34322F', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', p: 2 } }}
+          ModalProps={{ keepMounted: false, disablePortal: false }}
+          slotProps={{ backdrop: { sx: { bgcolor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' } } } as any}
+          PaperProps={{ sx: { bgcolor: '#161412', borderTop: '1px solid #34322F', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', p: 2, zIndex: 1400 } as any }}
         >
           <div className="space-y-3">
             <p className="text-sm font-bold text-white">Remove this {pendingBlockDelete.payload.childKind} object?</p>
