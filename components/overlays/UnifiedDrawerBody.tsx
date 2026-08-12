@@ -113,7 +113,6 @@ export function isUnifiedOverlayOnly(content: DrawerContent): boolean {
     content === 'login' ||
     content === 'moment-composer' ||
     content === 'new-chat' ||
-    content === 'delete-confirm' ||
     content === 'note'  // NoteDrawer manages its own sidebar + overlay — no Drawer shell needed
   );
 }
@@ -168,6 +167,23 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
       );
     case 'task-add-to-project':
       return <TaskAddToProjectDrawerHost />;
+    case 'delete-confirm':
+      return (
+        <div className="p-6 bg-[#161412] flex flex-col gap-5 max-h-[60dvh] overflow-y-auto">
+          <div className="flex justify-between items-start gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center flex-shrink-0 border border-[#FF453A]/30 bg-[#FF453A]/10 text-[#FF453A]">×</div>
+              <h3 className="font-black text-white text-[17px] font-clash leading-tight truncate">{drawerData?.title || 'Delete?'}</h3>
+            </div>
+            <button type="button" onClick={onClose} className="text-white/40 hover:text-white text-xl leading-none px-2 shrink-0">×</button>
+          </div>
+          <p className="text-white/60 text-[13px] font-semibold leading-relaxed">{drawerData?.description || `Are you sure you want to delete ${drawerData?.resourceName || 'this item'}? This cannot be undone.`}</p>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl border border-white/10 bg-white/5 text-white font-extrabold text-xs uppercase tracking-wide hover:bg-white/10">Cancel</button>
+            <button type="button" onClick={async () => { try { await drawerData?.onConfirm?.(); } finally { onClose(); } }} className="flex-1 py-3 rounded-xl border-0 bg-[#FF453A] text-white font-black text-xs uppercase tracking-wide hover:bg-[#FF453A]/90">{drawerData?.confirmLabel || 'Delete'}</button>
+          </div>
+        </div>
+      );
     case 'delete-note':
       return (
         <DeleteNoteDrawer

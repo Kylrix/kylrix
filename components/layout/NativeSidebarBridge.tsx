@@ -135,7 +135,7 @@ export function NativeSidebarBridge() {
       return;
     }
 
-    if (!isUnifiedOverlayOnly(unified.activeContent)) {
+    if (isDesktop && !isUnifiedOverlayOnly(unified.activeContent)) {
       const key = `unified:${unified.activeContent}`;
       if (lastKeyRef.current === key) return;
       lastKeyRef.current = key;

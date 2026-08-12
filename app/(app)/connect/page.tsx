@@ -133,26 +133,32 @@ function ConnectHomeContent() {
   }, [openMomentComposer, pathname, router, searchParams]);
 
   return (
-    <div className="flex-1 min-h-screen bg-[#000000] pointer-events-auto px-3 sm:px-4 md:px-0 pb-10 min-w-0 max-w-full overflow-hidden">
+    <div className="flex-1 min-h-screen bg-[#000000] pointer-events-auto px-3 sm:px-4 md:px-0 pt-6 md:pt-8 pb-10 min-w-0 max-w-full overflow-hidden">
       <div className="flex items-center gap-2 p-1 bg-[#161412] border border-[#34322F] rounded-2xl w-fit select-none mb-8">
-        {(['moments', 'chats', 'mail'] as ConnectTab[]).map((tab) => (
+        {[
+          { id: 'moments', label: 'moments' },
+          { id: 'chats', label: 'hangout' },
+          { id: 'mail', label: 'mail' },
+        ].map((tab) => (
           <button
-            key={tab}
+            key={tab.id}
             type="button"
-            onClick={() => {
-              if (tab === 'chats') {
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (tab.id === 'chats') {
                 router.push('/connect/chats');
                 return;
               }
-              setActiveTab(tab);
+              setActiveTab(tab.id as ConnectTab);
             }}
-            className={`px-5 py-2.5 rounded-xl text-xs font-extrabold capitalize transition-colors ${
-              activeTab === tab
+            className={`px-5 py-2.5 rounded-xl text-xs font-extrabold capitalize transition-colors cursor-pointer select-none ${
+              activeTab === tab.id
                 ? 'bg-[#F59E0B] text-black'
                 : 'text-white hover:bg-white/5'
             }`}
           >
-            {tab}
+            {tab.label}
           </button>
         ))}
       </div>

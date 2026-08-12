@@ -48,10 +48,10 @@ export function UnifiedBottomDrawer() {
         sx: {
           bgcolor: '#161412',
           backgroundImage: 'none',
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
           borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          maxHeight: '60dvh',
+          maxHeight: '92dvh',
         },
       }}
     >
