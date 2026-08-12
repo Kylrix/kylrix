@@ -258,8 +258,15 @@ export default function SudoModal({
                     const { SecurityEnclave } = await import('@/lib/security/enclave');
                     const probe = await SecurityEnclave.probeCapabilities(userId);
                     let entriesRes = probe.keychain;
-                    if (entriesRes.length === 0) {
-                        entriesRes = await AppwriteService.listKeychainEntries(userId);
+                    // If local probe returned empty but device is online, attempt AppwriteService fetch as secondary verification
+                    if (entriesRes.length === 0 && typeof navigator !== 'undefined' && navigator.onLine !== false) {
+                        try {
+                            const remoteEntries = await AppwriteService.listKeychainEntries(userId);
+                            if (remoteEntries.length > 0) {
+                                entriesRes = remoteEntries;
+                                await SecurityEnclave.setKeychain(userId, remoteEntries);
+                            }
+                        } catch (_err) {}
                     }
 
                     hasPass =
@@ -299,7 +306,10 @@ export default function SudoModal({
                 if (!active) return;
                 setHasMasterpass(hasPass);
 
-                if (hasPass === false) {
+                // Fail-safe: NEVER default to initialize mode unless explicitly requested by caller (intent === 'initialize')
+                // Default to 'password' mode if capability probe is empty due to transient network lag
+                if (hasPass === false && intent !== 'initialize') {
+                    setMode("password");
                     setIsDetecting(false);
                     return;
                 }
