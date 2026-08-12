@@ -137,6 +137,13 @@ export default function CreateNoteForm({
     isGuest,
     composerKind,
   });
+  // Keep ref in sync without causing rerenders — flushLiveNote reads this SoT
+  useEffect(() => { editorStateRef.current.title = title; }, [title]);
+  useEffect(() => { editorStateRef.current.content = content; }, [content]);
+  useEffect(() => { editorStateRef.current.tags = tags; }, [tags]);
+  useEffect(() => { editorStateRef.current.isPublic = isPublic; }, [isPublic]);
+  useEffect(() => { editorStateRef.current.isGuest = isGuest; }, [isGuest]);
+  useEffect(() => { editorStateRef.current.composerKind = composerKind; }, [composerKind]);
   const isPastedRef = useRef(false);
   const pasteTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -401,17 +408,18 @@ export default function CreateNoteForm({
     syncTimerRef.current = setTimeout(() => flushLiveNote(), 250);
   }, [flushLiveNote]);
 
-  // Protected-block — only when edit directly overlaps block, not when block shifts
+  // Realtime input — flow.realtime-input-rxdb-sync: direct onInput interception, sync ref + LocalEngine, React state is secondary
   const handleContentChange = useCallback((nextValue: string) => {
-    if (content.includes('[[kylrix-object:')) {
-      const blocks = parseObjectBlocks(content);
+    const curContent = editorStateRef.current.content;
+    if (curContent.includes('[[kylrix-object:')) {
+      const blocks = parseObjectBlocks(curContent);
       let overlapping: typeof blocks[0] | null = null;
       if (blocks.length) {
         let s = 0;
-        while (s < content.length && s < nextValue.length && content[s] === nextValue[s]) s++;
-        let ePrev = content.length - 1;
+        while (s < curContent.length && s < nextValue.length && curContent[s] === nextValue[s]) s++;
+        let ePrev = curContent.length - 1;
         let eNext = nextValue.length - 1;
-        while (ePrev >= s && eNext >= s && content[ePrev] === nextValue[eNext]) { ePrev--; eNext--; }
+        while (ePrev >= s && eNext >= s && curContent[ePrev] === nextValue[eNext]) { ePrev--; eNext--; }
         const changedStart = s;
         const changedEndPrev = ePrev + 1;
         overlapping = blocks.find((b) => changedStart < b.end && changedEndPrev > b.start) || null;
@@ -421,14 +429,19 @@ export default function CreateNoteForm({
         return;
       }
     }
-    setContent(nextValue);
-    // Keep textarea height snappy without triggering RxDB
+    // 1) Synchronous ref update — SoT for flushLiveNote, no render yet
+    editorStateRef.current.content = nextValue;
+    // 2) Secondary React state — transition so input never blocks
+    const { startTransition } = React as any;
+    const update = () => setContent(nextValue);
+    if (typeof startTransition === 'function') startTransition(update); else update();
+    // Keep textarea height (native DOM, no React)
     if (contentRef.current) {
       contentRef.current.style.height = 'auto';
       contentRef.current.style.height = `${Math.max(76, Math.min(contentRef.current.scrollHeight, 360))}px`;
     }
     scheduleLiveNoteSync();
-  }, [content, scheduleLiveNoteSync]);
+  }, [scheduleLiveNoteSync]);
 
   const insertTextAtCursor = (text: string) => {
     const textarea = contentRef.current;
@@ -446,19 +459,17 @@ export default function CreateNoteForm({
     }
   };
 
-  // Seamless auto-title logic
+  // Auto-title — derived, not state sync during typing (prevents extra render per keystroke)
   useEffect(() => {
     if (isTitleManuallyEdited) return;
-
-    const generatedTitle = buildAutoTitleFromContent(content);
-    if (content.trim()) {
-      if (generatedTitle !== title) {
-        setTitle(generatedTitle);
+    // Only sync when content settles via flushLiveNote, not per keystroke; keep title empty while typing fast
+    const generatedTitle = buildAutoTitleFromContent(editorStateRef.current.content);
+    if (editorStateRef.current.content.trim()) {
+      if (generatedTitle !== editorStateRef.current.title) {
+        editorStateRef.current.title = generatedTitle;
       }
-    } else {
-      setTitle('');
     }
-  }, [content, isTitleManuallyEdited, title]);
+  }, [content, isTitleManuallyEdited]);
 
   const existingTags = useMemo(() => {
     const tagSet = new Set<string>(ecosystemTags.map(t => t.name).filter(Boolean) as string[]);
@@ -1239,13 +1250,15 @@ export default function CreateNoteForm({
         <div className="flex-1 overflow-y-auto overscroll-contain p-2 flex flex-col gap-2 min-h-0 scrollbar-thin">
           {(content.trim().length >= 5 || isTitleManuallyEdited) && (
             <BareMetalInput
-              key={`create-title-${resolvedNoteId || 'new'}`}
+              key="create-title-stable"
               defaultValue={title}
-              value={title}
               enableLocalEngine={false}
               onValueChange={(val) => {
-                setTitle(val);
-                setIsTitleManuallyEdited(true);
+                editorStateRef.current.title = val;
+                const { startTransition } = React as any;
+                const upd = () => { setTitle(val); setIsTitleManuallyEdited(true); };
+                if (typeof startTransition === 'function') startTransition(upd); else upd();
+                scheduleLiveNoteSync();
               }}
               placeholder="Title"
               className="w-full bg-white/[0.02] text-white placeholder-white/20 border border-white/5 focus:border-pink-500/30 rounded-xl px-3 py-2 text-xl font-black focus:outline-none transition-all font-space-grotesk shrink-0"
@@ -1261,11 +1274,18 @@ export default function CreateNoteForm({
             className="w-full flex-1 flex flex-col relative"
           >
             <BareMetalTextarea
-              key={`create-content-${resolvedNoteId || 'new'}`}
+              key="create-content-stable"
               forwardedRef={contentRef}
               defaultValue={content}
-              value={content}
-              enableLocalEngine={false}
+              syncKey={resolvedNoteId ? `note_${resolvedNoteId}` : undefined}
+              enableLocalEngine={true}
+              syncDataBuilder={(next) => {
+                const draftId = resolvedNoteId || liveDraftIdRef.current || 'live-note';
+                const curTitle = editorStateRef.current.title;
+                const curTags = editorStateRef.current.tags as string[];
+                const previewTitle = resolveNoteCardTitle(isTitleManuallyEdited ? curTitle : null, next) || '';
+                return { $id: draftId, title: previewTitle, content: next, tags: curTags } as any;
+              }}
               onValueChange={(v) => handleContentChange(v)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey && !isExpanded && !isPastedRef.current) {

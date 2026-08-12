@@ -293,7 +293,7 @@ export default function TagsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0908] text-white p-4 md:p-8">
+    <div className="min-h-screen bg-[#0A0908] text-white p-4 md:p-8 pt-6 md:pt-8">
       <div className="max-w-[1440px] mx-auto w-full">
         <MultiSectionContainer panels={['note', 'huddles', 'projects']}>
           

@@ -329,16 +329,24 @@ export default function NotesPage() {
             });
           }
         }
-        // Merge live allNotes so recently edited/created (not yet in cache) is included and deduped by id, newest wins
+        // Live wins: allNotes (with fresh isPinned/tags) must not be clobbered by stale LocalEngine cache when timestamps tie
         const liveMap = new Map<string, Notes>();
-        for (const n of [...(Array.isArray(allNotes) ? allNotes : []), ...found]) {
+        for (const n of [...found, ...(Array.isArray(allNotes) ? allNotes : [])]) {
           if (!n?.$id) continue;
           const prev = liveMap.get(n.$id);
           if (!prev) liveMap.set(n.$id, n as Notes);
           else {
             const aT = new Date((prev as any).$updatedAt || (prev as any).updatedAt || 0).getTime();
             const bT = new Date((n as any).$updatedAt || (n as any).updatedAt || 0).getTime();
-            if (bT >= aT) liveMap.set(n.$id, n as Notes);
+            // Live (allNotes) is appended last, so b is live; only overwrite if strictly newer or has fresher pin/tags
+            if (bT > aT) liveMap.set(n.$id, n as Notes);
+            else if (bT === aT) {
+              // Tie: prefer live's isPinned/tags truthiness — prevents pinned note reverting to 'unpinned' among others
+              const prevPinned = !!(prev as any).isPinned;
+              const nextPinned = !!(n as any).isPinned;
+              const merged = { ...prev, ...(nextPinned && !prevPinned ? { isPinned: true } : {}), tags: (n as any).tags?.length ? (n as any).tags : (prev as any).tags } as Notes;
+              liveMap.set(n.$id, merged);
+            }
           }
         }
         const merged = Array.from(liveMap.values());
@@ -975,7 +983,7 @@ export default function NotesPage() {
 
   return (
     <NotesErrorBoundary>
-      <div className="flex-1 min-h-screen pointer-events-auto">
+      <div className="flex-1 min-h-screen pointer-events-auto pt-6 md:pt-8">
         {isDesktop ? (
           <div className="w-full">
             {/* Left Pane: Main Notes Content */}

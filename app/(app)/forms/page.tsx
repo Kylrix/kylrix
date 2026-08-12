@@ -279,7 +279,7 @@ export default function FormsDashboard() {
     }, [formSentinelNode, hasMoreForms, filteredFormsAll.length]);
 
     return (
-        <div className="animate-fadeIn p-4 md:px-0 md:py-8 min-h-screen bg-black">
+        <div className="animate-fadeIn p-4 md:px-0 pt-6 md:pt-8 min-h-screen bg-black">
             {/* Tab Switcher */}
             <div className="flex items-center gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-2xl w-fit select-none mb-8">
               <button

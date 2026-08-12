@@ -80,9 +80,9 @@ export function ObjectCreateDrawer({
   const [mounted, setMounted] = useState(false);
   const formOnlyFull = kind === 'form';
   const [heightMode, setHeightMode] = useState<HeightMode>(
-    formOnlyFull ? 'full' : defaultHeight || 'partial',
+    formOnlyFull ? 'full' : 'partial',
   );
-  const [isExpanded, setIsExpanded] = useState(formOnlyFull || defaultHeight === 'full');
+  const [isExpanded, setIsExpanded] = useState(formOnlyFull);
   const [isDesktop, setIsDesktop] = useState(false);
   const composerCloseRef = React.useRef<(() => void) | null>(null);
 
@@ -110,10 +110,10 @@ export function ObjectCreateDrawer({
 
   useEffect(() => {
     if (!open) return;
-    const mode = formOnlyFull ? 'full' : defaultHeight || 'partial';
+    const mode: HeightMode = formOnlyFull ? 'full' : 'partial';
     setHeightMode(mode);
     setIsExpanded(mode === 'full' || isDesktop);
-  }, [open, formOnlyFull, defaultHeight, isDesktop]);
+  }, [open, formOnlyFull, isDesktop]);
 
   const requestClose = useCallback(() => {
     if (composerCloseRef.current) {
