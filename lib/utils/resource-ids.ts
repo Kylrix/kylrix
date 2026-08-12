@@ -1,9 +1,9 @@
 /**
- * Appwrite row IDs are at most 36 chars and cannot be local ghost placeholders.
+ * Appwrite row IDs are at most 36 chars and cannot be local thread placeholders.
  */
 export function isLocalOnlyResourceId(id: string | null | undefined): boolean {
   const trimmed = String(id || '').trim();
-  if (!trimmed || trimmed === 'ghost' || trimmed.startsWith('ghost-')) return true;
+  if (!trimmed || trimmed === 'thread' || trimmed.startsWith('thread-')) return true;
   if (trimmed.startsWith('live-')) return true;
   return false;
 }

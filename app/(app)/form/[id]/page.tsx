@@ -5,7 +5,7 @@ import { Send, CheckCircle2, Upload as UploadIcon, X as XIcon, ArrowLeft } from 
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';
 import { useDataNexus } from '@/context/DataNexusContext';
-import { secureUploadFile, createGhostNoteChat } from '@/lib/actions/client-ops';
+import { secureUploadFile, createthreadNoteChat } from '@/lib/actions/client-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { SharedWorkspaceBar } from '@/components/common/SharedWorkspaceBar';
 import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
@@ -556,7 +556,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                                                 } catch {}
 
                                                 if (!threadExists) {
-                                                    await createGhostNoteChat(
+                                                    await createthreadNoteChat(
                                                         `@${targetUser.title || 'user'}'s Discussion`,
                                                         [currentUser.$id, targetUser.id],
                                                         deterministicId

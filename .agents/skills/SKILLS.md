@@ -88,7 +88,7 @@ _Catalog covers 86 skills._
 | `note.crosslinks-tagging` | Deep dive into the tag-prefix relational mapping pattern in Kylrix. Explains how crosslink tags (e.g. `source:kylrixnote:id`) represent relationships without co |
 | `note.decoupled-sdk` | Deep dive into the platform-agnostic Notes SDK structure. Explains the injection pattern, isolation of database queries, and modular mock compatibility. |
 | `note.filtering` | Foundation for note discovery and partitioning in the Kylrix ecosystem. Use this to ensure notes are correctly routed between the primary Notes list, Shared Pri |
-| `note.ghost-threads` | Guidelines and lifecycle rules for using Ghost Notes as a high-efficiency comment and chat thread channel across Kylrix resources (calls, tasks, tags, projects, |
+| `note.thread-threads` | Guidelines and lifecycle rules for using thread Notes as a high-efficiency comment and chat thread channel across Kylrix resources (calls, tasks, tags, projects, |
 | `note.shared-cache` | Share note state globally via RxDB/NotesContext instead of making redundant network fetches. Ensure once notes are loaded/synced in /note, they are locally quer |
 
 ## Workspaces & Flow

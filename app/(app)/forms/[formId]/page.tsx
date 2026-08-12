@@ -7,7 +7,7 @@ import { Forms } from '@/generated/appwrite/types';
 import Link from 'next/link';
 import FormDialog from '@/components/forms/FormDialog';
 import SubmissionViewer from '@/components/forms/SubmissionViewer';
-import { createGhostNoteForResource, promoteGhostResourceThreadToStory, getOrCreateThread, findThread, listThreadMessages, postThreadMessage } from '@/lib/actions/client-ops';
+import { createthreadNoteForResource, promotethreadResourceThreadToStory, getOrCreateThread, findThread, listThreadMessages, postThreadMessage } from '@/lib/actions/client-ops';
 import { client } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { useToast } from '@/components/ui/Toast';
@@ -206,7 +206,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
         if (!form) return;
         setHuddleLoading(true);
         try {
-            const res = await createGhostNoteForResource(resolvedParams.formId, 'form', `${form.title} Discussion`);
+            const res = await createthreadNoteForResource(resolvedParams.formId, 'form', `${form.title} Discussion`);
             setThreadId((res as any)?.$id || (res as any)?.primaryThreadId || null);
             setIsHuddleInit(true);
             showSuccess('Form discussion ready');
@@ -256,7 +256,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
     const handleSaveHuddleAsStory = async () => {
         setHuddleLoading(true);
         try {
-            await promoteGhostResourceThreadToStory(resolvedParams.formId, 'form');
+            await promotethreadResourceThreadToStory(resolvedParams.formId, 'form');
             showSuccess('Discussion promoted to permanent Story note!');
             setIsHuddleInit(false);
             setHuddleMessages([]);

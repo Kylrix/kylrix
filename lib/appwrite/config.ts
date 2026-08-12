@@ -55,7 +55,7 @@ export const APPWRITE_CONFIG = {
             BLOGPOSTS: '67ff065a003e2bb950f7',
             WALLET_MAP: 'walletMap',
             NOTE_REVISIONS: 'note_revisions',
-            /** Canonical discussion substrate (not ghost notes) */
+            /** Canonical discussion substrate (not thread notes) */
             THREADS: 'threads',
             THREAD_MESSAGES: 'thread_messages',
             THREAD_REACTIONS: 'thread_reactions',
@@ -156,7 +156,7 @@ export const APPWRITE_CONFIG = {
     },
     FUNCTIONS: {
         PERMISSION_UPDATER: '69c0ff79001b60e664d2',
-        CLAIM_GHOST_NOTES: 'claim-ghost-notes',
+        CLAIM_thread_NOTES: 'claim-thread-notes',
         SEARCH_USERS: '69a582720012957d2027',
         SYNC_USER_PROFILE: '69a583ac002b674685b0',
         NOTIFY_ON_SHARE: '69a58c1c001c39695bf6',

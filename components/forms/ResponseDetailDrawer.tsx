@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { convertResponseToGoal, createGhostNoteForProject } from '@/lib/actions/client-ops';
+import { convertResponseToGoal, createthreadNoteForProject } from '@/lib/actions/client-ops';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'react-hot-toast';
@@ -118,7 +118,7 @@ export function ResponseDetailDrawer({ isOpen, onClose, submission, schemaMap }:
 
       if (!discussionNoteId) {
         // Automatically initialize a project discussion huddle under the hood
-        const note = await createGhostNoteForProject(project.$id, `${project.title} Discussion`);
+        const note = await createthreadNoteForProject(project.$id, `${project.title} Discussion`);
         discussionNoteId = note.$id;
         showSuccess('Huddle Discussion spun up successfully!');
       }

@@ -12,7 +12,7 @@ const thread_SECRET_KEY = 'kylrix_thread_secret_v2';
  * Automatically claims and twists all kinds of thread notes (notes, tasks, credentials, TOTPs)
  * into official data containers upon login.
  */
-export const threadNoteClaimer = () => {
+export const ThreadNoteClaimer = () => {
     const { isAuthenticated, user } = useAuth();
     const isClaiming = useRef(false);
 

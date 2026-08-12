@@ -9,13 +9,13 @@ export default async function Image() {
   return new ImageResponse(
     renderKylrixShareCard({
       productLabel: 'Kylrix',
-      eyebrow: 'The agentic workspace',
-      title: 'Kylrix',
-      description: 'The agentic workspace that 10x the productivity of high agency builders.',
+      eyebrow: 'Build, think, and ship',
+      title: 'Build, think, and ship in one intelligent workspace.',
+      description: 'Your workflow becomes a living, callable system that compounds daily leverage over time.',
       accent: 'indigo',
-      ownerLabel: 'Built for',
-      ownerName: 'High agency builders',
-      chips: ['Notes', 'Vault', 'Flow', 'Projects', 'Agents']}),
+      ownerLabel: 'Philosophy',
+      ownerName: 'Every object → tool call → more context',
+      chips: ['Ideas', 'Flow', 'Vault', 'Workspaces', 'Connect', 'Agents']}),
     size
   );
 }

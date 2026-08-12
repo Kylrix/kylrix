@@ -643,7 +643,7 @@ export type NotesCreate = {
     "metadata"?: string | null;
     "attachments"?: string | null;
     "format"?: string | null;
-    "isGhost"?: boolean;
+    "isthread"?: boolean;
     "isThread"?: boolean;
     "isPinned"?: boolean | null;
     "isChat"?: boolean;
@@ -685,7 +685,7 @@ export type Notes = Models.Row & {
     "metadata"?: string | null;
     "attachments"?: string | null;
     "format"?: string | null;
-    "isGhost"?: boolean;
+    "isthread"?: boolean;
     "isThread"?: boolean;
     "isPinned"?: boolean | null;
     "isChat"?: boolean;
@@ -3063,7 +3063,7 @@ export type DatabaseTableMap = {
         "metadata"?: string | null;
         "attachments"?: string | null;
         "format"?: string | null;
-        "isGhost"?: boolean;
+        "isthread"?: boolean;
         "isThread"?: boolean;
         "isPinned"?: boolean | null;
         "isChat"?: boolean;
@@ -3105,7 +3105,7 @@ export type DatabaseTableMap = {
         "metadata"?: string | null;
         "attachments"?: string | null;
         "format"?: string | null;
-        "isGhost"?: boolean;
+        "isthread"?: boolean;
         "isThread"?: boolean;
         "isPinned"?: boolean | null;
         "isChat"?: boolean;

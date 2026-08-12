@@ -31,19 +31,19 @@ import {
   addObjectToProjectSecure,
   removeObjectFromProjectSecure,
   createCallSecure,
-  createGhostNoteSecure,
-  createSendGhostObjectSecure,
-  createGhostNoteForCallSecure,
+  createthreadNoteSecure,
+  createSendthreadObjectSecure,
+  createthreadNoteForCallSecure,
   createRowSecure,
   updateRowSecure,
   deleteRowSecure,
   convertResponseToGoalSecure,
-  createGhostNoteForProjectSecure,
-  createGhostNoteForResourceSecure,
-  promoteGhostResourceThreadToStorySecure,
+  createthreadNoteForProjectSecure,
+  createthreadNoteForResourceSecure,
+  promotethreadResourceThreadToStorySecure,
   getResourceCollaboratorsSecure,
-  createGhostNoteChatSecure,
-  listGhostNoteChatsSecure,
+  createthreadNoteChatSecure,
+  listthreadNoteChatsSecure,
   getCrossSuggestionsSecure,
   initGoalDiscussionSecure,
   toggleResourcePublicGuestSecure,
@@ -264,18 +264,18 @@ export async function createCall(data: any) {
   return createCallSecure(data, jwt);
 }
 
-export async function createGhostNote(data: any) {
-  return createGhostNoteSecure(data);
+export async function createthreadNote(data: any) {
+  return createthreadNoteSecure(data);
 }
 
-export async function createSendGhostObject(data: any) {
+export async function createSendthreadObject(data: any) {
   const jwt = await getJwt();
-  return createSendGhostObjectSecure({ ...data, jwt });
+  return createSendthreadObjectSecure({ ...data, jwt });
 }
 
-export async function createGhostNoteForCall(callId: string, title?: string) {
+export async function createthreadNoteForCall(callId: string, title?: string) {
   const jwt = await getJwt();
-  return createGhostNoteForCallSecure(callId, title, jwt);
+  return createthreadNoteForCallSecure(callId, title, jwt);
 }
 
 export async function createRow(databaseId: string, tableId: string, data: any, permissions?: string[]) {
@@ -298,25 +298,25 @@ export async function convertResponseToGoal(submissionId: string) {
   return convertResponseToGoalSecure(submissionId, jwt);
 }
 
-export async function createGhostNoteForProject(projectId: string, title?: string) {
+export async function createthreadNoteForProject(projectId: string, title?: string) {
   const jwt = await getJwt();
-  return createGhostNoteForProjectSecure(projectId, title, jwt);
+  return createthreadNoteForProjectSecure(projectId, title, jwt);
 }
 
-export async function deleteGhostNoteForProject(noteId: string) {
+export async function deletethreadNoteForProject(noteId: string) {
   const jwt = await getJwt();
   return deleteRowSecure(APPWRITE_CONFIG.DATABASES.NOTE, APPWRITE_CONFIG.TABLES.NOTE.NOTES, noteId, jwt);
 }
 
 
 
-export async function createGhostNoteForResource(
+export async function createthreadNoteForResource(
   resourceId: string,
   resourceType: 'task' | 'project' | 'tag' | 'event' | 'form',
   title?: string
 ) {
   const jwt = await getJwt();
-  return createGhostNoteForResourceSecure(resourceId, resourceType, title, jwt);
+  return createthreadNoteForResourceSecure(resourceId, resourceType, title, jwt);
 }
 
 export async function initGoalDiscussion(taskId: string) {
@@ -362,22 +362,22 @@ export async function postThreadMessage(data: {
   return postThreadMessageSecure({ ...data, jwt });
 }
 
-export async function promoteGhostResourceThreadToStory(resourceId: string, resourceType: string) {
+export async function promotethreadResourceThreadToStory(resourceId: string, resourceType: string) {
   const jwt = await getJwt();
-  return promoteGhostResourceThreadToStorySecure(resourceId, resourceType, jwt);
+  return promotethreadResourceThreadToStorySecure(resourceId, resourceType, jwt);
 }
 
 
 
 
-export async function createGhostNoteChat(title: string, participants: string[], customRowId?: string) {
+export async function createthreadNoteChat(title: string, participants: string[], customRowId?: string) {
   const jwt = await getJwt();
-  return createGhostNoteChatSecure({ title, participants, customRowId, jwt });
+  return createthreadNoteChatSecure({ title, participants, customRowId, jwt });
 }
 
-export async function listGhostNoteChats() {
+export async function listthreadNoteChats() {
   const jwt = await getJwt();
-  return listGhostNoteChatsSecure(jwt);
+  return listthreadNoteChatsSecure(jwt);
 }
 
 export async function getResourceCollaborators(params: { resourceId: string; resourceType: string }) {
@@ -398,10 +398,10 @@ export async function getCrossSuggestions(params: { sourceApp: string; sourceTyp
 }
 
 
-export async function deleteGhostThread(threadId: string) {
+export async function deletethreadThread(threadId: string) {
     const jwt = await getJwt();
-    const { deleteGhostThreadSecure } = await import('./secure-ops');
-    return deleteGhostThreadSecure(threadId, jwt);
+    const { deletethreadThreadSecure } = await import('./secure-ops');
+    return deletethreadThreadSecure(threadId, jwt);
 }
 
 export async function recordAnonymizedTelemetry(params: {

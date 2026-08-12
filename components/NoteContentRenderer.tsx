@@ -44,7 +44,7 @@ interface NoteContentRendererProps {
 }
 
 function isEphemeralNoteId(noteId?: string) {
-  return !noteId || noteId.startsWith('ghost-') || isEphemeralComposeNoteId(noteId);
+  return !noteId || noteId.startsWith('thread-') || isEphemeralComposeNoteId(noteId);
 }
 
 function NoteContentRenderer({

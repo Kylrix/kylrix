@@ -47,15 +47,15 @@ export function directParticipantsEqual(a: string[], b: string[]): boolean {
   return ca.every((v, i) => v === cb[i]);
 }
 
-export function extractGhostParticipantIds(ghost: any): string[] {
+export function extractthreadParticipantIds(thread: any): string[] {
   let metadataObj: any = {};
   try {
-    metadataObj = typeof ghost.metadata === 'string' ? JSON.parse(ghost.metadata) : ghost.metadata || {};
+    metadataObj = typeof thread.metadata === 'string' ? JSON.parse(thread.metadata) : thread.metadata || {};
   } catch {
     /* ignore */
   }
-  const raw = Array.isArray(ghost.collaborators) && ghost.collaborators.length
-    ? ghost.collaborators
+  const raw = Array.isArray(thread.collaborators) && thread.collaborators.length
+    ? thread.collaborators
     : metadataObj.participants || metadataObj.participantIds || [];
   return Array.isArray(raw) ? raw.map((s: any) => String(s)).filter(Boolean) : [];
 }

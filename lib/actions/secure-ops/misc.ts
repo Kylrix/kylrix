@@ -405,11 +405,11 @@ export async function getUsersByIdsSecure(ids: string[]) {
   return JSON.parse(JSON.stringify(profiles));
 }
 
-export async function createSendGhostObjectSecure(data: {
+export async function createSendthreadObjectSecure(data: {
   title: string;
   content: string;
   format?: string;
-  ghostSecret: string;
+  threadSecret: string;
   expiresAt?: string;
   isEncrypted?: boolean;
   creatorDeletionProofHash?: string;
@@ -422,9 +422,9 @@ export async function createSendGhostObjectSecure(data: {
   const kind = data.sendObject.kind;
   
   const metadata = JSON.stringify({
-    isGhost: true,
+    isthread: true,
     send_object: data.sendObject,
-    ghostSecret: data.ghostSecret,
+    threadSecret: data.threadSecret,
     expiresAt,
     version: 'v3',
     isEncrypted: data.isEncrypted ?? false,
@@ -452,7 +452,7 @@ export async function createSendGhostObjectSecure(data: {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       metadata,
-      isGhost: true,
+      isthread: true,
       isThread: false},
     permissions: [
       Permission.read(Role.any()),
@@ -1076,7 +1076,7 @@ export async function getFilePreviewSecure(bucketId: string, fileId: string, wid
   }
 }
 
-export async function promoteGhostResourceThreadToStorySecure(
+export async function promotethreadResourceThreadToStorySecure(
   resourceId: string,
   resourceType: string,
   jwt?: string
@@ -1097,7 +1097,7 @@ export async function promoteGhostResourceThreadToStorySecure(
     ] as any
   }).catch(() => ({ rows: [] }));
 
-  // 2. Fetch the ghost note itself to see if it exists
+  // 2. Fetch the thread note itself to see if it exists
   const noteRow = await tables.getRow({
     databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
     tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
@@ -1124,7 +1124,7 @@ export async function promoteGhostResourceThreadToStorySecure(
   const now = new Date().toISOString();
   const storyNoteId = ID.unique();
   const storyMeta = JSON.stringify({
-    isGhost: false,
+    isthread: false,
     isStory: true,
     linkedResourceType: resourceType,
     linkedResourceId: resourceId,
@@ -1150,7 +1150,7 @@ export async function promoteGhostResourceThreadToStorySecure(
     ]
   });
 
-  // 5. Cleanup the original ghost note comments
+  // 5. Cleanup the original thread note comments
   await Promise.all(
     commentsList.rows.map(c => 
       tables.deleteRow({
@@ -1161,7 +1161,7 @@ export async function promoteGhostResourceThreadToStorySecure(
     )
   );
 
-  // 6. Delete the original ghost note
+  // 6. Delete the original thread note
   if (noteRow) {
     await tables.deleteRow({
       databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
@@ -1173,7 +1173,7 @@ export async function promoteGhostResourceThreadToStorySecure(
   return JSON.parse(JSON.stringify(storyNote));
 }
 
-export async function deleteGhostThreadSecure(threadId: string, jwt?: string) {
+export async function deletethreadThreadSecure(threadId: string, jwt?: string) {
     const actor = await getActor(jwt);
     if (!actor || !actor.$id) throw new Error('Unauthorized');
 
@@ -1215,10 +1215,10 @@ export async function deleteGhostThreadSecure(threadId: string, jwt?: string) {
     try {
         await executeCascadeDeleteSecure(dbId, tableId, threadId);
     } catch (err) {
-        console.error('[deleteGhostThreadSecure] Cascade cleanup failed:', err);
+        console.error('[deletethreadThreadSecure] Cascade cleanup failed:', err);
     }
 
-    // 2b. Wipe project_objects and key_mapping for discussion ghost thread
+    // 2b. Wipe project_objects and key_mapping for discussion thread thread
     try {
         const polyCollabs = await tables.listRows({
             databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
@@ -1253,7 +1253,7 @@ export async function deleteGhostThreadSecure(threadId: string, jwt?: string) {
             rowId: row.$id
         }).catch(() => null)));
     } catch (cleanErr) {
-        console.warn('[deleteGhostThreadSecure] Secondary cleanup non-fatal warning:', cleanErr);
+        console.warn('[deletethreadThreadSecure] Secondary cleanup non-fatal warning:', cleanErr);
     }
 
     // 3. Delete the thread row itself

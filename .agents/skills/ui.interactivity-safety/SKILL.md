@@ -9,7 +9,7 @@ This skill enforces the 'Global Unmount Policy' and 'Architectural Flatness' req
 
 ## Core Problem: Stacking Context Traps
 
-In a mono-app with centralized chrome (Topbar, Sidebars, Bottom Bar), legacy drawer and modal patterns can leave ghost portals in the DOM. Even when closed, these may retain invisible backdrops or viewport-wide wrappers that intercept pointer events, rendering the page underneath unclickable.
+In a mono-app with centralized chrome (Topbar, Sidebars, Bottom Bar), legacy drawer and modal patterns can leave thread portals in the DOM. Even when closed, these may retain invisible backdrops or viewport-wide wrappers that intercept pointer events, rendering the page underneath unclickable.
 
 ## Mandatory Safety Patterns
 
@@ -43,7 +43,7 @@ Decouple high-frequency global contexts (like `UnifiedDrawerContext` or `Dynamic
 
 ## Debugging Workflow
 If the UI is 'frozen' or 'unclickable':
-1. Check for 'Ghost' drawers in the DOM using devtools or `grep` for hidden `Modal` roots.
+1. Check for 'thread' drawers in the DOM using devtools or `grep` for hidden `Modal` roots.
 2. Verify that `GlobalShell.tsx` is unmounting inactive components.
 3. Ensure no fixed-position `Box` is missing `pointer-events: none`.
 4. Hard-refresh the browser to clear HMR-induced DOM pollution.

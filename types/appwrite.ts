@@ -56,7 +56,6 @@ export type Notes = Models.Row & {
     linkedSource?: string | null;
     isPinned?: boolean | null;
     isEncrypted?: boolean | null;
-    isGhost?: boolean;
     isThread?: boolean;
     isChat?: boolean;
     creatorId?: string | null;

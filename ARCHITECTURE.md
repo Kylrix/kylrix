@@ -230,7 +230,7 @@ UI **Workspaces** (`/workspaces`, `/workspaces/[projectId]`) over `projects` tab
 
 **Isomorphic adapter:** `if(window) import('@/lib/actions/client-ops') else import('@/lib/actions/secure-ops')` — same business logic, no admin SDK in bundle.
 
-**Unified conversations:** Every discussion lives in **standard tables** `conversations`/`messages` (and `conversationMembers`). `isEncrypted:true` = sealed with transient per-chat keys; `false` when vault locked. Former `notes.isGhost/isThread` + `comments` + `ghost-cleanup` model retired — task/project/event/tag/form/call threads now create a regular `conversations` row (`type:'thread'` or `direct`/`group`) and `messages` rows; `project_objects` links workspace discussions. No `notes` polymorphism, no TTL sweep.
+**Unified conversations:** Every discussion lives in **standard tables** `conversations`/`messages` (and `conversationMembers`). `isEncrypted:true` = sealed with transient per-chat keys; `false` when vault locked. Former `notes.isthread/isThread` + `comments` + `thread-cleanup` model retired — task/project/event/tag/form/call threads now create a regular `conversations` row (`type:'thread'` or `direct`/`group`) and `messages` rows; `project_objects` links workspace discussions. No `notes` polymorphism, no TTL sweep.
 
 **Threads:** Same tables as hangouts; `participants` + member rows enforce RLS; retention is explicit delete, not 7-day expiry. Presence channels carry typing/online, not DB epochs.
 

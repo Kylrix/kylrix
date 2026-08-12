@@ -193,7 +193,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
       permission: 'read',
       targetUserId: targetUserIdToUse,
       resourceId: input.resourceId,
-      resourceType: resourceType === 'note' ? 'ghost_note' : (resourceType === 'secret' || resourceType === 'totp' ? 'secret' : 'task'),
+      resourceType: resourceType === 'note' ? 'thread_note' : (resourceType === 'secret' || resourceType === 'totp' ? 'secret' : 'task'),
       databaseId: dbId,
       tableId: tableId,
       rowId: input.resourceId}, requester.$id);
@@ -359,7 +359,7 @@ export async function revokePermissionSecure(input: {
         action: 'revoke',
         targetUserId: input.targetUserId,
         resourceId: input.resourceId,
-        resourceType: input.resourceType === 'note' ? 'ghost_note' : 'task',
+        resourceType: input.resourceType === 'note' ? 'thread_note' : 'task',
         databaseId: dbId,
         tableId: tableId,
         rowId: input.resourceId}, requester.$id);

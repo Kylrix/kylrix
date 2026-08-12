@@ -9,7 +9,7 @@ disable-model-invocation: true
 ## Rules
 
 1. Use short, direct English in user-facing copy.
-2. Avoid buzzwords and internal metaphors like "universal", "polymorphic", "ghost", "relay", and "zero-knowledge" unless a user explicitly asked for them.
+2. Avoid buzzwords and internal metaphors like "universal", "polymorphic", "thread", "relay", and "zero-knowledge" unless a user explicitly asked for them.
 3. Never expose database names, table IDs, bucket IDs, or internal storage names in user-facing copy.
 4. Prefer normal words: "private", "secure", "shared", "public", "expires", "removed", and "saved".
 5. Keep headings and helper text readable without extra context.

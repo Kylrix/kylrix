@@ -45,9 +45,9 @@ export const AppwriteService = {
   getReferralStatus: SharedService.getReferralStatus,
   applyReferral: SharedService.applyReferral,
 
-  // --- Ghost/Ephemeral Objects ---
-  createGhostNote: SharedService.createGhostNote,
-  createSendGhostObject: SharedService.createSendGhostObject,
+  // --- thread/Ephemeral Objects ---
+  createthreadNote: SharedService.createthreadNote,
+  createSendthreadObject: SharedService.createSendthreadObject,
 
   // --- Project Service Integration ---
   ...ProjectsService

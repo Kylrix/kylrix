@@ -25,7 +25,7 @@ import {
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { resolveResourceOwnerId } from '@/lib/utils/resource-ids';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { decryptGhostData } from '@/lib/encryption/ghost-crypto';
+import { decryptThreadData } from '@/lib/encryption/thread-crypto';
 import { Lock, ArrowLeft, LogIn, Globe, AlertTriangle } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -57,11 +57,11 @@ async function decryptNoteIfNeeded(note: Notes, key?: string): Promise<Notes> {
   const isT4 = meta.isEncrypted && meta.encryptionVersion === 'T4';
   // Lock state = non-empty dek column (same rule as vault)
   const isLocked = !!note.dek && !meta.clientDecrypted;
-  const isGhost = !!meta.isGhost;
+  const isthread = !!meta.isthread;
 
-  if (!isT4 && !isLocked && !isGhost) return note;
+  if (!isT4 && !isLocked && !isthread) return note;
   if (!key) {
-    if (isLocked || isT4 || isGhost) {
+    if (isLocked || isT4 || isthread) {
       throw new Error('This note is encrypted and requires a decryption key.');
     }
     return note;
@@ -99,8 +99,8 @@ async function decryptNoteIfNeeded(note: Notes, key?: string): Promise<Notes> {
 
   return {
     ...note,
-    title: await decryptGhostData(note.title || '', key),
-    content: await decryptGhostData(note.content || '', key),
+    title: await decryptThreadData(note.title || '', key),
+    content: await decryptThreadData(note.content || '', key),
     metadata: JSON.stringify({ ...meta, clientDecrypted: true })};
 }
 
@@ -157,9 +157,9 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
         return;
       }
 
-      // Ghost expiry check
+      // thread expiry check
       const meta = parseNoteMeta(raw);
-      if (meta.isGhost && meta.expiresAt && new Date(meta.expiresAt) < new Date()) {
+      if (meta.isthread && meta.expiresAt && new Date(meta.expiresAt) < new Date()) {
         setAccess({ role: 'none', reason: 'expired' });
         return;
       }

@@ -6,7 +6,7 @@ import { Plus, ShieldCheck, Lock, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { ChatService } from '@/lib/services/chat';
-import { listGhostNoteChats } from '@/lib/actions/client-ops';
+import { listthreadNoteChats } from '@/lib/actions/client-ops';
 import {
   peekChatsListMemory,
   peekThreadsListMemory,
@@ -179,7 +179,7 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
         const raced = await (Promise.race([
           Promise.all([
             ChatService.getConversations(user.$id).catch(() => ({ rows: [] as any[] })),
-            listGhostNoteChats().catch(() => [] as any[]),
+            listthreadNoteChats().catch(() => [] as any[]),
           ]),
           timeout(4000),
         ] as any).catch((e) => {
@@ -190,12 +190,12 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
           if (!cancelled) setLoading(false);
           return;
         }
-        const [secureRes, ghostRows] = raced as any;
+        const [secureRes, threadRowsRaw] = raced as any;
         const secureRows = ((secureRes as any)?.rows || []).map((c: any) => ({
           ...c,
           _viewerId: user.$id,
         }));
-        const threadRows = Array.isArray(ghostRows) ? ghostRows : [];
+        const threadRows = Array.isArray(threadRowsRaw) ? threadRowsRaw : [];
 
         // Merge prior local names/avatars so raw server rows don't blank the rail
         const prevSecure = cachedSecure.length ? cachedSecure : peekChatsListMemory();

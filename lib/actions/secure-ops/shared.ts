@@ -71,13 +71,13 @@ export const isViewerTokenValid = (token: string) => {
  */
 
 /**
- * Burns an ephemeral ghost / Send row using a per-note deletion secret.
+ * Burns an ephemeral thread / Send row using a per-note deletion secret.
  * Replaces legacy /api/ephemeral-note/delete.
  * Follows "The Golden Rule of Server Action Security".
  */
 
 /**
- * Removes the ghost row (and Send ciphertext file) after successful import.
+ * Removes the thread row (and Send ciphertext file) after successful import.
  * Replaces legacy /api/ephemeral-note/consume.
  */
 

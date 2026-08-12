@@ -534,7 +534,7 @@ async function flushGoalPending(
     const payloadAny = payload as any;
     const rawUserId = String(payloadAny.userId || '').trim();
     const isWorkspaceGoal = !!payloadAny.projectId && !!payloadAny.isWorkspace;
-    if (!rawUserId || rawUserId === 'guest' || rawUserId === 'ghost' || isWorkspaceGoal) {
+    if (!rawUserId || rawUserId === 'guest' || rawUserId === 'thread' || isWorkspaceGoal) {
       if (rawUserId !== activeUserId) payloadAny.userId = activeUserId;
       payload.creatorId = activeUserId;
       if (Array.isArray(payload.assigneeIds)) {
@@ -568,7 +568,7 @@ async function flushGoalPending(
 
   const creatorId = payload.creatorId || (payload as any).userId || activeUserId || 'guest';
   const assignees = (payload.assigneeIds || []).filter(
-    (id) => !!id && id !== 'guest' && id !== 'ghost' && id !== creatorId,
+    (id) => !!id && id !== 'guest' && id !== 'thread' && id !== creatorId,
   );
   const permissions = buildTaskPermissions(creatorId, [creatorId, ...assignees], []);
 
@@ -693,10 +693,10 @@ async function flushNotePending(
     const isWorkspaceNote = !!(payload as any).projectId && !!(payload as any).isWorkspace;
     // Workspace notes use isGuest/isGeneral escape hatch + project_objects membership, not strict userId equality (see security.secure-ops-rls-bypass).
     // For workspace notes we always restamp to activeUserId to avoid Forbidden: Cannot create resource for another user (createRowSecure guest fallback).
-    if (!rawUserId || rawUserId === 'guest' || rawUserId === 'ghost' || isWorkspaceNote) {
+    if (!rawUserId || rawUserId === 'guest' || rawUserId === 'thread' || isWorkspaceNote) {
       if (rawUserId !== activeUserId) {
         (payload as any).userId = activeUserId;
-        if ((payload as any).creatorId && (payload as any).creatorId !== activeUserId && ((payload as any).creatorId === 'guest' || (payload as any).creatorId === 'ghost')) {
+        if ((payload as any).creatorId && (payload as any).creatorId !== activeUserId && ((payload as any).creatorId === 'guest' || (payload as any).creatorId === 'thread')) {
           (payload as any).creatorId = activeUserId;
         }
         if (db) {
@@ -870,7 +870,7 @@ export const autonomicSyncEngine = {
     }
 
     const targetId = String(id || '').trim();
-    if (!targetId || targetId.startsWith('live-') || targetId.startsWith('ghost-')) return;
+    if (!targetId || targetId.startsWith('live-') || targetId.startsWith('thread-')) return;
     if (this.isPending(targetId)) return;
 
     void (async () => {
@@ -921,7 +921,7 @@ export const autonomicSyncEngine = {
     }
 
     // Baseline diff engine check: if an existing object has zero structural changes, discard false pending mark
-    if (payload && !id.startsWith('live-') && !id.startsWith('ghost-') && !LocalEngine.hasObjectDiff(rawId, payload)) {
+    if (payload && !id.startsWith('live-') && !id.startsWith('thread-') && !LocalEngine.hasObjectDiff(rawId, payload)) {
       return;
     }
 
@@ -955,7 +955,7 @@ export const autonomicSyncEngine = {
   isPending(noteId?: string | null) {
     const id = String(noteId || '').trim();
     if (!id) return false;
-    if (id.startsWith('live-') || id.startsWith('ghost-')) return true;
+    if (id.startsWith('live-') || id.startsWith('thread-')) return true;
     if (pendingById.has(id)) return true;
     if (pendingById.has(`event:${id}`)) return true;
     if (pendingById.has(`form:${id}`)) return true;

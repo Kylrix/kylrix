@@ -44,7 +44,7 @@ object part → SecondaryObjectShell(payload)
           <ul className="list-disc pl-4 space-y-1.5 text-sm text-white/50">
             <li>Primary fetches via <code className="text-white/70">getNoteSecondaryObjectPreview</code> (client-ops) → <code className="text-white/70">fetchNoteObjectPreviewCached</code> key <code className="text-white/70">noteObjectPreviewCacheKey</code>.</li>
             <li>Fallback to <code className="text-white/70">getNoteInheritedFileBlob</code> for media when previewDataUrl missing, writes back to cache.</li>
-            <li>Ephemeral notes (ghost- / compose draft) skip server preview, use <code className="text-white/70">StorageService.getFilePreview/getFileView</code> directly client-side.</li>
+            <li>Ephemeral notes (thread- / compose draft) skip server preview, use <code className="text-white/70">StorageService.getFilePreview/getFileView</code> directly client-side.</li>
             <li>Container: rounded 14px, border rgba(255,255,255,0.08), bg rgba(255,255,255,0.02).</li>
           </ul>
         </section>

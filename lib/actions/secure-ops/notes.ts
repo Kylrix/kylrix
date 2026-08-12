@@ -951,19 +951,19 @@ export async function deleteNoteSecure(noteId: string, jwt?: string) {
   return JSON.parse(JSON.stringify(result));
 }
 
-export async function createGhostNoteSecure(data: {
+export async function createthreadNoteSecure(data: {
   title: string;
   content: string;
   format?: string;
-  ghostSecret: string;
+  threadSecret: string;
   expiresAt?: string;
   isEncrypted?: boolean;
   creatorDeletionProofHash?: string;
 }) {
   const expiresAt = data.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const metadata = JSON.stringify({
-    isGhost: true,
-    ghostSecret: data.ghostSecret,
+    isthread: true,
+    threadSecret: data.threadSecret,
     expiresAt: expiresAt,
     version: 'v2',
     isEncrypted: data.isEncrypted || false,
@@ -983,20 +983,20 @@ export async function createGhostNoteSecure(data: {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       metadata,
-      isGhost: true,
+      isthread: true,
       isThread: false},
     permissions: [`read("any")`]});
 
   return JSON.parse(JSON.stringify(result));
 }
 
-export async function createGhostNoteForCallSecure(callId: string, title?: string, jwt?: string) {
+export async function createthreadNoteForCallSecure(callId: string, title?: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const metadata = JSON.stringify({
-    isGhost: true,
+    isthread: true,
     linkedSource: 'call',
     linkedTaskId: callId,
     expiresAt: expiresAt,
@@ -1019,14 +1019,14 @@ export async function createGhostNoteForCallSecure(callId: string, title?: strin
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       metadata,
-      isGhost: true,
+      isthread: true,
       isThread: true},
     permissions: [Permission.read(Role.user(actor.$id))]});
 
   return JSON.parse(JSON.stringify(result));
 }
 
-export async function createGhostNoteForProjectSecure(projectId: string, title?: string, jwt?: string) {
+export async function createthreadNoteForProjectSecure(projectId: string, title?: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized');
@@ -1084,7 +1084,7 @@ export async function createGhostNoteForProjectSecure(projectId: string, title?:
   return JSON.parse(JSON.stringify({
     $id: thread.id,
     title: thread.title,
-    isGhost: false,
+    isthread: false,
     isThread: false,
     resourceType: 'project',
     resourceId: projectId,
@@ -1094,7 +1094,7 @@ export async function createGhostNoteForProjectSecure(projectId: string, title?:
   }));
 }
 
-export async function createGhostNoteForResourceSecure(
+export async function createthreadNoteForResourceSecure(
   resourceId: string,
   resourceType: 'task' | 'project' | 'tag' | 'event' | 'form',
   title?: string,
@@ -1128,7 +1128,7 @@ export async function createGhostNoteForResourceSecure(
   return JSON.parse(JSON.stringify({
     $id: thread.id,
     title: thread.title,
-    isGhost: false,
+    isthread: false,
     isThread: false,
     resourceType,
     resourceId,
@@ -1138,7 +1138,7 @@ export async function createGhostNoteForResourceSecure(
   }));
 }
 
-export async function createGhostNoteChatSecure(data: {
+export async function createthreadNoteChatSecure(data: {
   title: string;
   participants: string[];
   customRowId?: string;
@@ -1151,7 +1151,7 @@ export async function createGhostNoteChatSecure(data: {
 
   const expiresAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString(); // 100 years
   const metadata = JSON.stringify({
-    isGhost: true,
+    isthread: true,
     version: 'v2',
     isChat: true,
     expiresAt: expiresAt,
@@ -1174,7 +1174,7 @@ export async function createGhostNoteChatSecure(data: {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       metadata,
-      isGhost: true,
+      isthread: true,
       isThread: true,
       isChat: true,
       collaborators: data.participants},
@@ -1198,14 +1198,14 @@ export async function createGhostNoteChatSecure(data: {
           accepted: true},
         permissions: data.participants.map(id => Permission.read(Role.user(id)))});
     } catch (e) {
-      console.error('[createGhostNoteChat] Failed to add collaborator row:', e);
+      console.error('[createthreadNoteChat] Failed to add collaborator row:', e);
     }
   }
 
   return JSON.parse(JSON.stringify(result));
 }
 
-export async function listGhostNoteChatsSecure(jwt?: string) {
+export async function listthreadNoteChatsSecure(jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized');

@@ -3,7 +3,7 @@
 Reuse `CommObjectDetail` + `FusedSecondarySidebar` + `ConnectCommRail` for any real-time communicative surface:
 
 - **Chats** (secure) — shipped
-- **Threads** (public ghost notes) — same shell via `kind: 'thread'`
+- **Threads** (public thread notes) — same shell via `kind: 'thread'`
 - **Calls / huddles** — plug call UI into `CommObjectDetail` with `kind: 'call'` (marked; do not invent a second fullscreen fixed shell)
 
 Rules:

@@ -126,7 +126,7 @@ export async function provisionHybridTeamExpansionSecure(
 }
 
 export type PermissionLevel = 'read' | 'write' | 'admin';
-type PermissionAction = 'grant' | 'revoke' | 'rotate_epoch' | 'pin_ghost_note';
+type PermissionAction = 'grant' | 'revoke' | 'rotate_epoch' | 'pin_thread_note';
 
 export interface PermissionMutationInput {
   databaseId?: string;

@@ -104,7 +104,7 @@ explicit remote save already succeeded (create drawer / agent tools)
   → autonomicSyncEngine.ack(id)
 ```
 
-Ephemeral ids (`live-*`, `ghost-*`): `isPending` stays true until they become real or are discarded + `ack`.
+Ephemeral ids (`live-*`, `thread-*`): `isPending` stays true until they become real or are discarded + `ack`.
 
 ---
 

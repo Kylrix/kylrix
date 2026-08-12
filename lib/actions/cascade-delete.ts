@@ -415,7 +415,7 @@ export async function executeCascadeDeleteSecure(
     // F. Delete Ephemeral Files for Send (isFile)
     try {
       const note = await tables.getRow<any>(databaseId, tableId, rowId);
-      if (note.isFile === true || (note.isGhost === true && note.metadata?.includes('fileId'))) {
+      if (note.isFile === true || (note.isthread === true && note.metadata?.includes('fileId'))) {
         const meta = (() => {
             try { return typeof note.metadata === 'string' ? JSON.parse(note.metadata) : note.metadata; } catch { return {}; }
         })();
@@ -429,7 +429,7 @@ export async function executeCascadeDeleteSecure(
         }
       }
     } catch (err) {
-      console.error('[Cascade Delete] Ghost file cleanup failed:', err);
+      console.error('[Cascade Delete] thread file cleanup failed:', err);
     }
   }
 
@@ -437,7 +437,7 @@ export async function executeCascadeDeleteSecure(
   else if (databaseId === CHAT_DB && tableId === 'projects') {
     console.log(`[Cascade Delete] Triggered project cascade cleanup for: ${rowId} (mode: ${projectDeleteMode})`);
 
-    // A. Fetch project metadata to find discussion ghost note
+    // A. Fetch project metadata to find discussion thread note
     let discussionNoteId = '';
     try {
       const projectDoc = await tables.getRow<any>(CHAT_DB, 'projects', rowId);
@@ -451,7 +451,7 @@ export async function executeCascadeDeleteSecure(
 
     // B. Purge discussion note (comments, reactions, voice, etc.) recursively
     if (discussionNoteId) {
-      console.log(`[Cascade Delete] Purging linked project discussion ghost note: ${discussionNoteId}`);
+      console.log(`[Cascade Delete] Purging linked project discussion thread note: ${discussionNoteId}`);
       try {
         await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, discussionNoteId);
         await tables.deleteRow({
@@ -587,9 +587,9 @@ export async function executeCascadeDeleteSecure(
       }
     }
 
-    // C. Clean up linked Ghost Note (Discussion Thread)
+    // C. Clean up linked thread Note (Discussion Thread)
     try {
-      console.log(`[Cascade Delete] Cleaning up linked event ghost huddle: ${rowId}`);
+      console.log(`[Cascade Delete] Cleaning up linked event thread huddle: ${rowId}`);
       await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, rowId);
       await tables.deleteRow({
         databaseId: NOTE_DB,
@@ -649,24 +649,24 @@ export async function executeCascadeDeleteSecure(
     console.log(`[Cascade Delete] Triggered call cascade cleanup for: ${rowId}`);
 
     try {
-      // Find all ghost notes associated with this call
-      const ghostNotesRes = await tables.listRows({
+      // Find all thread notes associated with this call
+      const threadNotesRes = await tables.listRows({
         databaseId: NOTE_DB,
         tableId: NOTE_TABLE,
         queries: [Query.contains('metadata', rowId), Query.limit(100)] as any});
 
-      for (const ghost of ghostNotesRes.rows as any[]) {
+      for (const thread of threadNotesRes.rows as any[]) {
         // Recursive deletion for the note's own child items
-        await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, ghost.$id);
+        await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, thread.$id);
 
-        // Delete the ghost note itself
+        // Delete the thread note itself
         await tables.deleteRow({
           databaseId: NOTE_DB,
           tableId: NOTE_TABLE,
-          rowId: ghost.$id});
+          rowId: thread.$id});
       }
     } catch (err) {
-      console.error('[Cascade Delete] Call ghost notes cleanup failed:', err);
+      console.error('[Cascade Delete] Call thread notes cleanup failed:', err);
     }
 
     // Wipe collaborators and key mappings for the huddle/call itself
@@ -726,9 +726,9 @@ export async function executeCascadeDeleteSecure(
       console.error('[Cascade Delete] Task subtasks cleanup failed:', err);
     }
 
-    // D. Clean up linked Ghost Note (Discussion Thread)
+    // D. Clean up linked thread Note (Discussion Thread)
     try {
-      console.log(`[Cascade Delete] Cleaning up linked task ghost discussion: ${rowId}`);
+      console.log(`[Cascade Delete] Cleaning up linked task thread discussion: ${rowId}`);
       await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, rowId);
       await tables.deleteRow({
         databaseId: NOTE_DB,

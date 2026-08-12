@@ -923,7 +923,7 @@ export default function CreateNoteForm({
     };
 
     if (!user?.$id) {
-      const id = isEphemeralComposeNoteId(source.$id) ? `ghost-${crypto.randomUUID()}` : source.$id;
+      const id = isEphemeralComposeNoteId(source.$id) ? `thread-${crypto.randomUUID()}` : source.$id;
       const saved = {
         $id: id,
         $createdAt: source.$createdAt || new Date().toISOString(),

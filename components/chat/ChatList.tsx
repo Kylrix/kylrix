@@ -8,14 +8,14 @@ import { tablesDB, realtime  } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { usePresence } from '../providers/PresenceProvider';
 import { showIslandNotification } from '@/lib/island-notification';
-import { listGhostNoteChats, deleteGhostThread } from '@/lib/actions/client-ops';
+import { listthreadNoteChats, deletethreadThread } from '@/lib/actions/client-ops';
 import { formatSecureChatStartError } from '@/lib/crypto/public-key';
 import {
     discoverRecipientSecureReady,
     resolveChatChannelKind,
     canonicalDirectParticipants,
     directParticipantsEqual,
-    extractGhostParticipantIds,
+    extractthreadParticipantIds,
 } from '@/lib/chat/recipient-secure-ready';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
@@ -115,7 +115,7 @@ export const ChatList = ({
     hideTabs?: boolean;
     /** Desktop threads panel — skip encrypted conversation fetch + subscriptions. */
     skipSecureLoad?: boolean;
-    /** Desktop secure panel — skip ghost thread fetch. */
+    /** Desktop secure panel — skip thread thread fetch. */
     skipThreadsLoad?: boolean;
     /** Prefer in-page selection over route navigation. */
     onOpenConversation?: (conversationId: string, kind?: 'chat' | 'thread') => void;
@@ -158,8 +158,8 @@ export const ChatList = ({
     });
     const activeTab = propActiveTab || activeTabState;
 
-    const [ghostConversations, setGhostConversations] = useState<any[]>(() => initialThreads);
-    const [loadingGhost, setLoadingGhost] = useState(() => !skipThreadsLoad && initialThreads.length === 0);
+    const [threadConversations, setthreadConversations] = useState<any[]>(() => initialThreads);
+    const [loadingthread, setLoadingthread] = useState(() => !skipThreadsLoad && initialThreads.length === 0);
 
     const [isInitializing, setIsInitializing] = useState(false);
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
@@ -244,7 +244,7 @@ export const ChatList = ({
         const isSelf = conv?.isSelf || (Array.isArray(conv?.participants) && conv.participants.length === 1 && conv.participants[0] === user?.$id);
         // Personal chats never show padlock — zombie encrypted self is treated as plaintext for UI (no lock)
         const isConversation = conv?._kind === 'secure' || conv?.type === 'direct' || conv?.type === 'group' || Array.isArray(conv?.participants);
-        // For routing, any conversation (including unencrypted self/bookmarks) is a conversation — not a ghost note
+        // For routing, any conversation (including unencrypted self/bookmarks) is a conversation — not a thread note
         const handleExport = async () => {
             try {
                 if (isConversation) {
@@ -271,16 +271,16 @@ export const ChatList = ({
               await ChatService.clearChatForMe(conv.$id, user!.$id);
               toast.success('Chat cleared');
             } else {
-              await deleteGhostThread(conv.$id);
+              await deletethreadThread(conv.$id);
               toast.success('Thread cleared');
-              setGhostConversations(prev => {
+              setthreadConversations(prev => {
                 const next = prev.filter(x => x.$id !== conv.$id);
                 writeThreadsListLocal(next);
                 return next;
               });
-              ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== conv.$id);
+              threadConversationsRef.current = threadConversationsRef.current.filter(x => x.$id !== conv.$id);
               // explicit local-copy signal → force network fetch; UI hook can re-request if cache empty
-              void loadGhostConversations({ forceRefresh: true } as any);
+              void loadthreadConversations({ forceRefresh: true } as any);
             }
           } catch (e: any) { toast.error(e?.message || 'Failed'); }
         };
@@ -288,15 +288,15 @@ export const ChatList = ({
           try {
             if (isConversation) { const r: any = await ChatService.wipeMyFootprint(conv.$id, user!.$id); toast.success(`Removed ${r.count || 0} messages`); }
             else {
-              await deleteGhostThread(conv.$id);
+              await deletethreadThread(conv.$id);
               toast.success('Thread cleared');
-              setGhostConversations(prev => {
+              setthreadConversations(prev => {
                 const next = prev.filter(x => x.$id !== conv.$id);
                 writeThreadsListLocal(next);
                 return next;
               });
-              ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== conv.$id);
-              void loadGhostConversations({ forceRefresh: true } as any);
+              threadConversationsRef.current = threadConversationsRef.current.filter(x => x.$id !== conv.$id);
+              void loadthreadConversations({ forceRefresh: true } as any);
             }
           } catch (e: any) { toast.error(e?.message || 'Failed'); }
         };
@@ -325,16 +325,16 @@ export const ChatList = ({
                 conversationsRef.current = conversationsRef.current.filter(c => c.$id !== conv.$id);
                 void loadConversations({ forceRefresh: true });
               } else {
-                // Ghost hangout wipe — Bookmarks ghost retired, now handled as unencrypted hangout (conversations). No note spin.
-                await deleteGhostThread(conv.$id);
+                // thread hangout wipe — Bookmarks thread retired, now handled as unencrypted hangout (conversations). No note spin.
+                await deletethreadThread(conv.$id);
                 toast.success('Hangout cleared');
-                setGhostConversations(prev => {
+                setthreadConversations(prev => {
                   const next = prev.filter(c => c.$id !== conv.$id);
                   writeThreadsListLocal(next);
                   return next;
                 });
-                ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== conv.$id);
-                void loadGhostConversations({ forceRefresh: true } as any);
+                threadConversationsRef.current = threadConversationsRef.current.filter(x => x.$id !== conv.$id);
+                void loadthreadConversations({ forceRefresh: true } as any);
               }
             } catch (e: any) { toast.error(e?.message || 'Wipe failed'); }
         };
@@ -396,7 +396,7 @@ export const ChatList = ({
         openChatSettings(conv);
     }, [openChatSettings]);
 
-    const handleGhostConversationRightClick = useCallback((event: React.MouseEvent, conv: any) => {
+    const handlethreadConversationRightClick = useCallback((event: React.MouseEvent, conv: any) => {
         event.preventDefault();
         openChatSettings(conv);
     }, [openChatSettings]);
@@ -447,7 +447,7 @@ export const ChatList = ({
         let cancelled = false;
         // Memory already painted via initial state (peek); clear skeletons instantly if we have it
         if (!skipSecureLoad && conversationsRef.current.length > 0) setLoading(false);
-        if (!skipThreadsLoad && ghostConversations.length > 0) setLoadingGhost(false);
+        if (!skipThreadsLoad && threadConversations.length > 0) setLoadingthread(false);
         void (async () => {
             if (!skipSecureLoad && conversationsRef.current.length === 0) {
                 const cached = await readChatsListLocal();
@@ -463,18 +463,18 @@ export const ChatList = ({
             } else if (!skipSecureLoad) {
                 setLoading(false);
             }
-            if (!skipThreadsLoad && ghostConversations.length === 0) {
+            if (!skipThreadsLoad && threadConversations.length === 0) {
                 const cachedThr = await readThreadsListLocal();
                 if (!cancelled) {
                     if (cachedThr.length) {
                         startTransition(() => {
-                            setGhostConversations(cachedThr);
+                            setthreadConversations(cachedThr);
                         });
                     }
-                    setLoadingGhost(false);
+                    setLoadingthread(false);
                 }
             } else if (!skipThreadsLoad) {
-                setLoadingGhost(false);
+                setLoadingthread(false);
             }
         })();
         return () => {
@@ -499,47 +499,47 @@ export const ChatList = ({
         rememberConversationRoster([]);
     }, []);
 
-    const ghostConversationsRef = React.useRef<any[]>(initialThreads);
+    const threadConversationsRef = React.useRef<any[]>(initialThreads);
     useEffect(() => {
-        ghostConversationsRef.current = ghostConversations;
-    }, [ghostConversations]);
+        threadConversationsRef.current = threadConversations;
+    }, [threadConversations]);
 
-    const loadGhostConversations = React.useCallback(async (options?: { silent?: boolean }) => {
+    const loadthreadConversations = React.useCallback(async (options?: { silent?: boolean }) => {
         // Local-first: always paint local even when user not yet resolved (guest keyspace)
-        if (ghostConversationsRef.current.length === 0) {
+        if (threadConversationsRef.current.length === 0) {
             const local = peekThreadsListMemory();
             if (local.length) {
-                ghostConversationsRef.current = local;
-                startTransition(() => setGhostConversations(local));
+                threadConversationsRef.current = local;
+                startTransition(() => setthreadConversations(local));
             } else {
                 const disk = await readThreadsListLocal();
                 if (disk.length) {
-                    ghostConversationsRef.current = disk;
-                    startTransition(() => setGhostConversations(disk));
+                    threadConversationsRef.current = disk;
+                    startTransition(() => setthreadConversations(disk));
                 }
             }
         }
 
-        const hasCachedRows = ghostConversationsRef.current.length > 0;
-        setLoadingGhost(false);
+        const hasCachedRows = threadConversationsRef.current.length > 0;
+        setLoadingthread(false);
         if (!options?.silent && !hasCachedRows) {
             // Soft empty-state spinner only when truly nothing local
-            setLoadingGhost(true);
+            setLoadingthread(true);
         }
         if (!user) {
-            setLoadingGhost(false);
+            setLoadingthread(false);
             return;
         }
         try {
             const results = await Promise.race([
-                listGhostNoteChats(),
-                new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error('ghost fetch timeout')), 4000)),
+                listthreadNoteChats(),
+                new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error('thread fetch timeout')), 4000)),
             ]).catch((e) => {
-                console.warn('[ChatList] ghost fetch timed out or failed:', (e as any)?.message);
+                console.warn('[ChatList] thread fetch timed out or failed:', (e as any)?.message);
                 return null;
             }) as any;
             if (!results) {
-                setLoadingGhost(false);
+                setLoadingthread(false);
                 return;
             }
 
@@ -560,12 +560,12 @@ export const ChatList = ({
 
                 const participants = note.collaborators || metadataObj.participants || [];
                 const otherId = participants.find((p: string) => p !== user.$id);
-                const isSelfBookmarksGhost = isChat && participants.length === 1 && participants[0] === user.$id;
+                const isSelfBookmarksthread = isChat && participants.length === 1 && participants[0] === user.$id;
 
                 let otherName = note.title || 'Huddle';
                 let avatarUrl: string | null = null;
 
-                if (isSelfBookmarksGhost) {
+                if (isSelfBookmarksthread) {
                     const cachedMe = getCachedIdentityById(user.$id);
                     otherName = 'Bookmarks (you)';
                     avatarUrl = (cachedMe?.avatar as string) || null;
@@ -581,11 +581,11 @@ export const ChatList = ({
 
                 return {
                     ...note,
-                    otherUserId: isSelfBookmarksGhost ? user.$id : otherId,
+                    otherUserId: isSelfBookmarksthread ? user.$id : otherId,
                     name: otherName,
                     avatarUrl,
-                    isGhostChat: true,
-                    isSelfBookmarks: isSelfBookmarksGhost,
+                    isthreadChat: true,
+                    isSelfBookmarks: isSelfBookmarksthread,
                     linkedResourceType: cleanLinkedResourceType,
                     linkedResourceId,
                     linkedResourceName,
@@ -593,7 +593,7 @@ export const ChatList = ({
                     lastMessageAt: note.updatedAt || note.$createdAt};
             });
 
-            // Bookmarks now a standard unencrypted hangout (isEncrypted=false) — ghost self-healing retired.
+            // Bookmarks now a standard unencrypted hangout (isEncrypted=false) — thread self-healing retired.
             // No note spinning: unencrypted self hangout heals via conversations (ChatService.ensureSelfConversation with encrypted:false) only.
 
             mapped.sort((a: any, b: any) => {
@@ -605,10 +605,10 @@ export const ChatList = ({
 
             writeThreadsListLocal(mapped);
             startTransition(() => {
-                setGhostConversations(mapped);
+                setthreadConversations(mapped);
             });
             setIsInitializing(false);
-            setLoadingGhost(false);
+            setLoadingthread(false);
 
             void (async () => {
                 const missing = mapped.filter(
@@ -650,7 +650,7 @@ export const ChatList = ({
                 if (!patches.size) return;
 
                 startTransition(() => {
-                    setGhostConversations((prev) => {
+                    setthreadConversations((prev) => {
                         const next = [...prev]
                             .map((c) => (patches.has(c.$id) ? { ...c, ...patches.get(c.$id) } : c))
                             .sort((a: any, b: any) => {
@@ -668,16 +668,16 @@ export const ChatList = ({
                 });
             })();
         } catch (error) {
-            console.error('Failed to load ghost huddles:', error);
+            console.error('Failed to load thread huddles:', error);
         } finally {
-            setLoadingGhost(false);
+            setLoadingthread(false);
         }
     }, [user, startTransition, pinSets.conversation]);
 
     // Keep pinned chats at the top when pin set changes
     useEffect(() => {
         setConversations((prev) => (prev.length ? sortConversations(prev) : prev));
-        setGhostConversations((prev) => {
+        setthreadConversations((prev) => {
             if (!prev.length) return prev;
             return [...prev].sort((a, b) => {
                 const ap = pinSets.conversation.has(a.$id) ? 1 : 0;
@@ -770,7 +770,7 @@ export const ChatList = ({
         if (!user) return;
         const targetUserId = targetUser.userId || targetUser.$id || targetUser.id;
 
-        toast.loading('Checking secure setup…', { id: 'ghost-init' });
+        toast.loading('Checking secure setup…', { id: 'thread-init' });
 
         // Always live-fetch BOTH profiles — search cards omit publicKey and single-side checks caused false threads.
         const [selfDiscovery, discovery] = await Promise.all([
@@ -792,22 +792,22 @@ export const ChatList = ({
                 if (activeTab !== 'public' && (!discovery.ready || !selfDiscovery.ready)) {
                     toast(
                         "This person hasn't set up secure chat yet. Starting a standard chat instead.",
-                        { id: 'ghost-init' },
+                        { id: 'thread-init' },
                     );
                 } else {
-                    toast.loading('Opening chat…', { id: 'ghost-init' });
+                    toast.loading('Opening chat…', { id: 'thread-init' });
                 }
 
-                const existingGhosts = await listGhostNoteChats();
+                const existingthreads = await listthreadNoteChats();
                 const targetSet = canonicalDirectParticipants([user.$id, targetUserId]);
-                const foundGhost = existingGhosts.find((c: any) => {
-                    const participants = extractGhostParticipantIds(c);
+                const foundthread = existingthreads.find((c: any) => {
+                    const participants = extractthreadParticipantIds(c);
                     return directParticipantsEqual(participants, targetSet);
                 });
 
-                if (foundGhost) {
-                    toast.dismiss('ghost-init');
-                    openConversation(foundGhost.$id, 'thread');
+                if (foundthread) {
+                    toast.dismiss('thread-init');
+                    openConversation(foundthread.$id, 'thread');
                     return;
                 }
 
@@ -816,13 +816,13 @@ export const ChatList = ({
                     targetUser.displayName ||
                     targetUser.username ||
                     'Chat';
-                // Unencrypted hangout — same conversations table, isEncrypted=false (no note). Previously discussion ghost.
+                // Unencrypted hangout — same conversations table, isEncrypted=false (no note). Previously discussion thread.
                 const newHangout = await ChatService.createConversation([user.$id, targetUserId], 'direct', title, { encrypted: false } as any);
-                toast.success('Hangout ready', { id: 'ghost-init' });
+                toast.success('Hangout ready', { id: 'thread-init' });
                 openConversation(newHangout.$id, 'chat');
             } catch (error: any) {
                 console.error('Failed to create thread:', error);
-                toast.error(formatSecureChatStartError(error, 'thread'), { id: 'ghost-init' });
+                toast.error(formatSecureChatStartError(error, 'thread'), { id: 'thread-init' });
             }
             return;
         }
@@ -840,7 +840,7 @@ export const ChatList = ({
                     );
                 });
                 if (foundLocal) {
-                    toast.dismiss('ghost-init');
+                    toast.dismiss('thread-init');
                     openConversation(foundLocal.$id, 'chat');
                     return;
                 }
@@ -854,7 +854,7 @@ export const ChatList = ({
                         );
                     });
                     if (remote) {
-                        toast.dismiss('ghost-init');
+                        toast.dismiss('thread-init');
                         openConversation(remote.$id, 'chat');
                         return;
                     }
@@ -866,16 +866,16 @@ export const ChatList = ({
                     [user.$id, targetUserId],
                     'direct',
                 );
-                toast.success('Secure chat ready', { id: 'ghost-init' });
+                toast.success('Secure chat ready', { id: 'thread-init' });
                 openConversation(newConv.$id, 'chat');
             } catch (error: any) {
                 console.error('Failed to create chat:', error);
-                toast.error(formatSecureChatStartError(error, 'secure'), { id: 'ghost-init' });
+                toast.error(formatSecureChatStartError(error, 'secure'), { id: 'thread-init' });
             }
         };
 
         if (!isUnlocked) {
-            toast.dismiss('ghost-init');
+            toast.dismiss('thread-init');
             requestSudo({
                 onSuccess: () => {
                     void openSecure();
@@ -1448,34 +1448,34 @@ export const ChatList = ({
     // Threads: load once when tab opens; keep local copy visible; refresh silently
     useEffect(() => {
         if (!user || skipThreadsLoad || activeTab !== 'public') return;
-        void loadGhostConversations({ silent: ghostConversations.length > 0 || peekThreadsListMemory().length > 0 });
+        void loadthreadConversations({ silent: threadConversations.length > 0 || peekThreadsListMemory().length > 0 });
 
         const noteChannel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents`;
         const subscription: any = realtime.subscribe([noteChannel], () => {
-            void loadGhostConversations({ silent: true });
+            void loadthreadConversations({ silent: true });
         });
         return () => {
             if (typeof subscription === 'function') subscription();
             else if (subscription?.unsubscribe) subscription.unsubscribe();
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: tab enter, not every ghost length change
-    }, [user, activeTab, skipThreadsLoad, loadGhostConversations]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: tab enter, not every thread length change
+    }, [user, activeTab, skipThreadsLoad, loadthreadConversations]);
 
     const filteredConversationsAll = conversations.filter(c =>
         c.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    const filteredGhostConversationsAll = ghostConversations.filter(c =>
+    const filteredthreadConversationsAll = threadConversations.filter(c =>
         c.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
     const CHAT_PAGE_SIZE = 20;
     const [chatPage, setChatPage] = useState(1);
-    const [ghostPage, setGhostPage] = useState(1);
+    const [threadPage, setthreadPage] = useState(1);
     const chatSentinelRef = useRef<HTMLDivElement | null>(null);
-    const ghostSentinelRef = useRef<HTMLDivElement | null>(null);
+    const threadSentinelRef = useRef<HTMLDivElement | null>(null);
     const filteredConversations = useMemo(() => filteredConversationsAll.slice(0, chatPage * CHAT_PAGE_SIZE), [filteredConversationsAll, chatPage]);
-    const filteredGhostConversations = useMemo(() => filteredGhostConversationsAll.slice(0, ghostPage * CHAT_PAGE_SIZE), [filteredGhostConversationsAll, ghostPage]);
+    const filteredthreadConversations = useMemo(() => filteredthreadConversationsAll.slice(0, threadPage * CHAT_PAGE_SIZE), [filteredthreadConversationsAll, threadPage]);
     const hasMoreChats = filteredConversations.length < filteredConversationsAll.length;
-    const hasMoreGhosts = filteredGhostConversations.length < filteredGhostConversationsAll.length;
+    const hasMorethreads = filteredthreadConversations.length < filteredthreadConversationsAll.length;
     // Unified feed: secret chats + threads together + default Kylie assistant chat
     const unifiedItems = useMemo(() => {
         const kylieItem = {
@@ -1490,7 +1490,7 @@ export const ChatList = ({
         const matchesKylie = !searchQuery || 'kylie assist'.includes(searchQuery.toLowerCase()) || 'ask kylie for help'.includes(searchQuery.toLowerCase());
 
         const secureMapped = filteredConversations.map((c: any) => ({ ...c, _kind: 'secure' as const, _sortAt: c.lastMessageAt || c.createdAt }));
-        const threadMapped = filteredGhostConversations.map((c: any) => ({ ...c, _kind: 'thread' as const, _sortAt: c.lastMessageAt || c.$createdAt || c.createdAt }));
+        const threadMapped = filteredthreadConversations.map((c: any) => ({ ...c, _kind: 'thread' as const, _sortAt: c.lastMessageAt || c.$createdAt || c.createdAt }));
         const combined = [...secureMapped, ...threadMapped];
         const pinned = pinSets.conversation;
         const sorted = combined.sort((a: any, b: any) => {
@@ -1501,8 +1501,8 @@ export const ChatList = ({
         });
 
         return matchesKylie ? [kylieItem, ...sorted] : sorted;
-    }, [filteredConversations, filteredGhostConversations, pinSets.conversation, searchQuery]);
-    useEffect(() => { setChatPage(1); setGhostPage(1); }, [searchQuery, conversations.length, ghostConversations.length]);
+    }, [filteredConversations, filteredthreadConversations, pinSets.conversation, searchQuery]);
+    useEffect(() => { setChatPage(1); setthreadPage(1); }, [searchQuery, conversations.length, threadConversations.length]);
     useEffect(() => {
       if (!chatSentinelRef.current || !hasMoreChats) return;
       const obs = new IntersectionObserver((e) => { if (e[0]?.isIntersecting) setChatPage((p) => p + 1); }, { rootMargin: '400px' });
@@ -1510,14 +1510,14 @@ export const ChatList = ({
       return () => obs.disconnect();
     }, [hasMoreChats, filteredConversationsAll.length]);
     useEffect(() => {
-      if (!ghostSentinelRef.current || !hasMoreGhosts) return;
-      const obs = new IntersectionObserver((e) => { if (e[0]?.isIntersecting) setGhostPage((p) => p + 1); }, { rootMargin: '400px' });
-      obs.observe(ghostSentinelRef.current);
+      if (!threadSentinelRef.current || !hasMorethreads) return;
+      const obs = new IntersectionObserver((e) => { if (e[0]?.isIntersecting) setthreadPage((p) => p + 1); }, { rootMargin: '400px' });
+      obs.observe(threadSentinelRef.current);
       return () => obs.disconnect();
-    }, [hasMoreGhosts, filteredGhostConversationsAll.length]);
+    }, [hasMorethreads, filteredthreadConversationsAll.length]);
 
     // Soft skeletons only when there is zero local copy — never hide a painted list (unified)
-    if (loading && conversations.length === 0 && ghostConversations.length === 0 && !skipSecureLoad && !skipThreadsLoad) return (
+    if (loading && conversations.length === 0 && threadConversations.length === 0 && !skipSecureLoad && !skipThreadsLoad) return (
         <div className="p-4 space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex items-center gap-4 p-2 animate-pulse">
@@ -1533,7 +1533,7 @@ export const ChatList = ({
 
     const showGlobalResults = searchQuery.length >= 2 && searchResults.length > 0;
 
-    const unifiedHasMore = hasMoreChats || hasMoreGhosts;
+    const unifiedHasMore = hasMoreChats || hasMorethreads;
 
     return (
         <div className="flex flex-col relative w-full">
@@ -1548,7 +1548,7 @@ export const ChatList = ({
                         <div className="space-y-2">
                             {searchResults.map((u) => {
                                 const targetId = u.userId || u.$id;
-                                const hasChat = conversations.some(c => c.type === 'direct' && c.participants?.includes(targetId)) || ghostConversations.some(c => {
+                                const hasChat = conversations.some(c => c.type === 'direct' && c.participants?.includes(targetId)) || threadConversations.some(c => {
                                         let metaObj: any = {};
                                         try { metaObj = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata || {}); } catch {}
                                         const participants = c.collaborators || metaObj.participants || [];
@@ -1592,20 +1592,20 @@ export const ChatList = ({
                             // Live refresh via permission-safe relay: force network, bypass local cache, keep realtime subscription alive
                             ChatService.invalidateConversationsListCache(user?.$id);
                             void loadConversations({ forceRefresh: true });
-                            void loadGhostConversations({ forceRefresh: true } as any);
+                            void loadthreadConversations({ forceRefresh: true } as any);
                             toast.success('Chat refreshed');
                         }}
-                        disabled={loading || loadingGhost}
+                        disabled={loading || loadingthread}
                         className="inline-flex items-center gap-1.5 rounded-xl border border-white/[0.06] bg-[#161412] px-3 py-1.5 text-xs font-bold text-white/70 hover:text-white hover:bg-[#1C1A18] hover:border-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         aria-label="Refresh chat"
                         title="Refresh chat live"
                     >
-                        <RefreshCw size={12} className={loading || loadingGhost ? 'animate-spin' : ''} />
+                        <RefreshCw size={12} className={loading || loadingthread ? 'animate-spin' : ''} />
                         Refresh
                     </button>
                 </div>
 
-                {(loading || loadingGhost) && unifiedItems.length === 0 && !showGlobalResults ? (
+                {(loading || loadingthread) && unifiedItems.length === 0 && !showGlobalResults ? (
                         <div className="p-4 space-y-3 animate-pulse">
                             {[1, 2, 3].map((i) => (
                                 <div key={i} className="flex items-center gap-4 p-2">
@@ -1628,7 +1628,7 @@ export const ChatList = ({
                                 {unifiedItems.map((conv: any) => {
                                 const isConversation = conv._kind === 'secure' || conv.type === 'direct' || conv.type === 'group' || Array.isArray(conv.participants);
                                 const isSecure = isConversation && !!conv.isEncrypted && !conv.isSelf;
-                                const handler = isConversation ? (e: any) => handleConversationRightClick(e, conv) : (e: any) => handleGhostConversationRightClick(e, conv);
+                                const handler = isConversation ? (e: any) => handleConversationRightClick(e, conv) : (e: any) => handlethreadConversationRightClick(e, conv);
                                 const openKind = isConversation ? 'chat' as const : 'thread' as const;
                                 return (
                                 <div key={conv.$id} className="w-full">
@@ -1820,15 +1820,15 @@ export const ChatList = ({
                           await ChatService.clearChatForMe(c.$id, user!.$id);
                           toast.success('Chat cleared');
                         } else {
-                          await deleteGhostThread(c.$id);
+                          await deletethreadThread(c.$id);
                           toast.success('Thread cleared');
-                          setGhostConversations(prev => {
+                          setthreadConversations(prev => {
                             const next = prev.filter(x => x.$id !== c.$id);
                             writeThreadsListLocal(next);
                             return next;
                           });
-                          ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== c.$id);
-                          void loadGhostConversations({ forceRefresh: true } as any);
+                          threadConversationsRef.current = threadConversationsRef.current.filter(x => x.$id !== c.$id);
+                          void loadthreadConversations({ forceRefresh: true } as any);
                         }
                       } catch (e: any) { toast.error(e?.message || 'Failed'); }
                     }}
@@ -1838,15 +1838,15 @@ export const ChatList = ({
                       try {
                         if (isConv2) { const r: any = await ChatService.wipeMyFootprint(c.$id, user!.$id); toast.success(`Removed ${r.count || 0} messages`); }
                         else {
-                          await deleteGhostThread(c.$id);
+                          await deletethreadThread(c.$id);
                           toast.success('Thread cleared');
-                          setGhostConversations(prev => {
+                          setthreadConversations(prev => {
                             const next = prev.filter(x => x.$id !== c.$id);
                             writeThreadsListLocal(next);
                             return next;
                           });
-                          ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== c.$id);
-                          void loadGhostConversations({ forceRefresh: true } as any);
+                          threadConversationsRef.current = threadConversationsRef.current.filter(x => x.$id !== c.$id);
+                          void loadthreadConversations({ forceRefresh: true } as any);
                         }
                       } catch (e: any) { toast.error(e?.message || 'Failed'); }
                     }}
@@ -1874,16 +1874,16 @@ export const ChatList = ({
                           conversationsRef.current = conversationsRef.current.filter(x => x.$id !== c.$id);
                           void loadConversations({ forceRefresh: true });
                         } else {
-                          // Bookmarks ghost retired — handled as hangout now, no note spin
-                          await deleteGhostThread(c.$id);
+                          // Bookmarks thread retired — handled as hangout now, no note spin
+                          await deletethreadThread(c.$id);
                           toast.success('Hangout cleared');
-                          setGhostConversations(prev => {
+                          setthreadConversations(prev => {
                             const next = prev.filter(x => x.$id !== c.$id);
                             writeThreadsListLocal(next);
                             return next;
                           });
-                          ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== c.$id);
-                          void loadGhostConversations({ forceRefresh: true } as any);
+                          threadConversationsRef.current = threadConversationsRef.current.filter(x => x.$id !== c.$id);
+                          void loadthreadConversations({ forceRefresh: true } as any);
                         }
                       } catch (e: any) { toast.error(e?.message || 'Wipe failed'); }
                     }}

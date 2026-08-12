@@ -43,7 +43,7 @@ export function CommObjectDetail({
   }, [onClose, router]);
 
   // Instant mural — never wait on getNote / network before painting ChatWindow.
-  // Resolve huddle/thread vs secure chat for any id (thread ids are ghost notes, not conversations).
+  // Resolve huddle/thread vs secure chat for any id (thread ids are thread notes, not conversations).
   useEffect(() => {
     let cancelled = false;
     const explicitThread = kind === 'thread';
@@ -97,7 +97,7 @@ export function CommObjectDetail({
             new Promise((resolve) => setTimeout(() => resolve(null), 2500)),
           ])) as any;
           if (cancelled || !note) return;
-          if (note && (note.isChat || note.isThread || note.isGhost)) {
+          if (note && (note.isChat || note.isThread || note.isthread)) {
             setIsHuddle(true);
             setHuddleTitle(note.title || title || 'Thread');
             void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), {

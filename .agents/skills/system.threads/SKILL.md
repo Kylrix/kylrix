@@ -3,7 +3,7 @@ name: system.threads
 description: >-
   Canonical threads substrate (threads, thread_messages, thread_reactions).
   Unique scopeKey parentKind:parentId:channel. Use when adding discussions to
-  notes, goals, workspaces, or any object — never spin ghost isThread notes.
+  notes, goals, workspaces, or any object — never spin thread isThread notes.
 ---
 
 # Threads (canonical)
@@ -38,7 +38,7 @@ Parent kinds: `note` | `goal` | `workspace` | `event` | `form` | `call` | `dm` |
 
 ## Legacy
 
-Ghost `isThread` / `isChat` notes + `comments` remain readable when `threads.legacyNoteId` is set. **New writes go to `thread_messages` only.** Do not create new ghost-note threads.
+thread `isThread` / `isChat` notes + `comments` remain readable when `threads.legacyNoteId` is set. **New writes go to `thread_messages` only.** Do not create new thread-note threads.
 
 ## Service / API
 
@@ -52,5 +52,5 @@ Ghost `isThread` / `isChat` notes + `comments` remain readable when `threads.leg
 - Add more `isThread` / `isDiscussion` / `isChat` flags on notes
 - Create a second thread for the same `(parentKind, parentId, channel)`
 - Use Appwrite CLI for row CRUD (schema only)
-- Let discussion shells appear in Ideas — enforce `isGhostNote` + `ideaListExclusionQueries()` on every note list path
-- Call `createGhostNoteForProject` / `ForResource` expecting a note row — they now return canonical thread ids only
+- Let discussion shells appear in Ideas — enforce `isthreadNote` + `ideaListExclusionQueries()` on every note list path
+- Call `createthreadNoteForProject` / `ForResource` expecting a note row — they now return canonical thread ids only

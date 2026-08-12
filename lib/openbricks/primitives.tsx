@@ -247,7 +247,7 @@ export const Button = React.forwardRef(({ children, className, sx, variant = 'te
 });
 Button.displayName = 'Button';
 
-// 3. IconButton Component — MUI default is ghost/transparent (no border box)
+// 3. IconButton Component — MUI default is thread/transparent (no border box)
 export const IconButton = React.forwardRef(({ children, className, sx, disabled, size, color, edge, ...props }: any, ref) => {
   const [hovered, setHovered] = React.useState(false);
   const { root, nested } = splitSx(sx);
@@ -1038,7 +1038,7 @@ export const Checkbox = ({ checked, onChange, disabled, ...props }: any) => (
   </button>
 );
 
-// 18. Tooltip Component — never leave visible ghost text when not hovered
+// 18. Tooltip Component — never leave visible thread text when not hovered
 export const Tooltip = ({ title, children, ..._props }: any) => (
   <div className="group/tip relative inline-flex shrink-0">
     {children}

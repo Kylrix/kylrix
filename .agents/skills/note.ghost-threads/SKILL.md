@@ -1,9 +1,9 @@
 ---
-name: note.ghost-threads
-description: Guidelines and lifecycle rules for using Ghost Notes as a high-efficiency comment and chat thread channel across Kylrix resources (calls, tasks, tags, projects, events, forms) without database bloat.
+name: note.thread-threads
+description: Guidelines and lifecycle rules for using thread Notes as a high-efficiency comment and chat thread channel across Kylrix resources (calls, tasks, tags, projects, events, forms) without database bloat.
 ---
 
-# Kylrix Ghost Note Thread System
+# Kylrix thread Note Thread System
 
 This guide documents the pattern of leveraging the existing Note Comment system to power real-time, persistent thread chats and comments on other resources (like Projects, Goals/Tasks, Forms, and Events) without introducing new database schemas or bloating the database.
 
@@ -11,22 +11,22 @@ This guide documents the pattern of leveraging the existing Note Comment system 
 
 ## 1. Core Metadata Schema
 
-Every Ghost Note created as a thread anchor must have the following metadata payload stringified in its `metadata` column:
+Every thread Note created as a thread anchor must have the following metadata payload stringified in its `metadata` column:
 
 ```json
 {
-  "isGhost": true,
+  "isthread": true,
   "linkedResourceType": "huddle" | "task" | "project" | "tag" | "event" | "form",
   "linkedResourceId": "parent-object-id",
   "linkedResourceName": "Quick Sync / Tag Earmark",
   "expiresAt": "2026-05-28T16:00:00.000Z",
-  "ghostSecret": "random-hex-string",
+  "threadSecret": "random-hex-string",
   "isStory": false
 }
 ```
 
 ### Attributes:
-- **`isGhost: true`**: Hides the note from the main notes sub-app and subjects it to the automated 7-day cleanup job.
+- **`isthread: true`**: Hides the note from the main notes sub-app and subjects it to the automated 7-day cleanup job.
 - **`linkedResourceType`**: Specifies which super-object owns the thread.
 - **`linkedResourceId`**: The unique ID of the parent resource.
 - **`isStory`**: If `true`, indicates the thread has been promoted to a permanent "Story" (an owned, standard note filtered from general view but exempted from the 7-day deletion).
@@ -38,15 +38,15 @@ Every Ghost Note created as a thread anchor must have the following metadata pay
 To prevent heavy database sweeps and in-memory JSON parsing overhead, the `notes` table has been upgraded with the following columns and indexes:
 
 ### New Columns (Optional Booleans):
-1. **`isGhost`** (Boolean, default: `false`): Explicit flag indicating an ephemeral document.
+1. **`isthread`** (Boolean, default: `false`): Explicit flag indicating an ephemeral document.
 2. **`isThread`** (Boolean, default: `false`): Explicit flag indicating the note anchors a resource discussion thread.
 
 ### Database Index:
-*   **Index Key**: `idx_notes_ghost_thread`
+*   **Index Key**: `idx_notes_thread_thread`
 *   **Index Type**: `Key` (non-unique index)
-*   **Attributes**: `isGhost` (ASC), `isThread` (ASC)
+*   **Attributes**: `isthread` (ASC), `isThread` (ASC)
 
-This indexing strategy allows the system-level cleanup sweeps to surgically select and delete expired ghost notes (`isGhost === true && isThread === false`) in a single query on-disk without downloading or parsing the metadata of persistent threads.
+This indexing strategy allows the system-level cleanup sweeps to surgically select and delete expired thread notes (`isthread === true && isThread === false`) in a single query on-disk without downloading or parsing the metadata of persistent threads.
 
 ---
 
@@ -67,27 +67,27 @@ To maximize performance and simplicity, **resource-linked huddles** utilize the 
 To save a temporary chat/thread from expiring in 7 days, users can convert it into a permanent **"Story"**:
 
 1.  **Chronological outline compilation**: Fetch all active comments under `noteId = resourceId` and format them into a beautiful, chronological markdown outline document.
-2.  **Provision permanent Note**: Create a new Note document with a unique ID (`rowId = ID.unique()`) owned by the actor (`userId = actor.$id`) with `isStory: true` and `isGhost: false`, completely removing the `expiresAt` parameter.
-3.  **Huddle Reset**: Delete all comments under `noteId = resourceId` and delete the original ghost note (with `id = resourceId`), cleanly resetting the discussion space so a fresh thread can be started.
+2.  **Provision permanent Note**: Create a new Note document with a unique ID (`rowId = ID.unique()`) owned by the actor (`userId = actor.$id`) with `isStory: true` and `isthread: false`, completely removing the `expiresAt` parameter.
+3.  **Huddle Reset**: Delete all comments under `noteId = resourceId` and delete the original thread note (with `id = resourceId`), cleanly resetting the discussion space so a fresh thread can be started.
 
 ---
 
 ## 5. Backwards-Compatible Legacy Fallback
 
-During the migration period, some older ghost notes may lack the first-class `isGhost` or `isThread` attributes. The UI and sweep jobs must employ the following fallback logic:
+During the migration period, some older thread notes may lack the first-class `isthread` or `isThread` attributes. The UI and sweep jobs must employ the following fallback logic:
 
 ```typescript
 // Safe classification helper
-const isGhostNote = (note: any) => {
+const isthreadNote = (note: any) => {
   // 1. Direct Column Check
-  if (note.isGhost !== undefined) {
-    return !!note.isGhost;
+  if (note.isthread !== undefined) {
+    return !!note.isthread;
   }
   // 2. Legacy Metadata Fallback
   if (note.metadata) {
     try {
       const parsed = JSON.parse(note.metadata);
-      return !!parsed.isGhost;
+      return !!parsed.isthread;
     } catch {}
   }
   // 3. Userless Fallback
@@ -103,4 +103,4 @@ This legacy parsing layer must be maintained until all legacy documents have nat
 
 -   **Public Disclosure**: Clearly inform users that thread comments are **Public by Design** to anyone with resource access.
 -   **Global Unmount**: Ensure thread sidebars and overlay drawers use conditional rendering (`{isThreadOpen && <ThreadPanel />}`) to avoid interaction traps.
--   **Layman-First Copy**: Avoid technical jargon. Use simple phrases like `"Public Thread (auto-cleans in 7 days)"` for ghost threads, and `"Public Event Huddle"` for events.
+-   **Layman-First Copy**: Avoid technical jargon. Use simple phrases like `"Public Thread (auto-cleans in 7 days)"` for thread threads, and `"Public Event Huddle"` for events.

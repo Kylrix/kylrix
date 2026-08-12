@@ -160,13 +160,13 @@ export function cleanRowData<T>(data: Partial<T>): Record<string, unknown> {
 
 /**
  * True for notes that must NEVER appear in the Ideas list.
- * Covers ghost / thread / chat / discussion shells (flag columns + metadata),
+ * Covers thread / chat / discussion shells (flag columns + metadata),
  * and object-linked empty shells that historically leaked when flags were missing.
  */
-export function isGhostNote(note: any): boolean {
+export function isExcludedNote(note: any): boolean {
   if (!note) return false;
-  // 1. Direct Column Check (Ghost, Thread, Chat, Discussion)
-  if (note.isGhost || note.isThread || note.isChat || note.isDiscussion) {
+  // 1. Direct Column Check (thread, chat, discussion) — legacy isThread handled via alias
+  if (note.isThread || note.isChat || note.isDiscussion) {
     return true;
   }
   // 2. Legacy Metadata Fallback
@@ -174,7 +174,7 @@ export function isGhostNote(note: any): boolean {
     try {
       const parsed = typeof note.metadata === 'string' ? JSON.parse(note.metadata) : note.metadata;
       if (parsed && typeof parsed === 'object') {
-        if (parsed.isGhost || parsed.isThread || parsed.isChat || parsed.isDiscussion) {
+        if (parsed.isThread || parsed.isChat || parsed.isDiscussion) {
           return true;
         }
         // Linked discussion carrier spun for another object
@@ -191,20 +191,21 @@ export function isGhostNote(note: any): boolean {
     const content = String(note.content ?? '').trim();
     if (!content) return true;
   }
-  // 4. Userless Fallback (Ghost notes used to use null/empty userId)
+  // 4. Userless Fallback (legacy thread notes used null userId)
   return !note.userId;
 }
 
 /** Alias — use at every Ideas / note discovery surface. */
-export const isIdeaListExcludedNote = isGhostNote;
+export const isIdeaListExcludedNote = isExcludedNote;
+// Back-compat alias for callers still importing isThreadNote
+export const isThreadNote = isExcludedNote;
 
 /**
  * Appwrite query fragments that shrink discussion shells before client filter.
- * Safe additive filters; still apply isGhostNote client-side (null flags).
+ * Safe additive filters; still apply isExcludedNote client-side (null flags).
  */
 export function ideaListExclusionQueries(): any[] {
   return [
-    Query.notEqual('isGhost', true),
     Query.notEqual('isThread', true),
     Query.notEqual('isChat', true),
     Query.notEqual('isDiscussion', true),
@@ -225,8 +226,10 @@ function hydrateVirtualAttributes(doc: any): any {
       }
     } catch { /* ignore */ }
   }
-  // Ensure isGhost is normalized (using direct, metadata, or legacy userId fallback)
-  doc.isGhost = isGhostNote(doc);
+  // Ensure isThread is normalized (using direct, metadata, or legacy userId fallback)
+  doc.isThread = isExcludedNote(doc);
+  // legacy alias for readers still checking isThread lowercased
+  (doc as any).isThread = doc.isThread;
   return doc;
 }
 
@@ -337,7 +340,7 @@ export function filterNoteData(data: Record<string, any>): Record<string, any> {
     'id', 'createdAt', 'updatedAt', 'userId', 'isPublic', 'isGuest', 'status', 
     'parentNoteId', 'title', 'content', 'tags', 'comments', 
     'extensions', 'collaborators', 'metadata', 'attachments', 'format',
-    'isGhost', 'isThread', 'isPinned', 'creatorId', 'isChat', 'resourceId',
+    'isThread', 'isPinned', 'creatorId', 'isChat', 'resourceId',
     'resourceType', 'isEncrypted', 'isPass', 'isTask', 'isFile', 'isTotp',
     'isDiscussion', 'isWorkspace', 'source', 'keepPermission', 'crdt', 'dek', 'isDeleted'
   ];
@@ -420,8 +423,8 @@ export async function createNote(data: Partial<Notes>, jwt?: string) {
 
 
 export async function getNote(noteId: string): Promise<Notes> {
-  if (noteId.startsWith('ghost-') && typeof window !== 'undefined') {
-    const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+  if (noteId.startsWith('thread-') && typeof window !== 'undefined') {
+    const historyRaw = localStorage.getItem('kylrix_thread_notes_v2');
     if (historyRaw) {
       const history = JSON.parse(historyRaw);
       const match = history.find((n: any) => n.id === noteId);
@@ -430,11 +433,11 @@ export async function getNote(noteId: string): Promise<Notes> {
         let decryptedContent = match.content || '';
         if (match.decryptionKey) {
           try {
-            const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
-            decryptedTitle = await decryptGhostData(match.title, match.decryptionKey);
-            decryptedContent = await decryptGhostData(match.content || '', match.decryptionKey);
+            const { decryptThreadData } = await import('@/lib/encryption/thread-crypto');
+            decryptedTitle = await decryptThreadData(match.title, match.decryptionKey);
+            decryptedContent = await decryptThreadData(match.content || '', match.decryptionKey);
           } catch (e) {
-            console.error('Failed to decrypt ghost note in getNote:', e);
+            console.error('Failed to decrypt thread note in getNote:', e);
           }
         }
         return {
@@ -445,7 +448,7 @@ export async function getNote(noteId: string): Promise<Notes> {
           content: decryptedContent,
           format: 'text',
           tags: [],
-          userId: 'ghost',
+          userId: 'thread',
           isPublic: false,
           isGuest: false,
           metadata: match.metadata || '{}'} as any;
@@ -477,8 +480,8 @@ export async function getNote(noteId: string): Promise<Notes> {
 }
 
 export async function updateNote(noteId: string, data: Partial<Notes>, jwt?: string) {
-  if (noteId.startsWith('ghost-') && typeof window !== 'undefined') {
-    const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+  if (noteId.startsWith('thread-') && typeof window !== 'undefined') {
+    const historyRaw = localStorage.getItem('kylrix_thread_notes_v2');
     if (historyRaw) {
       const history = JSON.parse(historyRaw);
       const index = history.findIndex((n: any) => n.id === noteId);
@@ -489,11 +492,11 @@ export async function updateNote(noteId: string, data: Partial<Notes>, jwt?: str
         let decryptedContent = match.content || '';
         if (match.decryptionKey) {
           try {
-            const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
-            decryptedTitle = await decryptGhostData(match.title, match.decryptionKey);
-            decryptedContent = await decryptGhostData(match.content || '', match.decryptionKey);
+            const { decryptThreadData } = await import('@/lib/encryption/thread-crypto');
+            decryptedTitle = await decryptThreadData(match.title, match.decryptionKey);
+            decryptedContent = await decryptThreadData(match.content || '', match.decryptionKey);
           } catch (e) {
-            console.error('Failed to decrypt ghost note for update:', e);
+            console.error('Failed to decrypt thread note for update:', e);
           }
         }
 
@@ -506,13 +509,13 @@ export async function updateNote(noteId: string, data: Partial<Notes>, jwt?: str
 
         if (match.decryptionKey) {
           try {
-            const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
-            const resTitle = await encryptGhostData(nextTitle, match.decryptionKey);
+            const { encryptThreadData } = await import('@/lib/encryption/thread-crypto');
+            const resTitle = await encryptThreadData(nextTitle, match.decryptionKey);
             encTitle = resTitle.encrypted;
-            const resContent = await encryptGhostData(nextContent, match.decryptionKey);
+            const resContent = await encryptThreadData(nextContent, match.decryptionKey);
             encContent = resContent.encrypted;
           } catch (e) {
-            console.error('Failed to encrypt ghost note for update:', e);
+            console.error('Failed to encrypt thread note for update:', e);
           }
         }
 
@@ -526,7 +529,7 @@ export async function updateNote(noteId: string, data: Partial<Notes>, jwt?: str
           decryptionKey,
           deletionSecret: match.deletionSecret};
         history[index] = updatedRef;
-        localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+        localStorage.setItem('kylrix_thread_notes_v2', JSON.stringify(history));
         window.dispatchEvent(new Event('storage'));
         return {
           $id: updatedRef.id,
@@ -536,7 +539,7 @@ export async function updateNote(noteId: string, data: Partial<Notes>, jwt?: str
           content: nextContent,
           format: 'text',
           tags: [],
-          userId: 'ghost',
+          userId: 'thread',
           isPublic: false,
           isGuest: false,
           metadata: updatedRef.metadata || '{}'} as any;
@@ -597,12 +600,12 @@ export async function deleteNote(noteId: string, jwt?: string) {
     }
   }
 
-  if (noteId.startsWith('ghost-') && typeof window !== 'undefined') {
-    const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+  if (noteId.startsWith('thread-') && typeof window !== 'undefined') {
+    const historyRaw = localStorage.getItem('kylrix_thread_notes_v2');
     if (historyRaw) {
       const history = JSON.parse(historyRaw);
       const filtered = history.filter((n: any) => n.id !== noteId);
-      localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(filtered));
+      localStorage.setItem('kylrix_thread_notes_v2', JSON.stringify(filtered));
       window.dispatchEvent(new Event('storage'));
       return { success: true };
     }
@@ -613,20 +616,20 @@ export async function deleteNote(noteId: string, jwt?: string) {
     
     const isOffline = !window.navigator.onLine;
     if (isOffline) {
-      console.log('[deleteNote] Offline. Saving deletion as a ghost note...');
-      const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+      console.log('[deleteNote] Offline. Saving deletion as a thread note...');
+      const historyRaw = localStorage.getItem('kylrix_thread_notes_v2');
       if (historyRaw) {
         try {
           const history = JSON.parse(historyRaw);
           const filtered = history.filter((n: any) => n.id !== noteId);
 
-          // Save deletion as a ghost note with _deleted: true
+          // Save deletion as a thread note with _deleted: true
           const newRef = {
             id: noteId,
             title: '',
             content: '',
             metadata: JSON.stringify({
-              isGhost: true,
+              isThread: true,
               _deleted: true,
               send_object: { kind: 'note' }
             }),
@@ -636,7 +639,7 @@ export async function deleteNote(noteId: string, jwt?: string) {
             deletionSecret: ''};
           filtered.unshift(newRef);
 
-          localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(filtered));
+          localStorage.setItem('kylrix_thread_notes_v2', JSON.stringify(filtered));
           window.dispatchEvent(new Event('storage'));
         } catch (e) {
           console.error(e);
@@ -653,20 +656,20 @@ export async function deleteNote(noteId: string, jwt?: string) {
     } catch (err: any) {
       const isNetworkError = !err.status || err.code === 'network_error' || err.message?.includes('fetch') || err.message?.includes('NetworkError');
       if (isNetworkError) {
-        console.log('[deleteNote] Network error. Saving deletion as a ghost note...');
-        const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+        console.log('[deleteNote] Network error. Saving deletion as a thread note...');
+        const historyRaw = localStorage.getItem('kylrix_thread_notes_v2');
         if (historyRaw) {
           try {
             const history = JSON.parse(historyRaw);
             const filtered = history.filter((n: any) => n.id !== noteId);
 
-            // Save deletion as a ghost note with _deleted: true
+            // Save deletion as a thread note with _deleted: true
             const newRef = {
               id: noteId,
               title: '',
               content: '',
               metadata: JSON.stringify({
-                isGhost: true,
+                isThread: true,
                 _deleted: true,
                 send_object: { kind: 'note' }
               }),
@@ -676,7 +679,7 @@ export async function deleteNote(noteId: string, jwt?: string) {
               deletionSecret: ''};
             filtered.unshift(newRef);
 
-            localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(filtered));
+            localStorage.setItem('kylrix_thread_notes_v2', JSON.stringify(filtered));
             window.dispatchEvent(new Event('storage'));
           } catch (e) {
             console.error(e);
@@ -692,7 +695,7 @@ export async function deleteNote(noteId: string, jwt?: string) {
   return result;
 }
 
-export async function listNotes(queries: any[] = [], limit: number = 100, options: { includeStories?: boolean; includeGhosts?: boolean } = {}) {
+export async function listNotes(queries: any[] = [], limit: number = 100, options: { includeStories?: boolean; includeThreads?: boolean } = {}) {
   const key = `list:notes:${JSON.stringify(queries)}:${limit}:${JSON.stringify(options)}`;
   
   return await fetchOptimized(key, async () => {
@@ -709,7 +712,7 @@ export async function listNotes(queries: any[] = [], limit: number = 100, option
 
     const finalQueries = [
       ...queries,
-      ...(!options.includeGhosts ? ideaListExclusionQueries() : []),
+      ...(!options.includeThreads ? ideaListExclusionQueries() : []),
       Query.limit(limit),
       Query.orderDesc('$createdAt')
     ];
@@ -754,8 +757,8 @@ export async function listNotes(queries: any[] = [], limit: number = 100, option
     if (!options.includeStories) {
       filteredNotes = filteredNotes.filter((n: any) => !(n as any).isStory);
     }
-    if (!options.includeGhosts) {
-      filteredNotes = filteredNotes.filter((n: any) => !isGhostNote(n));
+    if (!options.includeThreads) {
+      filteredNotes = filteredNotes.filter((n: any) => !isExcludedNote(n));
     }
 
     return { ...res, rows: filteredNotes };
@@ -1521,7 +1524,7 @@ export interface ListNotesPaginatedOptions {
   queries?: any[]; // additional custom queries (overrides userId logic if provided)
   hydrateTags?: boolean; // default true
   includeStories?: boolean;
-  includeGhosts?: boolean;
+  includeThreads?: boolean;
 }
 
 export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}) {
@@ -1533,7 +1536,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     queries,
     hydrateTags = true,
     includeStories = false,
-    includeGhosts = false} = options;
+    includeThreads = false} = options;
 
   let baseQueries: any[] = [];
   if (Array.isArray(queries) && queries.length) {
@@ -1562,7 +1565,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
 
   const finalQueries: any[] = [
     ...baseQueries,
-    ...(!includeGhosts ? ideaListExclusionQueries() : []),
+    ...(!includeThreads ? ideaListExclusionQueries() : []),
     Query.limit(limit),
     Query.orderDesc('$updatedAt')];
   if (sinceUpdatedAt) finalQueries.push(Query.greaterThan('$updatedAt', sinceUpdatedAt));
@@ -1607,7 +1610,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
             userId: doc.userId,
             isPublic: false,
             isGuest: false,
-            metadata: doc.metadata || '{}'})).filter((doc: any) => includeGhosts || !isGhostNote(doc)) as any[];
+            metadata: doc.metadata || '{}'})).filter((doc: any) => includeThreads || !isExcludedNote(doc)) as any[];
           
           return {
             rows,
@@ -1658,8 +1661,8 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
   if (!includeStories) {
     filteredNotes = filteredNotes.filter((n: any) => !(n as any).isStory);
   }
-  if (!includeGhosts) {
-    filteredNotes = filteredNotes.filter((n: any) => !isGhostNote(n));
+  if (!includeThreads) {
+    filteredNotes = filteredNotes.filter((n: any) => !isExcludedNote(n));
   }
 
   const batchLength = filteredNotes.length;
@@ -2007,7 +2010,7 @@ async function preparePublicNoteUpdate(
       content: encryptedContent,
       metadata: JSON.stringify({
         ...meta,
-        isGhost: false,
+        isThread: false,
         isEncrypted: true,
         encryptionVersion: 'T4',
         encryptedTitle

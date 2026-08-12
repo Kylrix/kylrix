@@ -425,7 +425,7 @@ export async function deleteConversationFullyInternal(payload: {
     }
   }
 
-  // Wipe linked discussion ghost note if any exist with the same id (legacy — now isEncrypted=false path, keep best-effort)
+  // Wipe linked discussion thread note if any exist with the same id (legacy — now isEncrypted=false path, keep best-effort)
   try {
     const { NOTE_DATABASE_ID, TABLES } = APPWRITE_CONFIG;
     await databases.deleteRow(NOTE_DATABASE_ID, TABLES.NOTES, payload.conversationId).catch(() => null);

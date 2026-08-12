@@ -101,7 +101,7 @@ export function isUnpersistedComposeDraft(noteId?: string | null): boolean {
 export function shouldCreateComposeNote(noteId?: string | null): boolean {
   const id = String(noteId || '').trim();
   if (!id) return true;
-  if (id.startsWith('live-') || id.startsWith('ghost-')) return true;
+  if (id.startsWith('live-') || id.startsWith('thread-')) return true;
   if (isNotePersistedRemote(id)) return false;
   return isUnpersistedComposeDraft(id);
 }
@@ -110,7 +110,7 @@ export function shouldCreateComposeNote(noteId?: string | null): boolean {
 export function isEphemeralComposeNoteId(noteId?: string | null): boolean {
   const id = String(noteId || '').trim();
   if (!id) return false;
-  if (id.startsWith('live-') || id.startsWith('ghost-')) return true;
+  if (id.startsWith('live-') || id.startsWith('thread-')) return true;
   return isUnpersistedComposeDraft(id) && !isNotePersistedRemote(id);
 }
 

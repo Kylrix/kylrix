@@ -9,7 +9,7 @@ This skill provides the permanent architectural resolution for the 'Non-Responsi
 
 ## The Problem: Layout-Driven Deadlocks
 When multiple standalone applications are merged into one, they often bring conflicting 'Shell' and 'Layout' wrappers. Each wrapper establishes its own **Stacking Context**. When these contexts are centralized into a `GlobalShell`:
-1.  **Ghost Backdrops**: Closed-but-mounted Drawers/Modals leave invisible viewport-wide layers in the DOM.
+1.  **thread Backdrops**: Closed-but-mounted Drawers/Modals leave invisible viewport-wide layers in the DOM.
 2.  **Microtask Saturation**: DOM-polling mechanisms (like `MutationObserver`) scan the entire tree on every mutation, dropping user clicks.
 3.  **Context Storms**: Non-memoized high-frequency contexts (like Task state) trigger global re-renders that lock the main thread.
 

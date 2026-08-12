@@ -28,12 +28,13 @@ const spaceGrotesk = Space_Grotesk({
 import GlobalShell from '@/components/GlobalShell';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://kylrix.space'),
+  metadataBase: new URL('https://www.kylrix.space'),
   title: {
-    default: 'Kylrix · The agentic workspace that 10x the productivity of high agency builders',
+    default: 'Build, think, and ship in one intelligent workspace. — Kylrix',
     template: '%s · Kylrix'},
-  description: 'The agentic workspace that 10x the productivity of high agency builders.',
+  description: 'Your workflow becomes a living, callable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
   manifest: '/manifest.webmanifest',
+  keywords: ['agentic workspace', 'local-first', 'PAT', 'OAuth2', 'WebRTC', 'offline-first', 'productivity system'],
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -45,19 +46,21 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://kylrix.space',
+    url: 'https://www.kylrix.space',
     siteName: 'Kylrix',
+    title: 'Build, think, and ship in one intelligent workspace.',
+    description: 'Your workflow becomes a living, callable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
     images: [
       {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'Kylrix Ecosystem'},
+        alt: 'Build, think, and ship in one intelligent workspace.'},
     ]},
   twitter: {
     card: 'summary_large_image',
-    title: 'Kylrix · The agentic workspace that 10x the productivity of high agency builders',
-    description: 'The agentic workspace that 10x the productivity of high agency builders.',
+    title: 'Build, think, and ship in one intelligent workspace. — Kylrix',
+    description: 'Your workflow becomes a living, callable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
     images: ['/opengraph-image']}};
 
 export const viewport: Viewport = {

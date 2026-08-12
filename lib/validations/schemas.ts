@@ -16,13 +16,13 @@ export const ListParamsSchema = z.object({
   queries: z.array(z.string()).optional()});
 
 export const MutatePermissionsSchema = z.object({
-  action: z.enum(['grant', 'revoke', 'pin_ghost_note']).default('grant'),
+  action: z.enum(['grant', 'revoke', 'pin_thread_note']).default('grant'),
   rowId: IDSchema.optional(),
   noteIds: z.union([z.string(), z.array(z.string())]).optional(),
   resourceId: IDSchema.optional(),
   resourceIds: z.array(IDSchema).optional(),
   wrappedKey: z.string().optional(),
-  ghostSecret: z.string().optional(),
+  threadSecret: z.string().optional(),
   resourceType: z.string().optional(),
   metadata: z.string().nullable().optional()});
 

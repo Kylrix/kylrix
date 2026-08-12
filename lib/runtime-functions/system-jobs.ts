@@ -5,12 +5,12 @@ import { sweepStaleLiveCallPresenceBatch } from '@/lib/services/internal/live-ca
 import { executeCascadeDeleteSecure } from '@/lib/actions/cascade-delete';
 
 export type SystemRuntimeJobId = 
-  | 'cleanup_expired_public_ghost_notes' 
+  | 'cleanup_expired_public_thread_notes' 
   | 'sweep_stale_live_call_presence'
   | 'sweep_stale_action_threads';
 
 const SYSTEM_JOB_IDS = new Set<SystemRuntimeJobId>([
-  'cleanup_expired_public_ghost_notes',
+  'cleanup_expired_public_thread_notes',
   'sweep_stale_live_call_presence',
   'sweep_stale_action_threads'
 ]);
@@ -19,7 +19,7 @@ export function isSystemRuntimeJobId(job: string): job is SystemRuntimeJobId {
   return SYSTEM_JOB_IDS.has(job as SystemRuntimeJobId);
 }
 
-async function cleanupExpiredPublicGhostNotes(payload?: { batchSize?: number }) {
+async function cleanupExpiredPublicthreadNotes(payload?: { batchSize?: number }) {
   const { databases } = createSystemClient();
   const NOTE_DB = APPWRITE_CONFIG.DATABASES.NOTE;
   const NOTES_TABLE = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
@@ -36,16 +36,16 @@ async function cleanupExpiredPublicGhostNotes(payload?: { batchSize?: number }) 
 
   let deleted = 0;
   for (const doc of res.rows) {
-    let meta: { isGhost?: boolean; expiresAt?: string; isThread?: boolean; isChat?: boolean };
+    let meta: { isthread?: boolean; expiresAt?: string; isThread?: boolean; isChat?: boolean };
     try {
       meta =
         typeof doc.metadata === 'string' && doc.metadata
-          ? (JSON.parse(doc.metadata) as { isGhost?: boolean; expiresAt?: string; isThread?: boolean; isChat?: boolean })
+          ? (JSON.parse(doc.metadata) as { isthread?: boolean; expiresAt?: string; isThread?: boolean; isChat?: boolean })
           : {};
     } catch {
       continue;
     }
-    if (!meta.isGhost) continue;
+    if (!meta.isthread) continue;
 
     // Preservation Gate: Skip persistent threads and chats
     if ((doc as any).isThread || (doc as any).isChat || meta.isThread || meta.isChat) {
@@ -59,7 +59,7 @@ async function cleanupExpiredPublicGhostNotes(payload?: { batchSize?: number }) 
       // 1. Recursive cleanup for storage files, comments, reactions, etc.
       await executeCascadeDeleteSecure(NOTE_DB, NOTES_TABLE, doc.$id);
 
-      // 2. Delete the ghost note itself
+      // 2. Delete the thread note itself
       await databases.deleteRow(NOTE_DB, NOTES_TABLE, doc.$id);
       deleted += 1;
     } catch {
@@ -110,8 +110,8 @@ export async function executeSystemRuntimeJob(
   job: SystemRuntimeJobId,
   payload?: { batchSize?: number; sweepLimit?: number }) {
   switch (job) {
-    case 'cleanup_expired_public_ghost_notes':
-      return cleanupExpiredPublicGhostNotes({ batchSize: payload?.batchSize });
+    case 'cleanup_expired_public_thread_notes':
+      return cleanupExpiredPublicthreadNotes({ batchSize: payload?.batchSize });
     case 'sweep_stale_live_call_presence':
       return sweepStaleLiveCallPresenceBatch(payload?.sweepLimit ?? payload?.batchSize ?? 160);
     case 'sweep_stale_action_threads':

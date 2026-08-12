@@ -291,11 +291,11 @@ export const CallInterface = ({
         });
     }, [participantIds, resolveUserName, participants, userNames]);
 
-    // Lazy load/spin Ghost Note
+    // Lazy load/spin thread Note
     useEffect(() => {
         if (!callCode || !user) return;
 
-        const initGhostChat = async () => {
+        const initthreadChat = async () => {
             try {
                 const link = await CallService.getCallLink(callCode);
                 if (!link) return;
@@ -305,18 +305,18 @@ export const CallInterface = ({
                     setChatNoteId(metadata.chatNoteId);
                 } else if (isCaller || link.userId === user.$id) {
                     const title = callTitle || link.title || 'Huddle Chat';
-                    const ghostNote = await CallService.createGhostNoteForCall(user.$id, callCode, title);
-                    if (ghostNote) {
-                        setChatNoteId(ghostNote.$id);
-                        await CallService.updateCallMetadata(callCode, { chatNoteId: ghostNote.$id });
+                    const threadNote = await CallService.createthreadNoteForCall(user.$id, callCode, title);
+                    if (threadNote) {
+                        setChatNoteId(threadNote.$id);
+                        await CallService.updateCallMetadata(callCode, { chatNoteId: threadNote.$id });
                     }
                 }
             } catch (e) {
-                console.error('[CallInterface] Failed to initialize ghost chat note:', e);
+                console.error('[CallInterface] Failed to initialize thread chat note:', e);
             }
         };
 
-        initGhostChat();
+        initthreadChat();
     }, [callCode, user, isCaller, callTitle]);
 
     // Fetch comments and subscribe to comments table

@@ -62,7 +62,7 @@ export class WebRTCManager {
 
   private setupRealtimeSignaling() {
       if (typeof window === 'undefined' || !this.callId) return;
-      const channel = PresenceService.getCallChannel ? (PresenceService as any).getCallChannel(this.callId) : `call.${this.callId}`;
+      const channel = (PresenceService as any).getCallChannel ? (PresenceService as any).getCallChannel(this.callId) : `call.${this.callId}`;
       const unsub = PresenceService.subscribeToPresence(channel, (payload: any) => {
           const row = payload?.data || payload;
           if (!row || row.callId !== this.callId) return;
@@ -297,9 +297,8 @@ export class WebRTCManager {
 
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
-
       if (this.callId) {
-          this.sendAppwriteSignal('offer', JSON.stringify(offer), senderId, targetId);
+          this.sendPresenceSignal('offer', JSON.stringify(offer), senderId, targetId);
       }
 
       this.events.onSignal({
@@ -396,9 +395,8 @@ export class WebRTCManager {
         await this.peerConnection.setLocalDescription(answer);
         
         console.log(`[WebRTCManager] Sending answer to ${signal.sender}`);
-
         if (this.callId) {
-            this.sendAppwriteSignal('answer', JSON.stringify(answer), signal.target, signal.sender);
+            this.sendPresenceSignal('answer', JSON.stringify(answer), signal.target, signal.sender);
         }
 
         this.events.onSignal({
@@ -474,22 +472,7 @@ export class WebRTCManager {
         this.unsubscribeRealtime();
     }
 
-    // Section 3: The Self-Cleaning Garbage Collection
-    if (this.callId) {
-        try {
-            const res = await databases.listRows(DB_ID, SIGNALS_TABLE, [
-                Query.equal('callId', this.callId)
-            ]);
-            
-            // Concurrent deletions for active signaling blocks
-            await Promise.all(
-                res.rows.map((doc: any) => databases.deleteRow(DB_ID, SIGNALS_TABLE, doc.$id))
-            );
-            console.log(`[WebRTCManager] Purged ${res.total} signaling rows for call ${this.callId}`);
-        } catch (err) {
-            console.warn('[WebRTCManager] Failed to purge signaling rows:', err);
-        }
-    }
+    // Ephemeral presence needs no purge — channel auto-expires when peers leave.
   }
 
   private updateState(newState: PeerState) {

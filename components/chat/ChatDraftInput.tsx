@@ -101,19 +101,19 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
       setDraft('Securing message...');
       try {
         const { AppwriteService } = await import('@/lib/appwrite');
-        const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
-        const ghostSecret =
+        const { encryptThreadData } = await import('@/lib/encryption/thread-crypto');
+        const threadSecret =
           typeof crypto !== 'undefined' && crypto.randomUUID
             ? crypto.randomUUID()
             : `${Date.now()}-send`;
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-        const titleEnc = await encryptGhostData('Secure Note');
-        const contentEnc = await encryptGhostData(val, titleEnc.key);
-        const note = await AppwriteService.createSendGhostObject({
+        const titleEnc = await encryptThreadData('Secure Note');
+        const contentEnc = await encryptThreadData(val, titleEnc.key);
+        const note = await AppwriteService.createSendthreadObject({
           title: titleEnc.encrypted,
           content: contentEnc.encrypted,
           format: 'markdown',
-          ghostSecret,
+          threadSecret,
           expiresAt,
           isEncrypted: true,
           sendObject: { kind: 'note' },

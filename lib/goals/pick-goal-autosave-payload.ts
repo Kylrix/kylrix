@@ -26,7 +26,7 @@ export function pickGoalAutosavePayload(task: Task): Record<string, unknown> {
   const title = clampNoteTitle(rawTitle || 'Untitled Goal', 'Untitled Goal');
 
   const assigneeIds = (task.assigneeIds || []).filter(
-    (id) => !!id && id !== 'guest' && id !== 'ghost');
+    (id) => !!id && id !== 'guest' && id !== 'thread');
 
   const locked = typeof task.dek === 'string' && task.dek.trim().length > 0;
 

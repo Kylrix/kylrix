@@ -359,45 +359,45 @@ export class AppwriteService {
       currentUsername: profile.username || currentUser?.prefs?.username || currentUser?.username || null};
   }
 
-  static async createGhostNote(data: {
+  static async createthreadNote(data: {
     title: string;
     content: string;
     format?: string;
-    ghostSecret: string;
+    threadSecret: string;
     expiresAt?: string;
     isEncrypted?: boolean;
     creatorDeletionProofHash?: string;
   }): Promise<any> {
     if (typeof window !== 'undefined') {
-      const { createGhostNote } = await import('@/lib/actions/client-ops');
-      return await createGhostNote(data);
+      const { createthreadNote } = await import('@/lib/actions/client-ops');
+      return await createthreadNote(data);
     } else {
-      const { createGhostNoteSecure } = await import('@/lib/actions/secure-ops');
-      return await createGhostNoteSecure(data);
+      const { createthreadNoteSecure } = await import('@/lib/actions/secure-ops');
+      return await createthreadNoteSecure(data);
     }
   }
 
   /**
-   * Send by Kylrix: same storage as ghost notes (no userId, public read) but metadata includes
+   * Send by Kylrix: same storage as thread notes (no userId, public read) but metadata includes
    * `send_object` so clients render password / TOTP / task payloads instead of plain notes.
-   * Coexists with classic ghost notes (those omit `send_object`).
+   * Coexists with classic thread notes (those omit `send_object`).
    */
-  static async createSendGhostObject(data: {
+  static async createSendthreadObject(data: {
     title: string;
     content: string;
     format?: string;
-    ghostSecret: string;
+    threadSecret: string;
     expiresAt?: string;
     isEncrypted?: boolean;
     creatorDeletionProofHash?: string;
     sendObject: { kind: string; bucketId?: string; fileId?: string };
   }): Promise<any> {
     if (typeof window !== 'undefined') {
-      const { createSendGhostObject } = await import('@/lib/actions/client-ops');
-      return await createSendGhostObject(data);
+      const { createSendthreadObject } = await import('@/lib/actions/client-ops');
+      return await createSendthreadObject(data);
     } else {
-      const { createSendGhostObjectSecure } = await import('@/lib/actions/secure-ops');
-      return await createSendGhostObjectSecure(data);
+      const { createSendthreadObjectSecure } = await import('@/lib/actions/secure-ops');
+      return await createSendthreadObjectSecure(data);
     }
   }
 

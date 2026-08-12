@@ -15,7 +15,7 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import type { Notes } from '@/types/appwrite';
 import { useAuth } from '@/context/auth/AuthContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { isGhostNote } from '@/lib/appwrite/note';
+import { isExcludedNote } from '@/lib/appwrite/note';
 import { useDataNexus } from './DataNexusContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { resolveNoteCardTitle } from '@/constants/noteTitle';
@@ -152,14 +152,14 @@ function normalizeVisibility(note: Notes): Notes {
 }
 
 
-async function getGhostNotes(): Promise<Notes[]> {
+async function getthreadNotes(): Promise<Notes[]> {
   if (typeof window === 'undefined') return [];
-  const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+  const historyRaw = localStorage.getItem('kylrix_thread_notes_v2');
   if (!historyRaw) return [];
   try {
     const history = JSON.parse(historyRaw);
     if (!Array.isArray(history)) return [];
-    const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+    const { decryptThreadData } = await import('@/lib/encryption/thread-crypto');
     const mapped = await Promise.all(history.map(async (item: any) => {
       const meta = (() => {
         try { return JSON.parse(item.metadata || '{}'); } catch { return {}; }
@@ -171,10 +171,10 @@ async function getGhostNotes(): Promise<Notes[]> {
       let decryptedContent = item.content || '';
       if (item.decryptionKey) {
         try {
-          decryptedTitle = await decryptGhostData(item.title, item.decryptionKey);
-          decryptedContent = await decryptGhostData(item.content || '', item.decryptionKey);
+          decryptedTitle = await decryptThreadData(item.title, item.decryptionKey);
+          decryptedContent = await decryptThreadData(item.content || '', item.decryptionKey);
         } catch (e) {
-          console.error('Failed to decrypt ghost note in getGhostNotes:', e);
+          console.error('Failed to decrypt thread note in getthreadNotes:', e);
         }
       }
       return {
@@ -185,7 +185,7 @@ async function getGhostNotes(): Promise<Notes[]> {
         content: decryptedContent,
         format: 'text',
         tags: [],
-        userId: 'ghost',
+        userId: 'thread',
         isPublic: false,
         isGuest: false,
         metadata: item.metadata || '{}',
@@ -193,7 +193,7 @@ async function getGhostNotes(): Promise<Notes[]> {
     }));
     return mapped.filter(Boolean) as any as Notes[];
   } catch (e) {
-    console.error('Failed to parse ghost history in getGhostNotes', e);
+    console.error('Failed to parse thread history in getthreadNotes', e);
     return [];
   }
 }
@@ -320,8 +320,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Load ghost notes and deleted IDs
-      const historyRaw = typeof window !== 'undefined' ? localStorage.getItem('kylrix_ghost_notes_v2') : null;
+      // Load thread notes and deleted IDs
+      const historyRaw = typeof window !== 'undefined' ? localStorage.getItem('kylrix_thread_notes_v2') : null;
       const deletedIds = new Set<string>();
       if (historyRaw) {
         try {
@@ -338,7 +338,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           }
         } catch {}
       }
-      const ghostNotes = await getGhostNotes();
+      const threadNotes = await getthreadNotes();
 
       // Pinned repatriation is secondary — sorted in-memory via sortPinnedThenCreatedAt (like goals), not a separate fetch.
 
@@ -355,15 +355,15 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         
         // Update other states based on this initial fetch
         const batch = mergeFetchedNotesWithLocalDrafts(
-          (res?.rows || []).map((note: Notes) => normalizeVisibility(note)).filter((n: any) => !deletedIds.has(n.$id) && !isGhostNote(n)),
+          (res?.rows || []).map((note: Notes) => normalizeVisibility(note)).filter((n: any) => !deletedIds.has(n.$id) && !isExcludedNote(n)),
           notesRef.current,
           liveEditGuardsRef.current,
           deletedIds,
         );
-        const withGhosts = dedupeNotesById([...ghostNotes, ...batch]) as Notes[];
+        const withthreads = dedupeNotesById([...threadNotes, ...batch]) as Notes[];
         setNotes((prev) =>
           mergeFetchedNotesWithLocalDrafts(
-            withGhosts,
+            withthreads,
             Array.isArray(prev) ? prev : [],
             liveEditGuardsRef.current,
             deletedIds,
@@ -374,10 +374,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         setCursor(res?.nextCursor || null);
 
         // Also cache individual notes for NoteEditorPage
-        withGhosts.forEach(note => {
+        withthreads.forEach(note => {
           if (note?.$id) setCachedData(`note_${note.$id}`, note);
         });
-        if (user?.$id) void warmNotesLocalCopy(user.$id, withGhosts);
+        if (user?.$id) void warmNotesLocalCopy(user.$id, withthreads);
 
       } else {
         // Normal pagination or force refetch
@@ -389,12 +389,12 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         const mergedBatch = mergeFetchedNotesWithLocalDrafts(
           (res?.rows || [])
             .map((note: Notes) => normalizeVisibility(note))
-            .filter((n: any) => !deletedIds.has(n.$id) && !isGhostNote(n)),
+            .filter((n: any) => !deletedIds.has(n.$id) && !isExcludedNote(n)),
           notesRef.current,
           liveEditGuardsRef.current,
           deletedIds,
         );
-        const batch = dedupeNotesById([...ghostNotes, ...mergedBatch]) as Notes[];
+        const batch = dedupeNotesById([...threadNotes, ...mergedBatch]) as Notes[];
 
         setNotes(prev => {
           // Soft upsert: even on reset, fold remote into existing live copy — never discard local presence.
@@ -832,18 +832,18 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const handleGhostClaimed = () => {
-      console.log('[NotesContext] Ghost items claimed. Refetching notes...');
+    const handlethreadClaimed = () => {
+      console.log('[NotesContext] thread items claimed. Refetching notes...');
       if (isAuthenticated) {
         refetchNotes();
       }
     };
 
     window.addEventListener('online', handleOnline);
-    window.addEventListener('kylrix:ghost-claimed', handleGhostClaimed);
+    window.addEventListener('kylrix:thread-claimed', handlethreadClaimed);
     return () => {
       window.removeEventListener('online', handleOnline);
-      window.removeEventListener('kylrix:ghost-claimed', handleGhostClaimed);
+      window.removeEventListener('kylrix:thread-claimed', handlethreadClaimed);
     };
   }, [isAuthenticated, refetchNotes]);
 

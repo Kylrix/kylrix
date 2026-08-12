@@ -472,13 +472,13 @@ export const ChatWindow = ({
             if (response) console.log('[ChatWindow] loadMessages: getMessages returned rows:', response?.rows?.length);
             // Thread fallback — canonical threads substrate (notes → threads/thread_messages, not conversations)
             // Use client-ops (server actions via Registry/JWT), NOT direct ThreadService (which needs APPWRITE_API system client)
-            // Bookmarks/discussion hangouts are ghost notes (isGhostChat) bridged to threads via scopeKey parentKind:parentId:channel + legacyNoteId
+            // Bookmarks/discussion hangouts are thread notes (isthreadChat) bridged to threads via scopeKey parentKind:parentId:channel + legacyNoteId
             if (!response || !Array.isArray(response.rows)) {
               try {
                 const { getOrCreateThread, listThreadMessages } = await import('@/lib/actions/client-ops');
                 let t: any = null;
                 let threadId: string | null = null;
-                const isSelfBookmarks = !!(conversation as any)?.isSelfBookmarks || (!!(conversation as any)?.isGhostChat && Array.isArray((conversation as any)?.collaborators) && (conversation as any).collaborators.length===1);
+                const isSelfBookmarks = !!(conversation as any)?.isSelfBookmarks || (!!(conversation as any)?.isthreadChat && Array.isArray((conversation as any)?.collaborators) && (conversation as any).collaborators.length===1);
                 const fallbackIsSelf = !isSelfBookmarks && !conv && conversationId && (() => {
                   try {
                     const mem: any[] = ((): any[] => { try { return (require('@/lib/chat/local-chat-cache') as any).peekThreadsListMemory?.() || []; } catch { return []; } })();
@@ -511,7 +511,7 @@ export const ChatWindow = ({
                   }));
                   response = { rows, atRestRows: rows };
                   if (!conv) {
-                    conv = { $id: threadId, id: threadId, settings: null, isEncrypted: !!t?.isEncrypted, isThreadFallback: true, isGhostChat: true, isSelfBookmarks: useSelf } as any;
+                    conv = { $id: threadId, id: threadId, settings: null, isEncrypted: !!t?.isEncrypted, isThreadFallback: true, isthreadChat: true, isSelfBookmarks: useSelf } as any;
                     console.log('[ChatWindow] loadMessages: thread fallback fetched:', conv.$id, 'rows:', rows.length);
                   }
                 }
@@ -1155,7 +1155,7 @@ export const ChatWindow = ({
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
         try {
-            const isThreadHangout = !!(conversation as any)?.isThreadFallback || (conversation as any)?.type === 'thread' || !!(conversation as any)?.isGhostChat || !!(conversation as any)?.isSelfBookmarks || (()=>{ try { const mem:any[]=(require('@/lib/chat/local-chat-cache') as any).peekThreadsListMemory?.()||[]; return !!mem.find((c:any)=>c.$id===conversationId||c.id===conversationId); } catch { return false; } })() || !conversation;
+            const isThreadHangout = !!(conversation as any)?.isThreadFallback || (conversation as any)?.type === 'thread' || !!(conversation as any)?.isthreadChat || !!(conversation as any)?.isSelfBookmarks || (()=>{ try { const mem:any[]=(require('@/lib/chat/local-chat-cache') as any).peekThreadsListMemory?.()||[]; return !!mem.find((c:any)=>c.$id===conversationId||c.id===conversationId); } catch { return false; } })() || !conversation;
             if (isThreadHangout) {
                 // Thread/discussion hangout — NOT conversations/messages table.
                 // Underlying substrate is notes/idea → threads/thread_messages (canonical) with legacy comments fallback.
@@ -1317,11 +1317,11 @@ export const ChatWindow = ({
                     // Stop all tracks to release microphone
                     stream.getTracks().forEach(track => track.stop());
 
-                    // Send the audio file — branch on substrate (thread ghost vs secure conversation)
+                    // Send the audio file — branch on substrate (thread thread vs secure conversation)
                     setSending(true);
                     try {
                         const uploaded = await StorageService.uploadFile(audioFile, StorageService.getBucketForType('audio'));
-                        const isThreadHangoutVoice = !!(conversation as any)?.isThreadFallback || (conversation as any)?.type === 'thread' || !!(conversation as any)?.isGhostChat || !!(conversation as any)?.isSelfBookmarks;
+                        const isThreadHangoutVoice = !!(conversation as any)?.isThreadFallback || (conversation as any)?.type === 'thread' || !!(conversation as any)?.isthreadChat || !!(conversation as any)?.isSelfBookmarks;
                         if (isThreadHangoutVoice) {
                             const { getOrCreateThread, postThreadMessage } = await import('@/lib/actions/client-ops');
                             let threadId: any = conversationId;

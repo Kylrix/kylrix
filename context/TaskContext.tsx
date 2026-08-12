@@ -757,7 +757,7 @@ async function syncTaskAccess(taskId: string, creatorId: string, assigneeIds: st
 
 export function TaskProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(taskReducer, initialState);
-  const ghostTasksRef = useRef<Task[]>([]);
+  const threadTasksRef = useRef<Task[]>([]);
   const tasksRef = useRef<Task[]>(state.tasks);
   tasksRef.current = state.tasks;
   const projectsRef = useRef<Project[]>(state.projects);
@@ -1009,7 +1009,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_USER', payload: userId });
         flowWarmOwnerRef.current = userId;
 
-        ghostTasksRef.current = [];
+        threadTasksRef.current = [];
 
         const tasksKey = `f_tasks_${userId}`;
         const calsKey = `f_calendars_${userId}`;
@@ -1101,18 +1101,18 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const handleGhostClaimed = () => {
-      console.log('[TaskContext] Ghost items claimed. Refreshing tasks...');
+    const handlethreadClaimed = () => {
+      console.log('[TaskContext] thread items claimed. Refreshing tasks...');
       if (state.userId && state.userId !== 'guest') {
         void refreshTasks();
       }
     };
 
     window.addEventListener('online', handleOnline);
-    window.addEventListener('kylrix:ghost-claimed', handleGhostClaimed);
+    window.addEventListener('kylrix:thread-claimed', handlethreadClaimed);
     return () => {
       window.removeEventListener('online', handleOnline);
-      window.removeEventListener('kylrix:ghost-claimed', handleGhostClaimed);
+      window.removeEventListener('kylrix:thread-claimed', handlethreadClaimed);
     };
   }, [state.userId, refreshTasks]);
 

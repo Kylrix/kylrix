@@ -78,8 +78,8 @@ Use this when adding goals, vault rows, projects, forms, tasks, events, or any n
 
 ### 8. Guest path
 
-- [ ] Local create ids may be ephemeral (`live-*` / `ghost-*`); `isPending` true until real id or discard.
-- [ ] Ghost/localStorage paths (if any) still enqueue/ack through the engine when they represent “owes sync.”
+- [ ] Local create ids may be ephemeral (`live-*` / `thread-*`); `isPending` true until real id or discard.
+- [ ] thread/localStorage paths (if any) still enqueue/ack through the engine when they represent “owes sync.”
 
 ---
 

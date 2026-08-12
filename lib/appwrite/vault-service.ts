@@ -72,14 +72,7 @@ const secureDatabases = {
     deleteRow: secureDeleteRow,
     getRow: (dbId: string, collId: string, docId: string) => originalAppwriteDatabases.getRow(dbId, collId, docId),
     listRows: (dbId: string, collId: string, queries?: string[]) => {
-        const finalQueries = queries ? [...queries] : [];
-        const trashSupported = ['totpSecrets'];
-        if (trashSupported.includes(collId) && !finalQueries.some(q => q.includes('isTrash'))) {
-            finalQueries.push(Query.notEqual('isTrash', true));
-        } else if (collId === 'credentials' && !finalQueries.some(q => q.includes('isDeleted'))) {
-            finalQueries.push(Query.notEqual('isDeleted', true));
-        }
-        return originalAppwriteDatabases.listRows(dbId, collId, finalQueries);
+        return originalAppwriteDatabases.listRows(dbId, collId, queries);
     }};
 
 export const vaultDatabases = secureDatabases;

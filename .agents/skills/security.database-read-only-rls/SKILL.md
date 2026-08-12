@@ -54,7 +54,7 @@ By yanking `create`, `update`, and `delete` permissions from database schemas:
 Since everyone has the same `read` permission on the database level, how does the system distinguish the owner from collaborators?
 
 ### A. Owner Verification (`userId` or `creatorId`)
-The Server SDK queries the row using elevated credentials and dynamically checks the owner column (`userId` or `creatorId` in ghost note discussions). If it matches the active `actorId`, the server executes the mutation:
+The Server SDK queries the row using elevated credentials and dynamically checks the owner column (`userId` or `creatorId` in thread note discussions). If it matches the active `actorId`, the server executes the mutation:
 
 ```typescript
 export async function updateNoteSecure(noteId: string, data: any, jwt: string) {

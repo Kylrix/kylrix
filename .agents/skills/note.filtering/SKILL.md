@@ -35,15 +35,15 @@ This tab aggregates two distinct categories:
 
 Discussions live in `threads` / `thread_messages` — **never** as Ideas.
 
-Any note that is a ghost/thread/chat/discussion shell (or empty `resourceType` host shell) must be excluded from Ideas via `isGhostNote` / `isIdeaListExcludedNote` and `ideaListExclusionQueries()`.
+Any note that is a thread/thread/chat/discussion shell (or empty `resourceType` host shell) must be excluded from Ideas via `isthreadNote` / `isIdeaListExcludedNote` and `ideaListExclusionQueries()`.
 
-Do **not** create new `isThread` / `isGhost` notes for object discussions. Use `ThreadService.getOrCreate`.
+Do **not** create new `isThread` / `isthread` notes for object discussions. Use `ThreadService.getOrCreate`.
 
 ## Summary Table
 
 | UI Surface | Owner | Public Status | Permission Requirement |
 | :--- | :--- | :--- | :--- |
-| **Notes UI** | Me | Any | Owner — **no** ghost/thread/discussion shells |
+| **Notes UI** | Me | Any | Owner — **no** thread/thread/discussion shells |
 | **Shared > Private** | Others | Private | Explicitly named in `$permissions` |
 | **Shared > Public** | Me | Public | Owner |
 | **Shared > Public** | Others | Public | Explicitly named in `$permissions` |

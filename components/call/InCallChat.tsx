@@ -72,7 +72,7 @@ export const InCallChat = ({
             const currentMetadata = note.metadata ? JSON.parse(note.metadata) : {};
             const newMetadata = JSON.stringify({
                 ...currentMetadata,
-                isGhost: false,
+                isthread: false,
                 isStory: true,
                 expiresAt: null
             });

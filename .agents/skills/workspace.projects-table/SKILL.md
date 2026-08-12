@@ -19,5 +19,5 @@ Workspaces remain the synergy hub: link ideas, goals, forms, events, hangouts, a
 
 1. New links go to `/workspaces`, never `/projects`.
 2. Use Table/Row terminology in code and copy.
-3. Project discussion / ghost threads follow `note.ghost-threads` and Connect patterns.
+3. Project discussion / thread threads follow `note.thread-threads` and Connect patterns.
 4. Do not resurrect deleted GitHub-integration or AI-milestone drawers unless product asks.

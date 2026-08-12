@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
 import { hasAuthSessionHint } from '@/lib/appwrite/client';
 import { EcosystemProviders } from './EcosystemProviders';
-import { GhostNoteClaimer } from '@/components/landing/GhostNoteClaimer';
+import { ThreadNoteClaimer } from '@/components/landing/ThreadNoteClaimer';
 import { SidekickHistoryBridge } from '@/components/agentic/SidekickHistoryBridge';
 
 export default function AppLayout({
@@ -90,7 +90,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-[#0A0908]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" /></div>}>
       <EcosystemProviders>
-        <GhostNoteClaimer />
+        <ThreadNoteClaimer />
         {children}
         <SidekickHistoryBridge />
         {/* Agentic/wallet/unified → NativeSidebarBridge; object details → Overlay/DynamicSidebar */}

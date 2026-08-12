@@ -20,7 +20,7 @@ To eliminate the risk of malicious client-side manipulation (e.g., users alterin
 Because the underlying Appwrite database only uses `read` permissions, actual authorization for updates and deletions is strictly virtualized via document **metadata**:
 - **Metadata Field:** A JSON `metadata` string on the document holds the access control lists (e.g., `writeCollaborators`, `viewers`, `role`).
 - **Server Verification:** When a user requests an update, the Server Action intercepts the request, reads the current document's `metadata` using the system client, verifies if the user's ID exists in the allowed collaborator lists, and only then executes the update.
-- **Public Access:** Public read access is granted by appending `read("any")` at creation or toggle. In the future, if editable public documents (like ghost notes) are introduced, the server action will check the metadata's `publicity` flags to permit anonymous/guest edits.
+- **Public Access:** Public read access is granted by appending `read("any")` at creation or toggle. In the future, if editable public documents (like thread notes) are introduced, the server action will check the metadata's `publicity` flags to permit anonymous/guest edits.
 
 ## Storage and Bucket Nuances
 - **No Client Uploads:** `storage.createFile()` must never be called from the client using the web SDK. 

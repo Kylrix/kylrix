@@ -200,7 +200,7 @@ export function UnifiedFileAttachmentDrawer() {
       } else if (activeSubTab === 'threads') {
         // Threads / Discussions
         const allNotes = (await db.notes.find().exec()).map((d) => d.toJSON());
-        items = allNotes.filter((n: any) => n.isThread || n.isDiscussion || n.isGhost);
+        items = allNotes.filter((n: any) => n.isThread || n.isDiscussion || n.isthread);
         if (items.length === 0) {
           items = (await LocalEngine.cacheGet<any[]>('f_threads_list')) || [];
         }

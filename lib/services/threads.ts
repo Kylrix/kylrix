@@ -5,7 +5,7 @@
  * Messages: thread_messages (parentMessageId + rootMessageId for nested branches)
  * Reactions: thread_reactions
  *
- * Legacy ghost-note threads (isThread notes + comments) remain readable via
+ * Legacy thread-note threads (isThread notes + comments) remain readable via
  * legacyNoteId when a thread was linked; new writes go here only.
  */
 
@@ -586,7 +586,7 @@ export const ThreadService = {
   },
 
   /**
-   * Link a legacy ghost-note discussion into the new table without duplicating
+   * Link a legacy thread-note discussion into the new table without duplicating
    * if scope already exists.
    */
   async adoptLegacyNote(params: {

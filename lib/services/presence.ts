@@ -49,5 +49,12 @@ export const PresenceService = {
      */
     getChatChannel: (conversationId: string) => {
         return `chat.conversations.${conversationId}`;
-    }
+    },
+
+    /**
+     * Helper for call signaling — ephemeral WebRTC SDP/ICE over presence.
+     */
+    getCallChannel: (callId: string) => {
+        return `call.${callId}`;
+    },
 };

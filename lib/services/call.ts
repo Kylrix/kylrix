@@ -250,19 +250,19 @@ export const CallService = {
         }, force);
     },
 
-    async createGhostNoteForCall(userId: string, callId: string, title?: string) {
+    async createthreadNoteForCall(userId: string, callId: string, title?: string) {
         try {
             let result: any;
             if (typeof window !== 'undefined') {
-                const { createGhostNoteForCall } = await import('@/lib/actions/client-ops');
-                result = await createGhostNoteForCall(callId, title);
+                const { createthreadNoteForCall } = await import('@/lib/actions/client-ops');
+                result = await createthreadNoteForCall(callId, title);
             } else {
-                const { createGhostNoteForCallSecure } = await import('@/lib/actions/secure-ops');
-                result = await createGhostNoteForCallSecure(callId, title);
+                const { createthreadNoteForCallSecure } = await import('@/lib/actions/secure-ops');
+                result = await createthreadNoteForCallSecure(callId, title);
             }
             return result;
         } catch (e) {
-            console.error('[CallService] createGhostNoteForCall failed:', e);
+            console.error('[CallService] createthreadNoteForCall failed:', e);
             throw e;
         }
     },

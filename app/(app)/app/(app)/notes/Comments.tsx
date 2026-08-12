@@ -15,7 +15,7 @@ import { TargetType } from '@/types/appwrite';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { getCachedCommentIdentity, getCachedCommentIdentities, upsertCommentIdentity, upsertCommentIdentities } from '@/lib/commentIdentityCache';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
-import { encryptGhostData, decryptGhostData } from '@/lib/encryption/ghost-crypto';
+import { encryptThreadData, decryptThreadData } from '@/lib/encryption/thread-crypto';
 
 interface CommentsProps {
   noteId: string;
@@ -409,12 +409,12 @@ function CommentItem({ comment, onReply, onUpdate, onDelete, depth = 0, userMap,
   useEffect(() => {
     if (comment.isEncrypted && decryptionKey) {
         setIsDecrypting(true);
-        decryptGhostData(comment.content, decryptionKey)
-            .then(plain => {
+        decryptThreadData(comment.content, decryptionKey)
+            .then((plain: any) => {
                 setPlainContent(plain);
                 setEditContent(plain);
             })
-            .catch(err => {
+            .catch((err: any) => {
                 console.error("Comment decryption failed", err);
                 setPlainContent("[Decryption Failed]");
             })
@@ -865,7 +865,7 @@ export default function CommentsSection({ noteId, decryptionKey }: CommentsProps
       }
       
       if (decryptionKey) {
-        const encrypted = await encryptGhostData(text, decryptionKey);
+        const encrypted = await encryptThreadData(text, decryptionKey);
         finalContent = encrypted.encrypted;
         isEncrypted = true;
       }
@@ -908,7 +908,7 @@ export default function CommentsSection({ noteId, decryptionKey }: CommentsProps
     try {
       let finalContent = content;
       if (decryptionKey) {
-        const encrypted = await encryptGhostData(content, decryptionKey);
+        const encrypted = await encryptThreadData(content, decryptionKey);
         finalContent = encrypted.encrypted;
       }
       await updateComment(commentId, { content: finalContent });

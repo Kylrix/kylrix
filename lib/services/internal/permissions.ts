@@ -13,7 +13,7 @@ import {
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { createServerClient } from '@/lib/appwrite/server';
 
-const DEFAULT_GHOST_RESOURCE_TYPE = 'ghost_note';
+const DEFAULT_thread_RESOURCE_TYPE = 'thread_note';
 
 function getAction(body: any): string {
   return String(body?.action || 'grant').trim();
@@ -30,7 +30,7 @@ function getResourceKeyMappings(body: any) {
   const resourceType = body?.resourceType || body?.mappingResourceType;
   const resourceId = body?.resourceId || body?.mappingResourceId || body?.rowId;
   const wrappedKeyMap = body?.wrappedKeyMap && typeof body.wrappedKeyMap === 'object' ? body.wrappedKeyMap : null;
-  const wrappedKey = body?.wrappedKey || body?.ghostSecret || null;
+  const wrappedKey = body?.wrappedKey || body?.threadSecret || null;
   const targetUserIds = normalizeTargetUserIds(body?.targetUserIds || body?.recipientUserIds || body?.targetUserId);
 
   if (!resourceType || !resourceId) return [];
@@ -66,20 +66,20 @@ export async function applyPermissionMutation(actorId: string, body: any) {
   const targetUserIds = normalizeTargetUserIds(body?.targetUserIds || body?.recipientUserIds || body?.targetUserId);
   const keyMappings = getResourceKeyMappings(body);
 
-  if (action === 'pin_ghost_note') {
+  if (action === 'pin_thread_note') {
     const noteIds = normalizeTargetUserIds((body?.noteIds || body?.resourceIds || body?.resourceId) as any);
-    const wrappedKey = (body?.wrappedKey || body?.ghostSecret) as string | undefined;
+    const wrappedKey = (body?.wrappedKey || body?.threadSecret) as string | undefined;
     if (noteIds.length === 0) throw new Error('At least one noteId is required');
     if (!wrappedKey) throw new Error('wrappedKey is required');
 
-    const ghostKeyMappings = noteIds.map((noteId: any) => ({
+    const threadKeyMappings = noteIds.map((noteId: any) => ({
       resourceId: noteId,
-      resourceType: (body?.resourceType as string) || DEFAULT_GHOST_RESOURCE_TYPE,
+      resourceType: (body?.resourceType as string) || DEFAULT_thread_RESOURCE_TYPE,
       grantee: actorId,
       wrappedKey: wrappedKey as string,
       metadata: body?.metadata as any || null}));
 
-    return await upsertLockboxRows(databases, actorId, ghostKeyMappings);
+    return await upsertLockboxRows(databases, actorId, threadKeyMappings);
   }
 
   if (action === 'rotate_epoch') {
