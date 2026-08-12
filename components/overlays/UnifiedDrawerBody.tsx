@@ -38,10 +38,6 @@ const SecureChatSetupDrawer = dynamic(
 const PasskeySetupPanel = dynamic(() => import('./PasskeySetup').then((m) => m.PasskeySetupPanel), {
   ssr: false,
 });
-const DeleteConfirmDrawer = dynamic(
-  () => import('./DeleteConfirmDrawer').then((m) => m.DeleteConfirmDrawer),
-  { ssr: false },
-);
 const SecurityConfirmDrawer = dynamic(
   () => import('./SecurityConfirmDrawer').then((m) => m.SecurityConfirmDrawer),
   { ssr: false },
@@ -206,8 +202,6 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           trustUnlocked={drawerData?.trustUnlocked ?? true}
         />
       );
-    case 'delete-confirm':
-      return <DeleteConfirmDrawer />;
     case 'security-confirm':
       return <SecurityConfirmDrawer />;
     case 'project-invite':
