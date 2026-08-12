@@ -175,11 +175,11 @@ export function CreateChatComposer({
     setBusy(true);
     const participantIds = [user.$id, ...selectedUsers.map((u) => u.id || (u as any).$id)];
 
-    // Unencrypted — same conversations/messages tables, isEncrypted=false, no key_mapping/epochs, no vault needed
+    // Unencrypted hangout — same conversations/messages tables, isEncrypted=false, no key_mapping/epochs, no vault needed
     if (!encryptedEnabled) {
       try {
         const newConv = await ChatService.createConversation(participantIds, isGroup ? 'group' : 'direct', isGroup ? hangoutName.trim() : undefined, { encrypted: false } as any);
-        toast.success(isGroup ? 'Discussion ready' : 'Chat started');
+        toast.success(isGroup ? 'Hangout ready' : 'Hangout ready');
         openConversation(newConv.$id, 'chat');
       } catch (error: any) {
         toast.error(formatSecureChatStartError(error, 'chat'));
@@ -201,7 +201,7 @@ export function CreateChatComposer({
         }
         if (isGroup) {
           const newConv = await ChatService.createConversation(participantIds, 'group', hangoutName.trim(), { encrypted: forceEncrypted } as any);
-          toast.success(forceEncrypted ? 'Hangout ready' : 'Discussion ready');
+          toast.success('Hangout ready');
           openConversation(newConv.$id, 'chat');
         } else {
           const newConv = await ChatService.createConversation(participantIds, 'direct', undefined, { encrypted: forceEncrypted } as any);
@@ -276,7 +276,7 @@ export function CreateChatComposer({
             <div className="min-w-0">
               <p className="text-xs font-extrabold text-white m-0">End-to-end encrypted</p>
               <p className="text-[10px] font-semibold text-white/35 m-0 leading-tight">
-                {checkingKeys ? 'Checking keys…' : hasMissingKeys ? 'Off — someone lacks secure setup' : encryptedEnabled ? 'Messages stay private to participants' : 'Off — will create standard discussion'}
+                {checkingKeys ? 'Checking keys…' : hasMissingKeys ? 'Off — someone lacks secure setup' : encryptedEnabled ? 'Messages stay private to participants' : 'Off — will create standard hangout'}
               </p>
             </div>
           </div>
@@ -319,7 +319,7 @@ export function CreateChatComposer({
         {isGroup ? (
           <div className="space-y-2">
             <label className="text-[10px] font-bold uppercase tracking-wider text-white/45 font-mono block">
-              Hangout name {encryptedEnabled ? '' : '(for discussion)'}
+              Hangout name {encryptedEnabled ? '' : '(unencrypted)'}
             </label>
             <input
               value={hangoutName}
@@ -352,14 +352,14 @@ export function CreateChatComposer({
 
         {selectedUsers.length === 0 ? (
           <p className="text-center text-xs text-white/35 py-6 font-semibold">
-            Add one person for a direct chat, or multiple for a hangout. {!encryptedEnabled ? 'Will create a discussion.' : 'Encrypted when possible.'}
+            Add one person for a direct chat, or multiple for a hangout. {!encryptedEnabled ? 'Will create a standard hangout.' : 'Encrypted when possible.'}
           </p>
         ) : null}
         {hasMissingKeys ? (
           <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2.5 flex gap-2.5">
             <Shield size={14} className="text-amber-400 shrink-0 mt-0.5" />
             <p className="text-[11px] font-semibold text-amber-200/90 leading-relaxed m-0">
-              One or more people haven&apos;t set up secure chat. Encryption is off — we&apos;ll create a standard discussion instead. Remove them or have them unlock vault in Settings to use encrypted hangouts.
+              One or more people haven&apos;t set up secure chat. Encryption is off — we&apos;ll create a standard hangout instead. Remove them or have them unlock vault in Settings to use encrypted hangouts.
             </p>
           </div>
         ) : null}
@@ -380,7 +380,7 @@ export function CreateChatComposer({
           onClick={() => void handleCreate()}
           className="flex-1 h-12 rounded-xl bg-[#F59E0B] text-black font-extrabold text-sm disabled:opacity-40 hover:bg-amber-500 transition-colors"
         >
-          {busy ? 'Creating…' : !encryptedEnabled ? (isGroup ? 'Create discussion' : 'Start discussion') : isGroup ? 'Create hangout' : 'Start chat'}
+          {busy ? 'Creating…' : isGroup ? 'Create hangout' : 'Start hangout'}
         </button>
       </div>
     </div>

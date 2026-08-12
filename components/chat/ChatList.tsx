@@ -323,45 +323,15 @@ export const ChatList = ({
                 conversationsRef.current = conversationsRef.current.filter(c => c.$id !== conv.$id);
                 void loadConversations({ forceRefresh: true });
               } else {
-                const isSelfBookmarks = !!(conv.isSelfBookmarks || (Array.isArray(conv.collaborators) && conv.collaborators.length===1 && conv.collaborators[0]===user?.$id));
+                // Ghost hangout wipe — Bookmarks ghost retired, now handled as unencrypted hangout (conversations). No note spin.
                 await deleteGhostThread(conv.$id);
-                if (isSelfBookmarks) {
-                  try {
-                    if (!user?.$id) throw new Error('No user');
-                    const created = await createGhostNoteChat('Bookmarks', [user.$id]);
-                    const cachedMeBookmarks = getCachedIdentityById(user.$id);
-                    const selfMapped: any = { ...created, name: 'Bookmarks (you)', isSelfBookmarks: true, isGhostChat: true, otherUserId: user.$id, avatarUrl: (cachedMeBookmarks?.avatar as string) || null, lastMessageText: 'Bookmarks', lastMessageAt: created.updatedAt || created.$createdAt };
-                    setGhostConversations(prev => {
-                      const filtered = prev.filter(c => c.$id !== conv.$id);
-                      const next = [...filtered, selfMapped].sort((a: any, b: any) => {
-                        const ap = pinSets.conversation.has(a.$id) ? 1 : 0;
-                        const bp = pinSets.conversation.has(b.$id) ? 1 : 0;
-                        if (ap !== bp) return bp - ap;
-                        return new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime();
-                      });
-                      writeThreadsListLocal(next);
-                      ghostConversationsRef.current = next;
-                      return next;
-                    });
-                    toast.success('Bookmarks wiped & fresh bookmarks ready');
-                  } catch {
-                    toast.success('Thread wiped');
-                    setGhostConversations(prev => {
-                      const next = prev.filter(c => c.$id !== conv.$id);
-                      writeThreadsListLocal(next);
-                      return next;
-                    });
-                    ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== conv.$id);
-                  }
-                } else {
-                  toast.success('Thread wiped');
-                  setGhostConversations(prev => {
-                    const next = prev.filter(c => c.$id !== conv.$id);
-                    writeThreadsListLocal(next);
-                    return next;
-                  });
-                  ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== conv.$id);
-                }
+                toast.success('Hangout cleared');
+                setGhostConversations(prev => {
+                  const next = prev.filter(c => c.$id !== conv.$id);
+                  writeThreadsListLocal(next);
+                  return next;
+                });
+                ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== conv.$id);
                 void loadGhostConversations({ forceRefresh: true } as any);
               }
             } catch (e: any) { toast.error(e?.message || 'Wipe failed'); }
@@ -621,39 +591,8 @@ export const ChatList = ({
                     lastMessageAt: note.updatedAt || note.$createdAt};
             });
 
-            // Self-healing for discussion self-chat "Bookmarks" — mirrors secure self-chat healing.
-            // Ensures at least one ghost self bookmarks exists; creates on its own, wipes bottom-up then recreates.
-            const hasSelfBookmarks = mapped.some((m: any) => m.isSelfBookmarks);
-            if (!hasSelfBookmarks && user?.$id) {
-                void (async () => {
-                    try {
-                        const created = await createGhostNoteChat('Bookmarks', [user!.$id]);
-                        const cachedMeHeal = getCachedIdentityById(user!.$id);
-                        const selfMapped = {
-                            ...created,
-                            otherUserId: user!.$id,
-                            name: 'Bookmarks (you)',
-                            avatarUrl: (cachedMeHeal?.avatar as string) || null,
-                            isGhostChat: true,
-                            isSelfBookmarks: true,
-                            linkedResourceType: null,
-                            linkedResourceId: null,
-                            linkedResourceName: null,
-                            lastMessageText: 'Bookmarks',
-                            lastMessageAt: created.updatedAt || created.$createdAt,
-                        };
-                        const next = [...mapped, selfMapped].sort((a: any, b: any) => {
-                            const ap = pinSets.conversation.has(a.$id) ? 1 : 0;
-                            const bp = pinSets.conversation.has(b.$id) ? 1 : 0;
-                            if (ap !== bp) return bp - ap;
-                            return new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime();
-                        });
-                        writeThreadsListLocal(next);
-                        startTransition(() => setGhostConversations(next));
-                        ghostConversationsRef.current = next;
-                    } catch (e) { console.warn('[ChatList] bookmarks self-heal create failed', (e as any)?.message); }
-                })();
-            }
+            // Bookmarks now a standard unencrypted hangout (isEncrypted=false) — ghost self-healing retired.
+            // No note spinning: unencrypted self hangout heals via conversations (ChatService.ensureSelfConversation with encrypted:false) only.
 
             mapped.sort((a: any, b: any) => {
                 const ap = pinSets.conversation.has(a.$id) ? 1 : 0;
@@ -875,9 +814,10 @@ export const ChatList = ({
                     targetUser.displayName ||
                     targetUser.username ||
                     'Chat';
-                const newGhost = await createGhostNoteChat(title, [user.$id, targetUserId]);
-                toast.success('Chat ready', { id: 'ghost-init' });
-                openConversation(newGhost.$id, 'thread');
+                // Unencrypted hangout — same conversations table, isEncrypted=false (no note). Previously discussion ghost.
+                const newHangout = await ChatService.createConversation([user.$id, targetUserId], 'direct', title, { encrypted: false } as any);
+                toast.success('Hangout ready', { id: 'ghost-init' });
+                openConversation(newHangout.$id, 'chat');
             } catch (error: any) {
                 console.error('Failed to create thread:', error);
                 toast.error(formatSecureChatStartError(error, 'thread'), { id: 'ghost-init' });
@@ -1925,44 +1865,15 @@ export const ChatList = ({
                           conversationsRef.current = conversationsRef.current.filter(x => x.$id !== c.$id);
                           void loadConversations({ forceRefresh: true });
                         } else {
-                          const isSelfBookmarks = !!(c.isSelfBookmarks || (Array.isArray(c.collaborators) && c.collaborators.length===1 && c.collaborators[0]===user?.$id));
+                          // Bookmarks ghost retired — handled as hangout now, no note spin
                           await deleteGhostThread(c.$id);
-                          if (isSelfBookmarks) {
-                            try {
-                              if (!user?.$id) throw new Error('No user');
-                              const created = await createGhostNoteChat('Bookmarks', [user.$id]);
-                              const selfMapped: any = { ...created, name: 'Bookmarks', isSelfBookmarks: true, isGhostChat: true, otherUserId: undefined, avatarUrl: null, lastMessageText: 'Bookmarks', lastMessageAt: created.updatedAt || created.$createdAt };
-                              setGhostConversations(prev => {
-                                const filtered = prev.filter(x => x.$id !== c.$id);
-                                const next = [...filtered, selfMapped].sort((a: any, b: any) => {
-                                  const ap = pinSets.conversation.has(a.$id) ? 1 : 0;
-                                  const bp = pinSets.conversation.has(b.$id) ? 1 : 0;
-                                  if (ap !== bp) return bp - ap;
-                                  return new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime();
-                                });
-                                writeThreadsListLocal(next);
-                                ghostConversationsRef.current = next;
-                                return next;
-                              });
-                              toast.success('Bookmarks wiped & fresh bookmarks ready');
-                            } catch {
-                              toast.success('Thread wiped');
-                              setGhostConversations(prev => {
-                                const next = prev.filter(x => x.$id !== c.$id);
-                                writeThreadsListLocal(next);
-                                return next;
-                              });
-                              ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== c.$id);
-                            }
-                          } else {
-                            toast.success('Thread wiped');
-                            setGhostConversations(prev => {
-                              const next = prev.filter(x => x.$id !== c.$id);
-                              writeThreadsListLocal(next);
-                              return next;
-                            });
-                            ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== c.$id);
-                          }
+                          toast.success('Hangout cleared');
+                          setGhostConversations(prev => {
+                            const next = prev.filter(x => x.$id !== c.$id);
+                            writeThreadsListLocal(next);
+                            return next;
+                          });
+                          ghostConversationsRef.current = ghostConversationsRef.current.filter(x => x.$id !== c.$id);
                           void loadGhostConversations({ forceRefresh: true } as any);
                         }
                       } catch (e: any) { toast.error(e?.message || 'Wipe failed'); }
