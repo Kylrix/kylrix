@@ -51,6 +51,7 @@ import { useTask } from '@/context/TaskContext';
 import { useToast } from '@/components/ui/Toast';
 import { useSudo } from '@/context/SudoContext';
 import { useInstantNoteInput } from '@/lib/note/useInstantNoteInput';
+import { BareMetalInput, BareMetalTextarea } from '@/components/ui/BareMetalInput';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -296,20 +297,10 @@ export function NoteDetailSidebar({
     onUpdate(draft);
   }, [readOnly, registerComposeSession, markDirty, onUpdate]);
 
-  // Pending selection survives controlled re-render — restored in layout before paint
   const pendingSelRef = useRef<{ start: number; end: number } | null>(null);
+  // Bare-metal content handler — no useLayoutEffect cursor restore needed for typing (uncontrolled DOM is SoT)
   const handleContentChange = useCallback((next: string) => {
     if (readOnly) return;
-    const ta = contentTextareaRef.current;
-    // Capture before state is clobbered; use rAF-unstable textarea value if event already mutated DOM
-    const selStart = ta?.selectionStart ?? next.length;
-    const selEnd = ta?.selectionEnd ?? next.length;
-    // For plain inserts/deletes without selection, keep native caret where user placed it
-    let keepStart = selStart;
-    let keepEnd = selEnd;
-    if (ta && document.activeElement === ta && !pendingSelRef.current) {
-      pendingSelRef.current = { start: keepStart, end: keepEnd };
-    }
     setContent(next);
     const noteId = liveNoteRef.current?.$id;
     if (!noteId) return;
@@ -317,22 +308,7 @@ export function NoteDetailSidebar({
     const draft: Notes = { ...liveNoteRef.current, content: next, $updatedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Notes;
     markDirty(draft);
     onUpdate(draft);
-  }, [readOnly, registerComposeSession, markDirty, onUpdate, content.length]);
-
-  // Flush pending caret after controlled value commit — before paint, not rAF
-  useLayoutEffect(() => {
-    const ta = contentTextareaRef.current;
-    const pending = pendingSelRef.current;
-    if (!ta || !pending) return;
-    if (document.activeElement !== ta) { pendingSelRef.current = null; return; }
-    try {
-      const len = ta.value.length;
-      const s = Math.max(0, Math.min(pending.start, len));
-      const e = Math.max(0, Math.min(pending.end, len));
-      ta.setSelectionRange(s, e);
-    } catch {}
-    pendingSelRef.current = null;
-  }, [content]);
+  }, [readOnly, registerComposeSession, markDirty, onUpdate]);
 
   const handleTagsChange = useCallback((nextRaw: string) => {
     if (readOnly) return;
@@ -1079,12 +1055,15 @@ export function NoteDetailSidebar({
                 {title || 'Untitled note'}
               </span>
             ) : (
-              <input
-                type="text"
+              <BareMetalInput
+                key={`title-${liveNote.$id}`}
+                defaultValue={title}
                 value={title}
-                onChange={(e) => handleTitleChange(e.target.value)}
+                onValueChange={handleTitleChange}
+                enableLocalEngine={false}
                 className="w-full min-w-0 bg-transparent text-[#6366F1] font-extrabold text-lg font-clash tracking-tight leading-tight border-none focus:outline-none placeholder:text-white/25"
                 placeholder="Untitled note"
+                aria-label="Note title"
               />
             )}
           </div>
@@ -1406,12 +1385,14 @@ export function NoteDetailSidebar({
                     setIsContextDrawerOpen(true);
                   }}
                 >
-                  <textarea
+                  <BareMetalTextarea
+                    key={`content-${liveNote.$id}`}
+                    defaultValue={content}
                     value={content}
-                    onChange={(e) => {
-                      const nextValue = e.target.value;
-                      const caret = e.target.selectionStart ?? nextValue.length;
-                      // Proper block guard — only when edit directly overlaps a protected block
+                    forwardedRef={contentTextareaRef}
+                    enableLocalEngine={false}
+                    onValueChange={(nextValue) => {
+                      // Proper block guard — only when edit directly overlaps a protected block (scoped, not whole doc)
                       const blocks = parseObjectBlocks(content);
                       let changedBlock: typeof blocks[0] | null = null;
                       if (blocks.length) {
@@ -1421,23 +1402,24 @@ export function NoteDetailSidebar({
                         let eNext = nextValue.length - 1;
                         while (ePrev >= s && eNext >= s && content[ePrev] === nextValue[eNext]) { ePrev--; eNext--; }
                         const changedStart = s;
-                        const changedEndPrev = ePrev + 1; // exclusive in prev
+                        const changedEndPrev = ePrev + 1;
                         changedBlock = blocks.find((b) => changedStart < b.end && changedEndPrev > b.start) || null;
                       }
                       if (changedBlock) {
                         setPendingBlockDelete(changedBlock);
-                        pendingSelRef.current = { start: changedBlock.start, end: changedBlock.start };
-                        try { e.target.setSelectionRange(changedBlock.start, changedBlock.start); } catch {}
+                        // Revert DOM to previous content (bare-metal uncontrolled) — keep cursor at block start
+                        const ta = contentTextareaRef.current;
+                        if (ta) {
+                          ta.value = content;
+                          try { ta.setSelectionRange(changedBlock.start, changedBlock.start); } catch {}
+                        }
                         return;
                       }
-                      pendingSelRef.current = { start: caret, end: caret };
                       handleContentChange(nextValue);
                     }}
-                    ref={contentTextareaRef}
-                    onKeyDown={onEditorKeyDown}
+                    onKeyDown={onEditorKeyDown as any}
                     className="w-full min-h-[320px] bg-transparent text-white/92 text-[15px] leading-[1.75] border-none focus:outline-none resize-y scrollbar-thin placeholder:text-[#9B9691]/45 font-satoshi"
                     placeholder="Write in markdown — headings, lists, links, and voice tags are supported."
-                    spellCheck
                   />
                 </div>
               </>

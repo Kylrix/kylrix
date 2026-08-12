@@ -34,6 +34,7 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { serializeObjectBlock, parseObjectBlocks } from '@/lib/note-object-secondary';
 import type { ParsedObjectBlock } from '@/lib/note-object-secondary';
 import { useNotes } from '@/context/NotesContext';
+import { BareMetalInput, BareMetalTextarea } from '@/components/ui/BareMetalInput';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -1237,11 +1238,12 @@ export default function CreateNoteForm({
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto overscroll-contain p-2 flex flex-col gap-2 min-h-0 scrollbar-thin">
           {(content.trim().length >= 5 || isTitleManuallyEdited) && (
-            <input
-              type="text"
+            <BareMetalInput
+              key={`create-title-${resolvedNoteId || 'new'}`}
+              defaultValue={title}
               value={title}
-              onChange={(event) => {
-                const val = event.target.value;
+              enableLocalEngine={false}
+              onValueChange={(val) => {
                 setTitle(val);
                 setIsTitleManuallyEdited(true);
               }}
@@ -1258,15 +1260,13 @@ export default function CreateNoteForm({
             }}
             className="w-full flex-1 flex flex-col relative"
           >
-            <textarea
-              ref={contentRef}
-              rows={isExpanded ? 12 : 6}
+            <BareMetalTextarea
+              key={`create-content-${resolvedNoteId || 'new'}`}
+              forwardedRef={contentRef}
+              defaultValue={content}
               value={content}
-              maxLength={isArticle ? 655300000 : 65535}
-              onPaste={handlePaste}
-              onChange={(event) => {
-                handleContentChange(event.target.value);
-              }}
+              enableLocalEngine={false}
+              onValueChange={(v) => handleContentChange(v)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey && !isExpanded && !isPastedRef.current) {
                   event.preventDefault();
