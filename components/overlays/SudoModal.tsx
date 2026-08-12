@@ -97,6 +97,8 @@ export default function SudoModal({
     const [isPendingVault, setIsPendingVault] = useState(false);
     const [showPasskeyIncentive, setShowPasskeyIncentive] = useState(false);
     const passkeyTriggeredRef = useRef(false);
+    const passkeyAbortRef = useRef<AbortController | null>(null);
+    const isManualSwitchRef = useRef(false);
     const appTone = getAppTone(app);
     const accentColor = appTone.secondary;
     const isKylrixDomain =
@@ -185,11 +187,27 @@ export default function SudoModal({
         setMode("initialize");
     }, []);
 
+    const handleSwitchToPassword = useCallback(() => {
+        isManualSwitchRef.current = true;
+        // Abort any in-flight WebAuthn prompt — prevents NotAllowedError from surfacing as failure
+        try { passkeyAbortRef.current?.abort(); } catch {}
+        passkeyAbortRef.current = null;
+        setPasskeyLoading(false);
+        setMode("password");
+        // Clear the abort flag after the passkey promise settles
+        setTimeout(() => { isManualSwitchRef.current = false; }, 1500);
+    }, []);
+
     const handlePasskeyVerify = useCallback(async () => {
         if (!user || passkeyLoading) return;
+        // Fresh abort controller for this attempt so switch can cancel it
+        const aborter = new AbortController();
+        passkeyAbortRef.current = aborter;
+        isManualSwitchRef.current = false;
         setPasskeyLoading(true);
         try {
-            const success = await unlockWithPasskey(user.$id);
+            const success = await unlockWithPasskey(user.$id, aborter.signal);
+            if (aborter.signal.aborted || isManualSwitchRef.current) return;
             if (success) {
                 const rawMek = await crypto.subtle.exportKey("raw", ecosystemSecurity.getMasterKey()!);
                 await masterPassCrypto.importKey(rawMek);
@@ -198,12 +216,18 @@ export default function SudoModal({
                 toast.success("Verified");
                 handleSuccessWithSync();
             } else {
+                // Suppressed when user intentionally switched to password (abort/interrupt is not a failure)
+                if (isManualSwitchRef.current) return;
                 toast.error("Passkey verification failed");
             }
         } catch (error: any) {
+            if (aborter.signal.aborted || isManualSwitchRef.current) return;
+            // User cancelled WebAuthn prompt is NotAllowedError — already handled as false, don't double-toast
+            if (error?.name === 'NotAllowedError' || error?.name === 'AbortError') return;
             console.error(error);
             toast.error(error.message || "Verification failed");
         } finally {
+            if (passkeyAbortRef.current === aborter) passkeyAbortRef.current = null;
             setPasskeyLoading(false);
         }
     }, [user, passkeyLoading, handleSuccessWithSync]);
@@ -907,12 +931,12 @@ export default function SudoModal({
                     )}
                 </div>
 
-                {/* Footer Switch mode */}
+                {/* Footer Switch mode — abort in-flight passkey so password unlock is not blocked */}
                 {mode === "passkey" && (
                     <div className="flex-shrink-0 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 border-t border-white/5 bg-[#161412]">
                         <button
                             type="button"
-                            onClick={() => setMode("password")}
+                            onClick={handleSwitchToPassword}
                             className="w-full min-h-[46px] flex items-center justify-center gap-2 border border-white/10 rounded-xl text-white font-extrabold text-sm bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20 transition-all cursor-pointer"
                         >
                             <Fingerprint className="w-4 h-4" />

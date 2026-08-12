@@ -12,8 +12,9 @@ import { getPasskeyRegisterFallbackSeedAction } from '@/lib/actions/auth-actions
 
 /**
  * Unlocks the ecosystem security (MEK) using a registered passkey.
+ * signal allows SudoModal to abort cleanly when switching to password — abort is not a failure.
  */
-export async function unlockWithPasskey(userId: string): Promise<boolean> {
+export async function unlockWithPasskey(userId: string, signal?: AbortSignal): Promise<boolean> {
   try {
     // 1. Get passkey rows from security enclave first (offline-safe)
     const { SecurityEnclave } = await import('@/lib/security/enclave');
@@ -56,8 +57,14 @@ export async function unlockWithPasskey(userId: string): Promise<boolean> {
       };
     }
 
-    // 3. Start WebAuthn authentication (optionsJSON matches Note / SimpleWebAuthn v13)
-    const authResp = await startAuthentication({ optionsJSON: authOptions });
+    // 3. Start WebAuthn authentication — abortable when user switches to password (not a failure)
+    if (signal?.aborted) return false;
+    const authResp = await (signal
+      ? Promise.race([
+          startAuthentication({ optionsJSON: authOptions } as any),
+          new Promise<never>((_, reject) => signal.addEventListener('abort', () => reject(new DOMException('Aborted due to method switch', 'AbortError')), { once: true })),
+        ])
+      : startAuthentication({ optionsJSON: authOptions } as any));
 
     // 4. Find the matching keychain entry
     const matchingEntry = passkeyEntries.find((e: any) => e.credentialId === authResp.id);
@@ -139,7 +146,7 @@ export async function unlockWithPasskey(userId: string): Promise<boolean> {
     return false;
   } catch (error: unknown) {
     const err = error as Error;
-    if (err.name === 'NotAllowedError') {
+    if (err.name === 'NotAllowedError' || err.name === 'AbortError') {
       return false;
     }
     
