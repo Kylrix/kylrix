@@ -305,10 +305,6 @@ export function NoteDetailSidebar({
     const selStart = ta?.selectionStart ?? next.length;
     const selEnd = ta?.selectionEnd ?? next.length;
     // For plain inserts/deletes without selection, keep native caret where user placed it
-    // Caller (onChange) already provides next with insertion at correct index; we preserve that index
-    const beforeLen = content.length;
-    const afterLen = next.length;
-    // If no explicit selection, infer caret from length delta when possible
     let keepStart = selStart;
     let keepEnd = selEnd;
     if (ta && document.activeElement === ta && !pendingSelRef.current) {
@@ -533,9 +529,8 @@ export function NoteDetailSidebar({
     return beforeCursor.split('\n').length;
   }, []);
 
-  const hasCollaborators = useMemo(() => {
-    return collaboratorProfiles.length > 0;
-  }, [collaboratorProfiles]);
+  // hasCollaborators kept for external consumers if needed (no longer gates realtime)
+  const _hasCollaborators = useMemo(() => collaboratorProfiles.length > 0, [collaboratorProfiles]);
 
   // Stable realtime per note — avoid re-subscribe jitter on collaborator loading
   useEffect(() => {
@@ -2060,12 +2055,12 @@ export function NoteDetailSidebar({
 
       {pendingBlockDelete && (
         <Drawer
-          anchor="bottom"
+          anchor={isDesktop ? 'right' : 'bottom'}
           open={Boolean(pendingBlockDelete)}
           onClose={() => setPendingBlockDelete(null)}
           ModalProps={{ keepMounted: false, disablePortal: false }}
           slotProps={{ backdrop: { sx: { bgcolor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' } } } as any}
-          PaperProps={{ sx: { bgcolor: '#161412', borderTop: '1px solid #34322F', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', p: 2, zIndex: 1400 } as any }}
+          PaperProps={{ sx: isDesktop ? { bgcolor: '#161412', borderLeft: '1px solid #34322F', width: 420, maxWidth: '92vw', height: '100%', p: 2.5, zIndex: 1400 } as any : { bgcolor: '#161412', borderTop: '1px solid #34322F', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', p: 2, zIndex: 1400 } as any }}
         >
           <div className="space-y-3">
             <p className="text-sm font-bold text-white">Remove this {pendingBlockDelete.payload.childKind} object?</p>
