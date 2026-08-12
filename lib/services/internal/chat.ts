@@ -99,6 +99,17 @@ async function deleteRowsInBatches(
   return deleted;
 }
 
+async function deleteRowsTransactional(txId: string, databaseId: string, tableId: string, rowIds: string[]) {
+  const uniqueIds = Array.from(new Set(rowIds.filter(Boolean)));
+  if (!uniqueIds.length) return 0;
+  const tables: any = createSystemTablesDB();
+  for (let i = 0; i < uniqueIds.length; i += 10) {
+    const batch = uniqueIds.slice(i, i + 10);
+    await Promise.all(batch.map((rowId: string) => tables.deleteRow({ databaseId, tableId, rowId, transactionId: txId })));
+  }
+  return uniqueIds.length;
+}
+
 function getMessageBucketId(messageType: string | null | undefined) {
   switch (messageType) {
     case 'audio':
@@ -137,10 +148,18 @@ async function deleteConversationArtifacts(databases: any, storage: any, convers
   const reactionRows = await listAllDocuments(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
     Query.equal('conversationId', conversationId)]);
   const reactionIds = reactionRows.map((row: any) => row.$id);
+  const messageIds = messages.map((row: any) => row.$id);
 
-  await Promise.all([
-    deleteRowsInBatches(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, messages.map((row: any) => row.$id)),
-    deleteRowsInBatches(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, reactionIds)]);
+  try {
+    await withSystemTransaction(async (txId) => {
+      await deleteRowsTransactional(txId, CHAT_DB_ID, MESSAGES_TABLE_ID, messageIds);
+      await deleteRowsTransactional(txId, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, reactionIds);
+    }, { ttl: 60 });
+  } catch {
+    await Promise.all([
+      deleteRowsInBatches(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, messageIds),
+      deleteRowsInBatches(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, reactionIds)]);
+  }
 
   return {
     messagesDeleted: messages.length,
@@ -244,9 +263,18 @@ export async function clearConversationFootprintInternal(payload: {
     ...reactionsOnOwnedMessages.map((row: any) => row.$id)]));
 
   await deleteMessageFiles(storage, ownedMessages);
-  await Promise.all([
-    deleteRowsInBatches(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, reactionIds),
-    deleteRowsInBatches(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, ownedMessageIds)]);
+  // Transactional: messages + reactions for this footprint must be atomic (no orphan reactions if message delete half-fails)
+  try {
+    await withSystemTransaction(async (txId) => {
+      await deleteRowsTransactional(txId, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, reactionIds);
+      await deleteRowsTransactional(txId, CHAT_DB_ID, MESSAGES_TABLE_ID, ownedMessageIds);
+    }, { ttl: 60 });
+  } catch {
+    // Fallback to best-effort batch deletes if transaction path unavailable (e.g., server without transactions support)
+    await Promise.all([
+      deleteRowsInBatches(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, reactionIds),
+      deleteRowsInBatches(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, ownedMessageIds)]);
+  }
 
   return {
     success: true,
@@ -305,28 +333,60 @@ export async function deleteConversationFullyInternal(payload: {
   ].filter(Boolean);
   await Promise.all(avatarFileIds.map((fileId: string) => storage.deleteFile(APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS, fileId).catch(() => null)));
 
-  // Wipe linked call links files/records
+  // Wipe linked call links files/records — transactional when possible (CHAT DB)
   if (callLinks.length) {
-    await deleteRowsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CONNECT.CALL_LINKS || 'calls', callLinks.map((row: any) => row.$id));
+    try {
+      await withSystemTransaction(async (txId) => {
+        await deleteRowsTransactional(txId, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CONNECT.CALL_LINKS || 'calls', callLinks.map((row: any) => row.$id));
+      }, { ttl: 60 });
+    } catch {
+      await deleteRowsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CONNECT.CALL_LINKS || 'calls', callLinks.map((row: any) => row.$id));
+    }
   }
 
-  // Wipe linked project object bindings
+  // Wipe linked project object bindings — transactional when possible
   if (projectObjects.length) {
-    await deleteRowsInBatches(databases, CHAT_DB_ID, 'project_objects', projectObjects.map((row: any) => row.$id));
+    try {
+      await withSystemTransaction(async (txId) => {
+        await deleteRowsTransactional(txId, CHAT_DB_ID, 'project_objects', projectObjects.map((row: any) => row.$id));
+      }, { ttl: 60 });
+    } catch {
+      await deleteRowsInBatches(databases, CHAT_DB_ID, 'project_objects', projectObjects.map((row: any) => row.$id));
+    }
   }
 
-  // Wipe linked discussion ghost note if any exist with the same id
+  // Wipe linked discussion ghost note if any exist with the same id (legacy — now isEncrypted=false path, keep best-effort)
   try {
     const { NOTE_DATABASE_ID, TABLES } = APPWRITE_CONFIG;
     await databases.deleteRow(NOTE_DATABASE_ID, TABLES.NOTES, payload.conversationId).catch(() => null);
   } catch {}
 
-  await Promise.all([
-    deleteRowsInBatches(databases, CHAT_DB_ID, CONVERSATIONS_TABLE_ID, [conversation.$id]),
-    deleteRowsInBatches(databases, CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, members.map((row: any) => row.$id)),
-    deleteRowsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.EPOCHS, epochs.map((row: any) => row.$id)),
-    deleteRowsInBatches(databases, APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, keyMappings.map((row: any) => row.$id)),
-    deleteRowsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, joinRequests.map((row: any) => row.$id))]);
+  // Transactional cascade: conversation + members + epochs + joinRequests (CHAT DB) atomically.
+  // Key mappings live in PASSWORD_MANAGER DB — separate transaction (cross-DB cannot share same txId on all Appwrite versions).
+  const keyMappingIds = keyMappings.map((row: any) => row.$id);
+  try {
+    await withSystemTransaction(async (txId) => {
+      await deleteRowsTransactional(txId, CHAT_DB_ID, CONVERSATIONS_TABLE_ID, [conversation.$id]);
+      await deleteRowsTransactional(txId, CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, members.map((row: any) => row.$id));
+      await deleteRowsTransactional(txId, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.EPOCHS, epochs.map((row: any) => row.$id));
+      await deleteRowsTransactional(txId, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, joinRequests.map((row: any) => row.$id));
+    }, { ttl: 60 });
+  } catch {
+    await Promise.all([
+      deleteRowsInBatches(databases, CHAT_DB_ID, CONVERSATIONS_TABLE_ID, [conversation.$id]),
+      deleteRowsInBatches(databases, CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, members.map((row: any) => row.$id)),
+      deleteRowsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.EPOCHS, epochs.map((row: any) => row.$id)),
+      deleteRowsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, joinRequests.map((row: any) => row.$id))]);
+  }
+  if (keyMappingIds.length) {
+    try {
+      await withSystemTransaction(async (txId) => {
+        await deleteRowsTransactional(txId, APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, keyMappingIds);
+      }, { ttl: 60 });
+    } catch {
+      await deleteRowsInBatches(databases, APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, keyMappingIds);
+    }
+  }
 
   return {
     success: true,
@@ -856,13 +916,20 @@ export async function clearChatForMeInternal(payload: {
   const conversation = await databases.getRow(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, payload.conversationId);
   const participantIds = await resolveConversationParticipants(databases as any, conversation);
   if (!participantIds.includes(verifiedActorId)) throw new Error('Forbidden: Not a participant');
-  // Object-based syntax required per system.server-sdk-action
-  await databases.updateRow({
-    databaseId: CHAT_DB_ID,
-    tableId: CONVERSATIONS_TABLE_ID,
-    rowId: payload.conversationId,
-    data: { settings: payload.encryptedSettings },
-  });
+  // Transactional single-row update — ensures settings flip is atomic with any concurrent deletes
+  try {
+    await withSystemTransaction(async (txId) => {
+      const tables: any = createSystemTablesDB();
+      await tables.updateRow({ databaseId: CHAT_DB_ID, tableId: CONVERSATIONS_TABLE_ID, rowId: payload.conversationId, data: { settings: payload.encryptedSettings }, transactionId: txId });
+    }, { ttl: 30 });
+  } catch {
+    await databases.updateRow({
+      databaseId: CHAT_DB_ID,
+      tableId: CONVERSATIONS_TABLE_ID,
+      rowId: payload.conversationId,
+      data: { settings: payload.encryptedSettings },
+    });
+  }
   return { success: true };
 }
 

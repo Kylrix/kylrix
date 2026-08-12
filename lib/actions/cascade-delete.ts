@@ -3,10 +3,21 @@
 import { Query } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+import { withSystemTransaction } from '@/lib/services/internal/transaction';
 
 /**
  * Helper to wipe both key mappings and polymorphic collaborators for any resource.
  */
+async function deleteRowsTransactional(txId: string, databaseId: string, tableId: string, rowIds: string[]) {
+  const unique = Array.from(new Set(rowIds.filter(Boolean)));
+  if (!unique.length) return;
+  const t: any = createSystemTablesDB();
+  for (let i = 0; i < unique.length; i += 10) {
+    const batch = unique.slice(i, i + 10);
+    await Promise.all(batch.map((rid: string) => t.deleteRow({ databaseId, tableId, rowId: rid, transactionId: txId })));
+  }
+}
+
 async function wipeCollaboratorsAndKeys(
   tables: any,
   resourceId: string,
@@ -16,7 +27,7 @@ async function wipeCollaboratorsAndKeys(
   const FLOW_DB = APPWRITE_CONFIG.DATABASES.FLOW;
   const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
 
-  // 1. Wipe key mappings
+  // 1. Wipe key mappings — transactional (VAULT DB)
   try {
     const mappingsRes = await tables.listRows({
       databaseId: VAULT_DB,
@@ -27,20 +38,20 @@ async function wipeCollaboratorsAndKeys(
         Query.limit(1000),
       ] as any});
 
-    await Promise.all(
-      (mappingsRes.rows || []).map((m: any) =>
-        tables.deleteRow({
-          databaseId: VAULT_DB,
-          tableId: 'key_mapping',
-          rowId: m.$id})
-      )
-    );
+    const ids = (mappingsRes.rows || []).map((m: any) => m.$id).filter(Boolean);
+    if (ids.length) {
+      try {
+        await withSystemTransaction(async (txId) => { await deleteRowsTransactional(txId, VAULT_DB, 'key_mapping', ids); }, { ttl: 60 });
+      } catch {
+        await Promise.all(ids.map((id: string) => tables.deleteRow({ databaseId: VAULT_DB, tableId: 'key_mapping', rowId: id })));
+      }
+    }
     console.log(`[Cascade Delete] Wiped ${mappingsRes.rows?.length || 0} key mappings for resource ${resourceId} (${resourceType})`);
   } catch (err) {
     console.error(`[Cascade Delete] Key mapping cleanup failed for ${resourceType} ${resourceId}:`, err);
   }
 
-  // 2. Wipe polymorphic collaborators
+  // 2. Wipe polymorphic collaborators — transactional (FLOW DB)
   try {
     const polyCollabsRes = await tables.listRows({
       databaseId: FLOW_DB,
@@ -51,14 +62,14 @@ async function wipeCollaboratorsAndKeys(
         Query.limit(1000),
       ] as any});
 
-    await Promise.all(
-      (polyCollabsRes.rows || []).map((collab: any) =>
-        tables.deleteRow({
-          databaseId: FLOW_DB,
-          tableId: POLYMORPHIC_COLLABORATORS_TABLE,
-          rowId: collab.$id})
-      )
-    );
+    const ids = (polyCollabsRes.rows || []).map((c: any) => c.$id).filter(Boolean);
+    if (ids.length) {
+      try {
+        await withSystemTransaction(async (txId) => { await deleteRowsTransactional(txId, FLOW_DB, POLYMORPHIC_COLLABORATORS_TABLE, ids); }, { ttl: 60 });
+      } catch {
+        await Promise.all(ids.map((id: string) => tables.deleteRow({ databaseId: FLOW_DB, tableId: POLYMORPHIC_COLLABORATORS_TABLE, rowId: id })));
+      }
+    }
     console.log(`[Cascade Delete] Wiped ${polyCollabsRes.rows?.length || 0} polymorphic collaborators for resource ${resourceId} (${resourceType})`);
   } catch (err) {
     console.error(`[Cascade Delete] Polymorphic collaborators cleanup failed for ${resourceType} ${resourceId}:`, err);
@@ -161,8 +172,8 @@ export async function executeCascadeDeleteSecure(
     const linkedObjects = (objectsRes.rows as any[]) || [];
     if (linkedObjects.length > 0) {
       console.log(`[Cascade Delete] Found ${linkedObjects.length} linked objects for parent ${rowId}`);
+      // Storage purge first (cannot be transactional)
       await Promise.all(linkedObjects.map(async (obj) => {
-        // A. If child is a file, purge from storage
         if (obj.childKind === 'voice') {
           await storage.deleteFile(VOICE_BUCKET, obj.childId).catch(() => null);
         } else if (obj.childKind === 'file') {
@@ -171,26 +182,29 @@ export async function executeCascadeDeleteSecure(
             try { await storage.deleteFile(b, obj.childId); break; } catch {}
           }
         }
-
-        // B. Delete the relationship entry
-        await tables.deleteRow({
-          databaseId: FLOW_DB,
-          tableId: objectsTable,
-          rowId: obj.$id});
       }));
+      // Transactional deletes for FLOW objects (same DB)
+      const objectIds = linkedObjects.map((o: any) => o.$id).filter(Boolean);
+      try {
+        await withSystemTransaction(async (txId) => { await deleteRowsTransactional(txId, FLOW_DB, objectsTable, objectIds); }, { ttl: 60 });
+      } catch {
+        await Promise.all(objectIds.map((id: string) => tables.deleteRow({ databaseId: FLOW_DB, tableId: objectsTable, rowId: id }).catch(() => null)));
+      }
     }
 
-    // Also remove any links where THIS resource is the child (preventing dead links)
+    // Also remove any links where THIS resource is the child (preventing dead links) — transactional
     const reverseLinksRes = await tables.listRows({
         databaseId: FLOW_DB,
         tableId: objectsTable,
         queries: [Query.equal('childId', rowId), Query.limit(1000)] as any});
-    await Promise.all((reverseLinksRes.rows || []).map((obj: any) => 
-        tables.deleteRow({
-            databaseId: FLOW_DB,
-            tableId: objectsTable,
-            rowId: obj.$id})
-    ));
+    const reverseIds = (reverseLinksRes.rows || []).map((o: any) => o.$id).filter(Boolean);
+    if (reverseIds.length) {
+      try {
+        await withSystemTransaction(async (txId) => { await deleteRowsTransactional(txId, FLOW_DB, objectsTable, reverseIds); }, { ttl: 60 });
+      } catch {
+        await Promise.all(reverseIds.map((id: string) => tables.deleteRow({ databaseId: FLOW_DB, tableId: objectsTable, rowId: id }).catch(() => null)));
+      }
+    }
   } catch (err) {
     console.error(`[Cascade Delete] Authoritative objects cleanup failed for ${rowId}:`, err);
   }
@@ -246,7 +260,8 @@ export async function executeCascadeDeleteSecure(
             ));
         }
 
-        // --- 1.2 Delete Reactions attached to these comments ---
+        // --- 1.2 Delete Reactions attached to these comments — transactional (NOTE DB)
+        let commentReactionIds: string[] = [];
         try {
           const reactionsRes = await tables.listRows({
             databaseId,
@@ -256,28 +271,21 @@ export async function executeCascadeDeleteSecure(
               Query.equal('targetId', commentIds),
               Query.limit(1000),
             ] as any});
-
-          await Promise.all(
-            reactionsRes.rows.map((r: any) =>
-              tables.deleteRow({
-                databaseId,
-                tableId: REACTIONS_TABLE,
-                rowId: r.$id})
-            )
-          );
+          commentReactionIds = (reactionsRes.rows || []).map((r: any) => r.$id).filter(Boolean);
         } catch (err) {
           console.error('[Cascade Delete] Note comments reactions cleanup failed:', err);
         }
 
-        // Delete the comments themselves
-        await Promise.all(
-          commentIds.map((cid: any) =>
-            tables.deleteRow({
-              databaseId,
-              tableId: COMMENTS_TABLE,
-              rowId: cid})
-          )
-        );
+        // Transactional batch: reactions + comments together (same DB, atomic)
+        try {
+          await withSystemTransaction(async (txId) => {
+            await deleteRowsTransactional(txId, databaseId, REACTIONS_TABLE, commentReactionIds);
+            await deleteRowsTransactional(txId, databaseId, COMMENTS_TABLE, commentIds);
+          }, { ttl: 60 });
+        } catch {
+          await Promise.all(commentReactionIds.map((rid: string) => tables.deleteRow({ databaseId, tableId: REACTIONS_TABLE, rowId: rid }).catch(() => null)));
+          await Promise.all(commentIds.map((cid: string) => tables.deleteRow({ databaseId, tableId: COMMENTS_TABLE, rowId: cid }).catch(() => null)));
+        }
       }
     } catch (err) {
       console.error('[Cascade Delete] Note comments cleanup failed:', err);

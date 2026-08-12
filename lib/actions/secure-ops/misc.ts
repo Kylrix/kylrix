@@ -6,6 +6,7 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+import { withSystemTransaction } from '@/lib/services/internal/transaction';
 import { Registry } from '@/lib/core/di/registry';
 import { InternalKylrixTokenService } from '@/lib/services/internal/kylrix-token';
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
@@ -839,7 +840,15 @@ export async function deleteRowSecure(
     console.error('deleteRowSecure cascade cleanup failed:', err);
   }
 
-  await Registry.getDatabase().deleteRow(dbId, tblId, rId, { forceSystem: true });
+  // Transactional parent delete (same DB as cascade children for notes/objects in NOTE/CHAT/FLOW where possible)
+  try {
+    await withSystemTransaction(async (txId) => {
+      const t: any = createSystemTablesDB();
+      await t.deleteRow({ databaseId: dbId, tableId: tblId, rowId: rId, transactionId: txId });
+    }, { ttl: 60 });
+  } catch {
+    await Registry.getDatabase().deleteRow(dbId, tblId, rId, { forceSystem: true });
+  }
   const result = { success: true };
 
   return JSON.parse(JSON.stringify(result));
@@ -1354,14 +1363,21 @@ export async function toggleResourcePublicGuestSecure(params: {
     updateData.status = 'published';
   }
 
+  // Transactional for encrypted vault objects (credential/totp) where share toggle implies key/collab fan-out; single-row but kept atomic with RLS bypass
   try {
-    await tables.updateRow({
-      databaseId: config.databaseId,
-      tableId: config.tableId,
-      rowId: resourceId,
-      data: updateData,
-      permissions: row.$permissions || []
-    });
+    try {
+      await withSystemTransaction(async (txId) => {
+        await (createSystemTablesDB() as any).updateRow({ databaseId: config.databaseId, tableId: config.tableId, rowId: resourceId, data: updateData, permissions: row.$permissions || [], transactionId: txId });
+      }, { ttl: 30 });
+    } catch {
+      await tables.updateRow({
+        databaseId: config.databaseId,
+        tableId: config.tableId,
+        rowId: resourceId,
+        data: updateData,
+        permissions: row.$permissions || []
+      });
+    }
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Could not save sharing settings';
     console.error('[toggleResourcePublicGuest]', resourceType, resourceId, error);
