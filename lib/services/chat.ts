@@ -1047,20 +1047,26 @@ export const ChatService = {
         }
     },
 
-    async createConversation(participants: string[], type: 'direct' | 'group' = 'direct', name?: string) {
+    async createConversation(participants: string[], type: 'direct' | 'group' = 'direct', name?: string, opts?: { encrypted?: boolean }) {
         const creatorId = participants[0];
         const isSelf = type === 'direct' && participants.length === 1 && participants[0] === participants[participants.length - 1];
         const isSelfPlaceholder = isSelf;
+        const wantEncrypted = opts?.encrypted !== undefined ? !!opts.encrypted : undefined; // undefined = auto (vault decides)
 
         if (!isSelfPlaceholder) {
-            if (!ecosystemSecurity.status.isUnlocked) {
-                throw new Error('Vault must be unlocked before creating conversations');
-            }
-            if (!ecosystemSecurity.status.hasIdentity) {
-                throw new Error('E2E identity must be initialized before creating conversations');
+            if (wantEncrypted === true) {
+                if (!ecosystemSecurity.status.isUnlocked) throw new Error('Vault must be unlocked before creating encrypted conversations');
+                if (!ecosystemSecurity.status.hasIdentity) throw new Error('E2E identity must be initialized before creating encrypted conversations');
+            } else if (wantEncrypted === false) {
+                // Unencrypted — no vault/identity needed, same tables, isEncrypted=false, no key_mapping
+            } else {
+                // Auto: legacy — require vault for direct/group unless self placeholder
+                if (!ecosystemSecurity.status.isUnlocked) throw new Error('Vault must be unlocked before creating conversations');
+                if (!ecosystemSecurity.status.hasIdentity) throw new Error('E2E identity must be initialized before creating conversations');
             }
         }
         const uniqueParticipants = isSelf ? [participants[0]] : Array.from(new Set(participants));
+        const shouldEncrypt = wantEncrypted === true ? true : wantEncrypted === false ? false : (ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity);
 
         // Personal chat: only proceed when a successful probe says it does not exist.
         if (isSelf) {
@@ -1069,8 +1075,32 @@ export const ChatService = {
                 throw new Error('Could not verify personal chat status. Try again.');
             }
             if (probe.conversation) {
-                console.log('[ChatService] Personal chat already exists:', probe.conversation.$id);
-                return probe.conversation;
+                // If encrypted flag differs, allow creating opposite type (self can have both encrypted + unencrypted/bookmarks)
+                if (wantEncrypted !== undefined) {
+                    const existingEncrypted = !!(probe.conversation as any).isEncrypted;
+                    if (existingEncrypted !== shouldEncrypt) {
+                        // Need to check if opposite-type self chat already exists separately
+                        try {
+                            const all = await tablesDB.listRows(DB_ID, CONV_TABLE, [
+                                Query.contains('participants', creatorId),
+                                Query.equal('type', 'direct'),
+                                Query.limit(100),
+                            ]);
+                            const matchOpposite = (all.rows || []).find((c: any) => this.isSelfChatConversation(c, creatorId) && !!(c as any).isEncrypted === shouldEncrypt);
+                            if (matchOpposite) {
+                                console.log('[ChatService] Self chat opposite type already exists:', matchOpposite.$id);
+                                return matchOpposite;
+                            }
+                        } catch {}
+                        // No opposite-type self chat yet — fall through to create
+                    } else {
+                        console.log('[ChatService] Personal chat already exists:', probe.conversation.$id);
+                        return probe.conversation;
+                    }
+                } else {
+                    console.log('[ChatService] Personal chat already exists:', probe.conversation.$id);
+                    return probe.conversation;
+                }
             }
         }
 
@@ -1121,11 +1151,15 @@ export const ChatService = {
                     const targetParticipantSet = canonicalizeParticipantsForMatch(uniqueParticipants);
                     for (const conversation of candidateRows) {
                         const memberSet = participantsByConversation.get(conversation.$id);
-                        // Fallback to conversation.participants when member rows are half-written (rowSecurity race)
                         const rawParticipants = memberSet && memberSet.length ? memberSet : (Array.isArray((conversation as any).participants) ? (conversation as any).participants : []);
                         const existingParticipantSet = canonicalizeParticipantsForMatch(rawParticipants);
 
                         if (arraysEqual(existingParticipantSet, targetParticipantSet)) {
+                            // Respect isEncrypted distinction — allow both encrypted and unencrypted directs between same pair
+                            if (wantEncrypted !== undefined) {
+                                const existingEncrypted = !!(conversation as any).isEncrypted;
+                                if (existingEncrypted !== shouldEncrypt) continue;
+                            }
                             console.log('[ChatService] Direct chat already exists, returning existing:', conversation.$id);
                             return conversation;
                         }
@@ -1135,14 +1169,12 @@ export const ChatService = {
         }
 
         let convKey: CryptoKey | null = null;
-
-        // E2E Layer: Only if vault is unlocked and identity is ready
-        if (ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity) {
+        if (shouldEncrypt) {
             convKey = await ecosystemSecurity.generateConversationKey();
         }
 
         let encryptedName = name;
-        if (name && convKey && ecosystemSecurity.status.isUnlocked) {
+        if (name && convKey && shouldEncrypt) {
             encryptedName = await ecosystemSecurity.encryptWithKey(name, convKey);
         }
 
@@ -1176,10 +1208,10 @@ export const ChatService = {
             participants: uniqueParticipants,
             type,
             name: encryptedName || 'Direct Chat',
-            isEncrypted: !!convKey,
-            encryptionVersion: convKey ? 'T4' : '1.0',
-            lockboxRows,
-            epochRows,
+            isEncrypted: shouldEncrypt && !!convKey,
+            encryptionVersion: shouldEncrypt && convKey ? 'T4' : '1.0',
+            lockboxRows: shouldEncrypt ? lockboxRows : [],
+            epochRows: shouldEncrypt ? epochRows : [],
             jwt: _jwt,
         }) as any;
 

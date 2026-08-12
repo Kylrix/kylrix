@@ -9,7 +9,6 @@ import { useAuth } from '@/lib/auth';
 import { useSudo } from '@/context/SudoContext';
 import { ChatService } from '@/lib/services/chat';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { createGhostNoteChat } from '@/lib/actions/client-ops';
 import { formatSecureChatStartError } from '@/lib/crypto/public-key';
 import { discoverRecipientSecureReady } from '@/lib/chat/recipient-secure-ready';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -51,13 +50,18 @@ export function CreateChatComposer({
   const [missingKeyIds, setMissingKeyIds] = useState<Set<string>>(new Set());
 
   const isUnlocked = ecosystemSecurity.status.isUnlocked;
-  // Thread/discussion huddles are NOT encrypted and never use conversation keys /
-  // epochs / key_mapping — they are ghost notes (isGhost/isThread/isChat) powered
-  // by comments + reactions. Only secure chats/hangouts use conversation keys.
-  // Toggle ON by default (transient, not persisted); auto-off only if user
-  // explicitly turned off OR any selected participant lacks X25519 publicKey.
+  // Unencrypted hangouts reuse same conversations/messages tables with isEncrypted=false (no key_mapping/epochs).
+  // Toggle ON by default (transient); auto-off if user toggled off OR participant lacks X25519 key. For unencrypted, no vault/keys needed.
   const hasMissingKeys = missingKeyIds.size > 0;
-  const encryptedEnabled = !userToggledOff && !hasMissingKeys;
+  const [existingDirectInfo, setExistingDirectInfo] = useState<{ hasEncrypted: boolean; hasUnencrypted: boolean; checked: boolean }>({ hasEncrypted: false, hasUnencrypted: false, checked: false });
+  const baseEncryptedEnabled = !userToggledOff && !hasMissingKeys;
+  // Duplicate prevention: two people can have at most two directs (encrypted + unencrypted). Default to opposite if one exists, grey out if both.
+  const isDirectForDup = selectedUsers.length === 1;
+  const hasBothDirects = isDirectForDup && existingDirectInfo.checked && existingDirectInfo.hasEncrypted && existingDirectInfo.hasUnencrypted;
+  const hasOneDirect = isDirectForDup && existingDirectInfo.checked && (existingDirectInfo.hasEncrypted !== existingDirectInfo.hasUnencrypted);
+  const defaultOpposite = hasOneDirect ? !existingDirectInfo.hasEncrypted : baseEncryptedEnabled;
+  const encryptedEnabled = hasBothDirects ? baseEncryptedEnabled : hasOneDirect ? defaultOpposite : baseEncryptedEnabled;
+  const isToggleGreyed = hasBothDirects || hasOneDirect || hasMissingKeys;
 
   useEffect(() => {
     onRegisterClose?.(() => onClose());
@@ -79,7 +83,6 @@ export function CreateChatComposer({
       discoveries.forEach((d) => {
         if (!d.ready) missing.add(d.userId);
       });
-      // Also check self readiness — if self has no publicKey, encryption off
       if (user?.$id) {
         const selfD = await discoverRecipientSecureReady(user.$id);
         if (!selfD.ready) missing.add(user.$id);
@@ -87,7 +90,6 @@ export function CreateChatComposer({
       if (cancelled) return;
       setMissingKeyIds(missing);
       if (missing.size > 0 && isUnlocked && !userToggledOff) {
-        // Auto-disable, inform once
         const names = discoveries.filter((d) => missing.has(d.userId)).map((d) => d.profile?.displayName || d.profile?.username || 'Someone').join(', ');
         if (names) toast(`Encryption off — ${names} hasn't set up secure chat`, { id: 'e2e-auto-off' });
       }
@@ -96,6 +98,28 @@ export function CreateChatComposer({
     });
     return () => { cancelled = true; };
   }, [selectedUsers, user?.$id, isUnlocked, userToggledOff]);
+
+  // Existing direct duplicate check — defaults to opposite, greys out if both exist
+  useEffect(() => {
+    if (selectedUsers.length !== 1 || !user?.$id) {
+      setExistingDirectInfo({ hasEncrypted: false, hasUnencrypted: false, checked: false });
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const otherId = (selectedUsers[0] as any).id || (selectedUsers[0] as any).$id;
+        const all = await ChatService.getConversations(user.$id);
+        const directs = (all.rows || []).filter((c: any) => c.type === 'direct' && Array.isArray(c.participants) && c.participants.includes(user.$id) && c.participants.includes(otherId) && c.participants.length === 2);
+        const hasEncrypted = directs.some((c: any) => c.isEncrypted === true);
+        const hasUnencrypted = directs.some((c: any) => !c.isEncrypted);
+        if (!cancelled) setExistingDirectInfo({ hasEncrypted, hasUnencrypted, checked: true });
+      } catch {
+        if (!cancelled) setExistingDirectInfo({ hasEncrypted: false, hasUnencrypted: false, checked: true });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedUsers, user?.$id]);
 
   const openConversation = useCallback(
     (id: string, kind: 'chat' | 'thread' = 'chat') => {
@@ -134,51 +158,54 @@ export function CreateChatComposer({
       return;
     }
 
-    setBusy(true);
+    // Duplicate prevention: direct can have at most encrypted+unencrypted. If both exist, show chooser.
+    if (selectedUsers.length === 1 && existingDirectInfo.checked && existingDirectInfo.hasEncrypted && existingDirectInfo.hasUnencrypted) {
+      try {
+        const otherId = (selectedUsers[0] as any).id || (selectedUsers[0] as any).$id;
+        const all = await ChatService.getConversations(user.$id);
+        const directs = (all.rows || []).filter((c: any) => c.type === 'direct' && Array.isArray(c.participants) && c.participants.includes(user.$id) && c.participants.includes(otherId) && c.participants.length === 2);
+        toast('Both conversations already exist — choose one', { id: 'dup-both' });
+        // Open the one matching current toggle, or first encrypted
+        const preferred = directs.find((c: any) => !!c.isEncrypted === encryptedEnabled) || directs[0];
+        if (preferred) openConversation(preferred.$id, 'chat');
+      } catch {}
+      return;
+    }
 
-    // Discussion huddle — NOT encrypted, never uses conversation keys/epochs/key_mapping.
-    // Substrate: NOTE DB `notes` with isGhost/isThread/isChat + Collaborators; messages
-    // are `comments`, reactions are `reactions`. Deletion is deleteGhostThread ->
-    // executeCascadeDeleteSecure (comments/reactions/storage) — completely separate
-    // from CHAT DB conversations. Same power for 1:1 and group.
+    setBusy(true);
+    const participantIds = [user.$id, ...selectedUsers.map((u) => u.id || (u as any).$id)];
+
+    // Unencrypted — same conversations/messages tables, isEncrypted=false, no key_mapping/epochs, no vault needed
     if (!encryptedEnabled) {
       try {
-        const participantIds = [user.$id, ...selectedUsers.map((u) => u.id || (u as any).$id)];
-        const title = isGroup
-          ? (hangoutName.trim() || `Hangout with ${selectedUsers.map((u) => u.displayName || u.username || 'user').slice(0, 3).join(', ')}`)
-          : (selectedUsers[0]?.displayName || selectedUsers[0]?.username || selectedUsers[0]?.title || 'Chat');
-        const ghost = await createGhostNoteChat(title, participantIds);
-        toast.success(isGroup ? 'Discussion ready' : 'Discussion started');
-        openConversation(ghost.$id, 'thread');
+        const newConv = await ChatService.createConversation(participantIds, isGroup ? 'group' : 'direct', isGroup ? hangoutName.trim() : undefined, { encrypted: false } as any);
+        toast.success(isGroup ? 'Discussion ready' : 'Chat started');
+        openConversation(newConv.$id, 'chat');
       } catch (error: any) {
-        toast.error(formatSecureChatStartError(error, 'thread'));
+        toast.error(formatSecureChatStartError(error, 'chat'));
       } finally {
         setBusy(false);
       }
       return;
     }
 
-    // Encrypted path — requires vault unlock + valid public keys
-    const doEncryptedCreate = async () => {
+    // Encrypted — requires vault unlock + valid public keys (transient toggle, no key_mapping for unencrypted)
+    const doCreate = async (forceEncrypted: boolean) => {
       try {
-        await ecosystemSecurity.ensureE2EIdentity(user.$id);
-        const participantIds = [user.$id, ...selectedUsers.map((u) => u.id || (u as any).$id)];
-
-        // Live discovery for every member — refuse if anyone not secure-ready (should already be auto-off, but double-check)
+        if (forceEncrypted) await ecosystemSecurity.ensureE2EIdentity(user.$id);
         const discoveries = await Promise.all(participantIds.map((id) => discoverRecipientSecureReady(id)));
         const missing = discoveries.find((d) => d.userId !== user.$id && !d.ready);
-        if (missing) {
+        if (forceEncrypted && missing) {
           const label = missing.profile?.displayName || missing.profile?.username || 'A member';
-          throw new Error(`${label} hasn't set up secure chat yet. Turn off encryption to start a standard discussion.`);
+          throw new Error(`${label} hasn't set up secure chat yet. Turn off encryption to start a standard chat.`);
         }
-
         if (isGroup) {
-          const newConv = await ChatService.createConversation(participantIds, 'group', hangoutName.trim());
-          toast.success('Hangout ready');
+          const newConv = await ChatService.createConversation(participantIds, 'group', hangoutName.trim(), { encrypted: forceEncrypted } as any);
+          toast.success(forceEncrypted ? 'Hangout ready' : 'Discussion ready');
           openConversation(newConv.$id, 'chat');
         } else {
-          const newConv = await ChatService.createConversation(participantIds, 'direct');
-          toast.success('Secure chat ready');
+          const newConv = await ChatService.createConversation(participantIds, 'direct', undefined, { encrypted: forceEncrypted } as any);
+          toast.success(forceEncrypted ? 'Secure chat ready' : 'Chat started');
           openConversation(newConv.$id, 'chat');
         }
       } catch (error: any) {
@@ -188,16 +215,16 @@ export function CreateChatComposer({
       }
     };
 
-    if (!ecosystemSecurity.status.isUnlocked) {
+    if (encryptedEnabled && !ecosystemSecurity.status.isUnlocked) {
       setBusy(false);
       requestSudo({
-        onSuccess: () => { void doEncryptedCreate(); },
+        onSuccess: () => { void doCreate(true); },
         onCancel: () => setBusy(false),
       });
       return;
     }
-    await doEncryptedCreate();
-  }, [user, selectedUsers, hangoutName, encryptedEnabled, openConversation, requestSudo]);
+    await doCreate(encryptedEnabled);
+  }, [user, selectedUsers, hangoutName, encryptedEnabled, existingDirectInfo, openConversation, requestSudo]);
 
   const isGroup = selectedUsers.length > 1;
   const canCreate = selectedUsers.length > 0 && !busy && (!isGroup || hangoutName.trim().length > 0 || !encryptedEnabled);
@@ -257,16 +284,20 @@ export function CreateChatComposer({
             type="button"
             role="switch"
             aria-checked={encryptedEnabled}
-            disabled={hasMissingKeys}
+            disabled={isToggleGreyed}
             onClick={() => {
               if (hasMissingKeys) {
                 toast('Turn off encryption is automatic — a participant lacks secure setup', { id: 'e2e-disabled-reason' });
                 return;
               }
+              if (hasBothDirects || hasOneDirect) {
+                toast(hasBothDirects ? 'Both encrypted and standard chats already exist — choose one' : `Only ${existingDirectInfo.hasEncrypted ? 'standard' : 'encrypted'} chat can be created — opposite of existing`, { id: 'dup-both-toggle' });
+                return;
+              }
               setUserToggledOff((v) => !v);
             }}
-            title={hasMissingKeys ? 'Disabled — participant without public key' : encryptedEnabled ? 'Tap to turn off — will create unencrypted discussion' : 'Tap to turn on'}
-            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${encryptedEnabled ? 'bg-[#F59E0B] border-[#F59E0B]' : 'bg-white/10 border-white/10'} ${hasMissingKeys && !encryptedEnabled ? 'opacity-60' : ''}`}
+            title={hasMissingKeys ? 'Disabled — participant without public key' : hasBothDirects ? 'Greyed — both chat types already exist' : hasOneDirect ? `Greyed — opposite of existing (${existingDirectInfo.hasEncrypted ? 'standard' : 'encrypted'})` : encryptedEnabled ? 'Tap to turn off — will create unencrypted discussion' : 'Tap to turn on'}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${encryptedEnabled ? 'bg-[#F59E0B] border-[#F59E0B]' : 'bg-white/10 border-white/10'} ${isToggleGreyed ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${encryptedEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
           </button>
@@ -275,7 +306,12 @@ export function CreateChatComposer({
           <p className="text-[10px] font-semibold text-amber-400/80 mt-2 px-1">Vault locked — creating encrypted hangout will prompt unlock.</p>
         ) : null}
         {!encryptedEnabled && hasMissingKeys ? (
-          <p className="text-[10px] font-semibold text-white/35 mt-2 px-1">No conversation keys — discussion will use notes/comments (no encryption).</p>
+          <p className="text-[10px] font-semibold text-white/35 mt-2 px-1">No conversation keys — standard chat uses same table with encryption off.</p>
+        ) : null}
+        {hasBothDirects ? (
+          <p className="text-[10px] font-semibold text-white/35 mt-2 px-1">Both encrypted and standard chats already exist — choose one from your conversations.</p>
+        ) : hasOneDirect ? (
+          <p className="text-[10px] font-semibold text-white/35 mt-2 px-1">Defaults to {existingDirectInfo.hasEncrypted ? 'standard (unencrypted)' : 'encrypted'} — opposite of existing chat. Toggle greyed to prevent duplicate.</p>
         ) : null}
       </div>
 
