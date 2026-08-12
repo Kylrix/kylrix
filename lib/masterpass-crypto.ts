@@ -357,13 +357,17 @@ class MasterPassCrypto {
         return false; // No keychain entry found
       }
 
-      const isArgon = !!keychainEntry.isArgon || (typeof keychainEntry.params === 'string' ? keychainEntry.params.includes("Argon2id") : keychainEntry.params?.algo === 'Argon2id');
-
-      // Derive AuthKey using the stored salt
+      // Deterministic Argon2id detection: check explicit boolean, 32-byte salt length, or JSON string/object param
       const salt = this.decodeBase64(keychainEntry.salt);
+      const isArgonBySalt = salt.length === MasterPassCrypto.SALT_SIZE;
+      const isArgonByParam = typeof keychainEntry.params === 'string'
+        ? keychainEntry.params.includes("Argon2id")
+        : (keychainEntry.params?.algo === 'Argon2id' || !!keychainEntry.params?.memory);
+      
+      const isArgon = Boolean(keychainEntry.isArgon || isArgonBySalt || isArgonByParam);
 
       logDebug(`[Vault] Unlocking with ${isArgon ? "Argon2id" : "Legacy PBKDF2"}...`);
-      const authKey = await this.deriveKey(password, salt, isArgon);
+      let authKey = await this.deriveKey(password, salt, isArgon);
 
       // Unwrap the MEK
       const wrappedKeyBytes = this.decodeBase64(keychainEntry.wrappedKey);
@@ -372,64 +376,87 @@ class MasterPassCrypto {
       const iv = wrappedKeyBytes.slice(0, MasterPassCrypto.IV_SIZE);
       const ciphertext = wrappedKeyBytes.slice(MasterPassCrypto.IV_SIZE);
 
+      let decryptedMek: ArrayBuffer | null = null;
+      let usedFallbackPBKDF2 = false;
 
       try {
-        const mekBytes = await crypto.subtle.decrypt(
+        decryptedMek = await crypto.subtle.decrypt(
           { name: "AES-GCM", iv: iv },
           authKey,
           ciphertext
         );
-
-        // Import the MEK
-        this.masterKey = await crypto.subtle.importKey(
-          "raw",
-          mekBytes,
-          { name: "AES-GCM", length: 256 },
-          true,
-          ["encrypt", "decrypt", "wrapKey", "unwrapKey"]
-        );
-
-        // --- SEAMLESS MIGRATION: PBKDF2 -> Argon2id (Double-Lock Pattern) ---
-        if (!isArgon) {
-            logDebug("[Migration] Legacy PBKDF2 detected. Initializing Double-Lock upgrade...");
-            this.onMigrationStart?.();
-            
-            // Failsafe: Store encrypted RAM backup
-            const backupId = `kylrix_mek_backup_${userId}`;
-            const rawMek = await crypto.subtle.exportKey("raw", this.masterKey!);
-            const backupSecret = crypto.getRandomValues(new Uint8Array(32));
-            
-            try {
-                // Encrypt backup for sessionStorage
-                const backupIv = crypto.getRandomValues(new Uint8Array(16));
-                const backupKey = await crypto.subtle.importKey("raw", backupSecret, { name: "AES-GCM" }, false, ["encrypt"]);
-                const encryptedBackup = await crypto.subtle.encrypt({ name: "AES-GCM", iv: backupIv }, backupKey, rawMek);
-                const combinedBackup = new Uint8Array(backupIv.length + encryptedBackup.byteLength);
-                combinedBackup.set(backupIv);
-                combinedBackup.set(new Uint8Array(encryptedBackup), backupIv.length);
-                
-                sessionStorage.setItem(backupId, btoa(String.fromCharCode(...combinedBackup)));
-                
-                // 1. Write new elite entry (marked as PENDING)
-                const { AppwriteService } = await import("./appwrite");
-                const newEntry = await this.createKeychainEntry(this.masterKey, password, userId, true, true);
-                
-                // 2. Delete legacy entry
-                if (keychainEntry.$id) {
-                    await AppwriteService.deleteKeychainEntry(keychainEntry.$id);
-                }
-
-                // 3. Finalize new entry (remove PENDING status)
-                await AppwriteService.updateKeychainEntry(newEntry.$id, { isPending: false });
-
-                logDebug("[Migration] Successfully upgraded to Argon2id via Double-Lock.");
-                sessionStorage.removeItem(backupId); // Purge backup immediately
-                this.onMigrationEnd?.(true);
-            } catch (err) {
-                logError("[Migration] Critical failure during Double-Lock upgrade", err as Error);
-                this.onMigrationEnd?.(false);
-            }
+      } catch (_primaryErr) {
+        // Safe fallback: If primary failed and we assumed Argon2id, test legacy PBKDF2 derivation ONCE
+        if (isArgon && !isArgonBySalt) {
+          try {
+            logDebug("[Vault] Primary Argon2id unlock failed. Trying legacy PBKDF2 fallback...");
+            const fallbackKey = await this.deriveKey(password, salt, false);
+            decryptedMek = await crypto.subtle.decrypt(
+              { name: "AES-GCM", iv: iv },
+              fallbackKey,
+              ciphertext
+            );
+            usedFallbackPBKDF2 = true;
+          } catch (_fallbackErr) {
+            // Both failed: Genuine invalid password — error out safely without touching rows
+            return false;
+          }
+        } else {
+          return false;
         }
+      }
+
+      if (!decryptedMek) return false;
+
+      // Import the verified MEK
+      this.masterKey = await crypto.subtle.importKey(
+        "raw",
+        decryptedMek,
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt", "decrypt", "wrapKey", "unwrapKey"]
+      );
+
+      // --- SEAMLESS MIGRATION: Trigger ONLY after confirmed PBKDF2 unlock ---
+      if (!isArgon || usedFallbackPBKDF2) {
+          logDebug("[Migration] Confirmed legacy PBKDF2 unlock. Initializing Double-Lock upgrade...");
+          this.onMigrationStart?.();
+          
+          // Failsafe: Store encrypted RAM backup
+          const backupId = `kylrix_mek_backup_${userId}`;
+          const rawMek = await crypto.subtle.exportKey("raw", this.masterKey!);
+          const backupSecret = crypto.getRandomValues(new Uint8Array(32));
+          
+          try {
+              // Encrypt backup for sessionStorage
+              const backupIv = crypto.getRandomValues(new Uint8Array(16));
+              const backupKey = await crypto.subtle.importKey("raw", backupSecret, { name: "AES-GCM" }, false, ["encrypt"]);
+              const encryptedBackup = await crypto.subtle.encrypt({ name: "AES-GCM", iv: backupIv }, backupKey, rawMek);
+              const combinedBackup = new Uint8Array(backupIv.length + encryptedBackup.byteLength);
+              combinedBackup.set(backupIv);
+              combinedBackup.set(new Uint8Array(encryptedBackup), backupIv.length);
+              
+              sessionStorage.setItem(backupId, btoa(String.fromCharCode(...combinedBackup)));
+              
+              // 1. Write new elite entry (marked as PENDING)
+              const { AppwriteService } = await import("./appwrite");
+              const newEntry = await this.createKeychainEntry(this.masterKey, password, userId, true, true);
+              
+              // 2. Delete legacy entry ONLY after successful new entry creation
+              if (keychainEntry.$id && newEntry?.$id) {
+                  await AppwriteService.deleteKeychainEntry(keychainEntry.$id);
+                  // 3. Finalize new entry (remove PENDING status)
+                  await AppwriteService.updateKeychainEntry(newEntry.$id, { isPending: false });
+              }
+
+              logDebug("[Migration] Successfully upgraded to Argon2id via Double-Lock.");
+              sessionStorage.removeItem(backupId); // Purge backup immediately
+              this.onMigrationEnd?.(true);
+          } catch (err) {
+              logError("[Migration] Failure during Double-Lock upgrade. Existing row preserved.", err as Error);
+              this.onMigrationEnd?.(false);
+          }
+      }
 
         return true;
       } catch (e: unknown) {
