@@ -257,7 +257,6 @@ export function NoteDetailSidebar({
   }, []);
 
   const { openFileDrawer } = useUnifiedFileDrawer();
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const liveNoteRef = useRef(liveNote);
   liveNoteRef.current = liveNote;
@@ -641,7 +640,6 @@ export function NoteDetailSidebar({
 
   const handleDelete = useCallback(() => {
     onDelete(liveNote.$id);
-    setShowDeleteConfirm(false);
     closeSidebar();
     closeOverlay();
   }, [onDelete, liveNote.$id, closeSidebar, closeOverlay]);
@@ -1224,7 +1222,13 @@ export function NoteDetailSidebar({
           {!readOnly && showHeaderDeleteButton && (
             <button 
               type="button"
-              onClick={() => setShowDeleteConfirm(true)} 
+              onClick={() => openUnified('delete-confirm', {
+                title: `Delete "${title || 'Untitled'}"?`,
+                description: 'Are you sure you want to delete this idea? This action is permanent and cannot be undone.',
+                resourceName: 'this idea',
+                confirmLabel: 'Delete Idea',
+                onConfirm: async () => { await handleDelete(); },
+              })}
               className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20 transition-colors flex items-center justify-center ml-auto"
               title="Delete"
             >
@@ -1612,33 +1616,7 @@ export function NoteDetailSidebar({
         </div>
       )}
 
-      {/* Delete Dialog */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[11050] flex items-center justify-center p-4 bg-black/70 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-[24px] bg-[#161412] border border-white/5 p-5 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95 duration-200">
-            <h3 className="font-extrabold font-space-grotesk text-[#FF453A] text-lg uppercase tracking-wide">Delete Note</h3>
-            <p className="text-xs text-white/60 font-sans leading-relaxed">
-              Are you sure you want to delete this note? This action is permanent and cannot be undone.
-            </p>
-            <div className="flex flex-col gap-2 mt-2">
-              <button 
-                type="button"
-                onClick={handleDelete} 
-                className="w-full py-2.5 rounded-xl bg-[#FF453A] hover:bg-[#FF453A]/90 text-white font-extrabold text-xs font-mono uppercase transition-colors"
-              >
-                Delete Permanently
-              </button>
-              <button 
-                type="button"
-                onClick={() => setShowDeleteConfirm(false)} 
-                className="w-full py-2.5 rounded-xl border border-white/10 text-white/80 hover:text-white hover:bg-white/5 font-extrabold text-xs font-mono uppercase transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete uses unified chrome: bottom drawer on mobile, right sidebar on desktop (ui.chrome-surfaces) — local fixed modal retired */}
 
       <ConfirmationDialog 
         open={showRotateConfirm} 
