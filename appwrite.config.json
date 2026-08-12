@@ -5148,6 +5148,15 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "role",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": "member",
+                    "encrypt": false
                 }
             ],
             "indexes": [

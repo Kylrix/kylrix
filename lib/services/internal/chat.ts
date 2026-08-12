@@ -1017,7 +1017,7 @@ export async function createConversationTransactionalInternal(payload: {
     // Stage members
     for (const pid of uniqueParticipants) {
       const memberPerms = [Permission.read(Role.user(verifiedActorId!)), ...uniqueParticipants.filter((id) => id !== verifiedActorId).map((id) => Permission.read(Role.user(id)))];
-      await tables.createRow({ databaseId: CHAT_DB_ID, tableId: CONVERSATION_MEMBERS_TABLE_ID, rowId: ID.unique(), data: { conversationId: convId, userId: pid, role: pid === verifiedActorId ? 'owner' : 'member', joinedAt: now }, permissions: memberPerms, transactionId: txId });
+      await tables.createRow({ databaseId: CHAT_DB_ID, tableId: CONVERSATION_MEMBERS_TABLE_ID, rowId: ID.unique(), data: { conversationId: convId, userId: pid, role: pid === verifiedActorId ? 'owner' : 'member' }, permissions: memberPerms, transactionId: txId });
     }
     // Stage key_mappings (direct & group lockbox)
     for (const row of lockbox) {
