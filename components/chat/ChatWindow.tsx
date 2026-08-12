@@ -54,7 +54,7 @@ import { toast } from 'react-hot-toast';
 
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getCachedIdentityById, seedIdentityCache, subscribeIdentityCache } from '@/lib/identity-cache';
-import { buildSafetyWarning, getVerificationState } from '@/lib/verification';
+import { getVerificationState } from '@/lib/verification';
 import { markConversationRead } from '@/lib/chat-read-state';
 import { useChatNotifications } from '../providers/ChatNotificationProvider';
 import { useCallLauncher } from '@/context/CallLauncherContext';
@@ -65,6 +65,7 @@ import { hasPaidKylrixPlan } from '@/lib/utils';
 import { showUpgradeIsland } from '@/lib/upgrade-island';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useSudo } from '@/context/SudoContext';
+import { PresenceService } from '@/lib/services/presence';
 
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import {
@@ -102,8 +103,14 @@ export const ChatWindow = ({
     const { markConversationRead: markConversationReadInContext } = useChatNotifications();
     const { openCallLauncher } = useCallLauncher();
     const { globalPresence} = usePresence();
+    // Typing/online via Appwrite presence (ephemeral) — mutual prefs from profile.preferences (privacy tab)
     const [typingUsers, _setTypingUsers] = useState<string[]>([]);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [ownTypingEnabled, setOwnTypingEnabled] = useState(true);
+    const [ownOnlineEnabled, setOwnOnlineEnabled] = useState(true);
+    const [partnerTypingEnabled, setPartnerTypingEnabled] = useState(true);
+    const [partnerOnlineEnabled, setPartnerOnlineEnabled] = useState(true);
+    const [_partnerPresence, setPartnerPresence] = useState<any>(null);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -242,7 +249,7 @@ export const ChatWindow = ({
 
     const isSelf = conversation?.type === 'direct' && conversation?.participants && (conversation.participants.length === 1 || conversation.participants.length === 2) && conversation.participants.every((p: string) => p === user?.$id);
     const hasRepliedToPartner = messages.some((message) => message.senderId === user?.$id);
-    const showFirstContactWarning = Boolean(
+    const _showFirstContactWarning = Boolean(
         conversation?.type === 'direct' &&
         !isSelf &&
         partnerProfile &&
@@ -453,18 +460,16 @@ export const ChatWindow = ({
             try {
               conv = await ChatService.getConversationById(conversationId, user?.$id);
             } catch {}
-            // WESP transient secret + decrypt guard — conv may be null (thread) or settings may be plaintext/empty
+            // Fix: always fetch messages even if conv is null (permission/typing bug hid messages while preview worked). Participants both have read perms on create.
             let response: any = null;
-            if (conv) {
-              console.log('[ChatWindow] loadMessages: conversation fetched:', conv?.$id);
-              try {
-                response = await ChatService.getMessages(conversationId, 50, 0, user?.$id, {
-                    prefetchedConversation: conv});
-              } catch (e) {
-                console.warn('[ChatWindow] getMessages failed, will try thread fallback', e);
-              }
-              console.log('[ChatWindow] loadMessages: getMessages returned rows:', response?.rows?.length);
+            try {
+              console.log('[ChatWindow] loadMessages: conversation fetched:', conv?.$id || 'null — still fetching messages');
+              response = await ChatService.getMessages(conversationId, 50, 0, user?.$id, {
+                  prefetchedConversation: conv || undefined});
+            } catch (e) {
+              console.warn('[ChatWindow] getMessages failed, will try thread fallback', e);
             }
+            if (response) console.log('[ChatWindow] loadMessages: getMessages returned rows:', response?.rows?.length);
             // Thread fallback — canonical threads substrate (notes → threads/thread_messages, not conversations)
             // Use client-ops (server actions via Registry/JWT), NOT direct ThreadService (which needs APPWRITE_API system client)
             // Bookmarks/discussion hangouts are ghost notes (isGhostChat) bridged to threads via scopeKey parentKind:parentId:channel + legacyNoteId
@@ -598,7 +603,55 @@ export const ChatWindow = ({
         }
     }, [conversation?.isEncrypted, isUnlocked, promptSudo]);
 
+    // Privacy prefs — typing/online (default true, mutual, direct-only, stored in profile.preferences)
+    useEffect(() => {
+        if (!user?.$id) return;
+        UsersService.getProfileById(user.$id).then((p: any) => {
+            try { const pr = typeof p?.preferences === 'string' ? JSON.parse(p.preferences) : p?.preferences || {}; setOwnTypingEnabled(pr.typingEnabled ?? true); setOwnOnlineEnabled(pr.onlineEnabled ?? true); } catch {}
+        }).catch(() => {});
+    }, [user?.$id]);
 
+    useEffect(() => {
+        const otherId = conversation?.type === 'direct' ? (conversation?.participants || []).find((id: string) => id !== user?.$id) : null;
+        if (!otherId || conversation?.type !== 'direct') { setPartnerTypingEnabled(true); setPartnerOnlineEnabled(true); return; }
+        UsersService.getProfileById(otherId).then((p: any) => {
+            try { const pr = typeof p?.preferences === 'string' ? JSON.parse(p.preferences) : p?.preferences || {}; setPartnerTypingEnabled(pr.typingEnabled ?? true); setPartnerOnlineEnabled(pr.onlineEnabled ?? true); } catch {}
+        }).catch(() => {});
+    }, [conversation?.participants, conversation?.type, user?.$id]);
+
+    // Typing via Appwrite presence — ephemeral, no DB writes, direct+mutual only, groups suppressed
+    useEffect(() => {
+        if (conversation?.type !== 'direct') { _setTypingUsers([]); return; }
+        if (!ownTypingEnabled || !partnerTypingEnabled) { _setTypingUsers([]); return; }
+        const channel = PresenceService.getChatChannel(conversationId);
+        let timeout: any = null;
+        const unsub = PresenceService.subscribeToPresence(channel, (payload: any) => {
+            const uid = payload?.userId || payload?.user_id;
+            if (!uid || uid === user?.$id) return;
+            const isTyping = !!payload?.metadata?.typing || payload?.state === 'typing';
+            if (isTyping) {
+                _setTypingUsers([uid]);
+                if (timeout) clearTimeout(timeout);
+                timeout = setTimeout(() => _setTypingUsers([]), 3000);
+            } else {
+                _setTypingUsers([]);
+            }
+        });
+        return () => { if (timeout) clearTimeout(timeout); try { (unsub as any)?.(); } catch {} };
+    }, [conversationId, conversation?.type, ownTypingEnabled, partnerTypingEnabled, user?.$id]);
+
+    // Online via Appwrite presence — direct+mutual only, groups suppressed, no DB polling
+    useEffect(() => {
+        const otherId = conversation?.type === 'direct' ? (conversation?.participants || []).find((id: string) => id !== user?.$id) : null;
+        if (conversation?.type !== 'direct' || !otherId || !ownOnlineEnabled || !partnerOnlineEnabled) { setPartnerPresence(null); return; }
+        const chan = PresenceService.getResourceChannel('presence', 'users', otherId);
+        const unsub = PresenceService.subscribeToPresence(chan, (payload: any) => {
+            setPartnerPresence(payload?.state === 'online' ? payload : null);
+        });
+        // also broadcast own online
+        void PresenceService.broadcastState(PresenceService.getResourceChannel('presence','users', user?.$id || 'anon'), { userId: user?.$id || '', state: 'online' as any });
+        return () => { try { (unsub as any)?.(); } catch {} };
+    }, [conversation?.participants, conversation?.type, ownOnlineEnabled, partnerOnlineEnabled, user?.$id]);
 
     useEffect(() => {
         if (!messageSenderIds.length) return;
@@ -1980,6 +2033,8 @@ export const ChatWindow = ({
                         attachmentDisabled={!isProPlan}
                         enableMentions={conversation?.type === 'group'}
                         mentionTargets={groupMentionTargets}
+                        canBroadcastTyping={conversation?.type === 'direct' && ownTypingEnabled && partnerTypingEnabled}
+                        isDirect={conversation?.type === 'direct'}
                         onAttach={() => {
                             openFileDrawer({
                                 onSelectFile: (file: any) => {

@@ -76,7 +76,8 @@ export function CreateChatComposer({
     let cancelled = false;
     setCheckingKeys(true);
     (async () => {
-      const ids = selectedUsers.map((u) => u.id || (u as any).$id).filter(Boolean);
+      const resolveUserId = (u: any) => u?.contactUserId || u?.userId || u?.targetUserId || u?.id || u?.$id;
+      const ids = selectedUsers.map((u) => resolveUserId(u)).filter(Boolean);
       const discoveries = await Promise.all(ids.map((id: string) => discoverRecipientSecureReady(id)));
       if (cancelled) return;
       const missing = new Set<string>();
@@ -173,7 +174,8 @@ export function CreateChatComposer({
     }
 
     setBusy(true);
-    const participantIds = [user.$id, ...selectedUsers.map((u) => u.id || (u as any).$id)];
+    const resolveUserId = (u: any) => u?.contactUserId || u?.userId || u?.targetUserId || u?.id || u?.$id;
+    const participantIds = [user.$id, ...selectedUsers.map((u) => resolveUserId(u)).filter(Boolean)];
 
     // Unencrypted hangout — same conversations/messages tables, isEncrypted=false, no key_mapping/epochs, no vault needed
     if (!encryptedEnabled) {

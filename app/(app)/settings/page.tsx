@@ -16,6 +16,7 @@ import {
     Edit3,
     UserCircle as ProfileIcon,
     ShieldCheck as SecurityIcon,
+    ShieldCheck,
     MonitorSmartphone as SessionsIcon,
     History as ActivityIcon,
     Sliders as PreferencesIcon,
@@ -27,6 +28,7 @@ import {
 import { WorkspaceTab } from '@/components/settings/WorkspaceTab';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { SecurityTab } from '@/components/settings/SecurityTab';
+import { PrivacyTab } from '@/components/settings/PrivacyTab';
 import { DevelopersTab } from '@/components/settings/DevelopersTab';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
@@ -107,7 +109,7 @@ function SettingsPageInner() {
     const _nativeSidebar = useNativeSidebarOptional();
 
     // Tab state
-    const [activeTab, setActiveTab] = useState<'general' | 'workspace' | 'profile' | 'security' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'workspace' | 'profile' | 'security' | 'privacy' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
     const [billingDrawerOpen, setBillingDrawerOpen] = useState(false);
     const [mfaFactors, setMfaFactors] = useState<any>(null);
     const [accountMfaEnabled, setAccountMfaEnabled] = useState(false);
@@ -117,7 +119,7 @@ function SettingsPageInner() {
     useEffect(() => {
         const section = (searchParams.get('section') || '').toLowerCase();
         const tab = (searchParams.get('tab') || '').toLowerCase();
-        const allowed = new Set(['general', 'workspace', 'profile', 'security', 'developers', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
+        const allowed = new Set(['general', 'workspace', 'profile', 'security', 'privacy', 'developers', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
         if (section.startsWith('admin') || tab === 'admin') {
             setActiveTab('admin');
             if (section.includes('user')) setAdminSubTab('users');
@@ -467,6 +469,7 @@ function SettingsPageInner() {
         { id: 'workspace', label: 'Workspace', icon: WorkspaceIcon },
         { id: 'profile', label: 'Profile', icon: ProfileIcon },
         { id: 'security', label: 'Security & 2FA', icon: SecurityIcon },
+        { id: 'privacy', label: 'Privacy', icon: ShieldCheck },
         { id: 'developers', label: 'Developers', icon: DevelopersIcon },
         { id: 'sessions', label: 'Sessions', icon: SessionsIcon },
         { id: 'activity', label: 'Activity Logs', icon: ActivityIcon },
@@ -881,6 +884,12 @@ function SettingsPageInner() {
                         mfaFactors={mfaFactors}
                         onManageMfa={openTwoFactorSurface}
                     />
+                )}
+
+                {activeTab === 'privacy' && (
+                    <div className="pb-24 max-w-3xl">
+                        <PrivacyTab />
+                    </div>
                 )}
 
                 {activeTab === 'developers' && <DevelopersTab />}

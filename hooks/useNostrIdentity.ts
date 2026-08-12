@@ -9,7 +9,6 @@ import { account } from '@/lib/appwrite';
 import { sha256 } from '@noble/hashes/sha2.js';
 import * as secp256k1 from '@noble/secp256k1';
 import { bytesToNpub, bytesToNsec, bytesToHex, hexToBytes } from '@/lib/nostr/crypto';
-import toast from 'react-hot-toast';
 
 export interface NostrIdentity {
   npub: string;
@@ -108,7 +107,6 @@ export function useNostrIdentity() {
       return newIdentity;
     } catch (err: any) {
       console.error('Failed to load or mint Nostr identity:', err);
-      toast.error('Failed to initialize Nostr identity');
       setLoading(false);
       return null;
     }

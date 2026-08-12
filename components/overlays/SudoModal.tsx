@@ -308,7 +308,7 @@ export default function SudoModal({
 
                 // Hoop: hasPass/hasMasterpass false from stale enclave pocket — trigger background sync of dedicated pocket sec_enclave_keychain_{userId} via RxDB/LocalEngine only (rxdb-local-storage-only).
                 if (hasPass === false) {
-                    void SecurityEnclave.hydrateFromRemote(userId, { force: true }).catch(() => {});
+                    void import('@/lib/security/enclave').then(({ SecurityEnclave: _SecurityEnclave }) => _SecurityEnclave.hydrateFromRemote(userId, { force: true }).catch(() => {}));
                 }
 
                 // Fail-safe: NEVER default to initialize mode unless explicitly requested by caller (intent === 'initialize')

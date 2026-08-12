@@ -240,7 +240,6 @@ export async function createMessageInternal(payload: {
 
         // Trigger on exactly the 3rd consecutive message
         if (senderStreak.length === 3) {
-          const sevenDaysAgoStr = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
           const { dispatchTelegramNotification } = await import('./telegram-dispatch');
           const { dispatchEmail } = await import('./emailDispatch');
 

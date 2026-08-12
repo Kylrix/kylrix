@@ -20,6 +20,8 @@ type Props = {
   typingUsers: string[];
   conversationId: string;
   typingTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
+  canBroadcastTyping?: boolean;
+  isDirect?: boolean;
 };
 
 /**
@@ -39,6 +41,8 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
   typingUsers,
   conversationId,
   typingTimeoutRef,
+  canBroadcastTyping = true,
+  isDirect = true,
 }: Props) {
   const [draft, setDraft] = useState('');
   const textRef = useRef<HTMLTextAreaElement | null>(null);
@@ -62,17 +66,27 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
     setDraft(e.target.value);
     resize();
 
-    if (!conversationId) return;
-    PresenceService.broadcastState(PresenceService.getChatChannel(conversationId), {
-      state: 'online',
-      activity: 'typing',
-    });
+    if (!conversationId || !isDirect || !canBroadcastTyping) return;
+    // Ephemeral typing via Appwrite presence — no DB writes, muted for groups or when privacy off (mutual)
+    try {
+      const uid = typeof window !== 'undefined' ? (document as any).__kylrix_userId || '' : '';
+      PresenceService.broadcastState(PresenceService.getChatChannel(conversationId), {
+        state: 'typing' as any,
+        // @ts-ignore metadata for typing
+        metadata: { typing: true, userId: uid },
+        activity: 'typing',
+      } as any);
+    } catch {}
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
-      PresenceService.broadcastState(PresenceService.getChatChannel(conversationId), {
-        state: 'online',
-        activity: 'viewing',
-      });
+      try {
+        PresenceService.broadcastState(PresenceService.getChatChannel(conversationId), {
+          state: 'online' as any,
+          // @ts-ignore
+          metadata: { typing: false },
+          activity: 'viewing',
+        } as any);
+      } catch {}
     }, 3000);
   };
 
