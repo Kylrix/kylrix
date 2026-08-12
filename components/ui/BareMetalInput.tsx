@@ -71,12 +71,20 @@ export function BareMetalInput({
   forwardedRef,
 }: BaseProps & { forwardedRef?: React.Ref<HTMLInputElement & HTMLTextAreaElement> }) {
   const innerRef = useRef<HTMLInputElement & HTMLTextAreaElement>(null);
-  const ref = (forwardedRef as React.MutableRefObject<any>) || innerRef;
+  const _ref = (forwardedRef as React.MutableRefObject<any>) || innerRef;
+  void _ref;
   // if forwardedRef is provided as object ref, sync it
   const setRef = useCallback((el: any) => {
     (innerRef as any).current = el;
-    if (typeof forwardedRef === 'function') (forwardedRef as any)(el);
-    else if (forwardedRef && typeof forwardedRef === 'object') (forwardedRef as any).current = el;
+    if (typeof forwardedRef === 'function') {
+      forwardedRef(el);
+    } else if (forwardedRef && 'current' in forwardedRef) {
+      try {
+        const refObj = forwardedRef as React.MutableRefObject<any>;
+        // eslint-disable-next-line react-hooks/immutability
+        refObj.current = el;
+      } catch {}
+    }
   }, [forwardedRef]);
   const onValueChangeRef = useRef(onValueChange);
   onValueChangeRef.current = onValueChange;

@@ -2,11 +2,8 @@
 
 
 import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode, useMemo } from 'react';
-import { Query } from 'appwrite';
 import { 
-  listNotesPaginated, 
-  getPinnedNoteIds,
-  getNote,
+  listNotesPaginated,
   updateNote,
   realtime,
   APPWRITE_DATABASE_ID,

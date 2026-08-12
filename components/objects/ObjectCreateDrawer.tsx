@@ -66,7 +66,7 @@ export function ObjectCreateDrawer({
   open,
   kind,
   onClose,
-  defaultHeight,
+  defaultHeight: _defaultHeight,
   initialContent,
   onNoteCreated,
   onGoalCreated,

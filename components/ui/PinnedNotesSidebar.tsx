@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Query } from 'appwrite';
 import { Box, Typography, Stack, IconButton, useTheme, CircularProgress, useMediaQuery } from '@/lib/openbricks/primitives';
 import { Close as CloseIcon, PushPin as PinIcon } from '@/lib/openbricks/icons';
@@ -8,13 +8,13 @@ import { useNotes } from '@/context/NotesContext';
 import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { Notes } from '@/types/appwrite';
-import { getPinnedNoteIds, listNotes, getNote } from '@/lib/appwrite';
-import { isClientEncryptedNote, resolvePinnedNoteRows } from '@/lib/note/note-visibility';
+import { listNotes, getNote } from '@/lib/appwrite';
+import { isClientEncryptedNote } from '@/lib/note/note-visibility';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { NoteObjectDetail } from '@/components/objects/NoteObjectDetail';
 import { useOverlay } from '@/components/ui/OverlayContext';
 
-async function fetchPinnedNoteRows(ids: string[], seed: Notes[]): Promise<Notes[]> {
+async function _fetchPinnedNoteRows(ids: string[], seed: Notes[]): Promise<Notes[]> {
   if (!ids.length) return [];
 
   const byId = new Map<string, Notes>();
@@ -129,7 +129,7 @@ export function PinnedNotesSidebar({ offset = 0 }: { offset?: number }) {
               fontSize: '1rem',
             }}
           >
-            Pinned ({scopedPinnedNotes.length})
+            Pinned ({pinnedNotes.length})
           </Typography>
         </Stack>
       </Box>

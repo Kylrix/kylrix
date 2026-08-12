@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Notes } from '@/types/appwrite';
 
 import NoteContentRenderer from '@/components/NoteContentRenderer';

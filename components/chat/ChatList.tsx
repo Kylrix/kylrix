@@ -8,7 +8,7 @@ import { tablesDB, realtime  } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { usePresence } from '../providers/PresenceProvider';
 import { showIslandNotification } from '@/lib/island-notification';
-import { createGhostNoteChat, listGhostNoteChats, deleteGhostThread } from '@/lib/actions/client-ops';
+import { listGhostNoteChats, deleteGhostThread } from '@/lib/actions/client-ops';
 import { formatSecureChatStartError } from '@/lib/crypto/public-key';
 import {
     discoverRecipientSecureReady,
@@ -243,9 +243,7 @@ export const ChatList = ({
         const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
         const isSelf = conv?.isSelf || (Array.isArray(conv?.participants) && conv.participants.length === 1 && conv.participants[0] === user?.$id);
         // Personal chats never show padlock — zombie encrypted self is treated as plaintext for UI (no lock)
-        const isEncryptedConversation = !!conv?.isEncrypted && !isSelf;
         const isConversation = conv?._kind === 'secure' || conv?.type === 'direct' || conv?.type === 'group' || Array.isArray(conv?.participants);
-        const isSecure = isEncryptedConversation || (isConversation && !!conv?.isEncrypted);
         // For routing, any conversation (including unencrypted self/bookmarks) is a conversation — not a ghost note
         const handleExport = async () => {
             try {

@@ -1177,7 +1177,7 @@ export default function CreateNoteForm({
     return () => onRegisterClose?.(null);
   }, [handleClose, onRegisterClose]);
 
-  const handlePaste = useCallback(() => {
+  const _handlePaste = useCallback(() => {
     isPastedRef.current = true;
     if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
     pasteTimerRef.current = setTimeout(() => {
