@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react';
 import { Notes } from '@/types/appwrite';
 
 import NoteContentRenderer from '@/components/NoteContentRenderer';
@@ -296,12 +296,24 @@ export function NoteDetailSidebar({
     onUpdate(draft);
   }, [readOnly, registerComposeSession, markDirty, onUpdate]);
 
+  // Pending selection survives controlled re-render — restored in layout before paint
+  const pendingSelRef = useRef<{ start: number; end: number } | null>(null);
   const handleContentChange = useCallback((next: string) => {
     if (readOnly) return;
-    // Preserve cursor/selection across local state update — avoids jump to end on fast typing
     const ta = contentTextareaRef.current;
-    const selStart = ta?.selectionStart ?? null;
-    const selEnd = ta?.selectionEnd ?? null;
+    // Capture before state is clobbered; use rAF-unstable textarea value if event already mutated DOM
+    const selStart = ta?.selectionStart ?? next.length;
+    const selEnd = ta?.selectionEnd ?? next.length;
+    // For plain inserts/deletes without selection, keep native caret where user placed it
+    // Caller (onChange) already provides next with insertion at correct index; we preserve that index
+    const beforeLen = content.length;
+    const afterLen = next.length;
+    // If no explicit selection, infer caret from length delta when possible
+    let keepStart = selStart;
+    let keepEnd = selEnd;
+    if (ta && document.activeElement === ta && !pendingSelRef.current) {
+      pendingSelRef.current = { start: keepStart, end: keepEnd };
+    }
     setContent(next);
     const noteId = liveNoteRef.current?.$id;
     if (!noteId) return;
@@ -309,12 +321,22 @@ export function NoteDetailSidebar({
     const draft: Notes = { ...liveNoteRef.current, content: next, $updatedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Notes;
     markDirty(draft);
     onUpdate(draft);
-    if (ta && selStart !== null && selEnd !== null) {
-      requestAnimationFrame(() => {
-        try { ta.setSelectionRange(selStart, selEnd); } catch {}
-      });
-    }
-  }, [readOnly, registerComposeSession, markDirty, onUpdate]);
+  }, [readOnly, registerComposeSession, markDirty, onUpdate, content.length]);
+
+  // Flush pending caret after controlled value commit — before paint, not rAF
+  useLayoutEffect(() => {
+    const ta = contentTextareaRef.current;
+    const pending = pendingSelRef.current;
+    if (!ta || !pending) return;
+    if (document.activeElement !== ta) { pendingSelRef.current = null; return; }
+    try {
+      const len = ta.value.length;
+      const s = Math.max(0, Math.min(pending.start, len));
+      const e = Math.max(0, Math.min(pending.end, len));
+      ta.setSelectionRange(s, e);
+    } catch {}
+    pendingSelRef.current = null;
+  }, [content]);
 
   const handleTagsChange = useCallback((nextRaw: string) => {
     if (readOnly) return;
@@ -862,13 +884,13 @@ export function NoteDetailSidebar({
     const needsTrailingBreak = end < content.length && !content.slice(end, Math.min(content.length, end + 2)).includes('\n\n');
     const insertion = `${needsLeadingBreak ? '\n\n' : ''}${block}${needsTrailingBreak ? '\n\n' : '\n'}`;
     const nextContent = content.substring(0, start) + insertion + content.substring(end);
+    const cursor = start + insertion.length;
+    pendingSelRef.current = { start: cursor, end: cursor };
     await replaceContentWithSave(nextContent);
     if (textarea) {
-      setTimeout(() => {
-        textarea.focus();
-        const cursor = start + insertion.length;
-        textarea.setSelectionRange(cursor, cursor);
-      }, 50);
+      requestAnimationFrame(() => {
+        try { textarea.focus(); textarea.setSelectionRange(cursor, cursor); } catch {}
+      });
     }
   }, [content, replaceContentWithSave]);
 
@@ -951,11 +973,11 @@ export function NoteDetailSidebar({
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const { next, cursorStart, cursorEnd } = applyMarkdownWrap(content, start, end, left, right);
+    pendingSelRef.current = { start: cursorStart, end: cursorEnd };
     handleContentChange(next);
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(cursorStart, cursorEnd);
-    }, 0);
+    requestAnimationFrame(() => {
+      try { textarea.focus(); textarea.setSelectionRange(cursorStart, cursorEnd); } catch {}
+    });
   }, [content, handleContentChange]);
 
   const onEditorKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -1393,6 +1415,7 @@ export function NoteDetailSidebar({
                     value={content}
                     onChange={(e) => {
                       const nextValue = e.target.value;
+                      const caret = e.target.selectionStart;
                       const blocks = parseObjectBlocks(content);
                       const changed = blocks.find((b) => {
                         const prevBlock = content.slice(b.start, b.end);
@@ -1401,8 +1424,15 @@ export function NoteDetailSidebar({
                       });
                       if (changed) {
                         setPendingBlockDelete(changed);
+                        // Revert DOM value on next render and keep caret at block edge
+                        pendingSelRef.current = { start: changed.start, end: changed.start };
+                        // Force React to keep controlled value (no content change) but restore selection
+                        e.target.value = content;
+                        try { e.target.setSelectionRange(changed.start, changed.start); } catch {}
                         return;
                       }
+                      // Preserve caret from event before handleContentChange overwrites
+                      pendingSelRef.current = { start: caret ?? nextValue.length, end: caret ?? nextValue.length };
                       handleContentChange(nextValue);
                     }}
                     ref={contentTextareaRef}
