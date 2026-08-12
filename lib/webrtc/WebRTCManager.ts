@@ -5,13 +5,7 @@ import {
   fetchTurnCredentials, 
   subscribeToCloudflareTracks 
 } from '@/lib/server/api';
-import { ID, Permission, Role, Query } from 'appwrite';
-import { databases, realtime } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { PresenceService } from '@/lib/services/presence';
-
-const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
-// Ephemeral presence replaces call_signals table — no DB writes, no cron purge.
 
 export class WebRTCManager {
   private sfuPeerConnection: RTCPeerConnection | null = null;
