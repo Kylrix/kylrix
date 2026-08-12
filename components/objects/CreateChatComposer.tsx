@@ -182,7 +182,7 @@ export function CreateChatComposer({
         toast.success(isGroup ? 'Hangout ready' : 'Hangout ready');
         openConversation(newConv.$id, 'chat');
       } catch (error: any) {
-        toast.error(formatSecureChatStartError(error, 'chat'));
+        toast.error(formatSecureChatStartError(error, 'thread'));
       } finally {
         setBusy(false);
       }

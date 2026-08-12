@@ -60,6 +60,14 @@ export function AppChromeProvider({ children }: { children: React.ReactNode }) {
     };
   }, [pathname]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('[PWA] Service worker registration failed:', err);
+      });
+    }
+  }, []);
+
   const value = useMemo<AppChromeContextType>(() => {
     const baseHeight = state.mode === 'compact' ? 72 : state.mode === 'hidden' ? 0 : 88;
     const headerHeight = baseHeight + state.dockHeight;

@@ -33,6 +33,12 @@ export const metadata: Metadata = {
     default: 'Kylrix · The agentic workspace that 10x the productivity of high agency builders',
     template: '%s · Kylrix'},
   description: 'The agentic workspace that 10x the productivity of high agency builders.',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Kylrix',
+  },
   icons: {
     icon: '/favicon.ico',
     apple: '/apple-touch-icon.png'},
@@ -55,9 +61,13 @@ export const metadata: Metadata = {
     images: ['/opengraph-image']}};
 
 export const viewport: Viewport = {
-  themeColor: '#6366F1',
+  themeColor: '#000000',
   width: 'device-width',
-  initialScale: 1};
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
