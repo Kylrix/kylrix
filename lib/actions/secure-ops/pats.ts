@@ -10,6 +10,8 @@ export async function createPatSecure(params: {
   name: string;
   scopes: string[];
   expiresAt?: string | null;
+  isWorkspace?: boolean;
+  workspaceId?: string | null;
   jwt?: string;
 }) {
   const actor = await getActor(params.jwt);
@@ -19,13 +21,18 @@ export async function createPatSecure(params: {
     name: params.name,
     scopes: params.scopes,
     expiresAt: params.expiresAt,
+    isWorkspace: params.isWorkspace,
+    workspaceId: params.workspaceId,
   });
 }
 
-export async function listPatsSecure(jwt?: string) {
-  const actor = await getActor(jwt);
+export async function listPatsSecure(opts?: { isWorkspace?: boolean; workspaceId?: string; jwt?: string }) {
+  const actor = await getActor(opts?.jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
-  const data = await PatService.listForUser(actor.$id);
+  const data = await PatService.listForUser(actor.$id, {
+    isWorkspace: opts?.isWorkspace,
+    workspaceId: opts?.workspaceId,
+  });
   return { success: true, data };
 }
 

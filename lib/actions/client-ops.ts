@@ -539,16 +539,18 @@ export async function createPat(params: {
   name: string;
   scopes: string[];
   expiresAt?: string | null;
+  isWorkspace?: boolean;
+  workspaceId?: string | null;
 }) {
   const jwt = await getJwt();
   const { createPatSecure } = await import('./secure-ops');
   return createPatSecure({ ...params, jwt });
 }
 
-export async function listPats() {
+export async function listPats(opts?: { isWorkspace?: boolean; workspaceId?: string }) {
   const jwt = await getJwt();
   const { listPatsSecure } = await import('./secure-ops');
-  return listPatsSecure(jwt);
+  return listPatsSecure({ ...opts, jwt });
 }
 
 export async function revokePat(patId: string) {

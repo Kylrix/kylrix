@@ -306,6 +306,11 @@ export default function SudoModal({
                 if (!active) return;
                 setHasMasterpass(hasPass);
 
+                // Hoop: hasPass/hasMasterpass false from stale enclave pocket — trigger background sync of dedicated pocket sec_enclave_keychain_{userId} via RxDB/LocalEngine only (rxdb-local-storage-only).
+                if (hasPass === false) {
+                    void SecurityEnclave.hydrateFromRemote(userId, { force: true }).catch(() => {});
+                }
+
                 // Fail-safe: NEVER default to initialize mode unless explicitly requested by caller (intent === 'initialize')
                 // Default to 'password' mode if capability probe is empty due to transient network lag
                 if (hasPass === false && intent !== 'initialize') {
@@ -378,8 +383,14 @@ export default function SudoModal({
         if (!user?.$id) return;
 
         if (hasMasterpass === false) {
-            handleRedirectToVaultSetup();
-            return;
+            // Hoop: hasMasterpass false from enclave probe — sync dedicated pocket (sec_enclave_keychain_{userId}) via LocalEngine/RxDB only, no UI fetch. Don't block unlock.
+            void import('@/lib/security/enclave').then(({ SecurityEnclave }) => SecurityEnclave.hydrateFromRemote(user.$id, { force: true }).catch(() => {}));
+            // Still attempt unlock if password provided — decouple from stale probe (masterpass-crypto SoT). Only redirect to setup if unlock+verified zero rows.
+            if (!password) {
+                handleRedirectToVaultSetup();
+                return;
+            }
+            // fall through to unlock attempt below
         }
 
         if (!password) return;

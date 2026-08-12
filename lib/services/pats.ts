@@ -17,6 +17,8 @@ export type PatRow = {
   status: 'active' | 'revoked';
   expiresAt?: string | null;
   lastUsedAt?: string | null;
+  isWorkspace?: string | boolean | null;
+  workspaceId?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
 };
@@ -29,6 +31,8 @@ export type PatPublic = {
   status: 'active' | 'revoked';
   expiresAt: string | null;
   lastUsedAt: string | null;
+  isWorkspace: boolean;
+  workspaceId: string | null;
   createdAt: string | null;
 };
 
@@ -57,6 +61,7 @@ export function parsePatToken(raw: string): { prefix: string; token: string } | 
 }
 
 function toPublic(row: PatRow): PatPublic {
+  const isWs = row.isWorkspace === true || String(row.isWorkspace) === 'true';
   return {
     id: row.$id,
     name: row.name,
@@ -65,6 +70,8 @@ function toPublic(row: PatRow): PatPublic {
     status: row.status,
     expiresAt: row.expiresAt || null,
     lastUsedAt: row.lastUsedAt || null,
+    isWorkspace: isWs,
+    workspaceId: row.workspaceId || null,
     createdAt: row.createdAt || row.$id ? (row as any).$createdAt || row.createdAt || null : null,
   };
 }
@@ -77,6 +84,8 @@ export const PatService = {
     name: string;
     scopes: unknown;
     expiresAt?: string | null;
+    isWorkspace?: boolean;
+    workspaceId?: string | null;
   }): Promise<{ pat: PatPublic; token: string }> {
     const scopes = normalizeScopes(params.scopes);
     if (scopes.length === 0) throw new Error('Select at least one permission');
@@ -91,6 +100,8 @@ export const PatService = {
     const now = new Date().toISOString();
     const tables = createSystemTablesDB();
 
+    const isWs = params.isWorkspace === true;
+
     const row = await tables.createRow({
       databaseId: DB,
       tableId: TABLE,
@@ -104,6 +115,8 @@ export const PatService = {
         status: 'active',
         expiresAt: params.expiresAt || null,
         lastUsedAt: null,
+        isWorkspace: isWs ? 'true' : 'false',
+        workspaceId: params.workspaceId || null,
         createdAt: now,
         updatedAt: now,
       },
@@ -119,12 +132,12 @@ export const PatService = {
         tableId: APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects',
         rowId: ID.unique(),
         data: {
-          parentId: params.userId,
-          parentKind: 'user',
+          parentId: isWs && params.workspaceId ? params.workspaceId : params.userId,
+          parentKind: isWs ? 'workspace' : 'user',
           childId: row.$id,
           childKind: 'pat',
           userId: params.userId,
-          metadata: JSON.stringify({ tokenPrefix: rowId, name }),
+          metadata: JSON.stringify({ tokenPrefix: rowId, name, isWorkspace: isWs, workspaceId: params.workspaceId }),
           createdAt: now,
           updatedAt: now,
           isPublic: false,
@@ -142,18 +155,27 @@ export const PatService = {
     return { pat: toPublic(row as unknown as PatRow), token };
   },
 
-  async listForUser(userId: string): Promise<PatPublic[]> {
+  async listForUser(userId: string, opts?: { isWorkspace?: boolean; workspaceId?: string }): Promise<PatPublic[]> {
     const tables = createSystemTablesDB();
+    const queries = [
+      Query.equal('userId', userId),
+      Query.orderDesc('$createdAt'),
+      Query.limit(100),
+    ];
     const res = await tables.listRows({
       databaseId: DB,
       tableId: TABLE,
-      queries: [
-        Query.equal('userId', userId),
-        Query.orderDesc('$createdAt'),
-        Query.limit(100),
-      ],
+      queries,
     });
-    return (res.rows as unknown as PatRow[]).map(toPublic);
+    const all = (res.rows as unknown as PatRow[]).map(toPublic);
+    if (opts?.isWorkspace !== undefined) {
+      return all.filter((p) => {
+        if (p.isWorkspace !== opts.isWorkspace) return false;
+        if (opts.workspaceId) return p.workspaceId === opts.workspaceId;
+        return true;
+      });
+    }
+    return all;
   },
 
   async revoke(params: { patId: string; userId: string }) {

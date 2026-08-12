@@ -125,7 +125,7 @@ export function DevelopersTab() {
     try {
       const prefs = await account.getPrefs().catch(() => ({} as any));
       setDeveloperMode(!!(prefs as any)?.developerMode);
-      const res = await listPats();
+      const res = await listPats({ isWorkspace: false });
       if (res?.success) setPats((res.data || []) as PatItem[]);
     } catch (err: any) {
       toast.error(err?.message || 'Failed to load tokens');

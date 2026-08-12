@@ -31,7 +31,6 @@ function paperSx(isDesktop: boolean) {
           borderLeft: '1px solid rgba(255,255,255,0.08)',
         }
       : {
-          // OpenBricks: bottom drawers are a fixed ~60% of the viewport
           height: '60dvh',
           maxHeight: '60dvh',
           width: '100%',
@@ -45,10 +44,14 @@ export function CreatePatDrawer({
   open,
   onClose,
   onCreated,
+  isWorkspace = false,
+  workspaceId = null,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated?: () => void;
+  isWorkspace?: boolean;
+  workspaceId?: string | null;
 }) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
@@ -95,7 +98,12 @@ export function CreatePatDrawer({
     }
     setCreating(true);
     try {
-      const res = await createPat({ name: name.trim(), scopes: selected });
+      const res = await createPat({
+        name: name.trim(),
+        scopes: selected,
+        isWorkspace,
+        workspaceId,
+      });
       setToken(res.token);
       setStep('done');
       try {
@@ -127,7 +135,7 @@ export function CreatePatDrawer({
         <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3 shrink-0">
           <div className="min-w-0">
             <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/40">
-              Personal access token
+              {isWorkspace ? 'Workspace Key' : 'Personal access token'}
             </p>
             <h2 className="text-lg font-black font-clash text-white tracking-tight truncate">
               {step === 'name' && 'Name'}
