@@ -50,61 +50,17 @@ async function fetchPinnedNoteRows(ids: string[], seed: Notes[]): Promise<Notes[
 export function PinnedNotesSidebar({ offset = 0 }: { offset?: number }) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-  const { notes: allNotes, pinnedIds } = useNotes();
+  const { notes: allNotes, isPinned } = useNotes();
   const { closeSidebar, openSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
-  const safePinnedIds = useMemo(() => pinnedIds ?? [], [pinnedIds]);
-
-  const contextPinned = useMemo(
-    () => resolvePinnedNoteRows(safePinnedIds, allNotes ?? []),
-    [safePinnedIds, allNotes]);
-
-  const [pinnedNotes, setPinnedNotes] = useState<Notes[]>(contextPinned);
-  const { filteredItems: scopedPinnedNotes } = useWorkspaceFilteredItems(pinnedNotes, 'note');
-  const displayNotes = useMemo(() => scopedPinnedNotes.slice(offset), [scopedPinnedNotes, offset]);
-  const [loading, setLoading] = useState(
-    () => safePinnedIds.length > 0 && contextPinned.length < safePinnedIds.length);
-
-  useEffect(() => {
-    setPinnedNotes(contextPinned);
-  }, [contextPinned]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      const ids = safePinnedIds.length ? safePinnedIds : await getPinnedNoteIds();
-      if (!ids.length) {
-        setPinnedNotes([]);
-        setLoading(false);
-        return;
-      }
-
-      const seeded = resolvePinnedNoteRows(ids, allNotes ?? []);
-      if (seeded.length >= ids.length) {
-        setPinnedNotes(seeded);
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const rows = await fetchPinnedNoteRows(ids, [...(allNotes ?? []), ...seeded]);
-        if (!cancelled) setPinnedNotes(rows);
-      } catch (error) {
-        console.error('[PinnedNotesSidebar] Failed to load pinned notes:', error);
-        if (!cancelled) setPinnedNotes(seeded);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [safePinnedIds, allNotes]);
+  // Single fetch — pinned repatriated to top in-memory (goals pattern), no separate pinnedIds query.
+  const { filteredItems: scopedAllNotes } = useWorkspaceFilteredItems(allNotes ?? [], 'note');
+  const pinnedNotes = useMemo(() => {
+    const pinned = scopedAllNotes.filter((n: any) => isPinned(n.$id));
+    return [...pinned].sort((a: any, b: any) => new Date(b.$updatedAt || b.$createdAt || 0).getTime() - new Date(a.$updatedAt || a.$createdAt || 0).getTime());
+  }, [scopedAllNotes, isPinned]);
+  const displayNotes = useMemo(() => pinnedNotes.slice(offset), [pinnedNotes, offset]);
+  const loading = false;
 
   const handleNoteSelect = (n: Notes) => {
     if (isDesktop) {

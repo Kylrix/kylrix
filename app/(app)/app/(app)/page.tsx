@@ -303,8 +303,7 @@ export default function NotesPage() {
 
 
 
-  // LocalEngine direct sources (CoD Tier 2) — avoid zombie initial-load that shows old haphazard notes.
-  const [localPinnedRaw, setLocalPinnedRaw] = useState<Notes[]>([]);
+  // Single local-engine fetch (goals pattern) — pinned is secondary in-memory sort, no separate pinned query.
   const [localAllRaw, setLocalAllRaw] = useState<Notes[]>([]);
   useEffect(() => {
     let cancelled = false;
@@ -345,41 +344,30 @@ export default function NotesPage() {
         const merged = Array.from(liveMap.values());
         if (!cancelled && merged.length) {
           setLocalAllRaw(merged);
-          // pinned SoT: row.isPinned OR legacy isPinned() via pinSets; must include live pinned not yet cached
-          setLocalPinnedRaw(merged.filter((n: any) => n.isPinned === true || isPinned(n.$id)));
         }
       } catch {}
     };
     void loadLocal();
     return () => { cancelled = true; };
-  }, [user?.$id, allNotes, visibleNotes.length, isPinned]);
-  const pinnedNotes = useMemo(() => {
-    // Prefer LocalEngine direct (includes recently edited) — filter by updatedAt, keep pinned visible everywhere
-    const sortByUpdatedAt = (a: any, b: any) => new Date(b.$updatedAt || b.updatedAt || b.$createdAt || 0).getTime() - new Date(a.$updatedAt || a.updatedAt || a.$createdAt || 0).getTime();
-    if (localPinnedRaw.length) {
-      const src = activeWorkspace.isPersonal
-        ? localPinnedRaw.filter(isDefaultWorkspaceObject as any)
-        : localPinnedRaw.filter((n: any) => visibleNotes.some(v => v.$id === n.$id) || (n as any).isWorkspace === true);
-      if (src.length) return [...src].sort(sortByUpdatedAt);
-    }
-    const source = activeWorkspace.isPersonal
-      ? (visibleNotes.length ? visibleNotes : combinedNotes.filter(isDefaultWorkspaceObject as any))
-      : visibleNotes;
-    const effective = source.length ? source : combinedNotes.filter(isDefaultWorkspaceObject as any);
-    const out = effective.filter((n: any) => n.isPinned === true || isPinned(n.$id));
-    return [...out].sort(sortByUpdatedAt);
-  }, [localPinnedRaw, visibleNotes, combinedNotes, isPinned, activeWorkspace.isPersonal]);
-
-  const regularSourceNotes = useMemo(() => {
-    // CoD: regular not limited to currently paginated visible page — use LocalEngine when visible empty to avoid 0-ideas zombie
+  }, [user?.$id, allNotes, visibleNotes.length]);
+  // Fetch once, then repatriate pinned to top (goals-style) — no separate pinned query.
+  const unifiedSorted = useMemo(() => {
     const base = visibleNotes.length
       ? visibleNotes
       : (localAllRaw.length
           ? localAllRaw.filter(isDefaultWorkspaceObject as any)
           : combinedNotes.filter(isDefaultWorkspaceObject as any));
     const src = base.length ? base : visibleNotes;
-    return src.filter((n: any) => !(n.isPinned === true || isPinned(n.$id)));
+    // Secondary pin sort — pinned first, then newest created (like TaskContext getFilteredTasks)
+    return [...src].sort((a: any, b: any) => {
+      const aPinned = isPinned(a.$id) ? 1 : 0;
+      const bPinned = isPinned(b.$id) ? 1 : 0;
+      if (aPinned !== bPinned) return bPinned - aPinned;
+      return new Date(b.$updatedAt || (b as any).updatedAt || b.$createdAt || 0).getTime() - new Date(a.$updatedAt || (a as any).updatedAt || a.$createdAt || 0).getTime();
+    });
   }, [visibleNotes, localAllRaw, combinedNotes, isPinned]);
+  const pinnedNotes = useMemo(() => unifiedSorted.filter((n: any) => isPinned(n.$id)), [unifiedSorted, isPinned]);
+  const regularSourceNotes = useMemo(() => unifiedSorted.filter((n: any) => !isPinned(n.$id)), [unifiedSorted, isPinned]);
 
   // Fetch notes action for the search hook
   const fetchNotesAction = useCallback(async () => {

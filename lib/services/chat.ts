@@ -1020,13 +1020,14 @@ export const ChatService = {
             return { conversation: probe.conversation, created: false, skippedReason: 'exists' };
         }
 
-        // Self-chat must exist even when vault locked — listing is plaintext and opening will prompt unlock.
-        // Only ensure identity when unlocked; placeholder creation is allowed locked.
+        // Listing is plaintext; opening secure material prompts unlock per WESP. Only ensure identity when unlocked.
+        // While locked, explicitly request unencrypted self hangout (bookmarks) — never create secure hangout without transient vault key.
         if (ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity) {
             try { await ecosystemSecurity.ensureE2EIdentity(userId); } catch {}
         }
         try {
-            const created = await this.createConversation([userId], 'direct');
+            const wantsEncrypted = ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity ? undefined : false;
+            const created = await this.createConversation([userId], 'direct', undefined, wantsEncrypted !== undefined ? { encrypted: wantsEncrypted } as any : undefined);
             return { conversation: created, created: true };
         } catch {
             // Locked or not ready — fallback to local placeholder so list never empty (self-chat minimum)
@@ -1067,6 +1068,11 @@ export const ChatService = {
         }
         const uniqueParticipants = isSelf ? [participants[0]] : Array.from(new Set(participants));
         const shouldEncrypt = wantEncrypted === true ? true : wantEncrypted === false ? false : (ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity);
+        // Secure hangouts (isEncrypted=true) require unlocked vault for any participant set, including self — transient session gate per WESP.
+        if (shouldEncrypt) {
+            if (!ecosystemSecurity.status.isUnlocked) throw new Error('Vault must be unlocked before creating secure hangouts');
+            if (!ecosystemSecurity.status.hasIdentity) throw new Error('E2E identity must be initialized before creating secure hangouts');
+        }
 
         // Personal chat: only proceed when a successful probe says it does not exist.
         if (isSelf) {

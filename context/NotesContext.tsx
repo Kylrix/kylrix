@@ -270,11 +270,6 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const syncPinned = getCachedData<string[]>(PINNED_CACHE_KEY);
-      if (syncPinned && Array.isArray(syncPinned) && syncPinned.length) {
-        setPinnedIds(syncPinned);
-      }
-
       const local = await loadNotesFromLocalCopy({
         userId,
         existingNotes: notesRef.current,
@@ -290,13 +285,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         setHasMore(local.hasMore ?? true);
         void warmNotesLocalCopy(userId, local.notes);
         console.log('[NotesContext] Instant cold start via local copy cascade.');
-      } else if (!syncPinned?.length) {
-        const cachedPinned = await getCachedDataAsync<string[]>(PINNED_CACHE_KEY);
-        if (!cancelled && cachedPinned && Array.isArray(cachedPinned)) {
-          setPinnedIds(cachedPinned);
-        }
       }
-
       hydratedUserIdRef.current = userId;
       setIsLoading(false);
       setIsCacheLoaded(true);
@@ -312,14 +301,9 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     isCacheLoaded,
     getCachedData,
     getCachedDataAsync,
-    PINNED_CACHE_KEY,
   ]);
 
   const PAGE_SIZE = Number(process.env.NEXT_PUBLIC_NOTES_PAGE_SIZE || 50);
-
-  const fetchPinnedIds = useCallback(async () => {
-    return await getPinnedNoteIds(user?.$id || '');
-  }, [user?.$id]);
 
   const fetchBatch = useCallback(async (reset: boolean = false) => {
     if (isFetchingRef.current) return;
@@ -359,11 +343,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       }
       const ghostNotes = await getGhostNotes();
 
-      // Fetch pinned IDs with optimization
-      if (reset && PINNED_CACHE_KEY) {
-        const pIds = await fetchOptimized(PINNED_CACHE_KEY, fetchPinnedIds);
-        setPinnedIds(pIds || []);
-      }
+      // Pinned repatriation is secondary — sorted in-memory via sortPinnedThenCreatedAt (like goals), not a separate fetch.
 
       // If we are resetting, we can use fetchOptimized for the first page
       let res;
@@ -463,7 +443,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       lastPullAtRef.current = Date.now();
       autonomicSyncEngine.markPullComplete();
     }
-  }, [isAuthenticated, isAuthLoading, user?.$id, PAGE_SIZE, fetchOptimized, fetchPinnedIds, setCachedData, PINNED_CACHE_KEY, INITIAL_NOTES_CACHE_KEY]);
+  }, [isAuthenticated, isAuthLoading, user?.$id, PAGE_SIZE, fetchOptimized, setCachedData, INITIAL_NOTES_CACHE_KEY]);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || isFetchingRef.current) return;
@@ -902,75 +882,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     setCachedData(PINNED_CACHE_KEY, effectivePinnedIds);
   }, [effectivePinnedIds, PINNED_CACHE_KEY, setCachedData]);
 
-  const missingPinnedKey = useMemo(
-    () => effectivePinnedIds.filter((id) => !notes.some((n) => n.$id === id)).join(','),
-    [effectivePinnedIds, notes],
-  );
-
-  useEffect(() => {
-    if (!isAuthenticated || !user?.$id || !missingPinnedKey) return;
-
-    const missingIds = missingPinnedKey.split(',').filter(Boolean);
-    if (!missingIds.length) return;
-
-    const mergeNotes = (incoming: Notes[]) => {
-      if (!incoming.length) return;
-      setNotes((prev) => {
-        const existingIds = new Set(prev.map((n) => n.$id));
-        const distinctNew = incoming.filter((n) => n.$id && !existingIds.has(n.$id));
-        return distinctNew.length ? [...prev, ...distinctNew] : prev;
-      });
-      incoming.forEach((doc) => {
-        if (doc?.$id) setCachedData(`note_${doc.$id}`, doc);
-      });
-    };
-
-    const hydratePinnedNotes = async () => {
-      try {
-        const fromCache: Notes[] = [];
-        for (const id of missingIds) {
-          const cached = await getCachedDataAsync<Notes>(`note_${id}`);
-          if (cached?.$id) fromCache.push(normalizeVisibility(cached));
-        }
-        mergeNotes(fromCache);
-
-        const stillMissing = missingIds.filter(
-          (id) =>
-            !fromCache.some((n) => n.$id === id) &&
-            !notesRef.current.some((n) => n.$id === id),
-        );
-        if (!stillMissing.length) return;
-
-        const res = await listNotesPaginated({
-          limit: Math.min(Math.max(stillMissing.length, 1), 100),
-          queries: [Query.equal('$id', stillMissing)],
-          hydrateTags: true});
-
-        let fetched = ((res?.rows || []) as Notes[]).map((note) => normalizeVisibility(note));
-
-        if (fetched.length < stillMissing.length) {
-          const fetchedIds = new Set(fetched.map((n) => n.$id));
-          const perNote = await Promise.all(
-            stillMissing
-              .filter((id) => !fetchedIds.has(id))
-              .map((id) => getNote(id).catch(() => null)),
-          );
-          fetched = [
-            ...fetched,
-            ...perNote
-              .filter((n): n is Notes => Boolean(n))
-              .map((note) => normalizeVisibility(note)),
-          ];
-        }
-
-        mergeNotes(fetched);
-      } catch (e) {
-        console.error('[NotesContext] Failed to hydrate missing pinned notes:', e);
-      }
-    };
-
-    void hydratePinnedNotes();
-  }, [missingPinnedKey, isAuthenticated, user?.$id, setCachedData, getCachedDataAsync]);
+  // Pinned show via single local-engine fetch + sortPinnedThenCreatedAt — no separate missing-pinned hydration (goals pattern).
 
   const applyNotePin = useCallback(async (noteId: string, pinned: boolean) => {
     const note = notes.find(n => n.$id === noteId);

@@ -242,10 +242,14 @@ export const ChatList = ({
     const openChatSettings = useCallback((conv: any) => {
         const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
         const isSelf = conv?.isSelf || (Array.isArray(conv?.participants) && conv.participants.length === 1 && conv.participants[0] === user?.$id);
-        const isSecure = conv?._kind === 'secure' || !!conv?.isEncrypted || String(conv?.$id || '').length > 20 && !conv?.linkedResourceType;
+        // Personal chats never show padlock — zombie encrypted self is treated as plaintext for UI (no lock)
+        const isEncryptedConversation = !!conv?.isEncrypted && !isSelf;
+        const isConversation = conv?._kind === 'secure' || conv?.type === 'direct' || conv?.type === 'group' || Array.isArray(conv?.participants);
+        const isSecure = isEncryptedConversation || (isConversation && !!conv?.isEncrypted);
+        // For routing, any conversation (including unencrypted self/bookmarks) is a conversation — not a ghost note
         const handleExport = async () => {
             try {
-                if (isSecure) {
+                if (isConversation) {
                   const msgs = await ChatService.getMessages(conv.$id, 100, 0, user?.$id, { prefetchedConversation: conv }).then(r => r.rows || []).catch(() => []);
                   const data = msgs.map((m: any) => ({ sender: m.senderId === user?.$id ? 'Me' : 'Partner', time: m.$createdAt || m.createdAt, content: m.content, type: m.type }));
                   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -265,7 +269,7 @@ export const ChatList = ({
         };
         const handleClearMe = async () => {
           try {
-            if (isSecure) {
+            if (isConversation) {
               await ChatService.clearChatForMe(conv.$id, user!.$id);
               toast.success('Chat cleared');
             } else {
@@ -284,7 +288,7 @@ export const ChatList = ({
         };
         const handleClearEveryone = async () => {
           try {
-            if (isSecure) { const r: any = await ChatService.wipeMyFootprint(conv.$id, user!.$id); toast.success(`Removed ${r.count || 0} messages`); }
+            if (isConversation) { const r: any = await ChatService.wipeMyFootprint(conv.$id, user!.$id); toast.success(`Removed ${r.count || 0} messages`); }
             else {
               await deleteGhostThread(conv.$id);
               toast.success('Thread cleared');
@@ -300,7 +304,7 @@ export const ChatList = ({
         };
         const handleNuclear = async () => {
             try {
-              if (isSecure) {
+              if (isConversation) {
                 const res: any = await ChatService.nuclearWipe(conv.$id);
                 ChatService.invalidateConversationsListCache(user?.$id);
                 try {
@@ -982,11 +986,14 @@ export const ChatList = ({
             const allSelfChats = rows.filter(isSelfChat);
             console.log('[ChatList] Self chats found:', allSelfChats.length);
 
-            // Dedup: If more than one self-chat exists, keep the best one and delete the rest
+            // Dedup: If more than one self-chat exists, keep the best one and delete the rest — prefer unencrypted (zombie encrypted self is not padlocked)
             if (allSelfChats.length > 1) {
                 console.log('[ChatList] Duplicate self-chats detected, deduplicating...');
-                // Sort: prefer the one with most recent activity, fallback to newest created
+                // Sort: prefer unencrypted (isEncrypted=false) first, then most recent activity
                 allSelfChats.sort((a, b) => {
+                    const encA = (a as any).isEncrypted ? 1 : 0;
+                    const encB = (b as any).isEncrypted ? 1 : 0;
+                    if (encA !== encB) return encA - encB;
                     const timeA = new Date(a.lastMessageAt || a.$createdAt || 0).getTime();
                     const timeB = new Date(b.lastMessageAt || b.$createdAt || 0).getTime();
                     return timeB - timeA;
@@ -1621,9 +1628,10 @@ export const ChatList = ({
                         <>
                             <div className="space-y-3">
                                 {unifiedItems.map((conv: any) => {
-                                const isSecure = conv._kind === 'secure';
-                                const handler = isSecure ? (e: any) => handleConversationRightClick(e, conv) : (e: any) => handleGhostConversationRightClick(e, conv);
-                                const openKind = isSecure ? 'chat' as const : 'thread' as const;
+                                const isConversation = conv._kind === 'secure' || conv.type === 'direct' || conv.type === 'group' || Array.isArray(conv.participants);
+                                const isSecure = isConversation && !!conv.isEncrypted && !conv.isSelf;
+                                const handler = isConversation ? (e: any) => handleConversationRightClick(e, conv) : (e: any) => handleGhostConversationRightClick(e, conv);
+                                const openKind = isConversation ? 'chat' as const : 'thread' as const;
                                 return (
                                 <div key={conv.$id} className="w-full">
                                     <div
@@ -1731,7 +1739,7 @@ export const ChatList = ({
                                                     <Pin size={14} className="text-[#F59E0B] shrink-0 fill-[#F59E0B]" />
                                                 ) : null}
                                                 {conv.name || (conv.type === 'direct' ? conv.otherUserId : 'Hangout')}
-                                                {isSecure && <Lock size={12} className="text-[#F59E0B] ml-1 shrink-0" />}
+                                                {isSecure && !conv.isSelf && !!(conv as any).isEncrypted && <Lock size={12} className="text-[#F59E0B] ml-1 shrink-0" />}
                                                 {!isSecure && conv.linkedResourceType && (
                                                     <span className="px-2 py-0.5 rounded border text-[9px] font-black font-mono uppercase tracking-wider" style={{ backgroundColor: alpha(conv.linkedResourceType === 'project' ? '#6366F1' : conv.linkedResourceType === 'task' ? '#10B981' : conv.linkedResourceType === 'event' ? '#EC4899' : conv.linkedResourceType === 'form' ? '#8B5CF6' : conv.linkedResourceType === 'tag' ? '#EF4444' : '#F59E0B', 0.1), borderColor: alpha(conv.linkedResourceType === 'project' ? '#818CF8' : conv.linkedResourceType === 'task' ? '#34D399' : conv.linkedResourceType === 'event' ? '#F472B6' : conv.linkedResourceType === 'form' ? '#A78BFA' : conv.linkedResourceType === 'tag' ? '#F87171' : '#FBBF24', 0.2), color: conv.linkedResourceType === 'project' ? '#818CF8' : conv.linkedResourceType === 'task' ? '#34D399' : conv.linkedResourceType === 'event' ? '#F472B6' : conv.linkedResourceType === 'form' ? '#A78BFA' : conv.linkedResourceType === 'tag' ? '#F87171' : '#FBBF24' }}>{conv.linkedResourceType}</span>
                                                 )}
@@ -1743,7 +1751,7 @@ export const ChatList = ({
                                                     const rowAt = conv.lastMessageAt ? new Date(conv.lastMessageAt).getTime() : -1;
                                                     const memoryText = memoryPreview && (memoryAt >= rowAt || !conv.lastMessageText) ? memoryPreview.lastMessageText : null;
                                                     const resolvedPreview = livePreviewByConversation[conv.$id]?.lastMessageText || memoryText || conv.lastMessageText || 'No messages yet';
-                                                    return (conv.isEncrypted && isLikelyEncrypted(resolvedPreview)) ? (
+                                                    return (conv.isEncrypted && !conv.isSelf && isLikelyEncrypted(resolvedPreview)) ? (
                                                         <span className="flex items-center gap-1"><Lock size={12} className="text-[#9B9691]" /><span>Secured Payload</span></span>
                                                     ) : (<span>{resolvedPreview}</span>);
                                                 })() : (<span>{conv.lastMessageText}</span>)}
@@ -1792,8 +1800,8 @@ export const ChatList = ({
                     onClose={() => setChatSettingsConv(null)}
                     onExport={async () => {
                       try {
-                        const isSecure = chatSettingsConv._kind === 'secure';
-                        if (isSecure) {
+                        const isConversation = chatSettingsConv._kind === 'secure' || chatSettingsConv.type === 'direct' || chatSettingsConv.type === 'group' || Array.isArray(chatSettingsConv.participants);
+                        if (isConversation) {
                           const msgs = await ChatService.getMessages(chatSettingsConv.$id, 100, 0, user?.$id, { prefetchedConversation: chatSettingsConv }).then(r => r.rows || []).catch(() => []);
                           const data = msgs.map((m: any) => ({ sender: m.senderId === user?.$id ? 'Me' : 'Partner', time: m.$createdAt || m.createdAt, content: m.content, type: m.type }));
                           const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1808,8 +1816,9 @@ export const ChatList = ({
                     }}
                     onClearMe={async () => {
                       const c = chatSettingsConv; setChatSettingsConv(null);
+                      const isConversation = c._kind === 'secure' || c.type === 'direct' || c.type === 'group' || Array.isArray(c.participants);
                       try {
-                        if (c._kind === 'secure') {
+                        if (isConversation) {
                           await ChatService.clearChatForMe(c.$id, user!.$id);
                           toast.success('Chat cleared');
                         } else {
@@ -1827,8 +1836,9 @@ export const ChatList = ({
                     }}
                     onClearEveryone={async () => {
                       const c = chatSettingsConv; setChatSettingsConv(null);
+                      const isConv2 = c._kind === 'secure' || c.type === 'direct' || c.type === 'group' || Array.isArray(c.participants);
                       try {
-                        if (c._kind === 'secure') { const r: any = await ChatService.wipeMyFootprint(c.$id, user!.$id); toast.success(`Removed ${r.count || 0} messages`); }
+                        if (isConv2) { const r: any = await ChatService.wipeMyFootprint(c.$id, user!.$id); toast.success(`Removed ${r.count || 0} messages`); }
                         else {
                           await deleteGhostThread(c.$id);
                           toast.success('Thread cleared');
@@ -1844,8 +1854,9 @@ export const ChatList = ({
                     }}
                     onNuclear={async () => {
                       const c = chatSettingsConv; setChatSettingsConv(null);
+                      const isConv3 = c._kind === 'secure' || c.type === 'direct' || c.type === 'group' || Array.isArray(c.participants);
                       try {
-                        if (c._kind === 'secure') {
+                        if (isConv3) {
                           const res: any = await ChatService.nuclearWipe(c.$id);
                           ChatService.invalidateConversationsListCache(user?.$id);
                           try {

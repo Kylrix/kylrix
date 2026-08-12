@@ -64,6 +64,7 @@ import { buildNoteAttachmentMetadata } from '@/lib/sdk';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { showUpgradeIsland } from '@/lib/upgrade-island';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
+import { useSudo } from '@/context/SudoContext';
 
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import {
@@ -125,6 +126,7 @@ export const ChatWindow = ({
     const [secretModalOpen, setSecretModalOpen] = useState(false);
     const [unlockModalOpen, setUnlockModalOpen] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
+    const { promptSudo } = useSudo();
     const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
     const [messageAnchorEl, setMessageAnchorEl] = useState<{ el: HTMLElement, msg: ChatMessage } | null>(null);
     const [partnerProfile, setPartnerProfile] = useState<any | null>(null);
@@ -374,9 +376,13 @@ export const ChatWindow = ({
                 void LocalEngine.cacheSet(chatConversationCacheKey(conversationId), conv);
             }
 
-            // Pre-warm & self-heal keys automatically when opening chat
-            if (conv && conv.isEncrypted && ecosystemSecurity.status.isUnlocked) {
-                void ChatService.getConversationKey(conv, user.$id, null, { allowCreate: true });
+            // Pre-warm & self-heal keys automatically when opening chat — prompt unlock if sealed material
+            if (conv && conv.isEncrypted) {
+                if (!ecosystemSecurity.status.isUnlocked) {
+                    void promptSudo();
+                } else {
+                    void ChatService.getConversationKey(conv, user.$id, null, { allowCreate: true });
+                }
             }
         } catch (error: unknown) {
             console.error('Failed to load conversation:', error);
@@ -584,6 +590,13 @@ export const ChatWindow = ({
 
         return () => unsubscribe();
     }, [loadConversation, loadMessages, isUnlocked]);
+
+    // Prompt vault unlock when opening sealed conversation — listing is plaintext, content is gated per WESP
+    useEffect(() => {
+        if (conversation?.isEncrypted && !isUnlocked) {
+            void promptSudo();
+        }
+    }, [conversation?.isEncrypted, isUnlocked, promptSudo]);
 
 
 
