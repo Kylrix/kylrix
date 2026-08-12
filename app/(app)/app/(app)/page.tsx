@@ -545,7 +545,7 @@ export default function NotesPage() {
 
   const tags = useMemo(() => {
     // CoD: tags from LocalEngine direct — not limited to currently paginated UI page; avoids 0-ideas haphazard zombie
-    const localTags = (localAllRaw.length ? localAllRaw : combinedNotes).flatMap((n: any) => n.tags || []);
+    const localTags = combinedNotes.flatMap((n: any) => n.tags || []);
     const fromGlobal = (globalTags || []).map((t: any) => t.name).filter(Boolean);
     const fromLocal = localTags.filter(Boolean) as string[];
     // Prefer recently edited note's tags first so it doesn't get excluded
