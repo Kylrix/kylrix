@@ -349,13 +349,15 @@ function DashboardPageContent() {
     void hydrateVaultData();
   }, [hydrateVaultData]);
 
-  const { filteredItems: workspaceCredentials } = useWorkspaceFilteredItems(allCredentials, 'credential');
-
   const sortedCredentials = useMemo(() => {
-    return [...workspaceCredentials].sort((a, b) => {
+    return [...allCredentials].sort((a, b) => {
+      const aPinned = isResourcePinned('credential', a.$id, a.userId, a.isPinned);
+      const bPinned = isResourcePinned('credential', b.$id, b.userId, b.isPinned);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
       return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
     });
-  }, [workspaceCredentials]);
+  }, [allCredentials, isResourcePinned]);
 
   const pinnedCredentials = useMemo(
     () =>

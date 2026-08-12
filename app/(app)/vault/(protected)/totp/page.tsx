@@ -508,7 +508,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
           </div>
         ) : (
           <div className="flex flex-col gap-3.5 max-w-3xl">
-            {scopedTotpCodes
+            {totpCodes
               .filter((totp) => {
                 const q = search.trim().toLowerCase();
                 if (!q) return true;
