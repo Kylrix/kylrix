@@ -1703,14 +1703,6 @@ export const ChatWindow = ({
                     </div>
                 ) : (
                     <>
-                        {showFirstContactWarning && (
-                            <Box sx={{ p: 2, mb: 2, borderRadius: '24px', bgcolor: '#161412', border: '1px solid rgba(245, 158, 11, 0.25)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
-                                <Typography variant="body2" sx={{ fontSize: '0.9rem', lineHeight: 1.6, color: '#fff', fontWeight: 600 }}>
-                                    {buildSafetyWarning(conversation?.name || 'this contact')}
-                                </Typography>
-                            </Box>
-                        )}
-
                         {messages.map((msg, index) => (
                         <React.Fragment key={msg.$id}>
                             {index === clientReadSegments.firstUnreadIncomingIndex && (
