@@ -143,10 +143,7 @@ export function ResourcePinProvider({ children }: { children: ReactNode }) {
         resourceId: params.resourceId,
         currentlyPinned,
         setOwnerRowPin: params.setOwnerRowPin});
-      const perUserOnly = params.resourceType === 'message' || params.resourceType === 'conversation';
-      if (perUserOnly || user.$id !== params.ownerId) {
-        setLocalPin(params.resourceType, params.resourceId, next);
-      }
+      setLocalPin(params.resourceType, params.resourceId, next);
       return next;
     },
     [user?.$id, isPinned, setLocalPin],

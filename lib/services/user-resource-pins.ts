@@ -107,6 +107,8 @@ export function resolveEffectivePinned(
   }
 
   const owner = ownerId || '';
-  if (actorId === owner) return rowIsPinned === true || String(rowIsPinned) === 'true';
+  if (actorId === owner) {
+    return rowIsPinned === true || String(rowIsPinned) === 'true' || collaboratorPinIds.has(resourceId);
+  }
   return collaboratorPinIds.has(resourceId);
 }

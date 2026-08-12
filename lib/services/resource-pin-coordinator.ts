@@ -30,15 +30,15 @@ export async function toggleResourcePin(params: {
 
   const isOwner = actorId === ownerId;
 
-  if (isOwner) {
-    await setOwnerRowPin(nextPinned);
-    return nextPinned;
-  }
-
   if (nextPinned) {
     await UserResourcePinService.pin(actorId, resourceType, resourceId);
   } else {
     await UserResourcePinService.unpin(actorId, resourceType, resourceId);
   }
+
+  if (isOwner) {
+    await setOwnerRowPin(nextPinned).catch(() => {});
+  }
+
   return nextPinned;
 }

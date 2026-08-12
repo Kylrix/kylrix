@@ -33,7 +33,7 @@ kylrix/
 │   ├── crypto/           noble (ed25519, secp256k1, bip32/bip39)
 │   ├── masterpass-crypto.ts  AES-256-GCM + Argon2id(64MB,3it,4p) / PBKDF2 legacy
 │   └── kylrixflow.ts     Flow CRUD facade
-├── functions/            Appwrite Functions (permission-updater, ghost-cleanup, etc.)
+├── functions/            Appwrite Functions (permission-updater, etc.)
 ├── oauth2/               OAuth2 skill docs
 ├── api/SKILL.md          Installable agent skill (npx skills add kylrix/kylrix/api)
 ├── middleware.ts         Edge: auth-hint, rewrites, loop-breaker, reload-storm
@@ -52,7 +52,7 @@ All modules share **one DB**: `passwordManagerDb` (`APPWRITE_CONFIG.TABLES.*`). 
 | VAULT | credentials, totpSecrets, folders, securityLogs, keychain, key_mapping, wallets |
 | FLOW | tasks, events, calendars, eventGuests, focusSessions, forms, agents |
 | CONNECT | conversations, conversationMembers, messages, moments, follows, calls, contacts, epochs (ephemeral) |
-| WORKSPACE | projects (=Workspaces UI), project_objects (join), discussions via ghost threads |
+| WORKSPACE | projects (=Workspaces UI), project_objects (join), discussions via conversations/threads |
 | SYSTEM | profiles, subscriptions, settings, extensions, compute_balances |
 | API/PAT | pats (prefix+hash), pat_rate_state, api_user_rate_state |
 | OAUTH (overlay) | oauth_apps, oauth_app_installs, oauth_consent_requests — cache only; Appwrite Apps/grants are SoT |
@@ -118,7 +118,7 @@ Paint local first; live copy = content SoT; pending = separate; auth late-bindin
 - **Guest:** same RxDB+queue; stays local until claimed.
 
 ### 5.4 Substrates & Caches
-`RxDBManager.ts` (Dexie/IndexedDB) for call signals + `LocalEngine` cache. `queryCache` Map 15m (`kylrixflow.ts`), `nexus-fetcher` coalescer, `tablesdb-row-cache` read-through, `commentIdentityCache` session.
+`LocalEngine` (RxDB/Dexie) cache is primary. `RxDBManager.ts` retained for call state buffering. `queryCache` Map 15m (`kylrixflow.ts`), `nexus-fetcher` coalescer, `tablesdb-row-cache` read-through, `commentIdentityCache` session.
 
 ---
 
@@ -156,9 +156,9 @@ Prompt → zone quick-action → `buildSystemPrompt(zone)` → Gemini → `tool_
 
 **Appwrite Realtime:** channel `databases.{db}.tables.{table}.rows` → `subscribeToTable<T>()`. Used for messages, tasks, vault events.
 
-**WebRTC (`WebRTCManager.ts`):** P2P `RTCPeerConnection` (2p) vs Cloudflare Calls SFU (N); signaling via `call_signals` rows + realtime; TURN from Cloudflare; screen-share transceiver; `MediaRecorder` → `storage.createFile()` via `CallRecorder`.
+**WebRTC (`WebRTCManager.ts`):** P2P `RTCPeerConnection` (2p) vs Cloudflare Calls SFU (N); **signaling via ephemeral presence channels** `call.<callId>` (`PresenceService.broadcastState` / `subscribeToPresence`) — no `call_signals` table writes; SDP offer/answer + ICE `candidate` go over Appwrite Realtime presence `presence.call.<id>` (TTL ephemeral, no DB thrash, no cron purge). TURN from Cloudflare; screen-share transceiver; `MediaRecorder` → `storage.createFile()` via `CallRecorder`. Chat DMs: `forceP2p:true` on `createOffer` produces testable P2P call in any `direct` conversation without SFU.
 
-**Presence & Typing:** Ephemeral Appwrite `presence` channels (`PresenceService.getChatChannel` / `getResourceChannel('presence','users',id)`). Heartbeat via `app_activity`, typing via channel broadcast (no `epochs` DB writes). Privacy tab (`profile.preferences` `{typingEnabled,onlineEnabled}` default true) enforces **mutual** gating: both peers must enable; groups always suppress.
+**Presence & Typing:** Ephemeral Appwrite `presence` channels (`PresenceService.getChatChannel` / `getCallChannel` / `getResourceChannel('presence','users',id)`). Heartbeat via `app_activity`, typing + call signaling via channel broadcast (no `epochs`/`call_signals` DB writes). Privacy tab (`profile.preferences` `{typingEnabled,onlineEnabled}` default true) enforces **mutual** gating: both peers must enable; groups always suppress.
 
 ---
 
@@ -188,8 +188,7 @@ Prompt → zone quick-action → `buildSystemPrompt(zone)` → Gemini → `tool_
 | `flow-event-sync` | Scheduled | Recurring events |
 | `sync-subscription-status` | Scheduled/webhook | BlockBee IPN reconcile |
 | `account-cleanup` | Auth delete | Cascade delete |
-| `connect-call-cleanup` | Scheduled | Expire stale calls |
-| `ghost-cleanup` | Scheduled | TTL-expire ghost notes (`isGhost && !isThread`) |
+| `connect-call-cleanup` | Scheduled | Expire stale calls (presence TTL, no DB signals) |
 | `search-users` | HTTP | Admin search |
 | `data-porter` | HTTP | Bitwarden CSV/JSON import-export |
 | `flow-agent-orchestrator` / `agent-action-guardrail` / `ecosystem-context-aggregator` | HTTP | Agent run / ownership check / context snapshot |
@@ -231,7 +230,9 @@ UI **Workspaces** (`/workspaces`, `/workspaces/[projectId]`) over `projects` tab
 
 **Isomorphic adapter:** `if(window) import('@/lib/actions/client-ops') else import('@/lib/actions/secure-ops')` — same business logic, no admin SDK in bundle.
 
-**Conversations vs Ghost Threads:** Secure/DM hangouts = `conversations`/`messages` (`isEncrypted:true` transient keys; `false` when vault locked; never `key_mapping/epochs`). Resource comments/huddles (task/project/event/tag/form/call) = **ghost notes** (`notes.isGhost/isThread`, `metadata {linkedResourceType, linkedResourceId, expiresAt, ghostSecret}`) with `comments` rows keyed by `noteId=resourceId`; `idx_notes_ghost_thread` for sweeps; story promotion via ghost-cleanup 7-day TTL.
+**Unified conversations:** Every discussion lives in **standard tables** `conversations`/`messages` (and `conversationMembers`). `isEncrypted:true` = sealed with transient per-chat keys; `false` when vault locked. Former `notes.isGhost/isThread` + `comments` + `ghost-cleanup` model retired — task/project/event/tag/form/call threads now create a regular `conversations` row (`type:'thread'` or `direct`/`group`) and `messages` rows; `project_objects` links workspace discussions. No `notes` polymorphism, no TTL sweep.
+
+**Threads:** Same tables as hangouts; `participants` + member rows enforce RLS; retention is explicit delete, not 7-day expiry. Presence channels carry typing/online, not DB epochs.
 
 **CrossLinks (`lib/sdk/crosslinks.ts`):** `source:kylrixnote:id` composite tags replace joins across vault/tasks/projects.
 

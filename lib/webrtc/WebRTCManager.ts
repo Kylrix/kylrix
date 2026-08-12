@@ -8,9 +8,10 @@ import {
 import { ID, Permission, Role, Query } from 'appwrite';
 import { databases, realtime } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { PresenceService } from '@/lib/services/presence';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
-const SIGNALS_TABLE = 'call_signals';
+// Ephemeral presence replaces call_signals table — no DB writes, no cron purge.
 
 export class WebRTCManager {
   private sfuPeerConnection: RTCPeerConnection | null = null;
@@ -61,31 +62,19 @@ export class WebRTCManager {
 
   private setupRealtimeSignaling() {
       if (typeof window === 'undefined' || !this.callId) return;
-
-      const channel = `databases.${DB_ID}.tables.${SIGNALS_TABLE}.rows`;
-      const unsub = realtime.subscribe(channel, (event) => {
-          const row = event.payload as any;
-          if (row.callId !== this.callId) return;
-          if (!event.events.some(e => e.includes('.create'))) return;
-
-          // We don't have localUserId here directly, but we can check if it's an offer/answer/candidate
-          // and if it's meant for us. In 1:1, any signal from 'the other' is for us.
-          // Note: WebRTCManager will filter out self-signals via its own logic if needed.
-          
-          this.handleAppwriteSignal(row);
+      const channel = PresenceService.getCallChannel ? (PresenceService as any).getCallChannel(this.callId) : `call.${this.callId}`;
+      const unsub = PresenceService.subscribeToPresence(channel, (payload: any) => {
+          const row = payload?.data || payload;
+          if (!row || row.callId !== this.callId) return;
+          this.handlePresenceSignal(row);
       });
-
       this.unsubscribeRealtime = () => {
           if (typeof unsub === 'function') (unsub as any)();
-          else if ((unsub as any).unsubscribe) (unsub as any).unsubscribe();
+          else if ((unsub as any)?.unsubscribe) (unsub as any).unsubscribe();
       };
   }
 
-  private async handleAppwriteSignal(row: any) {
-
-      // Basic protection against self-signals if we can identify sender
-      // Usually senderId is the peer.
-
+  private async handlePresenceSignal(row: any) {
       if (row.type === 'offer') {
           await this.handleSignal({ type: 'offer', sdp: JSON.parse(row.payload).sdp, sender: row.senderId, target: 'me' });
       } else if (row.type === 'answer') {
@@ -95,22 +84,22 @@ export class WebRTCManager {
       }
   }
 
-  private async sendAppwriteSignal(type: 'offer' | 'answer' | 'candidate', payload: string, senderId: string, targetId: string) {
+  private async sendPresenceSignal(type: 'offer' | 'answer' | 'candidate', payload: string, senderId: string, targetId: string) {
       if (!this.callId) return;
       try {
-          await databases.createRow(DB_ID, SIGNALS_TABLE, ID.unique(), {
-              callId: this.callId,
-              senderId: senderId,
-              type,
-              payload
-          }, [
-              Permission.read(Role.user(senderId)),
-              Permission.read(Role.user(targetId)),
-          ]);
+          const channel = (PresenceService as any).getCallChannel ? (PresenceService as any).getCallChannel(this.callId) : `call.${this.callId}`;
+          await PresenceService.broadcastState(channel, {
+              // ephemeral signal payload — never persisted to DB
+              // @ts-ignore presence metadata carries signal
+              callId: this.callId, senderId, targetId, type, payload,
+          } as any);
       } catch (err) {
-          console.error('[WebRTCManager] Failed to send Appwrite signal:', err);
+          console.error('[WebRTCManager] Failed to send presence signal:', err);
       }
   }
+  // Back-compat alias
+  private async handleAppwriteSignal(row: any) { return this.handlePresenceSignal(row); }
+  private async sendAppwriteSignal(type: 'offer'|'answer'|'candidate', payload: string, s: string, t: string) { return this.sendPresenceSignal(type, payload, s, t); }
 
   private async initializeTurnServers() {
       try {
@@ -269,9 +258,8 @@ export class WebRTCManager {
         pc.onicecandidate = (event) => {
             if (event.candidate && this.currentTargetId) {
                 const signalPayload = JSON.stringify(event.candidate);
-                
                 if (this.callId) {
-                    this.sendAppwriteSignal('candidate', signalPayload, senderId, this.currentTargetId);
+                    this.sendPresenceSignal('candidate', signalPayload, senderId, this.currentTargetId);
                 }
 
                 this.events.onSignal({
