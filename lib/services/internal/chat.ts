@@ -219,6 +219,77 @@ export async function createMessageInternal(payload: {
       updatedAt: now},
     buildMessagePermissions(payload.senderId, recipientIds));
 
+  // Fire background notification streak check asynchronously (non-blocking)
+  if (recipientIds.length > 0) {
+    (async () => {
+      try {
+        const recentMsgs = await listAllDocuments(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, [
+          Query.equal('conversationId', payload.conversationId),
+          Query.orderDesc('createdAt'),
+          Query.limit(10)]);
+        
+        // Count consecutive messages sent by the sender
+        const senderStreak: any[] = [];
+        for (const msg of recentMsgs) {
+          if (msg.senderId === payload.senderId) {
+            senderStreak.push(msg);
+          } else {
+            break;
+          }
+        }
+
+        // Trigger on exactly the 3rd consecutive message
+        if (senderStreak.length === 3) {
+          const sevenDaysAgoStr = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+          const { dispatchTelegramNotification } = await import('./telegram-dispatch');
+          const { dispatchEmail } = await import('./emailDispatch');
+
+          // Fetch sender profile name
+          let senderName = 'A contact';
+          try {
+            const senderDoc = await databases.getRow(CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, payload.senderId).catch(() => null);
+            senderName = senderDoc?.username || senderDoc?.displayName || senderName;
+          } catch {}
+
+          const isUnencrypted = !conversation.isEncrypted;
+          const streakTexts = senderStreak.reverse().map((m: any) => ({
+            content: isUnencrypted ? String(m.content || '') : '🔒 Encrypted message'
+          }));
+
+          for (const recipientId of recipientIds) {
+            // Check if recipient has telegram linked & verified
+            const tgSuccess = await dispatchTelegramNotification(
+              recipientId,
+              `💬 <b>New messages from ${senderName}</b>\n\n${senderName} sent you 3 messages without reply on Kylrix. Check your chat to reply!`,
+              { notificationType: 'standard', title: 'Message reminder' }
+            );
+
+            // If Telegram dispatch failed or was not linked/verified, fallback to email dispatch
+            if (!tgSuccess) {
+              await dispatchEmail({
+                eventType: 'message_streak',
+                sourceApp: 'connect',
+                actorId: payload.senderId,
+                actorName: senderName,
+                recipientIds: [recipientId],
+                resourceId: payload.conversationId,
+                resourceTitle: conversation.name || 'Chat',
+                resourceType: 'chat',
+                ctaText: 'Open Chat',
+                ctaUrl: `https://www.kylrix.space/connect/chat/${payload.conversationId}`,
+                metadata: {
+                  chatMessages: streakTexts
+                }
+              }).catch((err) => console.warn('[streakNotification] Email dispatch error:', err));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[streakNotification] Background streak check failed:', err);
+      }
+    })();
+  }
+
   return JSON.parse(JSON.stringify(message));
 }
 

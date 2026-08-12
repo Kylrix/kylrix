@@ -370,9 +370,22 @@ function buildEmailHtml(params: {
   body: string;
   ctaText: string;
   ctaUrl: string;
+  metadata?: Record<string, unknown> | null;
 }) {
   const theme = SOURCE_THEMES[params.sourceApp];
   const year = new Date().getFullYear();
+  const chatBubblesHtml = params.metadata?.chatMessages && Array.isArray(params.metadata.chatMessages)
+    ? `<div style="margin: 20px 0; padding: 16px; background: rgba(0,0,0,0.4); border-radius: 16px; border: 1px solid rgba(255,255,255,0.06);">
+        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: rgba(255,255,255,0.4); margin-bottom: 12px; font-weight: 800;">Recent messages</div>
+        ${params.metadata.chatMessages.map((msg: any) => `
+          <div style="margin-bottom: 10px; display: flex; flex-direction: column;">
+            <div style="align-self: flex-start; max-width: 85%; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.25); color: #fff; padding: 10px 14px; border-radius: 14px 14px 14px 4px; font-size: 14px; line-height: 1.4;">
+              ${escapeHtml(String(msg.content || ''))}
+            </div>
+          </div>
+        `).join('')}
+       </div>`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -422,6 +435,7 @@ function buildEmailHtml(params: {
       <div class="content">
         <h1 class="title">${escapeHtml(params.title)}</h1>
         <p class="body">Hello ${escapeHtml(params.recipientName)},<br><br>${escapeHtml(params.body)}</p>
+        ${chatBubblesHtml}
         <a class="button" href="${escapeHtml(params.ctaUrl)}">${escapeHtml(params.ctaText)}</a>
       </div>
       <div class="footer">© ${year} Kylrix. Event: ${escapeHtml(params.eventType)}</div>
@@ -942,7 +956,8 @@ export async function dispatchUnorganicEmails(input: UnorganicEmailDispatchInput
         title: copy.title,
         body: copy.body,
         ctaText: copy.ctaText,
-        ctaUrl: copy.ctaUrl});
+        ctaUrl: copy.ctaUrl,
+        metadata: input.metadata});
 
       const info = await messaging.createEmail({
         messageId: ID.unique(),
