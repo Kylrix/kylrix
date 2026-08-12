@@ -182,11 +182,17 @@ export function NoteDetailSidebar({
     return () => { try { unsub?.(); } catch {} };
   }, [note?.$id, readOnly, onUpdate]);
 
+  // Restore scroll once per note id — not on every liveNote update to avoid jitter
+  const hasRestoredScrollRef = useRef<string | null>(null);
   useEffect(() => {
-    if (scrollContainerRef.current && liveNote?.$id) {
-      const saved = getScrollPosition(`note_detail:${liveNote.$id}`);
-      scrollContainerRef.current.scrollTop = saved;
-    }
+    if (!scrollContainerRef.current || !liveNote?.$id) return;
+    if (hasRestoredScrollRef.current === liveNote.$id) return;
+    hasRestoredScrollRef.current = liveNote.$id;
+    const saved = getScrollPosition(`note_detail:${liveNote.$id}`);
+    // Use rAF to avoid layout thrash during initial mount; do not re-apply on content/attachment re-renders
+    requestAnimationFrame(() => {
+      if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = saved;
+    });
   }, [liveNote?.$id, getScrollPosition]);
 
   const updateLocalAndParentNote = useCallback((updated: Notes) => {
@@ -260,10 +266,18 @@ export function NoteDetailSidebar({
   const [tags, setTags] = useState(liveNote.tags?.join(', ') || '');
   const [isPublic, _setIsPublic] = useState(getNotePublicState(liveNote));
 
-  // Guarded sync from liveNote -> local fields: never clobber dirty typing
+  // Guarded sync from liveNote -> local fields: never clobber dirty typing or focused textarea (cursor)
   useEffect(() => {
     const isDirty = Date.now() - getLastEditAt() < 2000;
     if (isDirty) return;
+    // Never clobber while user is typing — preserves cursor/selection
+    const active = typeof document !== 'undefined' ? document.activeElement : null;
+    if (active === contentTextareaRef.current) return;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+      // Also guard title tag input focus
+      const titleActive = active.getAttribute?.('placeholder') === 'Untitled note';
+      if (titleActive) return;
+    }
     setTitle(liveNote.title || '');
     setContent(liveNote.content || '');
     setTags(liveNote.tags?.join(', ') || '');
@@ -284,6 +298,10 @@ export function NoteDetailSidebar({
 
   const handleContentChange = useCallback((next: string) => {
     if (readOnly) return;
+    // Preserve cursor/selection across local state update — avoids jump to end on fast typing
+    const ta = contentTextareaRef.current;
+    const selStart = ta?.selectionStart ?? null;
+    const selEnd = ta?.selectionEnd ?? null;
     setContent(next);
     const noteId = liveNoteRef.current?.$id;
     if (!noteId) return;
@@ -291,6 +309,11 @@ export function NoteDetailSidebar({
     const draft: Notes = { ...liveNoteRef.current, content: next, $updatedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Notes;
     markDirty(draft);
     onUpdate(draft);
+    if (ta && selStart !== null && selEnd !== null) {
+      requestAnimationFrame(() => {
+        try { ta.setSelectionRange(selStart, selEnd); } catch {}
+      });
+    }
   }, [readOnly, registerComposeSession, markDirty, onUpdate]);
 
   const handleTagsChange = useCallback((nextRaw: string) => {
@@ -492,12 +515,9 @@ export function NoteDetailSidebar({
     return collaboratorProfiles.length > 0;
   }, [collaboratorProfiles]);
 
+  // Stable realtime per note — avoid re-subscribe jitter on collaborator loading
   useEffect(() => {
     if (!liveNote.$id) return;
-    if (isLoadingCollaborators) return;
-    if (!hasCollaborators) {
-      return;
-    }
 
     const channel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents.${liveNote.$id}`;
     const unsubscribe = realtime.subscribe(channel, (response) => {
@@ -528,7 +548,7 @@ export function NoteDetailSidebar({
         (unsubscribe as any).unsubscribe();
       }
     };
-  }, [liveNote.$id, hasCollaborators, isLoadingCollaborators, pushLiveNote, onUpdate]);
+  }, [liveNote.$id, pushLiveNote, onUpdate]);
 
   useEffect(() => {
     let active = true;
@@ -1218,7 +1238,7 @@ export function NoteDetailSidebar({
         </div>
       </div>
 
-      {/* Content Scroll Area */}
+      {/* Content Scroll Area — stable, isolated scroll; local-copy-first, no jitter on attachment/preview loads */}
       <div
         ref={scrollContainerRef}
         onScroll={(e) => {
@@ -1226,7 +1246,8 @@ export function NoteDetailSidebar({
             persistScrollPosition(`note_detail:${liveNote.$id}`, e.currentTarget.scrollTop);
           }
         }}
-        className={`flex-1 overflow-y-auto flex flex-col gap-5 scrollbar-thin ${
+        style={{ overflowAnchor: 'none', contain: 'layout paint' } as React.CSSProperties}
+        className={`flex-1 overflow-y-auto flex flex-col gap-5 scrollbar-thin overscroll-contain ${
           isPageLayout ? 'px-4 md:px-5 py-4' : 'p-4 gap-4'
         }`}
       >
@@ -1343,13 +1364,16 @@ export function NoteDetailSidebar({
                 <div
                   className={`note-markdown-preview min-h-[240px] ${contentMode !== 'preview' ? 'hidden' : ''}`}
                   aria-hidden={contentMode !== 'preview'}
+                  style={{ contain: 'layout paint', contentVisibility: 'auto' } as React.CSSProperties}
                 >
                   {content.trim() ? (
-                    <NoteContentRenderer
-                      content={content}
-                      format={liveNote.format || 'markdown'}
-                      primaryNoteId={liveNote.$id}
-                    />
+                    <div style={{ minHeight: 200 }}>
+                      <NoteContentRenderer
+                        content={content}
+                        format={liveNote.format || 'markdown'}
+                        primaryNoteId={liveNote.$id}
+                      />
+                    </div>
                   ) : (
                     <p className="text-[#9B9691] text-sm font-semibold italic leading-relaxed">
                       Nothing to preview yet. Switch to Write and add markdown.
