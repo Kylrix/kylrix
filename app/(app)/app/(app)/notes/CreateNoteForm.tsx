@@ -472,11 +472,26 @@ export default function CreateNoteForm({
   }, [content, isTitleManuallyEdited]);
 
   const existingTags = useMemo(() => {
-    const tagSet = new Set<string>(ecosystemTags.map(t => t.name).filter(Boolean) as string[]);
-    // Avoid iterating allNotes on every keystroke — that caused O(N) churn per char via pushLiveNote→allNotes change.
-    // Only needed for tag autocomplete, so lazy-read without subscribing to live notes.
+    const tagSet = new Set<string>();
+    for (const t of ecosystemTags.map(t => t.name).filter(Boolean) as string[]) tagSet.add(t);
+    // Fallback to local notes tags when ecosystemTags empty — LocalEngine/RxDB is SoT per note.shared-cache
+    try {
+      const { notes: ctxNotes } = { notes: allNotes } as any;
+      for (const n of (ctxNotes as Notes[]) || []) {
+        for (const tag of (n.tags as string[]) || []) if (tag?.trim()) tagSet.add(tag.trim());
+      }
+    } catch {}
+    // Also include locally cached tags from DataNexus/RxDB if still empty
+    if (tagSet.size === 0) {
+      try {
+        // best-effort sync read from cache already hydrated in NotesContext; no network fetch
+        for (const n of (allNotesRef.current as Notes[]) || []) {
+          for (const tag of (n.tags as string[]) || []) if (tag?.trim()) tagSet.add(tag.trim());
+        }
+      } catch {}
+    }
     return Array.from(tagSet);
-  }, [ecosystemTags]);
+  }, [ecosystemTags, allNotes]);
 
   const _filteredExistingTags = useMemo(() => {
     const available = existingTags.filter((t) => !tags.includes(t));

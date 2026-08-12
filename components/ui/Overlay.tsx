@@ -78,7 +78,7 @@ const Overlay: React.FC = () => {
     (content.type as any).name === 'AgenticPanelContent'
   );
 
-  const drawerHeight = isMobile && !isFlapover ? (isProfileSidebar ? (isExpanded ? '100dvh' : '60vh') : (isExpanded ? '100dvh' : '85vh')) : '100dvh';
+  const drawerHeight = isMobile && !isFlapover ? (isProfileSidebar ? (isExpanded ? '100dvh' : '60vh') : (isExpanded ? '100dvh' : '60dvh')) : '100dvh';
   const paperWidth = isFlapover ? '100%' : isMobile ? '100%' : 'min(100vw, 720px)';
 
   return (
@@ -95,7 +95,7 @@ const Overlay: React.FC = () => {
           left: isFlapover ? 0 : undefined,
           right: isFlapover ? 0 : undefined,
           height: drawerHeight,
-          maxHeight: isMobile && !isFlapover ? (isProfileSidebar ? (isExpanded ? '100dvh' : '60vh') : (isExpanded ? '100dvh' : '85vh')) : '100dvh',
+          maxHeight: isMobile && !isFlapover ? (isProfileSidebar ? (isExpanded ? '100dvh' : '60vh') : (isExpanded ? '100dvh' : '60dvh')) : '100dvh',
           overflowX: 'hidden',
           overflowY: 'hidden',
           borderTopLeftRadius: isMobile && !isFlapover ? '24px' : 0,

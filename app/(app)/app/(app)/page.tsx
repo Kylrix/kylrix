@@ -303,77 +303,17 @@ export default function NotesPage() {
 
 
 
-  // Single local-engine fetch (goals pattern) — pinned is secondary in-memory sort, no separate pinned query.
-  const [localAllRaw, setLocalAllRaw] = useState<Notes[]>([]);
-  useEffect(() => {
-    let cancelled = false;
-    const loadLocal = async () => {
-      try {
-        const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const uid = user?.$id || 'guest';
-        const keys = [`f_notes_list_${uid}`, 'f_notes_list', `initial_notes_${uid}`];
-        let found: Notes[] = [];
-        for (const k of keys) {
-          const v = await LocalEngine.cacheGet<any>(k).catch(() => null);
-          const arr = Array.isArray(v) ? v : Array.isArray(v?.notes) ? v.notes : [];
-          if (arr.length) { found = arr as Notes[]; break; }
-        }
-        if (!found.length) {
-          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-          const db = await getRxDB().catch(() => null);
-          if (db?.notes) {
-            const rows = await db.notes.find().exec();
-            found = rows.map((d: any) => {
-              const j = d.toJSON();
-              return { $id: j.id || j.$id, title: j.title, content: j.content || '', tags: j.tags || [], isPinned: j.isPinned, isWorkspace: j.isWorkspace, $updatedAt: j.updatedAt || j.$updatedAt, $createdAt: j.createdAt || j.$createdAt } as any;
-            });
-          }
-        }
-        // Live wins: allNotes (with fresh isPinned/tags) must not be clobbered by stale LocalEngine cache when timestamps tie
-        const liveMap = new Map<string, Notes>();
-        for (const n of [...found, ...(Array.isArray(allNotes) ? allNotes : [])]) {
-          if (!n?.$id) continue;
-          const prev = liveMap.get(n.$id);
-          if (!prev) liveMap.set(n.$id, n as Notes);
-          else {
-            const aT = new Date((prev as any).$updatedAt || (prev as any).updatedAt || 0).getTime();
-            const bT = new Date((n as any).$updatedAt || (n as any).updatedAt || 0).getTime();
-            // Live (allNotes) is appended last, so b is live; only overwrite if strictly newer or has fresher pin/tags
-            if (bT > aT) liveMap.set(n.$id, n as Notes);
-            else if (bT === aT) {
-              // Tie: prefer live's isPinned/tags truthiness — prevents pinned note reverting to 'unpinned' among others
-              const prevPinned = !!(prev as any).isPinned;
-              const nextPinned = !!(n as any).isPinned;
-              const merged = { ...prev, ...(nextPinned && !prevPinned ? { isPinned: true } : {}), tags: (n as any).tags?.length ? (n as any).tags : (prev as any).tags } as Notes;
-              liveMap.set(n.$id, merged);
-            }
-          }
-        }
-        const merged = Array.from(liveMap.values());
-        if (!cancelled && merged.length) {
-          setLocalAllRaw(merged);
-        }
-      } catch {}
-    };
-    void loadLocal();
-    return () => { cancelled = true; };
-  }, [user?.$id, allNotes, visibleNotes.length]);
-  // Fetch once, then repatriate pinned to top (goals-style) — no separate pinned query.
+  // Local-first: NotesContext is SoT via RxDB (note.shared-cache, architecture.local-first). No second LocalEngine/RxDB fetch here — that duplicated and clobbered isPinned/tags.
   const unifiedSorted = useMemo(() => {
-    const base = visibleNotes.length
-      ? visibleNotes
-      : (localAllRaw.length
-          ? localAllRaw.filter(isDefaultWorkspaceObject as any)
-          : combinedNotes.filter(isDefaultWorkspaceObject as any));
-    const src = base.length ? base : visibleNotes;
-    // Secondary pin sort — pinned first, then newest created (like TaskContext getFilteredTasks)
+    const src = visibleNotes.length ? visibleNotes : combinedNotes.filter(isDefaultWorkspaceObject as any);
+    // Secondary pin sort — pinned first, then newest (like TaskContext getFilteredTasks / NotesContext sortedNotes)
     return [...src].sort((a: any, b: any) => {
       const aPinned = isPinned(a.$id) ? 1 : 0;
       const bPinned = isPinned(b.$id) ? 1 : 0;
       if (aPinned !== bPinned) return bPinned - aPinned;
       return new Date(b.$updatedAt || (b as any).updatedAt || b.$createdAt || 0).getTime() - new Date(a.$updatedAt || (a as any).updatedAt || a.$createdAt || 0).getTime();
     });
-  }, [visibleNotes, localAllRaw, combinedNotes, isPinned]);
+  }, [visibleNotes, combinedNotes, isPinned]);
   const pinnedNotes = useMemo(() => unifiedSorted.filter((n: any) => isPinned(n.$id)), [unifiedSorted, isPinned]);
   const regularSourceNotes = useMemo(() => unifiedSorted.filter((n: any) => !isPinned(n.$id)), [unifiedSorted, isPinned]);
 
@@ -623,7 +563,7 @@ export default function NotesPage() {
     const fromVisible = visibleNotes.flatMap((note: any) => note.tags || []);
     const m2 = Array.from(new Set([...fromGlobal, ...fromVisible].filter(Boolean) as string[])).slice(0, 8);
     return m2.length ? m2 : ['Personal', 'Work', 'Ideas', 'To-Do'];
-  }, [localAllRaw, visibleNotes, combinedNotes, globalTags, activeWorkspace.isPersonal]);
+  }, [visibleNotes, combinedNotes, globalTags, activeWorkspace.isPersonal]);
 
   const tagsGridContent = (
     <div className="flex flex-col gap-6">
