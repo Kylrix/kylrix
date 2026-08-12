@@ -48,13 +48,19 @@ export function UnifiedBottomDrawer() {
         sx: {
           bgcolor: '#161412',
           backgroundImage: 'none',
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
           maxHeight: '60dvh',
         },
       }}
     >
-      <Box sx={{ p: 0 }}>{content}</Box>
+      <Box sx={{ p: 0, position: 'relative' }}>
+        <div className="w-full flex justify-center pt-2.5 pb-1">
+          <div className="w-10 h-1 rounded-full bg-white/20" />
+        </div>
+        {content}
+      </Box>
     </Drawer>
   );
 }

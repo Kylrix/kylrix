@@ -39,104 +39,85 @@ export function DeleteConfirmDrawer() {
   };
 
   return (
-    <div className="p-6 md:p-8 text-white font-satoshi flex flex-col gap-6 relative select-none max-h-[60vh] overflow-y-auto scrollbar-thin">
+    <div className="p-5 md:p-6 text-white font-satoshi flex flex-col gap-5 relative select-none max-h-[60vh] overflow-y-auto scrollbar-thin">
       {/* Red Spotlight Ambient Gradient */}
       <div 
-        className="absolute top-0 left-0 right-0 h-36 pointer-events-none opacity-20"
-        style={{ backgroundImage: 'radial-gradient(circle at top, rgba(239, 68, 68, 0.25) 0%, transparent 70%)' }}
+        className="absolute top-0 left-0 right-0 h-36 pointer-events-none opacity-15"
+        style={{ backgroundImage: 'radial-gradient(circle at top, rgba(239, 68, 68, 0.2) 0%, transparent 70%)' }}
       />
 
       {/* Header */}
       <div className="flex justify-between items-center relative z-10 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 shadow-[0_0_12px_rgba(239,68,68,0.2)]">
-            <AlertTriangle size={20} />
+          <div className="p-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400">
+            <AlertTriangle size={18} />
           </div>
           <div>
-            <h3 className="font-extrabold text-lg text-white font-clash tracking-tight">
+            <h3 className="font-bold text-base text-white font-clash tracking-tight">
               Confirm Deletion
             </h3>
-            <p className="text-[10px] text-white/45 font-bold uppercase tracking-wider font-clash mt-0.5">
+            <p className="text-[10px] text-white/40 font-bold uppercase tracking-wider font-clash mt-0.5">
               Destructive Action
             </p>
           </div>
         </div>
+
         <button 
-          onClick={close} 
-          className="p-1.5 text-white/50 hover:text-white transition rounded-lg hover:bg-white/5 border border-white/5"
+          onClick={close}
+          className="p-1.5 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition duration-150"
         >
           <X size={18} />
         </button>
       </div>
 
-      {/* Content description */}
-      <div className="flex flex-col gap-2 relative z-10">
-        <h4 className="font-extrabold text-sm text-white/90 leading-tight font-satoshi">
-          {data.title}
-        </h4>
-        <p className="text-xs text-white/40 leading-relaxed font-satoshi">
-          {data.description || `This action is permanent and cannot be undone. All data associated with ${data.resourceName || 'this resource'} will be wiped from the ecosystem.`}
+      {/* Message Description */}
+      <div className="relative z-10 space-y-2">
+        <p className="text-xs text-white/70 font-satoshi leading-relaxed">
+          {data.description || `Are you sure you want to delete ${data.resourceName || 'this item'}? This action cannot be undone.`}
         </p>
       </div>
 
-      {/* Project Deletion options */}
+      {/* Project Selective Delete Options */}
       {data.isProject && (
-        <div className="flex flex-col gap-3 relative z-10">
-          <span className="text-[10px] font-black text-white/35 tracking-wider uppercase block font-clash">
-            Choose Deletion Mode
-          </span>
-          <div className="flex flex-col gap-2.5">
+        <div className="relative z-10 flex flex-col gap-2">
+          <label className="text-[11px] font-bold text-white/50 uppercase tracking-wider font-clash">
+            Deletion Scope
+          </label>
+          
+          <div className="flex flex-col gap-2">
             {[
               {
-                value: 'detach',
-                title: 'Detach resources untouched (Safe)',
-                desc: 'Keep all associated notes, tasks, and credentials intact. Only unlink and delete the project wrapper.',
-                color: '#10B981',
-                bgActive: 'bg-[#10B981]/5',
-                borderActive: 'border-[#10B981]/30'
+                id: 'detach',
+                title: 'Keep Linked Items (Unlink Only)',
+                desc: 'Removes the workspace row, but leaves associated notes, forms, and goals untouched.'
               },
               {
-                value: 'created_within',
-                title: 'Delete project-created resources only',
-                desc: 'Delete only resources that were created directly inside this project workspace. External linked resources remain untouched.',
-                color: '#F59E0B',
-                bgActive: 'bg-[#F59E0B]/5',
-                borderActive: 'border-[#F59E0B]/30'
+                id: 'created_within',
+                title: 'Delete Created Items Only',
+                desc: 'Purges notes/tasks created directly inside this workspace. Pre-existing linked items remain intact.'
               },
               {
-                value: 'all',
-                title: 'Delete all cascading resources (Dangerous)',
-                desc: 'Permanently wipe all linked resources and their sub-objects (including comment reactions, chats, and physical voice notes).',
-                color: '#EF4444',
-                bgActive: 'bg-[#EF4444]/5',
-                borderActive: 'border-[#EF4444]/30'
+                id: 'all',
+                title: 'Nuclear Wipe (Delete Everything)',
+                desc: 'Permanently destroys the workspace AND all linked notes, forms, goals, and thread histories.'
               }
             ].map((option) => {
-              const selected = deleteMode === option.value;
+              const isSelected = deleteMode === option.id;
               return (
                 <button
+                  key={option.id}
                   type="button"
-                  key={option.value}
-                  onClick={() => setDeleteMode(option.value as any)}
-                  className={`p-4 rounded-2xl border text-left transition duration-200 flex flex-col gap-1.5 w-full cursor-pointer hover:translate-y-[-1px] ${
-                    selected 
-                      ? `${option.bgActive} ${option.borderActive}` 
-                      : 'bg-[#0B0A09] border-white/5 hover:border-white/10'
+                  onClick={() => setDeleteMode(option.id as any)}
+                  className={`text-left p-3.5 rounded-xl border transition-all duration-150 flex flex-col gap-1 cursor-pointer ${
+                    isSelected 
+                      ? 'bg-red-500/10 border-red-500/40 text-white' 
+                      : 'bg-white/[0.02] border-white/5 text-white/60 hover:border-white/15'
                   }`}
-                  style={selected ? { boxShadow: `0 0 12px ${option.color}15` } : undefined}
                 >
-                  <div className="flex items-center justify-between w-full">
-                    <span 
-                      style={{ color: selected ? option.color : undefined }}
-                      className="font-extrabold text-xs text-white font-satoshi"
-                    >
-                      {option.title}
-                    </span>
-                    <div 
-                      style={{ borderColor: selected ? option.color : undefined, backgroundColor: selected ? option.color : undefined }}
-                      className="w-4 h-4 rounded-full border border-white/30 flex items-center justify-center transition-colors shrink-0"
-                    >
-                      {selected && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs font-clash text-white">{option.title}</span>
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected ? 'border-red-400 bg-red-500' : 'border-white/20'}`}>
+                      {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                     </div>
                   </div>
                   <p className="text-[10px] text-white/40 leading-relaxed font-satoshi">
@@ -150,17 +131,17 @@ export function DeleteConfirmDrawer() {
       )}
 
       {/* Buttons */}
-      <div className="flex flex-col gap-3 mt-4 relative z-10 shrink-0">
+      <div className="flex flex-col gap-2 mt-2 relative z-10 shrink-0">
         <button
           onClick={handleConfirm}
           disabled={loading}
-          className="w-full py-4 rounded-2xl font-extrabold text-sm bg-red-500 hover:bg-red-600 text-white disabled:opacity-50 transition duration-200 cursor-pointer shadow-[0_8px_16px_rgba(239,68,68,0.15)] flex items-center justify-center gap-2 hover:scale-[1.01]"
+          className="w-full py-3 rounded-xl font-bold text-xs bg-red-500 hover:bg-red-600 text-white disabled:opacity-50 transition duration-150 cursor-pointer flex items-center justify-center gap-2"
         >
           {loading ? (
             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (
             <>
-              <Trash2 size={16} />
+              <Trash2 size={15} />
               <span>{data.confirmLabel || 'Delete Permanently'}</span>
             </>
           )}
@@ -168,7 +149,7 @@ export function DeleteConfirmDrawer() {
         <button
           onClick={close}
           disabled={loading}
-          className="w-full py-3.5 rounded-xl font-bold text-xs text-white/45 hover:text-white transition duration-200 hover:bg-white/5"
+          className="w-full py-2.5 rounded-xl font-bold text-xs text-white/40 hover:text-white transition duration-150 hover:bg-white/5"
         >
           Cancel
         </button>
