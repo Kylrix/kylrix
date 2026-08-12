@@ -13,7 +13,10 @@ import {
   Save, 
   RefreshCw, 
   Mail,
-  AlertTriangle
+  AlertTriangle,
+  KeyRound,
+  Plus,
+  Code2
 } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
@@ -21,8 +24,10 @@ import { Projects } from '@/types/appwrite';
 import { useAuth } from '@/context/auth/AuthContext';
 import { toast } from 'react-hot-toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { listPats, revokePat } from '@/lib/actions/client-ops';
+import { CreatePatDrawer } from '@/components/settings/CreatePatDrawer';
 
-export function WorkspaceTab() {
+export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => void } = {}) {
   const { activeWorkspace, refreshWorkspaces } = useWorkspace();
   const { user: _user } = useAuth();
   const { open: openDrawer } = useUnifiedDrawer();
@@ -44,6 +49,33 @@ export function WorkspaceTab() {
   const [collaborators, setCollaborators] = useState<any[]>([]);
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [addingMember, setAddingMember] = useState(false);
+
+  // Workspace Keys
+  const [pats, setPats] = useState<any[]>([]);
+  const [loadingPats, setLoadingPats] = useState(false);
+  const [createPatOpen, setCreatePatOpen] = useState(false);
+
+  const loadWorkspacePats = useCallback(async (wsId: string) => {
+    setLoadingPats(true);
+    try {
+      const res = await listPats({ isWorkspace: true, workspaceId: wsId });
+      if (res?.success) setPats(res.data || []);
+    } catch {
+      setPats([]);
+    } finally {
+      setLoadingPats(false);
+    }
+  }, []);
+
+  const handleRevokePat = async (patId: string) => {
+    try {
+      await revokePat(patId);
+      toast.success('Workspace key revoked');
+      if (activeWorkspace?.id) void loadWorkspacePats(activeWorkspace.id);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to revoke key');
+    }
+  };
 
   const loadWorkspaceDetails = useCallback(async () => {
     if (!isCustomWorkspace || !activeWorkspace?.id) return;
@@ -75,6 +107,14 @@ export function WorkspaceTab() {
   useEffect(() => {
     void loadWorkspaceDetails();
   }, [loadWorkspaceDetails]);
+
+  useEffect(() => {
+    if (isCustomWorkspace && activeWorkspace?.id) {
+      void loadWorkspacePats(activeWorkspace.id);
+    } else {
+      setPats([]);
+    }
+  }, [isCustomWorkspace, activeWorkspace?.id, loadWorkspacePats]);
 
   const handleSaveDetails = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,12 +214,43 @@ export function WorkspaceTab() {
 
   if (!isCustomWorkspace) {
     return (
-      <div className="p-12 text-center rounded-3xl bg-[#161412] border border-[#1C1A18] max-w-2xl mx-auto">
-        <FolderKanban className="h-12 w-12 text-white/20 mx-auto mb-4" />
-        <h3 className="text-lg font-black text-white mb-2 font-clash">Personal Workspace Selected</h3>
-        <p className="text-sm text-[#9B9691] max-w-md mx-auto mb-6">
-          You are currently in your default personal workspace. Switch to a custom workspace using the top header navigation to configure workspace-level settings, members, and access control.
-        </p>
+      <div className="space-y-6 max-w-4xl mx-auto">
+        <div className="p-12 text-center rounded-3xl bg-[#161412] border border-[#1C1A18]">
+          <FolderKanban className="h-12 w-12 text-white/20 mx-auto mb-4" />
+          <h3 className="text-lg font-black text-white mb-2 font-clash">Personal Workspace Selected</h3>
+          <p className="text-sm text-[#9B9691] max-w-md mx-auto mb-6">
+            You are currently in your default personal workspace. Switch to a custom workspace using the top header navigation to configure workspace-level settings, members, and access control.
+          </p>
+        </div>
+
+        {/* Workspace Keys — disabled for personal workspace */}
+        <div className="p-6 md:p-8 rounded-3xl bg-[#161412] border border-[#1C1A18]">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-black text-white font-clash">Workspace Keys</h2>
+              <p className="text-xs text-[#9B9691] mt-0.5">Tokens scoped exclusively to a workspace</p>
+            </div>
+            <KeyRound className="h-5 w-5 text-[#6366F1]/50" />
+          </div>
+
+          <div className="p-5 rounded-2xl bg-[#0A0908] border border-dashed border-white/10 flex flex-col items-center gap-3 text-center">
+            <div className="w-10 h-10 rounded-full bg-[#6366F1]/10 flex items-center justify-center">
+              <KeyRound className="h-5 w-5 text-[#6366F1]/60" />
+            </div>
+            <p className="text-sm font-bold text-white/70">Not available in Personal Workspace</p>
+            <p className="text-xs text-[#9B9691] max-w-xs leading-relaxed">
+              Workspace Keys can only be created for custom workspaces. For API access to your personal data, use a general Personal Access Token instead.
+            </p>
+            <button
+              type="button"
+              onClick={() => onGoToDevelopers?.()}
+              className="mt-1 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white text-xs font-extrabold transition-colors"
+            >
+              <Code2 size={14} />
+              Go to Settings &rsaquo; Developers
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -339,6 +410,76 @@ export function WorkspaceTab() {
           )}
         </div>
       </div>
+
+      {/* Workspace Keys */}
+      <div className="p-6 md:p-8 rounded-3xl bg-[#161412] border border-[#1C1A18]">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-black text-white font-clash">Workspace Keys</h2>
+            <p className="text-xs text-[#9B9691] mt-0.5">Personal Access Tokens scoped exclusively to this workspace</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCreatePatOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white text-xs font-extrabold transition-colors"
+          >
+            <Plus size={14} />
+            Create Key
+          </button>
+        </div>
+
+        {loadingPats ? (
+          <div className="py-8 flex justify-center">
+            <RefreshCw size={20} className="animate-spin text-[#6366F1]" />
+          </div>
+        ) : pats.length === 0 ? (
+          <div className="p-6 rounded-2xl bg-[#0A0908] border border-dashed border-white/10 text-center">
+            <KeyRound className="h-6 w-6 text-white/20 mx-auto mb-2" />
+            <p className="text-sm font-bold text-white/50">No workspace keys yet</p>
+            <p className="text-xs text-[#9B9691] mt-1">Create a key to interact with this workspace via the API</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {pats.map((p) => (
+              <div key={p.id} className="flex items-center justify-between p-4 rounded-2xl bg-[#0A0908] border border-[#1C1A18] gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-bold text-white truncate">{p.name}</p>
+                    <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                      p.status === 'active'
+                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                        : 'bg-white/10 text-white/40 border border-white/10'
+                    }`}>
+                      {p.status}
+                    </span>
+                  </div>
+                  <p className="text-[10px] font-mono text-white/40 mt-0.5 truncate">
+                    kyl_pat_{p.tokenPrefix}_...
+                  </p>
+                </div>
+                {p.status === 'active' && (
+                  <button
+                    type="button"
+                    onClick={() => handleRevokePat(p.id)}
+                    className="shrink-0 p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-colors"
+                    title="Revoke key"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <CreatePatDrawer
+        open={createPatOpen}
+        onClose={() => setCreatePatOpen(false)}
+        onCreated={() => { if (activeWorkspace?.id) void loadWorkspacePats(activeWorkspace.id); }}
+        isWorkspace={true}
+        workspaceId={activeWorkspace?.id}
+      />
 
       {/* Danger Zone */}
       <div className="p-6 md:p-8 rounded-3xl bg-[#161412] border border-red-500/20">

@@ -668,7 +668,7 @@ function SettingsPageInner() {
                 {/* Content — fluid, right-rail aware */}
                 <div className="w-full relative min-h-[400px] min-w-0 col-span-1 lg:col-span-1">
                 {activeTab === 'workspace' && (
-                    <WorkspaceTab />
+                    <WorkspaceTab onGoToDevelopers={() => setActiveTab('developers')} />
                 )}
 
                 {activeTab === 'general' && (
