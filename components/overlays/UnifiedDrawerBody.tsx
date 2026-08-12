@@ -117,6 +117,7 @@ export function isUnifiedOverlayOnly(content: DrawerContent): boolean {
     content === 'login' ||
     content === 'moment-composer' ||
     content === 'new-chat' ||
+    content === 'delete-confirm' ||
     content === 'note'  // NoteDrawer manages its own sidebar + overlay — no Drawer shell needed
   );
 }

@@ -50,7 +50,7 @@ export function UnifiedBottomDrawer() {
           backgroundImage: 'none',
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
-          maxHeight: '92dvh',
+          maxHeight: '60dvh',
         },
       }}
     >
