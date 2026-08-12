@@ -14,6 +14,33 @@ import { RememberUnlockSettings } from '@/components/settings/RememberUnlockSett
 import { UnlockOnDemandSettings } from '@/components/settings/UnlockOnDemandSettings';
 import { FlowInstallSecuritySettings } from '@/components/settings/FlowInstallSecuritySettings';
 import { formatDateWithFallback } from '@/lib/date-utils';
+import { useAppwriteVault } from '@/context/appwrite-context';
+
+function PasskeyPreferenceSettings() {
+  const { usePasskeysByDefault, setUsePasskeysByDefault } = useAppwriteVault();
+  return (
+    <Section title="Unlock Preferences">
+      <Row
+        icon={<Fingerprint className="w-4 h-4" />}
+        title="Prefer passkeys by default"
+        meta="Automatically prompt passkey verification for sudo unlock modal"
+        trailing={
+          <button
+            type="button"
+            onClick={() => setUsePasskeysByDefault(!usePasskeysByDefault)}
+            className={`py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border-none transition-all ${
+              usePasskeysByDefault
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : 'bg-white/5 text-white/40 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            {usePasskeysByDefault ? 'Enabled' : 'Disabled'}
+          </button>
+        }
+      />
+    </Section>
+  );
+}
 
 type PasskeyEntry = {
   $id: string;
@@ -209,6 +236,8 @@ export function SecurityTab({
           })
         )}
       </Section>
+
+      <PasskeyPreferenceSettings />
 
       <UnlockOnDemandSettings />
 
