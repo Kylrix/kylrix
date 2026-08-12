@@ -458,11 +458,7 @@ class MasterPassCrypto {
           }
       }
 
-        return true;
-      } catch (e: unknown) {
-        logDebug("Failed to unwrap key with provided password", { error: e });
-        return false;
-      }
+      return true;
     } catch (error: unknown) {
       logError("Error in unlockWithKeychain", error as Error);
       return false;
