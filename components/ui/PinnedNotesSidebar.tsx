@@ -129,7 +129,7 @@ export function PinnedNotesSidebar({ offset = 0 }: { offset?: number }) {
               fontSize: '1rem',
             }}
           >
-            Pinned ({pinnedNotes.length})
+            Pinned ({displayNotes.length})
           </Typography>
         </Stack>
       </Box>
