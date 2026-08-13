@@ -8,6 +8,8 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
+import { toast } from 'react-hot-toast';
 
 const TAG_COLOR_MAP: Record<string, string> = {
   Personal: '#3B82F6',
@@ -129,6 +131,7 @@ export default function IdeasPage() {
   const { open: openUnified } = useUnifiedDrawer();
   const { setConfiguration, resetConfiguration } = useFAB();
   const [isDesktop, setIsDesktop] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
     const check = () => setIsDesktop(window.innerWidth >= 768);
@@ -138,6 +141,7 @@ export default function IdeasPage() {
   }, []);
 
   const openCreateNote = useCallback(() => {
+    setCreateOpen(true);
     openUnified('note', { isPublic: false, isGuest: false });
   }, [openUnified]);
 
@@ -364,6 +368,23 @@ export default function IdeasPage() {
       )}
         </div>
       </div>
+
+      <ObjectCreateDrawer
+        open={createOpen}
+        kind="note"
+        onClose={() => setCreateOpen(false)}
+        onNoteCreated={(note) => {
+          if (!note?.$id) return;
+          upsertNote(note as any);
+          setNotes((prev) => {
+            if (prev.some((n) => n.$id === note.$id)) {
+              return prev.map((n) => (n.$id === note.$id ? { ...n, ...note } : n));
+            }
+            return [note, ...prev];
+          });
+          toast.success('Idea saved locally');
+        }}
+      />
     </div>
   );
 }
