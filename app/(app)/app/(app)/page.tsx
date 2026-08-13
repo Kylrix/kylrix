@@ -314,19 +314,21 @@ export default function NotesPage() {
 
 
 
-  // Local-first: NotesContext is SoT via RxDB (note.shared-cache, architecture.local-first). No second LocalEngine/RxDB fetch here — that duplicated and clobbered isPinned/tags.
+  // Local-first: NotesContext is SoT via RxDB (note.shared-cache, architecture.local-first).
   const unifiedSorted = useMemo(() => {
     const src = visibleNotes.length ? visibleNotes : combinedNotes.filter(isDefaultWorkspaceObject as any);
-    // Secondary pin sort — pinned first, then newest (like TaskContext getFilteredTasks / NotesContext sortedNotes)
     return [...src].sort((a: any, b: any) => {
-      const aPinned = isPinned(a.$id) ? 1 : 0;
-      const bPinned = isPinned(b.$id) ? 1 : 0;
-      if (aPinned !== bPinned) return bPinned - aPinned;
-      return new Date(b.$updatedAt || (b as any).updatedAt || b.$createdAt || 0).getTime() - new Date(a.$updatedAt || (a as any).updatedAt || a.$createdAt || 0).getTime();
+      const aPinned = Boolean(a.isPinned || isPinned(a.$id));
+      const bPinned = Boolean(b.isPinned || isPinned(b.$id));
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      const aTime = new Date(a.$updatedAt || (a as any).updatedAt || a.$createdAt || 0).getTime();
+      const bTime = new Date(b.$updatedAt || (b as any).updatedAt || b.$createdAt || 0).getTime();
+      return bTime - aTime;
     });
   }, [visibleNotes, combinedNotes, isPinned]);
-  const pinnedNotes = useMemo(() => unifiedSorted.filter((n: any) => isPinned(n.$id)), [unifiedSorted, isPinned]);
-  const regularSourceNotes = useMemo(() => unifiedSorted.filter((n: any) => !isPinned(n.$id)), [unifiedSorted, isPinned]);
+  const pinnedNotes = useMemo(() => unifiedSorted.filter((n: any) => Boolean(n.isPinned || isPinned(n.$id))), [unifiedSorted, isPinned]);
+  const regularSourceNotes = useMemo(() => unifiedSorted.filter((n: any) => !Boolean(n.isPinned || isPinned(n.$id))), [unifiedSorted, isPinned]);
 
   // Fetch notes action for the search hook
   const fetchNotesAction = useCallback(async () => {
