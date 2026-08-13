@@ -120,6 +120,7 @@ export function NativeSidebarBridge() {
             isOpen
             embedded
             onClose={() => {
+              lastKeyRef.current = null;
               wallet.closeWallet();
               overlay.closeOverlay();
             }}
@@ -136,6 +137,7 @@ export function NativeSidebarBridge() {
           isOpen
           embedded
           onClose={() => {
+            lastKeyRef.current = null;
             wallet.closeWallet();
             dismissRef.current();
           }}

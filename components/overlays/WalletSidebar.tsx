@@ -967,7 +967,7 @@ export const WalletSidebar = ({
                     ))}
                 </Stack>
             </Drawer>
-        </Box>
+        </div>
     );
 };
 
