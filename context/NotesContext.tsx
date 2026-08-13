@@ -517,9 +517,19 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     const normalized = normalizeVisibility(note);
     let added = false;
     setNotes((prev) => {
-      if (prev.some((n) => n.$id === normalized.$id)) {
+      const existingIndex = prev.findIndex((n) => n.$id === normalized.$id);
+      if (existingIndex !== -1) {
+        const existing = prev[existingIndex];
+        if (
+          existing.title === normalized.title &&
+          existing.content === normalized.content &&
+          existing.isPublic === normalized.isPublic &&
+          existing.isGuest === normalized.isGuest &&
+          JSON.stringify(existing.tags) === JSON.stringify(normalized.tags)
+        ) {
+          return prev;
+        }
         const updated = dedupeNotesById(prev.map((item) => (item.$id === normalized.$id ? normalized : item)));
-        // Persist bulk cache so items survive offline navigation
         if (INITIAL_NOTES_CACHE_KEY) {
           setCachedData(INITIAL_NOTES_CACHE_KEY, {
             notes: updated,
@@ -531,7 +541,6 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       }
       added = true;
       const updated = dedupeNotesById([normalized, ...prev]);
-      // Persist bulk cache so new items survive offline navigation
       if (INITIAL_NOTES_CACHE_KEY) {
         setCachedData(INITIAL_NOTES_CACHE_KEY, {
           notes: updated,

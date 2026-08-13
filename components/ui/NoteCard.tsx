@@ -253,6 +253,19 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       return;
     }
     setActiveDetail({ type: 'note', id: note.$id, data: note });
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
+    const NoteDetailSidebarComp = require('@/components/ui/NoteDetailSidebar').NoteDetailSidebar;
+    if (isDesktop) {
+      openSidebar(
+        <NoteDetailSidebarComp note={liveNote} onClose={closeSidebar} />,
+        note.$id,
+        { hideHeader: true }
+      );
+    } else {
+      openOverlay(
+        <NoteDetailSidebarComp note={liveNote} onClose={closeOverlay} />
+      );
+    }
   };
 
   const accessControlItems = useAccessControlMenuItems({
