@@ -46,29 +46,66 @@ export function DeleteNoteDrawer({ isOpen, onClose, onConfirm, noteTitle }: {
 
   return (
     <Drawer 
-        anchor="bottom" 
-        open={isOpen} 
-        onClose={onClose} 
-        PaperProps={{ sx: DRAWER_SX }} 
-        ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
+      anchor="bottom" 
+      open={isOpen} 
+      onClose={onClose} 
+      PaperProps={{
+        sx: {
+          bgcolor: '#161412',
+          backgroundImage: 'none',
+          borderTopLeftRadius: '24px',
+          borderTopRightRadius: '24px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          maxWidth: 600,
+          width: '100%',
+          mx: 'auto',
+        }
+      }} 
+      ModalProps={{ keepMounted: false, disablePortal: true }}
     >
-      <Box sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography sx={{ fontWeight: 900, fontSize: '1.2rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
+      <Box sx={{ px: 3, pt: 3, pb: 4, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 2, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          <Typography component="span" sx={{ fontWeight: 900, fontSize: '1.05rem', color: '#fff', fontFamily: 'var(--font-clash)', textTransform: 'uppercase', letterSpacing: '-0.01em' }}>
             Delete Note?
           </Typography>
-          <IconButton onClick={onClose} sx={{ color: '#9B9691' }}><X size={20} /></IconButton>
+          <IconButton 
+            onClick={onClose} 
+            sx={{ 
+              color: 'rgba(255,255,255,0.4)', 
+              bgcolor: '#0A0908', 
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '12px',
+              width: 34,
+              height: 34,
+              '&:hover': { color: '#fff', bgcolor: '#1C1A18' } 
+            }}
+          >
+            <X size={15} />
+          </IconButton>
         </Box>
         
-        <Typography sx={{ color: '#9B9691', mb: 3, fontWeight: 500 }}>
-          Are you sure you want to permanently delete &quot;{noteTitle}&quot;? This action cannot be undone.
-        </Typography>
+        <Box sx={{ p: 2, bgcolor: '#0A0908', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px' }}>
+          <Typography component="span" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', fontFamily: 'var(--font-satoshi)', lineHeight: 1.5 }}>
+            Are you sure you want to permanently delete &quot;{noteTitle}&quot;? This action cannot be undone.
+          </Typography>
+        </Box>
         
-        <Stack direction="row" spacing={2}>
-            <Button fullWidth variant="outlined" onClick={onClose} sx={{ borderRadius: '12px', py: 1.5 }}>Cancel</Button>
-            <Button fullWidth variant="contained" color="error" onClick={handleDelete} disabled={loading} sx={{ borderRadius: '12px', py: 1.5, bgcolor: '#FF4D4D' }}>
-                {loading ? 'Deleting...' : 'Delete Permanently'}
-            </Button>
+        <Stack direction="row" spacing={1.5} sx={{ pt: 1 }}>
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="flex-1 py-3 rounded-xl border border-white/8 bg-[#0A0908] hover:bg-[#1C1A18] text-white font-satoshi font-bold text-xs transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button 
+            type="button" 
+            onClick={handleDelete} 
+            disabled={loading} 
+            className="flex-1 py-3 rounded-xl border border-red-500/30 bg-red-600 hover:bg-red-700 text-white font-satoshi font-bold text-xs transition-all shadow-[0_4px_16px_rgba(220,38,38,0.3)] disabled:opacity-50 cursor-pointer"
+          >
+            {loading ? 'Deleting...' : 'Delete Permanently'}
+          </button>
         </Stack>
       </Box>
     </Drawer>
