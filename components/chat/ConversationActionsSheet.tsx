@@ -632,7 +632,9 @@ export default function ConversationActionsSheet({
         open={open}
         onClose={onClose}
         ModalProps={{
-          keepMounted: false}}
+          keepMounted: false,
+          sx: { zIndex: 14000 },
+        }}
         PaperProps={{
           sx: {
             height: '60vh',
@@ -642,7 +644,7 @@ export default function ConversationActionsSheet({
             backgroundImage: 'none',
             border: '1px solid rgba(255,255,255,0.08)',
             overflow: 'hidden',
-            zIndex: 1305}}}
+            zIndex: 14000}}}
       >
           <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', pt: { xs: 'env(safe-area-inset-top)', md: 0 } }}>
           <Box sx={{ px: 2.5, pt: 2.5, pb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
