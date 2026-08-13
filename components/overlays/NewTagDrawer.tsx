@@ -368,156 +368,114 @@ export function NewTagDrawer() {
             </Paper>
           )}
 
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
+          {/* Tag Name Input */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography component="span" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
               Tag Name
             </Typography>
-            <TextField
-              fullWidth
+            <input
+              type="text"
               required
               autoFocus
               value={formData.name}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g. Research"
-              variant="standard"
-              InputProps={{
-                disableUnderline: true,
-                sx: {
-                  bgcolor: VOID,
-                  borderRadius: '16px',
-                  color: 'white',
-                  px: 2,
-                  py: 1.5,
-                  fontFamily: fontUi,
-                  fontWeight: 600,
-                  border: BORDER,
-                  '&:hover': { borderColor: '#4F4C49' },
-                  '&.ob-focused': { borderColor: SYSTEM_PRIMARY }
-                }
-              }}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="e.g. Research, Work, High Priority"
+              className="w-full bg-[#0A0908] border border-white/10 focus:border-[#A855F7] rounded-2xl px-4 py-3 text-sm text-white font-satoshi font-semibold placeholder-white/20 focus:outline-none transition-all"
             />
           </Box>
 
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
-              Description
+          {/* Description Input */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography component="span" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
+              Description <span style={{ opacity: 0.5 }}>(Optional)</span>
             </Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
+            <textarea
+              rows={2}
               value={formData.description}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Optional notes about this tag..."
-              variant="standard"
-              InputProps={{
-                disableUnderline: true,
-                sx: {
-                  bgcolor: VOID,
-                  borderRadius: '16px',
-                  color: 'white',
-                  px: 2,
-                  py: 1.5,
-                  fontFamily: fontUi,
-                  fontWeight: 500,
-                  border: BORDER,
-                  '&:hover': { borderColor: '#4F4C49' },
-                  '&.ob-focused': { borderColor: SYSTEM_PRIMARY }
-                }
-              }}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Brief context or use-case for this tag..."
+              className="w-full bg-[#0A0908] border border-white/10 focus:border-[#A855F7] rounded-2xl px-4 py-3 text-sm text-white font-satoshi placeholder-white/20 focus:outline-none transition-all resize-none"
             />
           </Box>
 
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 2, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
-              Theme Color
+          {/* Color Palette Picker */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Typography component="span" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)' }}>
+              Color Theme
             </Typography>
-            <Grid container spacing={1.5} sx={{ mb: 1 }}>
-              {predefinedColors.map((color) => (
-                <Grid size="auto" key={color}>
-                  <Tooltip title={color} arrow>
-                    <Box
-                      onClick={() => setFormData({ ...formData, color })}
-                      sx={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: '10px',
-                        bgcolor: color,
-                        cursor: 'pointer',
-                        border: '3px solid',
-                        borderColor: formData.color === color ? 'white' : 'transparent',
-                        transition: BRAND_TRANSITION,
-                        '&:hover': { transform: 'scale(1.1)' }
-                      }}
-                    />
-                  </Tooltip>
-                </Grid>
-              ))}
-            </Grid>
-            
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 2, p: 1.5, bgcolor: VOID, borderRadius: RADIUS_SMALL, border: BORDER }}>
-               <Box sx={{ position: 'relative', width: 32, height: 32, borderRadius: '6px', overflow: 'hidden', border: BORDER }}>
-                 <input 
-                  type="color"
-                  value={formData.color}
-                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  style={{ 
-                    position: 'absolute',
-                    top: '-50%',
-                    left: '-50%',
-                    width: '200%',
-                    height: '200%',
-                    border: 'none',
-                    padding: 0,
-                    margin: 0,
-                    cursor: 'pointer',
-                    background: 'none'
+            <div className="flex flex-wrap gap-2.5">
+              {predefinedColors.map((color) => {
+                const isSelected = formData.color === color;
+                return (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, color })}
+                    className="w-8 h-8 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                    style={{
+                      backgroundColor: color,
+                      transform: isSelected ? 'scale(1.1)' : 'scale(1)',
+                      boxShadow: isSelected ? `0 0 14px ${color}80` : 'none',
+                      outline: isSelected ? '2px solid white' : 'none',
+                      outlineOffset: '2px',
+                    }}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Custom Color Input & Live Preview */}
+            <div className="mt-2 p-3 bg-[#0A0908] border border-white/5 rounded-2xl flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative w-7 h-7 rounded-lg overflow-hidden border border-white/10 shrink-0">
+                  <input
+                    type="color"
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                    className="absolute -top-2 -left-2 w-12 h-12 cursor-pointer bg-transparent border-0"
+                  />
+                </div>
+                <span className="text-white text-xs font-mono font-bold tracking-wider">
+                  {formData.color.toUpperCase()}
+                </span>
+              </div>
+
+              {formData.name.trim() && (
+                <div
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-extrabold tracking-wider uppercase border"
+                  style={{
+                    color: formData.color,
+                    borderColor: `${formData.color}40`,
+                    backgroundColor: `${formData.color}15`,
                   }}
-                 />
-               </Box>
-               <Typography variant="caption" sx={{ fontWeight: 800, color: '#fff', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                 {formData.color.toUpperCase()}
-               </Typography>
-            </Stack>
+                >
+                  {formData.name.toUpperCase()}
+                </div>
+              )}
+            </div>
           </Box>
 
-          <Box sx={{ mt: 'auto', pt: 4 }}>
-            <Button 
-              fullWidth
+          {/* Action Buttons */}
+          <Box sx={{ mt: 'auto', pt: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <button
               type="submit"
-              variant="contained"
               disabled={isSaving || !formData.name.trim()}
-              sx={{
-                bgcolor: SYSTEM_PRIMARY,
-                color: '#fff',
-                fontWeight: 800,
-                fontSize: '0.9rem',
-                py: 1.75,
-                borderRadius: RADIUS_SMALL,
-                textTransform: 'none',
-                boxShadow: 'none',
-                transition: BRAND_TRANSITION,
-                '&:hover': { bgcolor: SYSTEM_HOVER },
-                '&.ob-disabled': { bgcolor: HOVER, color: TEXT_MUTED }
-              }}
+              className="w-full py-3.5 px-4 rounded-2xl bg-[#A855F7] hover:bg-[#9333EA] disabled:opacity-40 disabled:hover:bg-[#A855F7] text-white font-bold text-sm tracking-wide transition-all shadow-[0_4px_16px_rgba(168,85,247,0.3)] flex items-center justify-center gap-2 cursor-pointer"
             >
-              {isSaving ? <CircularProgress size={20} color="inherit" /> : (editingTag ? 'Update Tag' : 'Create Tag')}
-            </Button>
-            
-            <Button 
-              fullWidth
+              {isSaving ? (
+                <CircularProgress size={18} color="inherit" />
+              ) : (
+                <span>{editingTag ? 'Update Tag' : 'Create Tag'}</span>
+              )}
+            </button>
+
+            <button
+              type="button"
               onClick={close}
-              sx={{ 
-                mt: 1.5,
-                color: TEXT_MUTED, 
-                fontWeight: 700, 
-                fontSize: '0.85rem',
-                textTransform: 'none',
-                '&:hover': { color: '#fff', bgcolor: 'transparent' }
-              }}
+              className="w-full py-2.5 text-center text-xs text-white/40 hover:text-white font-bold transition-colors cursor-pointer"
             >
               Dismiss
-            </Button>
+            </button>
           </Box>
         </Box>
       </Box>
