@@ -182,22 +182,25 @@ export default function AppTestPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {notes.map((n) => {
-              const isShared = n.isPublic || n.isGuest || (n.$permissions && n.$permissions.some((p: string) => p.includes('Role.any') || p.includes('user:')));
+              const isPinned = Boolean(n.isPinned);
+              const isPublic = Boolean(n.isPublic);
+              const isShared = Boolean(n.isGuest || (n.$permissions && n.$permissions.some((p: string) => p.includes('user:') && !p.includes(`user:${n.userId}`))));
+
               return (
                 <div key={n.$id} className="p-4 bg-[#161412] border border-white/10 rounded-2xl space-y-2 relative">
                   <div className="flex items-center justify-between">
                     <p className="text-pink-400 font-bold truncate max-w-[200px]">{n.title || 'Untitled Idea'}</p>
-                    <div className="flex items-center gap-2">
-                      {n.isPinned && (
-                        <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg text-[10px] flex items-center gap-1">
-                          <Pin size={10} /> Pinned
-                        </span>
-                      )}
-                      {isShared && (
-                        <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-lg text-[10px] flex items-center gap-1">
-                          <Globe size={10} /> Shared
-                        </span>
-                      )}
+                    <div className="flex items-center gap-1.5">
+                      <Pin 
+                        size={14} 
+                        className={isPinned ? "text-amber-400 fill-amber-400/20" : "text-white/20"} 
+                        aria-label={isPinned ? "Pinned" : "Unpinned"}
+                      />
+                      <Globe 
+                        size={14} 
+                        className={isPublic || isShared ? "text-emerald-400" : "text-white/20"} 
+                        aria-label={isPublic || isShared ? "Shared/Public" : "Private"}
+                      />
                     </div>
                   </div>
                   <p className="text-white/70 line-clamp-2">{n.content || 'Empty note content'}</p>
