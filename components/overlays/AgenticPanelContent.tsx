@@ -1871,19 +1871,21 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto px-5 py-3 flex flex-col gap-2">
+            <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
               {loadingSessions && sessions.length === 0 ? (
-                <div className="flex items-center justify-center py-8 gap-2">
-                  <RefreshCw size={14} className="animate-spin text-[#9B9691]" />
-                  <span className="text-[#9B9691] text-xs font-semibold">Loading sessions…</span>
+                <div className="flex items-center justify-center py-12 gap-2.5">
+                  <RefreshCw size={15} className="animate-spin text-[#9B9691]" />
+                  <span className="text-[#9B9691] text-xs font-semibold">Loading past chats…</span>
                 </div>
               ) : sessions.length === 0 ? (
-                <div className="text-center py-8 text-[#9B9691] text-xs font-semibold">
-                  No active session threads. Click + to start one.
+                <div className="text-center py-12 text-[#9B9691] text-xs font-medium flex flex-col items-center gap-2">
+                  <History size={24} className="text-white/20" />
+                  <span>No past sessions yet. Click + above to start a fresh chat.</span>
                 </div>
               ) : (
                 sessions.map((sess) => {
                   const isObjectSession = Boolean((sess as any).targetType && (sess as any).targetId);
+                  const isSelected = sess.id === activeSessionId;
                   const objectIcon = (() => {
                     const t = String((sess as any).targetType || '');
                     if (t === 'idea' || t === 'note') return '💡';
@@ -1894,29 +1896,26 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                     if (t === 'event') return '📅';
                     return '🔗';
                   })();
-                  let previewText = 'Empty session thread';
-                  let titleText = `Session ${new Date(sess.createdAt).toLocaleDateString()}`;
+                  let previewText = 'Empty conversation';
+                  let titleText = `Chat from ${new Date(sess.createdAt || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
                   try {
                     const parsed = JSON.parse(sess.chatHistory || '[]');
                     const firstUser = parsed.find((m: any) => m.role === 'user');
                     const lastMsg = parsed[parsed.length - 1];
                     if (firstUser?.content) {
-                      titleText = visibleChatContent('user', firstUser.content).slice(0, 72) || titleText;
+                      titleText = visibleChatContent('user', firstUser.content).slice(0, 80) || titleText;
                     }
                     if (lastMsg) {
                       let body = visibleChatContent(lastMsg.role, lastMsg.content);
-                      // Sidekick sessions store JSON with oneLiner — show hint only, not full JSON
                       if (isObjectSession) {
                         try {
                           const j = JSON.parse(body);
                           if (j?.oneLiner) body = j.oneLiner;
                           else if (j?.response) body = String(j.response).slice(0, 80);
                           else if (typeof j === 'object') body = j.oneLiner || j.title || 'Sidekick session';
-                        } catch {
-                          // if body is already plain text, keep it
-                        }
+                        } catch {}
                       }
-                      body = body.replace(/\s+/g, ' ').trim().slice(0, 96);
+                      body = body.replace(/\s+/g, ' ').trim().slice(0, 110);
                       previewText = `${lastMsg.role === 'user' ? 'You' : 'Kylie'}: ${body}`;
                     }
                   } catch {}
@@ -1930,7 +1929,6 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                           const id = (sess as any).targetId as string;
                           setShowSessionsDrawer(false);
                           onClose();
-                          // Open in Sidekick, not general sidebar — reuse same targetType/targetId session
                           window.dispatchEvent(new CustomEvent('kylrix:open-sidekick', { detail: { type: t, id } }));
                           return;
                         }
@@ -1950,33 +1948,52 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                       onTouchEnd={clearSessionLongPress}
                       onTouchMove={clearSessionLongPress}
                       onTouchCancel={clearSessionLongPress}
-                      className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl border transition cursor-pointer text-left group max-h-[72px] overflow-hidden ${isObjectSession ? 'bg-[#A855F7]/10 border-[#A855F7]/20 hover:bg-[#A855F7]/15 hover:border-[#A855F7]/30' : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.05] hover:border-white/10'}`}
+                      className={`w-full flex items-center justify-between gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer text-left group select-none ${
+                        isSelected
+                          ? 'bg-white/[0.08] border-[#A855F7]/40 ring-1 ring-[#A855F7]/30'
+                          : isObjectSession
+                          ? 'bg-[#A855F7]/10 border-[#A855F7]/20 hover:bg-[#A855F7]/15 hover:border-[#A855F7]/35'
+                          : 'bg-[#141210] border-white/8 hover:bg-[#1A1816] hover:border-white/15'
+                      }`}
                     >
-                      <div className="min-w-0 flex-1 flex flex-col gap-0.5 overflow-hidden">
-                        <span className="text-white text-xs font-bold leading-tight truncate flex items-center gap-2">
-                          {isObjectSession && <span className="shrink-0 text-[11px]">{objectIcon}</span>}
-                          <span className="truncate">{titleText}</span>
-                          {isObjectSession && <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-[#A855F7]/20 text-[#E9D5FF] text-[9px] font-black uppercase tracking-wider">{String((sess as any).targetType)}</span>}
-                          {(sess as any).isPublic === true || (sess as any).isGuest === true ? <span className="shrink-0 px-1.5 py-0.5 rounded-full bg-indigo-500/15 text-[#818CF8] text-[9px] font-black border border-indigo-500/20">SHARED</span> : null}
-                          {sess.isPinned === true && <span className="text-[10px] text-[#F59E0B] font-black">PINNED</span>}
-                        </span>
-                        <span className="text-[#9B9691] text-[10px] leading-snug line-clamp-1 flex items-center gap-1 max-h-[20px] overflow-hidden">
-                          {isObjectSession && <span className="shrink-0">↗</span>}
-                          <span className="truncate">{previewText}</span>
-                        </span>
+                      <div className="min-w-0 flex-1 flex flex-col gap-1.5 overflow-hidden">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {isObjectSession && <span className="shrink-0 text-xs">{objectIcon}</span>}
+                          <span className="text-white text-xs font-bold font-clash leading-tight truncate">
+                            {titleText}
+                          </span>
+                          {isObjectSession && (
+                            <span className="shrink-0 px-2 py-0.5 rounded-md bg-[#A855F7]/20 text-[#E9D5FF] text-[9px] font-black uppercase tracking-wider font-mono">
+                              {String((sess as any).targetType)}
+                            </span>
+                          )}
+                          {((sess as any).isPublic === true || (sess as any).isGuest === true) && (
+                            <span className="shrink-0 px-2 py-0.5 rounded-md bg-indigo-500/15 text-[#818CF8] text-[9px] font-black border border-indigo-500/20 font-mono">
+                              SHARED
+                            </span>
+                          )}
+                          {sess.isPinned === true && (
+                            <span className="shrink-0 text-[10px] text-[#F59E0B] font-black font-mono">
+                              PINNED
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[#9B9691] text-[11px] font-satoshi leading-relaxed truncate m-0">
+                          {previewText}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
+                      <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
                         <button
                           type="button"
                           onClick={(e) => handleShareSession(e, sess.id, sess.isPublic === true || sess.isGuest === true)}
-                          title={sess.isPublic || sess.isGuest ? 'Session is shared — tap to make private' : 'Share session'}
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center border transition ${
+                          title={sess.isPublic || sess.isGuest ? 'Session is shared' : 'Share session'}
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-colors ${
                             sess.isPublic || sess.isGuest
                               ? 'text-[#818CF8] bg-indigo-500/15 border-indigo-500/20'
-                              : 'text-white/30 hover:text-white hover:bg-white/[0.06] border-transparent'
+                              : 'text-white/40 hover:text-white hover:bg-white/[0.08] border-transparent'
                           }`}
                         >
-                          <Share2 size={13} />
+                          <Share2 size={14} />
                         </button>
                         <button
                           type="button"
@@ -1985,9 +2002,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                             openSessionActionsDrawer(sess);
                           }}
                           title="More options"
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-white/30 hover:text-white hover:bg-white/[0.06] border border-transparent"
+                          className="w-8 h-8 rounded-xl flex items-center justify-center text-white/40 hover:text-white hover:bg-white/[0.08] border border-transparent transition-colors"
                         >
-                          <MoreHorizontal size={13} />
+                          <MoreHorizontal size={14} />
                         </button>
                       </div>
                     </div>
