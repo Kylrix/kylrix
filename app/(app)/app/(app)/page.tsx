@@ -11,6 +11,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
 import { toast } from 'react-hot-toast';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 const TAG_COLOR_MAP: Record<string, string> = {
@@ -233,26 +234,24 @@ export default function IdeasPage() {
         <div className="min-w-0 w-full flex flex-col gap-6">
           {/* Top Nav Switcher (Goals-inspired structure) */}
           <div className="flex items-center gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-2xl w-fit select-none">
-            <button
-              type="button"
+            <Link
+              href="/app"
               className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.25)]"
             >
               Ideas
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push('/forms')}
+            </Link>
+            <Link
+              href="/forms"
               className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
             >
               Forms
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push('/tags')}
+            </Link>
+            <Link
+              href="/tags"
               className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
             >
               Tags
-            </button>
+            </Link>
           </div>
 
           {/* Tags Filter Row (positioned under top nav switcher like Goals) */}
