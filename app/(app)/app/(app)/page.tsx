@@ -326,7 +326,7 @@ export default function IdeasPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {displayPinned.slice(0, 3).map((note) => (
-                  <NoteObjectRow key={note.$id} note={note} />
+                  <NoteObjectRow key={note.$id} note={note} onDelete={handleDeleteNote} />
                 ))}
               </div>
             </div>
@@ -342,7 +342,7 @@ export default function IdeasPage() {
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {displayUnpinned.map((note) => (
-                  <NoteObjectRow key={note.$id} note={note} />
+                  <NoteObjectRow key={note.$id} note={note} onDelete={handleDeleteNote} />
                 ))}
               </div>
             </div>

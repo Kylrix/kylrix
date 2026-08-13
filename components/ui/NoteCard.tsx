@@ -65,18 +65,35 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const unifiedDrawer = useUnifiedDrawer();
   const openShare = React.useCallback(() => unifiedDrawer.open('share-note', { noteId: note.$id, noteTitle: note.title }), [unifiedDrawer, note.$id, note.title]);
   const openDelete = React.useCallback(() => unifiedDrawer.open('delete-confirm', { 
-    title: `Delete "${note.title || 'Untitled'}"?`,
+    title: `Move "${note.title || 'Untitled'}" to Trash?`,
     resourceName: 'this idea',
-    confirmLabel: 'Delete Idea',
+    confirmLabel: 'Move to Trash',
     onConfirm: async () => {
-      if (onDelete) {
-        await onDelete(note.$id);
-        return;
-      }
-      await deleteNoteAction(note.$id);
+      // 1. Instant local removal — barred from showing up immediately
       removeNote(note.$id);
+      if (onDelete) {
+        onDelete(note.$id);
+      }
+
+      // 2. Immediate LocalEngine cache purge for zero-stale re-paint
+      try {
+        const uid = user?.$id || 'guest';
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cached = await LocalEngine.cacheGet<{ rows: any[] }>(`f_ideas_${uid}`);
+        if (cached?.rows) {
+          const updated = cached.rows.filter((r: any) => r.$id !== note.$id);
+          await LocalEngine.cacheSet(`f_ideas_${uid}`, { rows: updated, total: updated.length });
+        }
+      } catch {}
+
+      // 3. High-priority remote trash synchronization
+      try {
+        await deleteNoteAction(note.$id);
+      } catch (err) {
+        console.warn('[NoteCard] Remote trash sync failed:', err);
+      }
     },
-  }), [unifiedDrawer, note.title, note.$id, onDelete, removeNote]);
+  }), [unifiedDrawer, note.title, note.$id, onDelete, removeNote, user?.$id]);
 
   const resolveNoteShareUrl = React.useCallback(async () => {
     if (note.dek) {
