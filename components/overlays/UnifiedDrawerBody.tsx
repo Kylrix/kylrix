@@ -2,6 +2,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
+import { Trash2, X } from 'lucide-react';
 import type { DrawerContent } from '@/context/UnifiedDrawerContext';
 
 const LoginDrawer = dynamic(() => import('./LoginDrawer').then((m) => m.LoginDrawer), { ssr: false });
