@@ -55,7 +55,7 @@ function DashboardPageContent() {
       try {
         const { account } = await import('@/lib/appwrite/client');
         const prefs = await account.getPrefs();
-        if ((prefs as any)?.developerMode) setIsDevMode(true);
+        if ((prefs as any)?.developerMode) _setIsDevMode(true);
       } catch {}
     })();
   }, []);
