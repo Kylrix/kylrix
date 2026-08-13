@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { RefreshCw, Tag, X, ChevronRight } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { RefreshCw, Tag, X, ChevronRight, Plus } from 'lucide-react';
 import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
 import { useNotes } from '@/context/NotesContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
+import { useFAB } from '@/context/FABContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 const TAG_COLOR_MAP: Record<string, string> = {
   Personal: '#3B82F6',
@@ -123,6 +125,37 @@ export default function IdeasPage() {
       setLoading(false);
     }
   };
+
+  const { open: openUnified } = useUnifiedDrawer();
+  const { setConfiguration, resetConfiguration } = useFAB();
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  const openCreateNote = useCallback(() => {
+    openUnified('note', { isPublic: false, isGuest: false });
+  }, [openUnified]);
+
+  useEffect(() => {
+    if (isDesktop) {
+      resetConfiguration();
+      return;
+    }
+    setConfiguration({
+      isVisible: true,
+      mainColor: '#EC4899',
+      mainIcon: <Plus size={32} strokeWidth={3} />,
+      onMainClick: openCreateNote,
+      suppressWorkflow: true,
+      actions: [],
+    });
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration, openCreateNote, isDesktop]);
 
   useEffect(() => {
     // Fast initial render from LocalEngine cache if available (Goals/Vault local-first pattern)
