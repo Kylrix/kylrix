@@ -7,7 +7,7 @@
  * Used directly by LocalEngine; UI never touches backend.
  */
 
-import { Query, ID, Permission, Role, Models } from 'appwrite';
+import { Query, Permission, Role, Models } from 'appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 // ── Kind → table config (extend without touching service logic) ──
@@ -33,10 +33,10 @@ const OBJECT_TABLES: Record<string, TableConfig> = {
   tag:         { databaseId: APPWRITE_CONFIG.DATABASES.NOTE,      tableId: APPWRITE_CONFIG.TABLES.NOTE.TAGS,        ownerField: 'userId' },
   secret:     { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,     tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,ownerField: 'userId' },
   credential: { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,     tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,ownerField: 'userId' },
-  totp:       { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,     tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS,ownerField: 'userId' },
-  totpSecret: { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,     tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS,ownerField: 'userId' },
-  project:    { databaseId: APPWRITE_CONFIG.DATABASES.FLOW,      tableId: APPWRITE_CONFIG.TABLES.FLOW.PROJECTS || (APPWRITE_CONFIG.TABLES as any).PROJECTS, ownerField: 'userId' },
-  workspace:  { databaseId: APPWRITE_CONFIG.DATABASES.FLOW,      tableId: APPWRITE_CONFIG.TABLES.FLOW.PROJECTS || (APPWRITE_CONFIG.TABLES as any).PROJECTS, ownerField: 'userId' },
+  totp:       { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,     tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,ownerField: 'userId' },
+  totpSecret: { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,     tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,ownerField: 'userId' },
+  project:    { databaseId: APPWRITE_CONFIG.DATABASES.FLOW,      tableId: (APPWRITE_CONFIG.TABLES.FLOW as any).PROJECTS || (APPWRITE_CONFIG.TABLES as any).PROJECTS || 'projects', ownerField: 'userId' },
+  workspace:  { databaseId: APPWRITE_CONFIG.DATABASES.FLOW,      tableId: (APPWRITE_CONFIG.TABLES.FLOW as any).PROJECTS || (APPWRITE_CONFIG.TABLES as any).PROJECTS || 'projects', ownerField: 'userId' },
   folder:     { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,     tableId: APPWRITE_CONFIG.TABLES.VAULT.FOLDERS,    ownerField: 'userId' },
   // system-level (admin)
   token_registry: { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: 'token_registry', ownerField: 'userId', system: true },
@@ -53,7 +53,7 @@ function resolveConfig(kind: ObjectKind): TableConfig {
 export async function unifiedRead<T extends Models.Row = Models.Row>(
   kind: ObjectKind,
   queries: string[] = [],
-  opts?: { bypassCache?: boolean }
+  _opts?: { bypassCache?: boolean }
 ): Promise<{ total: number; rows: T[] }> {
   const { databaseId, tableId } = resolveConfig(kind);
   try {

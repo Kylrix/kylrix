@@ -4,6 +4,7 @@
  * LocalEngine — Decoupled universal local storage substrate for local copy & RxDB IndexedDB.
  * Independent of SyncEngine, readable and writable by all application engines (Sync, Spine, Neural).
  */
+import type { Models } from 'appwrite';
 
 import { getRxDB } from '@/lib/webrtc/RxDBManager';
 
@@ -218,7 +219,7 @@ export const LocalEngine = {
 
   // ── Unified object handles — UI calls these, never backend directly ──
   /** Manual fetch handle: UI can force refresh when cache feels stale/empty */
-  async fetch<T>(kind: string, queries: string[] = [], opts?: { force?: boolean; cacheKey?: string; ttl?: number }): Promise<{ total: number; rows: T[] }> {
+  async fetch<T extends Models.Row>(kind: string, queries: string[] = [], opts?: { force?: boolean; cacheKey?: string; ttl?: number }): Promise<{ total: number; rows: T[] }> {
     const { unifiedRead } = await import('./unified-object-service');
     const cacheKey = opts?.cacheKey || `local:${kind}:${JSON.stringify(queries)}`;
     if (!opts?.force) {
@@ -238,7 +239,7 @@ export const LocalEngine = {
     return fresh;
   },
 
-  async get<T>(kind: string, id: string, opts?: { force?: boolean }): Promise<T | null> {
+  async get<T extends Models.Row>(kind: string, id: string, opts?: { force?: boolean }): Promise<T | null> {
     const { unifiedGet } = await import('./unified-object-service');
     const cacheKey = `local:${kind}:${id}`;
     if (!opts?.force) {
@@ -250,7 +251,7 @@ export const LocalEngine = {
     return doc;
   },
 
-  async create<T>(kind: string, data: Record<string, any>): Promise<T> {
+  async create<T extends Models.Row>(kind: string, data: Record<string, any>): Promise<T> {
     const { unifiedCreate } = await import('./unified-object-service');
     const row = await unifiedCreate<T>(kind, data);
     // optimistic cache
@@ -258,7 +259,7 @@ export const LocalEngine = {
     return row;
   },
 
-  async update<T>(kind: string, id: string, data: Record<string, any>): Promise<T> {
+  async update<T extends Models.Row>(kind: string, id: string, data: Record<string, any>): Promise<T> {
     const { unifiedUpdate } = await import('./unified-object-service');
     const row = await unifiedUpdate<T>(kind, id, data);
     await this.cacheSet(`local:${kind}:${id}`, row as any);
@@ -271,17 +272,17 @@ export const LocalEngine = {
     await this.cacheDelete(`local:${kind}:${id}`);
   },
 
-  async systemCreate<T>(kind: string, data: Record<string, any>): Promise<T> {
+  async systemCreate<T extends Models.Row>(kind: string, data: Record<string, any>): Promise<T> {
     const { systemCreate } = await import('./unified-object-service');
     return systemCreate<T>(kind, data);
   },
-  async systemUpdate<T>(kind: string, id: string, data: Record<string, any>): Promise<T> {
+  async systemUpdate<T extends Models.Row>(kind: string, id: string, data: Record<string, any>): Promise<T> {
     const { systemUpdate } = await import('./unified-object-service');
     return systemUpdate<T>(kind, id, data);
   },
   async systemDelete(kind: string, id: string): Promise<void> {
     const { systemDelete } = await import('./unified-object-service');
-    return systemDelete(kind, id);
+    return (systemDelete as any)(kind, id);
   },
 };
 

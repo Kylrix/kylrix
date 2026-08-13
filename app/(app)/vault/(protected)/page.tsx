@@ -1,22 +1,19 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import type { Credentials } from '@/lib/appwrite/types';
 import { useAppwriteVault } from '@/context/appwrite-context';
+import { getCurrentUserSnapshot } from '@/lib/appwrite/client';
 import {
-  deleteCredential,
-  listAllCredentials} from '@/lib/appwrite';
+  deleteCredential} from '@/lib/appwrite';
 import { useResourcePins } from '@/context/ResourcePinContext';
-import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import toast from 'react-hot-toast';
 import CredentialItem from '@/components/app/dashboard/CredentialItem';
 import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
 import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
 import SudoModal from '@/components/overlays/SudoModal';
-import { useAI } from '@/context/AIContext';
 import { useSudo } from '@/context/SudoContext';
-import { useFAB } from '@/context/FABContext';
 import { MultiSectionContainer, useSection } from '@/context/SectionContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, RefreshCw, Lock } from 'lucide-react';
@@ -39,13 +36,10 @@ function useIsDesktop() {
 }
 
 function DashboardPageContent() {
-  const { user, needsMasterPassword, isVaultUnlocked, isVaultBlurEnabled, setVaultBlurEnabled } = useAppwriteVault();
+  const { user, isVaultUnlocked, isVaultBlurEnabled, setVaultBlurEnabled } = useAppwriteVault();
   const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
-  const searchParams = useSearchParams();
+  const { requestSudo } = useSudo();
   const router = useRouter();
-  const { registerCreateModal } = useAI();
-  const { requestSudo, unlockOnDemand } = useSudo();
-  const { setConfiguration, resetConfiguration } = useFAB();
   const { openOverlay, closeOverlay } = useOverlay();
   const isDesktop = useIsDesktop();
   const { setActiveDetail } = useSection();

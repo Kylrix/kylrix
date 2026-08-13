@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Shield, Copy, Pencil, Trash2, Search, Pin, Link as LinkIcon } from 'lucide-react';
 import { useAppwriteVault } from '@/context/appwrite-context';
+import { getCurrentUserSnapshot } from '@/lib/appwrite/client';
 import { listTotpSecrets, deleteTotpSecret, listFolders } from '@/lib/appwrite';
 import { generateTOTP } from '@/lib/totp-util';
 import toast from 'react-hot-toast';
@@ -355,7 +356,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
           try {
             const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
             const db = await getRxDB().catch(() => null);
-            if (db) {
+            if (db && user?.$id) {
               const { listRawTotpSecrets } = await import('@/lib/appwrite/vault-actions');
               const rawEncrypted = await listRawTotpSecrets(user.$id).catch(() => null);
               if (rawEncrypted) {

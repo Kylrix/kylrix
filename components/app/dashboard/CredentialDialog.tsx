@@ -43,7 +43,7 @@ export default function CredentialDialog({
   open: boolean;
   onClose: () => void;
   initial?: Credentials | null;
-  onSaved: () => void;
+  onSaved: (saved?: Credentials) => void;
   prefill?: { name?: string; url?: string; username?: string };
   defaultType?: string;
 }) {
