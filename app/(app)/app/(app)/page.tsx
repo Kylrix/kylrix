@@ -121,6 +121,17 @@ export default function NotesPage() {
   const { open: openUnified } = useUnifiedDrawer();
   const { openSecondarySidebar } = useLayout();
   const { showError } = useToast();
+  const [isDevMode, setIsDevMode] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { account } = await import('@/lib/appwrite/client');
+        const prefs = await account.getPrefs();
+        if ((prefs as any)?.developerMode) setIsDevMode(true);
+      } catch {}
+    })();
+  }, []);
 
   const fetchTags = useCallback(async () => {
     if (!user) return;
@@ -745,6 +756,14 @@ export default function NotesPage() {
           >
             {isCollapsed ? <ArrowRightIcon size={16} /> : <ArrowLeftIcon size={16} />}
           </button>
+          {isDevMode && (
+            <button
+              onClick={() => router.push('/app/test')}
+              className="h-10 px-3.5 rounded-xl bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30 text-xs font-bold transition-all"
+            >
+              Test (Raw)
+            </button>
+          )}
           <button 
             onClick={handleCreateNoteClick}
             className="h-10 px-4 rounded-xl bg-[#6366F1]/10 hover:bg-[#6366F1]/20 border border-[#6366F1]/20 hover:border-[#6366F1]/40 flex items-center justify-center text-[#818CF8] font-bold text-xs gap-1.5 transition-all"
