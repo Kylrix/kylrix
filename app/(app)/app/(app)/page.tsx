@@ -181,14 +181,41 @@ export default function IdeasPage() {
     void fetchNotesBarebones();
   }, []);
 
+  const [ecosystemTagsList, setEcosystemTagsList] = useState<{ name: string; color?: string }[]>([]);
+
+  useEffect(() => {
+    // Local-first tags hydration: query LocalEngine cache first
+    void (async () => {
+      try {
+        const { account } = await import('@/lib/appwrite/client');
+        const user = await account.get().catch(() => null);
+        const uid = user?.$id || 'guest';
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cachedTags = await LocalEngine.cacheGet<{ rows: any[] }>(`f_tags_${uid}`);
+        if (cachedTags?.rows && Array.isArray(cachedTags.rows) && cachedTags.rows.length > 0) {
+          setEcosystemTagsList(cachedTags.rows);
+        } else if (uid !== 'guest') {
+          // If local tags cache is empty, request local copy engine to fetch remote tags
+          const { getAllTags } = await import('@/lib/appwrite');
+          const { rows } = await getAllTags();
+          if (Array.isArray(rows) && rows.length > 0) {
+            setEcosystemTagsList(rows);
+            await LocalEngine.cacheSet(`f_tags_${uid}`, { rows, total: rows.length });
+          }
+        }
+      } catch {}
+    })();
+  }, []);
+
   const activeNotes = notes.filter((n) => !n.isTrash);
   const pinnedNotes = activeNotes.filter((n) => n.isPinned);
   const unpinnedNotes = activeNotes.filter((n) => !n.isPinned);
 
   const tags = React.useMemo(() => {
-    const allTags = notes.flatMap((n: any) => n.tags || []).filter(Boolean);
-    return Array.from(new Set(allTags)).slice(0, 8);
-  }, [notes]);
+    const fromNotes = notes.flatMap((n: any) => n.tags || []).filter(Boolean);
+    const fromEcosystem = ecosystemTagsList.map((t) => t.name).filter(Boolean);
+    return Array.from(new Set([...fromEcosystem, ...fromNotes])).slice(0, 16);
+  }, [notes, ecosystemTagsList]);
 
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
