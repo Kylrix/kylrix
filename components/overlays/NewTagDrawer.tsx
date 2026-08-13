@@ -231,9 +231,9 @@ export function NewTagDrawer() {
       anchor={isDesktop ? 'right' : 'bottom'}
       open={isOpen}
       onClose={close}
-      ModalProps={{ keepMounted: false, disableScrollLock: false }}
+      ModalProps={{ keepMounted: false, disablePortal: false }}
       sx={{
-        zIndex: 2000,
+        zIndex: 17000,
         '& .ob-drawer-panel': {
           ...(isDesktop
             ? {
@@ -250,7 +250,7 @@ export function NewTagDrawer() {
                 borderTop: BORDER,
                 borderBottom: 0,
                 borderRight: 0,
-                zIndex: 2000}
+                zIndex: 17000}
             : {
                 height: isExpanded ? '100dvh' : '60dvh',
                 minHeight: '60dvh',
@@ -260,9 +260,9 @@ export function NewTagDrawer() {
                 borderTopRightRadius: RADIUS_LARGE,
                 border: BORDER,
                 borderBottom: 0,
-                zIndex: 2000}),
+                zIndex: 17000}),
           bgcolor: SURFACE_ASH,
-          boxShadow: 'none',
+          boxShadow: '0 -24px 60px rgba(0,0,0,0.85)',
           backgroundImage: 'none',
           overflow: 'hidden',
           display: 'flex',
