@@ -49,7 +49,7 @@ export function CreateGoalComposer({
   onGoalCreated,
   initialContent,
 }: Props) {
-  const { pushLiveGoal, selectedProjectId, userId, deleteTask, ecosystemTags, refreshEcosystemTags } = useTask();
+  const { pushLiveGoal, selectedProjectId, userId, deleteTask, ecosystemTags, refreshEcosystemTags, tasks: allTasks } = useTask();
   const { user } = useAuth();
   const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const ownerId = user?.$id || userId || 'guest';
@@ -65,6 +65,37 @@ export function CreateGoalComposer({
   const [dueDate, setDueDate] = useState(initialContent?.dueDate || '');
   const [tags, setTags] = useState<string[]>(initialContent?.tags || []);
   const [isTagSelectorOpen, setIsTagSelectorOpen] = useState(false);
+
+  // Derive available tags from both ecosystem registry and local task copy
+  const availableTagList = React.useMemo(() => {
+    const list: { name: string; color: string }[] = [];
+    const seen = new Set<string>();
+
+    (ecosystemTags || []).forEach((t: any) => {
+      if (t?.name && !seen.has(t.name)) {
+        seen.add(t.name);
+        list.push({ name: t.name, color: t.color || '#A855F7' });
+      }
+    });
+
+    (allTasks || []).forEach((task) => {
+      (task.labels || []).forEach((label) => {
+        if (label && !seen.has(label)) {
+          seen.add(label);
+          list.push({ name: label, color: '#A855F7' });
+        }
+      });
+    });
+
+    return list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  }, [ecosystemTags, allTasks]);
+
+  // Refresh tags when tag selector opens
+  useEffect(() => {
+    if (isTagSelectorOpen) {
+      void refreshEcosystemTags();
+    }
+  }, [isTagSelectorOpen, refreshEcosystemTags]);
   const [showMobileDatePicker, setShowMobileDatePicker] = useState(false);
   const [resolvedId, setResolvedId] = useState<string | undefined>(initialContent?.id);
   const [draftHydrated, setDraftHydrated] = useState(false);
@@ -612,62 +643,88 @@ export function CreateGoalComposer({
             <div className="flex-1 overflow-y-auto flex flex-col gap-2 min-h-0">
               <button
                 type="button"
-                onClick={() => {
-                  setIsTagSelectorOpen(false);
-                  openUnified('new-tag', {
-                    onSuccess: async () => {
-                      await refreshEcosystemTags();
-                      setIsTagSelectorOpen(true);
-                    },
-                  });
+              {/* Inline Create Tag Row */}
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const form = e.currentTarget;
+                  const input = form.elements.namedItem('newTagName') as HTMLInputElement;
+                  const val = input?.value?.trim();
+                  if (!val) return;
+                  try {
+                    const { createTag } = await import('@/lib/appwrite');
+                    await createTag({ name: val, description: '', color: '#A855F7' });
+                    await refreshEcosystemTags();
+                    appendTag(val);
+                    input.value = '';
+                  } catch (err: any) {
+                    appendTag(val);
+                    if (input) input.value = '';
+                  }
                 }}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#A855F7]/10 border border-dashed border-[#A855F7]/30 hover:bg-[#A855F7]/20 text-[#C084FC] text-xs font-bold font-mono flex items-center gap-2 transition-all cursor-pointer"
+                className="flex items-center gap-2 w-full mb-1"
               >
-                <Plus size={16} />
-                <span>CREATE NEW TAG</span>
-              </button>
+                <input
+                  type="text"
+                  name="newTagName"
+                  placeholder="Type new tag name & press Enter..."
+                  className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white font-mono placeholder-white/30 focus:outline-none focus:border-[#A855F7]"
+                />
+                <button
+                  type="submit"
+                  className="px-3 py-2 rounded-xl bg-[#A855F7] text-white text-xs font-bold font-mono hover:bg-[#9333EA] transition-colors shrink-0"
+                >
+                  Add
+                </button>
+              </form>
 
-              {(ecosystemTags || []).map((tag) => {
-                const isSelected = tags.includes(tag.name || '');
-                const color = (tag as any).color || '#A855F7';
-                return (
-                  <button
-                    key={tag.$id}
-                    type="button"
-                    onClick={() => {
-                      if (isSelected) {
-                        removeTag(tag.name || '');
-                      } else {
-                        appendTag(tag.name || '');
-                      }
-                    }}
-                    className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer text-left ${
-                      isSelected
-                        ? 'bg-white/10 border-white/20'
-                        : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.06] hover:border-white/10'
-                    }`}
-                    style={isSelected ? { borderColor: `${color}60`, backgroundColor: `${color}15` } : undefined}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className="w-3 h-3 rounded-md shrink-0"
-                        style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}50` }}
-                      />
-                      <span className="text-white text-xs font-mono font-bold uppercase tracking-wider">
-                        {tag.name}
-                      </span>
-                    </div>
-                    {isSelected && (
-                      <span
-                        className="text-[10px] font-mono font-black uppercase tracking-wider px-2 py-0.5 rounded-md"
-                        style={{ color, backgroundColor: `${color}20` }}
-                      >
-                        SELECTED
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+              {availableTagList.length === 0 ? (
+                <div className="text-center py-6 text-white/30 text-xs font-mono">
+                  No existing tags found. Type a name above to create your first tag.
+                </div>
+              ) : (
+                availableTagList.map((tag) => {
+                  const isSelected = tags.includes(tag.name || '');
+                  const color = tag.color || '#A855F7';
+                  return (
+                    <button
+                      key={tag.name}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          removeTag(tag.name || '');
+                        } else {
+                          appendTag(tag.name || '');
+                        }
+                      }}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer text-left ${
+                        isSelected
+                          ? 'bg-white/10 border-white/20'
+                          : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.06] hover:border-white/10'
+                      }`}
+                      style={isSelected ? { borderColor: `${color}60`, backgroundColor: `${color}15` } : undefined}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="w-3 h-3 rounded-md shrink-0"
+                          style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}50` }}
+                        />
+                        <span className="text-white text-xs font-mono font-bold uppercase tracking-wider">
+                          {tag.name}
+                        </span>
+                      </div>
+                      {isSelected && (
+                        <span
+                          className="text-[10px] font-mono font-black uppercase tracking-wider px-2 py-0.5 rounded-md"
+                          style={{ color, backgroundColor: `${color}20` }}
+                        >
+                          SELECTED
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
