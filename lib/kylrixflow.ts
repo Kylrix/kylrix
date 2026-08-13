@@ -310,8 +310,17 @@ export const calendars = {
 // --- Tasks ---
 
 export const tasks = {
-    list: (queries?: string[]) => listRows<Task>(TABLES.TASKS, queries),
-    create: (data: TableCreateData<Task> & { $id?: string }, permissions?: string[]) => {
+    list: (queries?: string[]) => {
+        // Read via client SDK — create granted read ensures single-index reliability
+        return listRows<Task>(TABLES.TASKS, queries);
+    },
+    create: async (data: TableCreateData<Task> & { $id?: string }, permissions?: string[]) => {
+        // Unified create — server SDK, grants read to owner + collaborators; normal create (user-owned)
+        try {
+            const { unifiedCreate } = await import('@/lib/services/unified-object-service');
+            const row = await unifiedCreate('task', data as Record<string, any>, { permissions });
+            if ((row as any)?.$id) return row as unknown as Task;
+        } catch {}
         const reservedId =
             typeof (data as any)?.$id === 'string' && (data as any).$id.trim()
                 ? String((data as any).$id).trim()
@@ -321,9 +330,22 @@ export const tasks = {
         return createRow<Task>(TABLES.TASKS, { ...(data as any), $id: reservedId }, permissions, reservedId);
     },
     get: (id: string) => getRow<Task>(TABLES.TASKS, id),
-    update: (id: string, data: TableUpdateData<Task>, permissions?: string[]) =>
-        updateRow<Task>(TABLES.TASKS, id, data, permissions, FLOW_DATABASE_ID),
-    delete: (id: string) => deleteRow(TABLES.TASKS, id)
+    update: async (id: string, data: TableUpdateData<Task>, permissions?: string[]) => {
+        try {
+            const { unifiedUpdate } = await import('@/lib/services/unified-object-service');
+            const row = await unifiedUpdate('task', id, data as Record<string, any>, { permissions });
+            if ((row as any)?.$id) return row as unknown as Task;
+        } catch {}
+        return updateRow<Task>(TABLES.TASKS, id, data, permissions, FLOW_DATABASE_ID);
+    },
+    delete: async (id: string) => {
+        try {
+            const { unifiedDelete } = await import('@/lib/services/unified-object-service');
+            await unifiedDelete('task', id, { recursive: true });
+            return;
+        } catch {}
+        return deleteRow(TABLES.TASKS, id);
+    }
 };
 
 export const taskCollaborators = {
@@ -337,8 +359,13 @@ export const taskCollaborators = {
 // --- Events ---
 
 export const events = {
-    list: (queries?: string[]) => listRows<Event>(TABLES.EVENTS, queries),
+    list: (queries?: string[]) => listRows<Event>(TABLES.EVENTS, queries), // read via client SDK
     create: async (data: TableCreateData<Event>, _permissions?: string[]) => {
+        try {
+            const { unifiedCreate } = await import('@/lib/services/unified-object-service');
+            const row = await unifiedCreate('event', data as Record<string, any>);
+            if ((row as any)?.$id) return row as unknown as Event;
+        } catch {}
         if (typeof window !== 'undefined') {
             const { createEvent } = await import('@/lib/actions/client-ops');
             return await createEvent(data);
@@ -348,6 +375,11 @@ export const events = {
     },
     get: (id: string) => getRow<Event>(TABLES.EVENTS, id),
     update: async (id: string, data: TableUpdateData<Event>) => {
+        try {
+            const { unifiedUpdate } = await import('@/lib/services/unified-object-service');
+            const row = await unifiedUpdate('event', id, data as Record<string, any>);
+            if ((row as any)?.$id) return row as unknown as Event;
+        } catch {}
         if (typeof window !== 'undefined') {
             const { updateEvent } = await import('@/lib/actions/client-ops');
             return await updateEvent(id, data);
@@ -356,6 +388,11 @@ export const events = {
         return await updateEventSecure(id, data);
     },
     delete: async (id: string) => {
+        try {
+            const { unifiedDelete } = await import('@/lib/services/unified-object-service');
+            await unifiedDelete('event', id, { recursive: true });
+            return;
+        } catch {}
         if (typeof window !== 'undefined') {
             const { deleteEvent } = await import('@/lib/actions/client-ops');
             return await deleteEvent(id);
