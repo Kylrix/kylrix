@@ -4,28 +4,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   X, 
   Settings, 
-  Share2, 
-  Globe, 
-  Lock, 
-  Calendar, 
   Trash2, 
   Edit3, 
   FileText, 
   Copy, 
-  Check, 
-  Send,
-  Sparkles,
-  ExternalLink,
-  ChevronRight,
-  UserCheck
+  Check
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
-import { Forms, FormsStatus } from '@/generated/appwrite/types';
-import { useAuth } from '@/context/auth/AuthContext';
-import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { Forms } from '@/generated/appwrite/types';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useToast } from '@/components/ui/Toast';
-import { LocalEngine } from '@/lib/services/LocalEngine';
 import FormSettingsDialog from './FormSettingsDialog';
 
 interface FormDetailProps {
@@ -45,8 +33,6 @@ export function FormDetail({
   onDelete,
   embedded = false,
 }: FormDetailProps) {
-  const { user } = useAuth();
-  const { open: openDrawer } = useUnifiedDrawer();
   const { closeSidebar } = useDynamicSidebar();
   const { showSuccess, showError } = useToast();
 

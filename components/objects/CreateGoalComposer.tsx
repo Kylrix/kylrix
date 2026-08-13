@@ -10,7 +10,6 @@ import { PRIORITY_COLORS } from '@/components/objects/ObjectCardMeta';
 import type { Priority, Task } from '@/types';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
-import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import {
   EventDateTimePickerSurface,
   EventDateTimePickerDrawer,
@@ -54,7 +53,6 @@ export function CreateGoalComposer({
   const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const ownerId = user?.$id || userId || 'guest';
   const { openSidebar, closeSidebar } = useDynamicSidebar();
-  const { open: openUnified } = useUnifiedDrawer();
   const { getCachedData, setCachedData } = useDataNexus();
   const draftKey = `kylrix_goal_compose_draft_${ownerId}`;
 
@@ -655,7 +653,7 @@ export function CreateGoalComposer({
                     await refreshEcosystemTags();
                     appendTag(val);
                     input.value = '';
-                  } catch (err: any) {
+                  } catch (_err: any) {
                     appendTag(val);
                     if (input) input.value = '';
                   }

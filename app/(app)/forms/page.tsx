@@ -11,10 +11,7 @@ import {
     Settings, 
     Pin, 
     FolderKanban,
-    RefreshCw,
-    ChevronRight,
-    Globe,
-    Lock
+    ChevronRight
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
@@ -24,7 +21,6 @@ import FormSettingsDialog from '@/components/forms/FormSettingsDialog';
 import { FormDetail } from '@/components/forms/FormDetail';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
-import { useRouter } from 'next/navigation';
 import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuItems';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { MultiSectionContainer } from '@/context/SectionContext';
@@ -33,12 +29,10 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useFAB } from '@/context/FABContext';
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import toast from 'react-hot-toast';
 
 export default function FormsDashboard() {
     const { user } = useAuth();
-    const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
-    const router = useRouter();
+    const { isPinned: isResourcePinned, togglePin } = useResourcePins();
     const { open: openDrawer } = useUnifiedDrawer();
     const { openSidebar, closeSidebar } = useDynamicSidebar();
     const { openOverlay, closeOverlay } = useOverlay();
@@ -51,8 +45,6 @@ export default function FormsDashboard() {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [selectedForm, setSelectedForm] = useState<Forms | null>(null);
     const [selectedDraft, setSelectedDraft] = useState<FormDraft | null>(null);
-    const [formDraftStatus, setFormDraftStatus] = useState<Record<string, boolean>>({});
-    void formDraftStatus;
 
     const handleCreate = () => {
         setSelectedForm(null);

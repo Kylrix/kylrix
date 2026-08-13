@@ -5,15 +5,11 @@ import {
   Box, 
   Typography, 
   Stack, 
-  Button, 
-  TextField, 
-  Grid, 
   CircularProgress, 
   IconButton,
   Drawer,
   useTheme,
   useMediaQuery,
-  Tooltip,
   Paper
 } from '@/lib/openbricks/primitives';
 import { 
@@ -35,9 +31,7 @@ const SURFACE_ASH = '#161412';
 const VOID = '#0A0908';
 const HOVER = '#1C1A18';
 const BORDER_HAIRLINE = '#34322F';
-const TEXT_MUTED = '#9B9691';
 const SYSTEM_PRIMARY = '#6366F1';
-const SYSTEM_HOVER = '#575CF0';
 
 const BORDER = `1px solid ${BORDER_HAIRLINE}`;
 const BRAND_TRANSITION = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
@@ -221,7 +215,6 @@ export function NewTagDrawer() {
     }
   };
 
-  const fontUi = 'var(--font-satoshi)';
   const fontDisplay = 'var(--font-clash)';
 
   if (!isOpen) return null;

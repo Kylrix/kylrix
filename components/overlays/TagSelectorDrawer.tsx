@@ -11,8 +11,7 @@ import {
   useMediaQuery,
   List,
   ListItem,
-  ListItemButton,
-  ListItemText} from '@/lib/openbricks/primitives';
+  ListItemButton} from '@/lib/openbricks/primitives';
 import { 
   X as CloseIcon,
   Tag as TagIcon,
@@ -21,16 +20,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useTask } from '@/context/TaskContext';
 import { useNotes } from '@/context/NotesContext';
 
-const SURFACE_ASH = '#161412';
-const VOID = '#0A0908';
-const HOVER = '#1C1A18';
-const BORDER_HAIRLINE = '#34322F';
-const TEXT_MUTED = '#9B9691';
 const SYSTEM_PRIMARY = '#6366F1';
-
-const BORDER = `1px solid ${BORDER_HAIRLINE}`;
-const RADIUS_LARGE = '24px';
-const RADIUS_SMALL = '12px';
 
 export function TagSelectorDrawer() {
   const theme = useTheme();

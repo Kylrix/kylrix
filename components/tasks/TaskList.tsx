@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Plus, Trash2, Sparkles, ChevronDown, ChevronUp, Tag, X, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Sparkles, ChevronDown, ChevronUp, Tag, X } from 'lucide-react';
 import GoalObjectRow from './GoalObjectRow';
 import { useTask } from '@/context/TaskContext';
 import { useFAB } from '@/context/FABContext';
@@ -76,13 +76,13 @@ export default function TaskList() {
   const completedTasks = tasks.filter(t => t.status === 'done');
 
   const rawTagOptions = getTagFilterOptions();
-  const directTaskTags = React.useMemo(() => {
-    const fromTasks = tasks.flatMap((t) => t.labels || []);
-    const fromEcosystem = (ecosystemTags || []).map((t) => t.name).filter(Boolean);
-    return Array.from(new Set([...rawTagOptions, ...fromEcosystem, ...fromTasks].filter(Boolean))).sort((a, b) =>
-      a.localeCompare(b, undefined, { sensitivity: 'base' })
-    );
-  }, [tasks, rawTagOptions, ecosystemTags]);
+  const directTaskTags = Array.from(
+    new Set([
+      ...rawTagOptions,
+      ...(ecosystemTags || []).map((t) => t.name).filter(Boolean),
+      ...tasks.flatMap((t) => t.labels || [])
+    ].filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   const tagFilterOptions = directTaskTags;
   const activeTagFilter = filter.labels?.[0] ?? null;
 
@@ -144,24 +144,7 @@ export default function TaskList() {
   };
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
-
-  const getViewTitle = () => {
-    if (activeTagFilter) return `Tag: ${activeTagFilter}`;
-    if (selectedProject) return selectedProject.name;
-    if (filter.status?.includes('done')) return 'Completed Goals';
-    if (filter.dueDate?.from && filter.dueDate?.to) {
-      const from = new Date(filter.dueDate.from);
-      const _to = new Date(filter.dueDate.to);
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      if (from.toDateString() === today.toDateString()) return 'Today';
-      if (from.toDateString() === tomorrow.toDateString()) return 'Upcoming';
-    }
-    if (filter.dueDate?.to && !filter.dueDate.from) return 'Overdue';
-    return 'All Goals';
-  };
+  void selectedProject;
 
 
   return (

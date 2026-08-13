@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { RefreshCw, Tag, X, ChevronRight, Plus } from 'lucide-react';
+import { Tag, X, ChevronRight, Plus } from 'lucide-react';
 import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
 import { useNotes } from '@/context/NotesContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
@@ -12,7 +12,6 @@ import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
 import { toast } from 'react-hot-toast';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 const TAG_COLOR_MAP: Record<string, string> = {
   Personal: '#3B82F6',
@@ -34,7 +33,6 @@ function getTagColor(tagName: string): string | null {
 }
 
 export default function IdeasPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -228,8 +226,6 @@ export default function IdeasPage() {
   const handleDeleteNote = useCallback((noteId: string) => {
     setNotes((prev) => prev.filter((n) => n.$id !== noteId));
   }, []);
-
-  const [activeMainTab, setActiveMainTab] = useState<'ideas' | 'forms' | 'tags'>('ideas');
 
   return (
     <div className="flex-1 min-h-screen pointer-events-auto">

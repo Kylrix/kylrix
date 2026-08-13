@@ -77,7 +77,6 @@ function DashboardPageContent() {
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isMultiDeleting, _setIsMultiDeleting] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleToggleSelectMode = () => {
     setIsSelectMode(!isSelectMode);
@@ -314,35 +313,6 @@ function DashboardPageContent() {
     if (!user?.$id) return;
     void loadAllCredentials();
   };
-
-  const handleManualRefresh = useCallback(async () => {
-    if (isRefreshing) return;
-    if (user?.$id && !isVaultUnlocked()) {
-      requireUnlock(() => {
-        void (async () => {
-          setIsRefreshing(true);
-          try {
-            await loadAllCredentials(true);
-          } catch (error: unknown) {
-            console.error('Manual secrets refresh failed:', error);
-            toast.error('Could not refresh secrets. Try again.');
-          } finally {
-            setTimeout(() => setIsRefreshing(false), 600);
-          }
-        })();
-      });
-      return;
-    }
-    setIsRefreshing(true);
-    try {
-      await loadAllCredentials(true);
-    } catch (error: unknown) {
-      console.error('Manual secrets refresh failed:', error);
-      toast.error('Could not refresh secrets. Try again.');
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 600);
-    }
-  }, [isRefreshing, user?.$id, isVaultUnlocked, loadAllCredentials, requireUnlock]);
 
   const handleCopy = (value: string) => {
     if (!isVaultUnlocked()) {

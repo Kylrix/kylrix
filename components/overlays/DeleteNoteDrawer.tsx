@@ -1,21 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, Typography, IconButton, Button, Stack } from '@/lib/openbricks/primitives';
+import { Box, Typography, IconButton, Stack } from '@/lib/openbricks/primitives';
 import { X } from 'lucide-react';
 import { Drawer } from '@/lib/openbricks/primitives';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import toast from 'react-hot-toast';
-
-const DRAWER_SX = {
-  borderTopLeftRadius: '24px',
-  borderTopRightRadius: '24px',
-  bgcolor: '#161412',
-  borderTop: '1px solid #34322F',
-  maxWidth: 720,
-  width: '100%',
-  mx: 'auto'
-};
 
 export function DeleteNoteDrawer({ isOpen, onClose, onConfirm, noteTitle }: { 
     isOpen: boolean, 
