@@ -112,6 +112,23 @@ export function NativeSidebarBridge() {
     }
 
     if (wallet.isWalletOpen) {
+      if (!isDesktop) {
+        if (lastKeyRef.current === 'wallet_mobile') return;
+        lastKeyRef.current = 'wallet_mobile';
+        overlay.openOverlay(
+          <WalletSidebar
+            isOpen
+            embedded
+            onClose={() => {
+              wallet.closeWallet();
+              overlay.closeOverlay();
+            }}
+            tokenIntent={wallet.tokenIntent}
+            onConsumeTokenIntent={wallet.consumeTokenIntent}
+          />
+        );
+        return;
+      }
       if (lastKeyRef.current === 'wallet') return;
       lastKeyRef.current = 'wallet';
       openRef.current(

@@ -50,6 +50,10 @@ const RightSidebar = dynamic(() => import('./layout/RightSidebar'), { ssr: false
 const AccountHealthDrawers = dynamic(() => import('./onboarding/AccountHealthDrawers').then(m => m.AccountHealthDrawers), { ssr: false });
 const UnifiedFileAttachmentDrawer = dynamic(() => import('./overlays/UnifiedFileAttachmentDrawer').then(m => m.UnifiedFileAttachmentDrawer), { ssr: false });
 const Overlay = dynamic(() => import('@/components/ui/Overlay'), { ssr: false });
+const WalletSidebar = dynamic(
+  () => import('@/components/overlays/WalletSidebar').then((m) => m.WalletSidebar),
+  { ssr: false },
+);
 const AppDynamicSidebarPortal = dynamic(
   () => import('@/components/ui/AppDynamicSidebarPortal').then((m) => m.AppDynamicSidebarPortal),
   { ssr: false },
@@ -118,7 +122,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const { isOpen: isDynamicSidebarOpen, closeSidebar } = useDynamicSidebar();
   const { isCollapsed } = useSidebarContext();
   const rightRail = useRightRailOptional();
-  const { isWalletOpen, closeWallet } = useWalletOverlay();
+  const { isWalletOpen, closeWallet, tokenIntent, consumeTokenIntent } = useWalletOverlay();
   const { } = useAppChrome();
   const { isDrawerOpen, setIsDrawerOpen } = useDrawerState();
   const { } = useCallLauncher();

@@ -1795,52 +1795,62 @@ export const WalletSidebar = ({
     const renderHeader = () => {
         const isSubView = showSettings || showSignConfirmation || showKylrixDetail;
         return (
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ pt: 1.5, px: 3, pb: 1, borderBottom: isSubView ? `1px solid ${EDGE}` : 'none', flexShrink: 0 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ pt: 2, px: { xs: 2.5, md: 3 }, pb: 1.5, borderBottom: isSubView ? `1px solid ${EDGE}` : 'none', flexShrink: 0 }}>
                 {isSubView ? (
-                    <IconButton 
-                        size="small" 
-                        onClick={() => {
-                            setShowSettings(false);
-                            setShowSignConfirmation(false);
-                            setShowKylrixDetail(false);
-                            setExportedMnemonic(null);
-                            setExportedPrivateKey(null);
-                        }}
-                        sx={{ color: 'white', p: 0.75, '&:hover': { bgcolor: HIGHLIGHT } }}
-                        aria-label="Back to main wallet"
-                    >
-                        <ChevronLeft size={20} />
-                    </IconButton>
+                    <Stack direction="row" alignItems="center" gap={1.25}>
+                        <IconButton 
+                            size="small" 
+                            onClick={() => {
+                                setShowSettings(false);
+                                setShowSignConfirmation(false);
+                                setShowKylrixDetail(false);
+                                setExportedMnemonic(null);
+                                setExportedPrivateKey(null);
+                            }}
+                            sx={{ color: 'white', p: 0.75, '&:hover': { bgcolor: HIGHLIGHT } }}
+                            aria-label="Back to main wallet"
+                        >
+                            <ChevronLeft size={20} />
+                        </IconButton>
+                        <Typography sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)', fontSize: '0.95rem' }}>
+                            {showSettings ? 'Wallet Settings' : showSignConfirmation ? 'Authorize Request' : 'Kylrix Activity'}
+                        </Typography>
+                    </Stack>
                 ) : (
-                    <Box sx={{
-                        p: 1,
-                        borderRadius: '12px',
-                        bgcolor: '#1C1A18',
-                        border: `1px solid ${EDGE}`,
-                        color: ACCENT,
-                        display: 'flex'
-                    }}>
-                        <WalletIcon size={20} />
-                    </Box>
+                    <Stack direction="row" alignItems="center" gap={1.5}>
+                        <Box sx={{
+                            p: 1,
+                            borderRadius: '12px',
+                            bgcolor: '#1C1A18',
+                            border: `1px solid ${EDGE}`,
+                            color: ACCENT,
+                            display: 'flex'
+                        }}>
+                            <WalletIcon size={18} />
+                        </Box>
+                        <Box>
+                            <Typography sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)', fontSize: '1rem', lineHeight: 1.2 }}>
+                                Wallet
+                            </Typography>
+                            <Typography sx={{ color: MUTED, fontSize: '0.72rem', fontFamily: 'var(--font-mono)' }}>
+                                {user?.$id ? shortenUserId(user.$id) : 'Decentralized Vault'}
+                            </Typography>
+                        </Box>
+                    </Stack>
                 )}
-                <Stack direction="row" alignItems="center" gap={1}>
+                <Stack direction="row" alignItems="center" gap={0.75}>
                     {isUnlocked && !isSubView && (
                         <>
-                            <IconButton size="small" onClick={() => setShowKylrixDetail(true)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                            <IconButton size="small" onClick={() => setShowKylrixDetail(true)} title="Activity" sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
                                 <History size={18} />
                             </IconButton>
-                            <IconButton size="small" onClick={() => setShowSettings(true)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                            <IconButton size="small" onClick={() => setShowSettings(true)} title="Settings" sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
                                 <Settings size={18} />
                             </IconButton>
                         </>
                     )}
-                    {isMobile && (
-                        <IconButton size="small" onClick={() => setIsExpanded(!isExpanded)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
-                            {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                        </IconButton>
-                    )}
-                    <IconButton onClick={onClose} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
-                        <X size={20} />
+                    <IconButton onClick={onClose} aria-label="Close wallet" sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                        <X size={18} />
                     </IconButton>
                 </Stack>
             </Stack>
