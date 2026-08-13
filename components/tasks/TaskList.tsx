@@ -63,7 +63,14 @@ export default function TaskList() {
     return () => resetConfiguration();
   }, [setConfiguration, resetConfiguration, openCreateGoal, isDesktop]);
 
-  const tagFilterOptions = getTagFilterOptions();
+  const rawTagOptions = getTagFilterOptions();
+  const directTaskTags = React.useMemo(() => {
+    const fromTasks = tasks.flatMap((t) => t.labels || []);
+    return Array.from(new Set([...rawTagOptions, ...fromTasks].filter(Boolean))).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: 'base' })
+    );
+  }, [tasks, rawTagOptions]);
+  const tagFilterOptions = directTaskTags;
   const activeTagFilter = filter.labels?.[0] ?? null;
 
   const handleTagFilterToggle = (tag: string) => {
