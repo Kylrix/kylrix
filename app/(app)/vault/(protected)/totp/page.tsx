@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Shield, Copy, Pencil, Trash2, Search, Pin, Link as LinkIcon } from 'lucide-react';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { getCurrentUserSnapshot } from '@/lib/appwrite/client';
-import { listTotpSecrets, deleteTotpSecret, listFolders } from '@/lib/appwrite';
+import { listTotpSecrets, deleteTotpSecret } from '@/lib/appwrite';
 import { generateTOTP } from '@/lib/totp-util';
 import toast from 'react-hot-toast';
 import NewTotpDialog from '@/components/app/totp/new';
@@ -242,7 +242,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   const { setConfiguration, resetConfiguration } = useFAB();
   const [totpCodes, setTotpCodes] = useState<TotpItem[]>([]);
   const scopedTotpCodes = totpCodes;
-  const [folders, setFolders] = useState<Map<string, string>>(new Map());
+  const [folders, _setFolders] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(false);

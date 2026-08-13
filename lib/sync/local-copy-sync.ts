@@ -34,7 +34,7 @@ function getRowUpdatedAt(row: SyncableRow): number {
   return Math.max(parseTs(row.updatedAt), parseTs(row.$updatedAt), parseTs(row.createdAt), parseTs(row.$createdAt));
 }
 
-function getRowCreatedAt(row: SyncableRow): number {
+export function getRowCreatedAt(row: SyncableRow): number {
   return Math.max(parseTs(row.$createdAt), parseTs(row.createdAt), getRowUpdatedAt(row));
 }
 

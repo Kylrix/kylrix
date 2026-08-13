@@ -411,12 +411,12 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         // Cache the first page result if it was a reset
         if (reset && INITIAL_NOTES_CACHE_KEY) {
             setCachedData(INITIAL_NOTES_CACHE_KEY, {
-                notes: batch,
+                notes: fetchedRows,
                 totalNotes: res?.total || 0,
                 cursor: res?.nextCursor || null,
                 hasMore: !!res?.hasMore
             });
-            if (user?.$id) void warmNotesLocalCopy(user.$id, batch);
+            if (user?.$id) void warmNotesLocalCopy(user.$id, fetchedRows);
         }
       }
     } catch (err: any) {

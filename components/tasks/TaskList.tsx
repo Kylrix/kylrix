@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
-import { Plus, ArrowUpDown, Filter, List, LayoutGrid, Calendar, ArrowUp, ArrowDown, CheckCircle2, Trash2, Sparkles, ChevronDown, ChevronUp, Tag, X, RefreshCw } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Plus, Calendar, Trash2, Sparkles, ChevronDown, ChevronUp, Tag, X, RefreshCw } from 'lucide-react';
 import GoalObjectRow from './GoalObjectRow';
 import { useTask } from '@/context/TaskContext';
 import { useFAB } from '@/context/FABContext';
-import { ViewMode, SortField, TaskStatus } from '@/types';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -16,10 +15,6 @@ import { EmptyStateAnomalyDetector } from '@/context/NeuralContext';
 export default function TaskList() {
   const {
     getFilteredTasks,
-    viewMode,
-    setViewMode,
-    sort,
-    setSort,
     filter,
     setFilter,
     deleteTask,
@@ -33,8 +28,6 @@ export default function TaskList() {
   const { open } = useUnifiedDrawer();
   const { isAuthenticated, openIDMWindow } = useAuth();
 
-  const [isSortOpen, setIsSortOpen] = useState(false);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [showCompletedSection, setShowCompletedSection] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -92,7 +85,7 @@ export default function TaskList() {
   const [goalPage, setGoalPage] = useState(1);
   const [goalSentinelNode, setGoalSentinelNode] = useState<HTMLDivElement | null>(null);
   const goalSentinelRef = useCallback((node: HTMLDivElement | null) => setGoalSentinelNode(node), []);
-  const visibleActiveTasks = useMemo(() => activeTasks.slice(0, goalPage * GOAL_PAGE_SIZE), [activeTasks, goalPage]);
+  const visibleActiveTasks = activeTasks.slice(0, goalPage * GOAL_PAGE_SIZE);
   const hasMoreGoals = visibleActiveTasks.length < activeTasks.length;
   useEffect(() => {
     setGoalPage(1);
@@ -135,41 +128,6 @@ export default function TaskList() {
   };
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
-
-  const sortOptions: { field: SortField; label: string }[] = [
-    { field: 'dueDate', label: 'Due Date' },
-    { field: 'priority', label: 'Priority' },
-    { field: 'createdAt', label: 'Created Date' },
-    { field: 'updatedAt', label: 'Last Updated' },
-    { field: 'title', label: 'Title' },
-    { field: 'status', label: 'Status' }];
-
-  const statusFilters: { status: TaskStatus; label: string; color: string }[] = [
-    { status: 'todo', label: 'To Do', color: '#9E9E9E' },
-    { status: 'in-progress', label: 'In Progress', color: '#0288D1' },
-    { status: 'done', label: 'Done', color: '#2E7D32' },
-    { status: 'blocked', label: 'Blocked', color: '#D32F2F' }];
-
-  const handleSortChange = (field: SortField) => {
-    if (sort.field === field) {
-      setSort({ field, direction: sort.direction === 'asc' ? 'desc' : 'asc' });
-    } else {
-      setSort({ field, direction: 'asc' });
-    }
-  };
-
-  const handleStatusFilterToggle = (status: TaskStatus) => {
-    const currentStatuses = filter.status || [];
-    if (currentStatuses.includes(status)) {
-      setFilter({
-        ...filter,
-        status: currentStatuses.filter((s) => s !== status)});
-    } else {
-      setFilter({
-        ...filter,
-        status: [...currentStatuses, status]});
-    }
-  };
 
   const getViewTitle = () => {
     if (activeTagFilter) return `Tag: ${activeTagFilter}`;

@@ -47,7 +47,7 @@ function DashboardPageContent() {
   // Master password modal — only auto-open when unlock-on-demand is off
   const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(false);
   const [showPorterDrawer, setShowPorterDrawer] = useState(false);
-  const [isDevMode, setIsDevMode] = useState(false);
+  const [_isDevMode, _setIsDevMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'secrets' | 'totp'>('secrets');
 
   useEffect(() => {
@@ -204,8 +204,8 @@ function DashboardPageContent() {
       if (cursorToUse) {
         setAllCredentials((prev) => {
           const existingIds = new Set(prev.map((c) => c.$id));
-          const freshUnique = rows.filter((r: any) => !existingIds.has(r.$id));
-          const updated = [...prev, ...freshUnique];
+          const freshUnique = (rows as unknown as Credentials[]).filter((r: any) => !existingIds.has(r.$id));
+          const updated = [...prev, ...freshUnique] as Credentials[];
           void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
             void LocalEngine.cacheSet(cacheKey, updated);
           });

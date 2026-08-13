@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Pin, Lock, Globe, RefreshCw, Copy } from 'lucide-react';
+import { Pin, Globe, RefreshCw, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AppTestPage() {
