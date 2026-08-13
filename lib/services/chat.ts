@@ -947,7 +947,7 @@ export const ChatService = {
             return timeB - timeA;
         });
 
-        // Dedupe direct chats by exact participant set (keep most recent) — collapses myriads from prior half-written retries
+        // Dedupe direct chats by exact participant set + encryption flag (keep most recent) — preserves both plain text and E2EE chats between same pair
         const seenDirect = new Map<string, any>();
         const deduped: any[] = [];
         for (const row of rows) {
@@ -955,7 +955,8 @@ export const ChatService = {
                 deduped.push(row);
                 continue;
             }
-            const key = canonicalizeParticipantsForMatch(row.participants).join('|');
+            const encFlag = !!row.isEncrypted ? 'enc' : 'plain';
+            const key = `${canonicalizeParticipantsForMatch(row.participants).join('|')}:${encFlag}`;
             if (!seenDirect.has(key)) {
                 seenDirect.set(key, row);
                 deduped.push(row);
