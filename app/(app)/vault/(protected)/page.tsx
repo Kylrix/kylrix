@@ -145,10 +145,16 @@ function DashboardPageContent() {
     });
   };
 
-  const loadAllCredentials = useCallback(async (background = false) => {
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const loadAllCredentials = useCallback(async (background = false, cursorToUse: string | null = null) => {
     const activeUserId = user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.$id || '') : '');
     if (!activeUserId) { setLoading(false); return; }
-    if (!background && allCredentials.length === 0) setLoading(true);
+    if (!background && !cursorToUse && allCredentials.length === 0) setLoading(true);
+    if (cursorToUse) setLoadingMore(true);
+
     try {
       const { TablesDB, Client, Query } = await import('appwrite');
       const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
@@ -158,20 +164,51 @@ function DashboardPageContent() {
         .setProject(APPWRITE_CONFIG.PROJECT_ID);
 
       const tablesDB = new TablesDB(client);
+      const queryList = [
+        Query.equal('userId', activeUserId),
+        Query.limit(50),
+        Query.orderDesc('$updatedAt')
+      ];
+
+      if (cursorToUse) {
+        queryList.push(Query.cursorAfter(cursorToUse));
+      }
+
       const res = await tablesDB.listRows(
         APPWRITE_CONFIG.DATABASES.VAULT,
         APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
-        [Query.equal('userId', activeUserId)]
+        queryList
       );
 
       const rows = Array.isArray(res?.rows) ? res.rows : [];
-      console.log(`[Vault] Direct Client SDK listRows returned ${rows.length} credentials for user: ${activeUserId}`);
-      setAllCredentials(rows as any);
+      const batchHasMore = rows.length === 50;
+      const newCursor = batchHasMore && rows.length ? rows[rows.length - 1].$id : null;
+
+      setHasMore(batchHasMore);
+      setNextCursor(newCursor);
+
+      if (cursorToUse) {
+        setAllCredentials((prev) => {
+          const existingIds = new Set(prev.map((c) => c.$id));
+          const freshUnique = rows.filter((r: any) => !existingIds.has(r.$id));
+          return [...prev, ...freshUnique];
+        });
+      } else {
+        setAllCredentials(rows as any);
+      }
     } catch (error: unknown) {
       console.error("[Vault] Failed to load credentials:", error);
       if (allCredentials.length === 0) toast.error(`Vault load error: ${error instanceof Error ? error.message : String(error)}`);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
   }, [user, allCredentials.length]);
+
+  const loadMoreCredentials = useCallback(() => {
+    if (loadingMore || !hasMore || !nextCursor) return;
+    void loadAllCredentials(true, nextCursor);
+  }, [loadingMore, hasMore, nextCursor, loadAllCredentials]);
 
   const hydrateVaultData = useCallback(async () => {
     await loadAllCredentials();
@@ -495,6 +532,24 @@ function DashboardPageContent() {
                           />
                         ))}
                       </div>
+                      {hasMore && (
+                        <div className="flex justify-center mt-8">
+                          <button
+                            onClick={loadMoreCredentials}
+                            disabled={loadingMore}
+                            className="px-6 py-2.5 rounded-xl bg-[#161412] hover:bg-[#1C1A18] border border-[#1C1A18] text-xs font-bold text-white/80 hover:text-white transition-colors disabled:opacity-50 flex items-center gap-2"
+                          >
+                            {loadingMore ? (
+                              <>
+                                <RefreshCw size={14} className="animate-spin text-emerald-500" />
+                                Loading older secrets...
+                              </>
+                            ) : (
+                              'Load More Secrets'
+                            )}
+                          </button>
+                        </div>
+                      )}
                       </>
                     )}
                   </div>
