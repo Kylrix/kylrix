@@ -56,13 +56,47 @@ export function AgenticMessageBody({ content, blocks, onPickHit }: AgenticMessag
             />
           );
         }
-        if (block.type === 'user_search') {
+        if (block.type === 'pending_auth') {
           return (
-            <AgenticUserCards
-              key={`users-${idx}`}
-              query={block.query}
-              users={block.users}
-            />
+            <div
+              key={`auth-${idx}`}
+              className="p-3 rounded-2xl bg-[#161412] border border-[#6366F1]/30 flex items-center justify-between gap-3 text-left my-1"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                  block.status === 'authorized'
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : block.status === 'rejected'
+                    ? 'bg-rose-500/20 text-rose-400'
+                    : 'bg-[#6366F1]/20 text-[#6366F1] animate-pulse'
+                }`}>
+                  <span className="text-xs font-bold font-mono">
+                    {block.status === 'authorized' ? '✓' : block.status === 'rejected' ? '✕' : '⏳'}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-white font-satoshi truncate">
+                    {block.name}
+                  </div>
+                  <div className="text-[10px] text-white/50 font-satoshi">
+                    {block.status === 'authorized'
+                      ? 'Action authorized & executed'
+                      : block.status === 'rejected'
+                      ? 'Action authorization denied'
+                      : 'Confirmation drawer popped up'}
+                  </div>
+                </div>
+              </div>
+              <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase tracking-wider shrink-0 ${
+                block.status === 'authorized'
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  : block.status === 'rejected'
+                  ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                  : 'bg-[#6366F1]/10 text-[#818cf8] border border-[#6366F1]/20'
+              }`}>
+                {block.status}
+              </span>
+            </div>
           );
         }
         return null;

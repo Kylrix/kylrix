@@ -41,6 +41,13 @@ export type AgenticMessageBlock =
       type: 'user_search';
       query: string;
       users: UserSearchHit[];
+    }
+  | {
+      type: 'pending_auth';
+      toolKey: string;
+      name: string;
+      status: 'pending' | 'authorized' | 'rejected';
+      specifier?: string;
     };
 
 const KYLIX_BLOCKS_PREFIX = '__KYLIX_BLOCKS__:';
