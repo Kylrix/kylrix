@@ -314,9 +314,8 @@ export default function NotesPage() {
 
 
 
-  // Local-first: NotesContext is SoT via RxDB (note.shared-cache, architecture.local-first).
   const unifiedSorted = useMemo(() => {
-    const src = visibleNotes.length ? visibleNotes : combinedNotes.filter(isDefaultWorkspaceObject as any);
+    const src = Array.isArray(allNotes) ? allNotes : [];
     return [...src].sort((a: any, b: any) => {
       const aPinned = Boolean(a.isPinned || isPinned(a.$id));
       const bPinned = Boolean(b.isPinned || isPinned(b.$id));
@@ -326,7 +325,7 @@ export default function NotesPage() {
       const bTime = new Date(b.$updatedAt || (b as any).updatedAt || b.$createdAt || 0).getTime();
       return bTime - aTime;
     });
-  }, [visibleNotes, combinedNotes, isPinned]);
+  }, [allNotes, isPinned]);
   const pinnedNotes = useMemo(() => unifiedSorted.filter((n: any) => Boolean(n.isPinned || isPinned(n.$id))), [unifiedSorted, isPinned]);
   const regularSourceNotes = useMemo(() => unifiedSorted.filter((n: any) => !Boolean(n.isPinned || isPinned(n.$id))), [unifiedSorted, isPinned]);
 
