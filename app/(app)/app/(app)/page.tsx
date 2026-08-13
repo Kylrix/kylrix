@@ -109,6 +109,14 @@ export default function IdeasPage() {
       stamped.forEach((n: any) => upsertNote(n));
 
       setNotes(stamped);
+
+      // Non-blocking LocalEngine background copy write (Goals/Vault local-first pattern)
+      void (async () => {
+        try {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          await LocalEngine.cacheSet(`f_ideas_${user.$id}`, { rows: stamped, total: stamped.length });
+        } catch {}
+      })();
     } catch (err: any) {
       setError(err?.message || String(err));
     } finally {
@@ -117,6 +125,22 @@ export default function IdeasPage() {
   };
 
   useEffect(() => {
+    // Fast initial render from LocalEngine cache if available (Goals/Vault local-first pattern)
+    void (async () => {
+      try {
+        const { account } = await import('@/lib/appwrite/client');
+        const user = await account.get().catch(() => null);
+        if (user?.$id) {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          const cached = await LocalEngine.cacheGet<{ rows: any[] }>(`f_ideas_${user.$id}`);
+          if (cached?.rows && Array.isArray(cached.rows) && cached.rows.length > 0) {
+            setNotes((prev) => (prev.length === 0 ? cached.rows : prev));
+            setLoading(false);
+          }
+        }
+      } catch {}
+    })();
+
     void fetchNotesBarebones();
   }, []);
 
