@@ -64,6 +64,7 @@ export function CreateGoalComposer({
   const [priority, setPriority] = useState<Priority>(initialContent?.priority || 'medium');
   const [dueDate, setDueDate] = useState(initialContent?.dueDate || '');
   const [tags, setTags] = useState<string[]>(initialContent?.tags || []);
+  const [isTagSelectorOpen, setIsTagSelectorOpen] = useState(false);
   const [showMobileDatePicker, setShowMobileDatePicker] = useState(false);
   const [resolvedId, setResolvedId] = useState<string | undefined>(initialContent?.id);
   const [draftHydrated, setDraftHydrated] = useState(false);
@@ -545,14 +546,7 @@ export function CreateGoalComposer({
               </span>
               <button
                 type="button"
-                onClick={() => {
-                  openUnified('tag-selector', {
-                    selectedTags: tags,
-                    onSelect: (tagName: string) => {
-                      appendTag(tagName);
-                    },
-                  });
-                }}
+                onClick={() => setIsTagSelectorOpen(true)}
                 className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#A855F7] hover:text-[#C084FC] flex items-center gap-1 cursor-pointer transition-colors"
               >
                 <Plus size={12} />
@@ -580,14 +574,7 @@ export function CreateGoalComposer({
               </div>
             ) : (
               <div
-                onClick={() => {
-                  openUnified('tag-selector', {
-                    selectedTags: tags,
-                    onSelect: (tagName: string) => {
-                      appendTag(tagName);
-                    },
-                  });
-                }}
+                onClick={() => setIsTagSelectorOpen(true)}
                 className="w-full py-2 px-3 rounded-xl border border-dashed border-white/10 hover:border-[#A855F7]/30 text-white/30 hover:text-white/60 text-xs font-satoshi flex items-center gap-2 cursor-pointer transition-all"
               >
                 <Tag size={13} className="text-[#A855F7]/60" />
@@ -597,6 +584,94 @@ export function CreateGoalComposer({
           </div>
         </div>
       </div>
+
+      {/* Ecosystem Tags Selection Drawer */}
+      {isTagSelectorOpen && (
+        <div className="fixed inset-0 z-[15000] flex flex-col justify-end">
+          <div
+            className="fixed inset-0 bg-black/70 transition-opacity cursor-pointer"
+            onClick={() => setIsTagSelectorOpen(false)}
+          />
+          <div className="relative z-[15001] bg-[#161412] border-t border-white/10 rounded-t-[28px] max-h-[60dvh] w-full p-5 flex flex-col overflow-hidden shadow-2xl animate-slide-up">
+            <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3">
+              <div className="flex items-center gap-2">
+                <Tag size={18} className="text-[#A855F7]" />
+                <span className="text-white font-black text-sm font-clash uppercase tracking-wider">
+                  Select Tags
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTagSelectorOpen(false)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white bg-white/5 transition-all"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto flex flex-col gap-2 min-h-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsTagSelectorOpen(false);
+                  openUnified('new-tag', {
+                    onSuccess: async () => {
+                      await refreshEcosystemTags();
+                      setIsTagSelectorOpen(true);
+                    },
+                  });
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-[#A855F7]/10 border border-dashed border-[#A855F7]/30 hover:bg-[#A855F7]/20 text-[#C084FC] text-xs font-bold font-mono flex items-center gap-2 transition-all cursor-pointer"
+              >
+                <Plus size={16} />
+                <span>CREATE NEW TAG</span>
+              </button>
+
+              {(ecosystemTags || []).map((tag) => {
+                const isSelected = tags.includes(tag.name || '');
+                const color = (tag as any).color || '#A855F7';
+                return (
+                  <button
+                    key={tag.$id}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
+                        removeTag(tag.name || '');
+                      } else {
+                        appendTag(tag.name || '');
+                      }
+                    }}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer text-left ${
+                      isSelected
+                        ? 'bg-white/10 border-white/20'
+                        : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.06] hover:border-white/10'
+                    }`}
+                    style={isSelected ? { borderColor: `${color}60`, backgroundColor: `${color}15` } : undefined}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="w-3 h-3 rounded-md shrink-0"
+                        style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}50` }}
+                      />
+                      <span className="text-white text-xs font-mono font-bold uppercase tracking-wider">
+                        {tag.name}
+                      </span>
+                    </div>
+                    {isSelected && (
+                      <span
+                        className="text-[10px] font-mono font-black uppercase tracking-wider px-2 py-0.5 rounded-md"
+                        style={{ color, backgroundColor: `${color}20` }}
+                      >
+                        SELECTED
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showMobileDatePicker && (
         <EventDateTimePickerDrawer
