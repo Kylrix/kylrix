@@ -155,6 +155,20 @@ function DashboardPageContent() {
     if (!background && !cursorToUse && allCredentials.length === 0) setLoading(true);
     if (cursorToUse) setLoadingMore(true);
 
+    const cacheKey = `vault_credentials_${activeUserId}`;
+
+    // Instant local copy read on mount
+    if (!cursorToUse && allCredentials.length === 0) {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cachedRows = await LocalEngine.cacheGet<any[]>(cacheKey);
+        if (cachedRows && Array.isArray(cachedRows) && cachedRows.length > 0) {
+          setAllCredentials(cachedRows);
+          setLoading(false);
+        }
+      } catch {}
+    }
+
     try {
       const { TablesDB, Client, Query } = await import('appwrite');
       const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
@@ -191,10 +205,17 @@ function DashboardPageContent() {
         setAllCredentials((prev) => {
           const existingIds = new Set(prev.map((c) => c.$id));
           const freshUnique = rows.filter((r: any) => !existingIds.has(r.$id));
-          return [...prev, ...freshUnique];
+          const updated = [...prev, ...freshUnique];
+          void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+            void LocalEngine.cacheSet(cacheKey, updated);
+          });
+          return updated;
         });
       } else {
         setAllCredentials(rows as any);
+        void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+          void LocalEngine.cacheSet(cacheKey, rows);
+        });
       }
     } catch (error: unknown) {
       console.error("[Vault] Failed to load credentials:", error);

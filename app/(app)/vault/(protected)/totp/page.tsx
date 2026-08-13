@@ -325,6 +325,19 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     const activeUserId = user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.$id || '') : '');
     if (!activeUserId) return;
     let isCancelled = false;
+    const cacheKey = `vault_totp_${activeUserId}`;
+
+    // Instant local copy read on mount
+    (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cached = await LocalEngine.cacheGet<any[]>(cacheKey);
+        if (cached && Array.isArray(cached) && cached.length > 0 && !isCancelled) {
+          setTotpCodes(cached as any);
+          setLoading(false);
+        }
+      } catch {}
+    })();
 
     (async () => {
       try {
@@ -345,6 +358,9 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
         if (!isCancelled && res?.rows) {
           console.log(`[TOTP] Direct Client SDK listRows returned ${res.rows.length} TOTP codes for user: ${activeUserId}`);
           setTotpCodes(res.rows as any);
+          void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+            void LocalEngine.cacheSet(cacheKey, res.rows);
+          });
         }
       } catch (err: any) {
         console.error('[TOTP] Failed to load direct TOTP secrets:', err);
