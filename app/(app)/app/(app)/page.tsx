@@ -11,6 +11,8 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
 import { toast } from 'react-hot-toast';
 
+import { useRouter } from 'next/navigation';
+
 const TAG_COLOR_MAP: Record<string, string> = {
   Personal: '#3B82F6',
   Work: '#F59E0B',
@@ -31,6 +33,7 @@ function getTagColor(tagName: string): string | null {
 }
 
 export default function IdeasPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -232,34 +235,21 @@ export default function IdeasPage() {
           <div className="flex items-center gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-2xl w-fit select-none">
             <button
               type="button"
-              onClick={() => setActiveMainTab('ideas')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
-                activeMainTab === 'ideas'
-                  ? 'bg-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.25)]'
-                  : 'text-white/50 hover:text-white hover:bg-white/5'
-              }`}
+              className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.25)]"
             >
               Ideas
             </button>
             <button
               type="button"
-              onClick={() => setActiveMainTab('forms')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
-                activeMainTab === 'forms'
-                  ? 'bg-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.25)]'
-                  : 'text-white/50 hover:text-white hover:bg-white/5'
-              }`}
+              onClick={() => router.push('/forms')}
+              className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
             >
               Forms
             </button>
             <button
               type="button"
-              onClick={() => setActiveMainTab('tags')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
-                activeMainTab === 'tags'
-                  ? 'bg-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.25)]'
-                  : 'text-white/50 hover:text-white hover:bg-white/5'
-              }`}
+              onClick={() => router.push('/tags')}
+              className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
             >
               Tags
             </button>
@@ -305,16 +295,6 @@ export default function IdeasPage() {
               )}
             </div>
           )}
-
-          {activeMainTab === 'forms' ? (
-            <div className="p-12 text-center rounded-[32px] bg-[#161412] border border-white/5 text-white/40 font-mono text-sm">
-              Forms Tab View
-            </div>
-          ) : activeMainTab === 'tags' ? (
-            <div className="p-12 text-center rounded-[32px] bg-[#161412] border border-white/5 text-white/40 font-mono text-sm">
-              Global Tags Sweeper View
-            </div>
-          ) : null}
 
       {error && (
         <div className="p-4 bg-red-950/60 border border-red-500/50 rounded-2xl text-red-300 text-sm">

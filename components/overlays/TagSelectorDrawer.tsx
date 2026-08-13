@@ -35,14 +35,36 @@ export function TagSelectorDrawer() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { activeContent, drawerData, close, open } = useUnifiedDrawer();
-  const isOpen = activeContent === 'tag-selector';
-  const { ecosystemTags, refreshEcosystemTags } = useTask();
+  const { ecosystemTags, refreshEcosystemTags, tasks } = useTask();
 
   React.useEffect(() => {
     if (isOpen && (!ecosystemTags || ecosystemTags.length === 0)) {
       void refreshEcosystemTags();
     }
   }, [isOpen, ecosystemTags, refreshEcosystemTags]);
+
+  const availableTags = React.useMemo(() => {
+    const list: { $id: string; name: string; color: string }[] = [];
+    const seen = new Set<string>();
+
+    (ecosystemTags || []).forEach((t: any) => {
+      if (t?.name && !seen.has(t.name)) {
+        seen.add(t.name);
+        list.push({ $id: t.$id || t.name, name: t.name, color: t.color || SYSTEM_PRIMARY });
+      }
+    });
+
+    (tasks || []).forEach((task) => {
+      (task.labels || []).forEach((label) => {
+        if (label && !seen.has(label)) {
+          seen.add(label);
+          list.push({ $id: label, name: label, color: SYSTEM_PRIMARY });
+        }
+      });
+    });
+
+    return list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  }, [ecosystemTags, tasks]);
 
   const onSelect = drawerData?.onSelect as ((tagName: string) => void) | undefined;
   const selectedTags = drawerData?.selectedTags as string[] || [];
@@ -58,8 +80,7 @@ export function TagSelectorDrawer() {
     // Switch to new-tag drawer
     open('new-tag', { 
       onSuccess: () => {
-          // After creating a new tag, we might want to go back or just let it be.
-          // For now, let's just close or stay in new-tag.
+          void refreshEcosystemTags();
       }
     });
   };
@@ -69,9 +90,9 @@ export function TagSelectorDrawer() {
       anchor="bottom"
       open={isOpen}
       onClose={close}
-      ModalProps={{ keepMounted: false, disableScrollLock: false }}
+      ModalProps={{ keepMounted: false, disablePortal: false }}
       sx={{
-        zIndex: 2000,
+        zIndex: 16000,
         '& .ob-drawer-panel': {
           height: '50dvh',
           maxHeight: '80dvh',
@@ -80,14 +101,14 @@ export function TagSelectorDrawer() {
           border: BORDER,
           borderBottom: 0,
           bgcolor: SURFACE_ASH,
-          boxShadow: 'none',
+          boxShadow: '0 -20px 50px rgba(0,0,0,0.8)',
           backgroundImage: 'none',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
           maxWidth: isDesktop ? '600px' : '100%',
           margin: isDesktop ? '0 auto' : '0',
-          zIndex: 2000}}}
+          zIndex: 16000}}}
     >
       <Box sx={{ p: 3, pb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Stack direction="row" spacing={1.5} alignItems="center">
@@ -122,12 +143,12 @@ export function TagSelectorDrawer() {
             </ListItemButton>
           </ListItem>
 
-          {ecosystemTags.map((tag) => {
+          {availableTags.map((tag) => {
             const isSelected = selectedTags.includes(tag.name || '');
             const color = (tag as any).color || '#9B9691';
 
             return (
-              <ListItem key={tag.$id} disablePadding sx={{ mb: 0.5 }}>
+              <ListItem key={tag.$id || tag.name} disablePadding sx={{ mb: 0.5 }}>
                 <ListItemButton 
                   onClick={() => handleSelect(tag.name || '')}
                   disabled={isSelected}

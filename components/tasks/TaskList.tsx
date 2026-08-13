@@ -22,11 +22,19 @@ export default function TaskList() {
     selectedProjectId,
     getTagFilterOptions,
     labels,
+    ecosystemTags,
+    refreshEcosystemTags,
     isLoading,
     refreshTasks} = useTask();
   const { setConfiguration, resetConfiguration } = useFAB();
   const { open } = useUnifiedDrawer();
   const { isAuthenticated, openIDMWindow } = useAuth();
+
+  useEffect(() => {
+    if (!ecosystemTags || ecosystemTags.length === 0) {
+      void refreshEcosystemTags();
+    }
+  }, [ecosystemTags, refreshEcosystemTags]);
 
   const [showCompletedSection, setShowCompletedSection] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -70,10 +78,11 @@ export default function TaskList() {
   const rawTagOptions = getTagFilterOptions();
   const directTaskTags = React.useMemo(() => {
     const fromTasks = tasks.flatMap((t) => t.labels || []);
-    return Array.from(new Set([...rawTagOptions, ...fromTasks].filter(Boolean))).sort((a, b) =>
+    const fromEcosystem = (ecosystemTags || []).map((t) => t.name).filter(Boolean);
+    return Array.from(new Set([...rawTagOptions, ...fromEcosystem, ...fromTasks].filter(Boolean))).sort((a, b) =>
       a.localeCompare(b, undefined, { sensitivity: 'base' })
     );
-  }, [tasks, rawTagOptions]);
+  }, [tasks, rawTagOptions, ecosystemTags]);
   const tagFilterOptions = directTaskTags;
   const activeTagFilter = filter.labels?.[0] ?? null;
 
