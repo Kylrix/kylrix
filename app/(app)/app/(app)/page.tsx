@@ -334,7 +334,7 @@ export default function IdeasPage() {
                 {displayPinned.length > 3 && (
                   <button
                     type="button"
-                    onClick={() => openSidebar(<PinnedNotesSidebar offset={3} />, 'pinned-notes', { hideHeader: true })}
+                    onClick={() => openSidebar(<PinnedNotesSidebar offset={3} notes={displayPinned} />, 'pinned-notes', { hideHeader: true })}
                     className="text-xs font-bold text-[#EC4899] hover:text-[#f472b6] transition-colors flex items-center gap-1 font-mono select-none"
                   >
                     <span>See More ({displayPinned.length - 3})</span>

@@ -47,16 +47,17 @@ async function _fetchPinnedNoteRows(ids: string[], seed: Notes[]): Promise<Notes
     .filter((n): n is Notes => Boolean(n && !isClientEncryptedNote(n)));
 }
 
-export function PinnedNotesSidebar({ offset = 0 }: { offset?: number }) {
+export function PinnedNotesSidebar({ offset = 0, notes: providedNotes }: { offset?: number; notes?: Notes[] }) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { notes: allNotes, isPinned } = useNotes();
   const { closeSidebar, openSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
   // Single fetch — pinned repatriated to top in-memory (goals pattern), no separate pinnedIds query.
-  const { filteredItems: scopedAllNotes } = useWorkspaceFilteredItems(allNotes ?? [], 'note');
+  const sourceNotes = providedNotes || (allNotes ?? []);
+  const { filteredItems: scopedAllNotes } = useWorkspaceFilteredItems(sourceNotes, 'note');
   const pinnedNotes = useMemo(() => {
-    const pinned = scopedAllNotes.filter((n: any) => isPinned(n.$id));
+    const pinned = scopedAllNotes.filter((n: any) => !n.isTrash && isPinned(n.$id));
     return [...pinned].sort((a: any, b: any) => new Date(b.$updatedAt || b.$createdAt || 0).getTime() - new Date(a.$updatedAt || a.$createdAt || 0).getTime());
   }, [scopedAllNotes, isPinned]);
   const displayNotes = useMemo(() => pinnedNotes.slice(offset), [pinnedNotes, offset]);
