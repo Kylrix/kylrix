@@ -324,22 +324,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   useEffect(() => {
     if (!user?.$id) return;
 
-    const cacheKey = `vault_totp_${user.$id}`;
-    let isCancelled = false;
-
-    (async () => {
-      try {
-        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-        const db = await getRxDB().catch(() => null);
-        if (db) {
-          const cachedDoc = await db.cache.findOne(cacheKey).exec().catch(() => null);
-          if (cachedDoc?.data && Array.isArray(cachedDoc.data) && !isCancelled) {
-            setTotpCodes(cachedDoc.data as TotpItem[]);
-            setLoading(false);
-          }
-        }
-      } catch {}
-    })();
+    // Bypass RxDB cache read to force direct Appwrite server fetch
 
     Promise.allSettled([listTotpSecrets(user.$id), listFolders(user.$id)])
       .then(async ([secretsResult, foldersResult]) => {

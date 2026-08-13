@@ -147,19 +147,7 @@ function DashboardPageContent() {
       setLoading(false);
       return;
     }
-    const cacheKey = `vault_credentials_${user.$id}`;
-    try {
-      const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-      const db = await getRxDB().catch(() => null);
-      if (db) {
-        const cachedDoc = await db.cache.findOne(cacheKey).exec().catch(() => null);
-        if (cachedDoc?.data && Array.isArray(cachedDoc.data)) {
-          setAllCredentials(cachedDoc.data as Credentials[]);
-          setLoading(false);
-        }
-      }
-    } catch {}
-
+    // Bypass RxDB local cache read to force direct Appwrite server fetch
     if (!background && allCredentials.length === 0) setLoading(true);
     try {
       const credentials = await listAllCredentials(user.$id);
