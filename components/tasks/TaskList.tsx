@@ -63,6 +63,10 @@ export default function TaskList() {
     return () => resetConfiguration();
   }, [setConfiguration, resetConfiguration, openCreateGoal, isDesktop]);
 
+  const tasks = getFilteredTasks();
+  const activeTasks = tasks.filter(t => t.status !== 'done');
+  const completedTasks = tasks.filter(t => t.status === 'done');
+
   const rawTagOptions = getTagFilterOptions();
   const directTaskTags = React.useMemo(() => {
     const fromTasks = tasks.flatMap((t) => t.labels || []);
@@ -83,10 +87,6 @@ export default function TaskList() {
 
   const getTagColor = (tagName: string) =>
     labels.find((label) => label.name === tagName)?.color || '#9B9691';
-
-  const tasks = getFilteredTasks();
-  const activeTasks = tasks.filter(t => t.status !== 'done');
-  const completedTasks = tasks.filter(t => t.status === 'done');
 
   const GOAL_PAGE_SIZE = 20;
   const [goalPage, setGoalPage] = useState(1);
