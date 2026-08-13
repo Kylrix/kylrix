@@ -70,7 +70,12 @@ export default function IdeasPage() {
         return bTime - aTime;
       });
 
-      setNotes(sorted);
+      const formattedNotes = sorted.map((n: any) => ({
+        ...n,
+        isPinned: Boolean(n.isPinned || pinnedMap[n.$id])
+      }));
+
+      setNotes(formattedNotes);
     } catch (err: any) {
       setError(err?.message || String(err));
     } finally {
