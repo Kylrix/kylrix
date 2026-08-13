@@ -400,19 +400,19 @@ export const WalletSidebar = ({
     }, [ledgerHistoryRows]);
 
     useEffect(() => {
-        if (!showKylrixDetail || !user?.$id) return undefined;
+        if (activeSubView !== 'history' || !user?.$id) return undefined;
         void loadLedgerHistory();
         return undefined;
-    }, [showKylrixDetail, user?.$id, loadLedgerHistory]);
+    }, [activeSubView, user?.$id, loadLedgerHistory]);
 
     useEffect(() => {
-        if (!isOpen || !showKylrixDetail || !user?.$id) return undefined;
+        if (!isOpen || activeSubView !== 'history' || !user?.$id) return undefined;
         const onEarn = () => {
             void loadLedgerHistory();
         };
         window.addEventListener('kylrix:token-event', onEarn);
         return () => window.removeEventListener('kylrix:token-event', onEarn);
-    }, [isOpen, showKylrixDetail, user?.$id, loadLedgerHistory]);
+    }, [isOpen, activeSubView, user?.$id, loadLedgerHistory]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -1062,9 +1062,6 @@ export const WalletSidebar = ({
                     triggerTestSignature={triggerTestSignature}
                 />
             );
-        }
-        if (showKylrixDetail) {
-            return renderKylrixDetail();
         }
         return (
             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
