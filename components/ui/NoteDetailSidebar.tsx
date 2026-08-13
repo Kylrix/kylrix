@@ -644,14 +644,17 @@ export function NoteDetailSidebar({
     closeOverlay();
   }, [onDelete, liveNote.$id, closeSidebar, closeOverlay]);
 
+  const { setActiveDetail } = useSection();
+
   const handleBackClick = useCallback(() => {
     // Create persists on close; detail keeps compose session registered — sync engine flushes.
     if (onBack) {
       onBack();
-    } else {
-      closeSidebar();
     }
-  }, [onBack, closeSidebar]);
+    closeSidebar();
+    closeOverlay();
+    setActiveDetail(null);
+  }, [onBack, closeSidebar, closeOverlay, setActiveDetail]);
 
   const handleDismiss = useCallback(() => {
     closeSidebar();
