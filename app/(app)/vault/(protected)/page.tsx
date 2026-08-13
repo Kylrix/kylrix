@@ -150,26 +150,11 @@ function DashboardPageContent() {
     if (!activeUserId) { setLoading(false); return; }
     if (!background && allCredentials.length === 0) setLoading(true);
     try {
-      // Unified path via LocalEngine — UI never hits backend directly; LocalEngine delegates to unified service
-      const { LocalEngine } = await import('@/lib/services/LocalEngine');
       const { VaultService } = await import('@/lib/appwrite/vault-service');
-      const cacheKey = `vault_credentials_${activeUserId}`;
-      // LocalEngine.query handles cache-first + background refresh + manual force
-      const credentials = await LocalEngine.query<Credentials[]>(cacheKey, async () => {
-        const rows = await VaultService.listAllCredentials(activeUserId);
-        return rows as any;
-      }, { ttl: background ? 0 : undefined });
-      const list = Array.isArray(credentials) ? credentials : (credentials as any)?.rows || [];
-      console.log(`[Vault] Fetched ${list?.length ?? 0} credentials via LocalEngine+VaultService.`);
-      if (Array.isArray(list) && list.length) {
+      const list = await VaultService.listAllCredentials(activeUserId);
+      console.log(`[Vault] Fetched ${list?.length ?? 0} credentials via VaultService.`);
+      if (Array.isArray(list)) {
         setAllCredentials(list as any);
-      } else if (!background && allCredentials.length === 0) {
-        // Don't wipe populated live copy with empty network — keep previous, like NotesContext merge
-        // Only set empty if we truly have no local data
-        setAllCredentials([]);
-      } else if (Array.isArray(list) && !list.length && allCredentials.length) {
-        // Keep existing live rows (encrypted-only RxDB cache stays, like notes)
-        console.warn("[Vault] network empty but live copy populated — keeping live");
       }
     } catch (error: unknown) {
       console.error("[Vault] Failed to load via LocalEngine:", error);
