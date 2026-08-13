@@ -775,29 +775,22 @@ export default function NotesPage() {
       </header>
 
       {/* Tags Filter */}
-      <div className="overflow-x-auto scrollbar-none p-2 bg-white/[0.01] border border-white/5 rounded-[24px] flex items-center gap-2 select-none">
-        {isDevMode && (
-          <button
-            onClick={() => router.push('/app/test')}
-            className="whitespace-nowrap px-4 py-2 rounded-xl text-xs font-black transition-all bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/40"
-          >
-            Test (Raw)
-          </button>
-        )}
-        {tags.length > 0 && tags.map((tag, index) => (
-          <button
-            key={index}
-            aria-pressed={searchQuery === tag}
-            onClick={() => searchQuery === tag ? clearSearch() : setSearchQuery(tag)}
-            className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-              searchQuery === tag 
-                ? 'bg-[#EC4899] border-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.2)]' 
-                : 'bg-white/3 border-white/8 text-white/60 hover:text-white hover:border-white/15'
-            }`}
-          >
-            {tag}
-          </button>
-        ))}
+      {tags.length > 0 && (
+        <div className="overflow-x-auto scrollbar-none p-2 bg-white/[0.01] border border-white/5 rounded-[24px] flex items-center gap-2 select-none">
+          {tags.map((tag, index) => (
+            <button
+              key={index}
+              aria-pressed={searchQuery === tag}
+              onClick={() => searchQuery === tag ? clearSearch() : setSearchQuery(tag)}
+              className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                searchQuery === tag 
+                  ? 'bg-[#EC4899] border-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.2)]' 
+                  : 'bg-white/3 border-white/8 text-white/60 hover:text-white hover:border-white/15'
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
 
         {hasSearchResults && (
           <button 
