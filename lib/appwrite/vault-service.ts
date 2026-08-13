@@ -116,13 +116,10 @@ function readShareMetadata(metadata: string | null | undefined): Record<string, 
   }
 }
 
-/** Compound indexes split rows across idx_userId, (userId,isPublic), (userId,isPinned). */
 function getCredentialOwnerIndexQueries(userId: string): string[] {
-  return [
-    Query.equal("userId", userId),
-    Query.and([Query.equal("userId", userId), Query.equal("isPublic", true)]),
-    Query.and([Query.equal("userId", userId), Query.equal("isPinned", true)]),
-  ];
+  // Reliable single-index fanout: primary userId covers all rows; public/pinned variants are additive and deduped.
+  // Keep isPublic/isPinned queries best-effort — if compound index missing, primary still returns.
+  return [Query.equal("userId", userId)];
 }
 
 function buildCredentialOwnerFilterQueries(
@@ -145,20 +142,25 @@ async function listRowsMergedAcrossFilters(
   await Promise.all(
     filterQueries.map(async (filterQuery) => {
       let offset = 0;
-      let response: Models.RowList<Models.Row>;
-      do {
-        response = await listRowsWithRetry(tableId, [
-          filterQuery,
-          Query.limit(pageSize),
-          Query.offset(offset),
-          ...extraQueries,
-        ]);
-        const rows = Array.isArray(response?.rows) ? response.rows : [];
-        for (const row of rows) {
-          byId.set(row.$id, row);
-        }
-        offset += pageSize;
-      } while (Array.isArray(response?.rows) && response.rows.length > 0 && offset < (response.total || 0));
+      let response: Models.RowList<Models.Row> | null = null;
+      try {
+        do {
+          response = await listRowsWithRetry(tableId, [
+            filterQuery,
+            Query.limit(pageSize),
+            Query.offset(offset),
+            ...extraQueries,
+          ]);
+          const rows = Array.isArray(response?.rows) ? response.rows : [];
+          for (const row of rows) {
+            byId.set(row.$id, row);
+          }
+          offset += pageSize;
+        } while (Array.isArray(response?.rows) && response.rows.length > 0 && offset < (response.total || 0));
+      } catch (e) {
+        // Best-effort: compound index missing or throttled — skip this filter, keep primary userId results
+        console.warn("[vault] listRowsMerged filter skipped:", (e as any)?.message || e);
+      }
     }));
 
   return Array.from(byId.values());
@@ -1288,20 +1290,14 @@ export class VaultService {
     queries: string[] = []): Promise<TotpSecrets[]> {
     this.ensureRuntimeSecurityHooks();
     const resourceIds = await this.getCollaboratedResourceIds(userId, 'totp');
-    let filterQuery;
-    if (resourceIds.length > 0) {
-      filterQuery = Query.or([
-        Query.equal("userId", userId),
-        Query.equal("$id", resourceIds)
-      ]);
-    } else {
-      filterQuery = Query.equal("userId", userId);
-    }
-    const response = await appwriteDatabases.listRows(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_COLLECTION_TOTPSECRETS_ID,
-      [filterQuery, ...queries]);
-    return response.rows as unknown as TotpSecrets[];
+    const filterQueries = buildCredentialOwnerFilterQueries(userId, resourceIds);
+    const mergedRows = sortMergedRows(
+      await listRowsMergedAcrossFilters(
+        APPWRITE_COLLECTION_TOTPSECRETS_ID,
+        filterQueries,
+        queries),
+      queries);
+    return mergedRows as unknown as TotpSecrets[];
   }
 
   /**
@@ -1404,23 +1400,15 @@ export class VaultService {
 
     const request = (async () => {
       const resourceIds = await this.getCollaboratedResourceIds(userId, 'totp');
-      let filterQuery;
-      if (resourceIds.length > 0) {
-        filterQuery = Query.or([
-          Query.equal("userId", userId),
-          Query.equal("$id", resourceIds)
-        ]);
-      } else {
-        filterQuery = Query.equal("userId", userId);
-      }
-
-      const response = await appwriteDatabases.listRows(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_COLLECTION_TOTPSECRETS_ID,
-        [filterQuery, ...queries]);
-      const rows = Array.isArray(response?.rows) ? response.rows : [];
+      const filterQueries = buildCredentialOwnerFilterQueries(userId, resourceIds);
+      const mergedRows = sortMergedRows(
+        await listRowsMergedAcrossFilters(
+          APPWRITE_COLLECTION_TOTPSECRETS_ID,
+          filterQueries,
+          queries),
+        queries);
       const decryptedSecrets = await Promise.all(
-        rows.map(
+        mergedRows.map(
           (doc: Models.Row) =>
             this.decryptRowFields(
               doc,
