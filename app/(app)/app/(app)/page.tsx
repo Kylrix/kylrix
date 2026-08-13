@@ -200,6 +200,47 @@ export default function IdeasPage() {
             </button>
           </div>
 
+          {/* Tags Filter Row (positioned under top nav switcher like Goals) */}
+          {tags.length > 0 && (
+            <div className="overflow-x-auto scrollbar-none p-2 bg-white/[0.01] border border-white/5 rounded-[24px] flex items-center gap-2 select-none">
+              <Tag size={14} className="text-[#EC4899]/60 ml-2 shrink-0" />
+              {tags.map((tag: string, index: number) => {
+                const tagColor = getTagColor(tag);
+                const isSelected = selectedTag === tag;
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    aria-pressed={isSelected}
+                    onClick={() => setSelectedTag(isSelected ? null : tag)}
+                    className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                      isSelected 
+                        ? 'bg-[#EC4899] border-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.2)]' 
+                        : 'bg-white/3 border-white/8 text-white/60 hover:text-white hover:border-white/15'
+                    }`}
+                    style={
+                      !isSelected && tagColor
+                        ? { borderColor: `${tagColor}33`, color: tagColor }
+                        : undefined
+                    }
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+              {selectedTag && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedTag(null)}
+                  className="ml-2 px-3 py-1.5 text-xs text-[#EC4899] hover:text-[#f472b6] font-mono font-bold tracking-wider flex items-center gap-1 shrink-0"
+                >
+                  <X size={12} />
+                  Clear
+                </button>
+              )}
+            </div>
+          )}
+
           {activeMainTab === 'forms' ? (
             <div className="p-12 text-center rounded-[32px] bg-[#161412] border border-white/5 text-white/40 font-mono text-sm">
               Forms Tab View
@@ -230,45 +271,6 @@ export default function IdeasPage() {
                   <span className="font-mono font-bold text-[#EC4899]">{notes.length}</span> {notes.length === 1 ? 'idea' : 'ideas'}
                 </p>
               </header>
-
-              {/* Tags Filter Row */}
-              {tags.length > 0 && (
-                <div className="overflow-x-auto scrollbar-none p-2 bg-white/[0.01] border border-white/5 rounded-[24px] flex items-center gap-2 select-none">
-                  <Tag size={14} className="text-[#EC4899]/60 ml-2 shrink-0" />
-                  {tags.map((tag: string, index: number) => {
-                    const tagColor = getTagColor(tag);
-                    const isSelected = selectedTag === tag;
-                    return (
-                      <button
-                        key={index}
-                        aria-pressed={isSelected}
-                        onClick={() => setSelectedTag(isSelected ? null : tag)}
-                        className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-                          isSelected 
-                            ? 'bg-[#EC4899] border-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.2)]' 
-                            : 'bg-white/3 border-white/8 text-white/60 hover:text-white hover:border-white/15'
-                        }`}
-                        style={
-                          !isSelected && tagColor
-                            ? { borderColor: `${tagColor}33`, color: tagColor }
-                            : undefined
-                        }
-                      >
-                        {tag}
-                      </button>
-                    );
-                  })}
-                  {selectedTag && (
-                    <button
-                      onClick={() => setSelectedTag(null)}
-                      className="ml-2 px-3 py-1.5 text-xs text-[#EC4899] hover:text-[#f472b6] font-mono font-bold tracking-wider flex items-center gap-1 shrink-0"
-                    >
-                      <X size={12} />
-                      Clear
-                    </button>
-                  )}
-                </div>
-              )}
             </>
           )}
 
