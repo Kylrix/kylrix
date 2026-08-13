@@ -155,104 +155,162 @@ export function TagSelectorDrawer() {
       sx={{
         zIndex: 16000,
         '& .ob-drawer-panel': {
-          height: '50dvh',
+          height: '54dvh',
           maxHeight: '80dvh',
-          borderTopLeftRadius: RADIUS_LARGE,
-          borderTopRightRadius: RADIUS_LARGE,
-          border: BORDER,
+          borderTopLeftRadius: '28px',
+          borderTopRightRadius: '28px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
           borderBottom: 0,
-          bgcolor: SURFACE_ASH,
-          boxShadow: '0 -20px 50px rgba(0,0,0,0.8)',
+          bgcolor: '#161412',
+          boxShadow: '0 -24px 60px rgba(0,0,0,0.85)',
           backgroundImage: 'none',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          maxWidth: isDesktop ? '600px' : '100%',
+          maxWidth: isDesktop ? '580px' : '100%',
           margin: isDesktop ? '0 auto' : '0',
           zIndex: 16000}}}
     >
-      <Box sx={{ p: 3, pb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* Header */}
+      <Box sx={{ px: 3, pt: 3, pb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
         <Stack direction="row" spacing={1.5} alignItems="center">
-          <TagIcon size={20} color={SYSTEM_PRIMARY} />
-          <Typography sx={{ color: 'white', fontWeight: 900, fontFamily: 'var(--font-clash)', fontSize: '1.1rem' }}>
-            SELECT TAGS
-          </Typography>
+          <Box sx={{ width: 34, height: 34, borderRadius: '10px', bgcolor: '#0A0908', border: '1px solid rgba(255,255,255,0.06)', display: 'grid', placeItems: 'center', color: '#A855F7' }}>
+            <TagIcon size={18} />
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontFamily: 'var(--font-clash)', fontSize: '1.05rem', letterSpacing: '-0.01em', textTransform: 'uppercase' }}>
+              Select Tags
+            </Typography>
+            <Typography component="span" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: '0.72rem', fontFamily: 'var(--font-satoshi)' }}>
+              Attach categories to your idea or goal
+            </Typography>
+          </Box>
         </Stack>
-        <IconButton onClick={close} sx={{ color: TEXT_MUTED, bgcolor: VOID, '&:hover': { bgcolor: HOVER } }}>
-          <CloseIcon size={18} />
+        <IconButton 
+          onClick={close} 
+          sx={{ 
+            color: 'rgba(255,255,255,0.6)', 
+            bgcolor: '#0A0908', 
+            border: '1px solid rgba(255,255,255,0.06)', 
+            borderRadius: '12px',
+            width: 36,
+            height: 36,
+            '&:hover': { bgcolor: '#1C1A18', color: 'white' } 
+          }}
+        >
+          <CloseIcon size={16} />
         </IconButton>
       </Box>
 
-      <Box sx={{ flex: 1, overflowY: 'auto', px: 2, pb: 4 }}>
-        <List sx={{ pt: 0 }}>
-          <ListItem disablePadding sx={{ mb: 1 }}>
+      {/* List Area with proper inset padding so items never touch container boundaries */}
+      <Box sx={{ flex: 1, overflowY: 'auto', px: 3, py: 2.5 }}>
+        <List sx={{ pt: 0, display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+          <ListItem disablePadding>
             <ListItemButton 
               onClick={handleCreateNew}
               sx={{ 
-                borderRadius: RADIUS_SMALL, 
-                bgcolor: 'rgba(99, 102, 241, 0.1)',
-                border: '1px dashed rgba(99, 102, 241, 0.3)',
-                py: 1.5,
-                '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.15)' }
+                width: '100%',
+                borderRadius: '16px', 
+                bgcolor: '#0A0908',
+                border: '1px dashed rgba(168, 85, 247, 0.35)',
+                px: 2.5,
+                py: 1.75,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.75,
+                '&:hover': { bgcolor: '#1C1A18', borderColor: 'rgba(168, 85, 247, 0.6)' }
               }}
             >
-              <Plus size={18} color={SYSTEM_PRIMARY} style={{ marginRight: '12px' }} />
-              <ListItemText 
-                primary="Create New Tag" 
-                primaryTypographyProps={{ sx: { color: SYSTEM_PRIMARY, fontWeight: 800, fontSize: '0.9rem' } }}
-              />
+              <Box sx={{ width: 32, height: 32, borderRadius: '10px', bgcolor: 'rgba(168,85,247,0.12)', display: 'grid', placeItems: 'center', color: '#A855F7', flexShrink: 0 }}>
+                <Plus size={16} strokeWidth={2.5} />
+              </Box>
+              <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <Typography component="span" sx={{ color: '#C084FC', fontWeight: 800, fontSize: '0.85rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+                  Create New Tag
+                </Typography>
+                <Typography component="span" sx={{ color: 'rgba(255,255,255,0.35)', fontWeight: 600, fontSize: '0.72rem', fontFamily: 'var(--font-satoshi)' }}>
+                  Add a new color-coded category
+                </Typography>
+              </Box>
             </ListItemButton>
           </ListItem>
 
-          {availableTags.map((tag) => {
-            const isSelected = selectedTags.includes(tag.name || '');
-            const color = (tag as any).color || '#9B9691';
+          {availableTags.length === 0 ? (
+            <Box sx={{ py: 6, textAlign: 'center', color: 'rgba(255,255,255,0.35)', fontSize: '0.8rem', fontFamily: 'var(--font-mono)' }}>
+              No existing tags found. Tap above to create one.
+            </Box>
+          ) : (
+            availableTags.map((tag) => {
+              const isSelected = selectedTags.includes(tag.name || '');
+              const color = (tag as any).color || '#A855F7';
 
-            return (
-              <ListItem key={tag.$id || tag.name} disablePadding sx={{ mb: 0.5 }}>
-                <ListItemButton 
-                  onClick={() => handleSelect(tag.name || '')}
-                  disabled={isSelected}
-                  sx={{ 
-                    borderRadius: RADIUS_SMALL, 
-                    py: 1.5,
-                    border: '1px solid transparent',
-                    borderColor: isSelected ? color : 'transparent',
-                    bgcolor: isSelected ? `${color}10` : 'transparent',
-                    '&:hover': { bgcolor: HOVER }
-                  }}
-                >
-                  <Box 
+              return (
+                <ListItem key={tag.$id || tag.name} disablePadding>
+                  <ListItemButton 
+                    onClick={() => handleSelect(tag.name || '')}
+                    disabled={isSelected}
                     sx={{ 
-                      width: 12, 
-                      height: 12, 
-                      borderRadius: '4px', 
-                      bgcolor: color, 
-                      mr: 2,
-                      boxShadow: `0 0 10px ${color}40`
-                    }} 
-                  />
-                  <ListItemText 
-                    primary={(tag.name || '').toUpperCase()} 
-                    primaryTypographyProps={{ 
-                      sx: { 
-                        color: isSelected ? 'white' : TEXT_MUTED, 
-                        fontWeight: 900, 
-                        fontSize: '0.8rem',
-                        fontFamily: 'var(--font-mono)',
-                        letterSpacing: '0.05em'
-                      } 
+                      width: '100%',
+                      borderRadius: '16px', 
+                      px: 2.5,
+                      py: 1.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.75,
+                      border: '1px solid',
+                      borderColor: isSelected ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
+                      bgcolor: isSelected ? '#1C1A18' : '#0A0908',
+                      transition: 'all 0.15s ease',
+                      '&:hover': { bgcolor: isSelected ? '#1C1A18' : '#141210', borderColor: 'rgba(255,255,255,0.12)' }
                     }}
-                  />
-                  {isSelected && (
-                    <Typography sx={{ color: color, fontWeight: 900, fontSize: '0.7rem', opacity: 0.8 }}>
-                      SELECTED
-                    </Typography>
-                  )}
-                </ListItemButton>
-              </ListItem>
-            );
-          })}
+                  >
+                    <Box 
+                      sx={{ 
+                        width: 14, 
+                        height: 14, 
+                        borderRadius: '4px', 
+                        bgcolor: color, 
+                        flexShrink: 0,
+                        boxShadow: `0 0 10px ${color}50`
+                      }} 
+                    />
+                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <Typography 
+                        component="span"
+                        sx={{ 
+                          color: isSelected ? 'white' : 'rgba(255,255,255,0.85)', 
+                          fontWeight: 800, 
+                          fontSize: '0.85rem',
+                          fontFamily: 'var(--font-mono)',
+                          letterSpacing: '0.04em'
+                        }}
+                      >
+                        {(tag.name || '').toUpperCase()}
+                      </Typography>
+                    </Box>
+                    {isSelected && (
+                      <Box 
+                        sx={{ 
+                          color: color, 
+                          fontWeight: 900, 
+                          fontSize: '0.68rem', 
+                          fontFamily: 'var(--font-mono)',
+                          letterSpacing: '0.06em',
+                          bgcolor: `${color}18`,
+                          border: `1px solid ${color}35`,
+                          borderRadius: '8px',
+                          px: 1.5,
+                          py: 0.4
+                        }}
+                      >
+                        SELECTED
+                      </Box>
+                    )}
+                  </ListItemButton>
+                </ListItem>
+              );
+            })
+          )}
         </List>
       </Box>
     </Drawer>
