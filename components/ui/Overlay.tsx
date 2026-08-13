@@ -65,6 +65,8 @@ const Overlay: React.FC = () => {
   const isFlapover = !isProfileSidebar && React.isValidElement(content) && (
     (content.props as any).note !== undefined ||
     (content.props as any).taskId !== undefined ||
+    (content.props as any).formId !== undefined ||
+    (content.props as any).form !== undefined ||
     (content.props as any).eventId !== undefined ||
     (content.props as any).conversationId !== undefined ||
     (content.props as any).momentId !== undefined ||
@@ -72,6 +74,7 @@ const Overlay: React.FC = () => {
     (content.type as any).name === 'NoteObjectDetail' ||
     (content.type as any).name === 'TaskDetails' ||
     (content.type as any).name === 'GoalObjectDetail' ||
+    (content.type as any).name === 'FormDetail' ||
     (content.type as any).name === 'CommObjectDetail' ||
     (content.type as any).name === 'MomentObjectDetail' ||
     (content.type as any).name === 'EventDetails' ||
