@@ -125,11 +125,15 @@ function getCredentialOwnerIndexQueries(userId: string): string[] {
 function buildCredentialOwnerFilterQueries(
   userId: string,
   resourceIds: string[] = []): string[] {
-  const queries = getCredentialOwnerIndexQueries(userId);
   if (resourceIds.length > 0) {
-    queries.push(Query.equal("$id", resourceIds));
+    return [
+      Query.or([
+        Query.equal("userId", userId),
+        Query.equal("$id", resourceIds)
+      ])
+    ];
   }
-  return queries;
+  return [Query.equal("userId", userId)];
 }
 
 async function listRowsMergedAcrossFilters(
