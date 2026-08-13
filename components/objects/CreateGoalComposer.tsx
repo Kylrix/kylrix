@@ -641,8 +641,6 @@ export function CreateGoalComposer({
             </div>
 
             <div className="flex-1 overflow-y-auto flex flex-col gap-2 min-h-0">
-              <button
-                type="button"
               {/* Inline Create Tag Row */}
               <form
                 onSubmit={async (e) => {
