@@ -62,7 +62,13 @@ const Overlay: React.FC = () => {
     ((content.props as any).conversationId !== undefined && (content.props as any).seed !== undefined)
   );
 
-  const isFlapover = !isProfileSidebar && React.isValidElement(content) && (
+  const isWalletOverlay = React.isValidElement(content) && (
+    (content.props as any).isWallet !== undefined ||
+    (content.type as any).name === 'WalletSidebar' ||
+    (content.type as any).name === 'WalletDetail'
+  );
+
+  const isFlapover = !isProfileSidebar && !isWalletOverlay && React.isValidElement(content) && (
     (content.props as any).note !== undefined ||
     (content.props as any).taskId !== undefined ||
     (content.props as any).formId !== undefined ||
@@ -70,7 +76,6 @@ const Overlay: React.FC = () => {
     (content.props as any).eventId !== undefined ||
     (content.props as any).conversationId !== undefined ||
     (content.props as any).momentId !== undefined ||
-    (content.props as any).isWallet !== undefined ||
     (content.type as any).name === 'NoteDetailSidebar' ||
     (content.type as any).name === 'NoteObjectDetail' ||
     (content.type as any).name === 'TaskDetails' ||
@@ -79,12 +84,12 @@ const Overlay: React.FC = () => {
     (content.type as any).name === 'CommObjectDetail' ||
     (content.type as any).name === 'MomentObjectDetail' ||
     (content.type as any).name === 'EventDetails' ||
-    (content.type as any).name === 'AgenticPanelContent' ||
-    (content.type as any).name === 'WalletSidebar' ||
-    (content.type as any).name === 'WalletDetail'
+    (content.type as any).name === 'AgenticPanelContent'
   );
 
-  const drawerHeight = isMobile && !isFlapover ? (isProfileSidebar ? (isExpanded ? '100dvh' : '60vh') : (isExpanded ? '100dvh' : '60dvh')) : '100dvh';
+  const drawerHeight = isMobile && !isFlapover
+    ? (isWalletOverlay ? (isExpanded ? '100dvh' : '65dvh') : isProfileSidebar ? (isExpanded ? '100dvh' : '60vh') : (isExpanded ? '100dvh' : '60dvh'))
+    : '100dvh';
   const paperWidth = isFlapover ? '100%' : isMobile ? '100%' : 'min(100vw, 720px)';
 
   return (

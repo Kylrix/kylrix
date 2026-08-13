@@ -69,6 +69,8 @@ interface WalletSidebarProps {
     onConsumeTokenIntent?: () => void;
     /** Fill native right rail — no floating Drawer chrome */
     embedded?: boolean;
+    isExpanded?: boolean;
+    onToggleExpand?: () => void;
 }
 
 
@@ -78,6 +80,8 @@ export const WalletSidebar = ({
     tokenIntent = null,
     onConsumeTokenIntent,
     embedded = false,
+    isExpanded: propIsExpanded,
+    onToggleExpand,
 }: WalletSidebarProps) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -87,7 +91,15 @@ export const WalletSidebar = ({
     const { requestSudo } = useSudo();
     
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [internalExpanded, setInternalExpanded] = useState(false);
+    const isExpanded = propIsExpanded !== undefined ? propIsExpanded : internalExpanded;
+    const setIsExpanded = (val: boolean | ((prev: boolean) => boolean)) => {
+        if (onToggleExpand) {
+            onToggleExpand();
+        } else {
+            setInternalExpanded(val);
+        }
+    };
     const [loading, setLoading] = useState(false);
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -1849,6 +1861,16 @@ export const WalletSidebar = ({
                             </IconButton>
                         </>
                     )}
+                    {isMobile && !isSubView && (
+                        <IconButton 
+                            size="small" 
+                            onClick={() => setIsExpanded(!isExpanded)} 
+                            title={isExpanded ? "Collapse to bottom" : "Expand to fullscreen"}
+                            sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}
+                        >
+                            {isExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                        </IconButton>
+                    )}
                     <IconButton onClick={onClose} aria-label="Close wallet" sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
                         <X size={18} />
                     </IconButton>
@@ -1946,6 +1968,25 @@ export const WalletSidebar = ({
                     bgcolor: SURFACE,
                 }}
             >
+                {isMobile && (
+                    <Box
+                        sx={{
+                            width: '100%',
+                            pt: 1.5,
+                            pb: 0.5,
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            flexShrink: 0
+                        }}
+                        onClick={() => setIsExpanded(!isExpanded)}
+                    >
+                        <Stack direction="row" alignItems="center" gap={0.5} sx={{ color: MUTED, opacity: 0.75, '&:hover': { opacity: 1 } }}>
+                            <Box sx={{ width: 36, height: 4, bgcolor: '#4A4743', borderRadius: '2px' }} />
+                        </Stack>
+                    </Box>
+                )}
                 {renderHeader()}
                 {renderWalletContent()}
                 {renderPinDrawer()}
