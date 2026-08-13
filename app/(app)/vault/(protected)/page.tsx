@@ -46,7 +46,7 @@ function DashboardPageContent() {
   
   // Master password modal — only auto-open when unlock-on-demand is off
   const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(false);
-  // Vault porter drawer state
+  const [showPorterDrawer, setShowPorterDrawer] = useState(false);
   const [isDevMode, setIsDevMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'secrets' | 'totp'>('secrets');
 
