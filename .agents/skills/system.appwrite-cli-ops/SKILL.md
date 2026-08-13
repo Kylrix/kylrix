@@ -29,6 +29,7 @@ Supported: **17.4.0+** (tables-db). Current ecosystem often **21.x+**.
 
 - **NEVER** mutate CLI client config: no `appwrite client --endpoint`, `--key`, `--project-id`, or `--reset`. That wipes the user's local session/prefs.
 - **NEVER** run `appwrite whoami` — it is unnecessary noise; assume authenticated and use read-only `get-row`/`list-rows` for verification.
+- **ALWAYS use `appwrite tablesdb`** (never legacy `appwrite databases` or `documents`). All table/row operations MUST use `appwrite tablesdb <command>` with `--database-id` and `--table-id`.
 - Assume the user is already authenticated. On "Session not found" / auth errors: **stop** and ask them to run `appwrite login`. Do not improvise with keys in ways that rewrite prefs.
 
 ### CLI admin capability (STRICT)
