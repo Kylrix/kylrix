@@ -188,12 +188,16 @@ export const LocalEngine = {
     const cached = await this.cacheGet<T>(cacheKey, opts?.ttl);
     if (cached) {
       if (opts?.realtimeChannel) void this.subscribeRealtime(opts.realtimeChannel);
-      // background refresh without double-read cost — Realtime will push, fallback fetch only if no Realtime
+      // background refresh — failsafe: never wipe populated cache with empty fetch (workspace-introduced vault empty bug)
       void (async () => {
         try {
           const jwt = await getFreshJWT();
           const fresh = await fetcher(jwt);
-          if (JSON.stringify(fresh) !== JSON.stringify(cached)) await this.cacheSet(cacheKey, fresh as any);
+          if (JSON.stringify(fresh) === JSON.stringify(cached)) return;
+          const isFreshEmpty = Array.isArray(fresh) ? (fresh as any).length === 0 : (fresh as any)?.rows ? (fresh as any).rows.length === 0 : !fresh;
+          const isCachedPopulated = Array.isArray(cached) ? (cached as any).length > 0 : (cached as any)?.rows ? (cached as any).rows.length > 0 : !!cached;
+          if (isCachedPopulated && isFreshEmpty) return;
+          await this.cacheSet(cacheKey, fresh as any);
         } catch {}
       })();
       return cached;
@@ -220,8 +224,12 @@ export const LocalEngine = {
     if (!opts?.force) {
       const cached = await this.cacheGet<{ total: number; rows: T[] }>(cacheKey, opts?.ttl);
       if (cached && Array.isArray((cached as any).rows) && (cached as any).rows.length) {
-        // background refresh
-        void unifiedRead(kind, queries).then(fresh => this.cacheSet(cacheKey, fresh)).catch(()=>{});
+        // background refresh — failsafe: don't overwrite populated cache with empty (vault starter bug)
+        void unifiedRead(kind, queries).then(fresh => {
+          const isFreshEmpty = (fresh as any)?.rows ? (fresh as any).rows.length === 0 : !fresh;
+          if (isFreshEmpty) return;
+          return this.cacheSet(cacheKey, fresh);
+        }).catch(()=>{});
         return cached;
       }
     }
