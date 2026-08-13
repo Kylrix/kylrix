@@ -181,8 +181,9 @@ export default function IdeasPage() {
     void fetchNotesBarebones();
   }, []);
 
-  const pinnedNotes = notes.filter((n) => n.isPinned);
-  const unpinnedNotes = notes.filter((n) => !n.isPinned);
+  const activeNotes = notes.filter((n) => !n.isTrash);
+  const pinnedNotes = activeNotes.filter((n) => n.isPinned);
+  const unpinnedNotes = activeNotes.filter((n) => !n.isPinned);
 
   const tags = React.useMemo(() => {
     const allTags = notes.flatMap((n: any) => n.tags || []).filter(Boolean);

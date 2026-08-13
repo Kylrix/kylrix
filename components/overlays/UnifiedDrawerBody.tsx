@@ -169,18 +169,50 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
       return <TaskAddToProjectDrawerHost />;
     case 'delete-confirm':
       return (
-        <div className="p-6 bg-[#161412] flex flex-col gap-5 max-h-[60dvh] overflow-y-auto">
-          <div className="flex justify-between items-start gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center flex-shrink-0 border border-[#FF453A]/30 bg-[#FF453A]/10 text-[#FF453A]">×</div>
-              <h3 className="font-black text-white text-[17px] font-clash leading-tight truncate">{drawerData?.title || 'Delete?'}</h3>
+        <div className="p-6 bg-[#161412] flex flex-col justify-between gap-6 min-h-[60dvh] max-h-[60dvh] rounded-t-[32px] border-t border-white/10 select-none">
+          <div className="flex flex-col gap-4">
+            <div className="flex justify-between items-center gap-3 border-b border-white/5 pb-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 border border-red-500/30 bg-red-500/10 text-red-400 font-bold text-lg">
+                  ×
+                </div>
+                <h3 className="font-extrabold text-white text-lg font-clash leading-tight truncate">
+                  {drawerData?.title || 'Move to Trash?'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-xl bg-white/5 border border-white/5 text-white/40 hover:text-white flex items-center justify-center transition-colors shrink-0"
+              >
+                ×
+              </button>
             </div>
-            <button type="button" onClick={onClose} className="text-white/40 hover:text-white text-xl leading-none px-2 shrink-0">×</button>
+            <p className="text-white/60 text-sm font-semibold leading-relaxed px-1">
+              {drawerData?.description || `Are you sure you want to delete ${drawerData?.resourceName || 'this item'}? Trashed items can be restored anytime from Trash.`}
+            </p>
           </div>
-          <p className="text-white/60 text-[13px] font-semibold leading-relaxed">{drawerData?.description || `Are you sure you want to delete ${drawerData?.resourceName || 'this item'}? This cannot be undone.`}</p>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl border border-white/10 bg-white/5 text-white font-extrabold text-xs uppercase tracking-wide hover:bg-white/10">Cancel</button>
-            <button type="button" onClick={async () => { try { await drawerData?.onConfirm?.(); } finally { onClose(); } }} className="flex-1 py-3 rounded-xl border-0 bg-[#FF453A] text-white font-black text-xs uppercase tracking-wide hover:bg-[#FF453A]/90">{drawerData?.confirmLabel || 'Delete'}</button>
+          <div className="flex gap-3 pt-4 border-t border-white/5">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-3.5 rounded-2xl border border-white/10 bg-white/5 text-white font-extrabold text-xs uppercase tracking-wider hover:bg-white/10 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await drawerData?.onConfirm?.();
+                } finally {
+                  onClose();
+                }
+              }}
+              className="flex-1 py-3.5 rounded-2xl border-0 bg-red-500 text-white font-black text-xs uppercase tracking-wider hover:bg-red-600 transition-all shadow-[0_4px_16px_rgba(239,68,68,0.3)]"
+            >
+              {drawerData?.confirmLabel || 'Delete'}
+            </button>
           </div>
         </div>
       );
