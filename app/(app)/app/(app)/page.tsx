@@ -41,8 +41,10 @@ export default function IdeasPage() {
   const { upsertNote } = useNotes();
   const { openSidebar } = useDynamicSidebar();
 
-  const fetchNotesBarebones = async () => {
-    setLoading(true);
+  const fetchNotesBarebones = async (hasLocal = false) => {
+    if (!hasLocal) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -166,6 +168,8 @@ export default function IdeasPage() {
   }, [setConfiguration, resetConfiguration, openCreateNote, isDesktop]);
 
   useEffect(() => {
+    let hasLocalCopy = false;
+
     // Fast initial render from LocalEngine cache if available (Goals/Vault local-first pattern)
     void (async () => {
       try {
@@ -173,43 +177,38 @@ export default function IdeasPage() {
         const user = await account.get().catch(() => null);
         if (user?.$id) {
           const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const cached = await LocalEngine.cacheGet<{ rows: any[] }>(`f_ideas_${user.$id}`);
-          if (cached?.rows && Array.isArray(cached.rows) && cached.rows.length > 0) {
-            setNotes((prev) => (prev.length === 0 ? cached.rows : prev));
+          const [cachedIdeas, cachedInitial, cachedTags] = await Promise.all([
+            LocalEngine.cacheGet<{ rows: any[] }>(`f_ideas_${user.$id}`),
+            LocalEngine.cacheGet<any[]>(`initial_notes_${user.$id}`),
+            LocalEngine.cacheGet<any>(`f_tags_${user.$id}`),
+          ]);
+
+          const localRows =
+            cachedIdeas?.rows && Array.isArray(cachedIdeas.rows) && cachedIdeas.rows.length > 0
+              ? cachedIdeas.rows
+              : Array.isArray(cachedInitial) && cachedInitial.length > 0
+                ? cachedInitial
+                : [];
+
+          if (localRows.length > 0) {
+            hasLocalCopy = true;
+            setNotes(localRows);
             setLoading(false);
+          }
+
+          if (cachedTags?.rows && Array.isArray(cachedTags.rows) && cachedTags.rows.length > 0) {
+            setEcosystemTagsList(cachedTags.rows);
+          } else if (Array.isArray(cachedTags) && cachedTags.length > 0) {
+            setEcosystemTagsList(cachedTags);
           }
         }
       } catch {}
-    })();
 
-    void fetchNotesBarebones();
+      void fetchNotesBarebones(hasLocalCopy);
+    })();
   }, []);
 
   const [ecosystemTagsList, setEcosystemTagsList] = useState<{ name: string; color?: string }[]>([]);
-
-  useEffect(() => {
-    // Local-first tags hydration: query LocalEngine cache first
-    void (async () => {
-      try {
-        const { account } = await import('@/lib/appwrite/client');
-        const user = await account.get().catch(() => null);
-        const uid = user?.$id || 'guest';
-        const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const cachedTags = await LocalEngine.cacheGet<{ rows: any[] }>(`f_tags_${uid}`);
-        if (cachedTags?.rows && Array.isArray(cachedTags.rows) && cachedTags.rows.length > 0) {
-          setEcosystemTagsList(cachedTags.rows);
-        } else if (uid !== 'guest') {
-          // If local tags cache is empty, request local copy engine to fetch remote tags
-          const { getAllTags } = await import('@/lib/appwrite');
-          const { rows } = await getAllTags();
-          if (Array.isArray(rows) && rows.length > 0) {
-            setEcosystemTagsList(rows);
-            await LocalEngine.cacheSet(`f_tags_${uid}`, { rows, total: rows.length });
-          }
-        }
-      } catch {}
-    })();
-  }, []);
 
   const activeNotes = notes.filter((n) => !n.isTrash);
   const pinnedNotes = activeNotes.filter((n) => n.isPinned);
