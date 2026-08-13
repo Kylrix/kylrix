@@ -413,6 +413,11 @@ export { createNoteCreationService };
 
 
 export async function createNote(data: Partial<Notes>, jwt?: string) {
+  // Unified path — create via server SDK (create grants read), UI never touches backend directly
+  const { unifiedCreate } = await import('@/lib/services/unified-object-service');
+  const row = await unifiedCreate('note', data as Record<string, any>);
+  // keep legacy secure-ops path as fallback for jwt-scoped callers
+  if ((row as any)?.$id) return row as unknown as Notes;
   if (typeof window !== 'undefined') {
     const { createNote } = await import('@/lib/actions/client-ops');
     return await createNote(data);
@@ -547,6 +552,13 @@ export async function updateNote(noteId: string, data: Partial<Notes>, jwt?: str
     }
   }
 
+  // Unified update — server SDK (secure-ops) is SoT, client path as fallback
+  try {
+    const { unifiedUpdate } = await import('@/lib/services/unified-object-service');
+    const row = await unifiedUpdate('note', noteId, data as Record<string, any>);
+    if ((row as any)?.$id) { invalidateNoteRowClientCache(noteId); return row as unknown as Notes; }
+  } catch {}
+
   if (typeof window !== 'undefined') {
     invalidateNoteRowClientCache(noteId);
     
@@ -610,6 +622,14 @@ export async function deleteNote(noteId: string, jwt?: string) {
       return { success: true };
     }
   }
+
+  // Unified delete — recursive support, server SDK SoT
+  try {
+    const { unifiedDelete } = await import('@/lib/services/unified-object-service');
+    await unifiedDelete('note', noteId, { recursive: true, cascade: [{ kind: 'comment', foreignField: 'noteId' }] });
+    invalidateNoteRowClientCache(noteId);
+    return { success: true };
+  } catch {}
 
   if (typeof window !== 'undefined') {
     invalidateNoteRowClientCache(noteId);
