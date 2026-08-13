@@ -18,7 +18,6 @@ import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { useMemo, useCallback } from 'react';
 import SudoModal from '@/components/overlays/SudoModal';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
-import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import type { TotpSecrets as TotpItem } from '@/types/appwrite';
 import { looksEncrypted } from '@/lib/masterpass-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
