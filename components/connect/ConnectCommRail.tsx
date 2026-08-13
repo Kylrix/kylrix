@@ -7,6 +7,8 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { ChatService } from '@/lib/services/chat';
 import { listthreadNoteChats } from '@/lib/actions/client-ops';
+import { realtime } from '@/lib/appwrite/client';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
   peekChatsListMemory,
   peekThreadsListMemory,
@@ -226,6 +228,35 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
     })();
     return () => {
       cancelled = true;
+    };
+  }, [user?.$id]);
+
+  // Realtime subscription for conversations and incoming messages on desktop rail
+  useEffect(() => {
+    if (!user?.$id) return;
+    const conversationChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS}.documents`;
+    const messageChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`;
+    let unsub: any;
+    try {
+      unsub = realtime.subscribe([conversationChannel, messageChannel], async (res) => {
+        const payload = res.payload as any;
+        const relatedConvId = payload?.participants ? payload?.$id : payload?.conversationId;
+        if (!relatedConvId) return;
+        
+        // Refresh conversations from LocalEngine/ChatService
+        try {
+          const fresh = await ChatService.getConversations(user.$id, { forceRefresh: true });
+          if (fresh?.rows?.length) {
+            const mapped = fresh.rows.map((c: any) => ({ ...c, _viewerId: user.$id }));
+            setSecure(mapSecure(mapped));
+            writeChatsListLocal(mapped);
+          }
+        } catch {}
+      });
+    } catch {}
+    return () => {
+      if (typeof unsub === 'function') unsub();
+      else if (unsub?.unsubscribe) unsub.unsubscribe();
     };
   }, [user?.$id]);
 
