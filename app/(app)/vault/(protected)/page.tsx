@@ -157,8 +157,16 @@ function DashboardPageContent() {
       }, { ttl: background ? 0 : undefined });
       const list = Array.isArray(credentials) ? credentials : (credentials as any)?.rows || [];
       console.log(`[Vault] Fetched ${list?.length ?? 0} credentials via LocalEngine+VaultService.`);
-      if (Array.isArray(list) && list.length) setAllCredentials(list as any);
-      else if (!background) setAllCredentials([]);
+      if (Array.isArray(list) && list.length) {
+        setAllCredentials(list as any);
+      } else if (!background && allCredentials.length === 0) {
+        // Don't wipe populated live copy with empty network — keep previous, like NotesContext merge
+        // Only set empty if we truly have no local data
+        setAllCredentials([]);
+      } else if (Array.isArray(list) && !list.length && allCredentials.length) {
+        // Keep existing live rows (encrypted-only RxDB cache stays, like notes)
+        console.warn("[Vault] network empty but live copy populated — keeping live");
+      }
     } catch (error: unknown) {
       console.error("[Vault] Failed to load via LocalEngine:", error);
       if (allCredentials.length === 0) toast.error(`Vault load error: ${error instanceof Error ? error.message : String(error)}`);

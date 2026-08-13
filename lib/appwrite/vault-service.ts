@@ -125,15 +125,16 @@ function getCredentialOwnerIndexQueries(userId: string): string[] {
 function buildCredentialOwnerFilterQueries(
   userId: string,
   resourceIds: string[] = []): string[] {
+  // Simple notes/goals style: userId primary + collaborator $id fanout as separate filters (no Query.or array rejection)
+  const queries = [Query.equal("userId", userId)];
   if (resourceIds.length > 0) {
-    return [
-      Query.or([
-        Query.equal("userId", userId),
-        Query.equal("$id", resourceIds)
-      ])
-    ];
+    // Chunk $id arrays to avoid URL length limits — each chunk becomes its own filter, merged & deduped
+    const CHUNK = 50;
+    for (let i = 0; i < resourceIds.length; i += CHUNK) {
+      queries.push(Query.equal("$id", resourceIds.slice(i, i + CHUNK)));
+    }
   }
-  return [Query.equal("userId", userId)];
+  return queries;
 }
 
 async function listRowsMergedAcrossFilters(
