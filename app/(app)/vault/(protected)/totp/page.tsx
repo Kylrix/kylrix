@@ -323,70 +323,35 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
 
   useEffect(() => {
     const activeUserId = user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.$id || '') : '');
-    const cacheKey = `vault_totp_${activeUserId}`;
+    if (!activeUserId) return;
     let isCancelled = false;
 
     (async () => {
       try {
-        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-        const db = await getRxDB().catch(() => null);
-        if (db && activeUserId) {
-          const cachedDoc = await db.cache.findOne(cacheKey).exec().catch(() => null);
-          if (cachedDoc?.data && Array.isArray(cachedDoc.data) && !isCancelled) {
-            if (cachedDoc.data.length > 0) {
-              setTotpCodes(cachedDoc.data as TotpItem[]);
-              setLoading(false);
-            } else {
-              // Discard empty local cache entry to force fresh Appwrite fetch
-              await db.cache.findOne(cacheKey).remove().catch(() => {});
-            }
-          }
-        }
-      } catch {}
-    })();
+        const { TablesDB, Client, Query } = await import('appwrite');
+        const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
 
-    console.log(`[TOTP] Fetching TOTP codes for user: ${activeUserId}...`);
-    Promise.allSettled([listTotpSecrets(activeUserId), listFolders(activeUserId)])
-      .then(async ([secretsResult, foldersResult]) => {
-        if (isCancelled) return;
-        if (secretsResult.status === "fulfilled") {
-          console.log(`[TOTP] Successfully fetched ${secretsResult.value?.length ?? 0} TOTP secrets.`);
-          setTotpCodes(secretsResult.value);
-          try {
-            const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-            const db = await getRxDB().catch(() => null);
-            if (db && user?.$id) {
-              const { listRawTotpSecrets } = await import('@/lib/appwrite/vault-actions');
-              const rawEncrypted = await listRawTotpSecrets(user.$id).catch(() => null);
-              if (rawEncrypted) {
-                await db.cache.upsert({
-                  id: cacheKey,
-                  data: rawEncrypted as any,
-                  timestamp: Date.now()
-                }).catch(() => {});
-              }
-            }
-          } catch (cacheErr) {
-            console.warn("[TOTP] RxDB cache write warning:", cacheErr);
-          }
-        } else {
-          console.error("[TOTP] CRITICAL: Failed to fetch TOTP secrets:", secretsResult.reason);
-          toast.error(`TOTP load error: ${secretsResult.reason instanceof Error ? secretsResult.reason.message : String(secretsResult.reason)}`);
-        }
+        const client = new Client()
+          .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
+          .setProject(APPWRITE_CONFIG.PROJECT_ID);
 
-        if (foldersResult.status === "fulfilled") {
-          const folderMap = new Map<string, string>();
-          const folderItems = Array.isArray(foldersResult.value) ? foldersResult.value : [];
-          folderItems.forEach((f: any) => folderMap.set(f.$id, f.name));
-          setFolders(folderMap);
+        const tablesDB = new TablesDB(client);
+        const res = await tablesDB.listRows(
+          APPWRITE_CONFIG.DATABASES.VAULT,
+          APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
+          [Query.equal('userId', activeUserId)]
+        );
+
+        if (!isCancelled && res?.rows) {
+          console.log(`[TOTP] Direct Client SDK listRows returned ${res.rows.length} TOTP codes for user: ${activeUserId}`);
+          setTotpCodes(res.rows as any);
         }
-      })
-      .catch((err) => {
-        console.error("[TOTP] CRITICAL: Error in loading TOTP data chain:", err);
-      })
-      .finally(() => {
+      } catch (err: any) {
+        console.error('[TOTP] Failed to load direct TOTP secrets:', err);
+      } finally {
         if (!isCancelled) setLoading(false);
-      });
+      }
+    })();
 
     return () => {
       isCancelled = true;

@@ -150,14 +150,25 @@ function DashboardPageContent() {
     if (!activeUserId) { setLoading(false); return; }
     if (!background && allCredentials.length === 0) setLoading(true);
     try {
-      const { VaultService } = await import('@/lib/appwrite/vault-service');
-      const list = await VaultService.listAllCredentials(activeUserId);
-      console.log(`[Vault] Fetched ${list?.length ?? 0} credentials via VaultService.`);
-      if (Array.isArray(list)) {
-        setAllCredentials(list as any);
-      }
+      const { TablesDB, Client, Query } = await import('appwrite');
+      const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+
+      const client = new Client()
+        .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
+        .setProject(APPWRITE_CONFIG.PROJECT_ID);
+
+      const tablesDB = new TablesDB(client);
+      const res = await tablesDB.listRows(
+        APPWRITE_CONFIG.DATABASES.VAULT,
+        APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
+        [Query.equal('userId', activeUserId)]
+      );
+
+      const rows = Array.isArray(res?.rows) ? res.rows : [];
+      console.log(`[Vault] Direct Client SDK listRows returned ${rows.length} credentials for user: ${activeUserId}`);
+      setAllCredentials(rows as any);
     } catch (error: unknown) {
-      console.error("[Vault] Failed to load via LocalEngine:", error);
+      console.error("[Vault] Failed to load credentials:", error);
       if (allCredentials.length === 0) toast.error(`Vault load error: ${error instanceof Error ? error.message : String(error)}`);
     } finally { setLoading(false); }
   }, [user, allCredentials.length]);
