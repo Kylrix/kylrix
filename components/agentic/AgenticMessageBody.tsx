@@ -3,6 +3,7 @@ import { EcosystemHitCards } from './EcosystemHitCards';
 import { JsonRenderer, looksLikeJson } from './JsonRenderer';
 import { AgenticWalletCards } from './AgenticWalletCards';
 import { AgenticUserCards } from './AgenticUserCards';
+import { AgenticChainSelector } from './AgenticChainSelector';
 import type { AgenticMessageBlock } from '@/lib/agentic/message-blocks';
 import type { HydratedEcosystemHit } from '@/lib/agentic/hydrate-ecosystem-hits';
 
@@ -10,9 +11,10 @@ interface AgenticMessageBodyProps {
   content: string;
   blocks?: AgenticMessageBlock[];
   onPickHit?: (hit: HydratedEcosystemHit) => void;
+  onSelectChain?: (chain: string) => void;
 }
 
-export function AgenticMessageBody({ content, blocks, onPickHit }: AgenticMessageBodyProps) {
+export function AgenticMessageBody({ content, blocks, onPickHit, onSelectChain }: AgenticMessageBodyProps) {
   const hasBlocks = Boolean(blocks?.length);
   let trimmed = String(content || '').trim();
   if (hasBlocks && trimmed.startsWith('### Search:')) {
@@ -53,6 +55,26 @@ export function AgenticMessageBody({ content, blocks, onPickHit }: AgenticMessag
               key={`wallet-${idx}`}
               items={block.items}
               totalKylrix={block.totalKylrix}
+            />
+          );
+        }
+        if (block.type === 'user_search') {
+          return (
+            <AgenticUserCards
+              key={`users-${idx}`}
+              query={block.query}
+              users={block.users}
+            />
+          );
+        }
+        if (block.type === 'chain_selector') {
+          return (
+            <AgenticChainSelector
+              key={`chain-sel-${idx}`}
+              title={block.title}
+              selectedChain={block.selectedChain}
+              chains={block.chains}
+              onSelectChain={onSelectChain}
             />
           );
         }

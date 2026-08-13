@@ -469,9 +469,20 @@ async function executeAgenticToolCall(
       const userWallets = await WalletService.getWallets(ctx.user.$id).catch(() => []);
       const userBalance = await KylrixTokenService.getUserBalance(ctx.user.$id).catch(() => ({ amount: '0' }));
 
-      const requestedToken = String(args.token || 'ALL').toUpperCase();
+      // Fuzzy chain pattern normalization
+      const rawToken = String(args.token || args.chain || call.specifier || 'ALL').trim().toLowerCase();
+      let normalizedFilter = 'ALL';
+      if (/kyl|kts|token/i.test(rawToken)) normalizedFilter = 'KYLRIX';
+      else if (/sol/i.test(rawToken)) normalizedFilter = 'SOL';
+      else if (/eth|ether/i.test(rawToken)) normalizedFilter = 'ETH';
+      else if (/btc|bit/i.test(rawToken)) normalizedFilter = 'BTC';
+      else if (/sui/i.test(rawToken)) normalizedFilter = 'SUI';
+      else if (/base/i.test(rawToken)) normalizedFilter = 'BASE';
+      else if (/poly|pol|matic/i.test(rawToken)) normalizedFilter = 'POL';
+      else if (/arb/i.test(rawToken)) normalizedFilter = 'ARB';
+      else if (rawToken !== 'all') normalizedFilter = rawToken.toUpperCase();
 
-      const items = [
+      const allItems = [
         {
           token: 'KYLRIX',
           chainName: 'Kylrix Ledger',
@@ -484,20 +495,26 @@ async function executeAgenticToolCall(
           chainName: w.label,
           address: w.address,
           balance: '0.00',
-          color: '#14F195'
+          color: w.symbol === 'SOL' ? '#14F195' : w.symbol === 'ETH' ? '#627EEA' : w.symbol === 'BTC' ? '#F7931A' : '#818cf8'
         }))
-      ].filter(item => requestedToken === 'ALL' || item.token === requestedToken);
+      ];
 
-      const block: AgenticMessageBlock = {
-        type: 'wallet_balances',
-        items,
-        totalKylrix: userBalance?.amount || '0'
-      };
+      const items = allItems.filter(
+        item => normalizedFilter === 'ALL' || item.token.toUpperCase() === normalizedFilter
+      );
+
+      const messageBlocks: AgenticMessageBlock[] = [
+        {
+          type: 'wallet_balances',
+          items: items.length > 0 ? items : allItems,
+          totalKylrix: userBalance?.amount || '0'
+        }
+      ];
 
       return {
         success: true,
-        summary: `Retrieved ${items.length} wallet balance(s)`,
-        messageBlocks: [block]
+        summary: `Retrieved ${items.length || allItems.length} wallet balance(s)`,
+        messageBlocks
       };
     }
 

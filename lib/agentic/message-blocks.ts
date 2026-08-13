@@ -48,6 +48,12 @@ export type AgenticMessageBlock =
       name: string;
       status: 'pending' | 'authorized' | 'rejected';
       specifier?: string;
+    }
+  | {
+      type: 'chain_selector';
+      title?: string;
+      selectedChain?: string;
+      chains: Array<{ symbol: string; name: string; color: string; supported: boolean }>;
     };
 
 const KYLIX_BLOCKS_PREFIX = '__KYLIX_BLOCKS__:';

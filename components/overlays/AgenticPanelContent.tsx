@@ -1639,6 +1639,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 onPickHit={(hit) => {
                   void runPrompt(`Load "${hit.title}" (${hit.id}) and explain its core details and interesting parts in plain language.`);
                 }}
+                onSelectChain={(chain) => {
+                  void runPrompt(`Fetch my ${chain} wallet balance and address`);
+                }}
               />
               {msg.role === 'assistant' && msg.tools && msg.tools.length > 0 && (
                 <div className="mt-2.5 flex flex-col gap-1.5">
@@ -2099,16 +2102,22 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
                 <div className="text-[11px] font-extrabold text-white/50 uppercase tracking-wider font-satoshi">
                   Requested Scope & Chains
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-xs font-satoshi">
-                  <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] text-white/80 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                    <span className="truncate">Kylrix & Solana</span>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] text-white/80 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                    <span className="truncate">ETH & EVM Chains</span>
-                  </div>
-                </div>
+                {(() => {
+                  const rawToken = String(pendingToolAuth.args?.token || pendingToolAuth.args?.chain || 'ALL').toUpperCase();
+                  const isAll = rawToken === 'ALL';
+                  return (
+                    <div className="grid grid-cols-2 gap-2 text-xs font-satoshi">
+                      <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] text-white/80 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                        <span className="truncate">{isAll ? 'Kylrix Ledger' : `${rawToken} Network`}</span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] text-white/80 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                        <span className="truncate">{isAll ? 'Solana & EVM Chains' : 'Read Balance & Address'}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
                 {pendingToolAuth.args && (
                   <div className="text-[11px] text-white/40 font-mono pt-2 border-t border-white/[0.04] truncate">
                     Intent: {pendingToolAuth.toolKey} {JSON.stringify(pendingToolAuth.args)}
