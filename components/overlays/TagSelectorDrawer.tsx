@@ -35,6 +35,7 @@ export function TagSelectorDrawer() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { activeContent, drawerData, close, open } = useUnifiedDrawer();
+  const isOpen = activeContent === 'tag-selector';
   const { ecosystemTags, refreshEcosystemTags, tasks } = useTask();
 
   React.useEffect(() => {
