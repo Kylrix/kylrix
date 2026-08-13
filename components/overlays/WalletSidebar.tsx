@@ -29,7 +29,11 @@ import {
     Maximize2,
     Minimize2,
     ArrowUpRight,
-    ArrowDownLeft} from 'lucide-react';
+    ArrowDownLeft,
+    QrCode,
+    Download,
+    Check} from 'lucide-react';
+import { QRCodeCanvas } from './QRCodeCanvas';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSudo } from '@/context/SudoContext';
 import { account } from '@/lib/appwrite/client';
@@ -110,6 +114,12 @@ export const WalletSidebar = ({
     const { openTokenUserSearch } = useTokenOps();
     const [showKylrixDetail, setShowKylrixDetail] = useState(false);
     const [showReceive, setShowReceive] = useState(false);
+    const [receiveModalData, setReceiveModalData] = useState<{
+        token: string;
+        chainName: string;
+        address: string;
+        color?: string;
+    } | null>(null);
     const [kylrixSendAmount, setKylrixSendAmount] = useState('');
     const [kylrixIntentRecipient, setKylrixIntentRecipient] = useState<{ id: string; username: string; displayName: string } | null>(null);
     const [ktsMode, setKtsModeState] = useState(false);
@@ -683,49 +693,72 @@ export const WalletSidebar = ({
                         {kylrixIntentRecipient ? 'Continue to Confirmation' : 'Select Recipient & Confirm MasterPass'}
                     </Button>
                 </Stack>
-            <Stack gap={1.5}>
-                <Button
+            <div className="space-y-2">
+                <button
+                    type="button"
                     onClick={() => setShowReceive((prev) => !prev)}
-                    variant="outlined"
-                    sx={{ borderColor: EDGE, color: 'white', borderRadius: '12px', textTransform: 'none', fontWeight: 700 }}
+                    className="w-full py-2.5 px-4 rounded-xl border border-white/10 hover:border-white/20 bg-[#161412] text-white text-xs font-bold font-satoshi flex items-center justify-between cursor-pointer transition-all"
                 >
-                    {showReceive ? 'Hide Receive' : 'Receive'}
-                </Button>
+                    <span className="flex items-center gap-2">
+                        <QrCode size={15} className="text-[#6366F1]" />
+                        <span>{showReceive ? 'Hide Deposit Details' : `Deposit / Receive ${selectedToken}`}</span>
+                    </span>
+                    <ChevronDown size={15} className={`text-white/40 transition-transform ${showReceive ? 'rotate-180' : ''}`} />
+                </button>
                 {showReceive ? (
-                    <Paper sx={{ p: 2, borderRadius: '14px', bgcolor: '#1C1A18', border: `1px solid ${EDGE}` }}>
-                        <Typography sx={{ color: MUTED, fontSize: '0.78rem' }}>
-                            Your {selectedToken} deposit address
-                        </Typography>
-                        <Typography sx={{ color: 'white', fontFamily: 'var(--font-mono)', fontSize: '0.82rem', wordBreak: 'break-all', mb: 1 }}>
-                            {(() => {
-                                if (selectedToken === 'KYLRIX') return user?.$id || 'Unavailable';
+                    <div className="p-4 rounded-2xl bg-[#161412] border border-white/[0.08] space-y-3.5">
+                        <div className="flex items-center justify-between">
+                            <div className="text-xs text-white/50 font-satoshi font-bold">
+                                Your {selectedToken} Address
+                            </div>
+                            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-md bg-white/5 text-white/60">
+                                {selectedToken === 'KYLRIX' ? 'Internal ID' : 'Public Address'}
+                            </span>
+                        </div>
+
+                        {/* QR Code Preview */}
+                        {(() => {
+                            const addr = (() => {
+                                if (selectedToken === 'KYLRIX') return user?.$id || '';
                                 const matchingWallet = wallets.find(
                                     w => w.chain === selectedToken.toLowerCase() || 
                                     (w.family === 'evm' && ['ETH', 'USDC', 'BASE', 'POLYGON', 'ARBITRUM'].includes(selectedToken))
                                 );
-                                return matchingWallet?.address || 'Address not provisioned';
-                            })()}
-                        </Typography>
-                        <Button
-                            size="small"
-                            onClick={() => {
-                                const addr = (() => {
-                                    if (selectedToken === 'KYLRIX') return user?.$id || '';
-                                    const matchingWallet = wallets.find(
-                                        w => w.chain === selectedToken.toLowerCase() || 
-                                        (w.family === 'evm' && ['ETH', 'USDC', 'BASE', 'POLYGON', 'ARBITRUM'].includes(selectedToken))
-                                    );
-                                    return matchingWallet?.address || '';
-                                })();
-                                if (addr) handleCopyAddress(addr);
-                            }}
-                            sx={{ color: ACCENT, textTransform: 'none', p: 0 }}
-                        >
-                            Copy Address
-                        </Button>
-                    </Paper>
+                                return matchingWallet?.address || '';
+                            })();
+
+                            if (!addr) {
+                                return (
+                                    <div className="py-4 text-center text-xs text-white/40 font-satoshi">
+                                        Wallet address not provisioned yet.
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <div className="flex flex-col items-center gap-3 pt-2">
+                                    <div className="p-3 bg-white rounded-2xl shadow-inner flex items-center justify-center">
+                                        <QRCodeCanvas value={addr} size={150} />
+                                    </div>
+                                    <div className="w-full p-2.5 rounded-xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-2">
+                                        <span className="text-xs text-white font-mono break-all line-clamp-2 select-all">
+                                            {addr}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleCopyAddress(addr)}
+                                            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white shrink-0 transition-colors cursor-pointer"
+                                            title="Copy address"
+                                        >
+                                            <Copy size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                    </div>
                 ) : null}
-            </Stack>
+            </div>
 
             <Divider sx={{ my: 2.5, borderColor: EDGE }} />
 
@@ -1410,12 +1443,18 @@ export const WalletSidebar = ({
                                 
                                 {/* 1. Kylrix Card (Always Visible, Default Pinned) */}
                                 <div
+                                    onClick={() => setReceiveModalData({
+                                        token: 'KYLRIX',
+                                        chainName: 'Kylrix Ledger',
+                                        address: user?.$id || '',
+                                        color: '#6366F1'
+                                    })}
                                     onMouseDown={() => handlePressStart('KYLRIX')}
                                     onMouseUp={handlePressEnd}
                                     onMouseLeave={handlePressEnd}
                                     onTouchStart={() => handlePressStart('KYLRIX')}
                                     onTouchEnd={handlePressEnd}
-                                    className="p-3.5 rounded-2xl bg-[#161412] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-sm"
+                                    className="p-3.5 rounded-2xl bg-[#161412] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-sm active:scale-[0.99]"
                                 >
                                     <div className="flex items-center gap-3 w-full">
                                         <div className="w-10 h-10 rounded-xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center shrink-0">
@@ -1459,12 +1498,22 @@ export const WalletSidebar = ({
 
                                 {/* 2. Solana Card (Always Visible, Default Pinned) */}
                                 <div
+                                    onClick={() => {
+                                        if (solWallet) {
+                                            setReceiveModalData({
+                                                token: 'SOL',
+                                                chainName: 'Solana Network',
+                                                address: solWallet.address,
+                                                color: '#14F195'
+                                            });
+                                        }
+                                    }}
                                     onMouseDown={() => handlePressStart('SOL')}
                                     onMouseUp={handlePressEnd}
                                     onMouseLeave={handlePressEnd}
                                     onTouchStart={() => handlePressStart('SOL')}
                                     onTouchEnd={handlePressEnd}
-                                    className="p-3.5 rounded-2xl bg-[#161412] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-sm"
+                                    className="p-3.5 rounded-2xl bg-[#161412] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-sm active:scale-[0.99]"
                                 >
                                     <div className="flex items-center gap-3 w-full">
                                         <div className="w-10 h-10 rounded-xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center shrink-0">
@@ -1522,12 +1571,22 @@ export const WalletSidebar = ({
                                 {/* 3. Custom Pinned Card (Rendered if pinnedToken is not KYLRIX and not SOL) */}
                                 {pinnedToken !== 'KYLRIX' && pinnedToken !== 'SOL' && (
                                     <div
+                                        onClick={() => {
+                                            if (pinnedWallet) {
+                                                setReceiveModalData({
+                                                    token: pinnedToken,
+                                                    chainName: pinnedWallet.label,
+                                                    address: pinnedWallet.address,
+                                                    color: getNetworkColor(tokenToChain(pinnedToken)) || ACCENT
+                                                });
+                                            }
+                                        }}
                                         onMouseDown={() => handlePressStart(pinnedToken)}
                                         onMouseUp={handlePressEnd}
                                         onMouseLeave={handlePressEnd}
                                         onTouchStart={() => handlePressStart(pinnedToken)}
                                         onTouchEnd={handlePressEnd}
-                                        className="p-3.5 rounded-2xl bg-[#161412] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-sm"
+                                        className="p-3.5 rounded-2xl bg-[#161412] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-sm active:scale-[0.99]"
                                     >
                                         <div className="flex items-center gap-3 w-full">
                                             <div
@@ -1599,12 +1658,18 @@ export const WalletSidebar = ({
                                 {orderedWallets.filter(w => w.chain !== 'sol').map((wallet) => (
                                     <div
                                         key={wallet.chain}
+                                        onClick={() => setReceiveModalData({
+                                            token: wallet.symbol,
+                                            chainName: wallet.label,
+                                            address: wallet.address,
+                                            color: getNetworkColor(wallet.chain) || ACCENT
+                                        })}
                                         onMouseDown={() => handlePressStart(wallet.symbol)}
                                         onMouseUp={handlePressEnd}
                                         onMouseLeave={handlePressEnd}
                                         onTouchStart={() => handlePressStart(wallet.symbol)}
                                         onTouchEnd={handlePressEnd}
-                                        className="p-3.5 rounded-2xl bg-[#161412] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-sm"
+                                        className="p-3.5 rounded-2xl bg-[#161412] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-sm active:scale-[0.99]"
                                     >
                                         <div className="flex items-center gap-3 w-full">
                                             <div
@@ -1631,14 +1696,15 @@ export const WalletSidebar = ({
                                                 <div className="flex items-center gap-1">
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleCopyAddress(wallet.address)}
+                                                        onClick={(e) => { e.stopPropagation(); handleCopyAddress(wallet.address); }}
                                                         className="p-1 rounded text-white/40 hover:text-white transition-colors cursor-pointer"
                                                     >
                                                         <Copy size={13} />
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => {
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
                                                             const explorerUrl = getExplorerUrl(wallet);
                                                             if (explorerUrl) {
                                                                 window.open(explorerUrl, '_blank', 'noopener,noreferrer');
@@ -1843,6 +1909,110 @@ export const WalletSidebar = ({
         </Drawer>
     );
 
+    const renderReceiveDrawer = () => {
+        if (!receiveModalData) return null;
+        const { token, chainName, address, color } = receiveModalData;
+
+        const handleDownloadQR = () => {
+            const canvas = document.querySelector('canvas') as HTMLCanvasElement | null;
+            if (!canvas) {
+                toast.error('QR code not available');
+                return;
+            }
+            const link = document.createElement('a');
+            link.download = `${token.toLowerCase()}-receive-address-qr.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            toast.success('QR Code downloaded');
+        };
+
+        return (
+            <Drawer
+                anchor="bottom"
+                open={receiveModalData !== null}
+                onClose={() => setReceiveModalData(null)}
+                PaperProps={{
+                    sx: {
+                        bgcolor: SURFACE,
+                        borderTop: `1px solid ${EDGE}`,
+                        borderRadius: '32px 32px 0 0',
+                        backgroundImage: 'none',
+                        p: 3,
+                        maxHeight: '85dvh',
+                        zIndex: 1600,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2.5
+                    }
+                }}
+                ModalProps={{
+                    sx: {
+                        zIndex: 1590
+                    }
+                }}
+            >
+                <Box sx={{ width: 40, height: 4, bgcolor: '#3E3B37', borderRadius: '2px', alignSelf: 'center', mb: 0.5 }} />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                        <Typography sx={{ color: MUTED, fontSize: '0.72rem', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-satoshi)', mb: 0.5 }}>
+                            Receive / Deposit
+                        </Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white', fontSize: '1.25rem', lineHeight: 1.1 }}>
+                            {token} ({chainName})
+                        </Typography>
+                    </Box>
+                    <IconButton size="small" onClick={() => setReceiveModalData(null)} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                        <X size={20} />
+                    </IconButton>
+                </Box>
+
+                <div className="flex flex-col items-center gap-4 py-2">
+                    {/* QR Code */}
+                    <div className="p-3.5 bg-white rounded-2xl shadow-xl flex items-center justify-center">
+                        <QRCodeCanvas value={address || 'Unavailable'} size={180} />
+                    </div>
+
+                    {/* Address Box */}
+                    <div className="w-full p-3 rounded-2xl bg-[#0A0908] border border-white/[0.08] space-y-1.5">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-satoshi font-bold text-white/50">Deposit Address</span>
+                            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-white/5" style={{ color: color || ACCENT }}>
+                                {token}
+                            </span>
+                        </div>
+                        <div className="text-xs font-mono text-white/90 break-all select-all leading-relaxed">
+                            {address || 'Address not provisioned'}
+                        </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="w-full grid grid-cols-2 gap-2.5 pt-1">
+                        <button
+                            type="button"
+                            onClick={() => handleCopyAddress(address)}
+                            className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl bg-[#161412] hover:bg-[#1f1d1a] border border-white/10 text-white font-satoshi font-bold text-xs transition-all cursor-pointer active:scale-[0.98]"
+                        >
+                            <Copy size={15} className="text-[#6366F1]" />
+                            <span>Copy Address</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleDownloadQR}
+                            className="flex items-center justify-center gap-2 py-3 px-3 rounded-xl bg-[#161412] hover:bg-[#1f1d1a] border border-white/10 text-white font-satoshi font-bold text-xs transition-all cursor-pointer active:scale-[0.98]"
+                        >
+                            <Download size={15} className="text-[#14F195]" />
+                            <span>Save QR</span>
+                        </button>
+                    </div>
+
+                    <p className="text-[11px] text-white/40 font-satoshi text-center leading-relaxed px-2">
+                        Only send <strong className="text-white/80">{token}</strong> or compatible assets on <strong className="text-white/80">{chainName}</strong> to this specific address.
+                    </p>
+                </div>
+            </Drawer>
+        );
+    };
+
     if (embedded) {
         if (!isOpen) return null;
         return (
@@ -1878,6 +2048,7 @@ export const WalletSidebar = ({
                 {renderHeader()}
                 {renderWalletContent()}
                 {renderPinDrawer()}
+                {renderReceiveDrawer()}
             </Box>
         );
     }
@@ -1934,6 +2105,7 @@ export const WalletSidebar = ({
                     </Box>
                 </Drawer>
                 {renderPinDrawer()}
+                {renderReceiveDrawer()}
             </>
         );
     }
@@ -1966,6 +2138,7 @@ export const WalletSidebar = ({
                 </Box>
             </Drawer>
             {renderPinDrawer()}
+            {renderReceiveDrawer()}
         </>
     );
 };
