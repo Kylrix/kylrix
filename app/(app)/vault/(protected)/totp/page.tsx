@@ -322,16 +322,15 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   }, [user?.$id]);
 
   useEffect(() => {
-    if (!user?.$id) return;
-
-    const cacheKey = `vault_totp_${user.$id}`;
+    const activeUserId = user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.$id || '') : '');
+    const cacheKey = `vault_totp_${activeUserId}`;
     let isCancelled = false;
 
     (async () => {
       try {
         const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
         const db = await getRxDB().catch(() => null);
-        if (db) {
+        if (db && activeUserId) {
           const cachedDoc = await db.cache.findOne(cacheKey).exec().catch(() => null);
           if (cachedDoc?.data && Array.isArray(cachedDoc.data) && !isCancelled) {
             if (cachedDoc.data.length > 0) {
@@ -346,8 +345,8 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
       } catch {}
     })();
 
-    console.log(`[TOTP] Fetching TOTP codes for user: ${user.$id}...`);
-    Promise.allSettled([listTotpSecrets(user.$id), listFolders(user.$id)])
+    console.log(`[TOTP] Fetching TOTP codes for user: ${activeUserId}...`);
+    Promise.allSettled([listTotpSecrets(activeUserId), listFolders(activeUserId)])
       .then(async ([secretsResult, foldersResult]) => {
         if (isCancelled) return;
         if (secretsResult.status === "fulfilled") {

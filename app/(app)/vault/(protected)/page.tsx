@@ -142,12 +142,8 @@ function DashboardPageContent() {
   };
 
   const loadAllCredentials = useCallback(async (background = false) => {
-    if (!user?.$id) {
-      setAllCredentials([]);
-      setLoading(false);
-      return;
-    }
-    const cacheKey = `vault_credentials_${user.$id}`;
+    const activeUserId = user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.$id || '') : '');
+    const cacheKey = `vault_credentials_${activeUserId}`;
     try {
       const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
       const db = await getRxDB().catch(() => null);
@@ -167,16 +163,16 @@ function DashboardPageContent() {
 
     if (!background && allCredentials.length === 0) setLoading(true);
     try {
-      console.log(`[Vault] Fetching credentials for user: ${user.$id}...`);
-      const credentials = await listAllCredentials(user.$id);
+      console.log(`[Vault] Fetching credentials for user: ${activeUserId}...`);
+      const credentials = await listAllCredentials(activeUserId);
       console.log(`[Vault] Successfully fetched ${credentials?.length ?? 0} credentials from Appwrite.`);
       setAllCredentials(credentials);
       try {
         const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
         const db = await getRxDB().catch(() => null);
-        if (db) {
+        if (db && activeUserId) {
           const { listRawCredentials } = await import('@/lib/appwrite/vault-actions');
-          const rawEncrypted = await listRawCredentials(user.$id).catch(() => null);
+          const rawEncrypted = await listRawCredentials(activeUserId).catch(() => null);
           if (rawEncrypted) {
             await db.cache.upsert({
               id: cacheKey,
@@ -199,106 +195,12 @@ function DashboardPageContent() {
   }, [user, allCredentials.length]);
 
   const hydrateVaultData = useCallback(async () => {
-    if (!user?.$id) {
-      await loadAllCredentials();
-      return;
-    }
-    // With unlock-on-demand, list metadata while locked; decrypt happens on open.
-    if (!isVaultUnlocked() && !unlockOnDemand) return;
     await loadAllCredentials();
-  }, [user, isVaultUnlocked, unlockOnDemand, loadAllCredentials]);
+  }, [loadAllCredentials]);
 
   useEffect(() => {
-    if (user?.$id) return;
-    const handleStorage = () => {
-      void loadAllCredentials();
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, [user?.$id, loadAllCredentials]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const handleOnline = () => {
-      console.log('[Vault] Network connection restored. Hydrating vault data...');
-      void hydrateVaultData();
-    };
-
-    const handleVaultChange = async () => {
-      try {
-        const { VaultService } = await import('@/lib/appwrite/vault-service');
-        VaultService.clearVaultCaches();
-      } catch {}
-      void loadAllCredentials(true);
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('vault-unlocked', handleVaultChange);
-    window.addEventListener('vault-locked', handleVaultChange);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('vault-unlocked', handleVaultChange);
-      window.removeEventListener('vault-locked', handleVaultChange);
-    };
-  }, [hydrateVaultData, loadAllCredentials]);
-
-  // Effects
-  useEffect(() => {
-    if (activeTab !== 'secrets') return;
-
-    setConfiguration({
-      isVisible: true,
-      mainColor: '#10B981',
-      mainIcon: <Plus size={32} strokeWidth={3} />,
-      onMainClick: () => handleAdd(),
-      actions: []});
-    return () => resetConfiguration();
-  }, [activeTab, setConfiguration, resetConfiguration, handleAdd]);
-
-  useEffect(() => {
-    const action = searchParams?.get('action');
-    if (action && ['add-login', 'add-card'].includes(action)) {
-      requireUnlock(() => {
-        setEditCredential(null);
-        setDialogType(action.split('-')[1]);
-        setShowDialog(true);
-      });
-
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete('action');
-      const newPath = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
-      router.replace(newPath);
-    }
-  }, [searchParams, router, requireUnlock]);
-
-  useEffect(() => {
-    if (unlockOnDemand) {
-      setShowMasterPassDrawer(false);
-      return;
-    }
-    if (user && (needsMasterPassword || !isVaultUnlocked())) {
-      setShowMasterPassDrawer(true);
-    } else {
-      setShowMasterPassDrawer(false);
-    }
-  }, [user, needsMasterPassword, isVaultUnlocked, unlockOnDemand]);
-
-  useEffect(() => {
-    registerCreateModal((prefill) => {
-      requireUnlock(() => {
-        setEditCredential(null);
-        setDialogType("login");
-        setDialogPrefill(prefill);
-        setShowDialog(true);
-      });
-    });
-  }, [registerCreateModal, requireUnlock]);
-
-  useEffect(() => {
-    if (!user?.$id) return;
     void hydrateVaultData();
-  }, [user, hydrateVaultData]);
+  }, [hydrateVaultData]);
 
   const openDeleteModal = (cred: Credentials) => {
     requireUnlock(() => {
