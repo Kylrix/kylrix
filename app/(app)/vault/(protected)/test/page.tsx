@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 export default function VaultTestPage() {
   const [loading, setLoading] = useState(true);
@@ -49,6 +50,50 @@ export default function VaultTestPage() {
     }
   };
 
+  const handleCopyDiagnostics = () => {
+    const redactedCredentials = credentials.map((c) => ({
+      $id: c.$id,
+      userId: c.userId,
+      itemType: c.itemType,
+      name: '[REDACTED_ENCRYPTED_NAME]',
+      username: c.username ? '[REDACTED_ENCRYPTED_USERNAME]' : null,
+      permissions: c.$permissions,
+      isPinned: c.isPinned ?? null,
+      isPublic: c.isPublic ?? null,
+      isTrash: c.isTrash ?? null,
+      $createdAt: c.$createdAt,
+      $updatedAt: c.$updatedAt,
+    }));
+
+    const redactedTotp = totpSecrets.map((t) => ({
+      $id: t.$id,
+      userId: t.userId,
+      issuer: t.issuer ? '[REDACTED_ENCRYPTED_ISSUER]' : null,
+      accountName: t.accountName ? '[REDACTED_ENCRYPTED_ACCOUNT]' : null,
+      permissions: t.$permissions,
+      isPinned: t.isPinned ?? null,
+      isPublic: t.isPublic ?? null,
+      isTrash: t.isTrash ?? null,
+      $createdAt: t.$createdAt,
+      $updatedAt: t.$updatedAt,
+    }));
+
+    const report = {
+      timestamp: new Date().toISOString(),
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
+      error: error || null,
+      logs: rawLogs,
+      credentialsCount: credentials.length,
+      credentials: redactedCredentials,
+      totpCount: totpSecrets.length,
+      totpSecrets: redactedTotp,
+    };
+
+    const text = JSON.stringify(report, null, 2);
+    navigator.clipboard.writeText(text);
+    toast.success('Diagnostics copied to clipboard (rows redacted)');
+  };
+
   useEffect(() => {
     void fetchRawDirect();
   }, []);
@@ -60,12 +105,20 @@ export default function VaultTestPage() {
           <h1 className="text-xl font-bold text-emerald-400 font-clash">/vault/test (Detached Raw Diagnostics)</h1>
           <p className="text-white/50 text-xs">Direct Web SDK listRows fetch without any wrappers, caches, or filtering.</p>
         </div>
-        <button
-          onClick={() => void fetchRawDirect()}
-          className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-bold rounded-xl transition-colors"
-        >
-          Re-Fetch Raw DB
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleCopyDiagnostics}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-colors border border-indigo-400/30"
+          >
+            Copy Redacted Diagnostics
+          </button>
+          <button
+            onClick={() => void fetchRawDirect()}
+            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-black font-bold rounded-xl transition-colors"
+          >
+            Re-Fetch Raw DB
+          </button>
+        </div>
       </div>
 
       {error && (
