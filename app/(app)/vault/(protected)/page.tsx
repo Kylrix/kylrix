@@ -143,55 +143,26 @@ function DashboardPageContent() {
 
   const loadAllCredentials = useCallback(async (background = false) => {
     const activeUserId = user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.$id || '') : '');
-    const cacheKey = `vault_credentials_${activeUserId}`;
-    try {
-      const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-      const db = await getRxDB().catch(() => null);
-      if (db) {
-        const cachedDoc = await db.cache.findOne(cacheKey).exec().catch(() => null);
-        if (cachedDoc?.data && Array.isArray(cachedDoc.data)) {
-          if (cachedDoc.data.length > 0) {
-            setAllCredentials(cachedDoc.data as Credentials[]);
-            setLoading(false);
-          } else {
-            // Discard empty local cache entry to force fresh Appwrite fetch
-            await db.cache.findOne(cacheKey).remove().catch(() => {});
-          }
-        }
-      }
-    } catch {}
-
+    if (!activeUserId) { setLoading(false); return; }
     if (!background && allCredentials.length === 0) setLoading(true);
     try {
-      console.log(`[Vault] Fetching credentials for user: ${activeUserId}...`);
-      const credentials = await listAllCredentials(activeUserId);
-      console.log(`[Vault] Successfully fetched ${credentials?.length ?? 0} credentials from Appwrite.`);
-      setAllCredentials(credentials);
-      try {
-        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-        const db = await getRxDB().catch(() => null);
-        if (db && activeUserId) {
-          const { listRawCredentials } = await import('@/lib/appwrite/vault-actions');
-          const rawEncrypted = await listRawCredentials(activeUserId).catch(() => null);
-          if (rawEncrypted) {
-            await db.cache.upsert({
-              id: cacheKey,
-              data: rawEncrypted as any,
-              timestamp: Date.now()
-            }).catch(() => {});
-          }
-        }
-      } catch (cacheErr) {
-        console.warn("[Vault] RxDB cache write warning:", cacheErr);
-      }
+      // Unified path via LocalEngine — UI never hits backend directly; LocalEngine delegates to unified service
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      const { VaultService } = await import('@/lib/appwrite/vault-service');
+      const cacheKey = `vault_credentials_${activeUserId}`;
+      // LocalEngine.query handles cache-first + background refresh + manual force
+      const credentials = await LocalEngine.query<Credentials[]>(cacheKey, async () => {
+        const rows = await VaultService.listAllCredentials(activeUserId);
+        return rows as any;
+      }, { ttl: background ? 0 : undefined });
+      const list = Array.isArray(credentials) ? credentials : (credentials as any)?.rows || [];
+      console.log(`[Vault] Fetched ${list?.length ?? 0} credentials via LocalEngine+VaultService.`);
+      if (Array.isArray(list) && list.length) setAllCredentials(list as any);
+      else if (!background) setAllCredentials([]);
     } catch (error: unknown) {
-      console.error("[Vault] CRITICAL: Failed to load credentials from Appwrite:", error);
-      if (allCredentials.length === 0) {
-        toast.error(`Vault load error: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    } finally {
-      setLoading(false);
-    }
+      console.error("[Vault] Failed to load via LocalEngine:", error);
+      if (allCredentials.length === 0) toast.error(`Vault load error: ${error instanceof Error ? error.message : String(error)}`);
+    } finally { setLoading(false); }
   }, [user, allCredentials.length]);
 
   const hydrateVaultData = useCallback(async () => {

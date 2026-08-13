@@ -211,6 +211,70 @@ export const LocalEngine = {
     if (tier === 'lazy') return this.lazyWrite(cacheKey, data, mutator);
     return this.batchedWrite(cacheKey, data, mutator);
   },
+
+  // ── Unified object handles — UI calls these, never backend directly ──
+  /** Manual fetch handle: UI can force refresh when cache feels stale/empty */
+  async fetch<T>(kind: string, queries: string[] = [], opts?: { force?: boolean; cacheKey?: string; ttl?: number }): Promise<{ total: number; rows: T[] }> {
+    const { unifiedRead } = await import('./unified-object-service');
+    const cacheKey = opts?.cacheKey || `local:${kind}:${JSON.stringify(queries)}`;
+    if (!opts?.force) {
+      const cached = await this.cacheGet<{ total: number; rows: T[] }>(cacheKey, opts?.ttl);
+      if (cached && Array.isArray((cached as any).rows) && (cached as any).rows.length) {
+        // background refresh
+        void unifiedRead(kind, queries).then(fresh => this.cacheSet(cacheKey, fresh)).catch(()=>{});
+        return cached;
+      }
+    }
+    const fresh = await unifiedRead<T>(kind, queries);
+    await this.cacheSet(cacheKey, fresh as any);
+    return fresh;
+  },
+
+  async get<T>(kind: string, id: string, opts?: { force?: boolean }): Promise<T | null> {
+    const { unifiedGet } = await import('./unified-object-service');
+    const cacheKey = `local:${kind}:${id}`;
+    if (!opts?.force) {
+      const cached = await this.cacheGet<T>(cacheKey);
+      if (cached) return cached;
+    }
+    const doc = await unifiedGet<T>(kind, id);
+    if (doc) await this.cacheSet(cacheKey, doc as any);
+    return doc;
+  },
+
+  async create<T>(kind: string, data: Record<string, any>): Promise<T> {
+    const { unifiedCreate } = await import('./unified-object-service');
+    const row = await unifiedCreate<T>(kind, data);
+    // optimistic cache
+    await this.cacheSet(`local:${kind}:${(row as any).$id || (row as any).id}`, row as any);
+    return row;
+  },
+
+  async update<T>(kind: string, id: string, data: Record<string, any>): Promise<T> {
+    const { unifiedUpdate } = await import('./unified-object-service');
+    const row = await unifiedUpdate<T>(kind, id, data);
+    await this.cacheSet(`local:${kind}:${id}`, row as any);
+    return row;
+  },
+
+  async delete(kind: string, id: string, opts?: { recursive?: boolean; cascade?: Array<{ kind: string; foreignField: string }> }): Promise<void> {
+    const { unifiedDelete } = await import('./unified-object-service');
+    await unifiedDelete(kind, id, opts);
+    await this.cacheDelete(`local:${kind}:${id}`);
+  },
+
+  async systemCreate<T>(kind: string, data: Record<string, any>): Promise<T> {
+    const { systemCreate } = await import('./unified-object-service');
+    return systemCreate<T>(kind, data);
+  },
+  async systemUpdate<T>(kind: string, id: string, data: Record<string, any>): Promise<T> {
+    const { systemUpdate } = await import('./unified-object-service');
+    return systemUpdate<T>(kind, id, data);
+  },
+  async systemDelete(kind: string, id: string): Promise<void> {
+    const { systemDelete } = await import('./unified-object-service');
+    return systemDelete(kind, id);
+  },
 };
 
 function pickComparablePayload(payload: any): Record<string, any> {
