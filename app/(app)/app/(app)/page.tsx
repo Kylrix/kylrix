@@ -225,6 +225,10 @@ export default function IdeasPage() {
   const displayPinned = selectedTag ? pinnedNotes.filter((n: any) => n.tags?.includes(selectedTag)) : pinnedNotes;
   const displayUnpinned = selectedTag ? unpinnedNotes.filter((n: any) => n.tags?.includes(selectedTag)) : unpinnedNotes;
 
+  const handleDeleteNote = useCallback((noteId: string) => {
+    setNotes((prev) => prev.filter((n) => n.$id !== noteId));
+  }, []);
+
   const [activeMainTab, setActiveMainTab] = useState<'ideas' | 'forms' | 'tags'>('ideas');
 
   return (
