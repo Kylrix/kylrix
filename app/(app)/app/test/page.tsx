@@ -22,7 +22,8 @@ export default function AppTestPage() {
 
     try {
       log('Initializing direct Client SDK fetch for notes...');
-      const { Query, account, databases } = await import('@/lib/appwrite/client');
+      const { Query, Client, TablesDB } = await import('appwrite');
+      const { account, databases } = await import('@/lib/appwrite/client');
       const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
 
       const user = await account.get().catch(() => null);
@@ -39,21 +40,17 @@ export default function AppTestPage() {
       const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
       const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
 
-      const res = await (databases as any).listRows(dbId, tableId, [
-        Query.or([
-          Query.equal('userId', user.$id),
-          Query.equal('creatorId', user.$id)
-        ]),
+      const client = new Client()
+        .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
+        .setProject(APPWRITE_CONFIG.PROJECT_ID);
+      const tablesDB = new TablesDB(client);
+
+      const res = await tablesDB.listRows(dbId, tableId, [
+        Query.equal('userId', user.$id),
         Query.limit(50),
         Query.orderDesc('$updatedAt')
       ]).catch(async () => {
-        // Direct TablesDB fallback
-        const { Client, TablesDB } = await import('appwrite');
-        const client = new Client()
-          .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-          .setProject(APPWRITE_CONFIG.PROJECT_ID);
-        const t = new TablesDB(client);
-        return await t.listRows(dbId, tableId, [
+        return await (databases as any).listDocuments(dbId, tableId, [
           Query.equal('userId', user.$id),
           Query.limit(50),
           Query.orderDesc('$updatedAt')
