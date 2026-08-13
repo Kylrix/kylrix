@@ -367,10 +367,39 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
 
   const handleStartNewSession = async () => {
     try {
+      if (user?.$id) {
+        // 1. Scan LocalEngine and prune redundant empty sessions
+        const { reusableSessionId } = await AgenticSessionLocalStore.findAndPruneEmptySessions(
+          user.$id,
+          activeSessionId
+        );
+
+        if (reusableSessionId) {
+          setActiveSessionId(reusableSessionId);
+          await AgenticSessionLocalStore.setActiveSessionId(user.$id, reusableSessionId);
+          const local = await AgenticSessionLocalStore.getSession(reusableSessionId);
+          setMessages(local?.chatHistory || []);
+          try {
+            const { account } = await import('@/lib/appwrite/client');
+            const prefs = await account.getPrefs().catch(() => ({}));
+            await account.updatePrefs({ ...prefs, activeAgentSessionId: reusableSessionId }).catch(() => {});
+          } catch {}
+          toast.success('Switched to clean session.');
+          return;
+        }
+      }
+
+      // 2. Otherwise request fresh session from server action (which also reuses/prunes empty)
       const { startNewAgentSession } = await import('@/lib/actions/agentic');
       const { account } = await import('@/lib/appwrite/client');
       const jwt = await account.createJWT().then((res: { jwt?: string }) => res?.jwt || '').catch(() => undefined);
-      await startNewAgentSession(jwt);
+      const res = await startNewAgentSession(jwt);
+      if (res?.sessionId) {
+        setActiveSessionId(res.sessionId);
+        if (user?.$id) {
+          await AgenticSessionLocalStore.setActiveSessionId(user.$id, res.sessionId);
+        }
+      }
       setMessages([]);
       toast.success('Started a new conversation session.');
     } catch (err) {
@@ -388,6 +417,8 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     setShowSessionsDrawer(true);
     let hadLocal = false;
     if (user?.$id) {
+      // Clean up any empty duplicates before listing
+      await AgenticSessionLocalStore.findAndPruneEmptySessions(user.$id, activeSessionId);
       const local = await AgenticSessionLocalStore.getSessionsList(user.$id);
       if (local.length) {
         hadLocal = true;

@@ -256,6 +256,46 @@ export const AgenticSessionLocalStore = {
     return newSession;
   },
 
+  /**
+   * Scans for empty sessions for this user, keeps the active or most recent empty session,
+   * and prunes redundant empty duplicates from LocalEngine and lists.
+   */
+  async findAndPruneEmptySessions(
+    userId: string,
+    currentActiveId?: string | null): Promise<{ reusableSessionId?: string; prunedIds: string[] }> {
+    const list = await this.getSessionsList(userId);
+    const prunedIds: string[] = [];
+    let reusableSessionId: string | undefined;
+
+    // Filter only general sessions (not object-sidekick sessions)
+    const generalSessions = list.filter((s) => !s.targetType && !s.targetId);
+
+    for (const item of generalSessions) {
+      const full = await this.getSession(item.id);
+      const isHistoryEmpty = !full || !full.chatHistory || full.chatHistory.length === 0;
+
+      if (isHistoryEmpty) {
+        if (!reusableSessionId) {
+          // If the current active is empty, prefer that as reusable, otherwise keep this first empty one
+          reusableSessionId = (currentActiveId && item.id === currentActiveId) ? currentActiveId : item.id;
+        } else if (item.id !== reusableSessionId && item.id !== currentActiveId) {
+          // Duplicate empty session — delete from local cache
+          prunedIds.push(item.id);
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          await LocalEngine.cacheDelete(sessionKey(item.id));
+        }
+      }
+    }
+
+    if (prunedIds.length > 0) {
+      const remaining = list.filter((s) => !prunedIds.includes(s.id));
+      await this.setSessionsList(userId, remaining);
+      emit();
+    }
+
+    return { reusableSessionId, prunedIds };
+  },
+
   isMessagePending(message?: AgenticLocalMessage | null): boolean {
     if (!message) return false;
     return message.syncStatus === 'pending' || message.syncStatus === 'error';

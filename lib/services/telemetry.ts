@@ -307,10 +307,59 @@ export const TelemetryService = {
 
   /**
    * Persists or updates the context and chat history session.
+   * If creating an empty session, reuses an existing empty general session and cleans up duplicates.
    */
   async saveSession(userId: string, context: string, chatHistory: string, seen = true, sessionId?: string): Promise<string | undefined> {
     try {
       const tables = createSystemTablesDB();
+      const isEmpty = !chatHistory || chatHistory === '[]';
+
+      // If user wants to start/save an empty session without explicit ID, scan for existing empty sessions to reuse & prune duplicates
+      if (isEmpty && !sessionId) {
+        const res = await tables.listRows({
+          databaseId: DATABASE_ID,
+          tableId: 'agentic_sessions',
+          queries: [
+            Query.equal('userId', userId),
+            Query.notEqual('isMemory', true),
+            Query.orderDesc('$updatedAt'),
+            Query.limit(25)
+          ]
+        });
+
+        const generalRows = (res.rows || []).filter((r: any) => !r.targetType && !r.targetId);
+        let foundEmptyId: string | undefined;
+        const redundantEmptyIds: string[] = [];
+
+        for (const r of generalRows) {
+          try {
+            const parsed = JSON.parse(r.chatHistory || '[]');
+            if (!Array.isArray(parsed) || parsed.length === 0) {
+              if (!foundEmptyId) {
+                foundEmptyId = r.$id;
+              } else {
+                redundantEmptyIds.push(r.$id);
+              }
+            }
+          } catch {
+            redundantEmptyIds.push(r.$id);
+          }
+        }
+
+        // Delete duplicate empty sessions in background
+        for (const redundantId of redundantEmptyIds) {
+          tables.deleteRow({
+            databaseId: DATABASE_ID,
+            tableId: 'agentic_sessions',
+            rowId: redundantId
+          }).catch(() => {});
+        }
+
+        if (foundEmptyId) {
+          return foundEmptyId;
+        }
+      }
+
       const targetSessionId = sessionId || (await this.loadSession(userId)).rowId;
       
       const payload = {
