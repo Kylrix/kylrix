@@ -1276,10 +1276,10 @@ export const WalletSidebar = ({
                 ) : showKylrixDetail ? (
                     renderKylrixDetail()
                 ) : (
-                    <Box sx={{ flex: 1, overflowY: 'auto', px: 1.5, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
+                    <Box sx={{ flex: 1, overflowY: 'auto', px: { xs: 2.5, md: 3 }, py: 1.5, pb: 6, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
                         {/* OpenBricks Modern Balance Card */}
                         <Box sx={{ 
-                            p: 3, 
+                            p: { xs: 2.5, md: 3 }, 
                             mb: 3, 
                             textAlign: 'left',
                             bgcolor: '#161412',
@@ -1287,7 +1287,7 @@ export const WalletSidebar = ({
                             border: `1px solid rgba(255, 255, 255, 0.08)`,
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: 2
+                            gap: 2.5
                         }}>
                             <div>
                                 <div className="flex items-center justify-between">
