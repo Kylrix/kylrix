@@ -36,7 +36,13 @@ export function TagSelectorDrawer() {
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { activeContent, drawerData, close, open } = useUnifiedDrawer();
   const isOpen = activeContent === 'tag-selector';
-  const { ecosystemTags } = useTask();
+  const { ecosystemTags, refreshEcosystemTags } = useTask();
+
+  React.useEffect(() => {
+    if (isOpen && (!ecosystemTags || ecosystemTags.length === 0)) {
+      void refreshEcosystemTags();
+    }
+  }, [isOpen, ecosystemTags, refreshEcosystemTags]);
 
   const onSelect = drawerData?.onSelect as ((tagName: string) => void) | undefined;
   const selectedTags = drawerData?.selectedTags as string[] || [];

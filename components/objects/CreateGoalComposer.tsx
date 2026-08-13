@@ -1,8 +1,6 @@
-'use client';
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ID } from 'appwrite';
-import { ArrowLeft, Calendar, Check, ChevronDown, ChevronUp, Target } from 'lucide-react';
+import { ArrowLeft, Calendar, Check, ChevronDown, ChevronUp, Plus, Tag, Target, X } from 'lucide-react';
 import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
 import { useTask } from '@/context/TaskContext';
 import { useAuth } from '@/lib/auth';
@@ -12,6 +10,7 @@ import { PRIORITY_COLORS } from '@/components/objects/ObjectCardMeta';
 import type { Priority, Task } from '@/types';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import {
   EventDateTimePickerSurface,
   EventDateTimePickerDrawer,
@@ -34,6 +33,7 @@ type Props = {
     content?: string;
     priority?: Priority;
     dueDate?: string;
+    tags?: string[];
   };
 };
 
@@ -49,11 +49,12 @@ export function CreateGoalComposer({
   onGoalCreated,
   initialContent,
 }: Props) {
-  const { pushLiveGoal, selectedProjectId, userId, deleteTask } = useTask();
+  const { pushLiveGoal, selectedProjectId, userId, deleteTask, ecosystemTags, refreshEcosystemTags } = useTask();
   const { user } = useAuth();
   const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const ownerId = user?.$id || userId || 'guest';
   const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { open: openUnified } = useUnifiedDrawer();
   const { getCachedData, setCachedData } = useDataNexus();
   const draftKey = `kylrix_goal_compose_draft_${ownerId}`;
 
@@ -62,6 +63,7 @@ export function CreateGoalComposer({
   const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(Boolean(initialContent?.title));
   const [priority, setPriority] = useState<Priority>(initialContent?.priority || 'medium');
   const [dueDate, setDueDate] = useState(initialContent?.dueDate || '');
+  const [tags, setTags] = useState<string[]>(initialContent?.tags || []);
   const [showMobileDatePicker, setShowMobileDatePicker] = useState(false);
   const [resolvedId, setResolvedId] = useState<string | undefined>(initialContent?.id);
   const [draftHydrated, setDraftHydrated] = useState(false);
@@ -161,8 +163,21 @@ export function CreateGoalComposer({
     return id;
   }, [initialContent?.id, resolvedId]);
 
+  const appendTag = (tagName: string) => {
+    if (!tagName || tags.includes(tagName)) return;
+    const nextTags = [...tags, tagName];
+    setTags(nextTags);
+    pushLive(buildLive(content, title, priority, dueDate, nextTags));
+  };
+
+  const removeTag = (tagName: string) => {
+    const nextTags = tags.filter((t) => t !== tagName);
+    setTags(nextTags);
+    pushLive(buildLive(content, title, priority, dueDate, nextTags));
+  };
+
   const buildLive = useCallback(
-    (nextContent: string, nextTitle?: string, nextPriority?: Priority, nextDue?: string): Task => {
+    (nextContent: string, nextTitle?: string, nextPriority?: Priority, nextDue?: string, nextTags?: string[]): Task => {
       const id = ensureId();
       const previewTitle =
         resolveNoteCardTitle(
@@ -184,7 +199,7 @@ export function CreateGoalComposer({
         status: 'todo',
         projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : (selectedProjectId || 'inbox'),
         isWorkspace: Boolean(activeWorkspace && !activeWorkspace.isPersonal),
-        labels: [],
+        labels: nextTags !== undefined ? nextTags : tags,
         linkedNotes: [],
         subtasks: [],
         comments: [],
@@ -205,7 +220,7 @@ export function CreateGoalComposer({
         isGuest: false,
       };
     },
-    [activeWorkspace, dueDate, ensureId, isTitleManuallyEdited, ownerId, priority, selectedProjectId, title],
+    [activeWorkspace, dueDate, ensureId, isTitleManuallyEdited, ownerId, priority, selectedProjectId, tags, title],
   );
 
   const pushLive = useCallback(
@@ -520,6 +535,65 @@ export function CreateGoalComposer({
                 {dueDate ? 'Change' : 'Pick Date'}
               </span>
             </button>
+          </div>
+
+          {/* Tags Section */}
+          <div className="flex flex-col gap-2 border-t border-white/5 pt-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold font-mono uppercase tracking-widest text-white/40">
+                Tags & Categories
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  openUnified('tag-selector', {
+                    selectedTags: tags,
+                    onSelect: (tagName: string) => {
+                      appendTag(tagName);
+                    },
+                  });
+                }}
+                className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#A855F7] hover:text-[#C084FC] flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <Plus size={12} />
+                <span>Add Tag</span>
+              </button>
+            </div>
+
+            {tags.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 items-center">
+                {tags.map((tagName) => {
+                  const tag = (ecosystemTags as any[]).find((t) => t.name === tagName);
+                  const color = tag?.color || '#A855F7';
+                  return (
+                    <span
+                      key={tagName}
+                      onClick={() => removeTag(tagName)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#100F0E] text-[10px] font-extrabold font-mono rounded-lg border cursor-pointer hover:bg-[#1C1A18] transition-colors"
+                      style={{ color: color, borderColor: `${color}40` }}
+                    >
+                      {tagName.toUpperCase()}
+                      <X className="w-2.5 h-2.5" />
+                    </span>
+                  );
+                })}
+              </div>
+            ) : (
+              <div
+                onClick={() => {
+                  openUnified('tag-selector', {
+                    selectedTags: tags,
+                    onSelect: (tagName: string) => {
+                      appendTag(tagName);
+                    },
+                  });
+                }}
+                className="w-full py-2 px-3 rounded-xl border border-dashed border-white/10 hover:border-[#A855F7]/30 text-white/30 hover:text-white/60 text-xs font-satoshi flex items-center gap-2 cursor-pointer transition-all"
+              >
+                <Tag size={13} className="text-[#A855F7]/60" />
+                <span>No tags selected. Tap to add tags from local engine…</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
