@@ -19,6 +19,7 @@ import {
   Plus} from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useTask } from '@/context/TaskContext';
+import { useNotes } from '@/context/NotesContext';
 
 const SURFACE_ASH = '#161412';
 const VOID = '#0A0908';
@@ -37,9 +38,50 @@ export function TagSelectorDrawer() {
   const { activeContent, drawerData, close, open } = useUnifiedDrawer();
   const isOpen = activeContent === 'tag-selector';
   const { ecosystemTags, refreshEcosystemTags, tasks } = useTask();
+  const { notes } = useNotes();
+  const [directLocalTags, setDirectLocalTags] = React.useState<any[]>([]);
 
   React.useEffect(() => {
-    if (isOpen && (!ecosystemTags || ecosystemTags.length === 0)) {
+    if (!isOpen) return;
+
+    void (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const { account } = await import('@/lib/appwrite/client');
+        const user = await account.get().catch(() => null);
+        const uid = user?.$id || 'guest';
+        
+        const [c1, c2] = await Promise.all([
+          LocalEngine.cacheGet<any>(`f_tags_${uid}`),
+          LocalEngine.cacheGet<any>(`f_user_tags_${uid}`),
+        ]);
+        
+        const found =
+          c1?.rows && Array.isArray(c1.rows) && c1.rows.length > 0
+            ? c1.rows
+            : Array.isArray(c1) && c1.length > 0
+              ? c1
+              : c2?.rows && Array.isArray(c2.rows) && c2.rows.length > 0
+                ? c2.rows
+                : Array.isArray(c2) && c2.length > 0
+                  ? c2
+                  : [];
+                  
+        if (found.length > 0) {
+          setDirectLocalTags(found);
+        } else {
+          const { getAllTags, listTags } = await import('@/lib/appwrite');
+          const res = await getAllTags().catch(() => listTags());
+          const rows = Array.isArray(res) ? res : (Array.isArray(res?.rows) ? res.rows : []);
+          if (rows.length > 0) {
+            setDirectLocalTags(rows);
+            await LocalEngine.cacheSet(`f_tags_${uid}`, { rows, total: rows.length });
+          }
+        }
+      } catch {}
+    })();
+
+    if (!ecosystemTags || ecosystemTags.length === 0) {
       void refreshEcosystemTags();
     }
   }, [isOpen, ecosystemTags, refreshEcosystemTags]);
@@ -48,10 +90,19 @@ export function TagSelectorDrawer() {
     const list: { $id: string; name: string; color: string }[] = [];
     const seen = new Set<string>();
 
+    (directLocalTags || []).forEach((t: any) => {
+      const name = typeof t === 'string' ? t : t?.name;
+      if (name && !seen.has(name)) {
+        seen.add(name);
+        list.push({ $id: t?.$id || name, name, color: t?.color || SYSTEM_PRIMARY });
+      }
+    });
+
     (ecosystemTags || []).forEach((t: any) => {
-      if (t?.name && !seen.has(t.name)) {
-        seen.add(t.name);
-        list.push({ $id: t.$id || t.name, name: t.name, color: t.color || SYSTEM_PRIMARY });
+      const name = typeof t === 'string' ? t : t?.name;
+      if (name && !seen.has(name)) {
+        seen.add(name);
+        list.push({ $id: t?.$id || name, name, color: t?.color || SYSTEM_PRIMARY });
       }
     });
 
@@ -64,8 +115,17 @@ export function TagSelectorDrawer() {
       });
     });
 
+    (notes || []).forEach((note: any) => {
+      (note.tags || []).forEach((tag: string) => {
+        if (tag && !seen.has(tag)) {
+          seen.add(tag);
+          list.push({ $id: tag, name: tag, color: SYSTEM_PRIMARY });
+        }
+      });
+    });
+
     return list.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-  }, [ecosystemTags, tasks]);
+  }, [directLocalTags, ecosystemTags, tasks, notes]);
 
   const onSelect = drawerData?.onSelect as ((tagName: string) => void) | undefined;
   const selectedTags = drawerData?.selectedTags as string[] || [];
