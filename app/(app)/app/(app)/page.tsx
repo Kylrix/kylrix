@@ -287,30 +287,7 @@ export default function IdeasPage() {
             <div className="p-12 text-center rounded-[32px] bg-[#161412] border border-white/5 text-white/40 font-mono text-sm">
               Global Tags Sweeper View
             </div>
-          ) : (
-            <>
-              {/* Header Bar */}
-              <header className="flex items-center justify-between p-5 bg-white/[0.01] border border-white/8 rounded-[32px] shadow-2xl relative select-none">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-white font-black text-2xl md:text-3xl tracking-tight leading-tight font-mono tracking-tighter">
-                    Ideas
-                  </h1>
-                  <button
-                    onClick={() => void fetchNotesBarebones()}
-                    disabled={loading}
-                    className="w-9 h-9 rounded-xl bg-white/3 border border-white/8 hover:border-white/15 flex items-center justify-center transition-all duration-300 disabled:opacity-40"
-                    title="Refresh Ideas"
-                  >
-                    <RefreshCw size={15} className={`transition-all ${loading ? 'animate-spin text-[#EC4899]' : 'text-white/60'}`} />
-                  </button>
-                </div>
-
-                <p className="text-white/40 text-xs font-semibold leading-normal font-sans">
-                  <span className="font-mono font-bold text-[#EC4899]">{notes.length}</span> {notes.length === 1 ? 'idea' : 'ideas'}
-                </p>
-              </header>
-            </>
-          )}
+          ) : null}
 
       {error && (
         <div className="p-4 bg-red-950/60 border border-red-500/50 rounded-2xl text-red-300 text-sm">

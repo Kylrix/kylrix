@@ -157,45 +157,6 @@ export default function TaskList() {
       onHeal={refreshTasks}
     >
       <div className="animate-fadeIn pointer-events-auto w-full">
-        {/* Desktop & Mobile Header */}
-        <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-5 md:p-6 bg-white/[0.01] border border-white/8 rounded-[32px] shadow-2xl relative select-none mb-6 md:mb-8">
-          <div className="absolute top-[-1px] left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-transparent via-[#A855F7] to-transparent" />
-          
-          <div>
-            <h1 className="text-white font-black text-2xl md:text-3xl tracking-tight leading-tight mb-1 font-mono tracking-tighter">
-              {getViewTitle()}
-            </h1>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#A855F7] shadow-[0_0_8px_#A855F7]" />
-              <span className="font-mono text-xs font-bold text-white/40 uppercase tracking-wider">
-                <span className="text-[#A855F7] font-bold">{tasks.length}</span> {tasks.length === 1 ? 'Goal' : 'Goals'}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between md:justify-end gap-3 w-full md:w-auto">
-            {/* Refresh Button */}
-            <button
-              type="button"
-              onClick={refreshTasks}
-              disabled={isLoading}
-              className="w-10 h-10 rounded-xl bg-white/3 border border-white/8 hover:border-white/15 flex items-center justify-center transition-all duration-300 disabled:opacity-40"
-              title="Refresh Goals"
-            >
-              <RefreshCw size={16} className={`transition-all ${isLoading ? 'animate-spin text-[#A855F7]' : 'text-white/60'}`} />
-            </button>
-
-            {/* Add Goal Button (Desktop) */}
-            <button
-              type="button"
-              onClick={openCreateGoal}
-              className="hidden sm:flex items-center gap-1.5 h-10 px-4 bg-[#A855F7]/10 hover:bg-[#A855F7]/20 border border-[#A855F7]/20 hover:border-[#A855F7]/40 text-[#C084FC] font-bold rounded-xl transition-all text-xs"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Create Goal</span>
-            </button>
-          </div>
-        </header>
 
         {tagFilterOptions.length > 0 && (
           <div className="overflow-x-auto scrollbar-none mb-6 p-2 bg-white/[0.01] border border-white/5 rounded-[24px] flex items-center gap-2 select-none">
