@@ -459,16 +459,13 @@ export default function CreateNoteForm({
     }
   };
 
-  // Auto-title — derived, not state sync during typing (prevents extra render per keystroke)
+  // Auto-title — derived from content matching CreateGoalComposer
   useEffect(() => {
     if (isTitleManuallyEdited) return;
-    // Only sync when content settles via flushLiveNote, not per keystroke; keep title empty while typing fast
-    const generatedTitle = buildAutoTitleFromContent(editorStateRef.current.content);
-    if (editorStateRef.current.content.trim()) {
-      if (generatedTitle !== editorStateRef.current.title) {
-        editorStateRef.current.title = generatedTitle;
-      }
-    }
+    const generatedTitle = buildAutoTitleFromContent(content);
+    const newTitle = content.trim() ? generatedTitle : '';
+    setTitle(newTitle);
+    editorStateRef.current.title = newTitle;
   }, [content, isTitleManuallyEdited]);
 
   const existingTags = useMemo(() => {
@@ -1266,7 +1263,7 @@ export default function CreateNoteForm({
           {(content.trim().length >= 5 || isTitleManuallyEdited) && (
             <BareMetalInput
               key="create-title-stable"
-              defaultValue={title}
+              value={title}
               enableLocalEngine={false}
               onValueChange={(val) => {
                 editorStateRef.current.title = val;
