@@ -1786,9 +1786,9 @@ export const ChatList = ({
                 onConversationDeleted={handleConversationDeleted}
             />
 
-            {/* Mobile hangout settings — bottom drawer z-[14000] 60% height absolute top */}
+            {/* Mobile hangout settings — bottom drawer z-[9999999] 60% height absolute top (SudoModal layer) */}
             {chatSettingsConv && (
-              <div className="fixed inset-0 z-[14000] flex items-end justify-center bg-black/60 backdrop-blur-[2px]" onClick={() => setChatSettingsConv(null)}>
+              <div className="fixed inset-0 z-[9999999] flex items-end justify-center bg-black/60 backdrop-blur-[2px]" onClick={() => setChatSettingsConv(null)}>
                 <div className="w-full max-w-[560px] h-[60dvh] max-h-[60dvh] overflow-hidden rounded-t-[24px] border-t border-white/[0.06] bg-[#0A0908] flex flex-col" onClick={(e) => e.stopPropagation()}>
                   <ChatSettingsPanel
                     conversation={chatSettingsConv}
