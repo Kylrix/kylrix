@@ -801,6 +801,7 @@ export default function NotesPage() {
           </button>
         )}
       </div>
+      )}
 
       {/* Infinite scroll sentinel (top not needed) */}
 
