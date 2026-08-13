@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Pin, Lock, Globe, RefreshCw, UserCheck } from 'lucide-react';
+import { Pin, Lock, Globe, RefreshCw, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AppTestPage() {
@@ -96,6 +96,37 @@ export default function AppTestPage() {
     }
   };
 
+  const handleCopyDiagnostics = () => {
+    const redactedNotes = notes.map((n) => ({
+      $id: n.$id,
+      userId: n.userId,
+      creatorId: n.creatorId ?? null,
+      title: n.title ? '[REDACTED_TITLE]' : '',
+      content: n.content ? '[REDACTED_CONTENT]' : '',
+      tags: Array.isArray(n.tags) ? n.tags : [],
+      isPinned: n.isPinned ?? null,
+      isPublic: n.isPublic ?? null,
+      isGuest: n.isGuest ?? null,
+      isTrash: n.isTrash ?? null,
+      permissions: n.$permissions || [],
+      $createdAt: n.$createdAt,
+      $updatedAt: n.$updatedAt,
+    }));
+
+    const report = {
+      timestamp: new Date().toISOString(),
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
+      error: error || null,
+      logs: rawLogs,
+      notesCount: notes.length,
+      notes: redactedNotes,
+    };
+
+    const text = JSON.stringify(report, null, 2);
+    navigator.clipboard.writeText(text);
+    toast.success('Diagnostics copied to clipboard (titles/contents redacted)');
+  };
+
   useEffect(() => {
     void fetchNotesBarebones();
   }, []);
@@ -107,13 +138,22 @@ export default function AppTestPage() {
           <h1 className="text-xl font-bold text-pink-400 font-clash">/app/test (Ideas Diagnostic Reference)</h1>
           <p className="text-white/50 text-xs">Bare-bones Client SDK listRows + client-side pin sorting + shared icons.</p>
         </div>
-        <button
-          onClick={() => void fetchNotesBarebones()}
-          className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-black font-bold rounded-xl transition-colors flex items-center gap-2"
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          Re-Fetch Notes
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleCopyDiagnostics}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-colors border border-indigo-400/30 flex items-center gap-2"
+          >
+            <Copy size={14} />
+            Copy Redacted Diagnostics
+          </button>
+          <button
+            onClick={() => void fetchNotesBarebones()}
+            className="px-4 py-2 bg-pink-500 hover:bg-pink-600 text-black font-bold rounded-xl transition-colors flex items-center gap-2"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            Re-Fetch Notes
+          </button>
+        </div>
       </div>
 
       {error && (
