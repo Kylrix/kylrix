@@ -386,25 +386,18 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           cursor: reset ? null : (cursorRef.current || null),
           userId: user?.$id});
 
-        const mergedBatch = mergeFetchedNotesWithLocalDrafts(
-          (res?.rows || [])
-            .map((note: Notes) => normalizeVisibility(note))
-            .filter((n: any) => !deletedIds.has(n.$id) && !isExcludedNote(n)),
-          notesRef.current,
-          liveEditGuardsRef.current,
-          deletedIds,
-        );
-        const batch = dedupeNotesById([...threadNotes, ...mergedBatch]) as Notes[];
+        const fetchedRows = (res?.rows || [])
+          .map((note: Notes) => normalizeVisibility(note))
+          .filter((n: any) => !deletedIds.has(n.$id) && !isExcludedNote(n));
 
         setNotes(prev => {
-          // Soft upsert: even on reset, fold remote into existing live copy — never discard local presence.
           const safePrev = Array.isArray(prev) ? prev : [];
           if (reset) {
-            return mergeFetchedNotesWithLocalDrafts(batch, safePrev, liveEditGuardsRef.current, deletedIds);
+            return fetchedRows;
           }
           const existingIds = new Set(safePrev.map(n => n.$id));
-          const newOnes = batch.filter(n => !existingIds.has(n.$id));
-          return dedupeNotesById([...safePrev, ...newOnes]);
+          const newOnes = fetchedRows.filter((n: any) => !existingIds.has(n.$id));
+          return [...safePrev, ...newOnes];
         });
 
         setTotalNotes(res?.total || 0);
