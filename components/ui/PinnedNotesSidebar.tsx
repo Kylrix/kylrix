@@ -78,8 +78,8 @@ export function PinnedNotesSidebar({ offset = 0 }: { offset?: number }) {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#161412', overflow: 'hidden' }}>
-      {/* Header - Sticky/Fixed at Top with Unified #161412 fill */}
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0A0908', overflow: 'hidden' }}>
+      {/* Header - Sticky/Fixed at Top with Unified #0A0908 pitch dark fill */}
       <Box
         sx={{
           display: 'flex',
@@ -89,7 +89,7 @@ export function PinnedNotesSidebar({ offset = 0 }: { offset?: number }) {
           py: 2.5,
           pt: { xs: 'max(20px, env(safe-area-inset-top))', md: 2.5 },
           flexShrink: 0,
-          bgcolor: '#161412',
+          bgcolor: '#0A0908',
           borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
         }}
       >
