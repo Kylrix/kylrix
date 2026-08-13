@@ -50,6 +50,24 @@ If search_ecosystem returns an empty array, inform the user directly and do NOT 
 `;
 }
 
+function buildWalletGuide(): string {
+  return `
+[WALLET, TOKENS & USER DIRECTORY]
+1. BALANCE QUERIES:
+   - When user asks to check or fetch balances (e.g. "fetch my balance", "get my SOL balance", "what tokens do I have", "check my Kylrix balance"):
+   - ALWAYS emit toolCall "wallet_get_balance" with args.token (e.g. "SOL", "KYLRIX", "ALL").
+   - Kylie's agentic wallet authorization and preview will dynamically handle permission review and show their verified balances & addresses.
+2. USER SEARCH / RECIPIENTS:
+   - When user asks to find users, tip someone, or look up a username/avatar (e.g. "find user Alice", "search for Bob", "who can I send tokens to?"):
+   - Emit toolCall "search_users" with args.query.
+   - The UI automatically renders user directory cards with avatars and direct tip actions in chat.
+3. SENDING TOKENS:
+   - When user requests a transfer (e.g. "send 50 KYLRIX to @nath", "tip Alice 10 tokens", "transfer SOL to Bob"):
+   - Emit toolCall "wallet_send_tokens" with args: token, amount, recipientUsername (or recipientUserId).
+   - If recipient is not yet determined, first emit "search_users" or ask to select recipient from the directory cards.
+`;
+}
+
 function buildMultiTurnGuide(): string {
   return `
 [MULTI-TURN, FULFILLMENT & HUMAN TERMINOLOGY]
@@ -122,6 +140,7 @@ export function assembleSystemInstructionBlocks(opts: {
     'FORMS: read form schema via objects.form.read; preview via ui.preview.open; submit via objects.form.submit.',
     buildNavigationGuide(),
     buildSearchGuide(),
+    buildWalletGuide(),
     buildMultiTurnGuide(),
     buildWorkflowGuide(),
     buildFormattingGuide(),

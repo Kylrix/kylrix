@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { RememberUnlockSettings } from '@/components/settings/RememberUnlockSettings';
 import { UnlockOnDemandSettings } from '@/components/settings/UnlockOnDemandSettings';
+import { HardVerificationSettings } from '@/components/settings/HardVerificationSettings';
 import { FlowInstallSecuritySettings } from '@/components/settings/FlowInstallSecuritySettings';
 import { formatDateWithFallback } from '@/lib/date-utils';
 import { useAppwriteVault } from '@/context/appwrite-context';
@@ -240,6 +241,8 @@ export function SecurityTab({
       <PasskeyPreferenceSettings />
 
       <UnlockOnDemandSettings />
+
+      <HardVerificationSettings />
 
       <RememberUnlockSettings />
 

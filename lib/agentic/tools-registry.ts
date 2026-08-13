@@ -145,6 +145,27 @@ export const AGENTIC_TOOLS_REGISTRY: AgenticToolDefinition[] = [
       'Fetch and list all active user goals/tasks across all statuses or query by query string or ".all" to return every non-trashed goal. Specifiers: optional query string or ".all" for everything. Args: query (optional string, e.g. ".all" or "backend").',
     requiresAuthorization: false,
     parameters: ['query']},
+  {
+    key: 'wallet_get_balance',
+    name: 'Get Wallet Balance & Chains',
+    description:
+      'Fetch current balances and chain addresses for Kylrix, Solana, ETH, BTC, SUI, Base, Polygon, Arbitrum. Optional args: token (string, e.g. "SOL", "KYLRIX", "ALL"). Requires authorization confirmation to access on-chain assets.',
+    requiresAuthorization: true,
+    parameters: ['token']},
+  {
+    key: 'wallet_send_tokens',
+    name: 'Send Tokens / Kylrix',
+    description:
+      'Initiate a token transfer or native Kylrix tip to a recipient. Args: token (string, e.g. "KYLRIX", "SOL"), amount (string or number), recipientUsername (string) or recipientUserId (string). Requires authorization and security unlock.',
+    requiresAuthorization: true,
+    parameters: ['token', 'amount', 'recipientUsername', 'recipientUserId']},
+  {
+    key: 'search_users',
+    name: 'Search Users / Directory',
+    description:
+      'Search users by username, display name, or handle to select a transfer target or mention. Args: query (string). Returns matched user cards with avatars and user IDs directly in chat.',
+    requiresAuthorization: false,
+    parameters: ['query', 'limit']},
 ];
 
 

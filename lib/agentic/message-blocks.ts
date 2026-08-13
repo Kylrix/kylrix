@@ -9,6 +9,21 @@ export type EcosystemHitRef = {
   id: string;
 };
 
+export type WalletBalanceItem = {
+  token: string;
+  chainName: string;
+  address?: string;
+  balance: string;
+  color?: string;
+};
+
+export type UserSearchHit = {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl?: string;
+};
+
 export type AgenticMessageBlock =
   | { type: 'markdown'; content: string }
   | {
@@ -16,6 +31,16 @@ export type AgenticMessageBlock =
       query: string;
       plan?: Pick<SearchPlan, 'reasoning' | 'temporal' | 'domains'>;
       hits: EcosystemHitRef[];
+    }
+  | {
+      type: 'wallet_balances';
+      items: WalletBalanceItem[];
+      totalKylrix?: string;
+    }
+  | {
+      type: 'user_search';
+      query: string;
+      users: UserSearchHit[];
     };
 
 const KYLIX_BLOCKS_PREFIX = '__KYLIX_BLOCKS__:';

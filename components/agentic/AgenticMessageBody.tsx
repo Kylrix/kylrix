@@ -1,8 +1,8 @@
-'use client';
-
 import { AgenticMarkdown } from './AgenticMarkdown';
 import { EcosystemHitCards } from './EcosystemHitCards';
 import { JsonRenderer, looksLikeJson } from './JsonRenderer';
+import { AgenticWalletCards } from './AgenticWalletCards';
+import { AgenticUserCards } from './AgenticUserCards';
 import type { AgenticMessageBlock } from '@/lib/agentic/message-blocks';
 import type { HydratedEcosystemHit } from '@/lib/agentic/hydrate-ecosystem-hits';
 
@@ -44,6 +44,24 @@ export function AgenticMessageBody({ content, blocks, onPickHit }: AgenticMessag
               plan={block.plan}
               hits={block.hits}
               onPick={onPickHit}
+            />
+          );
+        }
+        if (block.type === 'wallet_balances') {
+          return (
+            <AgenticWalletCards
+              key={`wallet-${idx}`}
+              items={block.items}
+              totalKylrix={block.totalKylrix}
+            />
+          );
+        }
+        if (block.type === 'user_search') {
+          return (
+            <AgenticUserCards
+              key={`users-${idx}`}
+              query={block.query}
+              users={block.users}
             />
           );
         }

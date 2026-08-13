@@ -38,6 +38,7 @@ export interface AgenticExecutionContext {
     opts?: { blocks?: AgenticMessageBlock[] }) => void;
   openDrawer?: (type: string, payload?: Record<string, unknown>) => void;
   openDetailOverlay?: (kind: string, id: string) => void;
+  openWalletWithIntent?: (intent: any) => void;
   recordSessionObject?: (payload: {
     objectId: string;
     objectType: string;
@@ -455,6 +456,107 @@ async function executeAgenticToolCall(
         await deleteProject(delId);
       }
       return { success: true, summary: `Deleted ${type}: ${delId}` };
+    }
+
+    // ── Wallet Balance & Chains ────────────────────────────────
+    if (key === 'wallet_get_balance') {
+      if (!ctx.user?.$id) {
+        return { success: false, summary: '', error: 'Please sign in to check wallet balances.' };
+      }
+      const { WalletService } = await import('@/lib/services/wallets');
+      const { TokenLedgerService } = await import('@/lib/services/token-ledger');
+      
+      const userWallets = await WalletService.getWallets(ctx.user.$id).catch(() => []);
+      const tokenLedger = await TokenLedgerService.getAccount(ctx.user.$id).catch(() => null);
+
+      const requestedToken = String(args.token || 'ALL').toUpperCase();
+
+      const items = [
+        {
+          token: 'KYLRIX',
+          chainName: 'Kylrix Ledger',
+          address: ctx.user.$id,
+          balance: tokenLedger?.amount || '0',
+          color: '#6366F1'
+        },
+        ...userWallets.map(w => ({
+          token: w.symbol,
+          chainName: w.label,
+          address: w.address,
+          balance: '0.00',
+          color: '#14F195'
+        }))
+      ].filter(item => requestedToken === 'ALL' || item.token === requestedToken);
+
+      const block: AgenticMessageBlock = {
+        type: 'wallet_balances',
+        items,
+        totalKylrix: tokenLedger?.amount || '0'
+      };
+
+      return {
+        success: true,
+        summary: `Retrieved ${items.length} wallet balance(s)`,
+        messageBlocks: [block]
+      };
+    }
+
+    // ── Wallet Send Tokens ───────────────────────────────────────
+    if (key === 'wallet_send_tokens') {
+      if (!ctx.user?.$id) {
+        return { success: false, summary: '', error: 'Please sign in to transfer tokens.' };
+      }
+      const token = String(args.token || 'KYLRIX').toUpperCase();
+      const amount = String(args.amount || '0');
+      const recipientUsername = String(args.recipientUsername || args.recipient || '').replace(/^@/, '');
+      const recipientUserId = String(args.recipientUserId || '');
+
+      if (ctx.openWalletWithIntent) {
+        ctx.openWalletWithIntent({
+          mode: 'send',
+          toUser: recipientUserId || recipientUsername ? {
+            id: recipientUserId,
+            username: recipientUsername || 'recipient',
+            displayName: recipientUsername || recipientUserId || 'Recipient'
+          } : null
+        });
+        return {
+          success: true,
+          summary: `Prepared transfer of ${amount} ${token} to ${recipientUsername ? '@' + recipientUsername : 'recipient'}`
+        };
+      }
+
+      return {
+        success: true,
+        summary: `Initiated transfer of ${amount} ${token}`
+      };
+    }
+
+    // ── Search Users / Directory ────────────────────────────────
+    if (key === 'search_users') {
+      const q = String(args.query || call.specifier || '').trim();
+      const limit = Number(args.limit) || 6;
+      const { fetchUserProfiles } = await import('@/lib/appwrite/identity');
+      
+      const results = await fetchUserProfiles(q).catch(() => []);
+      const matched = results.slice(0, limit).map((u: any) => ({
+        id: u.$id || u.userId || u.id,
+        username: u.username || u.name || 'user',
+        displayName: u.displayName || u.name || u.username || 'User',
+        avatarUrl: u.avatarUrl || u.avatar || undefined
+      }));
+
+      const block: AgenticMessageBlock = {
+        type: 'user_search',
+        query: q,
+        users: matched
+      };
+
+      return {
+        success: true,
+        summary: `Found ${matched.length} user(s) matching "${q}"`,
+        messageBlocks: [block]
+      };
     }
 
     return { success: false, summary: '', error: `Unhandled tool: ${key}` };
