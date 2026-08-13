@@ -11,13 +11,17 @@ import {
     Settings, 
     Pin, 
     FolderKanban,
-    RefreshCw
+    RefreshCw,
+    ChevronRight,
+    Globe,
+    Lock
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
 import { Forms } from '@/generated/appwrite/types';
 import FormDialog from '@/components/forms/FormDialog';
 import FormSettingsDialog from '@/components/forms/FormSettingsDialog';
+import { FormDetail } from '@/components/forms/FormDetail';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { useRouter } from 'next/navigation';
@@ -25,6 +29,8 @@ import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuI
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { MultiSectionContainer } from '@/context/SectionContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
 import { useFAB } from '@/context/FABContext';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import toast from 'react-hot-toast';
@@ -34,6 +40,8 @@ export default function FormsDashboard() {
     const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
     const router = useRouter();
     const { open: openDrawer } = useUnifiedDrawer();
+    const { openSidebar, closeSidebar } = useDynamicSidebar();
+    const { openOverlay, closeOverlay } = useOverlay();
     const { setConfiguration, resetConfiguration } = useFAB();
     const [forms, setForms] = useState<Forms[]>([]);
     const [offlineDrafts, setOfflineDrafts] = useState<FormDraft[]>([]);
@@ -46,6 +54,11 @@ export default function FormsDashboard() {
     const [formDraftStatus, setFormDraftStatus] = useState<Record<string, boolean>>({});
     void formDraftStatus;
 
+    const handleCreate = () => {
+        setSelectedForm(null);
+        setSelectedDraft(null);
+        setDialogOpen(true);
+    };
 
     useEffect(() => {
         setConfiguration({
@@ -54,12 +67,11 @@ export default function FormsDashboard() {
             mainIcon: <Plus size={32} strokeWidth={3} />,
             onMainClick: handleCreate,
             actions: [
-                { id: 'create-form', label: 'CREATE FORM', icon: <Plus size={20} />, onClick: handleCreate }]
+                { id: 'create-form', label: 'CREATE FORM', icon: <Plus size={20} />, onClick: handleCreate }
+            ]
         });
         return () => resetConfiguration();
     }, [setConfiguration, resetConfiguration]);
-
-
 
     const formsRef = useRef<Forms[]>([]);
     useEffect(() => {
@@ -84,8 +96,6 @@ export default function FormsDashboard() {
         const isStateEmpty = formsRef.current.length === 0;
         if (showLoading && isStateEmpty) setLoading(true);
 
-        // Same path as UnifiedFileAttachmentDrawer forms tab:
-        // RxDB → LocalEngine `f_forms_list` → FormsService.listUserForms live refresh.
         try {
             let items: any[] = [];
             try {
@@ -98,79 +108,40 @@ export default function FormsDashboard() {
             if (items.length === 0) {
                 items = (await LocalEngine.cacheGet<any[]>('f_forms_list')) || [];
             }
+
             if (items.length > 0) {
-                setForms(sortForms(items as Forms[]));
+                setForms(sortForms(items as unknown as Forms[]));
                 setLoading(false);
             }
 
-            try {
-                if (userId && userId !== 'guest') {
-                    const response = await FormsService.listUserForms(userId);
-                    items = Array.isArray(response)
-                        ? response
-                        : (Array.isArray((response as any)?.rows) ? (response as any).rows : []);
-                }
-            } catch {
-                if (items.length === 0) {
-                    try {
-                        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-                        const db = await getRxDB();
-                        items = (await db.forms.find().exec()).map((d: any) => d.toJSON());
-                    } catch {
-                        items = [];
-                    }
-                    if (items.length === 0) {
-                        items = (await LocalEngine.cacheGet<any[]>('f_forms_list')) || [];
-                    }
-                }
-            }
+            // Sync drafts
+            const drafts = DraftsService.listDrafts();
+            setOfflineDrafts(drafts);
 
-            if (items.length > 0) {
+            if (userId === 'guest') return;
+
+            const res = await FormsService.listUserForms(userId);
+            const remoteRows = Array.isArray(res) ? res : (res?.rows || []);
+
+            if (Array.isArray(remoteRows)) {
                 const byId = new Map<string, Forms>();
-                (formsRef.current || []).forEach((f) => f?.$id && byId.set(f.$id, f));
-                items.forEach((f: any) => f?.$id && byId.set(f.$id, f));
-                const merged = sortForms(Array.from(byId.values()));
-                setForms(merged);
-                void LocalEngine.cacheSet('f_forms_list', merged);
+                items.forEach((item: any) => item?.$id && byId.set(item.$id, item));
+                remoteRows.forEach((row: any) => row?.$id && byId.set(row.$id, row));
+                const merged = Array.from(byId.values());
+
+                setForms(sortForms(merged as unknown as Forms[]));
+                await LocalEngine.cacheSet('f_forms_list', merged);
             }
-
-            const manifest = await DraftsService.getManifest();
-            setFormDraftStatus(
-                Object.keys(manifest).reduce((acc, id) => ({ ...acc, [id]: true }), {}));
-
-            const draftList: FormDraft[] = [];
-            await Promise.all(
-                Object.keys(manifest).map(async (id) => {
-                    const d = await DraftsService.getDraft(id);
-                    if (d) draftList.push(d);
-                }),
-            );
-            setOfflineDrafts(
-                draftList.sort(
-                    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
-        } catch (err) {
-            console.error('Failed to fetch forms', err);
+        } catch (error) {
+            console.error('Failed to fetch forms', error);
         } finally {
             setLoading(false);
         }
     }, [user?.$id, sortForms]);
 
-    const [isRefreshing, setIsRefreshing] = useState(false);
-
-    const handleManualRefresh = useCallback(async () => {
-        setIsRefreshing(true);
-        try {
-            await fetchForms(true);
-        } finally {
-            setTimeout(() => setIsRefreshing(false), 600);
-        }
+    useEffect(() => {
+        void fetchForms(true);
     }, [fetchForms]);
-
-    const handleCreate = () => {
-        setSelectedForm(null);
-        setSelectedDraft(null);
-        setDialogOpen(true);
-    };
 
     const handleEdit = (form: Forms) => {
         setSelectedForm(form);
@@ -179,7 +150,6 @@ export default function FormsDashboard() {
     };
 
     const handleEditDraft = (draft: FormDraft) => {
-        // If the draft corresponds to an existing form, load that form too
         const existingForm = forms.find(f => f.$id === draft.id);
         setSelectedForm(existingForm || null);
         setSelectedDraft(draft);
@@ -203,9 +173,7 @@ export default function FormsDashboard() {
                             'f_forms_list',
                             cached.filter((f: any) => f.$id !== form.$id),
                         );
-                    } catch {
-                        /* optional */
-                    }
+                    } catch {}
                     fetchForms(false);
                 } catch (err) {
                     console.error("Failed to delete form", err);
@@ -233,12 +201,38 @@ export default function FormsDashboard() {
         setSettingsOpen(true);
     };
 
+    const handleOpenDetail = useCallback((form: Forms) => {
+        const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 900;
+        if (isDesktop) {
+            openSidebar(
+                <FormDetail
+                    formId={form.$id}
+                    form={form}
+                    embedded
+                    onClose={closeSidebar}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                />,
+                `form_${form.$id}`,
+                { hideHeader: true }
+            );
+        } else {
+            openOverlay(
+                <FormDetail
+                    formId={form.$id}
+                    form={form}
+                    embedded
+                    onClose={closeOverlay}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                />
+            );
+        }
+    }, [openSidebar, closeSidebar, openOverlay, closeOverlay]);
+
     const handleTogglePin = async (form: Forms) => {
         if (!user?.$id) return;
         const ownerId = form.userId || user.$id;
-        const currentlyPinned = isResourcePinned('form', form.$id, ownerId, form.isPinned);
-        const isOwner = user.$id === ownerId;
-
         try {
             const nextPinned = await togglePin({
                 resourceType: 'form',
@@ -247,57 +241,18 @@ export default function FormsDashboard() {
                 rowIsPinned: form.isPinned,
                 setOwnerRowPin: async (pinned) => {
                     await FormsService.updateForm(form.$id, { isPinned: pinned } as any);
-                }});
+                }
+            });
             setForms((prev) =>
-                prev.map((f) => (f.$id === form.$id && isOwner ? { ...f, isPinned: nextPinned } : f)));
-            toast.success(nextPinned ? 'Pinned to top' : 'Unpinned');
-        } catch (_err) {
-            if (!isOwner) {
-                setLocalPin('form', form.$id, currentlyPinned);
-            }
-            toast.error('Failed to toggle pin');
-        }
+                sortForms(
+                    prev.map((f) => (f.$id === form.$id ? { ...f, isPinned: nextPinned } : f))
+                )
+            );
+        } catch {}
     };
 
-    useEffect(() => {
-        void fetchForms();
-    }, [fetchForms]);
-
-    const FORM_PAGE_SIZE = 20;
-    const [formPage, setFormPage] = useState(1);
-    const [formSentinelNode, setFormSentinelNode] = useState<HTMLDivElement | null>(null);
-    const formSentinelRef = useCallback((node: HTMLDivElement | null) => setFormSentinelNode(node), []);
-    const filteredFormsAll = forms;
-    const filteredForms = React.useMemo(() => filteredFormsAll.slice(0, formPage * FORM_PAGE_SIZE), [filteredFormsAll, formPage]);
-    const hasMoreForms = filteredForms.length < filteredFormsAll.length;
-    React.useEffect(() => { setFormPage(1); }, [filteredFormsAll.length]);
-    React.useEffect(() => {
-      if (!formSentinelNode || !hasMoreForms) return;
-      const obs = new IntersectionObserver((entries) => { if (entries[0]?.isIntersecting) setFormPage((p) => p + 1); }, { rootMargin: '400px', threshold: 0.1 });
-      obs.observe(formSentinelNode);
-      return () => obs.disconnect();
-    }, [formSentinelNode, hasMoreForms, filteredFormsAll.length]);
-
     return (
-        <div className="animate-fadeIn p-4 md:px-0 pt-6 md:pt-8 min-h-screen bg-black">
-            {/* Tab Switcher */}
-            <div className="flex items-center gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-2xl w-fit select-none mb-8">
-              <button
-                type="button"
-                onClick={() => router.push('/app')}
-                className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
-              >
-                Ideas
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push('/forms')}
-                className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#6366F1] text-white shadow-[0_4px_12px_rgba(99,102,241,0.25)]"
-              >
-                Forms
-              </button>
-            </div>
-
+        <div className="flex-1 min-h-screen bg-[#0A0908] text-white p-4 md:p-8">
             <MultiSectionContainer panels={['projects', 'huddles', 'goals']}>
                 <div className="flex justify-between items-center mb-8">
                     <div>
@@ -305,32 +260,30 @@ export default function FormsDashboard() {
                             Forms
                         </h1>
                         <p className="text-[#9B9691] font-semibold font-satoshi text-sm">
-                            Design data collection workflows for the ecosystem.
+                            Design structured intake portals and workflows.
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
                         <button
                             type="button"
-                            onClick={handleManualRefresh}
-                            disabled={isRefreshing}
-                            className="w-10 h-10 rounded-xl bg-white/3 border border-white/8 hover:border-white/15 flex items-center justify-center transition-all duration-300 disabled:opacity-40 cursor-pointer"
+                            onClick={() => fetchForms(true)}
+                            className="w-10 h-10 rounded-2xl bg-[#161412] border border-white/8 hover:border-white/15 flex items-center justify-center transition-all cursor-pointer text-white/60 hover:text-white"
                             title="Refresh Forms"
                         >
-                            <RefreshCw size={16} className={`transition-all ${isRefreshing ? 'animate-spin text-[#6366F1]' : 'text-white/60'}`} />
+                            <RefreshCw size={16} className={loading ? 'animate-spin text-[#6366F1]' : ''} />
                         </button>
                         <button 
                             type="button"
                             onClick={handleCreate}
-                            className="flex items-center gap-1.5 px-5 py-2.5 font-bold rounded-xl bg-[#6366F1] text-black font-satoshi hover:bg-[#575CF0] transition-colors cursor-pointer text-sm"
+                            className="flex items-center gap-2 px-5 py-2.5 font-extrabold rounded-2xl bg-[#6366F1] hover:bg-[#5254D8] text-white font-satoshi transition-all shadow-[0_4px_16px_rgba(99,102,241,0.3)] cursor-pointer text-sm"
                         >
-                            <Plus className="h-4 w-4" />
+                            <Plus size={16} strokeWidth={2.5} />
                             <span>Create Form</span>
                         </button>
                     </div>
                 </div>
 
-                {/* Custom Tab Switcher */}
-                <div className="flex border-b border-[#34322F] mb-8 overflow-x-auto whitespace-nowrap scrollbar-none gap-8">
+                <div className="flex border-b border-white/6 mb-8 overflow-x-auto whitespace-nowrap scrollbar-none gap-8">
                     {[
                         { label: 'Active Forms', icon: FileText },
                         { label: 'Templates', icon: Sparkles },
@@ -339,7 +292,7 @@ export default function FormsDashboard() {
                                 <div className="flex items-center gap-1.5">
                                     <span>Drafts</span>
                                     {offlineDrafts.length > 0 && (
-                                        <span className="bg-[#FFB020] text-black rounded-full w-4.5 h-4.5 text-[10px] flex items-center justify-center font-bold font-mono">
+                                        <span className="bg-[#FFB020] text-black rounded-full px-1.5 py-0.2 text-[10px] flex items-center justify-center font-bold font-mono">
                                             {offlineDrafts.length}
                                         </span>
                                     )}
@@ -358,7 +311,7 @@ export default function FormsDashboard() {
                                 className={`flex items-center gap-2 pb-3 border-b-2 font-bold text-sm transition-all font-satoshi cursor-pointer ${
                                     isActive 
                                         ? 'border-[#6366F1] text-[#6366F1]' 
-                                        : 'border-transparent text-[#9B9691] hover:text-white'
+                                        : 'border-transparent text-white/40 hover:text-white'
                                 }`}
                             >
                                 <Icon className="h-4.5 w-4.5" />
@@ -368,23 +321,16 @@ export default function FormsDashboard() {
                     })}
                 </div>
 
-                {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {loading && forms.length === 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         {[1, 2, 3].map((i) => (
-                            <div key={i} className="bg-[#161412] border border-[#34322F] rounded-[28px] p-6 animate-pulse">
-                                <div className="flex justify-between mb-4">
-                                    <div className="h-5 w-20 bg-neutral-800 rounded-md" />
-                                    <div className="h-8 w-8 bg-neutral-800 rounded-md" />
+                            <div key={i} className="bg-[#161412] border border-white/6 rounded-2xl p-5 animate-pulse space-y-4">
+                                <div className="flex justify-between">
+                                    <div className="h-5 w-24 bg-white/5 rounded-lg" />
+                                    <div className="h-5 w-12 bg-white/5 rounded-lg" />
                                 </div>
-                                <div className="h-6 w-3/4 bg-neutral-800 rounded-md mb-2" />
-                                <div className="h-4 w-full bg-neutral-800 rounded-md mb-2" />
-                                <div className="h-4 w-5/6 bg-neutral-800 rounded-md mb-6" />
-                                <hr className="border-[#34322F] mb-6" />
-                                <div className="flex gap-2">
-                                    <div className="h-8 w-8 bg-neutral-800 rounded-md" />
-                                    <div className="ml-auto h-8 w-8 bg-neutral-800 rounded-md" />
-                                    <div className="h-8 w-8 bg-neutral-800 rounded-md" />
-                                </div>
+                                <div className="h-4 w-3/4 bg-white/5 rounded-lg" />
+                                <div className="h-3 w-full bg-white/5 rounded-lg" />
                             </div>
                         ))}
                     </div>
@@ -392,25 +338,26 @@ export default function FormsDashboard() {
                     <div>
                         {tabValue === 0 && (
                             <>
-                                {filteredForms.length === 0 ? (
-                                    <div className="py-24 text-center bg-[#161412] border border-dashed border-[#34322F] rounded-[24px]">
-                                        <FileText className="h-16 w-16 mx-auto text-[#9B9691] opacity-35 mb-4" />
-                                        <h3 className="text-lg font-clash text-white opacity-85 mb-6">No active forms.</h3>
+                                {forms.length === 0 ? (
+                                    <div className="py-24 text-center bg-[#161412] border border-dashed border-white/10 rounded-3xl">
+                                        <FileText className="h-14 w-14 mx-auto text-white/20 mb-3" />
+                                        <h3 className="text-lg font-clash font-bold text-white mb-4">No active forms</h3>
                                         <button 
                                             type="button" 
                                             onClick={handleCreate} 
-                                            className="inline-flex items-center gap-1.5 px-5 py-2.5 border border-[#34322F] hover:border-[#6366F1] text-white font-bold rounded-xl hover:bg-[#161412] transition-colors font-satoshi text-sm cursor-pointer"
+                                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0A0908] border border-white/10 hover:border-[#6366F1] text-white font-bold rounded-xl text-xs font-satoshi transition-all cursor-pointer"
                                         >
-                                            <Plus className="h-4 w-4" />
-                                            <span>Start Building</span>
+                                            <Plus size={14} />
+                                            <span>Build First Form</span>
                                         </button>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {filteredForms.map((form) => (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                        {forms.map((form) => (
                                             <FormCard
                                                 key={form.$id}
                                                 form={form}
+                                                onSelect={() => handleOpenDetail(form)}
                                                 onTogglePin={handleTogglePin}
                                                 onEdit={handleEdit}
                                                 onOpenSettings={handleOpenSettings}
@@ -420,79 +367,62 @@ export default function FormsDashboard() {
                                         ))}
                                     </div>
                                 )}
-                                {hasMoreForms && (
-                                    <div ref={formSentinelRef} className="flex justify-center py-6">
-                                        <span className="text-xs font-bold tracking-widest uppercase text-white/25">Loading more…</span>
-                                    </div>
-                                )}
-                                {!hasMoreForms && filteredFormsAll.length > FORM_PAGE_SIZE && (
-                                    <div className="flex justify-center py-4">
-                                        <span className="text-[10px] font-bold tracking-widest uppercase text-white/15">End of list</span>
-                                    </div>
-                                )}
                             </>
                         )}
 
-                        {/* TEMPLATES TAB */}
                         {tabValue === 1 && (
-                            <div className="py-24 text-center bg-[#161412] border border-dashed border-[#34322F] rounded-[24px]">
-                                <Sparkles className="h-16 w-16 mx-auto text-[#9B9691] opacity-35 mb-4" />
-                                <h3 className="text-lg font-bold font-clash text-white tracking-tight">Templates coming soon.</h3>
+                            <div className="py-24 text-center bg-[#161412] border border-dashed border-white/10 rounded-3xl">
+                                <Sparkles className="h-14 w-14 mx-auto text-white/20 mb-3" />
+                                <h3 className="text-lg font-bold font-clash text-white tracking-tight">Form Templates Catalog Coming Soon</h3>
                             </div>
                         )}
 
-                        {/* OFFLINE DRAFTS TAB */}
                         {tabValue === 2 && (
                             <>
                                 {offlineDrafts.length === 0 ? (
-                                    <div className="py-24 text-center bg-[#161412] border border-dashed border-[#34322F] rounded-[24px]">
-                                        <History className="h-16 w-16 mx-auto text-[#9B9691] opacity-35 mb-4" />
-                                        <h3 className="text-lg font-bold font-clash text-white tracking-tight">No offline drafts found.</h3>
+                                    <div className="py-24 text-center bg-[#161412] border border-dashed border-white/10 rounded-3xl">
+                                        <History className="h-14 w-14 mx-auto text-white/20 mb-3" />
+                                        <h3 className="text-lg font-bold font-clash text-white tracking-tight">No offline form drafts</h3>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                         {offlineDrafts.map((draft) => (
                                             <div 
                                                 key={draft.id}
-                                                className="bg-[#161412] border border-[#34322F] rounded-[28px] p-6 hover:shadow-[0_12px_24px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-[#FFB020] hover:-translate-y-0.5 flex flex-col justify-between h-full"
+                                                onClick={() => handleEditDraft(draft)}
+                                                className="bg-[#161412] border border-white/6 hover:border-[#FFB020]/40 rounded-2xl p-5 transition-all flex flex-col justify-between cursor-pointer group"
                                             >
                                                 <div>
-                                                    <div className="flex justify-between items-center mb-4">
-                                                        <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded border bg-transparent text-[#FFB020] border-[#FFB020] tracking-wider">
+                                                    <div className="flex justify-between items-center mb-3">
+                                                        <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded border border-[#FFB020]/40 text-[#FFB020] bg-[#FFB020]/10 tracking-wider">
                                                             LOCAL DRAFT
                                                         </span>
-                                                        <span className="text-xs text-[#9B9691] font-mono">
+                                                        <span className="text-xs text-white/40 font-mono">
                                                             {new Date(draft.updatedAt).toLocaleTimeString()}
                                                         </span>
                                                     </div>
-                                                    <h2 className="text-lg font-bold mb-1 text-white font-clash tracking-tight truncate">
-                                                        {draft.title || 'Untitled Portal'}
+                                                    <h2 className="text-base font-bold text-white font-clash tracking-tight truncate group-hover:text-[#FFB020] transition-colors">
+                                                        {draft.title || 'Untitled Draft'}
                                                     </h2>
-                                                    <p className="text-[#9B9691] text-xs sm:text-sm font-satoshi leading-relaxed mb-4 min-h-[3em]">
-                                                        Last saved locally. Sync required to publish.
+                                                    <p className="text-white/40 text-xs font-satoshi line-clamp-2 mt-1">
+                                                        Unsynced changes stored in device engine.
                                                     </p>
                                                 </div>
 
-                                                <div>
-                                                    <hr className="border-[#34322F] mb-4" />
-                                                    <div className="flex gap-2 items-center">
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => handleEditDraft(draft)}
-                                                            className="flex items-center gap-1.5 px-4 py-2 bg-[#1C1A18] border border-[#34322F] hover:bg-[#34322F] text-white hover:text-white rounded-xl transition-all font-satoshi text-xs font-bold cursor-pointer"
-                                                        >
-                                                            <Edit className="h-3.5 w-3.5" />
-                                                            <span>Resume</span>
-                                                        </button>
-                                                        <div className="flex-grow" />
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => handleDeleteDraft(draft)} 
-                                                            className="p-1.5 text-[#D14343] bg-[#1C1A18] border border-[#34322F] hover:bg-[#34322F] hover:text-[#ff4444] rounded-xl transition-colors inline-flex items-center justify-center cursor-pointer"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </button>
-                                                    </div>
+                                                <div className="pt-4 mt-4 border-t border-white/6 flex items-center justify-between">
+                                                    <span className="text-xs font-bold text-[#FFB020] font-satoshi">
+                                                        Resume Draft
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteDraft(draft);
+                                                        }}
+                                                        className="text-white/40 hover:text-red-400 p-1 transition-colors"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}
@@ -528,6 +458,7 @@ export default function FormsDashboard() {
 
 function FormCard({
     form,
+    onSelect,
     onTogglePin,
     onEdit,
     onOpenSettings,
@@ -535,6 +466,7 @@ function FormCard({
     onUpdate
 }: {
     form: any;
+    onSelect: () => void;
     onTogglePin: (form: any) => void;
     onEdit: (form: any) => void;
     onOpenSettings: (form: any) => void;
@@ -557,6 +489,7 @@ function FormCard({
     });
 
     const contextMenuItems = [
+        { label: 'View Details', icon: <FileText size={16} />, onClick: onSelect },
         { label: pinned ? 'Unpin' : 'Pin', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: () => onTogglePin(form) },
         ...accessControlItems,
         { label: 'Edit Schema', icon: <Edit size={16} />, onClick: () => onEdit(form) },
@@ -593,46 +526,61 @@ function FormCard({
         }
     };
 
+    const isPublished = form.status === 'published';
+
     return (
         <div 
+            onClick={onSelect}
             onContextMenu={handleRightClick}
-            className="group relative bg-[#161412] hover:bg-[#1A1816] border border-[#34322F] hover:border-[#6366F1]/30 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between"
+            className="group relative bg-[#161412] hover:bg-[#1A1816] border border-white/6 hover:border-[#6366F1]/40 rounded-2xl p-5 transition-all flex flex-col justify-between cursor-pointer select-none"
         >
             <div className="space-y-3">
                 <div className="flex items-start justify-between gap-3">
-                    <h3 className="font-clash font-extrabold text-white text-lg tracking-tight group-hover:text-[#6366F1] transition-colors line-clamp-1">
-                        {form.title}
-                    </h3>
-                    <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase font-mono tracking-wider border ${
-                            form.status === 'published' 
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-[#0A0908] border border-white/8 flex items-center justify-center text-[#6366F1] shrink-0 group-hover:border-[#6366F1]/30 transition-colors">
+                            <FileText size={15} />
+                        </div>
+                        <h3 className="font-clash font-extrabold text-white text-base tracking-tight group-hover:text-[#6366F1] transition-colors truncate">
+                            {form.title || 'Untitled Form'}
+                        </h3>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase font-mono tracking-wider border ${
+                            isPublished 
                                 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
                                 : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
                         }`}>
                             {form.status || 'draft'}
                         </span>
-                        {pinned && <Pin size={14} className="rotate-45 text-[#F59E0B] fill-[#F59E0B]" />}
+                        {pinned && <Pin size={13} className="rotate-45 text-[#F59E0B] fill-[#F59E0B]" />}
                     </div>
                 </div>
 
-                <p className="text-xs text-[#9B9691] font-satoshi line-clamp-2 min-h-[2.5rem]">
+                <p className="text-xs text-white/50 font-satoshi line-clamp-2 min-h-[2.5rem] leading-relaxed">
                     {form.description || 'No description provided.'}
                 </p>
             </div>
 
-            <div className="pt-6 mt-6 border-t border-[#34322F]/50 flex items-center justify-between">
-                <div className="text-[11px] text-[#9B9691] font-satoshi">
-                    Updated {new Date(form.updatedAt || form.$createdAt).toLocaleDateString()}
+            <div className="pt-4 mt-4 border-t border-white/6 flex items-center justify-between">
+                <div className="text-[11px] text-white/40 font-mono">
+                    {new Date(form.updatedAt || form.$createdAt).toLocaleDateString()}
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button 
                         type="button" 
-                        onClick={() => onEdit(form)}
-                        className="px-3 py-1.5 rounded-lg border border-[#34322F] hover:border-[#6366F1] text-xs font-bold text-white hover:bg-[#6366F1]/10 transition-colors font-satoshi"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(form);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-[#0A0908] border border-white/8 hover:border-[#6366F1] text-[11px] font-bold text-white hover:bg-[#6366F1]/10 transition-colors font-satoshi cursor-pointer"
                     >
                         Edit
                     </button>
+                    <div className="text-white/30 group-hover:text-white/70 transition-colors">
+                        <ChevronRight size={14} />
+                    </div>
                 </div>
             </div>
         </div>
