@@ -17,7 +17,6 @@ import {
   Trash2,
   ArrowLeft,
   Loader2 as SpinnerIcon,
-  RefreshCw,
   Clock,
   CheckCircle2,
   Trash
@@ -61,7 +60,6 @@ export default function TrashPage() {
   const [itemsAll, setItemsAll] = useState<TrashItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [purging, setPurging] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('All');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
@@ -180,6 +178,18 @@ export default function TrashPage() {
   useEffect(() => {
     if (!isAuthenticated) { openIDMWindow(); return; }
     if (user?.$id) fetchAllTrash(false);
+
+    const onTrashUpdated = (e: Event) => {
+      const item = (e as CustomEvent)?.detail?.item as TrashItem | undefined;
+      if (item) {
+        setItemsAll((prev) => [item, ...prev.filter((i) => i.id !== item.id)]);
+      }
+    };
+
+    window.addEventListener('kylrix:trash-updated', onTrashUpdated);
+    return () => {
+      window.removeEventListener('kylrix:trash-updated', onTrashUpdated);
+    };
   }, [isAuthenticated, user?.$id, fetchAllTrash, openIDMWindow]);
 
   // Workspace-aware via projects table + project_objects (entityId) — per workspace.projects-table
@@ -305,8 +315,6 @@ export default function TrashPage() {
     });
   };
 
-  const handleRefresh = async () => { setRefreshing(true); await fetchAllTrash(true); setRefreshing(false); };
-
   const openTrashDetail = useCallback((item: TrashItem) => {
     const Detail = (
       <div className="h-full flex flex-col bg-[#161412] overflow-hidden">
@@ -396,10 +404,6 @@ export default function TrashPage() {
             </div>
           </div>
           <div className={`flex items-center gap-2 shrink-0 ${isRightRailPushing ? 'w-full xl:w-auto' : 'w-full md:w-auto'}`}>
-            <button onClick={handleRefresh} disabled={loading || refreshing} className="h-10 px-4 rounded-xl border border-white/10 hover:border-white/20 bg-white/2 hover:bg-white/5 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer">
-              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-              <span>Refresh</span>
-            </button>
             <button onClick={handleEmptyTrash} disabled={items.length===0 || purging} className="h-10 px-5 rounded-xl bg-[#EF4444] hover:bg-[#DC2626] disabled:opacity-40 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer flex-1 md:flex-none">
               <Trash size={14} />
               <span>Empty {isCustomWorkspace? 'Workspace ': ''}Trash</span>

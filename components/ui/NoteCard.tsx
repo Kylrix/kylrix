@@ -75,7 +75,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         onDelete(note.$id);
       }
 
-      // 2. Immediate LocalEngine cache purge for zero-stale re-paint
+      // 2. Immediate LocalEngine cache purge for ideas + instant addition to trash cache
       try {
         const uid = user?.$id || 'guest';
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
@@ -83,6 +83,26 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         if (cached?.rows) {
           const updated = cached.rows.filter((r: any) => r.$id !== note.$id);
           await LocalEngine.cacheSet(`f_ideas_${uid}`, { rows: updated, total: updated.length });
+        }
+
+        // Add to local trash cache immediately so /trash reflects it with 0ms delay
+        const trashCacheKey = `trash_all_${uid}`;
+        const existingTrash = (await LocalEngine.cacheGet<any[]>(trashCacheKey)) || [];
+        const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+        const newTrashItem = {
+          id: note.$id,
+          title: note.title || 'Untitled Note',
+          type: 'Note',
+          deletedAt: new Date().toISOString(),
+          databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+          tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+          projectId: (note as any).projectId || undefined,
+          isWorkspace: Boolean((note as any).isWorkspace || (note as any).projectId),
+        };
+        const updatedTrash = [newTrashItem, ...existingTrash.filter((t: any) => t.id !== note.$id)];
+        await LocalEngine.cacheSet(trashCacheKey, updatedTrash);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('kylrix:trash-updated', { detail: { item: newTrashItem } }));
         }
       } catch {}
 
