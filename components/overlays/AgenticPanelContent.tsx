@@ -2071,145 +2071,215 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       {/* Top z-index Agentic Confirmation Bottom Drawer */}
       {pendingToolAuth && (
         <div className="absolute inset-0 bg-black/80 z-[80] flex flex-col justify-end">
-          <div className="bg-[#161412] border-t border-white/10 rounded-t-[28px] w-full max-h-[85dvh] p-6 flex flex-col gap-4 shadow-2xl animate-slide-up">
-            <div className="w-12 h-1.5 rounded-full bg-white/15 mx-auto" />
+          <div className="bg-[#161412] border-t border-white/10 rounded-t-[28px] w-full h-[60dvh] max-h-[60dvh] p-6 flex flex-col justify-between shadow-2xl animate-slide-up">
+            <div className="flex flex-col gap-4 overflow-y-auto">
+              <div className="w-12 h-1.5 rounded-full bg-white/15 mx-auto shrink-0" />
 
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-[#6366F1]/15 border border-[#6366F1]/30 flex items-center justify-center text-[#6366F1] shrink-0">
-                {pendingToolAuth.toolKey.startsWith('wallet_') ? <Wallet size={20} /> : <Shield size={20} />}
-              </div>
-              <div className="flex-1 text-left min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-white text-sm font-bold font-satoshi truncate">
-                    {pendingToolAuth.toolKey.startsWith('wallet_') ? 'Agentic Wallet Access' : 'Authorize Action'}
-                  </h3>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#6366F1]/20 text-[#818cf8]">
-                    Kylie Inbuilt
-                  </span>
+              <div className="flex items-center gap-3.5 shrink-0">
+                <div className="w-11 h-11 rounded-2xl bg-[#6366F1]/15 border border-[#6366F1]/30 flex items-center justify-center text-[#6366F1] shrink-0">
+                  {pendingToolAuth.toolKey.startsWith('wallet_') ? <Wallet size={20} /> : <Shield size={20} />}
                 </div>
-                <p className="text-white/60 text-xs font-satoshi mt-0.5">
-                  Allow <strong>Kylie</strong> {pendingToolAuth.toolKey === 'wallet_get_balance' ? 'to read your wallet balances and on-chain addresses?' : `to execute ${pendingToolAuth.name}?`}
-                </p>
+                <div className="flex-1 text-left min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-white text-sm font-bold font-satoshi truncate">
+                      {pendingToolAuth.toolKey.startsWith('wallet_') ? 'Agentic Wallet Access' : 'Authorize Action'}
+                    </h3>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#6366F1]/20 text-[#818cf8]">
+                      Kylie Inbuilt
+                    </span>
+                  </div>
+                  <p className="text-white/60 text-xs font-satoshi mt-0.5">
+                    Allow <strong>Kylie</strong> {pendingToolAuth.toolKey === 'wallet_get_balance' ? 'to read your wallet balances and on-chain addresses?' : `to execute ${pendingToolAuth.name}?`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Permissions & Scope Overview */}
+              <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2.5 text-left shrink-0">
+                <div className="text-[11px] font-extrabold text-white/50 uppercase tracking-wider font-satoshi">
+                  Requested Scope & Chains
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs font-satoshi">
+                  <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] text-white/80 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                    <span className="truncate">Kylrix & Solana</span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] text-white/80 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                    <span className="truncate">ETH & EVM Chains</span>
+                  </div>
+                </div>
+                {pendingToolAuth.args && (
+                  <div className="text-[11px] text-white/40 font-mono pt-2 border-t border-white/[0.04] truncate">
+                    Intent: {pendingToolAuth.toolKey} {JSON.stringify(pendingToolAuth.args)}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Permissions & Scope Overview */}
-            <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2.5 text-left">
-              <div className="text-[11px] font-extrabold text-white/50 uppercase tracking-wider font-satoshi">
-                Requested Scope & Chains
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs font-satoshi">
-                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] text-white/80 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                  <span className="truncate">Kylrix & Solana</span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] text-white/80 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                  <span className="truncate">ETH & EVM Chains</span>
-                </div>
-              </div>
-              {pendingToolAuth.args && (
-                <div className="text-[11px] text-white/40 font-mono pt-2 border-t border-white/[0.04] truncate">
-                  Intent: {pendingToolAuth.toolKey} {JSON.stringify(pendingToolAuth.args)}
-                </div>
-              )}
-            </div>
+            <div className="pt-3 border-t border-white/5 space-y-2 shrink-0">
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 mt-1">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const auth = pendingToolAuth;
+                    setPendingToolAuth(null);
+                    toast.success(`Authorized ${auth.name}`);
+                    try {
+                      const { executeAgenticToolCallWithToast } = await import('@/lib/agentic/client-executor');
+                      const result = await executeAgenticToolCallWithToast(
+                        { toolKey: auth.toolKey, specifier: auth.specifier, args: auth.args },
+                        {
+                          user,
+                          router,
+                          onClose,
+                          setActiveWorkspaceId,
+                          tasks,
+                          notes: allNotes,
+                          setCachedData,
+                          pushLiveNote,
+                          removeNote,
+                          registerComposeSession,
+                          unregisterComposeSession,
+                          migrateDraftNoteId,
+                          addTask,
+                          updateTask: async (id: string, patch: any) => { updateTask(id, patch); },
+                          deleteTask: async (id: string) => { deleteTask(id); },
+                          appendMessage,
+                          openDrawer: (type: string, payload?: Record<string, unknown>) => { openUnified(type as any, payload); },
+                          openWalletWithIntent,
+                        },
+                        auth.name
+                      );
 
-            <div className="flex flex-col sm:flex-row items-center gap-2.5 mt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  toast.success(`Authorized ${pendingToolAuth.name}`);
-                  if (pendingToolAuth.assistantId) {
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === pendingToolAuth.assistantId
-                          ? {
-                              ...m,
-                              blocks: (m.blocks || []).map((b) =>
-                                b.type === 'pending_auth' && b.toolKey === pendingToolAuth.toolKey
-                                  ? { ...b, status: 'authorized' }
-                                  : b
-                              ),
-                            }
-                          : m
-                      )
-                    );
-                  }
-                  setPendingToolAuth(null);
-                }}
-                className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-[#6366F1] hover:bg-[#4f46e5] text-white text-xs font-black transition cursor-pointer"
-              >
-                Allow Access
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    const current = await account.getPrefs();
-                    const whitelist = Array.isArray(current?.authorizedTools) ? current.authorizedTools : [];
-                    if (!whitelist.includes(pendingToolAuth.toolKey)) {
-                      whitelist.push(pendingToolAuth.toolKey);
+                      if (auth.assistantId) {
+                        setMessages((prev) =>
+                          prev.map((m) =>
+                            m.id === auth.assistantId
+                              ? {
+                                  ...m,
+                                  blocks: [
+                                    ...(m.blocks || []).map((b) =>
+                                      b.type === 'pending_auth' && b.toolKey === auth.toolKey
+                                        ? { ...b, status: 'authorized' as const }
+                                        : b
+                                    ),
+                                    ...(result.messageBlocks || []),
+                                  ],
+                                }
+                              : m
+                          )
+                        );
+                      }
+                    } catch (execErr: any) {
+                      console.error('Failed to run authorized tool:', execErr);
+                      toast.error(`Execution failed: ${execErr?.message || 'Unknown error'}`);
                     }
-                    await account.updatePrefs({ ...current, authorizedTools: whitelist });
-                    toast.success(`Always allow whitelisted for ${pendingToolAuth.name}`);
-                  } catch (err) {
-                    console.error('Failed to update whitelisted preferences:', err);
-                  }
-                  if (pendingToolAuth.assistantId) {
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === pendingToolAuth.assistantId
-                          ? {
-                              ...m,
-                              blocks: (m.blocks || []).map((b) =>
-                                b.type === 'pending_auth' && b.toolKey === pendingToolAuth.toolKey
-                                  ? { ...b, status: 'authorized' }
-                                  : b
-                              ),
-                            }
-                          : m
-                      )
-                    );
-                  }
-                  setPendingToolAuth(null);
-                }}
-                className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-white text-xs font-bold transition cursor-pointer"
-              >
-                Always Allow
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (pendingToolAuth.assistantId) {
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === pendingToolAuth.assistantId
-                          ? {
-                              ...m,
-                              blocks: (m.blocks || []).map((b) =>
-                                b.type === 'pending_auth' && b.toolKey === pendingToolAuth.toolKey
-                                  ? { ...b, status: 'rejected' }
-                                  : b
-                              ),
-                            }
-                          : m
-                      )
-                    );
-                  }
-                  setPendingToolAuth(null);
-                }}
-                className="w-full sm:w-auto py-3 px-4 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 text-white/50 hover:text-white text-xs transition cursor-pointer"
-              >
-                Deny
-              </button>
-            </div>
+                  }}
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-[#6366F1] hover:bg-[#4f46e5] text-white text-xs font-black transition cursor-pointer"
+                >
+                  Allow Access
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const auth = pendingToolAuth;
+                    setPendingToolAuth(null);
+                    try {
+                      const current = await account.getPrefs();
+                      const whitelist = Array.isArray(current?.authorizedTools) ? current.authorizedTools : [];
+                      if (!whitelist.includes(auth.toolKey)) {
+                        whitelist.push(auth.toolKey);
+                      }
+                      await account.updatePrefs({ ...current, authorizedTools: whitelist });
+                      toast.success(`Always allow whitelisted for ${auth.name}`);
 
-            <div className="text-[10px] text-center text-white/40 pt-1">
-              Protected by Kylrix MasterPass & Security Enclave.{' '}
-              <Link href="/settings/agents" className="text-[#818cf8] hover:underline">
-                Manage agent permissions
-              </Link>
+                      const { executeAgenticToolCallWithToast } = await import('@/lib/agentic/client-executor');
+                      const result = await executeAgenticToolCallWithToast(
+                        { toolKey: auth.toolKey, specifier: auth.specifier, args: auth.args },
+                        {
+                          user,
+                          router,
+                          onClose,
+                          setActiveWorkspaceId,
+                          tasks,
+                          notes: allNotes,
+                          setCachedData,
+                          pushLiveNote,
+                          removeNote,
+                          registerComposeSession,
+                          unregisterComposeSession,
+                          migrateDraftNoteId,
+                          addTask,
+                          updateTask: async (id: string, patch: any) => { updateTask(id, patch); },
+                          deleteTask: async (id: string) => { deleteTask(id); },
+                          appendMessage,
+                          openDrawer: (type: string, payload?: Record<string, unknown>) => { openUnified(type as any, payload); },
+                          openWalletWithIntent,
+                        },
+                        auth.name
+                      );
+
+                      if (auth.assistantId) {
+                        setMessages((prev) =>
+                          prev.map((m) =>
+                            m.id === auth.assistantId
+                              ? {
+                                  ...m,
+                                  blocks: [
+                                    ...(m.blocks || []).map((b) =>
+                                      b.type === 'pending_auth' && b.toolKey === auth.toolKey
+                                        ? { ...b, status: 'authorized' as const }
+                                        : b
+                                    ),
+                                    ...(result.messageBlocks || []),
+                                  ],
+                                }
+                              : m
+                          )
+                        );
+                      }
+                    } catch (err) {
+                      console.error('Failed to whitelist/execute:', err);
+                    }
+                  }}
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] border border-white/10 text-white text-xs font-bold transition cursor-pointer"
+                >
+                  Always Allow
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (pendingToolAuth.assistantId) {
+                      setMessages((prev) =>
+                        prev.map((m) =>
+                          m.id === pendingToolAuth.assistantId
+                            ? {
+                                ...m,
+                                blocks: (m.blocks || []).map((b) =>
+                                  b.type === 'pending_auth' && b.toolKey === pendingToolAuth.toolKey
+                                    ? { ...b, status: 'rejected' }
+                                    : b
+                                ),
+                              }
+                            : m
+                        )
+                      );
+                    }
+                    setPendingToolAuth(null);
+                  }}
+                  className="w-full sm:w-auto py-3 px-4 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 text-white/50 hover:text-white text-xs transition cursor-pointer"
+                >
+                  Deny
+                </button>
+              </div>
+
+              <div className="text-[10px] text-center text-white/40 pt-1">
+                Protected by Kylrix MasterPass & Security Enclave.{' '}
+                <Link href="/settings/agents" className="text-[#818cf8] hover:underline">
+                  Manage agent permissions
+                </Link>
+              </div>
             </div>
           </div>
         </div>
