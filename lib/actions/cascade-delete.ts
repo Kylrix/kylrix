@@ -792,4 +792,51 @@ export async function executeCascadeDeleteSecure(
     // Wipe collaborators and key mappings for the credential itself
     await wipeCollaboratorsAndKeys(tables, rowId, 'credential');
   }
+
+  // --- 8. CASCADE AGENTIC SESSIONS AND RUN LOGS ---
+  try {
+    const sessionsRes = await tables.listRows({
+      databaseId: 'passwordManagerDb',
+      tableId: 'agentic_sessions',
+      queries: [
+        Query.equal('targetId', rowId),
+        Query.limit(100),
+      ] as any,
+    }).catch(() => ({ rows: [] }));
+
+    const sessionRows = (sessionsRes as any)?.rows || [];
+    if (sessionRows.length > 0) {
+      await Promise.all(
+        sessionRows.map(async (sess: any) => {
+          // Delete tool calls linked to this session
+          try {
+            const tcRes = await tables.listRows({
+              databaseId: 'passwordManagerDb',
+              tableId: 'agent_tool_calls',
+              queries: [Query.equal('sessionId', sess.$id), Query.limit(500)] as any,
+            }).catch(() => ({ rows: [] }));
+            const tcRows = (tcRes as any)?.rows || [];
+            await Promise.all(
+              tcRows.map((tc: any) =>
+                tables.deleteRow({
+                  databaseId: 'passwordManagerDb',
+                  tableId: 'agent_tool_calls',
+                  rowId: tc.$id,
+                }).catch(() => null)
+              )
+            );
+          } catch {}
+
+          // Delete session row
+          await tables.deleteRow({
+            databaseId: 'passwordManagerDb',
+            tableId: 'agentic_sessions',
+            rowId: sess.$id,
+          }).catch(() => null);
+        })
+      );
+    }
+  } catch (err) {
+    console.warn('[Cascade Delete] Agentic session cleanup skipped/non-blocking:', err);
+  }
 }
