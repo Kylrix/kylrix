@@ -389,7 +389,7 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
                 <div className="flex items-center justify-between p-6 border-b border-white/8">
                     <div>
                         <h3 className="text-white text-lg font-black tracking-tight leading-tight">Edit Profile</h3>
-                        <p className="text-white/40 text-[11px] font-bold mt-1">Configure your public handle & visibility</p>
+                        <p className="text-white/40 text-[11px] font-bold mt-1">Configure your public username & visibility</p>
                     </div>
                     <button 
                         onClick={onClose}
@@ -440,7 +440,7 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
 
                     {/* Username */}
                     <div className="space-y-2">
-                        <label className="text-xs font-black tracking-wider text-white/40 uppercase">Ecosystem Handle</label>
+                        <label className="text-xs font-black tracking-wider text-white/40 uppercase">Username</label>
                         <div className="relative">
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6366F1] font-black">@</span>
                             <input

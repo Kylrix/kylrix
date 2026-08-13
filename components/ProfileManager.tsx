@@ -335,7 +335,7 @@ export default function ProfileManager({ onProfileUpdate }: ProfileManagerProps)
 
         {/* Username */}
         <div className="space-y-2">
-          <label className="text-xs font-black tracking-wider text-white/40 uppercase">Ecosystem Handle</label>
+          <label className="text-xs font-black tracking-wider text-white/40 uppercase">Username</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6366F1] font-black">@</span>
             <input
