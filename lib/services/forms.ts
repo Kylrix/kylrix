@@ -16,6 +16,11 @@ export const FormsService = {
      * Create a new form definition
      */
     async createForm(userId: string, data: Omit<Forms, '$id' | '$createdAt' | '$updatedAt' | '$permissions' | '$databaseId' | '$tableId' | 'userId' | '$sequence' | '$tableId'>) {
+        try {
+            const { unifiedCreate } = await import('@/lib/services/unified-object-service');
+            const row = await unifiedCreate('form', data as Record<string, any>, { ownerId: userId });
+            if ((row as any)?.$id) return row as unknown as Forms;
+        } catch {}
         if (typeof window !== 'undefined') {
             const { createForm } = await import('@/lib/actions/client-ops');
             return await createForm(data);
