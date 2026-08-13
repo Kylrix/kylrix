@@ -47,8 +47,18 @@ function DashboardPageContent() {
   // Master password modal — only auto-open when unlock-on-demand is off
   const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(false);
   // Vault porter drawer state
-  const [showPorterDrawer, setShowPorterDrawer] = useState(false);
+  const [isDevMode, setIsDevMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'secrets' | 'totp'>('secrets');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { account } = await import('@/lib/appwrite/client');
+        const prefs = await account.getPrefs();
+        if ((prefs as any)?.developerMode) setIsDevMode(true);
+      } catch {}
+    })();
+  }, []);
   
   // State for all credentials, fetched once
   const [allCredentials, setAllCredentials] = useState<Credentials[]>([]);
@@ -315,7 +325,7 @@ function DashboardPageContent() {
         <MultiSectionContainer panels={['note', 'totp', 'projects']}>
           <div>
             {/* Tab Switcher */}
-            <div className="px-4 md:px-12 mb-6">
+            <div className="px-4 md:px-12 mb-6 flex items-center justify-between">
               <div className="flex items-center gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-2xl w-fit select-none">
                 <button
                   onClick={() => setActiveTab('secrets')}
@@ -337,6 +347,14 @@ function DashboardPageContent() {
                 >
                   TOTP
                 </button>
+                {isDevMode && (
+                  <button
+                    onClick={() => router.push('/vault/test')}
+                    className="px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30"
+                  >
+                    Test (Raw)
+                  </button>
+                )}
               </div>
             </div>
 
