@@ -329,7 +329,7 @@ export default function IdeasPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
                 <h2 className="text-xs font-mono font-bold text-white/40 uppercase tracking-wider">
-                  Pinned ({displayPinned.length})
+                  Pinned ({Math.min(3, displayPinned.length)})
                 </h2>
                 {displayPinned.length > 3 && (
                   <button
