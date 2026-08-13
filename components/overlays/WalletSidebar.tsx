@@ -575,18 +575,21 @@ export const WalletSidebar = ({
         };
 
         return (
-            <Box sx={{ flex: 1, overflowY: 'auto', px: 3, pt: 2, pb: 3, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
-                <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white', mb: 2 }}>
-                    Kylrix Activity
-                </Typography>
-                <Paper sx={{ p: 2.5, borderRadius: '20px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}`, mb: 2 }}>
-                    <Typography sx={{ color: MUTED, fontSize: '0.8rem', fontFamily: 'var(--font-satoshi)' }}>
+            <div className="flex-1 overflow-y-auto px-4 py-4 md:px-5 md:py-5 space-y-4">
+                <div className="text-base font-extrabold font-clash text-white tracking-tight">
+                    Kylrix Activity & Transfer
+                </div>
+                <div className="p-4 rounded-2xl bg-[#161412] border border-white/[0.08] space-y-1">
+                    <div className="text-xs text-white/50 font-satoshi">
                         {selectedToken} Balance
-                    </Typography>
-                    <Typography sx={{ color: selectedToken === 'KYLRIX' ? ACCENT : getNetworkColor(selectedToken.toLowerCase() as any) || 'white', fontWeight: 900, fontSize: '1.3rem', fontFamily: 'var(--font-mono)' }}>
+                    </div>
+                    <div
+                        className="text-2xl font-black font-mono tracking-tight"
+                        style={{ color: selectedToken === 'KYLRIX' ? ACCENT : getNetworkColor(selectedToken.toLowerCase() as any) || 'white' }}
+                    >
                         {tokenBalancesMap[selectedToken]} {selectedToken}
-                    </Typography>
-                </Paper>
+                    </div>
+                </div>
                 <Stack gap={1.5} sx={{ mb: 2 }}>
                     <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '0.9rem' }}>Send</Typography>
                     
@@ -1276,20 +1279,10 @@ export const WalletSidebar = ({
                 ) : showKylrixDetail ? (
                     renderKylrixDetail()
                 ) : (
-                    <Box sx={{ flex: 1, overflowY: 'auto', px: { xs: 2.5, md: 3 }, py: 1.5, pb: 6, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
+                    <div className="flex-1 overflow-y-auto px-4 py-4 md:px-5 md:py-5 space-y-5">
                         {/* OpenBricks Modern Balance Card */}
-                        <Box sx={{ 
-                            p: { xs: 2.5, md: 3 }, 
-                            mb: 3, 
-                            textAlign: 'left',
-                            bgcolor: '#161412',
-                            borderRadius: '20px',
-                            border: `1px solid rgba(255, 255, 255, 0.08)`,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 2.5
-                        }}>
-                            <div>
+                        <div className="p-5 rounded-2xl bg-[#161412] border border-white/[0.08] flex flex-col gap-4 shadow-sm">
+                            <div className="space-y-1.5">
                                 <div className="flex items-center justify-between">
                                     <span className="text-[11px] font-extrabold uppercase tracking-widest text-white/50 font-satoshi">
                                         {ktsMode ? 'Kylrix Ledger Balance' : 'Estimated Portfolio'}
@@ -1298,32 +1291,32 @@ export const WalletSidebar = ({
                                         {ktsMode ? 'KTS Mode' : `${wallets.length} Networks`}
                                     </span>
                                 </div>
-                                <div className="mt-2 text-3xl md:text-4xl font-extrabold font-clash text-white tracking-tight leading-none">
+                                <div className="text-3xl md:text-4xl font-extrabold font-clash text-white tracking-tight leading-normal py-1">
                                     {ktsMode ? (
-                                        <>
-                                            {tokenBalance?.amount || '0'}{' '}
+                                        <div className="flex items-baseline gap-2">
+                                            <span>{tokenBalance?.amount || '0'}</span>
                                             <span className="text-[#6366F1] font-mono text-2xl font-bold">{kylrixTicker(tokenBalance?.symbol)}</span>
-                                        </>
+                                        </div>
                                     ) : (
-                                        <>
-                                            $0.00
-                                            <div className="mt-1.5 flex items-center gap-2 text-sm font-mono font-medium text-white/60">
+                                        <div>
+                                            <div>$0.00</div>
+                                            <div className="mt-2 flex items-center gap-2 text-sm font-mono font-medium text-white/60">
                                                 <span>{tokenBalance?.amount || '0'} {kylrixTicker(tokenBalance?.symbol)}</span>
-                                                <span className="text-[11px] text-white/40 font-satoshi px-1.5 py-0.5 rounded bg-white/[0.04]">Ledger</span>
+                                                <span className="text-[11px] text-white/40 font-satoshi px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.04]">Ledger</span>
                                             </div>
-                                        </>
+                                        </div>
                                     )}
                                 </div>
                             </div>
 
                             {/* Tactile Action Grid */}
-                            <div className="grid grid-cols-3 gap-2 pt-1 border-t border-white/[0.06]">
+                            <div className="grid grid-cols-3 gap-2.5 pt-3 border-t border-white/[0.06]">
                                 <button
                                     type="button"
                                     onClick={() => setShowKylrixDetail(true)}
-                                    className="flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-[#0A0908] border border-white/[0.06] hover:border-white/20 transition-all text-white active:scale-[0.98] cursor-pointer"
+                                    className="flex flex-col items-center justify-center gap-2 py-3 px-2 rounded-xl bg-[#0A0908] border border-white/[0.06] hover:border-white/20 transition-all text-white active:scale-[0.98] cursor-pointer"
                                 >
-                                    <div className="w-8 h-8 rounded-lg bg-[#161412] flex items-center justify-center text-white/80">
+                                    <div className="w-8 h-8 rounded-lg bg-[#161412] border border-white/[0.04] flex items-center justify-center text-white/80">
                                         <ArrowUpRight size={16} />
                                     </div>
                                     <span className="text-xs font-bold font-satoshi">Send</span>
@@ -1334,9 +1327,9 @@ export const WalletSidebar = ({
                                         setShowKylrixDetail(true);
                                         setShowReceive(true);
                                     }}
-                                    className="flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-[#0A0908] border border-white/[0.06] hover:border-white/20 transition-all text-white active:scale-[0.98] cursor-pointer"
+                                    className="flex flex-col items-center justify-center gap-2 py-3 px-2 rounded-xl bg-[#0A0908] border border-white/[0.06] hover:border-white/20 transition-all text-white active:scale-[0.98] cursor-pointer"
                                 >
-                                    <div className="w-8 h-8 rounded-lg bg-[#161412] flex items-center justify-center text-white/80">
+                                    <div className="w-8 h-8 rounded-lg bg-[#161412] border border-white/[0.04] flex items-center justify-center text-white/80">
                                         <ArrowDownLeft size={16} />
                                     </div>
                                     <span className="text-xs font-bold font-satoshi">Receive</span>
@@ -1346,458 +1339,352 @@ export const WalletSidebar = ({
                                     onClick={() => {
                                         toast.success('Cross-chain swap router active soon');
                                     }}
-                                    className="flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-[#0A0908] border border-white/[0.06] hover:border-white/20 transition-all text-white/70 hover:text-white active:scale-[0.98] cursor-pointer"
+                                    className="flex flex-col items-center justify-center gap-2 py-3 px-2 rounded-xl bg-[#0A0908] border border-white/[0.06] hover:border-white/20 transition-all text-white/70 hover:text-white active:scale-[0.98] cursor-pointer"
                                 >
-                                    <div className="w-8 h-8 rounded-lg bg-[#161412] flex items-center justify-center text-white/60">
+                                    <div className="w-8 h-8 rounded-lg bg-[#161412] border border-white/[0.04] flex items-center justify-center text-white/60">
                                         <Plus size={16} />
                                     </div>
                                     <span className="text-xs font-bold font-satoshi">Swap</span>
                                 </button>
                             </div>
-                        </Box>
+                        </div>
 
                         {ktsMode ? (
-                        <Stack gap={1.5} sx={{ mb: 4 }}>
-                            <Typography variant="caption" sx={{ fontWeight: 800, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
+                        <div className="space-y-2.5 mb-4">
+                            <span className="text-[11px] font-extrabold text-[#6366F1] uppercase tracking-wider font-satoshi block">
                                 Kylrix
-                            </Typography>
-                            <Paper
-                                sx={{
-                                    p: 2.75,
-                                    px: 3,
-                                    borderRadius: '22px',
-                                    bgcolor: HIGHLIGHT,
-                                    border: `2px solid rgba(99,102,241,0.35)`,
-                                    transition: 'all 0.2s ease',
-                                    '&:hover': { bgcolor: SURFACE, borderColor: ACCENT, transform: 'translateY(-1px)' }}}
-                            >
-                                <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
-                                    <Stack direction="row" alignItems="center" gap={2}>
-                                        <Box sx={{
-                                            width: 48,
-                                            height: 48,
-                                            borderRadius: '14px',
-                                            bgcolor: '#252321',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            lineHeight: 0}}>
-                                            <Logo app="root" variant="icon" size={28} />
-                                        </Box>
-                                        <Box sx={{ minWidth: 0, textAlign: 'left' }}>
-                                            <Typography variant="body1" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
+                            </span>
+                            <div className="p-4 rounded-2xl bg-[#161412] border border-[#6366F1]/30 hover:border-[#6366F1] transition-all">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 rounded-xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center shrink-0">
+                                            <Logo app="root" variant="icon" size={22} />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="text-sm font-extrabold text-white font-satoshi truncate">
                                                 Kylrix
-                                            </Typography>
-                                            <Typography variant="caption" sx={{ color: MUTED, fontFamily: 'var(--font-mono)', display: 'block' }}>
+                                            </div>
+                                            <div className="text-xs font-mono text-white/40 truncate">
                                                 {user?.$id ? shortenUserId(user.$id) : '—'}
-                                            </Typography>
-                                        </Box>
-                                    </Stack>
-                                    <Stack alignItems="flex-end" gap={0.5}>
-                                        <Typography variant="h6" sx={{ fontWeight: 900, color: ACCENT, fontFamily: 'var(--font-mono)', fontSize: '1.05rem', whiteSpace: 'nowrap' }}>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1 shrink-0 pl-2">
+                                        <div className="text-sm font-extrabold text-[#6366F1] font-mono whitespace-nowrap">
                                             {tokenBalance?.amount || '0'} {kylrixTicker(tokenBalance?.symbol)}
-                                        </Typography>
+                                        </div>
                                         {user?.$id ? (
-                                            <Stack direction="row" gap={0.5}>
-                                                <IconButton
-                                                    size="small"
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
                                                     onClick={() => handleCopyAddress(user.$id)}
-                                                    sx={{ p: 0.5, color: MUTED, '&:hover': { color: ACCENT } }}
+                                                    className="p-1 rounded text-white/40 hover:text-[#6366F1] transition-colors cursor-pointer"
                                                     aria-label="Copy Kylrix wallet id"
                                                 >
-                                                    <Copy size={14} />
-                                                </IconButton>
-                                                <IconButton
-                                                    size="small"
+                                                    <Copy size={13} />
+                                                </button>
+                                                <button
+                                                    type="button"
                                                     onClick={() => handleKylrixCardClick()}
-                                                    sx={{ p: 0.5, color: MUTED, '&:hover': { color: 'white' } }}
+                                                    className="p-1 rounded text-white/40 hover:text-white transition-colors cursor-pointer"
                                                     aria-label="Open Kylrix ledger"
                                                 >
-                                                    <PanelRight size={14} />
-                                                </IconButton>
-                                            </Stack>
+                                                    <PanelRight size={13} />
+                                                </button>
+                                            </div>
                                         ) : null}
-                                    </Stack>
-                                </Stack>
-                            </Paper>
-                            <Typography variant="caption" sx={{ color: MUTED, textAlign: 'center', lineHeight: 1.5, px: 1 }}>
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="text-xs text-white/40 text-center leading-relaxed px-2 font-satoshi">
                                 KTS mode shows your Kylrix ledger balance as the headline total. Turn off the toggle to expose Solana, ETH, and other networks.
-                            </Typography>
-                        </Stack>
+                            </p>
+                        </div>
                         ) : (
                         <>
                             {/* Pinned Solana + KYLRIX */}
-                            <Stack gap={1.5} sx={{ mb: 4 }}>
-                                <Typography variant="caption" sx={{ fontWeight: 800, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
-                                    Pinned Network
-                                </Typography>
-                                                            {/* 1. Kylrix Card (Always Visible, Default Pinned) */}
-                                <Paper
+                            <div className="space-y-3 mb-4">
+                                <span className="text-[11px] font-extrabold text-white/50 uppercase tracking-wider font-satoshi block">
+                                    Pinned Networks
+                                </span>
+                                
+                                {/* 1. Kylrix Card (Always Visible, Default Pinned) */}
+                                <div
                                     onMouseDown={() => handlePressStart('KYLRIX')}
                                     onMouseUp={handlePressEnd}
                                     onMouseLeave={handlePressEnd}
                                     onTouchStart={() => handlePressStart('KYLRIX')}
                                     onTouchEnd={handlePressEnd}
-                                    sx={{
-                                        px: 2,
-                                        py: 1.5,
-                                        borderRadius: '16px',
-                                        bgcolor: '#161412',
-                                        border: `1px solid rgba(255, 255, 255, 0.08)`,
-                                        transition: 'all 0.15s ease',
-                                        cursor: 'pointer',
-                                        '&:hover': { bgcolor: '#1C1A18', borderColor: 'rgba(255, 255, 255, 0.16)' }}}
+                                    className="p-3.5 rounded-2xl bg-[#161412] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-sm"
                                 >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
-                                        <Box sx={{
-                                            width: 36,
-                                            height: 36,
-                                            borderRadius: '10px',
-                                            bgcolor: '#0A0908',
-                                            border: '1px solid rgba(255, 255, 255, 0.06)',
-                                            display: 'grid',
-                                            placeItems: 'center',
-                                            flexShrink: 0}}>
-                                            <Logo app="root" variant="icon" size={18} />
-                                        </Box>
-                                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                                            <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)', fontSize: '0.88rem', lineHeight: 1.2 }}>
+                                    <div className="flex items-center gap-3 w-full">
+                                        <div className="w-10 h-10 rounded-xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center shrink-0">
+                                            <Logo app="root" variant="icon" size={20} />
+                                        </div>
+                                        <div className="min-w-0 flex-1 flex flex-col gap-0.5 pr-2">
+                                            <span className="font-extrabold text-white font-satoshi text-sm leading-tight truncate">
                                                 Kylrix
-                                            </Typography>
-                                            <Typography component="span" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', fontSize: '0.74rem', lineHeight: 1.2 }}>
+                                            </span>
+                                            <span className="text-xs text-white/40 font-mono leading-tight truncate">
                                                 {user?.$id ? shortenUserId(user.$id) : '—'}
-                                            </Typography>
-                                        </Box>
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.35, flexShrink: 0 }}>
-                                            <Typography component="span" sx={{ fontWeight: 800, color: '#6366F1', fontFamily: 'var(--font-mono)', fontSize: '0.82rem', lineHeight: 1.2 }}>
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 shrink-0 pl-1">
+                                            <span className="font-extrabold text-[#6366F1] font-mono text-xs leading-tight whitespace-nowrap">
                                                 {tokenBalance?.amount || '0'} {kylrixTicker(tokenBalance?.symbol)}
-                                            </Typography>
+                                            </span>
                                             {user?.$id ? (
-                                                <Stack direction="row" gap={0.5}>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleCopyAddress(user.$id); }}
-                                                        sx={{ p: 0.4, color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#6366F1' } }}
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); handleCopyAddress(user.$id); }}
+                                                        className="p-1 rounded text-white/40 hover:text-[#6366F1] transition-colors cursor-pointer"
                                                         aria-label="Copy Kylrix wallet id"
                                                     >
-                                                        <Copy size={12} />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleKylrixCardClick(); }}
-                                                        sx={{ p: 0.4, color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}
+                                                        <Copy size={13} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); handleKylrixCardClick(); }}
+                                                        className="p-1 rounded text-white/40 hover:text-white transition-colors cursor-pointer"
                                                         aria-label="Open Kylrix ledger"
                                                     >
-                                                        <PanelRight size={12} />
-                                                    </IconButton>
-                                                </Stack>
+                                                        <PanelRight size={13} />
+                                                    </button>
+                                                </div>
                                             ) : null}
-                                        </Box>
-                                    </Box>
-                                </Paper>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 {/* 2. Solana Card (Always Visible, Default Pinned) */}
-                                <Paper
+                                <div
                                     onMouseDown={() => handlePressStart('SOL')}
                                     onMouseUp={handlePressEnd}
                                     onMouseLeave={handlePressEnd}
                                     onTouchStart={() => handlePressStart('SOL')}
                                     onTouchEnd={handlePressEnd}
-                                    sx={{
-                                        px: 2,
-                                        py: 1.5,
-                                        borderRadius: '16px',
-                                        bgcolor: '#161412',
-                                        border: `1px solid rgba(255, 255, 255, 0.08)`,
-                                        transition: 'all 0.15s ease',
-                                        cursor: 'pointer',
-                                        '&:hover': { bgcolor: '#1C1A18', borderColor: 'rgba(255, 255, 255, 0.16)' }
-                                    }}
+                                    className="p-3.5 rounded-2xl bg-[#161412] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-sm"
                                 >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
-                                        <Box sx={{
-                                            width: 36,
-                                            height: 36,
-                                            borderRadius: '10px',
-                                            bgcolor: '#0A0908',
-                                            border: '1px solid rgba(255, 255, 255, 0.06)',
-                                            display: 'grid',
-                                            placeItems: 'center',
-                                            flexShrink: 0
-                                        }}>
-                                            <PinnedNetworkIconSolana size={18} />
-                                        </Box>
-                                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                                            <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)', fontSize: '0.88rem', lineHeight: 1.2 }}>
+                                    <div className="flex items-center gap-3 w-full">
+                                        <div className="w-10 h-10 rounded-xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center shrink-0">
+                                            <PinnedNetworkIconSolana size={20} />
+                                        </div>
+                                        <div className="min-w-0 flex-1 flex flex-col gap-0.5 pr-2">
+                                            <span className="font-extrabold text-white font-satoshi text-sm leading-tight truncate">
                                                 {solWallet?.label || 'Solana'}
-                                            </Typography>
-                                            <Typography component="span" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', fontSize: '0.74rem', lineHeight: 1.2 }}>
+                                            </span>
+                                            <span className="text-xs text-white/40 font-mono leading-tight truncate">
                                                 {solWallet ? shortenAddress(solWallet.address) : 'Auto-provisioning'}
-                                            </Typography>
-                                        </Box>
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.35, flexShrink: 0 }}>
-                                            <Typography component="span" sx={{ fontWeight: 800, color: '#14F195', fontFamily: 'var(--font-mono)', fontSize: '0.82rem', lineHeight: 1.2 }}>
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1 shrink-0 pl-1">
+                                            <span className="font-extrabold text-[#14F195] font-mono text-xs leading-tight whitespace-nowrap">
                                                 {onChainBalances['SOL'] || '0.00'} SOL
-                                            </Typography>
+                                            </span>
                                             {solWallet ? (
-                                                <Stack direction="row" gap={0.5}>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleCopyAddress(solWallet.address); }}
-                                                        sx={{ p: 0.4, color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#14F195' } }}
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); handleCopyAddress(solWallet.address); }}
+                                                        className="p-1 rounded text-white/40 hover:text-[#14F195] transition-colors cursor-pointer"
                                                     >
-                                                        <Copy size={12} />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                                                        <Copy size={13} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
                                                             e.stopPropagation();
                                                             const explorerUrl = getExplorerUrl(solWallet);
                                                             if (explorerUrl) {
                                                                 window.open(explorerUrl, '_blank', 'noopener,noreferrer');
                                                             }
                                                         }}
-                                                        sx={{ p: 0.4, color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}
+                                                        className="p-1 rounded text-white/40 hover:text-white transition-colors cursor-pointer"
                                                     >
-                                                        <ExternalLink size={12} />
-                                                    </IconButton>
-                                                </Stack>
+                                                        <ExternalLink size={13} />
+                                                    </button>
+                                                </div>
                                             ) : (
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleAddNetwork('sol'); }}
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); handleAddNetwork('sol'); }}
                                                     disabled={pendingChain !== null}
-                                                    sx={{
-                                                        borderRadius: '8px',
-                                                        borderColor: 'rgba(255,255,255,0.1)',
-                                                        color: 'white',
-                                                        textTransform: 'none',
-                                                        fontSize: '0.72rem',
-                                                        px: 1.5,
-                                                        py: 0.4,
-                                                        fontFamily: 'var(--font-satoshi)',
-                                                        '&:hover': { bgcolor: '#1C1A18', borderColor: 'rgba(255,255,255,0.2)' }
-                                                    }}
+                                                    className="px-2.5 py-1 rounded-lg border border-white/10 hover:border-white/25 bg-[#0A0908] text-white font-satoshi text-xs font-semibold transition-all cursor-pointer"
                                                 >
                                                     Add SOL
-                                                </Button>
+                                                </button>
                                             )}
-                                        </Box>
-                                    </Box>
-                                </Paper>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 {/* 3. Custom Pinned Card (Rendered if pinnedToken is not KYLRIX and not SOL) */}
                                 {pinnedToken !== 'KYLRIX' && pinnedToken !== 'SOL' && (
-                                    <Paper
+                                    <div
                                         onMouseDown={() => handlePressStart(pinnedToken)}
                                         onMouseUp={handlePressEnd}
                                         onMouseLeave={handlePressEnd}
                                         onTouchStart={() => handlePressStart(pinnedToken)}
                                         onTouchEnd={handlePressEnd}
-                                        sx={{
-                                            px: 2,
-                                            py: 1.5,
-                                            borderRadius: '16px',
-                                            bgcolor: '#161412',
-                                            border: `1px solid rgba(255, 255, 255, 0.08)`,
-                                            transition: 'all 0.15s ease',
-                                            cursor: 'pointer',
-                                            '&:hover': { bgcolor: '#1C1A18', borderColor: 'rgba(255, 255, 255, 0.16)' }
-                                        }}
+                                        className="p-3.5 rounded-2xl bg-[#161412] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-sm"
                                     >
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
-                                            <Box sx={{
-                                                width: 36,
-                                                height: 36,
-                                                borderRadius: '10px',
-                                                bgcolor: '#0A0908',
-                                                border: '1px solid rgba(255, 255, 255, 0.06)',
-                                                display: 'grid',
-                                                placeItems: 'center',
-                                                flexShrink: 0,
-                                                color: getNetworkColor(tokenToChain(pinnedToken)) || ACCENT,
-                                                fontWeight: 800,
-                                                fontSize: '14px'
-                                            }}>
+                                        <div className="flex items-center gap-3 w-full">
+                                            <div
+                                                className="w-10 h-10 rounded-xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center shrink-0 font-extrabold text-sm"
+                                                style={{ color: getNetworkColor(tokenToChain(pinnedToken)) || ACCENT }}
+                                            >
                                                 {getNetworkLogo(tokenToChain(pinnedToken)) || pinnedToken[0]}
-                                            </Box>
-                                            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                                                <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)', fontSize: '0.88rem', lineHeight: 1.2 }}>
+                                            </div>
+                                            <div className="min-w-0 flex-1 flex flex-col gap-0.5 pr-2">
+                                                <span className="font-extrabold text-white font-satoshi text-sm leading-tight truncate">
                                                     {pinnedWallet?.label || pinnedToken}
-                                                </Typography>
-                                                <Typography component="span" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', fontSize: '0.74rem', lineHeight: 1.2 }}>
+                                                </span>
+                                                <span className="text-xs text-white/40 font-mono leading-tight truncate">
                                                     {pinnedWallet ? shortenAddress(pinnedWallet.address) : 'Provisioning required'}
-                                                </Typography>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.35, flexShrink: 0 }}>
-                                                <Typography component="span" sx={{ fontWeight: 800, color: getNetworkColor(tokenToChain(pinnedToken)) || 'white', fontFamily: 'var(--font-mono)', fontSize: '0.82rem', lineHeight: 1.2 }}>
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-1 shrink-0 pl-1">
+                                                <span
+                                                    className="font-extrabold font-mono text-xs leading-tight whitespace-nowrap"
+                                                    style={{ color: getNetworkColor(tokenToChain(pinnedToken)) || 'white' }}
+                                                >
                                                     {onChainBalances[pinnedToken.toUpperCase()] || '0.00'} {pinnedToken}
-                                                </Typography>
+                                                </span>
                                                 {pinnedWallet ? (
-                                                    <Stack direction="row" gap={0.5}>
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleCopyAddress(pinnedWallet.address); }}
-                                                            sx={{ p: 0.4, color: 'rgba(255,255,255,0.4)', '&:hover': { color: getNetworkColor(tokenToChain(pinnedToken)) } }}
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => { e.stopPropagation(); handleCopyAddress(pinnedWallet.address); }}
+                                                            className="p-1 rounded text-white/40 hover:text-white transition-colors cursor-pointer"
                                                         >
-                                                            <Copy size={12} />
-                                                        </IconButton>
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                                                            <Copy size={13} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 const explorerUrl = getExplorerUrl(pinnedWallet);
                                                                 if (explorerUrl) {
                                                                     window.open(explorerUrl, '_blank', 'noopener,noreferrer');
                                                                 }
                                                             }}
-                                                            sx={{ p: 0.4, color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}
+                                                            className="p-1 rounded text-white/40 hover:text-white transition-colors cursor-pointer"
                                                         >
-                                                            <ExternalLink size={12} />
-                                                        </IconButton>
-                                                    </Stack>
+                                                            <ExternalLink size={13} />
+                                                        </button>
+                                                    </div>
                                                 ) : (
-                                                    <Button
-                                                        size="small"
-                                                        variant="outlined"
-                                                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); handleAddNetwork(tokenToChain(pinnedToken)); }}
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); handleAddNetwork(tokenToChain(pinnedToken)); }}
                                                         disabled={pendingChain !== null}
-                                                        sx={{
-                                                            borderRadius: '8px',
-                                                            borderColor: 'rgba(255,255,255,0.1)',
-                                                            color: 'white',
-                                                            textTransform: 'none',
-                                                            fontSize: '0.72rem',
-                                                            px: 1.5,
-                                                            py: 0.4,
-                                                            fontFamily: 'var(--font-satoshi)',
-                                                            '&:hover': { bgcolor: '#1C1A18', borderColor: 'rgba(255,255,255,0.2)' }
-                                                        }}
+                                                        className="px-2.5 py-1 rounded-lg border border-white/10 hover:border-white/25 bg-[#0A0908] text-white font-satoshi text-xs font-semibold transition-all cursor-pointer"
                                                     >
                                                         Add {pinnedToken}
-                                                    </Button>
+                                                    </button>
                                                 )}
-                                            </Box>
-                                        </Box>
-                                    </Paper>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
-                            </Stack>
+                            </div>
 
                         {/* Other Live Networks */}
                         {orderedWallets.filter(w => w.chain !== 'sol').length > 0 && (
-                            <Stack gap={1.5} sx={{ mb: 4 }}>
-                                <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
+                            <div className="space-y-3 mb-4">
+                                <span className="text-[11px] font-extrabold text-white/50 uppercase tracking-wider font-satoshi block">
                                     Live Networks
-                                </Typography>
+                                </span>
                                 {orderedWallets.filter(w => w.chain !== 'sol').map((wallet) => (
-                                    <Paper
+                                    <div
                                         key={wallet.chain}
                                         onMouseDown={() => handlePressStart(wallet.symbol)}
                                         onMouseUp={handlePressEnd}
                                         onMouseLeave={handlePressEnd}
                                         onTouchStart={() => handlePressStart(wallet.symbol)}
                                         onTouchEnd={handlePressEnd}
-                                        sx={{
-                                            px: 2,
-                                            py: 1.5,
-                                            borderRadius: '16px',
-                                            bgcolor: '#161412',
-                                            border: `1px solid rgba(255, 255, 255, 0.08)`,
-                                            transition: 'all 0.15s ease',
-                                            cursor: 'pointer',
-                                            '&:hover': { bgcolor: '#1C1A18', borderColor: 'rgba(255, 255, 255, 0.16)' }
-                                        }}
+                                        className="p-3.5 rounded-2xl bg-[#161412] border border-white/[0.08] hover:border-white/20 transition-all cursor-pointer shadow-sm"
                                     >
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
-                                            <Box sx={{ 
-                                                width: 34, 
-                                                height: 34, 
-                                                borderRadius: '10px', 
-                                                bgcolor: '#0A0908', 
-                                                border: '1px solid rgba(255, 255, 255, 0.06)',
-                                                display: 'grid', 
-                                                placeItems: 'center', 
-                                                flexShrink: 0, 
-                                                color: getNetworkColor(wallet.chain), 
-                                                fontWeight: 800, 
-                                                fontSize: '13px' 
-                                            }}>
+                                        <div className="flex items-center gap-3 w-full">
+                                            <div
+                                                className="w-9 h-9 rounded-xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center shrink-0 font-extrabold text-sm"
+                                                style={{ color: getNetworkColor(wallet.chain) }}
+                                            >
                                                 {getNetworkLogo(wallet.chain)}
-                                            </Box>
-                                            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                                                <Typography component="span" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)', fontSize: '0.88rem', lineHeight: 1.2 }}>
+                                            </div>
+                                            <div className="min-w-0 flex-1 flex flex-col gap-0.5 pr-2">
+                                                <span className="font-extrabold text-white font-satoshi text-sm leading-tight truncate">
                                                     {wallet.label}
-                                                </Typography>
-                                                <Typography component="span" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)', fontSize: '0.74rem', lineHeight: 1.2 }}>
+                                                </span>
+                                                <span className="text-xs text-white/40 font-mono leading-tight truncate">
                                                     {shortenAddress(wallet.address)}
-                                                </Typography>
-                                            </Box>
-                                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.35, flexShrink: 0 }}>
-                                                <Typography component="span" sx={{ fontWeight: 800, color: getNetworkColor(wallet.chain), fontFamily: 'var(--font-mono)', fontSize: '0.82rem', lineHeight: 1.2 }}>
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-1 shrink-0 pl-1">
+                                                <span
+                                                    className="font-extrabold font-mono text-xs leading-tight whitespace-nowrap"
+                                                    style={{ color: getNetworkColor(wallet.chain) }}
+                                                >
                                                     {onChainBalances[wallet.chain.toUpperCase()] || '0.00'} {wallet.symbol}
-                                                </Typography>
-                                                <Stack direction="row" gap={0.5}>
-                                                    <IconButton
-                                                        size="small"
+                                                </span>
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        type="button"
                                                         onClick={() => handleCopyAddress(wallet.address)}
-                                                        sx={{ p: 0.4, color: 'rgba(255,255,255,0.4)', '&:hover': { color: getNetworkColor(wallet.chain) } }}
+                                                        className="p-1 rounded text-white/40 hover:text-white transition-colors cursor-pointer"
                                                     >
-                                                        <Copy size={12} />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        size="small"
+                                                        <Copy size={13} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
                                                         onClick={() => {
                                                             const explorerUrl = getExplorerUrl(wallet);
                                                             if (explorerUrl) {
                                                                 window.open(explorerUrl, '_blank', 'noopener,noreferrer');
                                                             }
                                                         }}
-                                                        sx={{ p: 0.4, color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}
+                                                        className="p-1 rounded text-white/40 hover:text-white transition-colors cursor-pointer"
                                                     >
-                                                        <ExternalLink size={12} />
-                                                    </IconButton>
-                                                </Stack>
-                                            </Box>
-                                        </Box>
-                                    </Paper>
+                                                        <ExternalLink size={13} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 ))}
-                            </Stack>
+                            </div>
                         )}
 
                         {addableNetworks.length > 0 && (
-                            <Stack gap={1.5} sx={{ mb: 4 }}>
-                                <Typography variant="caption" sx={{ fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
+                            <div className="space-y-3 mb-6">
+                                <span className="text-[11px] font-extrabold text-white/50 uppercase tracking-wider font-satoshi block">
                                     Add Network
-                                </Typography>
-                                <Stack direction="row" gap={1} flexWrap="wrap">
+                                </span>
+                                <div className="flex flex-wrap gap-2">
                                     {addableNetworks.map((chain) => (
-                                        <Button
+                                        <button
                                             key={chain}
-                                            variant="outlined"
-                                            startIcon={pendingChain === chain ? <CircularProgress size={14} color="inherit" /> : <Plus size={14} />}
+                                            type="button"
                                             onClick={() => handleAddNetwork(chain)}
                                             disabled={pendingChain !== null}
-                                            sx={{
-                                                borderRadius: '12px',
-                                                borderColor: EDGE,
-                                                color: '#D4D4D8',
-                                                textTransform: 'none',
-                                                fontWeight: 800,
-                                                fontFamily: 'var(--font-satoshi)',
-                                                '&:hover': { bgcolor: HIGHLIGHT, borderColor: '#4A4743', color: 'white' }
-                                            }}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 hover:border-white/25 bg-[#161412] text-white/80 hover:text-white font-satoshi text-xs font-bold transition-all cursor-pointer"
                                         >
-                                            {WalletService.networkDefinitions[chain].label}
-                                        </Button>
+                                            {pendingChain === chain ? (
+                                                <CircularProgress size={13} color="inherit" />
+                                            ) : (
+                                                <Plus size={13} />
+                                            )}
+                                            <span>{WalletService.networkDefinitions[chain].label}</span>
+                                        </button>
                                     ))}
-                                </Stack>
-                            </Stack>
+                                </div>
+                            </div>
                         )}
 
                         </>
                         )}
-                    </Box>
+                    </div>
                 )}
 
 
