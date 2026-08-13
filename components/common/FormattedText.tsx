@@ -6,9 +6,15 @@ interface FormattedTextProps {
     text: string;
     variant?: any;
     sx?: any;
+    linkPreviewsEnabled?: boolean;
 }
 
-export const FormattedText: React.FC<FormattedTextProps> = ({ text, variant = 'body1', sx = {} }) => {
+export const FormattedText: React.FC<FormattedTextProps> = ({
+    text,
+    variant = 'body1',
+    sx = {},
+    linkPreviewsEnabled = true,
+}) => {
     if (!text) return null;
 
     // Regex to match URLs
@@ -18,11 +24,35 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, variant = 'b
     const parts = text.split(urlRegex);
     
     const getEcosystemType = (url: string) => {
-        if (url.includes('connect.kylrix')) return { label: 'CONNECT', color: '#F59E0B', icon: <MessageSquare size={12} /> };
-        if (url.includes('flow.kylrix')) return { label: 'FLOW', color: '#A855F7', icon: <Zap size={12} /> };
-        if (url.includes('vault.kylrix')) return { label: 'VAULT', color: '#10B981', icon: <Lock size={12} /> };
-        if (url.includes('note.kylrix')) return { label: 'NOTE', color: '#EC4899', icon: <FileText size={12} /> };
-        return null;
+        let hostname = '';
+        let pathname = '';
+        try {
+            const parsed = new URL(url);
+            hostname = parsed.hostname.toLowerCase();
+            pathname = parsed.pathname.toLowerCase();
+        } catch {
+            /* ignore invalid URL */
+        }
+
+        const isCurrentHost = typeof window !== 'undefined' && window.location.hostname.toLowerCase() === hostname;
+        const isKylrixDomain = hostname.endsWith('kylrix.space') || hostname.endsWith('kylrix.com') || hostname === 'kylrix.app' || isCurrentHost;
+
+        if (!isKylrixDomain) return null;
+
+        if (hostname.startsWith('connect.') || pathname.startsWith('/connect') || pathname.startsWith('/chats') || pathname.startsWith('/hangouts')) {
+            return { label: 'CONNECT', color: '#F59E0B', icon: <MessageSquare size={12} /> };
+        }
+        if (hostname.startsWith('flow.') || pathname.startsWith('/flow') || pathname.startsWith('/workflows')) {
+            return { label: 'FLOW', color: '#A855F7', icon: <Zap size={12} /> };
+        }
+        if (hostname.startsWith('vault.') || pathname.startsWith('/vault')) {
+            return { label: 'VAULT', color: '#10B981', icon: <Lock size={12} /> };
+        }
+        if (hostname.startsWith('note.') || pathname.startsWith('/note') || pathname.startsWith('/notes') || pathname.startsWith('/app')) {
+            return { label: 'KYLRIX NOTE', color: '#EC4899', icon: <FileText size={12} /> };
+        }
+
+        return { label: 'KYLRIX', color: '#6366F1', icon: <FileText size={12} /> };
     };
 
     return (
@@ -44,7 +74,7 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, variant = 'b
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     gap: 1,
-                                    bgcolor: alpha(eco.color, 0.1),
+                                    bgcolor: alpha(eco.color, 0.12),
                                     color: eco.color,
                                     px: 1.5,
                                     py: 0.5,
@@ -52,23 +82,31 @@ export const FormattedText: React.FC<FormattedTextProps> = ({ text, variant = 'b
                                     textDecoration: 'none',
                                     fontWeight: 800,
                                     fontSize: '0.85rem',
-                                    border: `1px solid ${alpha(eco.color, 0.2)}`,
+                                    border: `1px solid ${alpha(eco.color, 0.25)}`,
                                     my: 0.5,
                                     mr: 0.5,
                                     verticalAlign: 'middle',
                                     transition: 'all 0.2s ease',
                                     fontFamily: 'var(--font-satoshi)',
                                     '&:hover': {
-                                        bgcolor: alpha(eco.color, 0.2),
+                                        bgcolor: alpha(eco.color, 0.22),
                                         transform: 'translateY(-1px)',
-                                        boxShadow: `0 4px 12px ${alpha(eco.color, 0.2)}`
+                                        boxShadow: `0 4px 12px ${alpha(eco.color, 0.25)}`
                                     }
                                 }}
                             >
                                 {eco.icon}
                                 <span>{eco.label}</span>
-                                <ExternalLink size={12} style={{ opacity: 0.5 }} />
+                                <ExternalLink size={12} style={{ opacity: 0.6 }} />
                             </Box>
+                        );
+                    }
+
+                    if (!linkPreviewsEnabled) {
+                        return (
+                            <span key={i} style={{ color: '#818CF8', wordBreak: 'break-all' }}>
+                                {part}
+                            </span>
                         );
                     }
 

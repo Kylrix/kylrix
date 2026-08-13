@@ -603,11 +603,18 @@ export const ChatWindow = ({
         }
     }, [conversation?.isEncrypted, isUnlocked, promptSudo]);
 
-    // Privacy prefs — typing/online (default true, mutual, direct-only, stored in profile.preferences)
+    const [ownLinkPreviewsEnabled, setOwnLinkPreviewsEnabled] = useState(true);
+
+    // Privacy prefs — typing/online/linkPreviews (default true, stored in profile.preferences)
     useEffect(() => {
         if (!user?.$id) return;
         UsersService.getProfileById(user.$id).then((p: any) => {
-            try { const pr = typeof p?.preferences === 'string' ? JSON.parse(p.preferences) : p?.preferences || {}; setOwnTypingEnabled(pr.typingEnabled ?? true); setOwnOnlineEnabled(pr.onlineEnabled ?? true); } catch {}
+            try {
+                const pr = typeof p?.preferences === 'string' ? JSON.parse(p.preferences) : p?.preferences || {};
+                setOwnTypingEnabled(pr.typingEnabled ?? true);
+                setOwnOnlineEnabled(pr.onlineEnabled ?? true);
+                setOwnLinkPreviewsEnabled(pr.linkPreviewsEnabled ?? true);
+            } catch {}
         }).catch(() => {});
     }, [user?.$id]);
 
@@ -1846,6 +1853,7 @@ export const ChatWindow = ({
                                                         msg={msg}
                                                         isUnlocked={isUnlocked}
                                                         conversationId={conversationId}
+                                                        linkPreviewsEnabled={ownLinkPreviewsEnabled}
                                                         onDecrypted={(id, decrypted) =>
                                                             setMessages((prev) =>
                                                                 prev.map((m) =>

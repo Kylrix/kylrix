@@ -19,11 +19,13 @@ export function ChatMessageContent({
   isUnlocked,
   conversationId,
   onDecrypted,
+  linkPreviewsEnabled = true,
 }: {
   msg: ChatMessage;
   isUnlocked: boolean;
   conversationId: string;
   onDecrypted: (messageId: string, decrypted: string) => void;
+  linkPreviewsEnabled?: boolean;
 }) {
         if ((msg as any).metadata?.type === 'attachment') {
             return <ChatAttachmentCard metadata={(msg as any).metadata as unknown as AttachmentMetadata} />;
@@ -105,7 +107,7 @@ export function ChatMessageContent({
         }
 
         const fileId = msg.attachments && msg.attachments[0];
-        if (!fileId) return <FormattedText text={displayedContent} />;
+        if (!fileId) return <FormattedText text={displayedContent} linkPreviewsEnabled={linkPreviewsEnabled} />;
 
         const bucketId = StorageService.getBucketForType(msg.type);
         const viewUrl = StorageService.getFileView(fileId, bucketId);
