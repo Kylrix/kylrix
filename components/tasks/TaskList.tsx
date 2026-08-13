@@ -147,12 +147,6 @@ export default function TaskList() {
     return 'All Goals';
   };
 
-  // Group tasks by status for board view
-  const groupedTasks = {
-    todo: tasks.filter((t) => t.status === 'todo'),
-    'in-progress': tasks.filter((t) => t.status === 'in-progress'),
-    blocked: tasks.filter((t) => t.status === 'blocked'),
-    done: tasks.filter((t) => t.status === 'done')};
 
   return (
     <EmptyStateAnomalyDetector
