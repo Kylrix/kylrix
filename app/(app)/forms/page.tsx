@@ -140,7 +140,28 @@ export default function FormsDashboard() {
     }, [user?.$id, sortForms]);
 
     useEffect(() => {
-        void fetchForms(true);
+        void fetchForms(false);
+
+        // Realtime subscription: live sync for forms mutations without manual polling
+        let unsubscribe: (() => void) | undefined;
+        void (async () => {
+            try {
+                const { client } = await import('@/lib/appwrite/client');
+                const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+                const dbId = APPWRITE_CONFIG.DATABASES.FLOW;
+                const tableId = APPWRITE_CONFIG.TABLES.FLOW.FORMS;
+                const channel = `databases.${dbId}.collections.${tableId}.documents`;
+                unsubscribe = client.subscribe(channel, (response: any) => {
+                    if (response.events.some((event: string) => event.includes('.create') || event.includes('.update') || event.includes('.delete'))) {
+                        void fetchForms(false);
+                    }
+                });
+            } catch {}
+        })();
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
     }, [fetchForms]);
 
     const handleEdit = (form: Forms) => {
@@ -254,6 +275,7 @@ export default function FormsDashboard() {
     return (
         <div className="flex-1 min-h-screen bg-[#0A0908] text-white p-4 md:p-8">
             <MultiSectionContainer panels={['projects', 'huddles', 'goals']}>
+                {/* Header Row */}
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h1 className="text-3xl font-black mb-1 tracking-tight font-clash text-white">
@@ -264,14 +286,6 @@ export default function FormsDashboard() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button
-                            type="button"
-                            onClick={() => fetchForms(true)}
-                            className="w-10 h-10 rounded-2xl bg-[#161412] border border-white/8 hover:border-white/15 flex items-center justify-center transition-all cursor-pointer text-white/60 hover:text-white"
-                            title="Refresh Forms"
-                        >
-                            <RefreshCw size={16} className={loading ? 'animate-spin text-[#6366F1]' : ''} />
-                        </button>
                         <button 
                             type="button"
                             onClick={handleCreate}

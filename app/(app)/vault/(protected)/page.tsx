@@ -447,16 +447,6 @@ function DashboardPageContent() {
                       </button>
 
                       <button
-                        onClick={() => void handleManualRefresh()}
-                        disabled={isRefreshing}
-                        className="p-2 border border-[#1C1A18] rounded-xl text-white/60 bg-[#161412] hover:text-white hover:bg-[#1C1A18] transition-colors disabled:opacity-40"
-                        title="Refresh secrets list"
-                        aria-label="Refresh secrets list"
-                      >
-                        <RefreshCw size={16} className={isRefreshing ? 'animate-spin text-[#10B981]' : ''} />
-                      </button>
-
-                      <button
                         onClick={() => setVaultBlurEnabled(!isVaultBlurEnabled)}
                         className={`p-2 border border-[#1C1A18] rounded-xl transition-colors ${
                           isVaultBlurEnabled ? 'text-white/40 bg-[#161412]' : 'text-[#10B981] bg-[#161412]'
