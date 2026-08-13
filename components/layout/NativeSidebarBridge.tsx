@@ -269,7 +269,11 @@ export function NativeSidebarBridge() {
       agentic.closeAgenticDrawer();
       lastKeyRef.current = null;
     }
-  }, [isOpen, agentic.isOpen]);
+    if (!isOpen && wallet.isWalletOpen && (lastKeyRef.current === 'wallet' || lastKeyRef.current === 'wallet_mobile')) {
+      wallet.closeWallet();
+      lastKeyRef.current = null;
+    }
+  }, [isOpen, agentic.isOpen, wallet.isWalletOpen]);
 
   void activeKey;
 
