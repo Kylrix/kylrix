@@ -108,7 +108,7 @@ export function sortPinnedThenCreatedAt<T extends SyncableRow>(
     const bPinned = isPinned(b);
     if (aPinned && !bPinned) return -1;
     if (!aPinned && bPinned) return 1;
-    return getRowCreatedAt(b) - getRowCreatedAt(a);
+    return getRowUpdatedAt(b) - getRowUpdatedAt(a);
   });
 }
 
