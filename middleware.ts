@@ -74,7 +74,7 @@ export function middleware(request: NextRequest) {
 
   // Instant Route Forwards (Legacy -> Canonical)
   const APP_NOTE_RESERVED = new Set([
-    'shared', 'landing', 'admin', 'pitch', 'popout', 'notes', 'extensions', 'settings', 'api',
+    'shared', 'landing', 'admin', 'pitch', 'popout', 'notes', 'extensions', 'settings', 'api', 'test',
   ]);
 
   const legacyAppNote = pathname.match(/^\/app\/([^/]+)(?:\/(.*))?$/);
