@@ -162,7 +162,9 @@ function DashboardPageContent() {
 
     if (!background && allCredentials.length === 0) setLoading(true);
     try {
+      console.log(`[Vault] Fetching credentials for user: ${user.$id}...`);
       const credentials = await listAllCredentials(user.$id);
+      console.log(`[Vault] Successfully fetched ${credentials?.length ?? 0} credentials from Appwrite.`);
       setAllCredentials(credentials);
       try {
         const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
@@ -178,12 +180,14 @@ function DashboardPageContent() {
             }).catch(() => {});
           }
         }
-      } catch {}
-    } catch (error: unknown) {
-      if (allCredentials.length === 0) {
-        toast.error("Failed to load secrets. Please try again.");
+      } catch (cacheErr) {
+        console.warn("[Vault] RxDB cache write warning:", cacheErr);
       }
-      console.error("Failed to load credentials:", error);
+    } catch (error: unknown) {
+      console.error("[Vault] CRITICAL: Failed to load credentials from Appwrite:", error);
+      if (allCredentials.length === 0) {
+        toast.error(`Vault load error: ${error instanceof Error ? error.message : String(error)}`);
+      }
     } finally {
       setLoading(false);
     }

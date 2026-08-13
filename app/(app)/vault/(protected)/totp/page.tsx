@@ -341,10 +341,12 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
       } catch {}
     })();
 
+    console.log(`[TOTP] Fetching TOTP codes for user: ${user.$id}...`);
     Promise.allSettled([listTotpSecrets(user.$id), listFolders(user.$id)])
       .then(async ([secretsResult, foldersResult]) => {
         if (isCancelled) return;
         if (secretsResult.status === "fulfilled") {
+          console.log(`[TOTP] Successfully fetched ${secretsResult.value?.length ?? 0} TOTP secrets.`);
           setTotpCodes(secretsResult.value);
           try {
             const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
@@ -360,9 +362,12 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
                 }).catch(() => {});
               }
             }
-          } catch {}
+          } catch (cacheErr) {
+            console.warn("[TOTP] RxDB cache write warning:", cacheErr);
+          }
         } else {
-          console.error("Failed to fetch TOTP secrets", secretsResult.reason);
+          console.error("[TOTP] CRITICAL: Failed to fetch TOTP secrets:", secretsResult.reason);
+          toast.error(`TOTP load error: ${secretsResult.reason instanceof Error ? secretsResult.reason.message : String(secretsResult.reason)}`);
         }
 
         if (foldersResult.status === "fulfilled") {
@@ -373,7 +378,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
         }
       })
       .catch((err) => {
-        console.error("Error loading TOTP data:", err);
+        console.error("[TOTP] CRITICAL: Error in loading TOTP data chain:", err);
       })
       .finally(() => {
         if (!isCancelled) setLoading(false);
