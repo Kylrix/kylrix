@@ -17,17 +17,22 @@ export const FormattedText: React.FC<FormattedTextProps> = ({
 }) => {
     if (!text) return null;
 
-    // Regex to match URLs
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    // Regex to match URLs (with or without http:// or https://)
+    const urlRegex = /((?:https?:\/\/|www\.)[^\s]+|(?:[a-zA-Z0-9-]+\.)+kylrix\.space[^\s]*)/gi;
     
     // Split text by URLs
     const parts = text.split(urlRegex);
     
-    const getEcosystemType = (url: string) => {
+    const getEcosystemType = (rawUrl: string) => {
+        let fullUrl = rawUrl;
+        if (!/^https?:\/\//i.test(fullUrl)) {
+            fullUrl = `https://${fullUrl}`;
+        }
+
         let hostname = '';
         let pathname = '';
         try {
-            const parsed = new URL(url);
+            const parsed = new URL(fullUrl);
             hostname = parsed.hostname.toLowerCase();
             pathname = parsed.pathname.toLowerCase();
         } catch {
@@ -39,20 +44,29 @@ export const FormattedText: React.FC<FormattedTextProps> = ({
 
         if (!isKylrixDomain) return null;
 
+        if (pathname.startsWith('/u/') || pathname.startsWith('/user/') || pathname.startsWith('/profile/')) {
+            const handle = pathname.split('/')[2] || '';
+            return {
+                label: handle ? `@${handle.toUpperCase()}` : 'PROFILE',
+                color: '#3B82F6',
+                icon: <MessageSquare size={12} />,
+                href: fullUrl,
+            };
+        }
         if (hostname.startsWith('connect.') || pathname.startsWith('/connect') || pathname.startsWith('/chats') || pathname.startsWith('/hangouts')) {
-            return { label: 'CONNECT', color: '#F59E0B', icon: <MessageSquare size={12} /> };
+            return { label: 'CONNECT', color: '#F59E0B', icon: <MessageSquare size={12} />, href: fullUrl };
         }
         if (hostname.startsWith('flow.') || pathname.startsWith('/flow') || pathname.startsWith('/workflows')) {
-            return { label: 'FLOW', color: '#A855F7', icon: <Zap size={12} /> };
+            return { label: 'FLOW', color: '#A855F7', icon: <Zap size={12} />, href: fullUrl };
         }
         if (hostname.startsWith('vault.') || pathname.startsWith('/vault')) {
-            return { label: 'VAULT', color: '#10B981', icon: <Lock size={12} /> };
+            return { label: 'VAULT', color: '#10B981', icon: <Lock size={12} />, href: fullUrl };
         }
         if (hostname.startsWith('note.') || pathname.startsWith('/note') || pathname.startsWith('/notes') || pathname.startsWith('/app')) {
-            return { label: 'KYLRIX NOTE', color: '#EC4899', icon: <FileText size={12} /> };
+            return { label: 'KYLRIX NOTE', color: '#EC4899', icon: <FileText size={12} />, href: fullUrl };
         }
 
-        return { label: 'KYLRIX', color: '#6366F1', icon: <FileText size={12} /> };
+        return { label: 'KYLRIX', color: '#6366F1', icon: <FileText size={12} />, href: fullUrl };
     };
 
     return (
@@ -66,7 +80,7 @@ export const FormattedText: React.FC<FormattedTextProps> = ({
                             <Box
                                 key={i}
                                 component="a"
-                                href={part}
+                                href={eco.href}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e: React.MouseEvent) => e.stopPropagation()}
@@ -102,6 +116,8 @@ export const FormattedText: React.FC<FormattedTextProps> = ({
                         );
                     }
 
+                    const hrefUrl = /^https?:\/\//i.test(part) ? part : `https://${part}`;
+
                     if (!linkPreviewsEnabled) {
                         return (
                             <span key={i} style={{ color: '#818CF8', wordBreak: 'break-all' }}>
@@ -113,7 +129,7 @@ export const FormattedText: React.FC<FormattedTextProps> = ({
                     return (
                         <Link 
                             key={i} 
-                            href={part} 
+                            href={hrefUrl} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             onClick={(e: React.MouseEvent) => e.stopPropagation()}
