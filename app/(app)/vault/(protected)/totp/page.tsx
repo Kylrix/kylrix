@@ -334,8 +334,13 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
         if (db) {
           const cachedDoc = await db.cache.findOne(cacheKey).exec().catch(() => null);
           if (cachedDoc?.data && Array.isArray(cachedDoc.data) && !isCancelled) {
-            setTotpCodes(cachedDoc.data as TotpItem[]);
-            setLoading(false);
+            if (cachedDoc.data.length > 0) {
+              setTotpCodes(cachedDoc.data as TotpItem[]);
+              setLoading(false);
+            } else {
+              // Discard empty local cache entry to force fresh Appwrite fetch
+              await db.cache.findOne(cacheKey).remove().catch(() => {});
+            }
           }
         }
       } catch {}

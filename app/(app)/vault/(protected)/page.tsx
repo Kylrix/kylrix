@@ -154,8 +154,13 @@ function DashboardPageContent() {
       if (db) {
         const cachedDoc = await db.cache.findOne(cacheKey).exec().catch(() => null);
         if (cachedDoc?.data && Array.isArray(cachedDoc.data)) {
-          setAllCredentials(cachedDoc.data as Credentials[]);
-          setLoading(false);
+          if (cachedDoc.data.length > 0) {
+            setAllCredentials(cachedDoc.data as Credentials[]);
+            setLoading(false);
+          } else {
+            // Discard empty local cache entry to force fresh Appwrite fetch
+            await db.cache.findOne(cacheKey).remove().catch(() => {});
+          }
         }
       }
     } catch {}
@@ -549,13 +554,33 @@ function DashboardPageContent() {
                         <p className="text-[#9B9691] max-w-xs mx-auto mb-6 text-sm">
                           Your secure vault is empty. Store passwords, logins, or cards safely.
                         </p>
-                        <button
-                          onClick={handleAdd}
-                          className="inline-flex items-center gap-2 px-6 h-12 bg-[#10B981] hover:bg-[#059669] text-black font-black rounded-2xl transition-colors"
-                        >
-                          <Plus size={18} />
-                          Add Secret
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={handleAdd}
+                            className="inline-flex items-center gap-2 px-6 h-12 bg-[#10B981] hover:bg-[#059669] text-black font-black rounded-2xl transition-colors"
+                          >
+                            <Plus size={18} />
+                            Add Secret
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const { VaultService } = await import('@/lib/appwrite/vault-service');
+                                VaultService.clearVaultCaches();
+                                const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+                                const db = await getRxDB().catch(() => null);
+                                if (db && user?.$id) {
+                                  await db.cache.findOne(`vault_credentials_${user.$id}`).remove().catch(() => {});
+                                }
+                              } catch {}
+                              void loadAllCredentials();
+                            }}
+                            className="inline-flex items-center gap-2 px-4 h-12 bg-[#161412] hover:bg-[#1C1A18] text-white/70 hover:text-white border border-[#1C1A18] font-bold rounded-2xl text-xs transition-colors"
+                          >
+                            <RefreshCw size={15} />
+                            Sync Remote
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <>
