@@ -39,7 +39,10 @@ export default function IdeasPage() {
       const tablesDB = new TablesDB(client);
 
       const queryList = [
-        Query.equal('userId', activeUserId),
+        Query.or([
+          Query.equal('userId', activeUserId),
+          Query.equal('creatorId', activeUserId)
+        ]),
         Query.limit(50),
         Query.orderDesc('$updatedAt')
       ];
