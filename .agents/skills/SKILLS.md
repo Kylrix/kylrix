@@ -60,6 +60,7 @@ _Catalog covers 86 skills._
 | `storage.core` | Ecosystem standards and architectural rules for file uploads, size gating, client-side compression, and dynamic rendering across all Kylrix storage buckets. |
 | `storage.upload-gating` | Deep dive into the server-side file upload security engine in Kylrix. Explains the subscription plan gates, bucket-level byte ceilings, and Next.js Server Actio |
 | `sync` | Canonical offline-first local-copy sync for Kylrix. Live copy = UI content SoT; autonomic sync engine pending queue (RxDB) = amber/green SoT; Appwrite confirms  |
+| `flow.vault-direct-client-pagination` | Direct Web Client SDK cursor-based fetching for Vault Credentials and TOTP secrets without cache-lock traps. |
 | `system.appwrite-audit` | Audits table/index usage against live schema config without proposing schema edits. Use when validating data flow, query alignment, and stale table assumptions. |
 | `system.appwrite-cli-ops` | **Durable SoT** for Appwrite CLI/schema (survives official skill reinstall). Guardrails, no push tables, additive-only, deprecated `string` → varchar/text/mediumtext/longtext. |
 | `system.pat-http-api` | Personal Access Tokens, `/api/v1`, rate buckets, Developers tab, scopes catalog. |
