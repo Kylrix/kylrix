@@ -116,8 +116,13 @@ function readShareMetadata(metadata: string | null | undefined): Record<string, 
   }
 }
 
+/** Compound indexes split rows across idx_userId, (userId,isPublic), (userId,isPinned). */
 function getCredentialOwnerIndexQueries(userId: string): string[] {
-  return [Query.equal("userId", userId)];
+  return [
+    Query.equal("userId", userId),
+    Query.and([Query.equal("userId", userId), Query.equal("isPublic", true)]),
+    Query.and([Query.equal("userId", userId), Query.equal("isPinned", true)]),
+  ];
 }
 
 function buildCredentialOwnerFilterQueries(
