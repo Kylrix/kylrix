@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { RefreshCw, Tag, X } from 'lucide-react';
+import { RefreshCw, Tag, X, ChevronRight } from 'lucide-react';
 import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
 import { useNotes } from '@/context/NotesContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
 
 const TAG_COLOR_MAP: Record<string, string> = {
   Personal: '#3B82F6',
@@ -29,6 +31,7 @@ export default function IdeasPage() {
   const [notes, setNotes] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { upsertNote } = useNotes();
+  const { openSidebar } = useDynamicSidebar();
 
   const fetchNotesBarebones = async () => {
     setLoading(true);
@@ -260,11 +263,23 @@ export default function IdeasPage() {
           {/* Pinned Section */}
           {displayPinned.length > 0 && (
             <div className="space-y-3">
-              <h2 className="text-xs font-mono font-bold text-white/40 uppercase tracking-wider px-1">
-                Pinned ({displayPinned.length})
-              </h2>
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-xs font-mono font-bold text-white/40 uppercase tracking-wider">
+                  Pinned ({displayPinned.length})
+                </h2>
+                {displayPinned.length > 3 && (
+                  <button
+                    type="button"
+                    onClick={() => openSidebar(<PinnedNotesSidebar offset={3} />, 'pinned-notes', { hideHeader: true })}
+                    className="text-xs font-bold text-[#EC4899] hover:text-[#f472b6] transition-colors flex items-center gap-1 font-mono select-none"
+                  >
+                    <span>See More ({displayPinned.length - 3})</span>
+                    <ChevronRight size={14} />
+                  </button>
+                )}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {displayPinned.map((note) => (
+                {displayPinned.slice(0, 3).map((note) => (
                   <NoteObjectRow key={note.$id} note={note} />
                 ))}
               </div>
