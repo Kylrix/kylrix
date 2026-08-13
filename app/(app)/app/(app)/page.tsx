@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
-import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
+import { Pin, Globe, RefreshCw } from 'lucide-react';
+import { useSection } from '@/context/SectionContext';
 
 export default function IdeasPage() {
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const { setActiveDetail } = useSection();
 
   const fetchNotesBarebones = async () => {
     setLoading(true);
@@ -70,16 +71,7 @@ export default function IdeasPage() {
         return bTime - aTime;
       });
 
-      const formattedNotes = sorted.map((n: any) => {
-        const isShared = Boolean(n.isGuest || (n.$permissions && n.$permissions.some((p: string) => p.includes('user:') && !p.includes(`user:${n.userId}`))));
-        return {
-          ...n,
-          isPinned: Boolean(n.isPinned || pinnedMap[n.$id]),
-          isGuest: Boolean(n.isGuest || isShared)
-        };
-      });
-
-      setNotes(formattedNotes);
+      setNotes(sorted);
     } catch (err: any) {
       setError(err?.message || String(err));
     } finally {
@@ -116,9 +108,42 @@ export default function IdeasPage() {
         <div className="p-8 text-center text-white/40">No ideas found.</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {notes.map((note) => (
-            <NoteObjectRow key={note.$id} note={note} />
-          ))}
+          {notes.map((n) => {
+            const isPinned = Boolean(n.isPinned);
+            const isPublic = Boolean(n.isPublic);
+            const isShared = Boolean(n.isGuest || (n.$permissions && n.$permissions.some((p: string) => p.includes('user:') && !p.includes(`user:${n.userId}`))));
+            return (
+              <div
+                key={n.$id}
+                className="p-4 bg-[#161412] border border-white/10 rounded-2xl space-y-2 relative cursor-pointer hover:border-white/20 transition-all"
+                onClick={() => setActiveDetail({ type: 'note', id: n.$id, data: n })}
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-white font-bold truncate max-w-[220px] text-sm">{n.title || 'Untitled Idea'}</p>
+                  <div className="flex items-center gap-1.5">
+                    <Pin
+                      size={14}
+                      className={isPinned ? 'text-[#EC4899] fill-[#EC4899]/20' : 'text-white/20'}
+                      aria-label={isPinned ? 'Pinned' : 'Unpinned'}
+                    />
+                    <Globe
+                      size={14}
+                      className={isPublic || isShared ? 'text-emerald-400' : 'text-white/20'}
+                      aria-label={isPublic || isShared ? 'Shared/Public' : 'Private'}
+                    />
+                  </div>
+                </div>
+                <p className="text-white/60 text-xs line-clamp-2">{n.content || ''}</p>
+                {Array.isArray(n.tags) && n.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {n.tags.slice(0, 4).map((tag: string, i: number) => (
+                      <span key={i} className="px-2 py-0.5 rounded-lg bg-white/5 text-white/40 text-[10px] font-mono">{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
