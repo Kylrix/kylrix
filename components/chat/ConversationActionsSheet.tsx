@@ -635,10 +635,8 @@ export default function ConversationActionsSheet({
           keepMounted: false}}
         PaperProps={{
           sx: {
-            top: '88px',
-            bottom: 0,
-            height: 'calc(100dvh - 88px)',
-            maxHeight: 'calc(100dvh - 88px)',
+            height: '60vh',
+            maxHeight: '60vh',
             borderRadius: '24px 24px 0 0',
             bgcolor: '#161412',
             backgroundImage: 'none',
