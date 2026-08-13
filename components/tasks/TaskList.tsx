@@ -81,7 +81,7 @@ export default function TaskList() {
       ...rawTagOptions,
       ...(ecosystemTags || []).map((t) => t.name).filter(Boolean),
       ...tasks.flatMap((t) => t.labels || [])
-    ].filter(Boolean))
+    ].filter((item): item is string => Boolean(item)))
   ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   const tagFilterOptions = directTaskTags;
   const activeTagFilter = filter.labels?.[0] ?? null;
