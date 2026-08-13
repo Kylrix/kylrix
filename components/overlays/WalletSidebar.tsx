@@ -19,6 +19,7 @@ import {
     ChevronLeft,
     ChevronDown,
     Lock,
+    Fingerprint,
     Copy,
     ExternalLink,
     PanelRight,
@@ -1184,9 +1185,10 @@ export const WalletSidebar = ({
                         }}
                     >
                         <Box sx={{
-                            width: 64,
-                            height: 64,
-                            borderRadius: '20px',
+                            position: 'relative',
+                            width: 68,
+                            height: 68,
+                            borderRadius: '22px',
                             bgcolor: SURFACE,
                             display: 'flex',
                             alignItems: 'center',
@@ -1195,13 +1197,30 @@ export const WalletSidebar = ({
                             border: `1px solid ${EDGE}`,
                             color: ACCENT
                         }}>
-                            <Lock size={32} />
+                            <Fingerprint size={34} strokeWidth={1.75} />
+                            <Box sx={{
+                                position: 'absolute',
+                                bottom: -2,
+                                right: -2,
+                                width: 22,
+                                height: 22,
+                                borderRadius: '8px',
+                                bgcolor: '#1C1A18',
+                                border: `1px solid ${EDGE}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.5)'
+                            }}>
+                                <Lock size={11} />
+                            </Box>
                         </Box>
                         <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, fontFamily: 'var(--font-satoshi)', color: 'white' }}>
                             Wallet is Locked
                         </Typography>
                         <Typography variant="body2" sx={{ color: MUTED, mb: 4, maxWidth: 240, fontFamily: 'var(--font-satoshi)' }}>
-                            Vault is locked. Click anywhere here to prompt the unlock screen and auto-provision your wallet.
+                            Click to unlock with your passkey or MasterPass to view balances and sign actions.
                         </Typography>
                     </Box>
                 ) : loading ? (
