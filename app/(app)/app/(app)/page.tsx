@@ -70,10 +70,14 @@ export default function IdeasPage() {
         return bTime - aTime;
       });
 
-      const formattedNotes = sorted.map((n: any) => ({
-        ...n,
-        isPinned: Boolean(n.isPinned || pinnedMap[n.$id])
-      }));
+      const formattedNotes = sorted.map((n: any) => {
+        const isShared = Boolean(n.isGuest || (n.$permissions && n.$permissions.some((p: string) => p.includes('user:') && !p.includes(`user:${n.userId}`))));
+        return {
+          ...n,
+          isPinned: Boolean(n.isPinned || pinnedMap[n.$id]),
+          isGuest: Boolean(n.isGuest || isShared)
+        };
+      });
 
       setNotes(formattedNotes);
     } catch (err: any) {
