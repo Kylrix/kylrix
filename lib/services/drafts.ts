@@ -110,6 +110,17 @@ export const DraftsService = {
     },
 
     /**
+     * List all full draft objects
+     */
+    async listDrafts(): Promise<FormDraft[]> {
+        if (typeof window === 'undefined') return [];
+        const manifest = await this.getManifest();
+        const ids = Object.keys(manifest);
+        const drafts = await Promise.all(ids.map(id => this.getDraft(id)));
+        return drafts.filter((d): d is FormDraft => d !== null);
+    },
+
+    /**
      * Clear all form drafts (useful for master resets)
      */
     async clearAll() {

@@ -107,7 +107,7 @@ export default function FormsDashboard() {
             }
 
             // Sync drafts
-            const drafts = DraftsService.listDrafts();
+            const drafts = await DraftsService.listDrafts();
             setOfflineDrafts(drafts);
 
             if (userId === 'guest') return;
@@ -201,8 +201,8 @@ export default function FormsDashboard() {
             description: `You are about to remove "${draft.title || 'Untitled Portal'}" from your local storage. This cannot be recovered.`,
             resourceName: 'this draft',
             confirmLabel: 'Delete Draft',
-            onConfirm: () => {
-                DraftsService.clearDraft(draft.id);
+            onConfirm: async () => {
+                await DraftsService.clearDraft(draft.id);
                 fetchForms(false);
             }
         });
