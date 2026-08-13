@@ -303,18 +303,44 @@ export default function CredentialDialog({
         (credentialData as any).isWorkspace = true;
       }
 
+      // Local-first: push to RxDB live copy immediately (like idea input), then background Appwrite sync
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      const { ID } = await import('appwrite');
       if (initial && initial.$id) {
-        await updateCredential(initial.$id, credentialData);
+        const localUpdated = { ...initial, ...credentialData, $id: initial.$id, $updatedAt: new Date().toISOString() } as any;
+        await LocalEngine.cacheSet(`vault_credential_${initial.$id}`, localUpdated).catch(()=>{});
+        // fire-and-forget server sync
+        void updateCredential(initial.$id, credentialData).catch(()=>{});
+        onSaved(localUpdated as any);
       } else {
-        const created = await createCredential(credentialData);
-        if (isCustomWorkspace && (created?.$id || (created as any)?.id)) {
-          void attachEntityToActiveWorkspace('credential', created.$id || (created as any).id);
-        }
+        const tempId = ID.unique();
+        const localCreated = { ...credentialData, $id: tempId, $createdAt: new Date().toISOString(), $updatedAt: new Date().toISOString() } as any;
+        await LocalEngine.cacheSet(`vault_credential_${tempId}`, localCreated).catch(()=>{});
+        // also warm the list cache so DashboardPageContent sees it instantly
+        try {
+          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+          const db = await getRxDB().catch(()=>null);
+          if (db) {
+            const cacheKey = `vault_credentials_${user?.$id}`;
+            const existing = await db.cache.findOne(cacheKey).exec().catch(()=>null);
+            const prev = (existing?.data as any) || [];
+            await db.cache.upsert({ id: cacheKey, data: [localCreated, ...(Array.isArray(prev) ? prev : [])], timestamp: Date.now() }).catch(()=>{});
+          }
+        } catch {}
+        // background server create (encrypted)
+        void createCredential(credentialData).then(async (created: any) => {
+          if (isCustomWorkspace && (created?.$id || (created as any)?.id)) {
+            void attachEntityToActiveWorkspace('credential', created.$id || (created as any).id);
+          }
+          // replace temp with real id in cache
+          try {
+            await LocalEngine.cacheDelete(`vault_credential_${tempId}`).catch(()=>{});
+            await LocalEngine.cacheSet(`vault_credential_${created.$id}`, created).catch(()=>{});
+          } catch {}
+        }).catch(()=>{});
+        onSaved(localCreated as any);
+        if (typeof window !== 'undefined') localStorage.removeItem('kylrix:draft:secret');
       }
-      if (!initial && typeof window !== 'undefined') {
-        localStorage.removeItem('kylrix:draft:secret');
-      }
-      onSaved();
       handleClose();
       setLoading(false);
     } catch (e: unknown) {
