@@ -21,7 +21,7 @@ export default function VaultTestPage() {
     setRawLogs([]);
     try {
       log('Initializing direct Appwrite Client SDK fetch (zero wrappers)...');
-      const { Client, Databases } = await import('appwrite');
+      const { Client, Databases, TablesDB } = await import('appwrite');
       const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
 
       const client = new Client()
@@ -29,19 +29,30 @@ export default function VaultTestPage() {
         .setProject(APPWRITE_CONFIG.PROJECT_ID);
 
       const databases = new Databases(client);
+      const tablesDB = new TablesDB(client);
       const dbId = APPWRITE_CONFIG.DATABASES.VAULT;
       const credsCollId = APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS;
       const totpCollId = APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS;
 
       log(`Querying credentials table (${credsCollId}) from database (${dbId})...`);
-      const credsRes = await databases.listRows(dbId, credsCollId);
-      log(`Credentials returned: total = ${credsRes.total}, count = ${credsRes.rows.length}`);
-      setCredentials(credsRes.rows);
+      let credsRes: any;
+      try {
+        credsRes = await tablesDB.listRows(dbId, credsCollId);
+      } catch {
+        credsRes = await databases.listDocuments(dbId, credsCollId);
+      }
+      log(`Credentials returned: total = ${credsRes.total}, count = ${credsRes.rows?.length || credsRes.documents?.length || 0}`);
+      setCredentials(credsRes.rows || credsRes.documents || []);
 
       log(`Querying totpSecrets table (${totpCollId}) from database (${dbId})...`);
-      const totpRes = await databases.listRows(dbId, totpCollId);
-      log(`TOTP Secrets returned: total = ${totpRes.total}, count = ${totpRes.rows.length}`);
-      setTotpSecrets(totpRes.rows);
+      let totpRes: any;
+      try {
+        totpRes = await tablesDB.listRows(dbId, totpCollId);
+      } catch {
+        totpRes = await databases.listDocuments(dbId, totpCollId);
+      }
+      log(`TOTP Secrets returned: total = ${totpRes.total}, count = ${totpRes.rows?.length || totpRes.documents?.length || 0}`);
+      setTotpSecrets(totpRes.rows || totpRes.documents || []);
     } catch (err: any) {
       log(`ERROR CAUGHT: ${err?.message || String(err)}`);
       setError(err?.message || String(err));
