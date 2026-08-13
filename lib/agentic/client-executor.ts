@@ -464,10 +464,10 @@ async function executeAgenticToolCall(
         return { success: false, summary: '', error: 'Please sign in to check wallet balances.' };
       }
       const { WalletService } = await import('@/lib/services/wallets');
-      const { TokenLedgerService } = await import('@/lib/services/token-ledger');
+      const { KylrixTokenService } = await import('@/lib/services/token');
       
       const userWallets = await WalletService.getWallets(ctx.user.$id).catch(() => []);
-      const tokenLedger = await TokenLedgerService.getAccount(ctx.user.$id).catch(() => null);
+      const userBalance = await KylrixTokenService.getUserBalance(ctx.user.$id).catch(() => ({ amount: '0' }));
 
       const requestedToken = String(args.token || 'ALL').toUpperCase();
 
@@ -476,7 +476,7 @@ async function executeAgenticToolCall(
           token: 'KYLRIX',
           chainName: 'Kylrix Ledger',
           address: ctx.user.$id,
-          balance: tokenLedger?.amount || '0',
+          balance: userBalance?.amount || '0',
           color: '#6366F1'
         },
         ...userWallets.map(w => ({
@@ -491,7 +491,7 @@ async function executeAgenticToolCall(
       const block: AgenticMessageBlock = {
         type: 'wallet_balances',
         items,
-        totalKylrix: tokenLedger?.amount || '0'
+        totalKylrix: userBalance?.amount || '0'
       };
 
       return {
