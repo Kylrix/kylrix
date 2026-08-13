@@ -834,10 +834,18 @@ export const ChatWindow = ({
         let unsub: any;
         const initRealtime = async () => {
             unsub = await realtime.subscribe(
-                [`databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`],
+                [
+                    `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`,
+                    `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGE_REACTIONS}.documents`
+                ],
                 async (response) => {
-                    const payload = response.payload as ChatMessage;
-                    if (payload.conversationId === conversationId) {
+                    const payload = response.payload as any;
+                    // Handle Message Reactions realtime updates
+                    if (payload?.conversationId === conversationId && (response.events.some(e => e.includes('message_reactions')) || payload.emoji)) {
+                        void loadReactions();
+                        return;
+                    }
+                    if (payload?.conversationId === conversationId) {
                         if (response.events.some(e => e.includes('.create')) || response.events.some(e => e.includes('.update'))) {
                             if (user && payload.senderId === user.$id && response.events.some(e => e.includes('.create'))) return;
 

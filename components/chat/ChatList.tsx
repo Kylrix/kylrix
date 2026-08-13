@@ -1717,7 +1717,8 @@ export const ChatList = ({
                                                     </div>
                                                 ) : (
                                                     <IdentityAvatar
-                                                        src={conv.avatarUrl}
+                                                        userId={conv.isSelf ? user?.$id : conv.otherUserId}
+                                                        src={conv.avatarUrl || (conv as any).avatar || null}
                                                         alt={conv.name}
                                                         fallback={conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'H'}
                                                         size={48}
