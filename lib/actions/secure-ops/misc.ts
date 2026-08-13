@@ -503,42 +503,35 @@ export async function createRowSecure(
     actor = await getActor(jwt);
   } catch (_) {}
 
-  if (!actor || !actor.$id) {
-    actor = { $id: 'guest', email: 'guest@kylrix.space' };
-  }
-
   // 3. Security checks and payload preparation
   if (rowData && typeof rowData === 'object') {
     const isSpecializedTable = await getIsSpecializedTable(tblId);
 
     if (!isSpecializedTable) {
-      // Workspace/project escape hatch: project-linked rows use isGuest/isGeneral + project_objects membership, not strict userId equality.
-      // If actor is guest due to stale JWT but cookies still resolve, getActor would have returned real actor; guest fallback only for anonymous.
-      // For workspace-linked payloads we auto-restamp to actor instead of throwing, to clear amber on stale-JWT Forbidden.
       const isWorkspaceLinked = !!(rowData as any).projectId || (rowData as any).isWorkspace === true;
-      const actorIsGuest = !actor?.$id || actor.$id === 'guest';
+      const isAuthenticatedActor = actor && actor.$id && actor.$id !== 'guest';
+
       if ((rowData as any).userId && (rowData as any).userId !== actor?.$id) {
-        if (isWorkspaceLinked && actor?.$id && !actorIsGuest) {
-          // Restamp workspace object to current actor (privileged adapter pattern: Actor ID is source of truth)
+        if (isWorkspaceLinked && isAuthenticatedActor) {
           (rowData as any).userId = actor.$id;
           if ((rowData as any).ownerId) (rowData as any).ownerId = actor.$id;
           if ((rowData as any).creatorId) (rowData as any).creatorId = actor.$id;
-        } else if (actorIsGuest) {
+        } else if (!isAuthenticatedActor) {
           throw new Error('Unauthorized: Session expired or invalid');
         } else {
           throw new Error('Forbidden: Cannot create resource for another user');
         }
       }
       if ((rowData as any).ownerId && (rowData as any).ownerId !== actor?.$id) {
-        if (isWorkspaceLinked && actor?.$id && !actorIsGuest) {
+        if (isWorkspaceLinked && isAuthenticatedActor) {
           (rowData as any).ownerId = actor.$id;
-        } else if (actorIsGuest) {
+        } else if (!isAuthenticatedActor) {
           throw new Error('Unauthorized: Session expired or invalid');
         } else {
           throw new Error('Forbidden: Cannot create resource for another user');
         }
       }
-      if (!(rowData as any).userId && !(rowData as any).ownerId && actor?.$id) {
+      if (!(rowData as any).userId && !(rowData as any).ownerId && isAuthenticatedActor) {
         (rowData as any).userId = actor.$id;
       }
     } else {
