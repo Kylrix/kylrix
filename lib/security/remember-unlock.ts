@@ -13,6 +13,7 @@ export type RememberUnlockDurationId =
   | '8h'
   | '24h'
   | '7d'
+  | 'indefinite'
   | 'custom';
 
 export type RememberUnlockPrefs = {
@@ -33,6 +34,7 @@ export const REMEMBER_UNLOCK_DURATION_OPTIONS: Array<{
   { id: '8h', label: '8 hours', hours: 8 },
   { id: '24h', label: '24 hours', hours: 24 },
   { id: '7d', label: '1 week', hours: 24 * 7 },
+  { id: 'indefinite', label: 'Indefinite', hours: null },
   { id: 'custom', label: 'Custom', hours: null },
 ];
 

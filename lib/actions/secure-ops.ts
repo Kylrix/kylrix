@@ -124,6 +124,14 @@ import {
   deleteNostrIdentityAction,
   resolveNostrPubkeysAction} from './secure-ops/nostr';
 
+import {
+  listAgentByokKeysAction,
+  saveAgentByokKeyAction,
+  deleteAgentByokKeyAction,
+  enableConvenienceModeAction,
+  disableConvenienceModeAction,
+  resolveConvenienceMekAction} from './secure-ops/byok-convenience';
+
 export {
   
   
@@ -248,6 +256,12 @@ export {
   registerNostrIdentityAction,
   setActiveNostrIdentityAction,
   deleteNostrIdentityAction,
-  resolveNostrPubkeysAction};
+  resolveNostrPubkeysAction,
+  listAgentByokKeysAction,
+  saveAgentByokKeyAction,
+  deleteAgentByokKeyAction,
+  enableConvenienceModeAction,
+  disableConvenienceModeAction,
+  resolveConvenienceMekAction};
 
 export type { PermissionLevel} from './secure-ops/shared';

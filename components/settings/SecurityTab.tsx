@@ -11,6 +11,7 @@ import {
   Smartphone,
 } from 'lucide-react';
 import { RememberUnlockSettings } from '@/components/settings/RememberUnlockSettings';
+import { AgentByokSettings } from '@/components/settings/AgentByokSettings';
 import { UnlockOnDemandSettings } from '@/components/settings/UnlockOnDemandSettings';
 import { HardVerificationSettings } from '@/components/settings/HardVerificationSettings';
 import { FlowInstallSecuritySettings } from '@/components/settings/FlowInstallSecuritySettings';
@@ -245,6 +246,8 @@ export function SecurityTab({
       <HardVerificationSettings />
 
       <RememberUnlockSettings />
+
+      <AgentByokSettings />
 
       <FlowInstallSecuritySettings />
 

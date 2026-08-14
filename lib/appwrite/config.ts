@@ -37,6 +37,8 @@ export const APPWRITE_CONFIG = {
         WEB3_TRANSACTIONS: 'web3_transactions',
         NOSTR_IDENTITIES: 'nostr_identities',
         AGENT_PAYMENT_INTENTS: 'agent_payment_intents',
+        AGENT_BYOK_KEYS: 'agent_byok_keys',
+        USER_CONVENIENCE_SESSIONS: 'user_convenience_sessions',
 
         NOTE: {
             USERS: '67ff05c900247b5673d3',

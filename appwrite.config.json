@@ -12702,6 +12702,123 @@
                     ]
                 }
             ]
+        },
+        {
+            "$id": "agent_byok_keys",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "agent_byok_keys",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "provider",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "keyHint",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 32,
+                    "default": "",
+                    "encrypt": false
+                },
+                {
+                    "key": "encryptedKey",
+                    "type": "mediumtext",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "enabled",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_byok_user_provider",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "user_convenience_sessions",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "user_convenience_sessions",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "encryptedUserMek",
+                    "type": "mediumtext",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "expiresAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_conv_user_uq",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         }
     ],
     "buckets": [
