@@ -183,7 +183,7 @@ export default function IdeasPage() {
 
       {loading ? (
         <div className="p-8 text-center text-white/40">Loading ideas...</div>
-      ) : notes.length === 0 ? (
+      ) : activeNotes.length === 0 ? (
         <div className="p-8 text-center text-white/40">No ideas found.</div>
       ) : (
         <div className="space-y-8">
