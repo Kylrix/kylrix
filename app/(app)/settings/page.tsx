@@ -26,6 +26,7 @@ import {
     FolderKanban as WorkspaceIcon
 } from 'lucide-react';
 import { WorkspaceTab } from '@/components/settings/WorkspaceTab';
+import { AgentsSettingsTab } from '@/components/settings/AgentsSettingsTab';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { SecurityTab } from '@/components/settings/SecurityTab';
 import { PrivacyTab } from '@/components/settings/PrivacyTab';
@@ -109,7 +110,7 @@ function SettingsPageInner() {
     const _nativeSidebar = useNativeSidebarOptional();
 
     // Tab state
-    const [activeTab, setActiveTab] = useState<'general' | 'workspace' | 'profile' | 'security' | 'privacy' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'agents' | 'workspace' | 'profile' | 'security' | 'privacy' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
     const [billingDrawerOpen, setBillingDrawerOpen] = useState(false);
     const [mfaFactors, setMfaFactors] = useState<any>(null);
     const [accountMfaEnabled, setAccountMfaEnabled] = useState(false);
@@ -119,13 +120,17 @@ function SettingsPageInner() {
     useEffect(() => {
         const section = (searchParams.get('section') || '').toLowerCase();
         const tab = (searchParams.get('tab') || '').toLowerCase();
-        const allowed = new Set(['general', 'workspace', 'profile', 'security', 'privacy', 'developers', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
+        const allowed = new Set(['general', 'agents', 'workspace', 'profile', 'security', 'privacy', 'developers', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
         if (section.startsWith('admin') || tab === 'admin') {
             setActiveTab('admin');
             if (section.includes('user')) setAdminSubTab('users');
             else if (section.includes('email')) setAdminSubTab('email');
             else if (section.includes('coupon')) setAdminSubTab('coupons');
             else setAdminSubTab('dashboard');
+            return;
+        }
+        if (tab === 'assistants' || tab === 'agent') {
+            setActiveTab('agents');
             return;
         }
         if (tab && allowed.has(tab)) {
@@ -466,6 +471,7 @@ function SettingsPageInner() {
 
     const tabsList = [
         { id: 'general', label: 'General', icon: RootAccountIcon },
+        { id: 'agents', label: 'Smart Agents', icon: Bot },
         { id: 'workspace', label: 'Workspace', icon: WorkspaceIcon },
         { id: 'profile', label: 'Profile', icon: ProfileIcon },
         { id: 'security', label: 'Security & 2FA', icon: SecurityIcon },
@@ -670,6 +676,10 @@ function SettingsPageInner() {
 
                 {/* Content — fluid, right-rail aware */}
                 <div className="w-full relative min-h-[400px] min-w-0 col-span-1 lg:col-span-1">
+                {activeTab === 'agents' && (
+                    <AgentsSettingsTab />
+                )}
+
                 {activeTab === 'workspace' && (
                     <WorkspaceTab onGoToDevelopers={() => setActiveTab('developers')} />
                 )}
@@ -728,8 +738,8 @@ function SettingsPageInner() {
                             {/* Smart Assistants */}
                             <button
                                 type="button"
-                                onClick={() => router.push('/settings/agents')}
-                                className="w-full text-left p-6 bg-[#161412] border border-white/5 hover:border-white/10 hover:bg-[#1C1A18] rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group"
+                                onClick={() => setActiveTab('agents')}
+                                className="w-full text-left p-6 bg-[#161412] border border-white/5 hover:border-white/10 hover:bg-[#1C1A18] rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group cursor-pointer"
                             >
                                 <div className="flex items-center gap-3 min-w-0">
                                     <div className="w-11 h-11 rounded-xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
