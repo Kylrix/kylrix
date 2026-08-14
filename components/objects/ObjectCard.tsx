@@ -3,6 +3,7 @@
 import React, { useCallback, useRef } from 'react';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import { goalPendingKey } from '@/lib/sync/goal-keys';
+import { triggerLocalSoftRefresh } from '@/lib/sync/local-soft-refresh';
 import {
   objectKindAccent,
   type ObjectKind,
@@ -98,6 +99,7 @@ export function ObjectCard({
       longPressFired.current = false;
       return;
     }
+    triggerLocalSoftRefresh(item.kind, item.id);
     onOpen?.(item);
   }, [item, onOpen]);
 
@@ -109,6 +111,7 @@ export function ObjectCard({
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
+          triggerLocalSoftRefresh(item.kind, item.id);
           onOpen?.(item);
         }
       }}

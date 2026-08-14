@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ObjectDetailShell } from '@/components/objects/ObjectDetailShell';
 import type { UnifiedObjectDetailModel } from '@/lib/objects/types';
+import { triggerLocalSoftRefresh } from '@/lib/sync/local-soft-refresh';
 
 type Props = {
   item: UnifiedObjectDetailModel | null;
@@ -27,6 +28,12 @@ export function ObjectDetailHost({
   chrome = 'panel',
   children,
   footer}: Props) {
+  useEffect(() => {
+    if (open && item?.id) {
+      triggerLocalSoftRefresh(item.kind, item.id);
+    }
+  }, [open, item?.id, item?.kind]);
+
   if (!open || !item) return null;
 
   // Always fill the parent Overlay / DynamicSidebar (those are true fullscreen).

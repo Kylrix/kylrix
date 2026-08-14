@@ -31,6 +31,7 @@ import {
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { registerLiveNoteGetter } from '@/lib/sync/pending-sync-bridge';
 import { loadNotesFromLocalCopy, warmNotesLocalCopy } from '@/lib/notes/load-local-notes';
+import { subscribeLocalSoftRefresh } from '@/lib/sync/local-soft-refresh';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 
@@ -289,8 +290,31 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     };
 
     void hydrateFromCache();
+
+    // Rite of passage: soft refresh from LocalEngine whenever any object card/detail is opened
+    const unsubscribe = subscribeLocalSoftRefresh((kind) => {
+      if (!kind || kind === 'note' || kind === 'idea') {
+        void (async () => {
+          const local = await loadNotesFromLocalCopy({
+            userId: activeUserId,
+            existingNotes: notesRef.current,
+            getCachedDataSync: (key) => getCachedData(key),
+            getCachedDataAsync: (key) => getCachedDataAsync(key),
+          });
+          if (local?.notes?.length) {
+            setNotes((prev) => {
+              const liveById = new Map(prev.map((n) => [n.$id, n]));
+              const next = local.notes.map((n) => liveById.get(n.$id) || n);
+              return next;
+            });
+          }
+        })();
+      }
+    });
+
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [
     activeUserId,

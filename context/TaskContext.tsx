@@ -33,6 +33,7 @@ import { goalPendingKey } from '@/lib/sync/goal-keys';
 import { shouldSoftPull } from '@/lib/sync/local-copy-sync';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { loadGoalsFromLocalCopy } from '@/lib/goals/load-local-goals';
+import { subscribeLocalSoftRefresh } from '@/lib/sync/local-soft-refresh';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 import { useProjectObjects } from '@/hooks/useProjectObjects';
@@ -960,7 +961,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const lastPathnameRef = useRef<string | null>(null);
 
-  // Instant local hydration on mount — do not wait for auth or network
+  // Instant local hydration on mount & soft refresh channel — zero database calls
   useEffect(() => {
     if (typeof window === 'undefined') return;
     let cancelled = false;
@@ -989,8 +990,17 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     };
 
     void hydrateInstant();
+
+    // Rite of passage: soft refresh from LocalEngine whenever any object card/detail is opened
+    const unsubscribe = subscribeLocalSoftRefresh((kind) => {
+      if (!kind || kind === 'goal' || kind === 'task') {
+        void hydrateInstant();
+      }
+    });
+
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [authUser?.$id, getCachedData, getCachedDataAsync, dispatchSyncedData]);
 
