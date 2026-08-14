@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Sliders, Tag, Eye, Layers, Hash, RadioTower, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
 import { CONNECT_FEED_DEFAULTS, getConnectFeedSettings, setConnectFeedSettings, type ConnectFeedSettings } from '@/lib/connect/feed-settings';
+import { CURATED_TOPIC_CATEGORIES } from '@/lib/ecosystem/intelligence-topics';
 import { ConnectNostrSettingsView } from './ConnectNostrSettingsView';
 
 function Toggle({ label, value, onToggle, desc }: { label: string; value: boolean; onToggle: () => void; desc?: string }) {
@@ -109,45 +110,105 @@ export function ConnectFeedSettingsPanel({
           <p className="text-xs text-white/45 font-satoshi m-0">Ultra-granular controls synced locally and to your live settings. Changes apply instantly.</p>
         </div>
 
-        <section className="space-y-3">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5"><Hash size={12} /> Custom feed topics</h3>
+        {/* Curated Wide-Range Topics Section */}
+        <section className="space-y-3.5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5 font-mono">
+              <Hash size={12} className="text-[#F59E0B]" /> Curated Topics & Tags
+            </h3>
+            <span className="text-[10px] font-mono text-white/40">Fixed anchors</span>
+          </div>
+
           <div className="flex gap-2">
             <input
               value={newTopic}
               onChange={e => setNewTopic(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTopic(); } }}
-              placeholder="e.g. bitcoin, builders..."
-              className="flex-1 h-10 rounded-xl bg-[#161412] border border-white/[0.06] px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#F59E0B]/40"
+              placeholder="Add custom topic (e.g. bitcoin, rust)..."
+              className="flex-1 h-9 rounded-xl bg-[#161412] border border-white/[0.06] px-3 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#F59E0B]/40"
             />
-            <button type="button" onClick={addTopic} className="h-10 px-4 rounded-xl bg-[#F59E0B] text-black text-xs font-extrabold">Add</button>
+            <button type="button" onClick={addTopic} className="h-9 px-3.5 rounded-xl bg-[#F59E0B] text-black text-xs font-black">Add</button>
           </div>
-          <div className="flex flex-wrap gap-1.5">
+
+          {/* Active Selected Topics */}
+          <div className="flex flex-wrap gap-1.5 min-h-6">
             {settings.topics.length ? settings.topics.map(t => (
-              <span key={t} className="inline-flex items-center gap-1.5 rounded-full bg-[#1C1A18] border border-white/[0.06] px-2.5 py-1 text-xs font-bold text-white">
+              <span key={t} className="inline-flex items-center gap-1.5 rounded-lg bg-[#1C1A18] border border-[#F59E0B]/30 px-2.5 py-1 text-xs font-bold text-[#F59E0B] font-mono">
                 #{t}
-                <button type="button" onClick={() => removeTopic(t)} className="text-white/40 hover:text-white">×</button>
+                <button type="button" onClick={() => removeTopic(t)} className="text-[#F59E0B]/60 hover:text-white">×</button>
               </span>
-            )) : <p className="text-xs text-white/30">No custom topics yet — feed shows all.</p>}
+            )) : <p className="text-xs text-white/30 font-satoshi m-0">No fixed topic filters active — showing all ecosystem topics.</p>}
+          </div>
+
+          {/* Curated Categories Catalog */}
+          <div className="space-y-2.5 pt-2">
+            <p className="text-[11px] font-bold text-white/50 uppercase tracking-wider font-mono m-0">
+              Browse Topics Catalog
+            </p>
+            <div className="space-y-3">
+              {CURATED_TOPIC_CATEGORIES.map(category => (
+                <div key={category.id} className="rounded-xl bg-[#161412] border border-white/[0.04] p-3 space-y-2">
+                  <div>
+                    <p className="text-xs font-bold text-white font-satoshi m-0">{category.label}</p>
+                    <p className="text-[10px] text-white/40 font-satoshi m-0 mt-0.5">{category.description}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {category.topics.map(item => {
+                      const isSelected = settings.topics.includes(item.tag.toLowerCase());
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) removeTopic(item.tag.toLowerCase());
+                            else patch({ topics: [...settings.topics, item.tag.toLowerCase()].slice(0, 20) });
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-colors ${
+                            isSelected
+                              ? 'bg-[#F59E0B] text-black font-extrabold shadow-sm'
+                              : 'bg-[#0A0908] border border-white/[0.06] text-white/70 hover:text-white hover:border-white/20'
+                          }`}
+                        >
+                          #{item.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
+        {/* Dynamic Real-time Interests Section */}
         <section className="space-y-3">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5"><Tag size={12} /> Interests</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5 font-mono">
+              <Tag size={12} className="text-emerald-400" /> Ephemeral Interests
+            </h3>
+            <span className="text-[10px] font-mono text-emerald-400 font-bold">Fast-adaptive (minutes)</span>
+          </div>
+
+          <p className="text-[11px] text-white/40 font-satoshi m-0 leading-relaxed">
+            Interests drift and adapt rapidly based on what you consume and engage with across your workspace and feed.
+          </p>
+
           <div className="flex gap-2">
             <input
               value={newInterest}
               onChange={e => setNewInterest(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addInterest(); } }}
               placeholder="e.g. design, ai, nostr..."
-              className="flex-1 h-10 rounded-xl bg-[#161412] border border-white/[0.06] px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#F59E0B]/40"
+              className="flex-1 h-9 rounded-xl bg-[#161412] border border-white/[0.06] px-3 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400/40"
             />
-            <button type="button" onClick={addInterest} className="h-10 px-4 rounded-xl bg-white text-black text-xs font-extrabold">Add</button>
+            <button type="button" onClick={addInterest} className="h-9 px-3.5 rounded-xl bg-emerald-400 text-black text-xs font-black">Add</button>
           </div>
+
           <div className="flex flex-wrap gap-1.5">
             {settings.interests.map(t => (
-              <span key={t} className="inline-flex items-center gap-1.5 rounded-full bg-[#F59E0B] text-black px-2.5 py-1 text-xs font-extrabold">
+              <span key={t} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-400/15 border border-emerald-400/30 text-emerald-300 px-2.5 py-1 text-xs font-mono font-bold">
                 {t}
-                <button type="button" onClick={() => removeInterest(t)} className="text-black/60 hover:text-black">×</button>
+                <button type="button" onClick={() => removeInterest(t)} className="text-emerald-300/60 hover:text-emerald-100">×</button>
               </span>
             ))}
           </div>

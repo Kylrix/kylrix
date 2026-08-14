@@ -58,11 +58,13 @@ import { EventsProvider } from '@/context/EventsContext';
  * Mandatory for GlobalShell and UI orchestration. 
  * Lightweight UI-state providers that don't block hydration with heavy data fetching.
  */
+import { ContextIntelligenceProvider } from '@/context/ContextIntelligenceContext';
 import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
 
 const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   SpineProvider,
   NeuralProvider,
+  ContextIntelligenceProvider,
   SecurityProvider,
   ChatNotificationProvider,
   UnifiedFileDrawerProvider,

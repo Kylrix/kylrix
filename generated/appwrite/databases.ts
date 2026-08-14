@@ -116,6 +116,7 @@ tableIdMap["passwordManagerDb"]["thread_messages"] = "thread_messages";
 tableIdMap["passwordManagerDb"]["thread_reactions"] = "thread_reactions";
 tableIdMap["passwordManagerDb"]["agent_byok_keys"] = "agent_byok_keys";
 tableIdMap["passwordManagerDb"]["user_convenience_sessions"] = "user_convenience_sessions";
+tableIdMap["passwordManagerDb"]["Feed Sessions"] = "feed_sessions";
 
 const tablesWithRelationships = new Set<string>();
 

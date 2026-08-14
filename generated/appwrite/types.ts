@@ -2658,6 +2658,20 @@ export type UserConvenienceSessions = Models.Row & {
     "expiresAt"?: string | null;
 }
 
+export type FeedSessionsCreate = {
+    "userId": string;
+    "interestWaves"?: string | null;
+    "sessionHash"?: string | null;
+    "lastActiveAt"?: string | null;
+}
+
+export type FeedSessions = Models.Row & {
+    "userId": string;
+    "interestWaves"?: string | null;
+    "sessionHash"?: string | null;
+    "lastActiveAt"?: string | null;
+}
+
 declare const __roleStringBrand: unique symbol;
 export type RoleString = string & { readonly [__roleStringBrand]: never };
 
@@ -5352,6 +5366,23 @@ export type DatabaseTableMap = {
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<UserConvenienceSessions>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<UserConvenienceSessions>>(field: K, value: QueryableFieldValue<UserConvenienceSessions, K>) => string; notEqual: <K extends QueryableKeys<UserConvenienceSessions>>(field: K, value: QueryableFieldValue<UserConvenienceSessions, K>) => string; lessThan: <K extends QueryableKeys<UserConvenienceSessions>>(field: K, value: QueryableFieldValue<UserConvenienceSessions, K>) => string; lessThanEqual: <K extends QueryableKeys<UserConvenienceSessions>>(field: K, value: QueryableFieldValue<UserConvenienceSessions, K>) => string; greaterThan: <K extends QueryableKeys<UserConvenienceSessions>>(field: K, value: QueryableFieldValue<UserConvenienceSessions, K>) => string; greaterThanEqual: <K extends QueryableKeys<UserConvenienceSessions>>(field: K, value: QueryableFieldValue<UserConvenienceSessions, K>) => string; contains: <K extends QueryableKeys<UserConvenienceSessions>>(field: K, value: QueryableFieldValue<UserConvenienceSessions, K>) => string; search: <K extends QueryableKeys<UserConvenienceSessions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<UserConvenienceSessions>>(field: K) => string; isNotNull: <K extends QueryableKeys<UserConvenienceSessions>>(field: K) => string; startsWith: <K extends QueryableKeys<UserConvenienceSessions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<UserConvenienceSessions>>(field: K, value: string) => string; between: <K extends QueryableKeys<UserConvenienceSessions>>(field: K, start: QueryableFieldValue<UserConvenienceSessions, K>, end: QueryableFieldValue<UserConvenienceSessions, K>) => string; select: <K extends keyof UserConvenienceSessions>(fields: K[]) => string; orderAsc: <K extends keyof UserConvenienceSessions>(field: K) => string; orderDesc: <K extends keyof UserConvenienceSessions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: UserConvenienceSessions[] }>;
+    };
+    "Feed Sessions": {
+      create: (data: {
+        "userId": string;
+        "interestWaves"?: string | null;
+        "sessionHash"?: string | null;
+        "lastActiveAt"?: string | null;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<FeedSessions>;
+      get: (id: string) => Promise<FeedSessions>;
+      update: (id: string, data: Partial<{
+        "userId": string;
+        "interestWaves"?: string | null;
+        "sessionHash"?: string | null;
+        "lastActiveAt"?: string | null;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<FeedSessions>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<FeedSessions>>(field: K, value: QueryableFieldValue<FeedSessions, K>) => string; notEqual: <K extends QueryableKeys<FeedSessions>>(field: K, value: QueryableFieldValue<FeedSessions, K>) => string; lessThan: <K extends QueryableKeys<FeedSessions>>(field: K, value: QueryableFieldValue<FeedSessions, K>) => string; lessThanEqual: <K extends QueryableKeys<FeedSessions>>(field: K, value: QueryableFieldValue<FeedSessions, K>) => string; greaterThan: <K extends QueryableKeys<FeedSessions>>(field: K, value: QueryableFieldValue<FeedSessions, K>) => string; greaterThanEqual: <K extends QueryableKeys<FeedSessions>>(field: K, value: QueryableFieldValue<FeedSessions, K>) => string; contains: <K extends QueryableKeys<FeedSessions>>(field: K, value: QueryableFieldValue<FeedSessions, K>) => string; search: <K extends QueryableKeys<FeedSessions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<FeedSessions>>(field: K) => string; isNotNull: <K extends QueryableKeys<FeedSessions>>(field: K) => string; startsWith: <K extends QueryableKeys<FeedSessions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<FeedSessions>>(field: K, value: string) => string; between: <K extends QueryableKeys<FeedSessions>>(field: K, start: QueryableFieldValue<FeedSessions, K>, end: QueryableFieldValue<FeedSessions, K>) => string; select: <K extends keyof FeedSessions>(fields: K[]) => string; orderAsc: <K extends keyof FeedSessions>(field: K) => string; orderDesc: <K extends keyof FeedSessions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: FeedSessions[] }>;
     }
   }
 };
