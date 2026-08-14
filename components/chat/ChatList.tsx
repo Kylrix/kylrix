@@ -25,7 +25,9 @@ import {
     Lock, 
     Pin,
     Sparkles,
+    RefreshCw,
 } from 'lucide-react';
+import { requestSmartLocalRefresh } from '@/lib/sync/local-soft-refresh';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar } from '../IdentityBadge';
@@ -1581,6 +1583,36 @@ export const ChatList = ({
                         <div className="my-6 border-t border-[#34322F]" />
                     </div>
                 )}
+
+                <div className="flex items-center justify-end px-1 pb-2">
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            await requestSmartLocalRefresh({
+                                scope: 'chats',
+                                onLocalRefresh: async () => {
+                                    const local = await readChatsListLocal();
+                                    if (local.length) {
+                                        setConversations(sortConversations(local));
+                                    }
+                                },
+                                onRemoteFetch: async () => {
+                                    ChatService.invalidateConversationsListCache(user?.$id);
+                                    await loadConversations({ forceRefresh: true });
+                                    await loadthreadConversations({ forceRefresh: true } as any);
+                                },
+                                ephemeralItems: unifiedItems,
+                            });
+                        }}
+                        disabled={loading || loadingthread}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-white/[0.06] bg-[#161412] px-3 py-1.5 text-xs font-bold text-white/70 hover:text-white hover:bg-[#1C1A18] hover:border-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Refresh chats"
+                        title="Check local engine sync"
+                    >
+                        <RefreshCw size={12} className={loading || loadingthread ? 'animate-spin' : ''} />
+                        Refresh
+                    </button>
+                </div>
 
                 {(loading || loadingthread) && unifiedItems.length === 0 && !showGlobalResults ? (
                         <div className="p-4 space-y-3 animate-pulse">

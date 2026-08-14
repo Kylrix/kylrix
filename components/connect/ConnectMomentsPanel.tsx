@@ -1,23 +1,39 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef } from 'react';
-import { Sparkles, Sliders } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Sparkles, Sliders, RefreshCw } from 'lucide-react';
 import { MomentCard } from '@/components/connect/MomentCard';
 import { useConnectMomentsFeed } from '@/components/connect/useConnectMomentsFeed';
 import { ConnectFeedSettingsPanel } from '@/components/connect/ConnectFeedSettingsPanel';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { requestSmartLocalRefresh } from '@/lib/sync/local-soft-refresh';
 
 interface ConnectMomentsPanelProps {
   onCreateMoment?: () => void;
 }
 
 export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps) {
-  const { items, total, loading, refreshing, hasMore, loadMore } =
+  const { items, total, loading, refreshing, hasMore, loadMore, refresh } =
     useConnectMomentsFeed();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const [spinning, setSpinning] = useState(false);
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
+
+  const handleSmartReload = async () => {
+    setSpinning(true);
+    try {
+      await requestSmartLocalRefresh({
+        scope: 'moments',
+        onLocalRefresh: () => refresh(),
+        onRemoteFetch: () => refresh(),
+        ephemeralItems: items,
+      });
+    } finally {
+      setTimeout(() => setSpinning(false), 350);
+    }
+  };
 
   const onIntersect = useCallback(
     (entries: IntersectionObserverEntry[]) => {
@@ -62,6 +78,18 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
             aria-label="Live feed settings"
           >
             <Sliders size={16} className="text-white" />
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSmartReload()}
+            disabled={spinning || refreshing}
+            className="w-10 h-10 shrink-0 rounded-xl bg-[#161412] border border-[#34322F] flex items-center justify-center disabled:opacity-40 hover:border-white/15 transition-colors"
+            aria-label="Refresh moments"
+          >
+            <RefreshCw
+              size={16}
+              className={spinning || refreshing ? 'text-[#F59E0B] animate-spin' : 'text-white'}
+            />
           </button>
         </div>
       </header>
