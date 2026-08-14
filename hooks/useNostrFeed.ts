@@ -166,24 +166,25 @@ export function useNostrFeed() {
   }, [queueEvent, activeInterests.join(',')]);
 
   const publishPost = useCallback(
-    async (content: string) => {
+    async (content: string, extraTags?: string[][]): Promise<{ success: boolean; eventId?: string }> => {
       if (!identity) {
         toast.error('Identity not unlocked');
-        return false;
+        return { success: false };
       }
 
       if (!poolRef.current) {
         toast.error('Not connected to relays');
-        return false;
+        return { success: false };
       }
 
       try {
         const primaryTag = activeInterests[0] || 'sovereignengineering';
+        const tags: string[][] = [['t', primaryTag], ['client', 'kylrix'], ...(extraTags || [])];
         const unsignedEvent = {
           pubkey: bytesToHex(secp256k1.schnorr.getPublicKey(identity.privateKeyBytes)),
           created_at: Math.floor(Date.now() / 1000),
           kind: 1,
-          tags: [['t', primaryTag], ['client', 'kylrix']],
+          tags,
           content,
         };
 
@@ -197,11 +198,11 @@ export function useNostrFeed() {
         });
 
         toast.success('Post published to Nostr relays!');
-        return true;
+        return { success: true, eventId: signed.id };
       } catch (err) {
         console.error('Failed to publish event:', err);
         toast.error('Failed to publish post');
-        return false;
+        return { success: false };
       }
     },
     [identity, activeInterests],

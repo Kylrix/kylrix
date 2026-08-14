@@ -48,8 +48,12 @@ function buildItems(
   },
 ): UnifiedFeedItem[] {
   const rows: UnifiedFeedItem[] = [];
+  const ecosystemNostrIds = new Set<string>();
 
   for (const m of ecosystemMoments) {
+    if (m.nostrId) {
+      ecosystemNostrIds.add(m.nostrId);
+    }
     const rawDateStr = m.createdAt || m.$createdAt;
     const createdAtMs = rawDateStr ? new Date(rawDateStr).getTime() : 0;
     rows.push({
@@ -75,6 +79,8 @@ function buildItems(
 
   for (const event of nostrFeed) {
     if ((event as any).tags?.some((t: string[]) => t[0] === 'e')) continue;
+    // Prioritize native Kylrix moment: if this Nostr event was already synced and exists natively, filter it out
+    if (ecosystemNostrIds.has(event.id)) continue;
 
     let authorName = `npub…${event.pubkey.slice(-8)}`;
     let authorAvatar: string | undefined;

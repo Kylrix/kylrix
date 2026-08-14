@@ -11,7 +11,7 @@ const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const MOMENTS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.MOMENTS;
 const FOLLOWS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.FOLLOWS;
 const INTERACTIONS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.INTERACTIONS;
-const MOMENT_LIST_SELECT = ['$id', 'userId', 'caption', 'fileId', 'momentKind', 'sourceId', 'searchTitle', 'createdAt', 'expiresAt', 'isPublic', 'isGuest'];
+const MOMENT_LIST_SELECT = ['$id', 'userId', 'caption', 'fileId', 'momentKind', 'sourceId', 'searchTitle', 'createdAt', 'expiresAt', 'isPublic', 'isGuest', 'nostrId', 'attachments'];
 const INTERACTION_LIST_SELECT = ['$id', 'userId', 'messageId', 'emoji', 'createdAt'];
 
 export interface MomentMetadata {
@@ -585,7 +585,20 @@ export const SocialService = {
     },
 
     /** When caption is empty, `fallbackSearchTitle` is used for indexing (e.g. attached note title). */
-    async createMoment(creatorId: string, content: string, type: 'post' | 'reply' | 'pulse' | 'quote' = 'post', mediaIds: string[] = [], _visibility: 'public' | 'private' | 'followers' = 'public', noteId?: string, eventId?: string, sourceId?: string, callId?: string, fallbackSearchTitle?: string | null) {
+    async createMoment(
+        creatorId: string, 
+        content: string, 
+        type: 'post' | 'reply' | 'pulse' | 'quote' = 'post', 
+        mediaIds: string[] = [], 
+        _visibility: 'public' | 'private' | 'followers' = 'public', 
+        noteId?: string, 
+        eventId?: string, 
+        sourceId?: string, 
+        callId?: string, 
+        fallbackSearchTitle?: string | null,
+        nostrId?: string | null,
+        attachmentsPayload?: any
+    ) {
         const permissions = [
             `read("user:${creatorId}")`];
 
@@ -637,6 +650,8 @@ export const SocialService = {
             sourceId: sourceId || null,
             searchTitle: searchTitleRow,
             fileId: effectiveFileId, 
+            nostrId: nostrId || null,
+            attachments: attachmentsPayload ? (typeof attachmentsPayload === 'string' ? attachmentsPayload : JSON.stringify(attachmentsPayload)) : null,
             isPublic: true,
             isGuest: true,
             createdAt: new Date().toISOString(),

@@ -206,24 +206,45 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
         }
       }
 
+      let nostrId: string | null = null;
+      let nostrSynced = false;
+
+      // If Nostr sync enabled, publish to Nostr relays first to obtain eventId and Blossom media URLs
+      if (syncToNostr && !isVaultLocked && identity) {
+        try {
+          const nostrRes = await publishPost(body || content.trim());
+          if (nostrRes && typeof nostrRes === 'object' && nostrRes.success && nostrRes.eventId) {
+            nostrId = nostrRes.eventId;
+            nostrSynced = true;
+          } else if (nostrRes === true as any) {
+            nostrSynced = true;
+          }
+        } catch (nostrErr) {
+          console.warn('[MomentComposer] Nostr sync warning:', nostrErr);
+        }
+      } else if (syncToNostr && isVaultLocked) {
+        toast.error('Unlock vault to sync to Nostr');
+      }
+
+      // ALWAYS create in native Kylrix feed with attached nostrId and attachments payload
       const createdMoment = await SocialService.createMoment(
         user.$id,
         body || 'Shared an update',
         'post',
         mediaIds,
         'public',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        null,
+        nostrId,
+        attachments.length ? attachments : null,
       );
 
       if (createdMoment) {
         const cachedMoments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
         await LocalEngine.cacheSet('f_moments_list', [createdMoment, ...cachedMoments]);
-      }
-
-      let nostrSynced = false;
-      if (syncToNostr && !isVaultLocked && identity) {
-        nostrSynced = await publishPost(body || content.trim());
-      } else if (syncToNostr && isVaultLocked) {
-        toast.error('Unlock vault to sync to Nostr');
       }
 
       toast.success(

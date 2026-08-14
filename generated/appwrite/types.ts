@@ -1170,6 +1170,8 @@ export type MomentsCreate = {
     "searchTitle"?: string | null;
     "isPublic"?: boolean | null;
     "isGuest"?: boolean | null;
+    "nostrId"?: string | null;
+    "attachments"?: string | null;
 }
 
 export type Moments = Models.Row & {
@@ -1184,6 +1186,8 @@ export type Moments = Models.Row & {
     "searchTitle"?: string | null;
     "isPublic"?: boolean | null;
     "isGuest"?: boolean | null;
+    "nostrId"?: string | null;
+    "attachments"?: string | null;
 }
 
 export type CallsCreate = {
@@ -3685,6 +3689,8 @@ export type DatabaseTableMap = {
         "searchTitle"?: string | null;
         "isPublic"?: boolean | null;
         "isGuest"?: boolean | null;
+        "nostrId"?: string | null;
+        "attachments"?: string | null;
       }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Moments>;
       get: (id: string) => Promise<Moments>;
       update: (id: string, data: Partial<{
@@ -3699,6 +3705,8 @@ export type DatabaseTableMap = {
         "searchTitle"?: string | null;
         "isPublic"?: boolean | null;
         "isGuest"?: boolean | null;
+        "nostrId"?: string | null;
+        "attachments"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Moments>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Moments>>(field: K, value: QueryableFieldValue<Moments, K>) => string; notEqual: <K extends QueryableKeys<Moments>>(field: K, value: QueryableFieldValue<Moments, K>) => string; lessThan: <K extends QueryableKeys<Moments>>(field: K, value: QueryableFieldValue<Moments, K>) => string; lessThanEqual: <K extends QueryableKeys<Moments>>(field: K, value: QueryableFieldValue<Moments, K>) => string; greaterThan: <K extends QueryableKeys<Moments>>(field: K, value: QueryableFieldValue<Moments, K>) => string; greaterThanEqual: <K extends QueryableKeys<Moments>>(field: K, value: QueryableFieldValue<Moments, K>) => string; contains: <K extends QueryableKeys<Moments>>(field: K, value: QueryableFieldValue<Moments, K>) => string; search: <K extends QueryableKeys<Moments>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Moments>>(field: K) => string; isNotNull: <K extends QueryableKeys<Moments>>(field: K) => string; startsWith: <K extends QueryableKeys<Moments>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Moments>>(field: K, value: string) => string; between: <K extends QueryableKeys<Moments>>(field: K, start: QueryableFieldValue<Moments, K>, end: QueryableFieldValue<Moments, K>) => string; select: <K extends keyof Moments>(fields: K[]) => string; orderAsc: <K extends keyof Moments>(field: K) => string; orderDesc: <K extends keyof Moments>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Moments[] }>;

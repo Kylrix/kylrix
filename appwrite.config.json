@@ -4777,6 +4777,23 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "nostrId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "attachments",
+                    "type": "mediumtext",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
