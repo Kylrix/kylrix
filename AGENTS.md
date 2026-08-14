@@ -12,7 +12,9 @@
 
 ## 🏗️ Architectural Mandates
 
-### 🚫 IMMUTABLE FILES (STRICT)
+### 🚫 IMMUTABLE FILES & CLI SAFETY (STRICT)
+- **NEVER Hand-Edit `appwrite.config.json`**: Hand-editing `appwrite.config.json` is strictly forbidden. It causes schema drift and catastrophic data loss.
+- **NEVER Run `appwrite push`**: NEVER execute `appwrite push` or any of its push subcommands (`appwrite push tables`, `appwrite push all`, etc.). Pushing overwrites and wipes live databases and existing user records.
 - **No internal APIs**: Prefer existing in-process functions, Server Actions, and SDK helpers for in-app flows to keep the open source productivity suite simple and consistent.
 - **Prefer Internal Methods**: Use existing in-process functions, Server Actions, and SDK helpers instead of exposing new API surfaces.
 - **Data Consolidation**: When returning shaped payloads to hydrate multiple UI widgets, use Server Actions or consolidated internal service methods.

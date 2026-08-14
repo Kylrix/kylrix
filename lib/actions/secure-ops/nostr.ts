@@ -5,10 +5,22 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getActor } from '../secure-ops/shared';
 import { Databases, Query } from 'node-appwrite';
 
+interface StoredIdentityItem {
+  id: string;
+  npub: string;
+  label: string;
+  isDefault: boolean;
+  isDerived: boolean;
+  encryptedNsec: string;
+  iv: string;
+  salt: string;
+  createdAt: string;
+}
+
 /**
  * Retrieves all Nostr identities for the logged-in user.
  */
-export async function listNostrIdentitiesAction(params?: { jwt?: string }) {
+export async function listNostrIdentitiesAction(params?: { jwt?: string }): Promise<StoredIdentityItem[]> {
   try {
     const jwt = params?.jwt;
     const actor = await getActor(jwt);
@@ -25,19 +37,39 @@ export async function listNostrIdentitiesAction(params?: { jwt?: string }) {
       [Query.equal('userId', userId), Query.limit(25), Query.orderDesc('$createdAt')]
     );
 
-    return (res.documents || []).map((row: any) => ({
-      id: row.$id,
-      npub: row.npub,
-      label: row.label || '',
-      isDefault: Boolean(row.isDefault),
-      isDerived: Boolean(row.isDerived),
-      encryptedNsec: row.encryptedNsec,
-      iv: row.iv,
-      salt: row.salt,
-      createdAt: row.$createdAt
-    }));
+    const rows = res.documents || [];
+    if (rows.length === 0) return [];
+
+    const identities: StoredIdentityItem[] = [];
+    for (const row of rows) {
+      // Check if this row stores bundled identities in label/encryptedNsec or individual identity
+      let bundled: StoredIdentityItem[] | null = null;
+      try {
+        if (row.encryptedNsec && row.encryptedNsec.startsWith('bundle:')) {
+          bundled = JSON.parse(row.encryptedNsec.slice(7));
+        }
+      } catch {}
+
+      if (bundled && Array.isArray(bundled)) {
+        identities.push(...bundled);
+      } else {
+        identities.push({
+          id: row.$id,
+          npub: row.npub,
+          label: row.label || '',
+          isDefault: Boolean(row.isDefault),
+          isDerived: Boolean(row.isDerived),
+          encryptedNsec: row.encryptedNsec,
+          iv: row.iv,
+          salt: row.salt,
+          createdAt: row.$createdAt
+        });
+      }
+    }
+
+    return identities;
   } catch (err: any) {
-    console.error('Failed to list Nostr identities:', err);
+    console.error('Failed to list Nostr identity rows:', err);
     return [];
   }
 }
@@ -83,72 +115,117 @@ export async function registerNostrIdentityAction(params: {
     const { client } = await createServerClient(jwt);
     const databases = new Databases(client);
     
-    // Check if exact same npub already registered for user
+    // Check if user already has an existing row in nostr_identities table
     const existing = await databases.listDocuments(
       APPWRITE_CONFIG.DATABASE_ID,
       APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-      [Query.equal('userId', userId), Query.equal('npub', params.npub), Query.limit(1)]
+      [Query.equal('userId', userId), Query.limit(10)]
     );
 
     const makeDefault = params.makeDefault ?? true;
 
-    if (makeDefault) {
-      // Unset previous defaults
-      const allRows = await databases.listDocuments(
+    // If no row exists, create the first row for this user
+    if (existing.total === 0) {
+      const row = await databases.createDocument(
         APPWRITE_CONFIG.DATABASE_ID,
         APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-        [Query.equal('userId', userId), Query.limit(50)]
-      );
-      for (const doc of allRows.documents) {
-        if (doc.isDefault) {
-          await databases.updateDocument(
-            APPWRITE_CONFIG.DATABASE_ID,
-            APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-            doc.$id,
-            { isDefault: false }
-          ).catch(() => {});
-        }
-      }
-    }
-
-    if (existing.total > 0) {
-      const doc = existing.documents[0];
-      const updated = await databases.updateDocument(
-        APPWRITE_CONFIG.DATABASE_ID,
-        APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-        doc.$id,
+        'unique()',
         {
+          userId,
+          npub: params.npub,
           encryptedNsec: params.encryptedNsec,
           iv: params.iv,
           salt: params.salt,
-          label: params.label !== undefined ? params.label : (doc.label || ''),
-          isDerived: params.isDerived !== undefined ? params.isDerived : Boolean(doc.isDerived),
-          isDefault: makeDefault
+          label: params.label || '',
+          isDerived: Boolean(params.isDerived),
+          isDefault: true
         }
       );
-      return { success: true, id: updated.$id, npub: updated.npub };
+
+      return {
+        success: true,
+        id: row.$id,
+        npub: row.npub
+      };
     }
 
-    const row = await databases.createDocument(
+    // If an existing row exists, check if user is updating the same npub
+    const userRow = existing.documents[0];
+    let allIdentities: StoredIdentityItem[] = [];
+
+    let isBundled = false;
+    try {
+      if (userRow.encryptedNsec && userRow.encryptedNsec.startsWith('bundle:')) {
+        allIdentities = JSON.parse(userRow.encryptedNsec.slice(7));
+        isBundled = true;
+      }
+    } catch {}
+
+    if (!isBundled) {
+      allIdentities = [{
+        id: userRow.$id,
+        npub: userRow.npub,
+        label: userRow.label || '',
+        isDefault: Boolean(userRow.isDefault),
+        isDerived: Boolean(userRow.isDerived),
+        encryptedNsec: userRow.encryptedNsec,
+        iv: userRow.iv,
+        salt: userRow.salt,
+        createdAt: userRow.$createdAt
+      }];
+    }
+
+    // If making default, reset default flag on others
+    if (makeDefault) {
+      allIdentities = allIdentities.map(i => ({ ...i, isDefault: false }));
+    }
+
+    const existingIdx = allIdentities.findIndex(i => i.npub === params.npub);
+    const newEntry: StoredIdentityItem = {
+      id: existingIdx >= 0 ? allIdentities[existingIdx].id : `id_${Date.now()}`,
+      npub: params.npub,
+      label: params.label || (existingIdx >= 0 ? allIdentities[existingIdx].label : ''),
+      isDefault: makeDefault,
+      isDerived: params.isDerived !== undefined ? Boolean(params.isDerived) : (existingIdx >= 0 ? allIdentities[existingIdx].isDerived : false),
+      encryptedNsec: params.encryptedNsec,
+      iv: params.iv,
+      salt: params.salt,
+      createdAt: existingIdx >= 0 ? allIdentities[existingIdx].createdAt : new Date().toISOString()
+    };
+
+    if (existingIdx >= 0) {
+      allIdentities[existingIdx] = newEntry;
+    } else {
+      allIdentities.push(newEntry);
+    }
+
+    // Determine primary identity for top-level columns
+    const defaultIdentity = allIdentities.find(i => i.isDefault) || allIdentities[0];
+
+    // Store bundled JSON in encryptedNsec with bundle: prefix if multiple identities exist
+    const encryptedPayload = allIdentities.length > 1 
+      ? `bundle:${JSON.stringify(allIdentities)}`
+      : defaultIdentity.encryptedNsec;
+
+    await databases.updateDocument(
       APPWRITE_CONFIG.DATABASE_ID,
       APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-      'unique()',
+      userRow.$id,
       {
-        userId,
-        npub: params.npub,
-        encryptedNsec: params.encryptedNsec,
-        iv: params.iv,
-        salt: params.salt,
-        label: params.label || '',
-        isDerived: Boolean(params.isDerived),
-        isDefault: makeDefault
+        npub: defaultIdentity.npub,
+        encryptedNsec: encryptedPayload,
+        iv: defaultIdentity.iv,
+        salt: defaultIdentity.salt,
+        label: defaultIdentity.label || '',
+        isDerived: defaultIdentity.isDerived,
+        isDefault: true
       }
     );
 
     return {
       success: true,
-      id: row.$id,
-      npub: row.npub
+      id: newEntry.id,
+      npub: newEntry.npub
     };
   } catch (err: any) {
     console.error('Failed to register Nostr identity row:', err);
@@ -169,23 +246,59 @@ export async function setActiveNostrIdentityAction(params: { identityId: string;
     const { client } = await createServerClient(jwt);
     const databases = new Databases(client);
 
-    const allRows = await databases.listDocuments(
+    const existing = await databases.listDocuments(
       APPWRITE_CONFIG.DATABASE_ID,
       APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-      [Query.equal('userId', userId), Query.limit(50)]
+      [Query.equal('userId', userId), Query.limit(1)]
     );
 
-    for (const doc of allRows.documents) {
-      const shouldBeDefault = doc.$id === params.identityId;
-      if (Boolean(doc.isDefault) !== shouldBeDefault) {
-        await databases.updateDocument(
-          APPWRITE_CONFIG.DATABASE_ID,
-          APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-          doc.$id,
-          { isDefault: shouldBeDefault }
-        );
+    if (existing.total === 0) return { success: true };
+
+    const userRow = existing.documents[0];
+    let allIdentities: StoredIdentityItem[] = [];
+
+    try {
+      if (userRow.encryptedNsec && userRow.encryptedNsec.startsWith('bundle:')) {
+        allIdentities = JSON.parse(userRow.encryptedNsec.slice(7));
+      } else {
+        allIdentities = [{
+          id: userRow.$id,
+          npub: userRow.npub,
+          label: userRow.label || '',
+          isDefault: true,
+          isDerived: Boolean(userRow.isDerived),
+          encryptedNsec: userRow.encryptedNsec,
+          iv: userRow.iv,
+          salt: userRow.salt,
+          createdAt: userRow.$createdAt
+        }];
       }
-    }
+    } catch {}
+
+    allIdentities = allIdentities.map(i => ({
+      ...i,
+      isDefault: i.id === params.identityId || i.npub === params.identityId
+    }));
+
+    const defaultIdentity = allIdentities.find(i => i.isDefault) || allIdentities[0];
+    const encryptedPayload = allIdentities.length > 1
+      ? `bundle:${JSON.stringify(allIdentities)}`
+      : defaultIdentity.encryptedNsec;
+
+    await databases.updateDocument(
+      APPWRITE_CONFIG.DATABASE_ID,
+      APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
+      userRow.$id,
+      {
+        npub: defaultIdentity.npub,
+        encryptedNsec: encryptedPayload,
+        iv: defaultIdentity.iv,
+        salt: defaultIdentity.salt,
+        label: defaultIdentity.label || '',
+        isDerived: defaultIdentity.isDerived,
+        isDefault: true
+      }
+    );
 
     return { success: true };
   } catch (err: any) {
@@ -207,36 +320,69 @@ export async function deleteNostrIdentityAction(params: { identityId: string; jw
     const { client } = await createServerClient(jwt);
     const databases = new Databases(client);
 
-    const target = await databases.getDocument(
+    const existing = await databases.listDocuments(
       APPWRITE_CONFIG.DATABASE_ID,
       APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-      params.identityId
+      [Query.equal('userId', userId), Query.limit(1)]
     );
 
-    if (target.userId !== userId) throw new Error('Unauthorized');
+    if (existing.total === 0) return { success: true };
 
-    await databases.deleteDocument(
-      APPWRITE_CONFIG.DATABASE_ID,
-      APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-      params.identityId
-    );
+    const userRow = existing.documents[0];
+    let allIdentities: StoredIdentityItem[] = [];
 
-    // If deleted row was default, elect another identity as default
-    if (target.isDefault) {
-      const remaining = await databases.listDocuments(
+    try {
+      if (userRow.encryptedNsec && userRow.encryptedNsec.startsWith('bundle:')) {
+        allIdentities = JSON.parse(userRow.encryptedNsec.slice(7));
+      } else {
+        allIdentities = [{
+          id: userRow.$id,
+          npub: userRow.npub,
+          label: userRow.label || '',
+          isDefault: true,
+          isDerived: Boolean(userRow.isDerived),
+          encryptedNsec: userRow.encryptedNsec,
+          iv: userRow.iv,
+          salt: userRow.salt,
+          createdAt: userRow.$createdAt
+        }];
+      }
+    } catch {}
+
+    allIdentities = allIdentities.filter(i => i.id !== params.identityId && i.npub !== params.identityId);
+
+    if (allIdentities.length === 0) {
+      await databases.deleteDocument(
         APPWRITE_CONFIG.DATABASE_ID,
         APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-        [Query.equal('userId', userId), Query.limit(1), Query.orderDesc('$createdAt')]
+        userRow.$id
       );
-      if (remaining.total > 0) {
-        await databases.updateDocument(
-          APPWRITE_CONFIG.DATABASE_ID,
-          APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-          remaining.documents[0].$id,
-          { isDefault: true }
-        );
-      }
+      return { success: true };
     }
+
+    if (!allIdentities.some(i => i.isDefault)) {
+      allIdentities[0].isDefault = true;
+    }
+
+    const defaultIdentity = allIdentities.find(i => i.isDefault) || allIdentities[0];
+    const encryptedPayload = allIdentities.length > 1
+      ? `bundle:${JSON.stringify(allIdentities)}`
+      : defaultIdentity.encryptedNsec;
+
+    await databases.updateDocument(
+      APPWRITE_CONFIG.DATABASE_ID,
+      APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
+      userRow.$id,
+      {
+        npub: defaultIdentity.npub,
+        encryptedNsec: encryptedPayload,
+        iv: defaultIdentity.iv,
+        salt: defaultIdentity.salt,
+        label: defaultIdentity.label || '',
+        isDerived: defaultIdentity.isDerived,
+        isDefault: true
+      }
+    );
 
     return { success: true };
   } catch (err: any) {
