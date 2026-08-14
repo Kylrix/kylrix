@@ -1,7 +1,13 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { getNostrIdentityAction, registerNostrIdentityAction } from '@/lib/actions/secure-ops';
+import { 
+  getNostrIdentityAction, 
+  listNostrIdentitiesAction, 
+  registerNostrIdentityAction, 
+  setActiveNostrIdentityAction, 
+  deleteNostrIdentityAction 
+} from '@/lib/actions/secure-ops';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useSudo } from '@/context/SudoContext';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -11,8 +17,13 @@ import * as secp256k1 from '@noble/secp256k1';
 import { bytesToNpub, bytesToNsec, bytesToHex, hexToBytes, nsecToBytes } from '@/lib/nostr/crypto';
 
 export interface NostrIdentity {
+  id?: string;
   npub: string;
   nsec: string;
+  label?: string;
+  isDefault?: boolean;
+  isDerived?: boolean;
+  createdAt?: string;
   privateKeyBytes: Uint8Array;
 }
 
@@ -20,6 +31,7 @@ export function useNostrIdentity() {
   const { user } = useAuth();
   const { requestSudo } = useSudo();
   const [identity, setIdentity] = useState<NostrIdentity | null>(null);
+  const [identities, setIdentities] = useState<NostrIdentity[]>([]);
   const [loading, setLoading] = useState(false);
   const [isVaultLocked, setIsVaultLocked] = useState(!ecosystemSecurity.status.isUnlocked);
 
@@ -55,27 +67,40 @@ export function useNostrIdentity() {
         console.warn('Failed to generate JWT (possible guest session):', err);
       }
 
-      // Check if identity already exists on server
-      const existing = await getNostrIdentityAction({ jwt: jwtToken });
+      // Check all registered identities on server
+      const rows = await listNostrIdentitiesAction({ jwt: jwtToken });
 
-      if (existing) {
-        // Decrypt the nsec using vault decrypt
-        const decryptedNsecRaw = await ecosystemSecurity.decrypt(existing.encryptedNsec);
-        const decryptedNsec = JSON.parse(decryptedNsecRaw);
-        const privateKeyBytes = hexToBytes(decryptedNsec);
-        const derivedNsec = bytesToNsec(privateKeyBytes);
+      if (rows && rows.length > 0) {
+        const decryptedList: NostrIdentity[] = [];
+        for (const row of rows) {
+          try {
+            const decryptedNsecRaw = await ecosystemSecurity.decrypt(row.encryptedNsec);
+            const decryptedNsec = JSON.parse(decryptedNsecRaw);
+            const privateKeyBytes = hexToBytes(decryptedNsec);
+            const derivedNsec = bytesToNsec(privateKeyBytes);
+            decryptedList.push({
+              id: row.id,
+              npub: row.npub,
+              nsec: derivedNsec,
+              label: row.label,
+              isDefault: row.isDefault,
+              isDerived: row.isDerived,
+              createdAt: row.createdAt,
+              privateKeyBytes
+            });
+          } catch (decryptErr) {
+            console.warn('Failed to decrypt Nostr identity row:', row.id, decryptErr);
+          }
+        }
 
-        const currentIdentity: NostrIdentity = {
-          npub: existing.npub,
-          nsec: derivedNsec,
-          privateKeyBytes
-        };
-        setIdentity(currentIdentity);
+        setIdentities(decryptedList);
+        const active = decryptedList.find(i => i.isDefault) || decryptedList[0] || null;
+        setIdentity(active);
         setLoading(false);
-        return currentIdentity;
+        return active;
       }
 
-      // Mint a new Nostr key deterministically from user MEK
+      // No identities exist yet — Mint default deterministic Nostr key from user MEK
       const rawMek = await window.crypto.subtle.exportKey("raw", masterKey);
       const privKeyBytes = new Uint8Array(sha256(new Uint8Array(rawMek)));
       const pubKeyBytes = secp256k1.schnorr.getPublicKey(privKeyBytes);
@@ -88,21 +113,29 @@ export function useNostrIdentity() {
       const encryptedNsec = await ecosystemSecurity.encrypt(hexNsec);
 
       // Store in Appwrite database
-      await registerNostrIdentityAction({
+      const reg = await registerNostrIdentityAction({
         npub,
         encryptedNsec,
         iv: 'aes-gcm-iv',
         salt: 'mek-derived-salt',
+        label: 'Default Kylrix Key',
+        isDerived: true,
+        makeDefault: true,
         jwt: jwtToken
       });
 
       const newIdentity: NostrIdentity = {
+        id: reg.id,
         npub,
         nsec,
+        label: 'Default Kylrix Key',
+        isDefault: true,
+        isDerived: true,
         privateKeyBytes: privKeyBytes
       };
 
       setIdentity(newIdentity);
+      setIdentities([newIdentity]);
       setLoading(false);
       return newIdentity;
     } catch (err: any) {
@@ -112,7 +145,7 @@ export function useNostrIdentity() {
     }
   }, [user?.$id]);
 
-  const importCustomNsec = useCallback(async (customNsec: string): Promise<NostrIdentity | null> => {
+  const importCustomNsec = useCallback(async (customNsec: string, label?: string): Promise<NostrIdentity | null> => {
     if (!user?.$id) return null;
     const clean = customNsec.trim();
     if (!clean) throw new Error('Private key cannot be empty');
@@ -142,22 +175,55 @@ export function useNostrIdentity() {
     const hexNsec = bytesToHex(privKeyBytes);
     const encryptedNsec = await ecosystemSecurity.encrypt(hexNsec);
 
-    await registerNostrIdentityAction({
+    const reg = await registerNostrIdentityAction({
       npub,
       encryptedNsec,
       iv: 'aes-gcm-iv',
       salt: 'mek-derived-salt',
+      label: label || `Imported (${npub.slice(0, 10)}…)`,
+      isDerived: false,
+      makeDefault: true,
       jwt: jwtToken,
     });
 
     const newIdentity: NostrIdentity = {
+      id: reg.id,
       npub,
       nsec,
+      label: label || `Imported (${npub.slice(0, 10)}…)`,
+      isDefault: true,
+      isDerived: false,
       privateKeyBytes: privKeyBytes,
     };
+
     setIdentity(newIdentity);
+    await loadOrMintIdentity();
     return newIdentity;
-  }, [user?.$id]);
+  }, [user?.$id, loadOrMintIdentity]);
+
+  const setActiveIdentity = useCallback(async (identityId: string) => {
+    if (!user?.$id) return;
+    let jwtToken: string | undefined;
+    try {
+      const jwtResponse = await account.createJWT();
+      jwtToken = jwtResponse.jwt;
+    } catch {}
+
+    await setActiveNostrIdentityAction({ identityId, jwt: jwtToken });
+    await loadOrMintIdentity();
+  }, [user?.$id, loadOrMintIdentity]);
+
+  const deleteIdentity = useCallback(async (identityId: string) => {
+    if (!user?.$id) return;
+    let jwtToken: string | undefined;
+    try {
+      const jwtResponse = await account.createJWT();
+      jwtToken = jwtResponse.jwt;
+    } catch {}
+
+    await deleteNostrIdentityAction({ identityId, jwt: jwtToken });
+    await loadOrMintIdentity();
+  }, [user?.$id, loadOrMintIdentity]);
 
   const resetToDefaultIdentity = useCallback(async (): Promise<NostrIdentity | null> => {
     if (!user?.$id) return null;
@@ -180,22 +246,31 @@ export function useNostrIdentity() {
     const hexNsec = bytesToHex(privKeyBytes);
     const encryptedNsec = await ecosystemSecurity.encrypt(hexNsec);
 
-    await registerNostrIdentityAction({
+    const reg = await registerNostrIdentityAction({
       npub,
       encryptedNsec,
       iv: 'aes-gcm-iv',
       salt: 'mek-derived-salt',
+      label: 'Default Kylrix Key',
+      isDerived: true,
+      makeDefault: true,
       jwt: jwtToken,
     });
 
     const newIdentity: NostrIdentity = {
+      id: reg.id,
       npub,
       nsec,
+      label: 'Default Kylrix Key',
+      isDefault: true,
+      isDerived: true,
       privateKeyBytes: privKeyBytes,
     };
+
     setIdentity(newIdentity);
+    await loadOrMintIdentity();
     return newIdentity;
-  }, [user?.$id]);
+  }, [user?.$id, loadOrMintIdentity]);
 
   const unlockAndLoad = useCallback(async () => {
     return new Promise<NostrIdentity | null>((resolve) => {
@@ -220,11 +295,14 @@ export function useNostrIdentity() {
 
   return {
     identity,
+    identities,
     loading,
     isVaultLocked,
     unlockAndLoad,
     loadOrMintIdentity,
     importCustomNsec,
+    setActiveIdentity,
+    deleteIdentity,
     resetToDefaultIdentity,
   };
 }

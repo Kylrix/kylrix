@@ -13,7 +13,13 @@ import {
   Cpu,
   ShieldCheck,
   Eye,
-  EyeOff
+  EyeOff,
+  UserCheck,
+  Plus,
+  Trash2,
+  Sparkles,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import { 
@@ -28,23 +34,30 @@ type Props = {
   settings: ConnectFeedSettings;
   onUpdate: (next: Partial<ConnectFeedSettings>) => void;
   onBack: () => void;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 };
 
-export function ConnectNostrSettingsView({ settings, onUpdate, onBack }: Props) {
+export function ConnectNostrSettingsView({ settings, onUpdate, onBack, isExpanded, onToggleExpand }: Props) {
   const { 
     identity, 
+    identities,
     loading: identityLoading, 
     isVaultLocked, 
     unlockAndLoad, 
     loadOrMintIdentity,
     importCustomNsec,
+    setActiveIdentity,
+    deleteIdentity,
     resetToDefaultIdentity
   } = useNostrIdentity();
-  const [copiedKey, setCopiedKey] = useState<'npub' | 'nsec' | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [showNsec, setShowNsec] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importNsec, setImportNsec] = useState('');
+  const [importLabel, setImportLabel] = useState('');
   const [importing, setImporting] = useState(false);
+  const [switchingId, setSwitchingId] = useState<string | null>(null);
   const [newRelayUrl, setNewRelayUrl] = useState('');
   const [newRelayRead, setNewRelayRead] = useState(true);
   const [newRelayWrite, setNewRelayWrite] = useState(true);
@@ -64,14 +77,38 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack }: Props) 
       if (isVaultLocked) {
         await unlockAndLoad();
       }
-      await importCustomNsec(clean);
+      await importCustomNsec(clean, importLabel.trim() || undefined);
       setImportNsec('');
+      setImportLabel('');
       setShowImport(false);
-      toast.success('Nostr account switched successfully');
+      toast.success('Custom Nostr account added and set as active!');
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to switch Nostr account');
+      toast.error(err?.message || 'Failed to import Nostr account');
     } finally {
       setImporting(false);
+    }
+  };
+
+  const handleSelectAccount = async (id: string) => {
+    setSwitchingId(id);
+    try {
+      await setActiveIdentity(id);
+      toast.success('Active Nostr identity switched');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to switch identity');
+    } finally {
+      setSwitchingId(null);
+    }
+  };
+
+  const handleDeleteAccount = async (id: string, npub: string) => {
+    if (confirm(`Remove Nostr account ${npub.slice(0, 12)}… from your account list?`)) {
+      try {
+        await deleteIdentity(id);
+        toast.success('Nostr account removed');
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to remove account');
+      }
     }
   };
 
@@ -109,11 +146,11 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack }: Props) 
     onUpdate({ nostrConfig: updated });
   };
 
-  const copyToClipboard = (text: string, type: 'npub' | 'nsec') => {
+  const copyToClipboard = (text: string, label: string) => {
     if (!text) return;
     navigator.clipboard.writeText(text);
-    setCopiedKey(type);
-    toast.success(type === 'npub' ? 'Public key (npub) copied' : 'Private key (nsec) copied');
+    setCopiedKey(label);
+    toast.success(`${label} copied`);
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
@@ -233,36 +270,60 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack }: Props) 
             <h2 className="text-sm font-black font-clash text-white m-0 leading-none mt-0.5">Nostr settings</h2>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={resetNostrToDefaults}
-          className="p-1.5 rounded-lg text-white/40 hover:text-[#F59E0B] hover:bg-white/5 transition-colors"
-          title="Reset Nostr to defaults"
-        >
-          <RotateCcw size={14} />
-        </button>
+        <div className="flex items-center gap-1.5">
+          {onToggleExpand ? (
+            <button
+              type="button"
+              onClick={onToggleExpand}
+              className="p-1.5 rounded-lg text-[#8E8A86] hover:text-white hover:bg-[#161412] transition-colors"
+              aria-label={isExpanded ? 'Collapse' : 'Full screen'}
+              title={isExpanded ? 'Collapse' : 'Full screen'}
+            >
+              {isExpanded ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={resetNostrToDefaults}
+            className="p-1.5 rounded-lg text-white/40 hover:text-[#F59E0B] hover:bg-white/5 transition-colors"
+            title="Reset Nostr to defaults"
+          >
+            <RotateCcw size={16} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6 min-h-0">
-        {/* Keys & Identity Section */}
+        {/* Active Account Banner */}
         <section className="space-y-3">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5 font-mono">
-            <Key size={13} className="text-[#F59E0B]" /> Nostr keys
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5 font-mono">
+              <Key size={13} className="text-[#F59E0B]" /> Active Nostr Account
+            </h3>
+            {identity?.isDerived ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#F59E0B]/10 border border-[#F59E0B]/20 text-[10px] font-bold font-mono text-[#F59E0B]">
+                <Sparkles size={10} /> Auto-Generated (MEK)
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] font-bold font-mono text-white/70">
+                Custom Imported
+              </span>
+            )}
+          </div>
 
           <div className="rounded-xl bg-[#161412] border border-white/[0.06] p-3.5 space-y-3">
-            {/* Public Key (npub) */}
+            {/* Active Public Key (npub) */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[11px] font-bold text-white/60 uppercase tracking-wider font-mono">Public key (npub)</span>
                 {identity?.npub && (
                   <button
                     type="button"
-                    onClick={() => copyToClipboard(identity.npub, 'npub')}
+                    onClick={() => copyToClipboard(identity.npub, 'Active npub')}
                     className="inline-flex items-center gap-1 text-[11px] font-bold text-[#F59E0B] hover:text-[#F59E0B]/80 font-mono"
                   >
-                    {copiedKey === 'npub' ? <Check size={11} /> : <Copy size={11} />}
-                    {copiedKey === 'npub' ? 'Copied' : 'Copy'}
+                    {copiedKey === 'Active npub' ? <Check size={11} /> : <Copy size={11} />}
+                    {copiedKey === 'Active npub' ? 'Copied' : 'Copy'}
                   </button>
                 )}
               </div>
@@ -271,7 +332,7 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack }: Props) 
               </div>
             </div>
 
-            {/* Private Key (nsec) */}
+            {/* Active Private Key (nsec) */}
             <div className="pt-2 border-t border-white/[0.04]">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[11px] font-bold text-white/60 uppercase tracking-wider font-mono flex items-center gap-1.5">
@@ -280,11 +341,11 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack }: Props) 
                 {identity?.nsec && showNsec && (
                   <button
                     type="button"
-                    onClick={() => copyToClipboard(identity.nsec, 'nsec')}
+                    onClick={() => copyToClipboard(identity.nsec, 'Active nsec')}
                     className="inline-flex items-center gap-1 text-[11px] font-bold text-[#F59E0B] hover:text-[#F59E0B]/80 font-mono"
                   >
-                    {copiedKey === 'nsec' ? <Check size={11} /> : <Copy size={11} />}
-                    {copiedKey === 'nsec' ? 'Copied' : 'Copy'}
+                    {copiedKey === 'Active nsec' ? <Check size={11} /> : <Copy size={11} />}
+                    {copiedKey === 'Active nsec' ? 'Copied' : 'Copy'}
                   </button>
                 )}
               </div>
@@ -314,66 +375,147 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack }: Props) 
                     </button>
                   </div>
                   <p className="text-[10px] text-amber-500/80 font-mono m-0 leading-tight">
-                    Never share your nsec with anyone. It gives full control of your Nostr identity.
+                    Encrypted at rest with your Vault MEK. Never share your nsec with anyone.
                   </p>
                 </div>
               )}
             </div>
+          </div>
+        </section>
 
-            {/* Switch / Import Nostr Account */}
-            <div className="pt-2 border-t border-white/[0.04] space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-white/60 uppercase tracking-wider font-mono">Account switching</span>
+        {/* Multi-Account Switcher Section */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5 font-mono">
+              <UserCheck size={13} className="text-[#F59E0B]" /> Nostr Account Switcher
+            </h3>
+            <button
+              type="button"
+              onClick={() => setShowImport(prev => !prev)}
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#F59E0B] hover:text-[#F59E0B]/80 font-mono"
+            >
+              {showImport ? 'Cancel' : <><Plus size={12} /> Import custom nsec</>}
+            </button>
+          </div>
+
+          {/* Import Custom nsec Card */}
+          {showImport && (
+            <div className="space-y-2.5 rounded-xl bg-[#161412] border border-[#F59E0B]/30 p-3.5 animate-fadeIn">
+              <p className="text-xs font-bold text-white m-0">Import External Nostr Account</p>
+              <p className="text-[11px] text-white/40 font-satoshi m-0">
+                Paste your existing nsec key. It will be encrypted with your Vault Master Encryption Key (MEK) and stored safely.
+              </p>
+              <input
+                type="text"
+                value={importLabel}
+                onChange={e => setImportLabel(e.target.value)}
+                placeholder="Account label (e.g. Personal, Primal, Nostr Bot)"
+                className="w-full h-8 rounded-lg bg-[#0A0908] border border-white/[0.06] px-3 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#F59E0B]/40"
+              />
+              <input
+                type="password"
+                value={importNsec}
+                onChange={e => setImportNsec(e.target.value)}
+                placeholder="nsec1... or 64-char hex private key"
+                className="w-full h-8 rounded-lg bg-[#0A0908] border border-white/[0.06] px-3 text-xs font-mono text-white placeholder:text-white/30 focus:outline-none focus:border-[#F59E0B]/40"
+              />
+              <div className="flex items-center justify-end gap-2 pt-1">
                 <button
                   type="button"
-                  onClick={() => setShowImport(prev => !prev)}
-                  className="text-[11px] font-bold text-[#F59E0B] hover:text-[#F59E0B]/80 font-mono"
+                  onClick={() => setShowImport(false)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-white/40 hover:text-white"
                 >
-                  {showImport ? 'Cancel' : '+ Import custom nsec'}
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleImportAccount}
+                  disabled={importing || !importNsec.trim()}
+                  className="h-8 px-4 rounded-lg bg-[#F59E0B] text-black text-xs font-black disabled:opacity-40 hover:bg-amber-400 transition-colors"
+                >
+                  {importing ? 'Importing & Encrypting…' : 'Import & Switch'}
                 </button>
               </div>
+            </div>
+          )}
 
-              {showImport ? (
-                <div className="space-y-2 rounded-lg bg-[#0A0908] border border-white/[0.06] p-2.5">
-                  <input
-                    type="password"
-                    value={importNsec}
-                    onChange={e => setImportNsec(e.target.value)}
-                    placeholder="nsec1... or 64-char hex private key"
-                    className="w-full h-8 rounded bg-[#161412] border border-white/[0.06] px-2.5 text-xs font-mono text-white placeholder:text-white/30 focus:outline-none focus:border-[#F59E0B]/40"
-                  />
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={handleResetToDefaultAccount}
-                      className="text-[10px] font-mono text-white/40 hover:text-white"
-                    >
-                      Reset to default derived key
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleImportAccount}
-                      disabled={importing || !importNsec.trim()}
-                      className="h-7 px-3 rounded bg-[#F59E0B] text-black text-xs font-extrabold disabled:opacity-40"
-                    >
-                      {importing ? 'Importing…' : 'Switch account'}
-                    </button>
+          {/* Accounts List */}
+          <div className="space-y-2.5">
+            {identities.map((acc, index) => {
+              const isActive = identity?.npub === acc.npub || acc.isDefault;
+              return (
+                <div
+                  key={acc.id || acc.npub || index}
+                  className={`rounded-xl border p-3 transition-all ${
+                    isActive 
+                      ? 'bg-[#1C1A18] border-[#F59E0B]/40 shadow-sm' 
+                      : 'bg-[#161412] border-white/[0.06] hover:border-white/15'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`h-2 w-2 rounded-full shrink-0 ${isActive ? 'bg-[#F59E0B]' : 'bg-white/20'}`} />
+                      <p className="text-xs font-bold font-mono text-white truncate m-0">
+                        {acc.label || (acc.isDerived ? 'Default Internal Account' : `Account ${index + 1}`)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {acc.isDerived && (
+                        <span className="px-1.5 py-0.5 rounded bg-white/5 text-[9px] font-mono text-white/50 border border-white/5">
+                          Internal MEK
+                        </span>
+                      )}
+                      {isActive ? (
+                        <span className="px-2 py-0.5 rounded bg-[#F59E0B] text-[10px] font-black text-black font-mono">
+                          ACTIVE
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={switchingId === acc.id}
+                          onClick={() => acc.id && handleSelectAccount(acc.id)}
+                          className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-[#F59E0B] hover:text-black text-white text-[11px] font-bold font-mono transition-colors disabled:opacity-50"
+                        >
+                          {switchingId === acc.id ? 'Switching…' : 'Switch'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1 text-[11px] font-mono text-white/40">
+                    <span className="truncate select-all">{acc.npub}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(acc.npub, `npub (${acc.npub.slice(0, 8)}…)`)}
+                        className="text-white/40 hover:text-[#F59E0B] transition-colors"
+                        title="Copy npub"
+                      >
+                        {copiedKey === `npub (${acc.npub.slice(0, 8)}…)` ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                      </button>
+                      {!acc.isDerived && acc.id && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAccount(acc.id!, acc.npub)}
+                          className="text-white/30 hover:text-red-400 transition-colors"
+                          title="Remove account"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-white/40">Using custom or default Nostr identity</span>
-                  <button
-                    type="button"
-                    onClick={handleResetToDefaultAccount}
-                    className="text-[11px] font-mono font-bold text-white/40 hover:text-white"
-                    title="Derive fresh key from vault MEK"
-                  >
-                    Reset to default
-                  </button>
-                </div>
-              )}
-            </div>
+              );
+            })}
+
+            {identities.length === 0 && (
+              <div className="rounded-xl bg-[#161412] border border-white/[0.06] p-4 text-center">
+                <p className="text-xs text-white/40 font-satoshi m-0">
+                  {isVaultLocked ? 'Unlock vault to load and switch Nostr accounts.' : 'Deriving default account…'}
+                </p>
+              </div>
+            )}
           </div>
         </section>
 
@@ -448,39 +590,38 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack }: Props) 
                       type="button"
                       onClick={() => toggleRelayDirection(idx, 'read')}
                       className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border transition-colors ${
-                        relay.read 
-                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-                          : 'bg-white/[0.02] border-white/[0.06] text-white/30'
+                        relay.read
+                          ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+                          : 'bg-white/5 border-white/10 text-white/30'
                       }`}
                     >
-                      {relay.read ? '✓ Read' : 'Read off'}
+                      Read {relay.read ? '✓' : '✗'}
                     </button>
                     <button
                       type="button"
                       onClick={() => toggleRelayDirection(idx, 'write')}
                       className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border transition-colors ${
-                        relay.write 
-                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
-                          : 'bg-white/[0.02] border-white/[0.06] text-white/30'
+                        relay.write
+                          ? 'bg-[#F59E0B]/10 border-[#F59E0B]/25 text-[#F59E0B]'
+                          : 'bg-white/5 border-white/10 text-white/30'
                       }`}
                     >
-                      {relay.write ? '✓ Write' : 'Write off'}
+                      Write {relay.write ? '✓' : '✗'}
                     </button>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => removeRelay(idx)}
-                  className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                  className="text-white/30 hover:text-red-400 p-1.5 transition-colors"
                   title="Remove relay"
                 >
-                  <span className="text-xs font-bold font-mono">×</span>
+                  <X size={14} />
                 </button>
               </div>
             ))}
           </div>
         </section>
-
         {/* Directory & Metadata Indexers */}
         <section className="space-y-3">
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5 font-mono">

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, Sliders, Tag, Eye, Layers, Hash, RadioTower, ChevronRight } from 'lucide-react';
+import { X, Sliders, Tag, Eye, Layers, Hash, RadioTower, ChevronRight, ChevronUp, ChevronDown, Maximize2, Minimize2 } from 'lucide-react';
 import { CONNECT_FEED_DEFAULTS, getConnectFeedSettings, setConnectFeedSettings, type ConnectFeedSettings } from '@/lib/connect/feed-settings';
 import { ConnectNostrSettingsView } from './ConnectNostrSettingsView';
 
@@ -23,7 +23,15 @@ function Toggle({ label, value, onToggle, desc }: { label: string; value: boolea
   );
 }
 
-export function ConnectFeedSettingsPanel({ onClose }: { onClose?: () => void }) {
+export function ConnectFeedSettingsPanel({ 
+  onClose,
+  isExpanded,
+  onToggleExpand
+}: { 
+  onClose?: () => void;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
+}) {
   const [view, setView] = useState<'feed' | 'nostr'>('feed');
   const [settings, setSettings] = useState<ConnectFeedSettings>(CONNECT_FEED_DEFAULTS);
   const [newTopic, setNewTopic] = useState('');
@@ -47,6 +55,8 @@ export function ConnectFeedSettingsPanel({ onClose }: { onClose?: () => void }) 
         settings={settings}
         onUpdate={patch}
         onBack={() => setView('feed')}
+        isExpanded={isExpanded}
+        onToggleExpand={onToggleExpand}
       />
     );
   }
@@ -78,7 +88,20 @@ export function ConnectFeedSettingsPanel({ onClose }: { onClose?: () => void }) 
             <h2 className="text-sm font-black font-clash text-white m-0 leading-none mt-0.5">Live feed</h2>
           </div>
         </div>
-        <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-[#8E8A86] hover:text-white hover:bg-[#161412]"><X size={18} /></button>
+        <div className="flex items-center gap-1.5">
+          {onToggleExpand ? (
+            <button
+              type="button"
+              onClick={onToggleExpand}
+              className="p-1.5 rounded-lg text-[#8E8A86] hover:text-white hover:bg-[#161412] transition-colors"
+              aria-label={isExpanded ? 'Collapse' : 'Full screen'}
+              title={isExpanded ? 'Collapse' : 'Full screen'}
+            >
+              {isExpanded ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+            </button>
+          ) : null}
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-[#8E8A86] hover:text-white hover:bg-[#161412]"><X size={18} /></button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6 min-h-0">

@@ -10320,6 +10320,29 @@
                     "size": 64,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isDefault",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "isDerived",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "label",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 128,
+                    "default": "",
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -11399,6 +11422,24 @@
                     "array": false,
                     "default": null,
                     "format": ""
+                },
+                {
+                    "key": "isWorkspace",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "workspaceId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [

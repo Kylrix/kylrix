@@ -118,7 +118,10 @@ import {
 
 import {
   getNostrIdentityAction,
+  listNostrIdentitiesAction,
   registerNostrIdentityAction,
+  setActiveNostrIdentityAction,
+  deleteNostrIdentityAction,
   resolveNostrPubkeysAction} from './secure-ops/nostr';
 
 export {
@@ -241,7 +244,10 @@ export {
   revokePatSecure,
   listOAuthAppInstallsSecure,
   getNostrIdentityAction,
+  listNostrIdentitiesAction,
   registerNostrIdentityAction,
+  setActiveNostrIdentityAction,
+  deleteNostrIdentityAction,
   resolveNostrPubkeysAction};
 
 export type { PermissionLevel} from './secure-ops/shared';
