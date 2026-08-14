@@ -64,7 +64,7 @@ export default function CredentialDetail({
         let changed = false;
 
         let dekKey: CryptoKey | null = null;
-        if (credential.dek && looksEncrypted(credential.dek)) {
+        if (credential.dek) {
           try {
             const dekBase64 = await decryptField(credential.dek);
             const rawKey = new Uint8Array(atob(dekBase64).split('').map((c) => c.charCodeAt(0)));
@@ -74,11 +74,15 @@ export default function CredentialDetail({
 
         for (const field of fieldsToDecrypt) {
           const val = (credential as any)[field];
-          if (val && typeof val === 'string' && looksEncrypted(val)) {
+          if (val && typeof val === 'string' && val.trim().length > 0) {
             try {
               let plain: string | null = null;
               if (dekKey) {
-                plain = await ecosystemSecurity.decryptWithKey(val, dekKey);
+                try {
+                  plain = await ecosystemSecurity.decryptWithKey(val, dekKey);
+                } catch {
+                  plain = await decryptField(val);
+                }
               } else {
                 plain = await decryptField(val);
               }
@@ -87,7 +91,7 @@ export default function CredentialDetail({
                 changed = true;
               }
             } catch (err) {
-              console.error(`[CredentialDetail] Failed to decrypt ${field}:`, err);
+              // Not encrypted or already plaintext
             }
           }
         }
@@ -441,7 +445,7 @@ export default function CredentialDetail({
               </div>
             </div>
             <FieldValue className={showPassword ? 'text-white' : 'text-white/40 tracking-[0.3em]'}>
-              {liveCredential.password ? (showPassword ? (looksEncrypted(liveCredential.password) ? '••••••••' : liveCredential.password) : "••••••••••••••••") : "N/A"}
+              {liveCredential.password ? (showPassword ? liveCredential.password : "••••••••••••••••") : "N/A"}
             </FieldValue>
           </div>
 
