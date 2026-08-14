@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, Sliders, Tag, Eye, Layers, Hash } from 'lucide-react';
+import { X, Sliders, Tag, Eye, Layers, Hash, RadioTower, ChevronRight } from 'lucide-react';
 import { CONNECT_FEED_DEFAULTS, getConnectFeedSettings, setConnectFeedSettings, type ConnectFeedSettings } from '@/lib/connect/feed-settings';
+import { ConnectNostrSettingsView } from './ConnectNostrSettingsView';
 
 function Toggle({ label, value, onToggle, desc }: { label: string; value: boolean; onToggle: () => void; desc?: string }) {
   return (
@@ -23,6 +24,7 @@ function Toggle({ label, value, onToggle, desc }: { label: string; value: boolea
 }
 
 export function ConnectFeedSettingsPanel({ onClose }: { onClose?: () => void }) {
+  const [view, setView] = useState<'feed' | 'nostr'>('feed');
   const [settings, setSettings] = useState<ConnectFeedSettings>(CONNECT_FEED_DEFAULTS);
   const [newTopic, setNewTopic] = useState('');
   const [newInterest, setNewInterest] = useState('');
@@ -38,6 +40,16 @@ export function ConnectFeedSettingsPanel({ onClose }: { onClose?: () => void }) 
     setSettings(merged as ConnectFeedSettings);
     void setConnectFeedSettings(next);
   };
+
+  if (view === 'nostr') {
+    return (
+      <ConnectNostrSettingsView
+        settings={settings}
+        onUpdate={patch}
+        onBack={() => setView('feed')}
+      />
+    );
+  }
 
   const addTopic = () => {
     const t = newTopic.trim().toLowerCase();
@@ -122,6 +134,30 @@ export function ConnectFeedSettingsPanel({ onClose }: { onClose?: () => void }) 
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5"><Layers size={12} /> Sources</h3>
           <Toggle label="Ecosystem moments" desc="Kylrix moments feed" value={settings.showEcosystem} onToggle={() => patch({ showEcosystem: !settings.showEcosystem })} />
           <Toggle label="Nostr feed" desc="External Nostr notes" value={settings.showNostr} onToggle={() => patch({ showNostr: !settings.showNostr })} />
+
+          {/* Nostr protocol & relay configuration entry */}
+          <button
+            type="button"
+            onClick={() => setView('nostr')}
+            className="w-full flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-[#161412] px-3.5 py-3 text-left hover:bg-[#1C1A18] hover:border-white/10 transition-colors group"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="h-7 w-7 rounded-lg bg-[#0A0908] border border-white/[0.06] grid place-items-center shrink-0">
+                <RadioTower size={13} className="text-[#F59E0B]" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-white font-satoshi m-0 flex items-center gap-1.5">
+                  Nostr settings
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold">NIP-65</span>
+                </p>
+                <p className="text-xs text-white/40 m-0 mt-0.5 truncate">
+                  Keys, nsec export, and outbox sync relays
+                </p>
+              </div>
+            </div>
+            <ChevronRight size={15} className="text-white/40 group-hover:text-white shrink-0 transition-colors" />
+          </button>
+
           <Toggle label="Show replies" desc="Include reply threads" value={settings.showReplies} onToggle={() => patch({ showReplies: !settings.showReplies })} />
           <Toggle label="Show likes" desc="Include like counts" value={settings.showLikes} onToggle={() => patch({ showLikes: !settings.showLikes })} />
         </section>

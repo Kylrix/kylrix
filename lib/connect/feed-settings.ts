@@ -3,6 +3,35 @@
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { account } from '@/lib/appwrite/client';
 
+export type NostrRelayConfig = {
+  url: string;
+  read: boolean;
+  write: boolean;
+};
+
+export type NostrPerformanceSettings = {
+  eagerMediaLoading: boolean;
+  autoplayVideos: boolean;
+  maxConcurrentRelaySockets: number;
+  feedPageLimit: number;
+  cacheStrategy: 'indexedDB' | 'memory' | 'localEngine';
+};
+
+export type NostrProtocolSettings = {
+  outboxModel: boolean;
+  nip07Support: boolean;
+  nip46RemoteSigner: boolean;
+};
+
+export type NostrSettingsConfig = {
+  relays: {
+    defaults: NostrRelayConfig[];
+    lookupIndexers: string[];
+  };
+  performance: NostrPerformanceSettings;
+  protocol: NostrProtocolSettings;
+};
+
 export type ConnectFeedSettings = {
   topics: string[];
   interests: string[];
@@ -13,6 +42,34 @@ export type ConnectFeedSettings = {
   showLikes: boolean;
   compactMode: boolean;
   autoPlayMedia: boolean;
+  nostrConfig: NostrSettingsConfig;
+};
+
+export const NOSTR_CONFIG_DEFAULTS: NostrSettingsConfig = {
+  relays: {
+    defaults: [
+      { url: 'wss://relay.damus.io', read: true, write: true },
+      { url: 'wss://nos.lol', read: true, write: true },
+      { url: 'wss://relay.primal.net', read: true, write: true },
+      { url: 'wss://relay.nostr.band', read: true, write: true },
+    ],
+    lookupIndexers: [
+      'wss://purplepag.es',
+      'wss://user.kindpag.es',
+    ],
+  },
+  performance: {
+    eagerMediaLoading: false,
+    autoplayVideos: false,
+    maxConcurrentRelaySockets: 6,
+    feedPageLimit: 25,
+    cacheStrategy: 'indexedDB',
+  },
+  protocol: {
+    outboxModel: true,
+    nip07Support: true,
+    nip46RemoteSigner: true,
+  },
 };
 
 const DEFAULTS: ConnectFeedSettings = {
@@ -25,10 +82,56 @@ const DEFAULTS: ConnectFeedSettings = {
   showLikes: true,
   compactMode: false,
   autoPlayMedia: false,
+  nostrConfig: NOSTR_CONFIG_DEFAULTS,
 };
 
 const LOCAL_KEY = 'kylrix_connect_feed_settings_v1';
 const PREFS_KEY = 'connectFeedSettings';
+
+function normalizeNostrConfig(raw: any): NostrSettingsConfig {
+  if (!raw || typeof raw !== 'object') return { ...NOSTR_CONFIG_DEFAULTS };
+  const rawRelays = raw.relays;
+  const defaults: NostrRelayConfig[] = Array.isArray(rawRelays?.defaults)
+    ? rawRelays.defaults
+        .filter((r: any) => r && typeof r.url === 'string' && r.url.trim().startsWith('ws'))
+        .map((r: any) => ({
+          url: String(r.url).trim(),
+          read: typeof r.read === 'boolean' ? r.read : true,
+          write: typeof r.write === 'boolean' ? r.write : true,
+        }))
+    : NOSTR_CONFIG_DEFAULTS.relays.defaults;
+
+  const lookupIndexers: string[] = Array.isArray(rawRelays?.lookupIndexers)
+    ? rawRelays.lookupIndexers
+        .filter((u: any) => typeof u === 'string' && u.trim().startsWith('ws'))
+        .map((u: string) => u.trim())
+    : NOSTR_CONFIG_DEFAULTS.relays.lookupIndexers;
+
+  const rawPerf = raw.performance;
+  const performance: NostrPerformanceSettings = {
+    eagerMediaLoading: typeof rawPerf?.eagerMediaLoading === 'boolean' ? rawPerf.eagerMediaLoading : NOSTR_CONFIG_DEFAULTS.performance.eagerMediaLoading,
+    autoplayVideos: typeof rawPerf?.autoplayVideos === 'boolean' ? rawPerf.autoplayVideos : NOSTR_CONFIG_DEFAULTS.performance.autoplayVideos,
+    maxConcurrentRelaySockets: typeof rawPerf?.maxConcurrentRelaySockets === 'number' ? rawPerf.maxConcurrentRelaySockets : NOSTR_CONFIG_DEFAULTS.performance.maxConcurrentRelaySockets,
+    feedPageLimit: typeof rawPerf?.feedPageLimit === 'number' ? rawPerf.feedPageLimit : NOSTR_CONFIG_DEFAULTS.performance.feedPageLimit,
+    cacheStrategy: rawPerf?.cacheStrategy === 'memory' || rawPerf?.cacheStrategy === 'localEngine' ? rawPerf.cacheStrategy : 'indexedDB',
+  };
+
+  const rawProto = raw.protocol;
+  const protocol: NostrProtocolSettings = {
+    outboxModel: typeof rawProto?.outboxModel === 'boolean' ? rawProto.outboxModel : NOSTR_CONFIG_DEFAULTS.protocol.outboxModel,
+    nip07Support: typeof rawProto?.nip07Support === 'boolean' ? rawProto.nip07Support : NOSTR_CONFIG_DEFAULTS.protocol.nip07Support,
+    nip46RemoteSigner: typeof rawProto?.nip46RemoteSigner === 'boolean' ? rawProto.nip46RemoteSigner : NOSTR_CONFIG_DEFAULTS.protocol.nip46RemoteSigner,
+  };
+
+  return {
+    relays: {
+      defaults: defaults.length ? defaults : NOSTR_CONFIG_DEFAULTS.relays.defaults,
+      lookupIndexers: lookupIndexers.length ? lookupIndexers : NOSTR_CONFIG_DEFAULTS.relays.lookupIndexers,
+    },
+    performance,
+    protocol,
+  };
+}
 
 function normalize(raw: any): ConnectFeedSettings {
   if (!raw || typeof raw !== 'object') return { ...DEFAULTS };
@@ -42,6 +145,7 @@ function normalize(raw: any): ConnectFeedSettings {
     showLikes: typeof raw.showLikes === 'boolean' ? raw.showLikes : DEFAULTS.showLikes,
     compactMode: typeof raw.compactMode === 'boolean' ? raw.compactMode : DEFAULTS.compactMode,
     autoPlayMedia: typeof raw.autoPlayMedia === 'boolean' ? raw.autoPlayMedia : DEFAULTS.autoPlayMedia,
+    nostrConfig: normalizeNostrConfig(raw.nostrConfig),
   };
 }
 
@@ -130,6 +234,22 @@ export async function getFeedAffinity(): Promise<Affinity> {
     if (raw) return normalizeAffinity(raw);
   } catch {}
   return { interests: [], mediaKinds: [], updatedAt: 0 };
+}
+
+export async function getNostrReadRelays(): Promise<string[]> {
+  const settings = await getConnectFeedSettings();
+  const configured = (settings.nostrConfig?.relays?.defaults || [])
+    .filter(r => r.read && r.url)
+    .map(r => r.url);
+  return configured.length > 0 ? configured : NOSTR_CONFIG_DEFAULTS.relays.defaults.map(r => r.url);
+}
+
+export async function getNostrWriteRelays(): Promise<string[]> {
+  const settings = await getConnectFeedSettings();
+  const configured = (settings.nostrConfig?.relays?.defaults || [])
+    .filter(r => r.write && r.url)
+    .map(r => r.url);
+  return configured.length > 0 ? configured : NOSTR_CONFIG_DEFAULTS.relays.defaults.map(r => r.url);
 }
 
 export const CONNECT_FEED_DEFAULTS = DEFAULTS;
