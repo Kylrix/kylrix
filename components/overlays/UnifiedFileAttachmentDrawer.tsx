@@ -115,6 +115,8 @@ export function UnifiedFileAttachmentDrawer() {
   const [activeSubTab, setActiveSubTab] = useState<ObjectSubTab>('goals');
   const [searchQuery, setSearchQuery] = useState('');
 
+  if (!isOpen) return null;
+
   // Auto MasterPass when switching to encrypted sub-tabs — suppressed when unlock-on-demand (default).
   useEffect(() => {
     if (isOpen && activeTab === 'objects' && (activeSubTab === 'totps' || activeSubTab === 'vault')) {

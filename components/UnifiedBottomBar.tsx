@@ -88,7 +88,9 @@ export function UnifiedBottomBar() {
     if (!target) return;
 
     if (newValue === getCurrentTab()) {
-      if (pathname !== target) router.replace(target);
+      if (pathname !== target) {
+        router.replace(target);
+      }
       return;
     }
 

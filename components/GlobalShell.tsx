@@ -28,6 +28,7 @@ import UniversalFAB from '@/components/layout/UniversalFAB';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useCallLauncher } from '@/context/CallLauncherContext';
+import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { useServiceWorker } from '@/hooks/useServiceWorker';
 import { isFlowPath, isGoalsSurfacePath } from '@/lib/routing/app-paths';
 
@@ -122,6 +123,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const { } = useAppChrome();
   const { isDrawerOpen, setIsDrawerOpen } = useDrawerState();
   const { } = useCallLauncher();
+  const { isOpen: isUnifiedFileDrawerOpen } = useUnifiedFileDrawer();
 
   // Smart responsive Left Sidebar visibility
   const isNoteFullPageDetail = useMemo(
@@ -340,7 +342,7 @@ const isSpecificPostPage = useMemo(
       {unifiedDrawerActive === 'note' && <NoteDrawer />}
       {secondarySidebar.isOpen && <RightSidebar />}
       <AccountHealthDrawers />
-      <UnifiedFileAttachmentDrawer />
+      {isUnifiedFileDrawerOpen && <UnifiedFileAttachmentDrawer />}
     </Box>
     );
     };
