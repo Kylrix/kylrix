@@ -453,35 +453,42 @@ export const ChatList = ({
         migrateLegacyChatListCache();
         let cancelled = false;
         // Memory already painted via initial state (peek); clear skeletons instantly if we have it
-        if (!skipSecureLoad && conversationsRef.current.length > 0) setLoading(false);
-        if (!skipThreadsLoad && threadConversations.length > 0) setLoadingthread(false);
+        const memSecure = peekChatsListMemory();
+        const memThreads = peekThreadsListMemory();
+        if (memSecure.length) {
+            setConversations(memSecure);
+            conversationsRef.current = memSecure;
+            setLoading(false);
+        }
+        if (memThreads.length) {
+            setthreadConversations(memThreads);
+            threadConversationsRef.current = memThreads;
+            setLoadingthread(false);
+        }
         void (async () => {
-            if (!skipSecureLoad && conversationsRef.current.length === 0) {
-                const cached = await readChatsListLocal();
-                if (!cancelled) {
-                    if (cached.length) {
-                        startTransition(() => {
-                            setConversations(cached);
-                            conversationsRef.current = cached;
-                        });
-                    }
+            const [cached, cachedThr] = await Promise.all([
+                readChatsListLocal(),
+                readThreadsListLocal(),
+            ]);
+            if (!cancelled) {
+                if (cached.length) {
+                    startTransition(() => {
+                        setConversations(cached);
+                        conversationsRef.current = cached;
+                    });
                     setLoading(false);
                 }
-            } else if (!skipSecureLoad) {
-                setLoading(false);
-            }
-            if (!skipThreadsLoad && threadConversations.length === 0) {
-                const cachedThr = await readThreadsListLocal();
-                if (!cancelled) {
-                    if (cachedThr.length) {
-                        startTransition(() => {
-                            setthreadConversations(cachedThr);
-                        });
-                    }
+                if (cachedThr.length) {
+                    startTransition(() => {
+                        setthreadConversations(cachedThr);
+                        threadConversationsRef.current = cachedThr;
+                    });
                     setLoadingthread(false);
                 }
-            } else if (!skipThreadsLoad) {
-                setLoadingthread(false);
+                if (cached.length || cachedThr.length || memSecure.length || memThreads.length) {
+                    setLoading(false);
+                    setLoadingthread(false);
+                }
             }
         })();
         return () => {
