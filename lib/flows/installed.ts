@@ -1,41 +1,42 @@
 import { listMyFlowInstallsSecure } from '@/lib/actions/secure-ops/flows';
+import { LocalEngine } from '@/lib/services/LocalEngine';
 
-const KEY = 'kylrix_installed_flows';
-let inMemoryInstalledIds: string[] | null = null;
+const LOCAL_KEY = 'f_installed_flows';
+let inMemoryInstalledIds: string[] = [];
+let isHydrated = false;
 
-function read(): string[] {
-  if (typeof window === 'undefined') return inMemoryInstalledIds || [];
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return inMemoryInstalledIds || [];
-    const parsed = JSON.parse(raw);
-    const ids = Array.isArray(parsed) ? parsed.map(String) : [];
-    inMemoryInstalledIds = ids;
-    return ids;
-  } catch {
-    return inMemoryInstalledIds || [];
-  }
+// Eagerly bootstrap from LocalEngine/RxDB on client load
+if (typeof window !== 'undefined') {
+  void (async () => {
+    try {
+      const cached = await LocalEngine.cacheGet<string[]>(LOCAL_KEY);
+      if (Array.isArray(cached) && cached.length > 0) {
+        inMemoryInstalledIds = [...new Set(cached)];
+        isHydrated = true;
+      }
+    } catch {}
+  })();
 }
 
 function write(ids: string[]) {
   const unique = [...new Set(ids)];
   inMemoryInstalledIds = unique;
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(unique));
-  } catch {}
+  isHydrated = true;
+  if (typeof window !== 'undefined') {
+    void LocalEngine.cacheSet(LOCAL_KEY, unique).catch(() => {});
+  }
 }
 
 export function listInstalledFlowIds(): string[] {
-  return read();
+  return inMemoryInstalledIds;
 }
 
 export function isFlowInstalled(id: string): boolean {
-  return read().includes(id);
+  return inMemoryInstalledIds.includes(id);
 }
 
 export function installFlowLocal(id: string): string[] {
-  const next = [...read(), id];
+  const next = [...inMemoryInstalledIds, id];
   write(next);
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('kylrix:flows-changed', { detail: { id, action: 'install' } }));
@@ -44,7 +45,7 @@ export function installFlowLocal(id: string): string[] {
 }
 
 export function uninstallFlowLocal(id: string): string[] {
-  const next = read().filter((x) => x !== id);
+  const next = inMemoryInstalledIds.filter((x) => x !== id);
   write(next);
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('kylrix:flows-changed', { detail: { id, action: 'uninstall' } }));
@@ -53,8 +54,7 @@ export function uninstallFlowLocal(id: string): string[] {
 }
 
 export function syncInstalledFlowsFromRemote(remoteFlowIds: string[]): string[] {
-  const current = read();
-  const merged = [...new Set([...current, ...remoteFlowIds])];
+  const merged = [...new Set([...inMemoryInstalledIds, ...remoteFlowIds])];
   write(merged);
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('kylrix:flows-changed', { detail: { action: 'sync' } }));
@@ -64,6 +64,16 @@ export function syncInstalledFlowsFromRemote(remoteFlowIds: string[]): string[] 
 
 export async function pullAndSyncUserFlowInstalls(): Promise<string[]> {
   try {
+    // 1. Initial hydration from RxDB substrate if in-memory is empty
+    if (!isHydrated) {
+      const cached = await LocalEngine.cacheGet<string[]>(LOCAL_KEY);
+      if (Array.isArray(cached) && cached.length > 0) {
+        inMemoryInstalledIds = [...new Set(cached)];
+        isHydrated = true;
+      }
+    }
+
+    // 2. Fetch authoritative active installs from Server Action
     const res = await listMyFlowInstallsSecure();
     if (res.success && Array.isArray(res.data)) {
       const activeIds = res.data
@@ -72,7 +82,7 @@ export async function pullAndSyncUserFlowInstalls(): Promise<string[]> {
       return syncInstalledFlowsFromRemote(activeIds);
     }
   } catch {
-    // quiet fallback to local storage
+    // quiet fallback
   }
-  return read();
+  return inMemoryInstalledIds;
 }
