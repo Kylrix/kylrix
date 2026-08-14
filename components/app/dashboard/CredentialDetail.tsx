@@ -256,31 +256,52 @@ export default function CredentialDetail({
 
   const faviconUrl = getFaviconUrl(credential.url || "");
 
-  const FieldLabel = ({ label, onCopy, fieldId }: { label: string; onCopy?: () => void; fieldId?: string }) => (
+  const FieldLabel = ({ label }: { label: string }) => (
     <div className="flex items-center justify-between mb-1.5">
       <span className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase font-clash">
         {label}
       </span>
-      {onCopy && (
-        <button 
-          type="button"
-          onClick={onCopy} 
-          className="h-6 text-[10px] font-bold px-2 rounded-lg hover:bg-[#10B981]/10 flex items-center gap-1.5 transition-colors text-[#10B981]"
-        >
-          <Copy className="w-3 h-3" />
-          <span>{copied === fieldId ? "Copied!" : "Copy"}</span>
-        </button>
-      )}
     </div>
   );
 
-  const FieldValue = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-    <div
-      className={`p-3.5 rounded-xl bg-[#141211] border border-[#2C2A28] font-mono text-sm text-[#F5F2ED] break-all ${className}`}
-    >
-      {children}
-    </div>
-  );
+  const FieldValue = ({
+    children,
+    className = "",
+    onClick,
+    fieldId,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    onClick?: () => void;
+    fieldId?: string;
+  }) => {
+    const isFieldCopied = copied === fieldId;
+    return (
+      <div
+        role={onClick ? "button" : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onClick={onClick}
+        onKeyDown={(e) => {
+          if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+        className={`relative group p-3.5 rounded-xl bg-[#141211] border transition-all font-mono text-sm text-[#F5F2ED] break-all ${
+          onClick
+            ? 'cursor-pointer hover:border-[#10B981]/50 hover:bg-[#1A1817]'
+            : 'cursor-default'
+        } ${isFieldCopied ? 'border-[#10B981] bg-[#10B981]/10 text-[#10B981]' : 'border-[#2C2A28]'} ${className}`}
+      >
+        {children}
+        {isFieldCopied ? (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold tracking-wider uppercase text-[#10B981] font-mono bg-[#141211]/90 px-2 py-0.5 rounded border border-[#10B981]/30">
+            Copied!
+          </span>
+        ) : null}
+      </div>
+    );
+  };
 
   const content = (
     <div className={`h-full flex flex-col ${inline ? 'bg-transparent' : 'bg-[#161412]'} w-full min-h-0 text-[#F5F2ED]`}>
@@ -306,7 +327,7 @@ export default function CredentialDetail({
           <div className="flex items-center gap-1 shrink-0">
             <button 
               type="button"
-              onClick={handleShareLink}
+              onClick={handleShareLink} 
               className={`p-2 rounded-xl transition-all border ${
                 isPublic 
                   ? 'text-[#10B981] bg-[#10B981]/15 border-[#10B981]/30 hover:bg-[#10B981]/25' 
@@ -347,8 +368,13 @@ export default function CredentialDetail({
 
         {/* Row 2: Full-bleed Title & Sync Status Indicator matching TaskDetails / NoteDetailSidebar */}
         <div className="w-full min-w-0 flex flex-col gap-1.5 pt-1">
-          <h2 className="w-full min-w-0 text-lg md:text-xl font-black font-clash text-[#10B981] tracking-tight uppercase break-words [overflow-wrap:anywhere]">
+          <h2
+            onClick={() => handleCopy(looksEncrypted(liveCredential.name) ? '' : (liveCredential.name || ''), "title")}
+            title="Click to copy title"
+            className="w-full min-w-0 text-lg md:text-xl font-black font-clash text-[#10B981] tracking-tight uppercase break-words [overflow-wrap:anywhere] cursor-pointer hover:underline"
+          >
             {looksEncrypted(liveCredential.name) ? 'Encrypted Secret' : liveCredential.name}
+            {copied === 'title' ? <span className="ml-2 text-xs font-mono text-[#10B981] lowercase">(copied!)</span> : null}
           </h2>
           <div className="flex items-center gap-2 shrink-0">
             <SyncStatusDot resourceId={liveCredential.$id} kind="secret" row={liveCredential as unknown as Record<string, unknown>} />
@@ -409,8 +435,13 @@ export default function CredentialDetail({
         {/* Fields List */}
         <div className="flex flex-col gap-4">
           <div>
-            <FieldLabel label="Username / Email" onCopy={() => handleCopy(looksEncrypted(liveCredential.username) ? '' : (liveCredential.username || ''), "username")} fieldId="username" />
-            <FieldValue>{looksEncrypted(liveCredential.username) ? '••••••••' : (liveCredential.username || "N/A")}</FieldValue>
+            <FieldLabel label="Username / Email" />
+            <FieldValue
+              fieldId="username"
+              onClick={() => handleCopy(looksEncrypted(liveCredential.username) ? '' : (liveCredential.username || ''), "username")}
+            >
+              {looksEncrypted(liveCredential.username) ? '••••••••' : (liveCredential.username || "N/A")}
+            </FieldValue>
           </div>
 
           {/* Secret Password Value */}
@@ -434,17 +465,18 @@ export default function CredentialDetail({
                   {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   <span>{showPassword ? "Hide" : "Show"}</span>
                 </button>
-                <button 
-                  type="button"
-                  onClick={() => requestSudo({ onSuccess: () => handleCopy(looksEncrypted(liveCredential.password) ? '' : (liveCredential.password || ''), "password") })}
-                  className="h-6 text-[10px] font-bold px-2 rounded-lg hover:bg-[#10B981]/10 flex items-center gap-1.5 transition-colors text-[#10B981]"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>{copied === "password" ? "Copied!" : "Copy"}</span>
-                </button>
               </div>
             </div>
-            <FieldValue className={showPassword ? 'text-white' : 'text-white/40 tracking-[0.3em]'}>
+            <FieldValue
+              fieldId="password"
+              onClick={() =>
+                requestSudo({
+                  onSuccess: () =>
+                    handleCopy(looksEncrypted(liveCredential.password) ? '' : (liveCredential.password || ''), "password"),
+                })
+              }
+              className={showPassword ? 'text-white' : 'text-white/40 tracking-[0.3em]'}
+            >
               {liveCredential.password ? (showPassword ? liveCredential.password : "••••••••••••••••") : "N/A"}
             </FieldValue>
           </div>
@@ -452,8 +484,12 @@ export default function CredentialDetail({
           {/* Notes */}
           {liveCredential.notes && (
             <div>
-              <FieldLabel label="Notes" onCopy={() => handleCopy(looksEncrypted(liveCredential.notes) ? '' : (liveCredential.notes || ''), "notes")} fieldId="notes" />
-              <FieldValue className="whitespace-pre-wrap font-sans text-xs leading-relaxed text-[#D6D1CA]">
+              <FieldLabel label="Notes" />
+              <FieldValue
+                fieldId="notes"
+                onClick={() => handleCopy(looksEncrypted(liveCredential.notes) ? '' : (liveCredential.notes || ''), "notes")}
+                className="whitespace-pre-wrap font-sans text-xs leading-relaxed text-[#D6D1CA]"
+              >
                 {looksEncrypted(liveCredential.notes) ? 'Encrypted Notes' : liveCredential.notes}
               </FieldValue>
             </div>
@@ -486,10 +522,13 @@ export default function CredentialDetail({
                   <div key={field.id || index} className="flex flex-col">
                     <FieldLabel 
                       label={field.label || `Field ${index + 1}`} 
-                      onCopy={() => handleCopy(field.value || "", `custom-${index}`)} 
-                      fieldId={`custom-${index}`} 
                     />
-                    <FieldValue>{field.value || "Empty"}</FieldValue>
+                    <FieldValue
+                      fieldId={`custom-${index}`}
+                      onClick={() => handleCopy(field.value || "", `custom-${index}`)}
+                    >
+                      {field.value || "Empty"}
+                    </FieldValue>
                   </div>
                 ))}
               </div>
