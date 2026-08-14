@@ -114,8 +114,8 @@ export function UnifiedBottomBar() {
   const isSpecificPostPage = Boolean(pathname?.match(/^\/connect\/post\/[^/]+$/));
   const isSpecificProjectPage = Boolean(pathname?.match(/^\/workspace\/[^/]+$/));
   const isPublicFormPage = Boolean(pathname?.match(/^\/form\/[^/]+$/));
-  // Public idea pages only — do not hide chrome on /app home
-  const isPublicIdeaPage = Boolean(pathname?.match(/^\/idea(\/|$)/));
+  // Public shared idea pages only (/idea/:id) — do not match app routes
+  const isPublicIdeaPage = Boolean(pathname?.match(/^\/idea\/[^/]+$/));
 
   const contextMenu = useContextMenu();
 
