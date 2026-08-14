@@ -134,32 +134,41 @@ export function ConnectFeedSettingsPanel({ onClose }: { onClose?: () => void }) 
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5"><Layers size={12} /> Sources</h3>
           <Toggle label="Ecosystem moments" desc="Kylrix moments feed" value={settings.showEcosystem} onToggle={() => patch({ showEcosystem: !settings.showEcosystem })} />
           <Toggle label="Nostr feed" desc="External Nostr notes" value={settings.showNostr} onToggle={() => patch({ showNostr: !settings.showNostr })} />
+          <Toggle label="Show replies" desc="Include reply threads" value={settings.showReplies} onToggle={() => patch({ showReplies: !settings.showReplies })} />
+          <Toggle label="Show likes" desc="Include like counts" value={settings.showLikes} onToggle={() => patch({ showLikes: !settings.showLikes })} />
+        </section>
 
-          {/* Nostr protocol & relay configuration entry */}
+        {/* Dedicated Nostr Section */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5">
+              <RadioTower size={12} className="text-[#F59E0B]" /> Nostr settings
+            </h3>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold">
+              NIP-65
+            </span>
+          </div>
+
           <button
             type="button"
             onClick={() => setView('nostr')}
-            className="w-full flex items-center justify-between gap-3 rounded-xl border border-white/[0.06] bg-[#161412] px-3.5 py-3 text-left hover:bg-[#1C1A18] hover:border-white/10 transition-colors group"
+            className="w-full flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-[#161412] p-3.5 text-left hover:bg-[#1C1A18] hover:border-[#F59E0B]/40 transition-all group"
           >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="h-7 w-7 rounded-lg bg-[#0A0908] border border-white/[0.06] grid place-items-center shrink-0">
-                <RadioTower size={13} className="text-[#F59E0B]" />
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="h-8 w-8 rounded-lg bg-[#0A0908] border border-white/[0.06] grid place-items-center shrink-0">
+                <RadioTower size={15} className="text-[#F59E0B]" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-white font-satoshi m-0 flex items-center gap-1.5">
-                  Nostr settings
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold">NIP-65</span>
+                <p className="text-sm font-bold text-white font-satoshi m-0 flex items-center gap-2">
+                  Keys, Outbox & Relays
                 </p>
                 <p className="text-xs text-white/40 m-0 mt-0.5 truncate">
-                  Keys, nsec export, and outbox sync relays
+                  Inspect npub, export nsec, switch account, and configure sync to/from servers
                 </p>
               </div>
             </div>
-            <ChevronRight size={15} className="text-white/40 group-hover:text-white shrink-0 transition-colors" />
+            <ChevronRight size={16} className="text-white/40 group-hover:text-[#F59E0B] group-hover:translate-x-0.5 shrink-0 transition-all" />
           </button>
-
-          <Toggle label="Show replies" desc="Include reply threads" value={settings.showReplies} onToggle={() => patch({ showReplies: !settings.showReplies })} />
-          <Toggle label="Show likes" desc="Include like counts" value={settings.showLikes} onToggle={() => patch({ showLikes: !settings.showLikes })} />
         </section>
 
         <section className="space-y-3">
