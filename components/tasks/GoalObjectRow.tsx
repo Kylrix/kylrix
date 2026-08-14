@@ -356,16 +356,26 @@ export default function GoalObjectRow({ task }: Props) {
     [contextMenuItems, openMenu],
   );
 
+  const goalTags = useMemo(() => {
+    const rawTags = (task as any).tags;
+    const userLabels = Array.isArray(task.labels) && task.labels.length > 0 ? task.labels : [];
+    const extractedTags = Array.isArray(rawTags)
+      ? rawTags.filter((t: string) => !String(t).startsWith('project:') && !String(t).startsWith('source:'))
+      : [];
+    return Array.from(new Set([...userLabels, ...extractedTags])).filter(Boolean);
+  }, [task.labels, (task as any).tags]);
+
   const item = useMemo(() => {
     const base = goalToCard(task);
+    const contentText = String(task.description || (task as any).content || (task as any).summary || '').trim();
     return {
       ...base,
-      title: locked ? 'Locked' : base.title,
+      title: locked ? 'Locked' : (task.title || base.title || 'Untitled Goal'),
       isPinned: pinned,
       accent: null,
       subtitle: locked
         ? 'Locked goal'
-        : (task.description || '').trim().slice(0, 120) || undefined,
+        : contentText.slice(0, 160) || undefined,
     };
   }, [task, pinned, locked]);
 
@@ -422,7 +432,7 @@ export default function GoalObjectRow({ task }: Props) {
       footer={
         <ObjectCardMeta
           priority={task.priority || 'medium'}
-          tags={task.labels || []}
+          tags={goalTags}
           tagColors={tagColors}
           dueLabel={due}
         />
