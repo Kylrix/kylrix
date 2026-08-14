@@ -33,7 +33,7 @@ function getTagColor(tagName: string): string | null {
 }
 
 export default function IdeasPage() {
-  const { notes: allNotes, isLoading: isContextLoading, upsertNote, removeNote } = useNotes();
+  const { notes: allNotes, isLoading: isContextLoading, error, upsertNote, removeNote } = useNotes();
   const { openSidebar } = useDynamicSidebar();
   const { open: openUnified } = useUnifiedDrawer();
   const { setConfiguration, resetConfiguration } = useFAB();
