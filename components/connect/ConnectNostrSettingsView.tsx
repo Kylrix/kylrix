@@ -24,6 +24,13 @@ import {
 } from '@/lib/connect/feed-settings';
 import toast from 'react-hot-toast';
 
+type Props = {
+  settings: ConnectFeedSettings;
+  onUpdate: (next: Partial<ConnectFeedSettings>) => void;
+  onBack: () => void;
+};
+
+export function ConnectNostrSettingsView({ settings, onUpdate, onBack }: Props) {
   const { 
     identity, 
     loading: identityLoading, 
