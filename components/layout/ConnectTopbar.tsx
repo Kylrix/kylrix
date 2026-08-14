@@ -66,6 +66,10 @@ import { useNotes } from '@/context/NotesContext';
 import { useTask } from '@/context/TaskContext';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { useSection } from '@/context/SectionContext';
+import { useLayout } from '@/context/LayoutContext';
 
 import {
   renderShortcutsList,
@@ -97,7 +101,11 @@ export default function ConnectTopbar({
   const { setIsCollapsed } = useSidebar();
   const { activeWorkspace, workspaces, setActiveWorkspaceId, loadingWorkspaces } = useWorkspace();
   const { notes = [] } = useNotes();
-  const { tasks = [], projects = [] } = useTask();
+  const { tasks = [], projects = [], selectTask } = useTask();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { openOverlay, closeOverlay } = useOverlay();
+  const { setActiveDetail } = useSection();
+  const { openSecondarySidebar } = useLayout();
   // To let any drawer communicate full state expansion globally:
   const isDrawerExpanded = typeof window !== 'undefined' && document.body.classList.contains('drawer-expanded');
   
@@ -1150,6 +1158,41 @@ export default function ConnectTopbar({
                             component="button"
                             onClick={() => {
                               handleCloseAll();
+                              if (r.kind === 'note' && r.raw) {
+                                const noteItem = r.raw;
+                                setActiveDetail({ type: 'note', id: r.id, data: noteItem });
+                                const isWide = typeof window !== 'undefined' && window.innerWidth >= 900;
+                                const NoteDetailSidebarComp = require('@/components/ui/NoteDetailSidebar').NoteDetailSidebar;
+                                if (isWide) {
+                                  openSidebar(
+                                    <NoteDetailSidebarComp note={noteItem} onClose={closeSidebar} />,
+                                    r.id,
+                                    { hideHeader: true }
+                                  );
+                                } else {
+                                  openOverlay(
+                                    <NoteDetailSidebarComp note={noteItem} onClose={closeOverlay} />
+                                  );
+                                }
+                                return;
+                              }
+                              if (r.kind === 'goal') {
+                                selectTask(r.id);
+                                const isWide = typeof window !== 'undefined' && window.innerWidth >= 900;
+                                const GoalObjectDetailComp = require('@/components/objects/GoalObjectDetail').GoalObjectDetail;
+                                if (isWide) {
+                                  openSidebar(
+                                    <GoalObjectDetailComp taskId={r.id} embedded onClose={closeSidebar} />,
+                                    r.id,
+                                    { hideHeader: true }
+                                  );
+                                } else {
+                                  openOverlay(
+                                    <GoalObjectDetailComp taskId={r.id} onClose={closeOverlay} embedded />
+                                  );
+                                }
+                                return;
+                              }
                               navPush(r.href);
                             }}
                             sx={{
