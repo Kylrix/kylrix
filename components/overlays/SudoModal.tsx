@@ -209,9 +209,16 @@ export default function SudoModal({
             const success = await unlockWithPasskey(user.$id, aborter.signal);
             if (aborter.signal.aborted || isManualSwitchRef.current) return;
             if (success) {
-                const rawMek = await crypto.subtle.exportKey("raw", ecosystemSecurity.getMasterKey()!);
-                await masterPassCrypto.importKey(rawMek);
-                await masterPassCrypto.unlockWithImportedKey();
+                try {
+                    const masterKey = ecosystemSecurity.getMasterKey();
+                    if (masterKey) {
+                        const rawMek = await crypto.subtle.exportKey("raw", masterKey);
+                        await masterPassCrypto.importKey(rawMek);
+                        await masterPassCrypto.unlockWithImportedKey();
+                    }
+                } catch (cryptoErr) {
+                    console.warn("[SudoModal] Crypto import warning:", cryptoErr);
+                }
 
                 toast.success("Verified");
                 handleSuccessWithSync();
