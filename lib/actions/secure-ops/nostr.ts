@@ -40,17 +40,29 @@ export async function listNostrIdentitiesAction(params?: { jwt?: string }): Prom
     });
 
     const rows = res.rows || [];
-    return rows.map((row: any) => ({
-      id: row.$id,
-      npub: row.npub,
-      label: row.label || '',
-      isDefault: Boolean(row.isDefault),
-      isDerived: Boolean(row.isDerived),
-      encryptedNsec: row.encryptedNsec,
-      iv: row.iv,
-      salt: row.salt,
-      createdAt: row.$createdAt
-    }));
+    if (rows.length === 0) return [];
+
+    // Check if any row has an explicit isDefault: true
+    const hasExplicitDefault = rows.some((r: any) => r.isDefault === true);
+
+    return rows.map((row: any, idx: number) => {
+      // If there's an explicit true, respect it; otherwise, the first/oldest row (or derived row) defaults to true
+      const isDefault = hasExplicitDefault
+        ? Boolean(row.isDefault)
+        : (row.isDefault !== false && (row.isDerived || idx === rows.length - 1 || idx === 0));
+
+      return {
+        id: row.$id,
+        npub: row.npub,
+        label: row.label || '',
+        isDefault: Boolean(isDefault),
+        isDerived: Boolean(row.isDerived),
+        encryptedNsec: row.encryptedNsec,
+        iv: row.iv,
+        salt: row.salt,
+        createdAt: row.$createdAt
+      };
+    });
   } catch (err: any) {
     console.error('[NostrOps] Failed to list Nostr identity rows:', err);
     return [];
