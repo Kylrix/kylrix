@@ -231,11 +231,12 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
             </p>
           ) : null}
 
-          {autoPreview && images.length > 0 ? (
+          {/* Media Container — Data Saver mode uses lightweight previews and on-demand reveal */}
+          {images.length > 0 ? (
             <div
               className={`mt-3 w-full max-w-full ${IMAGE_BAND_H} rounded-xl overflow-hidden border border-white/[0.06] bg-[#0A0908] grid ${
                 images.length > 1 ? 'grid-cols-2 gap-0.5' : 'grid-cols-1'
-              }`}
+              } relative group/media`}
               onClick={(e) => e.stopPropagation()}
             >
               {images.slice(0, 2).map((src) => (
@@ -244,20 +245,14 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
                   key={src}
                   src={src}
                   alt=""
-                  className="w-full h-full max-w-full object-cover"
+                  className="w-full h-full max-w-full object-cover transition-opacity duration-300"
                   loading="lazy"
-                  decoding={autoPlay ? 'auto' : 'async'}
-                  // Never autoplay media when user disabled it — static preview only
+                  decoding="async"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
               ))}
-            </div>
-          ) : autoPreview === false && images.length > 0 ? (
-            <div className="mt-3 w-full rounded-xl border border-dashed border-white/[0.12] bg-[#0A0908] px-3 py-2.5 flex items-center justify-between">
-              <span className="text-xs text-white/40">Media hidden — auto preview off</span>
-              <button type="button" onClick={(e) => { e.stopPropagation(); setFeedSettings((prev:any) => prev ? {...prev, autoPreviewMedia: true} as any : prev); }} className="text-xs font-bold text-[#F59E0B]">Show</button>
             </div>
           ) : null}
 

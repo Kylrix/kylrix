@@ -36,6 +36,7 @@ export type ConnectFeedSettings = {
   topics: string[];
   interests: string[];
   autoPreviewMedia: boolean;
+  dataSaverMode: boolean;
   showNostr: boolean;
   showEcosystem: boolean;
   showReplies: boolean;
@@ -61,8 +62,8 @@ export const NOSTR_CONFIG_DEFAULTS: NostrSettingsConfig = {
   performance: {
     eagerMediaLoading: false,
     autoplayVideos: false,
-    maxConcurrentRelaySockets: 6,
-    feedPageLimit: 25,
+    maxConcurrentRelaySockets: 3,
+    feedPageLimit: 15,
     cacheStrategy: 'indexedDB',
   },
   protocol: {
@@ -76,6 +77,7 @@ const DEFAULTS: ConnectFeedSettings = {
   topics: [],
   interests: ['builders', 'nostr', 'kylrix'],
   autoPreviewMedia: true,
+  dataSaverMode: true,
   showNostr: true,
   showEcosystem: true,
   showReplies: true,
@@ -139,6 +141,7 @@ function normalize(raw: any): ConnectFeedSettings {
     topics: Array.isArray(raw.topics) ? raw.topics.filter((t: any) => typeof t === 'string' && t.trim()).slice(0, 20) : [...DEFAULTS.topics],
     interests: Array.isArray(raw.interests) ? raw.interests.filter((t: any) => typeof t === 'string' && t.trim()).slice(0, 20) : [...DEFAULTS.interests],
     autoPreviewMedia: typeof raw.autoPreviewMedia === 'boolean' ? raw.autoPreviewMedia : DEFAULTS.autoPreviewMedia,
+    dataSaverMode: typeof raw.dataSaverMode === 'boolean' ? raw.dataSaverMode : DEFAULTS.dataSaverMode,
     showNostr: typeof raw.showNostr === 'boolean' ? raw.showNostr : DEFAULTS.showNostr,
     showEcosystem: typeof raw.showEcosystem === 'boolean' ? raw.showEcosystem : DEFAULTS.showEcosystem,
     showReplies: typeof raw.showReplies === 'boolean' ? raw.showReplies : DEFAULTS.showReplies,
