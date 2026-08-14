@@ -25,15 +25,33 @@ export function chatMessagesCacheKey(conversationId: string) {
 function isLikelyCiphertext(val: unknown): boolean {
   if (typeof val !== 'string' || !val.trim()) return false;
   const trimmed = val.trim();
+  // Fast negative checks for URLs, protocols, and standard text patterns
+  if (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('ftp://') ||
+    trimmed.startsWith('mailto:') ||
+    trimmed.startsWith('nostr:') ||
+    trimmed.startsWith('npub1') ||
+    trimmed.startsWith('nsec1') ||
+    trimmed.startsWith('note1')
+  ) {
+    return false;
+  }
   if (
     trimmed.startsWith('{"iv"') ||
     trimmed.startsWith('{"data"') ||
     trimmed.startsWith('{"ct"') ||
+    trimmed.startsWith('{"ciphertext"') ||
     trimmed.startsWith('[DECRYPTION_')
   ) {
     return true;
   }
-  return trimmed.length >= 24 && !trimmed.includes(' ');
+  // Pure base64 or hex ciphertext (never containing slashes after scheme or standard punctuation like :// or ?=)
+  if (trimmed.includes('://') || trimmed.includes('/') || trimmed.includes('?')) {
+    return false;
+  }
+  return trimmed.length >= 32 && !trimmed.includes(' ') && /^[A-Za-z0-9+/=_-]+$/.test(trimmed);
 }
 
 /** Strip decrypted secure fields before LocalEngine write. */
