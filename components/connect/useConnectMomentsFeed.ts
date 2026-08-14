@@ -8,6 +8,7 @@ import { fetchNostrEngagement } from '@/lib/nostr/thread';
 import { SocialService } from '@/lib/services/social';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/context/auth/AuthContext';
+import { getCachedNostrProfile, queueNostrProfileFetch } from '@/lib/nostr/metadata';
 
 export interface UnifiedFeedItem {
   id: string;
@@ -61,6 +62,8 @@ function buildItems(
     });
   }
 
+  const pubkeysToFetch: string[] = [];
+
   for (const event of nostrFeed) {
     if ((event as any).tags?.some((t: string[]) => t[0] === 'e')) continue;
 
@@ -68,6 +71,8 @@ function buildItems(
     let authorAvatar: string | undefined;
     let authorUsername: string | undefined;
     let isEco = false;
+
+    // 1. Check Kylrix platform identity first
     try {
       const npubStr = bytesToNpub(hexToBytes(event.pubkey));
       const profile = resolvedProfiles[npubStr];
@@ -77,8 +82,24 @@ function buildItems(
         authorAvatar = profile.avatarUrl;
         isEco = true;
       }
-    } catch {
-      /* keep fallback */
+    } catch {}
+
+    // 2. If not a Kylrix user, check Nostr NIP-01/05 metadata cache
+    if (!isEco) {
+      const nostrProf = getCachedNostrProfile(event.pubkey);
+      if (nostrProf) {
+        if (nostrProf.displayName || nostrProf.name) {
+          authorName = nostrProf.displayName || nostrProf.name || authorName;
+        }
+        if (nostrProf.username || nostrProf.nip05) {
+          authorUsername = nostrProf.nip05 || nostrProf.username;
+        }
+        if (nostrProf.picture) {
+          authorAvatar = nostrProf.picture;
+        }
+      } else {
+        pubkeysToFetch.push(event.pubkey);
+      }
     }
 
     rows.push({
@@ -94,6 +115,10 @@ function buildItems(
       repliesCount: nostrEngagement.replyCount[event.id] || 0,
       rawEvent: event,
     });
+  }
+
+  if (pubkeysToFetch.length) {
+    void queueNostrProfileFetch(pubkeysToFetch);
   }
 
   return rows.sort((a, b) => b.createdAt - a.createdAt).slice(0, MAX_FEED);
@@ -315,26 +340,52 @@ export function useConnectMomentsFeed() {
       nostrEngagement,
     );
     if (!incoming.length) return;
-    // Respect live settings — source toggles, curated topics/interests phrase search (tightly curated, adapt live, offline cached)
+    // Respect live settings — source toggles, curated topics/interests phrase search & spam reduction
     if (feedSettings) {
       const s: any = feedSettings;
       if (s.showEcosystem === false) incoming = incoming.filter(i => i.source !== 'ecosystem');
       if (s.showNostr === false) incoming = incoming.filter(i => i.source !== 'nostr');
       if (s.showReplies === false) incoming = incoming.filter(i => (i.repliesCount || 0) === 0);
+
       const phrases: string[] = [
         ...((s.topics as string[]) || []),
         ...((s.interests as string[]) || []),
-      ].map(t => String(t).toLowerCase()).filter(Boolean);
+      ].map(t => String(t).toLowerCase().replace(/^#/, '').trim()).filter(Boolean);
+
+      const spamKeywords = [
+        'presale', 'pump', 'solana contract', 'airdrop claim', 'moonshot', '100x gem',
+        'free btc', 't.me/', 'pumpex', 'ca:', 'buy now!', '0x', '$pepe', '$wif'
+      ];
+
+      // Filter out low-signal token shilling
+      incoming = incoming.filter(i => {
+        const text = (i.content || '').toLowerCase();
+        const isSpam = spamKeywords.some(w => text.includes(w));
+        return !isSpam;
+      });
+
       if (phrases.length) {
-        const before = incoming.length;
-        const filtered = incoming.filter(i => {
-          const hay = `${i.content || ''} ${i.authorName || ''} ${i.authorUsername || ''}`.toLowerCase();
-          return phrases.some(p => hay.includes(p));
+        // Score items by user declared interest match count
+        const scored = incoming.map(item => {
+          const hay = `${item.content || ''} ${item.authorName || ''} ${item.authorUsername || ''}`.toLowerCase();
+          const tags = Array.isArray(item.rawEvent?.tags)
+            ? item.rawEvent.tags.filter((t: any) => t[0] === 't').map((t: any) => String(t[1] || '').toLowerCase())
+            : [];
+          
+          let score = 0;
+          for (const phrase of phrases) {
+            if (tags.includes(phrase)) score += 3;
+            else if (hay.includes(phrase)) score += 1;
+          }
+          return { item, score };
         });
-        // If curated filter would empty feed, keep unfiltered to avoid dead feed (gradual adapt)
-        if (filtered.length) incoming = filtered;
-        else if (before > 0 && filtered.length === 0) {
-          // keep before
+
+        // Retain items matching declared interests or ecosystem content
+        const matched = scored.filter(s => s.score > 0 || s.item.source === 'ecosystem');
+        if (matched.length > 0) {
+          incoming = matched
+            .sort((a, b) => (b.score - a.score) || (b.item.createdAt - a.item.createdAt))
+            .map(s => s.item);
         }
       }
     }

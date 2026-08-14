@@ -5,19 +5,22 @@ import { NostrRelayPool, NostrEvent, signEvent } from '@/lib/nostr/nostr';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import { bytesToHex } from '@/lib/nostr/crypto';
 import * as secp256k1 from '@noble/secp256k1';
+import { getConnectFeedSettings, subscribeConnectFeedSettings, getNostrReadRelays, type ConnectFeedSettings } from '@/lib/connect/feed-settings';
+import { queueNostrProfileFetch } from '@/lib/nostr/metadata';
 import toast from 'react-hot-toast';
 
-const RELAYS = [
-  'wss://nos.lol',
-  'wss://purplepag.es',
+const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
+  'wss://nos.lol',
   'wss://relay.primal.net',
+  'wss://relay.nostr.band',
+  'wss://purplepag.es',
 ];
 
 const LOCAL_CACHE_KEY = 'kylrix_nostr_feed_cache';
-const FILTER_TAGS = ['sovereignengineering', 'localfirst', 'linux', 'openbuidl', 'nostr', 'bitcoin'];
-const FLUSH_MS = 2500;
-const MAX_EVENTS = 100;
+const BASE_TOPICS = ['sovereignengineering', 'localfirst', 'linux', 'openbuidl', 'nostr', 'bitcoin'];
+const FLUSH_MS = 1500;
+const MAX_EVENTS = 120;
 
 function mergeEvents(prev: NostrEvent[], incoming: NostrEvent[]): NostrEvent[] {
   if (!incoming.length) return prev;
@@ -41,6 +44,7 @@ export function useNostrFeed() {
   const { identity } = useNostrIdentity();
   const [feed, setFeed] = useState<NostrEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [feedSettings, setFeedSettings] = useState<ConnectFeedSettings | null>(null);
   const poolRef = useRef<NostrRelayPool | null>(null);
   const pendingRef = useRef<NostrEvent[]>([]);
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -50,11 +54,40 @@ export function useNostrFeed() {
     feedRef.current = feed;
   }, [feed]);
 
+  // Load live feed settings (user declared interests & topics)
+  useEffect(() => {
+    let active = true;
+    void getConnectFeedSettings().then((s) => {
+      if (active) setFeedSettings(s);
+    });
+    const unsub = subscribeConnectFeedSettings((s) => {
+      if (active) setFeedSettings(s);
+    });
+    return () => {
+      active = false;
+      unsub();
+    };
+  }, []);
+
+  const activeInterests = Array.from(
+    new Set([
+      ...(feedSettings?.interests || []).map((t) => t.toLowerCase().replace(/^#/, '').trim()),
+      ...(feedSettings?.topics || []).map((t) => t.toLowerCase().replace(/^#/, '').trim()),
+      ...BASE_TOPICS,
+    ].filter(Boolean))
+  );
+
   const flushPending = useCallback(() => {
     flushTimerRef.current = null;
     const batch = pendingRef.current;
     pendingRef.current = [];
     if (!batch.length) return;
+
+    // Queue author metadata lookup
+    const authorPubkeys = Array.from(new Set(batch.map((e) => e.pubkey).filter(Boolean)));
+    if (authorPubkeys.length) {
+      void queueNostrProfileFetch(authorPubkeys);
+    }
 
     setFeed((prev) => {
       const next = mergeEvents(prev, batch);
@@ -85,6 +118,10 @@ export function useNostrFeed() {
         const parsed = JSON.parse(cached) as NostrEvent[];
         if (Array.isArray(parsed) && parsed.length) {
           setFeed(parsed);
+          const authorPubkeys = Array.from(new Set(parsed.map((e) => e.pubkey).filter(Boolean)));
+          if (authorPubkeys.length) {
+            void queueNostrProfileFetch(authorPubkeys);
+          }
         }
       }
     } catch {
@@ -92,62 +129,85 @@ export function useNostrFeed() {
     }
   }, []);
 
+  // Connect and subscribe to relays based on user configured read relays & declared interests
   useEffect(() => {
-    setLoading(true);
-    const pool = new NostrRelayPool(RELAYS);
-    poolRef.current = pool;
-    pool.connect();
+    let cancelled = false;
+    let pool: NostrRelayPool | null = null;
 
-    pool.addListener(queueEvent);
-    pool.subscribe('kylrix-tech-feed', [{ kinds: [1], '#t': FILTER_TAGS, limit: 50 }]);
-    setLoading(false);
+    void (async () => {
+      setLoading(true);
+      const configuredRelays = await getNostrReadRelays();
+      const targetRelays = configuredRelays.length ? configuredRelays : DEFAULT_RELAYS;
+
+      if (cancelled) return;
+
+      pool = new NostrRelayPool(targetRelays);
+      poolRef.current = pool;
+      pool.addListener(queueEvent);
+      pool.connect();
+
+      // Dynamic subscription filter using user's explicit declared interests + base topics
+      const tagsToQuery = activeInterests.slice(0, 25);
+      pool.subscribe('kylrix-interest-feed', [
+        { kinds: [1], '#t': tagsToQuery, limit: 60 },
+      ]);
+      setLoading(false);
+    })();
 
     return () => {
+      cancelled = true;
       if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
-      pool.removeListener(queueEvent);
-      pool.unsubscribe('kylrix-tech-feed');
-      pool.close();
+      if (pool) {
+        pool.removeListener(queueEvent);
+        pool.unsubscribe('kylrix-interest-feed');
+        pool.close();
+      }
     };
-  }, [queueEvent]);
+  }, [queueEvent, activeInterests.join(',')]);
 
-  const publishPost = useCallback(async (content: string) => {
-    if (!identity) {
-      toast.error('Identity not unlocked');
-      return false;
-    }
+  const publishPost = useCallback(
+    async (content: string) => {
+      if (!identity) {
+        toast.error('Identity not unlocked');
+        return false;
+      }
 
-    if (!poolRef.current) {
-      toast.error('Not connected to relays');
-      return false;
-    }
+      if (!poolRef.current) {
+        toast.error('Not connected to relays');
+        return false;
+      }
 
-    try {
-      const unsignedEvent = {
-        pubkey: bytesToHex(secp256k1.schnorr.getPublicKey(identity.privateKeyBytes)),
-        created_at: Math.floor(Date.now() / 1000),
-        kind: 1,
-        tags: [['t', 'sovereignengineering'], ['client', 'kylrix']],
-        content};
+      try {
+        const primaryTag = activeInterests[0] || 'sovereignengineering';
+        const unsignedEvent = {
+          pubkey: bytesToHex(secp256k1.schnorr.getPublicKey(identity.privateKeyBytes)),
+          created_at: Math.floor(Date.now() / 1000),
+          kind: 1,
+          tags: [['t', primaryTag], ['client', 'kylrix']],
+          content,
+        };
 
-      const signed = signEvent(unsignedEvent, identity.privateKeyBytes);
-      await poolRef.current.publish(signed);
+        const signed = signEvent(unsignedEvent, identity.privateKeyBytes);
+        await poolRef.current.publish(signed);
 
-      setFeed((prev) => {
-        const next = mergeEvents(prev, [signed]);
-        persistFeed(next);
-        return next;
-      });
+        setFeed((prev) => {
+          const next = mergeEvents(prev, [signed]);
+          persistFeed(next);
+          return next;
+        });
 
-      toast.success('Post published to Nostr relays!');
-      return true;
-    } catch (err) {
-      console.error('Failed to publish event:', err);
-      toast.error('Failed to publish post');
-      return false;
-    }
-  }, [identity]);
+        toast.success('Post published to Nostr relays!');
+        return true;
+      } catch (err) {
+        console.error('Failed to publish event:', err);
+        toast.error('Failed to publish post');
+        return false;
+      }
+    },
+    [identity, activeInterests],
+  );
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
     if (flushTimerRef.current) {
       clearTimeout(flushTimerRef.current);
       flushTimerRef.current = null;
@@ -158,17 +218,24 @@ export function useNostrFeed() {
     if (poolRef.current) {
       setLoading(true);
       poolRef.current.close();
+      const configuredRelays = await getNostrReadRelays();
+      const targetRelays = configuredRelays.length ? configuredRelays : DEFAULT_RELAYS;
+      poolRef.current = new NostrRelayPool(targetRelays);
+      poolRef.current.addListener(queueEvent);
       poolRef.current.connect();
-      poolRef.current.subscribe('kylrix-tech-feed', [{ kinds: [1], '#t': FILTER_TAGS, limit: 50 }]);
+      const tagsToQuery = activeInterests.slice(0, 25);
+      poolRef.current.subscribe('kylrix-interest-feed', [
+        { kinds: [1], '#t': tagsToQuery, limit: 60 },
+      ]);
       setLoading(false);
-      toast.success('Reconnecting to Nostr relays...');
     }
-  }, [flushPending]);
+  }, [flushPending, queueEvent, activeInterests]);
 
   return {
     feed,
     loading,
     publishPost,
     refresh,
-    filterTags: FILTER_TAGS};
+    filterTags: activeInterests,
+  };
 }
