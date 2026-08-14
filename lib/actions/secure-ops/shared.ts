@@ -393,11 +393,6 @@ export async function getRowCached(params: { databaseId: string; tableId: string
 export async function getActor(jwt?: string) {
   try {
     const actor = await Registry.getAuth().getActor(jwt);
-    if (actor) {
-        console.log('[secure-ops] Actor established via AuthPort:', actor.$id, actor.email);
-    } else {
-        console.warn('[secure-ops] Actor discovery via AuthPort returned null');
-    }
     return actor;
   } catch (err) {
     console.error('[secure-ops] getActor exception:', err);

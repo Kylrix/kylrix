@@ -144,7 +144,7 @@ export function useNostrIdentity() {
     }
   }, [user?.$id]);
 
-  const importCustomNsec = useCallback(async (customNsec: string, label?: string): Promise<NostrIdentity | null> => {
+  const importCustomNsec = useCallback(async (customNsec: string, label?: string, makeDefault: boolean = false): Promise<NostrIdentity | null> => {
     if (!user?.$id) return null;
     const clean = customNsec.trim();
     if (!clean) throw new Error('Private key cannot be empty');
@@ -181,7 +181,7 @@ export function useNostrIdentity() {
       salt: 'mek-derived-salt',
       label: label || `Imported (${npub.slice(0, 10)}…)`,
       isDerived: false,
-      makeDefault: true,
+      makeDefault,
       jwt: jwtToken,
     });
 
@@ -190,12 +190,14 @@ export function useNostrIdentity() {
       npub,
       nsec,
       label: label || `Imported (${npub.slice(0, 10)}…)`,
-      isDefault: true,
+      isDefault: makeDefault,
       isDerived: false,
       privateKeyBytes: privKeyBytes,
     };
 
-    setIdentity(newIdentity);
+    if (makeDefault) {
+      setIdentity(newIdentity);
+    }
     await loadOrMintIdentity();
     return newIdentity;
   }, [user?.$id, loadOrMintIdentity]);

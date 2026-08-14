@@ -63,6 +63,7 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack, isExpande
   const [newRelayRead, setNewRelayRead] = useState(true);
   const [newRelayWrite, setNewRelayWrite] = useState(true);
   const [newIndexerUrl, setNewIndexerUrl] = useState('');
+  const [makeDefaultOnImport, setMakeDefaultOnImport] = useState(false);
 
   useEffect(() => {
     if (!isVaultLocked && !identity) {
@@ -78,11 +79,12 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack, isExpande
       if (isVaultLocked) {
         await unlockAndLoad();
       }
-      await importCustomNsec(clean, importLabel.trim() || undefined);
+      await importCustomNsec(clean, importLabel.trim() || undefined, makeDefaultOnImport);
       setImportNsec('');
       setImportLabel('');
+      setMakeDefaultOnImport(false);
       setShowImport(false);
-      toast.success('Custom Nostr account added and set as active!');
+      toast.success(makeDefaultOnImport ? 'Nostr account imported and set as default!' : 'Nostr account added to your accounts list.');
     } catch (err: any) {
       toast.error(err?.message || 'Failed to import Nostr account');
     } finally {
@@ -420,6 +422,15 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack, isExpande
                 placeholder="nsec1... or 64-char hex private key"
                 className="w-full h-8 rounded-lg bg-[#0A0908] border border-white/[0.06] px-3 text-xs font-mono text-white placeholder:text-white/30 focus:outline-none focus:border-[#F59E0B]/40"
               />
+              <label className="flex items-center gap-2 text-xs text-white/70 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={makeDefaultOnImport}
+                  onChange={(e) => setMakeDefaultOnImport(e.target.checked)}
+                  className="rounded border-white/20 bg-[#0A0908] text-[#F59E0B] focus:ring-0 cursor-pointer"
+                />
+                <span>Set as default / active account on import</span>
+              </label>
               <div className="flex items-center justify-end gap-2 pt-1">
                 <button
                   type="button"
@@ -434,7 +445,7 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack, isExpande
                   disabled={importing || !importNsec.trim()}
                   className="h-8 px-4 rounded-lg bg-[#F59E0B] text-black text-xs font-black disabled:opacity-40 hover:bg-amber-400 transition-colors"
                 >
-                  {importing ? 'Importing & Encrypting…' : 'Import & Switch'}
+                  {importing ? 'Importing & Encrypting…' : makeDefaultOnImport ? 'Import & Set Default' : 'Import Account'}
                 </button>
               </div>
             </div>
