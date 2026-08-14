@@ -24,7 +24,6 @@ import {
     ShieldCheck, 
     Lock, 
     Pin,
-    RefreshCw,
     Sparkles,
 } from 'lucide-react';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
@@ -533,7 +532,7 @@ export const ChatList = ({
         try {
             const results = await Promise.race([
                 listthreadNoteChats(),
-                new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error('thread fetch timeout')), 4000)),
+                new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error('thread fetch timeout')), 15000)),
             ]).catch((e) => {
                 console.warn('[ChatList] thread fetch timed out or failed:', (e as any)?.message);
                 return null;
@@ -958,7 +957,7 @@ export const ChatList = ({
                 ChatService.getConversations(user.$id, {
                     forceRefresh: options?.forceRefresh,
                 }),
-                new Promise<never>((_, reject) => setTimeout(() => reject(new Error('conversations fetch timeout')), 4000)),
+                new Promise<never>((_, reject) => setTimeout(() => reject(new Error('conversations fetch timeout')), 15000)),
             ]).catch((e) => {
                 console.warn('[ChatList] conversations fetch timed out or failed:', (e as any)?.message);
                 return null;
@@ -1321,15 +1320,17 @@ export const ChatList = ({
             void loadConversations({ silent: conversationsRef.current.length > 0 });
         }
 
-        const conversationChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS}.documents`;
-        const messageChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`;
+        const conversationChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS}.rows`;
+        const messageChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.rows`;
+        const legacyConvChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS}.documents`;
+        const legacyMsgChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`;
 
         if (skipSecureLoad) {
             return;
         }
 
         const subscription: any = realtime.subscribe(
-            [conversationChannel, messageChannel],
+            [conversationChannel, messageChannel, legacyConvChannel, legacyMsgChannel],
             async (response) => {
             const payload = response.payload;
             const isConversationEvent = Array.isArray(payload?.participants);
@@ -1450,8 +1451,9 @@ export const ChatList = ({
         if (!user || skipThreadsLoad || activeTab !== 'public') return;
         void loadthreadConversations({ silent: threadConversations.length > 0 || peekThreadsListMemory().length > 0 });
 
-        const noteChannel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents`;
-        const subscription: any = realtime.subscribe([noteChannel], () => {
+        const noteChannel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.tables.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.rows`;
+        const legacyNoteChannel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents`;
+        const subscription: any = realtime.subscribe([noteChannel, legacyNoteChannel], () => {
             void loadthreadConversations({ silent: true });
         });
         return () => {
@@ -1547,16 +1549,12 @@ export const ChatList = ({
                         </span>
                         <div className="space-y-2">
                             {searchResults.map((u) => {
-                                const targetId = u.userId || u.$id;
-                                const hasChat = conversations.some(c => c.type === 'direct' && c.participants?.includes(targetId)) || threadConversations.some(c => {
-                                        let metaObj: any = {};
-                                        try { metaObj = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata || {}); } catch {}
-                                        const participants = c.collaborators || metaObj.participants || [];
-                                        return participants.includes(targetId);
-                                    });
+                            {searchResults.map((u: any) => {
+                                const hasChat = conversations.some(c => c.participants?.includes(u.userId || u.$id));
                                 return (
-                                    <div key={u.$id} className="w-full">
+                                    <div key={u.$id || u.userId} className="relative">
                                         <button
+                                            type="button"
                                             onClick={() => startChat(u)}
                                             className="w-full flex items-center gap-4 p-3 rounded-2xl bg-[#161412] border border-[#1C1A18] hover:bg-[#1F1D1B] hover:border-[#F59E0B] transition-all text-left"
                                         >
@@ -1584,26 +1582,6 @@ export const ChatList = ({
                         <div className="my-6 border-t border-[#34322F]" />
                     </div>
                 )}
-
-                <div className="flex items-center justify-end px-1 pb-2">
-                    <button
-                        type="button"
-                        onClick={() => {
-                            // Live refresh via permission-safe relay: force network, bypass local cache, keep realtime subscription alive
-                            ChatService.invalidateConversationsListCache(user?.$id);
-                            void loadConversations({ forceRefresh: true });
-                            void loadthreadConversations({ forceRefresh: true } as any);
-                            toast.success('Chat refreshed');
-                        }}
-                        disabled={loading || loadingthread}
-                        className="inline-flex items-center gap-1.5 rounded-xl border border-white/[0.06] bg-[#161412] px-3 py-1.5 text-xs font-bold text-white/70 hover:text-white hover:bg-[#1C1A18] hover:border-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        aria-label="Refresh chat"
-                        title="Refresh chat live"
-                    >
-                        <RefreshCw size={12} className={loading || loadingthread ? 'animate-spin' : ''} />
-                        Refresh
-                    </button>
-                </div>
 
                 {(loading || loadingthread) && unifiedItems.length === 0 && !showGlobalResults ? (
                         <div className="p-4 space-y-3 animate-pulse">
