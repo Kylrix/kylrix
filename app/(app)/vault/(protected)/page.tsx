@@ -17,6 +17,7 @@ import { useSudo } from '@/context/SudoContext';
 import { MultiSectionContainer, useSection } from '@/context/SectionContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, RefreshCw, Lock } from 'lucide-react';
+import { useFAB } from '@/context/FABContext';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { TOTPPageContent } from './totp/page';
 
@@ -43,6 +44,7 @@ function DashboardPageContent() {
   const { openOverlay, closeOverlay } = useOverlay();
   const isDesktop = useIsDesktop();
   const { setActiveDetail } = useSection();
+  const { setConfiguration, resetConfiguration } = useFAB();
   
   // Master password modal — only auto-open when unlock-on-demand is off
   const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(false);
@@ -104,6 +106,21 @@ function DashboardPageContent() {
     setDialogType("login");
     setShowDialog(true);
   }, [isVaultUnlocked, requestSudo]);
+
+  useEffect(() => {
+    if (activeTab === 'secrets') {
+      setConfiguration({
+        isVisible: true,
+        mainColor: '#10B981',
+        mainIcon: <Plus size={26} strokeWidth={2.5} />,
+        onMainClick: handleAdd,
+        actions: [
+          { id: 'add-secret', label: 'ADD SECRET', icon: <Plus size={20} />, onClick: handleAdd }
+        ]
+      });
+      return () => resetConfiguration();
+    }
+  }, [activeTab, handleAdd, setConfiguration, resetConfiguration]);
 
   const requireUnlock = useCallback(
     (onSuccess: () => void) => {
