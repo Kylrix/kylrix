@@ -34,6 +34,8 @@ type Props = {
   userId: string;
   emailVerified?: boolean;
   loginMethod?: MfaLoginMethod;
+  hasPasskeys?: boolean;
+  onAddPasskey?: () => void;
   onChanged?: () => void;
   mode?: 'setup' | 'reminder';
 };
@@ -54,8 +56,8 @@ function MethodRow({
   icon: ReactNode;
   title: string;
   on: boolean;
-  actionLabel: string;
-  onAction: () => void;
+  actionLabel?: string;
+  onAction?: () => void;
   disabled?: boolean;
   danger?: boolean;
 }) {
@@ -70,18 +72,20 @@ function MethodRow({
           {on ? 'On' : 'Off'}
         </p>
       </div>
-      <button
-        type="button"
-        onClick={onAction}
-        disabled={disabled}
-        className={`py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border-none disabled:opacity-40 ${
-          danger
-            ? 'bg-red-500/15 text-red-400'
-            : 'bg-[#6366F1] text-white'
-        }`}
-      >
-        {actionLabel}
-      </button>
+      {actionLabel && onAction ? (
+        <button
+          type="button"
+          onClick={onAction}
+          disabled={disabled}
+          className={`py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border-none disabled:opacity-40 ${
+            danger
+              ? 'bg-red-500/15 text-red-400'
+              : 'bg-[#6366F1] text-white'
+          }`}
+        >
+          {actionLabel}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -94,6 +98,8 @@ export function TwoFactorPanel({
   userId,
   emailVerified = false,
   loginMethod = 'password',
+  hasPasskeys = false,
+  onAddPasskey,
   onChanged,
   mode = 'setup',
 }: Props) {
@@ -101,7 +107,6 @@ export function TwoFactorPanel({
   const [vaultUnlocked, setVaultUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
   const [emailEnabled, setEmailEnabled] = useState(false);
   const [totpEnabled, setTotpEnabled] = useState(false);
-  const [passkeyEnabled, setPasskeyEnabled] = useState(false);
   const [accountMfaOn, setAccountMfaOn] = useState(false);
   const [step, setStep] = useState<Step>('manage');
   const [totpSecret, setTotpSecret] = useState('');
@@ -112,7 +117,8 @@ export function TwoFactorPanel({
   const [storedRecoveryCodes, setStoredRecoveryCodes] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const isTwoFactorOn = accountMfaOn || (emailEnabled && totpEnabled) || (accountMfaOn && passkeyEnabled);
+  const passkeyEnabled = Boolean(accountMfaOn && hasPasskeys && (totpEnabled || emailEnabled));
+  const isTwoFactorOn = Boolean(accountMfaOn && (totpEnabled || emailEnabled));
 
   const refreshFactors = useCallback(async () => {
     try {
@@ -442,20 +448,21 @@ export function TwoFactorPanel({
               icon={<Fingerprint className="w-4 h-4" />}
               title="Passkey 2FA"
               on={passkeyEnabled}
-              actionLabel={passkeyEnabled ? 'Active' : 'Configure'}
+              actionLabel={!hasPasskeys ? 'Configure' : undefined}
               disabled={loading}
-              onAction={() => {
-                if (passkeyEnabled) {
-                  toast.success('Passkey 2FA is active on your account');
-                } else {
-                  setStep('passkey');
-                }
-              }}
+              onAction={
+                !hasPasskeys
+                  ? () => {
+                      if (onAddPasskey) onAddPasskey();
+                      else setStep('passkey');
+                    }
+                  : undefined
+              }
             />
 
             <MethodRow
               icon={<Smartphone className="w-4 h-4" />}
-              title="Authenticator"
+              title="TOTP 2FA"
               on={totpEnabled}
               actionLabel={totpEnabled ? 'Remove' : 'Add'}
               danger={totpEnabled}
@@ -469,7 +476,7 @@ export function TwoFactorPanel({
 
             <MethodRow
               icon={<Mail className="w-4 h-4" />}
-              title="Email"
+              title="Email 2FA"
               on={emailEnabled}
               actionLabel={emailEnabled ? 'Remove' : 'Enable'}
               danger={emailEnabled}
@@ -483,10 +490,14 @@ export function TwoFactorPanel({
             <MethodRow
               icon={<KeyRound className="w-4 h-4" />}
               title="Recovery codes"
-              on={Boolean(storedRecoveryCodes?.length || (isTwoFactorOn && accountMfaOn))}
-              actionLabel={storedRecoveryCodes?.length || isTwoFactorOn ? 'Show' : 'Not Saved'}
-              disabled={loading || (!storedRecoveryCodes?.length && !isTwoFactorOn)}
-              onAction={() => void showStoredRecoveryCodes()}
+              on={Boolean(isTwoFactorOn && storedRecoveryCodes?.length)}
+              actionLabel={isTwoFactorOn && storedRecoveryCodes?.length ? 'Show' : undefined}
+              disabled={loading}
+              onAction={
+                isTwoFactorOn && storedRecoveryCodes?.length
+                  ? () => void showStoredRecoveryCodes()
+                  : undefined
+              }
             />
 
             <div className="pt-2 space-y-2">

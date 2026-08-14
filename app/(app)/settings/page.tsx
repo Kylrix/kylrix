@@ -176,6 +176,8 @@ function SettingsPageInner() {
             <TwoFactorPanel
                 userId={user.$id}
                 loginMethod="password"
+                hasPasskeys={passkeyEntries.length > 0}
+                onAddPasskey={() => setPasskeySetupOpen(true)}
                 onClose={close}
                 onChanged={() => {
                     void refreshMfaFactors();

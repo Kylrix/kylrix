@@ -293,7 +293,7 @@ export function SecurityTab({
         <button type="button" onClick={onManageMfa} className="w-full text-left cursor-pointer border-none bg-transparent p-0">
           <Row
             icon={<Smartphone className="w-4 h-4" />}
-            title="Authenticator (TOTP)"
+            title="TOTP 2FA"
             meta="Google Authenticator, 1Password, Aegis"
             trailing={
               <span
@@ -309,7 +309,7 @@ export function SecurityTab({
         <button type="button" onClick={onManageMfa} className="w-full text-left cursor-pointer border-none bg-transparent p-0">
           <Row
             icon={<Mail className="w-4 h-4" />}
-            title="Email"
+            title="Email 2FA"
             meta="One-time 2FA codes sent to your email"
             trailing={
               <span
