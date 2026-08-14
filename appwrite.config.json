@@ -10373,9 +10373,11 @@
                     "type": "unique",
                     "status": "available",
                     "columns": [
-                        "userId"
+                        "userId",
+                        "npub"
                     ],
                     "orders": [
+                        "ASC",
                         "ASC"
                     ]
                 }
