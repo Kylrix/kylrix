@@ -144,13 +144,20 @@ function SettingsPageInner() {
     const refreshMfaFactors = useCallback(async () => {
         if (!user?.$id) return;
         try {
-            const factors = await AppwriteService.getMfaFactors();
+            const { listCurrentMfaFactors } = await import('@/lib/mfa');
+            const factors = await listCurrentMfaFactors();
             setMfaFactors(factors);
-            setAccountMfaEnabled(Boolean(factors?.email && factors?.totp));
+            setAccountMfaEnabled(Boolean(factors?.mfaEnabled));
         } catch (err) {
             console.warn('Failed to load MFA factors:', err);
         }
     }, [user?.$id]);
+
+    useEffect(() => {
+        if (user?.$id) {
+            void refreshMfaFactors();
+        }
+    }, [user?.$id, refreshMfaFactors]);
 
     const openTwoFactorSurface = useCallback(() => {
         if (!user?.$id) return;

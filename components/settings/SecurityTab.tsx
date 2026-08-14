@@ -66,7 +66,7 @@ type Props = {
   onAddPasskey: () => void;
   onRemovePasskey: (id: string) => void;
   accountMfaEnabled: boolean;
-  mfaFactors: { email?: boolean; totp?: boolean } | null;
+  mfaFactors: { email?: boolean; totp?: boolean; passkey?: boolean; mfaEnabled?: boolean } | null;
   onManageMfa: () => void;
 };
 
@@ -254,26 +254,38 @@ export function SecurityTab({
       <Section
         title="2FA"
         action={
-          <button
-            type="button"
-            onClick={onManageMfa}
-            className="py-1.5 px-3 rounded-lg bg-[#6366F1] text-white text-[11px] font-extrabold cursor-pointer border-none"
-          >
-            {accountMfaEnabled ? 'Manage' : 'Set up'}
-          </button>
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
+                accountMfaEnabled || mfaFactors?.mfaEnabled
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                  : 'bg-white/5 border-white/10 text-white/40'
+              }`}
+            >
+              {accountMfaEnabled || mfaFactors?.mfaEnabled ? '2FA ON' : '2FA OFF'}
+            </span>
+            <button
+              type="button"
+              onClick={onManageMfa}
+              className="py-1.5 px-3 rounded-lg bg-[#6366F1] text-white text-[11px] font-extrabold cursor-pointer border-none"
+            >
+              Manage
+            </button>
+          </div>
         }
       >
         <button type="button" onClick={onManageMfa} className="w-full text-left cursor-pointer border-none bg-transparent p-0">
           <Row
-            icon={<Mail className="w-4 h-4" />}
-            title="Email codes"
+            icon={<Fingerprint className="w-4 h-4" />}
+            title="Passkey 2FA"
+            meta="Hardware biometrics / Security keys for 2FA"
             trailing={
               <span
                 className={`text-[10px] font-extrabold uppercase tracking-wide ${
-                  mfaFactors?.email ? 'text-emerald-400' : 'text-white/35'
+                  mfaFactors?.passkey ? 'text-emerald-400' : 'text-white/35'
                 }`}
               >
-                {mfaFactors?.email ? 'On' : 'Off'}
+                {mfaFactors?.passkey ? 'On' : 'Off'}
               </span>
             }
           />
@@ -281,7 +293,8 @@ export function SecurityTab({
         <button type="button" onClick={onManageMfa} className="w-full text-left cursor-pointer border-none bg-transparent p-0">
           <Row
             icon={<Smartphone className="w-4 h-4" />}
-            title="Authenticator"
+            title="Authenticator (TOTP)"
+            meta="Google Authenticator, 1Password, Aegis"
             trailing={
               <span
                 className={`text-[10px] font-extrabold uppercase tracking-wide ${
@@ -289,6 +302,22 @@ export function SecurityTab({
                 }`}
               >
                 {mfaFactors?.totp ? 'On' : 'Off'}
+              </span>
+            }
+          />
+        </button>
+        <button type="button" onClick={onManageMfa} className="w-full text-left cursor-pointer border-none bg-transparent p-0">
+          <Row
+            icon={<Mail className="w-4 h-4" />}
+            title="Email codes"
+            meta="One-time challenge codes sent to your email"
+            trailing={
+              <span
+                className={`text-[10px] font-extrabold uppercase tracking-wide ${
+                  mfaFactors?.email ? 'text-emerald-400' : 'text-white/35'
+                }`}
+              >
+                {mfaFactors?.email ? 'On' : 'Off'}
               </span>
             }
           />

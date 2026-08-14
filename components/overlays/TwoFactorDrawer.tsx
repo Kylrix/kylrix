@@ -23,6 +23,7 @@ import {
   Mail,
   Smartphone,
   KeyRound,
+  Fingerprint,
   ArrowLeft,
 } from 'lucide-react';
 
@@ -35,7 +36,7 @@ type Props = {
   mode?: 'setup' | 'reminder';
 };
 
-type Step = 'manage' | 'recovery' | 'email-verify' | 'totp' | 'recovery-view';
+type Step = 'manage' | 'recovery' | 'email-verify' | 'totp' | 'passkey' | 'recovery-view';
 
 const RECOVERY_HINT = 'Save these codes somewhere safe. They are shown once.';
 
@@ -89,7 +90,7 @@ function MethodRow({
 export function TwoFactorPanel({
   onClose,
   userId,
-  emailVerified = true,
+  emailVerified = false,
   loginMethod = 'password',
   onChanged,
   mode = 'setup',
@@ -98,6 +99,8 @@ export function TwoFactorPanel({
   const [vaultUnlocked, setVaultUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
   const [emailEnabled, setEmailEnabled] = useState(false);
   const [totpEnabled, setTotpEnabled] = useState(false);
+  const [passkeyEnabled, setPasskeyEnabled] = useState(false);
+  const [accountMfaOn, setAccountMfaOn] = useState(false);
   const [step, setStep] = useState<Step>('manage');
   const [totpSecret, setTotpSecret] = useState('');
   const [totpUri, setTotpUri] = useState('');
@@ -107,17 +110,21 @@ export function TwoFactorPanel({
   const [storedRecoveryCodes, setStoredRecoveryCodes] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const isTwoFactorOn = emailEnabled && totpEnabled;
+  const isTwoFactorOn = accountMfaOn || (emailEnabled && totpEnabled) || (accountMfaOn && passkeyEnabled);
 
   const refreshFactors = useCallback(async () => {
     try {
       const factors = await listCurrentMfaFactors();
       setEmailEnabled(Boolean(factors.email));
       setTotpEnabled(Boolean(factors.totp));
+      setPasskeyEnabled(Boolean(factors.passkey));
+      setAccountMfaOn(Boolean(factors.mfaEnabled));
       return factors;
     } catch {
       setEmailEnabled(false);
       setTotpEnabled(false);
+      setPasskeyEnabled(false);
+      setAccountMfaOn(false);
       return null;
     }
   }, []);
@@ -401,15 +408,17 @@ export function TwoFactorPanel({
             ) : null}
 
             <MethodRow
-              icon={<Mail className="w-4 h-4" />}
-              title="Email codes"
-              on={emailEnabled}
-              actionLabel={emailEnabled ? 'Remove' : 'Enable'}
-              danger={emailEnabled}
-              disabled={loading || (!emailEnabled && !vaultUnlocked)}
+              icon={<Fingerprint className="w-4 h-4" />}
+              title="Passkey 2FA"
+              on={passkeyEnabled}
+              actionLabel={passkeyEnabled ? 'Active' : 'Configure'}
+              disabled={loading || !vaultUnlocked}
               onAction={() => {
-                if (emailEnabled) void removeEmail();
-                else setStep('email-verify');
+                if (passkeyEnabled) {
+                  toast.success('Passkey 2FA is active on this device');
+                } else {
+                  setStep('passkey');
+                }
               }}
             />
 
@@ -424,6 +433,19 @@ export function TwoFactorPanel({
                 if (totpEnabled) void removeTotp();
                 else if (emailEnabled) void startTotpSetup();
                 else void beginSetup();
+              }}
+            />
+
+            <MethodRow
+              icon={<Mail className="w-4 h-4" />}
+              title="Email codes"
+              on={emailEnabled}
+              actionLabel={emailEnabled ? 'Remove' : 'Enable'}
+              danger={emailEnabled}
+              disabled={loading || (!emailEnabled && !vaultUnlocked)}
+              onAction={() => {
+                if (emailEnabled) void removeEmail();
+                else setStep('email-verify');
               }}
             />
 
@@ -531,6 +553,52 @@ export function TwoFactorPanel({
                 className="w-full py-3 rounded-[14px] bg-[#161412] border border-white/[0.08] text-white font-bold text-xs cursor-pointer"
               >
                 I verified — continue
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 'passkey' && (
+          <div className="space-y-3">
+            <div className="rounded-[16px] bg-[#0A0908] border border-white/[0.04] p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.06] text-[#6366F1]">
+                  <Fingerprint className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">Hardware Passkey 2FA</h4>
+                  <p className="text-xs text-white/40 font-satoshi">Biometric and Security Key verification</p>
+                </div>
+              </div>
+              <p className="text-xs text-white/50 font-satoshi leading-relaxed">
+                Use your device TouchID, FaceID, Windows Hello, or physical YubiKey as a second factor for two-factor challenges.
+              </p>
+              <div className="p-3 rounded-xl bg-[#161412] border border-white/[0.06] flex items-center justify-between">
+                <span className="text-xs text-white/80 font-bold">Registered on this device:</span>
+                <span className={`text-xs font-black uppercase ${passkeyEnabled ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {passkeyEnabled ? 'Ready' : 'Not Registered'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    await enableAccountMfa();
+                    await refreshFactors();
+                    notifyChanged();
+                    toast.success('Passkey 2FA enabled on your account.');
+                    setStep('manage');
+                  } catch (err: any) {
+                    setError(err?.message || 'Could not enable 2FA');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading}
+                className="w-full py-3.5 rounded-[14px] bg-[#6366F1] text-white font-bold text-sm cursor-pointer border-none disabled:opacity-50"
+              >
+                {loading ? 'Activating…' : 'Activate 2FA with Passkey'}
               </button>
             </div>
           </div>

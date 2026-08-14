@@ -5,12 +5,14 @@ export const MFA_RECOVERY_VAULT_NAME = 'kylrix:mfa-recovery';
 export const MFA_RECOVERY_KIND = 'kylrix-mfa-recovery';
 
 export type MfaLoginMethod = 'email-otp' | 'oauth2' | 'password' | 'unknown';
-export type MfaChallengeFactor = 'email' | 'totp' | 'recoverycode';
+export type MfaChallengeFactor = 'email' | 'totp' | 'recoverycode' | 'passkey';
 
 export type MfaFactorsLike = {
   email?: boolean;
   totp?: boolean;
   phone?: boolean;
+  passkey?: boolean;
+  mfaEnabled?: boolean;
 };
 
 type SessionLike = {
@@ -37,11 +39,14 @@ function normalizeMfaFactors(value: unknown): MfaFactorsLike | null {
   return {
     email: Boolean(factors.email),
     totp: Boolean(factors.totp),
-    phone: Boolean(factors.phone)};
+    phone: Boolean(factors.phone),
+    passkey: Boolean(factors.passkey || factors.custom),
+  };
 }
 
 export function isMfaFullyEnabled(factors?: MfaFactorsLike | null): boolean {
-  return Boolean(factors?.email && factors?.totp);
+  if (!factors) return false;
+  return Boolean(factors.email || factors.totp || factors.passkey || factors.phone);
 }
 
 export function isMfaRequiredError(error: unknown): boolean {
@@ -78,8 +83,35 @@ export function getPreferredLoginChallengeFactor(
 }
 
 export async function listCurrentMfaFactors(): Promise<MfaFactorsLike> {
-  const factors = await account.listMfaFactors();
-  return normalizeMfaFactors(factors) || { email: false, totp: false, phone: false };
+  try {
+    const [factorsRes, userDoc] = await Promise.all([
+      account.listMfaFactors().catch(() => null),
+      account.get().catch(() => null),
+    ]);
+
+    const factors = normalizeMfaFactors(factorsRes) || { email: false, totp: false, phone: false };
+    const mfaEnabled = Boolean(userDoc?.mfa);
+
+    // Check passkey presence for 2FA capability
+    let passkey = false;
+    if (userDoc?.$id) {
+      try {
+        const { KeychainService } = await import('@/lib/appwrite/vault-service');
+        const entries = await KeychainService.listKeychainEntries(userDoc.$id);
+        passkey = entries.some((e: any) => e.type === 'passkey');
+      } catch {}
+    }
+
+    return {
+      email: Boolean(factors.email),
+      totp: Boolean(factors.totp),
+      phone: Boolean(factors.phone),
+      passkey,
+      mfaEnabled,
+    };
+  } catch {
+    return { email: false, totp: false, phone: false, passkey: false, mfaEnabled: false };
+  }
 }
 
 export async function assertAuthenticatedAccount(
