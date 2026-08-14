@@ -205,11 +205,45 @@ export default function CredentialDetail({
 
   if (!credential) return null;
 
-  const handleCopy = (value: string, field: string) => {
-    if (!value) return;
-    navigator.clipboard.writeText(value);
-    setCopied(field);
-    setTimeout(() => setCopied(null), 1500);
+  const handleCopy = async (value: string | undefined | null, field: string) => {
+    let textToCopy = value ?? '';
+    if (!textToCopy) {
+      toast.error('Nothing to copy.');
+      return;
+    }
+
+    // If still ciphertext, attempt on-demand decryption
+    if (looksEncrypted(textToCopy)) {
+      try {
+        const { decryptField, masterPassCrypto } = await import('@/lib/masterpass-crypto');
+        if (masterPassCrypto.isVaultUnlocked()) {
+          const decrypted = await decryptField(textToCopy);
+          if (decrypted) textToCopy = decrypted;
+        }
+      } catch {}
+    }
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = textToCopy;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopied(field);
+      toast.success('Copied to clipboard');
+      setTimeout(() => setCopied(null), 1500);
+    } catch (err: any) {
+      console.error('Copy failed:', err);
+      toast.error('Failed to copy to clipboard');
+    }
   };
 
   let customFields: any[] = [];
@@ -438,7 +472,7 @@ export default function CredentialDetail({
             <FieldLabel label="Username / Email" />
             <FieldValue
               fieldId="username"
-              onClick={() => handleCopy(looksEncrypted(liveCredential.username) ? '' : (liveCredential.username || ''), "username")}
+              onClick={() => handleCopy(liveCredential.username || credential.username, "username")}
             >
               {looksEncrypted(liveCredential.username) ? '••••••••' : (liveCredential.username || "N/A")}
             </FieldValue>
@@ -472,7 +506,7 @@ export default function CredentialDetail({
               onClick={() =>
                 requestSudo({
                   onSuccess: () =>
-                    handleCopy(looksEncrypted(liveCredential.password) ? '' : (liveCredential.password || ''), "password"),
+                    handleCopy(liveCredential.password || credential.password, "password"),
                 })
               }
               className={showPassword ? 'text-white' : 'text-white/40 tracking-[0.3em]'}
@@ -487,7 +521,7 @@ export default function CredentialDetail({
               <FieldLabel label="Notes" />
               <FieldValue
                 fieldId="notes"
-                onClick={() => handleCopy(looksEncrypted(liveCredential.notes) ? '' : (liveCredential.notes || ''), "notes")}
+                onClick={() => handleCopy(liveCredential.notes || credential.notes, "notes")}
                 className="whitespace-pre-wrap font-sans text-xs leading-relaxed text-[#D6D1CA]"
               >
                 {looksEncrypted(liveCredential.notes) ? 'Encrypted Notes' : liveCredential.notes}
