@@ -33,13 +33,7 @@ export const metadata: Metadata = {
     default: 'Build, think, and ship in one intelligent workspace. — Kylrix',
     template: '%s · Kylrix'},
   description: 'Your workflow becomes a living, callable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
-  manifest: '/manifest.webmanifest',
   keywords: ['agentic workspace', 'local-first', 'PAT', 'OAuth2', 'WebRTC', 'offline-first', 'productivity system'],
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'Kylrix',
-  },
   icons: {
     icon: '/favicon.ico',
     apple: '/apple-touch-icon.png'},
