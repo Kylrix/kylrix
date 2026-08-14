@@ -1548,7 +1548,6 @@ export const ChatList = ({
                             Global Directory
                         </span>
                         <div className="space-y-2">
-                            {searchResults.map((u) => {
                             {searchResults.map((u: any) => {
                                 const hasChat = conversations.some(c => c.participants?.includes(u.userId || u.$id));
                                 return (
