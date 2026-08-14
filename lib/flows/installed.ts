@@ -4,17 +4,16 @@ const KEY = 'kylrix_installed_flows';
 let inMemoryInstalledIds: string[] | null = null;
 
 function read(): string[] {
-  if (inMemoryInstalledIds) return inMemoryInstalledIds;
-  if (typeof window === 'undefined') return [];
+  if (typeof window === 'undefined') return inMemoryInstalledIds || [];
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return [];
+    if (!raw) return inMemoryInstalledIds || [];
     const parsed = JSON.parse(raw);
     const ids = Array.isArray(parsed) ? parsed.map(String) : [];
     inMemoryInstalledIds = ids;
     return ids;
   } catch {
-    return [];
+    return inMemoryInstalledIds || [];
   }
 }
 
