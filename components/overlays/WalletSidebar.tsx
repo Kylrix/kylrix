@@ -8,7 +8,6 @@ import {
     Drawer,
     Stack,
     Button,
-    Divider,
     useMediaQuery,
     useTheme,
     CircularProgress,
@@ -31,8 +30,7 @@ import {
     ArrowUpRight,
     ArrowDownLeft,
     QrCode,
-    Download,
-    Check} from 'lucide-react';
+    Download} from 'lucide-react';
 import { QRCodeCanvas } from './QRCodeCanvas';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSudo } from '@/context/SudoContext';
@@ -113,7 +111,6 @@ export const WalletSidebar = ({
     const [unlockPromptedForSession, setUnlockPromptedForSession] = useState(false);
     const { openTokenUserSearch } = useTokenOps();
     const [activeSubView, setActiveSubView] = useState<'dashboard' | 'send' | 'receive' | 'history' | 'settings' | 'sign'>('dashboard');
-    const [showReceive, setShowReceive] = useState(false);
     const [receiveModalData, setReceiveModalData] = useState<{
         token: string;
         chainName: string;
@@ -535,11 +532,6 @@ export const WalletSidebar = ({
         }
     };
 
-    const handleKylrixCardClick = () => {
-        setShowKylrixDetail(true);
-        setShowReceive(false);
-    };
-
     const handleKylrixSend = () => {
         if (!user?.$id) return;
         openTokenUserSearch({
@@ -560,7 +552,6 @@ export const WalletSidebar = ({
     useEffect(() => {
         if (!isOpen) {
             setActiveSubView('dashboard');
-            setShowReceive(false);
             setReceiveModalData(null);
             setKylrixSendAmount('');
             setKylrixIntentRecipient(null);
@@ -1242,30 +1233,35 @@ export const WalletSidebar = ({
                     renderHistoryView()
                 ) : activeSubView === 'settings' ? (
                     <WalletSettingsPanel
+                        ktsMode={ktsMode}
+                        setKtsModeState={setKtsModeState}
                         testnetMode={testnetMode}
-                        onToggleTestnet={(val) => {
+                        handleToggleTestnet={(val) => {
                             setTestnetMode(val);
                             localStorage.setItem('kylrix_wallet_testnet_mode', val ? '1' : '0');
                         }}
                         smartDelegation={smartDelegation}
-                        onToggleSmartDelegation={(val) => {
+                        handleToggleSmartDelegation={(val) => {
                             setSmartDelegation(val);
                             localStorage.setItem('kylrix_wallet_smart_delegation', val ? '1' : '0');
                         }}
                         gasRelay={gasRelay}
-                        onToggleGasRelay={(val) => {
+                        handleToggleGasRelay={(val) => {
                             setGasRelay(val);
                             localStorage.setItem('kylrix_wallet_gas_relay', val ? '1' : '0');
                         }}
                         recurringBilling={recurringBilling}
-                        onToggleRecurringBilling={(val) => {
+                        handleToggleRecurringBilling={(val) => {
                             setRecurringBilling(val);
                             localStorage.setItem('kylrix_wallet_recurring_billing', val ? '1' : '0');
                         }}
                         exportedMnemonic={exportedMnemonic}
                         exportedPrivateKey={exportedPrivateKey}
-                        onExportKeys={handleExportKeys}
-                        onResetWallet={handleResetWallet}
+                        setExportedMnemonic={setExportedMnemonic}
+                        setExportedPrivateKey={setExportedPrivateKey}
+                        handleExportSecrets={handleExportSecrets}
+                        setShowSettings={(val) => { if (!val) setActiveSubView('dashboard'); }}
+                        triggerTestSignature={() => {}}
                     />
                 ) : (
                     <div className="flex-1 overflow-y-auto px-4 py-4 md:px-5 md:py-5 space-y-5">

@@ -1,14 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Wallet, ArrowUpRight, Copy, Check } from 'lucide-react';
+import { Wallet, Copy, Check } from 'lucide-react';
 import type { WalletBalanceItem } from '@/lib/agentic/message-blocks';
 import { toast } from 'react-hot-toast';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 
 export function AgenticWalletCards({
   items,
-  totalKylrix,
+  totalKylrix: _totalKylrix,
 }: {
   items: WalletBalanceItem[];
   totalKylrix?: string;

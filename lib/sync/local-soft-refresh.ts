@@ -43,7 +43,6 @@ type RefreshScopeState = {
 
 const scopeState = new Map<string, RefreshScopeState>();
 
-const MIN_MANUAL_INTERVAL_MS = 2500; // Minimum gap between manual refresh handling
 const REMOTE_SOFT_PULL_WINDOW_MS = 20_000; // Minimum gap before LocalEngine honors remote soft-pull
 
 /**

@@ -26,7 +26,7 @@ export interface EcosystemSendDrawerProps {
 }
 
 export function EcosystemSendDrawer({
-  isOpen = true,
+  isOpen: _isOpen = true,
   onClose,
   resourceType,
   resourceId,

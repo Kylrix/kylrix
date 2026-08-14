@@ -378,7 +378,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           setActiveSessionId(reusableSessionId);
           await AgenticSessionLocalStore.setActiveSessionId(user.$id, reusableSessionId);
           const local = await AgenticSessionLocalStore.getSession(reusableSessionId);
-          setMessages(local?.chatHistory || []);
+          setMessages((local?.chatHistory as any) || []);
           try {
             const { account } = await import('@/lib/appwrite/client');
             const prefs = await account.getPrefs().catch(() => ({}));
@@ -2059,6 +2059,17 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             >
               <Flag size={16} />
               <span>{selectedSessionActionTarget.isPinned === true ? 'Unpin session' : 'Pin session'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                handleDeleteSession(e as any, selectedSessionActionTarget.id);
+                setShowSessionActionsDrawer(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-bold hover:bg-red-500/20 transition-colors"
+            >
+              <Trash2 size={16} />
+              <span>Delete session</span>
             </button>
             <button
               type="button"

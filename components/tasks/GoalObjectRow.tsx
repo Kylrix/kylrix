@@ -37,7 +37,6 @@ import {
   unlockGoal,
 } from '@/lib/appwrite/goal-crypto';
 import { toast } from 'react-hot-toast';
-import { openHangoutShare } from '@/lib/hangout/openHangoutShare';
 
 type Props = {
   task: Task;

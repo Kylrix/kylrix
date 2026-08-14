@@ -466,7 +466,7 @@ async function executeAgenticToolCall(
       const { WalletService } = await import('@/lib/services/wallets');
       const { KylrixTokenService } = await import('@/lib/services/token');
       
-      const userWallets = await WalletService.getWallets(ctx.user.$id).catch(() => []);
+      const userWallets = await WalletService.listMainWallets(ctx.user.$id).catch(() => []);
       const userBalance = await KylrixTokenService.getUserBalance(ctx.user.$id).catch(() => ({ amount: '0' }));
 
       // Fuzzy chain pattern normalization
@@ -553,9 +553,9 @@ async function executeAgenticToolCall(
     if (key === 'search_users') {
       const q = String(args.query || call.specifier || '').trim();
       const limit = Number(args.limit) || 6;
-      const { fetchUserProfiles } = await import('@/lib/appwrite/identity');
+      const { UsersService } = await import('@/lib/services/users');
       
-      const results = await fetchUserProfiles(q).catch(() => []);
+      const results = await UsersService.searchUsers(q).catch(() => []);
       const matched = results.slice(0, limit).map((u: any) => ({
         id: u.$id || u.userId || u.id,
         username: u.username || u.name || 'user',

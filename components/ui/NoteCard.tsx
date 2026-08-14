@@ -14,7 +14,6 @@ import {
 import { useContextMenu } from './ContextMenuContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
-import { openHangoutShare } from '@/lib/hangout/openHangoutShare';
 import { useNotes } from '@/context/NotesContext';
 import type { Notes } from '@/types/appwrite';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
