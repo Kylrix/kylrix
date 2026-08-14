@@ -9,7 +9,6 @@ import { useSudo } from '@/context/SudoContext';
 import { 
   ArrowLeft, 
   X, 
-  Copy, 
   Eye, 
   EyeOff, 
   Globe, 

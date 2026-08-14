@@ -10,6 +10,7 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import toast from 'react-hot-toast';
 
@@ -54,6 +55,7 @@ function initials(name: string) {
 function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
   const { user } = useAuth();
   const { identity, isVaultLocked, unlockAndLoad } = useNostrIdentity();
+  const { open: openUnifiedDrawer } = useUnifiedDrawer();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
   const [likes, setLikes] = useState(item.likesCount || 0);
@@ -174,6 +176,19 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     }
   };
 
+  const openProfilePreview = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    openUnifiedDrawer('profile-preview', {
+      userId: item.rawEvent?.userId || item.rawEvent?.authorId,
+      username: item.authorUsername || item.authorName,
+      name: item.authorName,
+      avatar: item.authorAvatar,
+      npub: item.source === 'nostr' ? item.authorUsername : undefined,
+      pubkey: item.source === 'nostr' ? item.rawEvent?.pubkey : undefined,
+      source: item.source
+    });
+  };
+
   return (
     <article
       role="button"
@@ -188,9 +203,12 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
       className="w-full max-w-full min-w-[280px] sm:min-w-[320px] h-full flex flex-col justify-between text-left rounded-[22px] bg-[#161412] border border-[#34322F] hover:border-[#3C3A38] hover:bg-[#1C1A18] transition-all duration-200 hover:-translate-y-px cursor-pointer focus:outline-none focus-visible:border-[#F59E0B]/40 overflow-hidden"
     >
       <div className="flex gap-3 p-4 min-w-0 max-w-full">
-        <div
-          className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black border border-white/[0.06] overflow-hidden bg-[#0A0908]"
+        <button
+          type="button"
+          onClick={openProfilePreview}
+          className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black border border-white/[0.06] overflow-hidden bg-[#0A0908] hover:ring-2 hover:ring-emerald-400/40 transition-all cursor-pointer"
           style={{ color: isNostr ? '#F59E0B' : '#34D399' }}
+          title={`View ${item.authorName}'s profile`}
         >
           {item.authorAvatar ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -198,13 +216,17 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
           ) : (
             initials(item.authorName)
           )}
-        </div>
+        </button>
 
         <div className="min-w-0 flex-1 overflow-hidden">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[15px] font-extrabold text-white font-satoshi truncate">
+            <button
+              type="button"
+              onClick={openProfilePreview}
+              className="text-[15px] font-extrabold text-white font-satoshi truncate hover:underline hover:text-emerald-400 text-left transition-colors"
+            >
               {item.authorName.replace(/^@/, '')}
-            </span>
+            </button>
             <span className="text-[13px] text-white/40 font-medium truncate min-w-0">
               {handle}
             </span>

@@ -125,13 +125,11 @@ export function TwoFactorPanel({
       const factors = await listCurrentMfaFactors();
       setEmailEnabled(Boolean(factors.email));
       setTotpEnabled(Boolean(factors.totp));
-      setPasskeyEnabled(Boolean(factors.passkey));
       setAccountMfaOn(Boolean(factors.mfaEnabled));
       return factors;
     } catch {
       setEmailEnabled(false);
       setTotpEnabled(false);
-      setPasskeyEnabled(false);
       setAccountMfaOn(false);
       return null;
     }

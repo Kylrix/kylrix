@@ -59,6 +59,10 @@ const ResponseDetailDrawer = dynamic(
   () => import('../forms/ResponseDetailDrawer').then((m) => m.ResponseDetailDrawer),
   { ssr: false },
 );
+const ProfilePreviewDrawer = dynamic(
+  () => import('./ProfilePreviewDrawer').then((m) => m.ProfilePreviewDrawer),
+  { ssr: false },
+);
 const AgenticPreviewDrawer = dynamic(
   () => import('../agentic/AgenticPreviewDrawer').then((m) => m.AgenticPreviewDrawer),
   { ssr: false },
@@ -356,6 +360,21 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
       );
     case 'milestone-details':
       return <TaskDetails taskId={drawerData?.taskId} onBack={onClose} />;
+    case 'profile-preview':
+      return (
+        <ProfilePreviewDrawer
+          isOpen
+          onClose={onClose}
+          userId={drawerData?.userId}
+          username={drawerData?.username}
+          name={drawerData?.name}
+          avatar={drawerData?.avatar}
+          npub={drawerData?.npub}
+          pubkey={drawerData?.pubkey}
+          bio={drawerData?.bio}
+          source={drawerData?.source}
+        />
+      );
     default:
       return null;
   }

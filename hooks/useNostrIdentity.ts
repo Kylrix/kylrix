@@ -34,12 +34,28 @@ export function useNostrIdentity() {
   const [loading, setLoading] = useState(false);
   const [isVaultLocked, setIsVaultLocked] = useState(!ecosystemSecurity.status.isUnlocked);
 
-  // Sync vault status
+  // Sync vault status & Realtime LocalEngine identity sync
   useEffect(() => {
     const unsub = ecosystemSecurity.onStatusChange((status) => {
       setIsVaultLocked(!status.isUnlocked);
     });
-    return unsub;
+
+    // Hydrate cached active identity immediately on boot
+    void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+      void LocalEngine.cacheGet<NostrIdentity>('nostr:active_identity').then((cached) => {
+        if (cached) setIdentity(cached);
+      });
+    });
+
+    const handleSync = (e: any) => {
+      if (e?.detail) setIdentity(e.detail);
+    };
+
+    window.addEventListener('kylrix:nostr-identity-synced', handleSync);
+    return () => {
+      unsub();
+      window.removeEventListener('kylrix:nostr-identity-synced', handleSync);
+    };
   }, []);
 
   const loadOrMintIdentity = useCallback(async () => {
@@ -95,6 +111,14 @@ export function useNostrIdentity() {
         setIdentities(decryptedList);
         const active = decryptedList.find(i => i.isDefault) || decryptedList[0] || null;
         setIdentity(active);
+        if (active) {
+          void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+            void LocalEngine.cacheSet('nostr:active_identity', active);
+          });
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('kylrix:nostr-identity-synced', { detail: active }));
+          }
+        }
         setLoading(false);
         return active;
       }
@@ -135,6 +159,12 @@ export function useNostrIdentity() {
 
       setIdentity(newIdentity);
       setIdentities([newIdentity]);
+      void import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+        void LocalEngine.cacheSet('nostr:active_identity', newIdentity);
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('kylrix:nostr-identity-synced', { detail: newIdentity }));
+      }
       setLoading(false);
       return newIdentity;
     } catch (err: any) {
