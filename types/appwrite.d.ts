@@ -479,6 +479,7 @@ export type Notes = Models.Row & {
     metadata: string | null;
     attachments: string | null;
     format: string | null;
+    isGhost: boolean;
     isThread: boolean;
     isPinned: boolean | null;
     isChat: boolean;
@@ -763,6 +764,7 @@ export type Epochs = Models.Row & {
 export type ConversationMembers = Models.Row & {
     conversationId: string;
     userId: string;
+    role: string;
 }
 
 export type Profiles = Models.Row & {
@@ -1228,6 +1230,9 @@ export type NostrIdentities = Models.Row & {
     encryptedNsec: string;
     iv: string;
     salt: string;
+    isDefault: boolean;
+    isDerived: boolean;
+    label: string;
 }
 
 export type AgentPaymentIntents = Models.Row & {
@@ -1334,6 +1339,8 @@ export type Pats = Models.Row & {
     lastUsedAt: string | null;
     createdAt: string | null;
     updatedAt: string | null;
+    isWorkspace: string | null;
+    workspaceId: string | null;
 }
 
 export type PatRateState = Models.Row & {
@@ -1453,4 +1460,18 @@ export type ThreadReactions = Models.Row & {
     userId: string;
     emoji: string;
     createdAt: string | null;
+}
+
+export type AgentByokKeys = Models.Row & {
+    userId: string;
+    provider: string;
+    keyHint: string;
+    encryptedKey: string;
+    enabled: boolean;
+}
+
+export type UserConvenienceSessions = Models.Row & {
+    userId: string;
+    encryptedUserMek: string;
+    expiresAt: string | null;
 }

@@ -408,7 +408,7 @@ export default function CreateNoteForm({
     syncTimerRef.current = setTimeout(() => flushLiveNote(), 250);
   }, [flushLiveNote]);
 
-  // Realtime input — flow.realtime-input-rxdb-sync: direct onInput interception, sync ref + LocalEngine, React state is secondary
+  // Realtime input — flow.realtime-input-rxdb-sync: direct onInput interception, sync ref + LocalEngine
   const handleContentChange = useCallback((nextValue: string) => {
     const curContent = editorStateRef.current.content;
     if (curContent.includes('[[kylrix-object:')) {
@@ -429,19 +429,24 @@ export default function CreateNoteForm({
         return;
       }
     }
-    // 1) Synchronous ref update — SoT for flushLiveNote, no render yet
+    // 1) Synchronous ref update — SoT for flushLiveNote
     editorStateRef.current.content = nextValue;
-    // 2) Secondary React state — transition so input never blocks
-    const { startTransition } = React as any;
-    const update = () => setContent(nextValue);
-    if (typeof startTransition === 'function') startTransition(update); else update();
+    setContent(nextValue);
+
+    // 2) Immediate synchronous auto-title derivation (matches CreateGoalComposer instant response)
+    if (!isTitleManuallyEdited) {
+      const generated = nextValue.trim() ? buildAutoTitleFromContent(nextValue) : '';
+      editorStateRef.current.title = generated;
+      setTitle(generated);
+    }
+
     // Keep textarea height (native DOM, no React)
     if (contentRef.current) {
       contentRef.current.style.height = 'auto';
       contentRef.current.style.height = `${Math.max(76, Math.min(contentRef.current.scrollHeight, 360))}px`;
     }
     scheduleLiveNoteSync();
-  }, [scheduleLiveNoteSync]);
+  }, [isTitleManuallyEdited, scheduleLiveNoteSync]);
 
   const insertTextAtCursor = (text: string) => {
     const textarea = contentRef.current;
@@ -462,10 +467,9 @@ export default function CreateNoteForm({
   // Auto-title — derived from content matching CreateGoalComposer
   useEffect(() => {
     if (isTitleManuallyEdited) return;
-    const generatedTitle = buildAutoTitleFromContent(content);
-    const newTitle = content.trim() ? generatedTitle : '';
-    setTitle(newTitle);
-    editorStateRef.current.title = newTitle;
+    const generatedTitle = content.trim() ? buildAutoTitleFromContent(content) : '';
+    setTitle(generatedTitle);
+    editorStateRef.current.title = generatedTitle;
   }, [content, isTitleManuallyEdited]);
 
   const existingTags = useMemo(() => {
