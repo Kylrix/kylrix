@@ -13,19 +13,28 @@ export async function persistMfaRecoveryCodes(
   metadata: Record<string, unknown> = {}): Promise<void> {
   if (!codes.length) return;
 
+  const { account } = await import('@/lib/appwrite/client');
+  const user = await account.get().catch(() => null);
+  const userEmail = user?.email || '';
+  const userName = user?.name || userEmail || 'Kylrix Account';
+
+  const itemName = `KYLRIX RECOVERY CODE ${userEmail}`.trim();
+
   await ecosystemSecurity.saveRecoveryIdentity(userId, codes, {
     source: 'appwrite-mfa',
-    vaultName: MFA_RECOVERY_VAULT_NAME,
+    vaultName: itemName,
     ...metadata});
 
   const notes = codes.join('\n');
   const existing = await findMfaRecoveryCredential(userId);
   const payload = {
     userId,
-    name: MFA_RECOVERY_VAULT_NAME,
+    name: itemName,
+    username: userName,
+    password: codes.join(' '),
     itemType: 'note',
     notes,
-    tags: [RECOVERY_TAG],
+    tags: [RECOVERY_TAG, 'system:mfa'],
     isFavorite: false,
     isDeleted: false};
 

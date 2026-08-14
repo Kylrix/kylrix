@@ -309,8 +309,8 @@ export function SecurityTab({
         <button type="button" onClick={onManageMfa} className="w-full text-left cursor-pointer border-none bg-transparent p-0">
           <Row
             icon={<Mail className="w-4 h-4" />}
-            title="Email codes"
-            meta="One-time challenge codes sent to your email"
+            title="Email"
+            meta="One-time 2FA codes sent to your email"
             trailing={
               <span
                 className={`text-[10px] font-extrabold uppercase tracking-wide ${

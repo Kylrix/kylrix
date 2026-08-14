@@ -25,7 +25,9 @@ import {
   KeyRound,
   Fingerprint,
   ArrowLeft,
+  Unlock,
 } from 'lucide-react';
+import { useSudo } from '@/context/SudoContext';
 
 type Props = {
   onClose: () => void;
@@ -312,13 +314,34 @@ export function TwoFactorPanel({
     }
   };
 
+  const { promptSudo } = useSudo?.() || {};
+
+  const requestUnlockVault = async () => {
+    try {
+      if (promptSudo) {
+        const ok = await promptSudo('unlock');
+        if (ok) {
+          setVaultUnlocked(true);
+          return true;
+        }
+      }
+    } catch {}
+    return ecosystemSecurity.status.isUnlocked;
+  };
+
   const showStoredRecoveryCodes = async () => {
     setLoading(true);
     setError(null);
     try {
-      ensureVaultUnlocked();
+      if (!ecosystemSecurity.status.isUnlocked) {
+        const unlocked = await requestUnlockVault();
+        if (!unlocked) {
+          setError('Unlock your vault to view recovery codes.');
+          return;
+        }
+      }
       const codes = await loadMfaRecoveryCodes(userId);
-      if (!codes?.length) throw new Error('No recovery codes in your vault.');
+      if (!codes?.length) throw new Error('No recovery codes saved in your vault.');
       setStoredRecoveryCodes(codes);
       setStep('recovery-view');
     } catch (err) {
@@ -402,8 +425,16 @@ export function TwoFactorPanel({
         {step === 'manage' && (
           <div className="space-y-3">
             {!vaultUnlocked ? (
-              <div className="p-3.5 rounded-[16px] bg-[#0A0908] border border-amber-500/25 text-amber-300 text-xs font-semibold font-satoshi">
-                Unlock your vault to change 2FA or save recovery codes.
+              <div className="p-3.5 rounded-[16px] bg-[#0A0908] border border-amber-500/25 flex items-center justify-between gap-3 text-amber-300 text-xs font-semibold font-satoshi">
+                <span>Unlock your vault to view saved recovery codes or update 2FA.</span>
+                <button
+                  type="button"
+                  onClick={() => void requestUnlockVault()}
+                  className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-xs cursor-pointer border border-amber-500/30 shrink-0 flex items-center gap-1.5"
+                >
+                  <Unlock className="w-3.5 h-3.5" />
+                  Unlock
+                </button>
               </div>
             ) : null}
 
@@ -412,10 +443,10 @@ export function TwoFactorPanel({
               title="Passkey 2FA"
               on={passkeyEnabled}
               actionLabel={passkeyEnabled ? 'Active' : 'Configure'}
-              disabled={loading || !vaultUnlocked}
+              disabled={loading}
               onAction={() => {
                 if (passkeyEnabled) {
-                  toast.success('Passkey 2FA is active on this device');
+                  toast.success('Passkey 2FA is active on your account');
                 } else {
                   setStep('passkey');
                 }
@@ -428,7 +459,7 @@ export function TwoFactorPanel({
               on={totpEnabled}
               actionLabel={totpEnabled ? 'Remove' : 'Add'}
               danger={totpEnabled}
-              disabled={loading || (!totpEnabled && !vaultUnlocked)}
+              disabled={loading}
               onAction={() => {
                 if (totpEnabled) void removeTotp();
                 else if (emailEnabled) void startTotpSetup();
@@ -438,11 +469,11 @@ export function TwoFactorPanel({
 
             <MethodRow
               icon={<Mail className="w-4 h-4" />}
-              title="Email codes"
+              title="Email"
               on={emailEnabled}
               actionLabel={emailEnabled ? 'Remove' : 'Enable'}
               danger={emailEnabled}
-              disabled={loading || (!emailEnabled && !vaultUnlocked)}
+              disabled={loading}
               onAction={() => {
                 if (emailEnabled) void removeEmail();
                 else setStep('email-verify');
@@ -452,9 +483,9 @@ export function TwoFactorPanel({
             <MethodRow
               icon={<KeyRound className="w-4 h-4" />}
               title="Recovery codes"
-              on={Boolean(storedRecoveryCodes?.length || isTwoFactorOn)}
-              actionLabel="Show"
-              disabled={loading || !vaultUnlocked}
+              on={Boolean(storedRecoveryCodes?.length || (isTwoFactorOn && accountMfaOn))}
+              actionLabel={storedRecoveryCodes?.length || isTwoFactorOn ? 'Show' : 'Not Saved'}
+              disabled={loading || (!storedRecoveryCodes?.length && !isTwoFactorOn)}
               onAction={() => void showStoredRecoveryCodes()}
             />
 

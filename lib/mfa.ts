@@ -89,24 +89,25 @@ export async function listCurrentMfaFactors(): Promise<MfaFactorsLike> {
       account.get().catch(() => null),
     ]);
 
-    const factors = normalizeMfaFactors(factorsRes) || { email: false, totp: false, phone: false };
     const mfaEnabled = Boolean(userDoc?.mfa);
+    const rawFactors = normalizeMfaFactors(factorsRes) || { email: false, totp: false, phone: false };
 
     // Check passkey presence for 2FA capability
-    let passkey = false;
+    let hasPasskeyRegistered = false;
     if (userDoc?.$id) {
       try {
         const { VaultService } = await import('@/lib/appwrite/vault-service');
         const entries = await VaultService.listKeychainEntries(userDoc.$id);
-        passkey = entries.some((e: any) => e.type === 'passkey');
+        hasPasskeyRegistered = entries.some((e: any) => e.type === 'passkey');
       } catch {}
     }
 
+    // Factors are active when 2FA is turned on for the account, or when specifically configured
     return {
-      email: Boolean(factors.email),
-      totp: Boolean(factors.totp),
-      phone: Boolean(factors.phone),
-      passkey,
+      email: Boolean(rawFactors.email && mfaEnabled),
+      totp: Boolean(rawFactors.totp),
+      phone: Boolean(rawFactors.phone && mfaEnabled),
+      passkey: Boolean(hasPasskeyRegistered && mfaEnabled),
       mfaEnabled,
     };
   } catch {
