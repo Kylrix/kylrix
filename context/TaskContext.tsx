@@ -121,9 +121,12 @@ async function persistGoalsLocalCopy(userId: string | null | undefined, tasks: T
             .upsert({
               id: t.id,
               title: t.title || '',
+              description: t.description || '',
               status: t.status || 'todo',
+              priority: t.priority || 'medium',
+              projectId: t.projectId || 'inbox',
+              labels: Array.isArray(t.labels) ? t.labels : [],
               userId: t.userId || t.creatorId || 'guest',
-              isPublic: Boolean(t.isPublic),
               updatedAt: (t.updatedAt instanceof Date ? t.updatedAt : new Date()).toISOString()})
             .catch(() => {}),
         ),

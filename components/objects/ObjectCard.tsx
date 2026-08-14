@@ -197,7 +197,7 @@ export function ObjectCard({
           className={[
             leading ? 'pl-9' : '',
             uniform && !isTask ? 'flex-1 min-h-[2.75rem] sm:min-h-[3.25rem]' : '',
-            isTask && uniform ? 'flex-1 min-h-[1.25rem]' : '',
+            isTask && uniform ? 'flex-1 min-h-[1.5rem]' : '',
           ].join(' ')}
         >
           {children ?? (
@@ -205,7 +205,7 @@ export function ObjectCard({
               className={[
                 'font-satoshi break-words m-0',
                 isTask
-                  ? 'text-[#7A766F] text-[0.75rem] leading-snug line-clamp-1 font-medium'
+                  ? 'text-white/60 text-[0.8125rem] leading-snug line-clamp-2 font-medium'
                   : 'text-white/50 text-[0.8125rem] sm:text-sm font-medium leading-relaxed line-clamp-3',
                 !isTask && uniform ? 'line-clamp-2' : '',
               ].join(' ')}
