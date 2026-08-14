@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, Sliders, Tag, Eye, Layers, Hash, RadioTower, ChevronRight, ChevronUp, ChevronDown, Maximize2, Minimize2 } from 'lucide-react';
+import { X, Sliders, Tag, Eye, Layers, Hash, RadioTower, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
 import { CONNECT_FEED_DEFAULTS, getConnectFeedSettings, setConnectFeedSettings, type ConnectFeedSettings } from '@/lib/connect/feed-settings';
 import { ConnectNostrSettingsView } from './ConnectNostrSettingsView';
 

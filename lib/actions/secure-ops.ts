@@ -264,4 +264,5 @@ export {
   disableConvenienceModeAction,
   resolveConvenienceMekAction};
 
-export type { PermissionLevel} from './secure-ops/shared';
+export type { PermissionLevel } from './secure-ops/shared';
+export type { AgentByokKeySummary } from './secure-ops/byok-convenience';

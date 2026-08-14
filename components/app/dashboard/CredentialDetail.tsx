@@ -90,7 +90,7 @@ export default function CredentialDetail({
                 (updated as any)[field] = plain;
                 changed = true;
               }
-            } catch (err) {
+            } catch (_err) {
               // Not encrypted or already plaintext
             }
           }

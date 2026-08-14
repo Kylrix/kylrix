@@ -19,7 +19,8 @@ import {
   Trash2,
   Sparkles,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  X
 } from 'lucide-react';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 import { 
@@ -112,7 +113,7 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack, isExpande
     }
   };
 
-  const handleResetToDefaultAccount = async () => {
+  const _handleResetToDefaultAccount = async () => {
     try {
       if (isVaultLocked) {
         await unlockAndLoad();

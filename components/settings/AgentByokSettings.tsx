@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Key, Plus, Trash2, Check, ShieldCheck, Sparkles } from 'lucide-react';
+import { Key, Plus, Trash2, Check, Sparkles } from 'lucide-react';
 import {
   listAgentByokKeysAction,
   saveAgentByokKeyAction,

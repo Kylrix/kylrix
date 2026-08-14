@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { 
-  getNostrIdentityAction, 
   listNostrIdentitiesAction, 
   registerNostrIdentityAction, 
   setActiveNostrIdentityAction, 

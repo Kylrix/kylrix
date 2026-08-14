@@ -69,7 +69,6 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useSection } from '@/context/SectionContext';
-import { useLayout } from '@/context/LayoutContext';
 
 import {
   renderShortcutsList,
@@ -105,7 +104,6 @@ export default function ConnectTopbar({
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
   const { setActiveDetail } = useSection();
-  const { openSecondarySidebar } = useLayout();
   // To let any drawer communicate full state expansion globally:
   const isDrawerExpanded = typeof window !== 'undefined' && document.body.classList.contains('drawer-expanded');
   
