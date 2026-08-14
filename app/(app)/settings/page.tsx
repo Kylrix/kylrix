@@ -158,8 +158,16 @@ function SettingsPageInner() {
         }
     }, [user?.$id, refreshMfaFactors]);
 
-    const openTwoFactorSurface = useCallback(() => {
+    const { promptSudo } = useSudo?.() || {};
+
+    const openTwoFactorSurface = useCallback(async () => {
         if (!user?.$id) return;
+        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
+        if (!ecosystemSecurity.status.isUnlocked && promptSudo) {
+            const unlocked = await promptSudo('unlock');
+            if (!unlocked) return;
+        }
+
         const close = () => {
             if (typeof window !== 'undefined' && window.innerWidth >= 768) closeSidebar();
             else closeOverlay();
@@ -179,7 +187,7 @@ function SettingsPageInner() {
         } else {
             openOverlay(panel);
         }
-    }, [user?.$id, openSidebar, closeSidebar, openOverlay, closeOverlay, refreshMfaFactors]);
+    }, [user?.$id, promptSudo, openSidebar, closeSidebar, openOverlay, closeOverlay, refreshMfaFactors]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
