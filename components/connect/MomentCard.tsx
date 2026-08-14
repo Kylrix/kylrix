@@ -62,8 +62,8 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
   const [feedSettings, setFeedSettings] = useState<any>(null);
 
   const { text: bodyText, images } = useMemo(
-    () => extractPostImages(item.content || ''),
-    [item.content],
+    () => extractPostImages(item.content || '', item.rawEvent?.tags),
+    [item.content, item.rawEvent?.tags],
   );
   const preview = truncateMomentBody(bodyText || '');
   const isNostr = item.source === 'nostr';

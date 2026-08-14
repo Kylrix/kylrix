@@ -247,7 +247,7 @@ export function PostViewClient({
       ? `npub…${String(moment.pubkey).slice(-8)}`
       : who);
   const rawBody = moment?.caption || moment?.content || preview?.content || '';
-  const { text: body, images } = extractPostImages(rawBody);
+  const { text: body, images } = extractPostImages(rawBody, moment?.tags);
   const isNostr = source === 'nostr';
 
   if (loading) {
