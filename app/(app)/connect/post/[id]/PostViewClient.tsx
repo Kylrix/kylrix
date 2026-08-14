@@ -199,6 +199,7 @@ export function PostViewClient({
         content: text,
         userId: user?.$id,
         privateKeyBytes: identity?.privateKeyBytes,
+        nsec: identity?.nsec,
         rootPubkey: moment?.pubkey,
       });
       setReplyContent('');

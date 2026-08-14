@@ -105,7 +105,8 @@ export async function createMomentComment(opts: {
   id: string;
   content: string;
   userId?: string;
-  privateKeyBytes?: Uint8Array;
+  privateKeyBytes?: Uint8Array | Record<string, number> | any;
+  nsec?: string;
   rootPubkey?: string;
 }): Promise<MomentComment | null> {
   const text = opts.content.trim();
@@ -126,8 +127,22 @@ export async function createMomentComment(opts: {
     return row ? mapKylrixReply(row) : null;
   }
 
-  if (!opts.privateKeyBytes) throw new Error('Unlock vault to comment on Nostr');
-  const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(opts.privateKeyBytes));
+  let privBytes = opts.privateKeyBytes;
+  if (privBytes && !(privBytes instanceof Uint8Array)) {
+    privBytes = new Uint8Array(Object.values(privBytes));
+  }
+  if ((!privBytes || privBytes.length !== 32) && opts.nsec) {
+    try {
+      const { nsecToBytes } = await import('@/lib/nostr/crypto');
+      privBytes = nsecToBytes(opts.nsec);
+    } catch {}
+  }
+
+  if (!privBytes || privBytes.length !== 32) {
+    throw new Error('Unlock vault to comment on Nostr');
+  }
+
+  const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
   const tags: string[][] = [['e', opts.id, '', 'root']];
   if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
 
@@ -138,7 +153,7 @@ export async function createMomentComment(opts: {
     tags,
     content: text,
   };
-  const signed = signEvent(unsigned, opts.privateKeyBytes);
+  const signed = signEvent(unsigned, privBytes);
   const pool = new NostrRelayPool(RELAYS);
   pool.connect();
   await pool.publish(signed);
