@@ -33,115 +33,39 @@ function getTagColor(tagName: string): string | null {
 }
 
 export default function IdeasPage() {
-  const [loading, setLoading] = useState(true);
-  const [notes, setNotes] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const { upsertNote } = useNotes();
+  const { notes: allNotes, isLoading: isContextLoading, upsertNote, removeNote } = useNotes();
   const { openSidebar } = useDynamicSidebar();
-
-  const fetchNotesBarebones = async (hasLocal = false) => {
-    if (!hasLocal) {
-      setLoading(true);
-    }
-    setError(null);
-
-    try {
-      const { Query, Client, TablesDB } = await import('appwrite');
-      const { account, databases } = await import('@/lib/appwrite/client');
-      const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
-
-      const user = await account.get().catch(() => null);
-      if (!user?.$id) {
-        setError('Unauthenticated user session');
-        setLoading(false);
-        return;
-      }
-
-      const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
-      const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
-
-      const client = new Client()
-        .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-        .setProject(APPWRITE_CONFIG.PROJECT_ID);
-      const tablesDB = new TablesDB(client);
-
-      const res = await tablesDB.listRows(dbId, tableId, [
-        Query.equal('userId', user.$id),
-        Query.limit(50),
-        Query.orderDesc('$updatedAt')
-      ]).catch(async () => {
-        return await (databases as any).listDocuments(dbId, tableId, [
-          Query.equal('userId', user.$id),
-          Query.limit(50),
-          Query.orderDesc('$updatedAt')
-        ]);
-      });
-
-      const rows = Array.isArray(res?.rows) ? res.rows : Array.isArray(res?.documents) ? res.documents : [];
-
-      // Read local pins state directly from ResourcePinContext storage key
-      let pinnedMap: Record<string, boolean> = {};
-      try {
-        const storedPins = localStorage.getItem(`kylrix_resource_pins_${user.$id}`);
-        if (storedPins) {
-          const parsed = JSON.parse(storedPins);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((id: string) => { pinnedMap[id] = true; });
-          }
-        }
-      } catch {}
-
-      // Pure client-side sort: Pinned first, then newest updatedAt
-      const sorted = [...rows].sort((a: any, b: any) => {
-        const aPinned = Boolean(a.isPinned || pinnedMap[a.$id]);
-        const bPinned = Boolean(b.isPinned || pinnedMap[b.$id]);
-        if (aPinned && !bPinned) return -1;
-        if (!aPinned && bPinned) return 1;
-        const aTime = new Date(a.$updatedAt || a.updatedAt || a.$createdAt || 0).getTime();
-        const bTime = new Date(b.$updatedAt || b.updatedAt || b.$createdAt || 0).getTime();
-        return bTime - aTime;
-      });
-
-      // Stamp isPinned and isGuest from local data, then feed into NotesContext
-      // so NoteCard's liveNote lookup finds the correctly stamped object
-      const stamped = sorted.map((n: any) => {
-        const isShared = Boolean(n.isGuest || (n.$permissions && n.$permissions.some((p: string) => p.includes('user:') && !p.includes(`user:${n.userId}`))));
-        return {
-          ...n,
-          isPinned: Boolean(n.isPinned || pinnedMap[n.$id]),
-          isGuest: Boolean(n.isGuest || isShared),
-        };
-      });
-
-      // Feed into NotesContext so NoteCard's liveNote resolves correctly
-      stamped.forEach((n: any) => upsertNote(n));
-
-      setNotes(stamped);
-
-      // Non-blocking LocalEngine background copy write (Goals/Vault local-first pattern)
-      void (async () => {
-        try {
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          await LocalEngine.cacheSet(`f_ideas_${user.$id}`, { rows: stamped, total: stamped.length });
-        } catch {}
-      })();
-    } catch (err: any) {
-      setError(err?.message || String(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const { open: openUnified } = useUnifiedDrawer();
   const { setConfiguration, resetConfiguration } = useFAB();
   const [isDesktop, setIsDesktop] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [ecosystemTagsList, setEcosystemTagsList] = useState<{ name: string; color?: string }[]>([]);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   useEffect(() => {
     const check = () => setIsDesktop(window.innerWidth >= 768);
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
+  }, []);
+
+  // Hydrate tags from LocalEngine / Nexus
+  useEffect(() => {
+    void (async () => {
+      try {
+        const { account } = await import('@/lib/appwrite/client');
+        const user = await account.get().catch(() => null);
+        if (user?.$id) {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          const cachedTags = await LocalEngine.cacheGet<any>(`f_tags_${user.$id}`);
+          if (cachedTags?.rows && Array.isArray(cachedTags.rows) && cachedTags.rows.length > 0) {
+            setEcosystemTagsList(cachedTags.rows);
+          } else if (Array.isArray(cachedTags) && cachedTags.length > 0) {
+            setEcosystemTagsList(cachedTags);
+          }
+        }
+      } catch {}
+    })();
   }, []);
 
   const openCreateNote = useCallback(() => {
@@ -165,67 +89,24 @@ export default function IdeasPage() {
     return () => resetConfiguration();
   }, [setConfiguration, resetConfiguration, openCreateNote, isDesktop]);
 
-  useEffect(() => {
-    let hasLocalCopy = false;
-
-    // Fast initial render from LocalEngine cache if available (Goals/Vault local-first pattern)
-    void (async () => {
-      try {
-        const { account } = await import('@/lib/appwrite/client');
-        const user = await account.get().catch(() => null);
-        if (user?.$id) {
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const [cachedIdeas, cachedInitial, cachedTags] = await Promise.all([
-            LocalEngine.cacheGet<{ rows: any[] }>(`f_ideas_${user.$id}`),
-            LocalEngine.cacheGet<any[]>(`initial_notes_${user.$id}`),
-            LocalEngine.cacheGet<any>(`f_tags_${user.$id}`),
-          ]);
-
-          const localRows =
-            cachedIdeas?.rows && Array.isArray(cachedIdeas.rows) && cachedIdeas.rows.length > 0
-              ? cachedIdeas.rows
-              : Array.isArray(cachedInitial) && cachedInitial.length > 0
-                ? cachedInitial
-                : [];
-
-          if (localRows.length > 0) {
-            hasLocalCopy = true;
-            setNotes(localRows);
-            setLoading(false);
-          }
-
-          if (cachedTags?.rows && Array.isArray(cachedTags.rows) && cachedTags.rows.length > 0) {
-            setEcosystemTagsList(cachedTags.rows);
-          } else if (Array.isArray(cachedTags) && cachedTags.length > 0) {
-            setEcosystemTagsList(cachedTags);
-          }
-        }
-      } catch {}
-
-      void fetchNotesBarebones(hasLocalCopy);
-    })();
-  }, []);
-
-  const [ecosystemTagsList, setEcosystemTagsList] = useState<{ name: string; color?: string }[]>([]);
-
-  const activeNotes = notes.filter((n) => !n.isTrash);
+  const activeNotes = (allNotes || []).filter((n) => !n.isTrash);
   const pinnedNotes = activeNotes.filter((n) => n.isPinned);
   const unpinnedNotes = activeNotes.filter((n) => !n.isPinned);
 
   const tags = React.useMemo(() => {
-    const fromNotes = notes.flatMap((n: any) => n.tags || []).filter(Boolean);
+    const fromNotes = (allNotes || []).flatMap((n: any) => n.tags || []).filter(Boolean);
     const fromEcosystem = ecosystemTagsList.map((t) => t.name).filter(Boolean);
     return Array.from(new Set([...fromEcosystem, ...fromNotes])).slice(0, 16);
-  }, [notes, ecosystemTagsList]);
-
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  }, [allNotes, ecosystemTagsList]);
 
   const displayPinned = selectedTag ? pinnedNotes.filter((n: any) => n.tags?.includes(selectedTag)) : pinnedNotes;
   const displayUnpinned = selectedTag ? unpinnedNotes.filter((n: any) => n.tags?.includes(selectedTag)) : unpinnedNotes;
 
+  const loading = isContextLoading && activeNotes.length === 0;
+
   const handleDeleteNote = useCallback((noteId: string) => {
-    setNotes((prev) => prev.filter((n) => n.$id !== noteId));
-  }, []);
+    removeNote(noteId);
+  }, [removeNote]);
 
   return (
     <div className="flex-1 min-h-screen pointer-events-auto">
@@ -359,12 +240,6 @@ export default function IdeasPage() {
         onNoteCreated={(note) => {
           if (!note?.$id) return;
           upsertNote(note as any);
-          setNotes((prev) => {
-            if (prev.some((n) => n.$id === note.$id)) {
-              return prev.map((n) => (n.$id === note.$id ? { ...n, ...note } : n));
-            }
-            return [note, ...prev];
-          });
           toast.success('Idea saved locally');
         }}
       />
