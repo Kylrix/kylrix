@@ -4,6 +4,7 @@
  * Fallback: NIP-96 (nostr.build)
  */
 
+import * as secp256k1 from '@noble/secp256k1';
 import { signEvent } from '@/lib/nostr/nostr';
 import { bytesToHex } from '@/lib/nostr/crypto';
 import { sha256 } from '@noble/hashes/sha2.js';
@@ -49,7 +50,10 @@ export function createNip98AuthHeader(opts: {
     tags.push(['payload', opts.payloadSha256]);
   }
 
+  const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(opts.privateKeyBytes));
+
   const unsigned = {
+    pubkey,
     kind: 27235,
     created_at: Math.floor(Date.now() / 1000),
     tags,

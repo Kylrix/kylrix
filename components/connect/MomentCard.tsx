@@ -81,8 +81,8 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     })();
     return () => { cancelled = true; };
   }, []);
-  const autoPreview = feedSettings ? (feedSettings as any).autoPreviewMedia !== false : true;
-  const autoPlay = feedSettings ? !!(feedSettings as any).autoPlayMedia : false;
+  const _autoPreview = feedSettings ? (feedSettings as any).autoPreviewMedia !== false : true;
+  const _autoPlay = feedSettings ? !!(feedSettings as any).autoPlayMedia : false;
   const momentId =
     item.source === 'ecosystem'
       ? item.rawEvent?.$id || item.rawEvent?.id
