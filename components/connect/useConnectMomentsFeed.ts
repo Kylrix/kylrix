@@ -23,6 +23,8 @@ export interface UnifiedFeedItem {
   likesCount?: number;
   pulsesCount?: number;
   repliesCount?: number;
+  zapsCount?: number;
+  repostsCount?: number;
   isLiked?: boolean;
 }
 
@@ -38,7 +40,12 @@ function buildItems(
   ecosystemMoments: any[],
   nostrFeed: { id: string; pubkey: string; content: string; created_at: number; tags?: string[][] }[],
   resolvedProfiles: Record<string, { username: string; avatarUrl?: string }>,
-  nostrEngagement: { replyCount: Record<string, number>; likeCount: Record<string, number> },
+  nostrEngagement: { 
+    replyCount: Record<string, number>; 
+    likeCount: Record<string, number>;
+    zapCount?: Record<string, number>;
+    repostCount?: Record<string, number>;
+  },
 ): UnifiedFeedItem[] {
   const rows: UnifiedFeedItem[] = [];
 
@@ -57,6 +64,8 @@ function buildItems(
       likesCount: m.likeCount || 0,
       pulsesCount: m.pulseCount || 0,
       repliesCount: m.replyCount || 0,
+      zapsCount: m.zapCount || 0,
+      repostsCount: m.repostCount || 0,
       isLiked: Boolean(m.isLiked),
       rawEvent: m,
     });
@@ -113,6 +122,8 @@ function buildItems(
       createdAt: event.created_at * 1000,
       likesCount: nostrEngagement.likeCount[event.id] || 0,
       repliesCount: nostrEngagement.replyCount[event.id] || 0,
+      zapsCount: nostrEngagement.zapCount?.[event.id] || 0,
+      repostsCount: nostrEngagement.repostCount?.[event.id] || 0,
       rawEvent: event,
     });
   }
@@ -196,7 +207,9 @@ export function useConnectMomentsFeed() {
   const [nostrEngagement, setNostrEngagement] = useState<{
     replyCount: Record<string, number>;
     likeCount: Record<string, number>;
-  }>({ replyCount: {}, likeCount: {} });
+    zapCount?: Record<string, number>;
+    repostCount?: Record<string, number>;
+  }>({ replyCount: {}, likeCount: {}, zapCount: {}, repostCount: {} });
   const [displayItems, setDisplayItems] = useState<UnifiedFeedItem[]>(() => (memoryUnified ? [...memoryUnified] : []));
   const [visibleCount, setVisibleCount] = useState(() => (memoryUnified?.length ? Math.min(PAGE_SIZE, memoryUnified.length) : PAGE_SIZE));
   const [hydrated, setHydrated] = useState(() => !!memoryUnified?.length);
@@ -474,6 +487,8 @@ export function useConnectMomentsFeed() {
         setNostrEngagement({
           replyCount: res.replyCount,
           likeCount: res.likeCount,
+          zapCount: res.zapCount,
+          repostCount: res.repostCount,
         });
       });
     }, 700);

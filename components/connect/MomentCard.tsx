@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Globe, Heart, MessageCircle, Repeat2, Share, Shield } from 'lucide-react';
+import { Globe, Heart, MessageCircle, Repeat2, Share, Shield, Zap } from 'lucide-react';
 import type { UnifiedFeedItem } from '@/components/connect/useConnectMomentsFeed';
 import { toggleMomentLike } from '@/lib/connect/moment-engagement';
 import { extractPostImages, truncateMomentBody } from '@/lib/connect/moment-media';
@@ -38,6 +38,8 @@ function itemsEqual(a: UnifiedFeedItem, b: UnifiedFeedItem) {
     a.createdAt === b.createdAt &&
     (a.likesCount || 0) === (b.likesCount || 0) &&
     (a.repliesCount || 0) === (b.repliesCount || 0) &&
+    (a.zapsCount || 0) === (b.zapsCount || 0) &&
+    (a.repostsCount || 0) === (b.repostsCount || 0) &&
     Boolean(a.isLiked) === Boolean(b.isLiked)
   );
 }
@@ -263,6 +265,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
             className="mt-3 flex items-center justify-between max-w-md text-white/40"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Replies */}
             <button
               type="button"
               onClick={(e) => {
@@ -275,9 +278,10 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
               <span className="p-1.5 rounded-full group-hover:bg-[#0A0908]">
                 <MessageCircle size={16} />
               </span>
-              {(item.repliesCount || 0) > 0 ? item.repliesCount : ''}
+              <span className="text-xs font-mono">{(item.repliesCount || 0) > 0 ? item.repliesCount : ''}</span>
             </button>
 
+            {/* Reposts */}
             <button
               type="button"
               className="group inline-flex items-center gap-1.5 text-[13px] font-semibold hover:text-[#00BA7C] transition-colors"
@@ -287,8 +291,26 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
               <span className="p-1.5 rounded-full group-hover:bg-[#0A0908]">
                 <Repeat2 size={16} />
               </span>
+              <span className="text-xs font-mono">{(item.repostsCount || 0) > 0 ? item.repostsCount : ''}</span>
             </button>
 
+            {/* Zaps (Nostr Lightning) */}
+            <button
+              type="button"
+              className="group inline-flex items-center gap-1.5 text-[13px] font-semibold hover:text-[#F59E0B] transition-colors"
+              aria-label="Zap"
+              onClick={(e) => {
+                e.stopPropagation();
+                toast.success('Nostr Lightning Zaps');
+              }}
+            >
+              <span className="p-1.5 rounded-full group-hover:bg-[#0A0908]">
+                <Zap size={16} className={(item.zapsCount || 0) > 0 ? 'text-[#F59E0B] fill-[#F59E0B]' : ''} />
+              </span>
+              <span className="text-xs font-mono">{(item.zapsCount || 0) > 0 ? item.zapsCount : ''}</span>
+            </button>
+
+            {/* Likes / Reactions */}
             <button
               type="button"
               disabled={busy}
@@ -301,9 +323,10 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
               <span className="p-1.5 rounded-full group-hover:bg-[#0A0908]">
                 <Heart size={16} className={liked ? 'fill-[#F91880]' : ''} />
               </span>
-              {likes > 0 ? likes : ''}
+              <span className="text-xs font-mono">{likes > 0 ? likes : ''}</span>
             </button>
 
+            {/* Share */}
             <button
               type="button"
               onClick={onShare}

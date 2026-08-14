@@ -26,6 +26,8 @@ export interface MomentEngagementSnapshot {
   comments: MomentComment[];
   likesCount: number;
   repliesCount: number;
+  zapsCount?: number;
+  repostsCount?: number;
   isLiked?: boolean;
 }
 
@@ -81,6 +83,8 @@ export async function loadMomentEngagement(opts: {
       comments,
       repliesCount: comments.length,
       likesCount: moment?.stats?.likes ?? moment?.likeCount ?? 0,
+      zapsCount: moment?.stats?.zaps ?? moment?.zapCount ?? 0,
+      repostsCount: moment?.stats?.reposts ?? moment?.repostCount ?? 0,
       isLiked: Boolean(liked),
     };
   }
@@ -90,6 +94,8 @@ export async function loadMomentEngagement(opts: {
     comments: thread.replies.map(mapNostrReply),
     repliesCount: thread.replyCount,
     likesCount: thread.likeCount,
+    zapsCount: thread.zapCount,
+    repostsCount: thread.repostCount,
     isLiked: false,
   };
 }

@@ -16,7 +16,7 @@ import { extractPostImages } from '@/lib/connect/moment-media';
 import { SocialService } from '@/lib/services/social';
 import { UsersService } from '@/lib/services/users';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
-import { ArrowLeft, Globe, Heart, Link2, Lock, MessageCircle, Shield } from 'lucide-react';
+import { ArrowLeft, Globe, Heart, Link2, Lock, MessageCircle, Repeat2, Shield, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 type PreviewSeed = {
@@ -66,6 +66,8 @@ export function PostViewClient({
   );
   const [replies, setReplies] = useState<MomentComment[]>([]);
   const [likes, setLikes] = useState(0);
+  const [zaps, setZaps] = useState(0);
+  const [reposts, setReposts] = useState(0);
   const [liked, setLiked] = useState(false);
   const [loading, setLoading] = useState(!preview?.content);
   const [replyContent, setReplyContent] = useState('');
@@ -125,6 +127,8 @@ export function PostViewClient({
       });
       setReplies(engagement.comments);
       setLikes(engagement.likesCount);
+      setZaps(engagement.zapsCount || 0);
+      setReposts(engagement.repostsCount || 0);
       setLiked(Boolean(engagement.isLiked));
     } catch (e) {
       console.error('Failed to load moment', e);
@@ -347,26 +351,47 @@ export function PostViewClient({
             />
           ) : null}
 
-          <div className="flex items-center gap-4 pt-2 border-t border-white/[0.06] min-w-0">
+          <div className="flex items-center gap-4 sm:gap-6 pt-3 border-t border-white/[0.06] min-w-0 flex-wrap">
+            {/* Likes */}
             <button
               type="button"
               disabled={busy}
               onClick={() => void toggleLike()}
-              className={`inline-flex items-center gap-1.5 text-sm font-bold disabled:opacity-40 shrink-0 ${
+              className={`inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold disabled:opacity-40 shrink-0 ${
                 liked ? 'text-[#F91880]' : 'text-white/60 hover:text-[#F91880]'
               }`}
             >
               <Heart size={16} className={liked ? 'fill-[#F91880]' : ''} />
-              {likes}
+              <span className="font-mono">{likes}</span>
             </button>
-            <span className="inline-flex items-center gap-1.5 text-sm font-bold text-white/40 shrink-0">
+
+            {/* Replies */}
+            <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/40 shrink-0">
               <MessageCircle size={16} />
-              {replies.length}
+              <span className="font-mono">{replies.length}</span>
             </span>
+
+            {/* Reposts */}
+            <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/40 shrink-0">
+              <Repeat2 size={16} />
+              <span className="font-mono">{reposts}</span>
+            </span>
+
+            {/* Zaps */}
+            <button
+              type="button"
+              onClick={() => toast.success('Nostr Lightning Zaps')}
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/40 hover:text-[#F59E0B] shrink-0"
+            >
+              <Zap size={16} className={zaps > 0 ? 'text-[#F59E0B] fill-[#F59E0B]' : ''} />
+              <span className="font-mono">{zaps}</span>
+            </button>
+
+            {/* Copy Link */}
             <button
               type="button"
               onClick={() => void copyLink()}
-              className="inline-flex items-center gap-1.5 text-sm font-bold text-white/60 hover:text-white ml-auto shrink-0"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white/60 hover:text-white ml-auto shrink-0"
             >
               <Link2 size={16} />
               <span className="hidden sm:inline">Copy link</span>

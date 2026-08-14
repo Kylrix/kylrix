@@ -1,6 +1,6 @@
 import { NostrRelayPool, type NostrEvent } from '@/lib/nostr/nostr';
 
-const RELAYS = [
+const DEFAULT_ENGAGEMENT_RELAYS = [
   'wss://nos.lol',
   'wss://purplepag.es',
   'wss://relay.damus.io',
@@ -13,65 +13,102 @@ function taggedEventIds(event: NostrEvent): string[] {
 
 function isPositiveReaction(event: NostrEvent): boolean {
   const c = (event.content || '').trim();
-  return c === '' || c === '+' || c === '❤️' || c === '🤙' || c === '💜';
+  // NIP-25: "+" or "" or heart emoji or thumbs up is positive reaction, "-" is dislike
+  return c === '' || c === '+' || c === '❤️' || c === '🤙' || c === '💜' || c === '👍' || c === '🔥' || c === '⚡';
+}
+
+function isZapEvent(event: NostrEvent): boolean {
+  // NIP-57: kind 9735 is zap receipt
+  return event.kind === 9735;
+}
+
+export interface NostrEngagementData {
+  repliesByRoot: Record<string, NostrEvent[]>;
+  reactionsByRoot: Record<string, NostrEvent[]>;
+  zapsByRoot: Record<string, NostrEvent[]>;
+  repostsByRoot: Record<string, NostrEvent[]>;
+  replyCount: Record<string, number>;
+  likeCount: Record<string, number>;
+  zapCount: Record<string, number>;
+  repostCount: Record<string, number>;
 }
 
 /**
- * One-shot relay pull for replies (kind 1) and reactions (kind 7) on root event ids.
+ * Robust relay pull for replies (kind 1), reposts (kind 6), reactions (kind 7), and zaps (kind 9735) on root event IDs.
+ * Totally open Nostr read protocol — no keys or unlock required.
  */
 export async function fetchNostrEngagement(
   eventIds: string[],
   timeoutMs = 3500,
-): Promise<{
-  repliesByRoot: Record<string, NostrEvent[]>;
-  reactionsByRoot: Record<string, NostrEvent[]>;
-  replyCount: Record<string, number>;
-  likeCount: Record<string, number>;
-}> {
+): Promise<NostrEngagementData> {
   const ids = [...new Set(eventIds.filter(Boolean))];
-  const empty = {
-    repliesByRoot: {} as Record<string, NostrEvent[]>,
-    reactionsByRoot: {} as Record<string, NostrEvent[]>,
-    replyCount: {} as Record<string, number>,
-    likeCount: {} as Record<string, number>,
+  const empty: NostrEngagementData = {
+    repliesByRoot: {},
+    reactionsByRoot: {},
+    zapsByRoot: {},
+    repostsByRoot: {},
+    replyCount: {},
+    likeCount: {},
+    zapCount: {},
+    repostCount: {},
   };
-  // Node 22+ and browsers both expose WebSocket; allow server-side PAT API reads.
+
   if (!ids.length || typeof WebSocket === 'undefined') return empty;
 
   const repliesByRoot: Record<string, NostrEvent[]> = {};
   const reactionsByRoot: Record<string, NostrEvent[]> = {};
+  const zapsByRoot: Record<string, NostrEvent[]> = {};
+  const repostsByRoot: Record<string, NostrEvent[]> = {};
+
   for (const id of ids) {
     repliesByRoot[id] = [];
     reactionsByRoot[id] = [];
+    zapsByRoot[id] = [];
+    repostsByRoot[id] = [];
   }
 
   const seen = new Set<string>();
-  const pool = new NostrRelayPool(RELAYS);
+  const pool = new NostrRelayPool(DEFAULT_ENGAGEMENT_RELAYS);
   pool.connect();
 
   const onEvent = (event: NostrEvent) => {
     if (seen.has(event.id)) return;
     seen.add(event.id);
+
+    // Extract all referenced 'e' tag event IDs (root or reply)
     const roots = taggedEventIds(event).filter((id) => ids.includes(id));
     if (!roots.length) return;
+
     for (const root of roots) {
       if (event.kind === 1) {
         if (!repliesByRoot[root].some((e) => e.id === event.id)) {
           repliesByRoot[root].push(event);
         }
+      } else if (event.kind === 6) {
+        // NIP-18 repost
+        if (!repostsByRoot[root].some((e) => e.id === event.id)) {
+          repostsByRoot[root].push(event);
+        }
       } else if (event.kind === 7 && isPositiveReaction(event)) {
         if (!reactionsByRoot[root].some((e) => e.id === event.id)) {
           reactionsByRoot[root].push(event);
+        }
+      } else if (isZapEvent(event)) {
+        // NIP-57 zap receipt
+        if (!zapsByRoot[root].some((e) => e.id === event.id)) {
+          zapsByRoot[root].push(event);
         }
       }
     }
   };
 
   pool.addListener(onEvent);
-  const subId = `kylrix-thread-${Date.now()}`;
+  const subId = `kylrix-eng-${Date.now()}`;
   pool.subscribe(subId, [
     { kinds: [1], '#e': ids, limit: 200 },
+    { kinds: [6], '#e': ids, limit: 150 },
     { kinds: [7], '#e': ids, limit: 400 },
+    { kinds: [9735], '#e': ids, limit: 150 },
   ]);
 
   await new Promise((r) => setTimeout(r, timeoutMs));
@@ -81,13 +118,27 @@ export async function fetchNostrEngagement(
 
   const replyCount: Record<string, number> = {};
   const likeCount: Record<string, number> = {};
+  const zapCount: Record<string, number> = {};
+  const repostCount: Record<string, number> = {};
+
   for (const id of ids) {
     repliesByRoot[id].sort((a, b) => a.created_at - b.created_at);
     replyCount[id] = repliesByRoot[id].length;
     likeCount[id] = reactionsByRoot[id].length;
+    zapCount[id] = zapsByRoot[id].length;
+    repostCount[id] = repostsByRoot[id].length;
   }
 
-  return { repliesByRoot, reactionsByRoot, replyCount, likeCount };
+  return {
+    repliesByRoot,
+    reactionsByRoot,
+    zapsByRoot,
+    repostsByRoot,
+    replyCount,
+    likeCount,
+    zapCount,
+    repostCount,
+  };
 }
 
 export async function fetchNostrThread(eventId: string, timeoutMs = 4000) {
@@ -95,7 +146,11 @@ export async function fetchNostrThread(eventId: string, timeoutMs = 4000) {
   return {
     replies: result.repliesByRoot[eventId] || [],
     reactions: result.reactionsByRoot[eventId] || [],
+    zaps: result.zapsByRoot[eventId] || [],
+    reposts: result.repostsByRoot[eventId] || [],
     replyCount: result.replyCount[eventId] || 0,
     likeCount: result.likeCount[eventId] || 0,
+    zapCount: result.zapCount[eventId] || 0,
+    repostCount: result.repostCount[eventId] || 0,
   };
 }
