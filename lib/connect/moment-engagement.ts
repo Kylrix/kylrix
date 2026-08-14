@@ -124,6 +124,36 @@ export async function createMomentComment(opts: {
       undefined,
       opts.id,
     );
+
+    // If moment was synced to Nostr and vault is unlocked, dual-sync reply to Nostr
+    if (opts.nostrId && opts.privateKeyBytes) {
+      try {
+        let privBytes = opts.privateKeyBytes;
+        if (privBytes && !(privBytes instanceof Uint8Array)) {
+          privBytes = new Uint8Array(Object.values(privBytes));
+        }
+        if (privBytes && privBytes.length === 32) {
+          const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
+          const tags: string[][] = [['e', opts.nostrId, '', 'root']];
+          if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
+          const unsigned = {
+            pubkey,
+            created_at: Math.floor(Date.now() / 1000),
+            kind: 1,
+            tags,
+            content: text,
+          };
+          const signed = signEvent(unsigned, privBytes);
+          const pool = new NostrRelayPool(RELAYS);
+          pool.connect();
+          await pool.publish(signed);
+          setTimeout(() => pool.close(), 400);
+        }
+      } catch (nostrSyncErr) {
+        console.warn('[Engagement] Dual Nostr reply sync skipped:', nostrSyncErr);
+      }
+    }
+
     return row ? mapKylrixReply(row) : null;
   }
 
@@ -157,7 +187,7 @@ export async function createMomentComment(opts: {
   const pool = new NostrRelayPool(RELAYS);
   pool.connect();
   await pool.publish(signed);
-  setTimeout(() => pool.close(), 1500);
+  setTimeout(() => pool.close(), 400);
   return mapNostrReply(signed);
 }
 
@@ -169,19 +199,59 @@ export async function toggleMomentLike(opts: {
   contentSnippet?: string;
   privateKeyBytes?: Uint8Array;
   rootPubkey?: string;
+  nostrId?: string;
 }): Promise<{ liked: boolean }> {
   if (opts.source === 'ecosystem') {
     if (!opts.userId) throw new Error('Sign in to like');
-    return SocialService.toggleLike(
+    const res = await SocialService.toggleLike(
       opts.userId,
       opts.id,
       opts.creatorId,
       opts.contentSnippet,
     );
+
+    // If moment was synced to Nostr, vault unlocked, and action was a like, dual-sync to Nostr
+    if (res.liked && opts.nostrId && opts.privateKeyBytes) {
+      try {
+        let privBytes = opts.privateKeyBytes;
+        if (privBytes && !(privBytes instanceof Uint8Array)) {
+          privBytes = new Uint8Array(Object.values(privBytes));
+        }
+        if (privBytes && privBytes.length === 32) {
+          const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
+          const tags: string[][] = [['e', opts.nostrId, '', 'root']];
+          if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
+          const unsigned = {
+            pubkey,
+            created_at: Math.floor(Date.now() / 1000),
+            kind: 7,
+            tags,
+            content: '+',
+          };
+          const signed = signEvent(unsigned, privBytes);
+          const pool = new NostrRelayPool(RELAYS);
+          pool.connect();
+          await pool.publish(signed);
+          setTimeout(() => pool.close(), 400);
+        }
+      } catch (nostrLikeErr) {
+        console.warn('[Engagement] Dual Nostr like sync skipped:', nostrLikeErr);
+      }
+    }
+
+    return res;
   }
 
   if (!opts.privateKeyBytes) throw new Error('Unlock vault to like on Nostr');
-  const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(opts.privateKeyBytes));
+  let privBytes = opts.privateKeyBytes;
+  if (privBytes && !(privBytes instanceof Uint8Array)) {
+    privBytes = new Uint8Array(Object.values(privBytes));
+  }
+  if (!privBytes || privBytes.length !== 32) {
+    throw new Error('Unlock vault to like on Nostr');
+  }
+
+  const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
   const tags: string[][] = [['e', opts.id, '', 'root']];
   if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
 
@@ -192,11 +262,11 @@ export async function toggleMomentLike(opts: {
     tags,
     content: '+',
   };
-  const signed = signEvent(unsigned, opts.privateKeyBytes);
+  const signed = signEvent(unsigned, privBytes);
   const pool = new NostrRelayPool(RELAYS);
   pool.connect();
   await pool.publish(signed);
-  setTimeout(() => pool.close(), 1500);
+  setTimeout(() => pool.close(), 400);
   return { liked: true };
 }
 

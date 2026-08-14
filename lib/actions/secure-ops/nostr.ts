@@ -300,8 +300,8 @@ export async function resolveNostrPubkeysAction(npubs: string[]) {
     for (const row of profilesRes.rows) {
       profileMap[row.userId] = {
         userId: row.userId,
-        username: row.username,
-        avatarUrl: row.avatarUrl || row.avatar
+        username: row.username || row.name || 'Kylrix User',
+        avatarUrl: row.avatarUrl || row.avatar || row.picture
       };
     }
 

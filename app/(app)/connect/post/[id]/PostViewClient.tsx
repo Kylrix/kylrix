@@ -201,6 +201,7 @@ export function PostViewClient({
         privateKeyBytes: identity?.privateKeyBytes,
         nsec: identity?.nsec,
         rootPubkey: moment?.pubkey,
+        nostrId: (moment as any)?.nostrId,
       });
       setReplyContent('');
       if (created) setReplies((prev) => [...prev, created]);

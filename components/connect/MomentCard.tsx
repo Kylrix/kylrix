@@ -150,6 +150,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
         contentSnippet: preview.slice(0, 80),
         privateKeyBytes: identity?.privateKeyBytes,
         rootPubkey: item.rawEvent?.pubkey,
+        nostrId: item.rawEvent?.nostrId,
       });
     } catch (err) {
       setLiked(prevLiked);
@@ -188,6 +189,8 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
       source: item.source
     });
   };
+
+  const isSyncedToNostr = !isNostr && Boolean(item.rawEvent?.nostrId);
 
   return (
     <article
@@ -236,14 +239,19 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
             </time>
             <span
               className="ml-auto shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#0A0908] border border-white/[0.06] text-[10px] font-bold uppercase tracking-wider text-white/45"
-              title={isNostr ? 'From Nostr relays' : 'From Kylrix'}
+              title={isNostr ? 'From Nostr relays' : isSyncedToNostr ? 'Kylrix + Nostr Synced' : 'From Kylrix'}
             >
               {isNostr ? (
                 <Globe size={11} className="text-[#F59E0B]" />
+              ) : isSyncedToNostr ? (
+                <>
+                  <Shield size={11} className="text-emerald-400" />
+                  <Globe size={10} className="text-[#F59E0B]" />
+                </>
               ) : (
                 <Shield size={11} className="text-emerald-400" />
               )}
-              {isNostr ? 'Nostr' : 'Kylrix'}
+              {isNostr ? 'Nostr' : isSyncedToNostr ? 'Kylrix & Nostr' : 'Kylrix'}
             </span>
           </div>
 
