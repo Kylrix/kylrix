@@ -106,9 +106,7 @@ async function decryptWithDek(ciphertext: string, dek: CryptoKey): Promise<strin
   }
 }
 
-function looksEncrypted(val: string): boolean {
-  return typeof val === 'string' && val.length > 20 && /^[A-Za-z0-9+/=]+$/.test(val);
-}
+import { looksEncrypted } from '@/lib/masterpass-crypto';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 

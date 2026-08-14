@@ -850,9 +850,28 @@ export function looksEncrypted(val?: string | null): boolean {
   ) {
     return true;
   }
-  if (v.length > 20 && (/^[A-Za-z0-9+/=]+$/.test(v) || /^[A-Fa-f0-9:]+$/.test(v))) {
-    return true;
+  
+  // MasterPass / AES-GCM base64 format check:
+  // Must be valid base64, length >= 44 (16-byte IV + 16-byte tag + ciphertext in base64),
+  // and contain standard padding or base64 structure without common plaintext whitespace/punctuation.
+  if (v.length >= 44 && /^[A-Za-z0-9+/]+={0,2}$/.test(v)) {
+    try {
+      const decoded = atob(v);
+      // Minimum AES-GCM envelope is 16 bytes IV + 16 bytes tag = 32 bytes binary
+      if (decoded.length >= 32) {
+        // If decoding produces binary non-printable control bytes in the first 16 bytes (IV), it's ciphertext
+        let nonPrintable = 0;
+        for (let i = 0; i < Math.min(decoded.length, 16); i++) {
+          const code = decoded.charCodeAt(i);
+          if (code < 32 || code > 126) nonPrintable++;
+        }
+        if (nonPrintable >= 2) return true;
+      }
+    } catch {
+      return false;
+    }
   }
+  
   return false;
 }
 

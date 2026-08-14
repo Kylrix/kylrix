@@ -63,10 +63,7 @@ async function decryptWithDek(ciphertext: string, dek: CryptoKey): Promise<strin
   }
 }
 
-function looksEncrypted(val: string): boolean {
-  // Encrypted fields are base64 blobs > 20 chars
-  return typeof val === 'string' && val.length > 20 && /^[A-Za-z0-9+/=]+$/.test(val);
-}
+import { looksEncrypted } from '@/lib/masterpass-crypto';
 
 export default function SharedVaultClient({ credentialId, dekFragment, rawCredential }: SharedVaultClientProps & { rawCredential: any }) {
   const [credential, setCredential] = useState<DecryptedCredential | null>(null);
