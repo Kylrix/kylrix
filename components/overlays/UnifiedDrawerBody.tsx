@@ -82,6 +82,10 @@ const AccessControlDrawer = dynamic(
   () => import('./AccessControlDrawer').then((m) => m.AccessControlDrawer),
   { ssr: false },
 );
+const EcosystemSendDrawer = dynamic(
+  () => import('./EcosystemSendDrawer').then((m) => m.EcosystemSendDrawer),
+  { ssr: false },
+);
 const TaskDetails = dynamic(() => import('../tasks/TaskDetails'), { ssr: false });
 const AgenticPanelContent = dynamic(
   () => import('./AgenticPanelContent').then((m) => m.AgenticPanelContent),
@@ -331,6 +335,22 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           isGuest={drawerData?.isGuest}
           resourceTitle={drawerData?.resourceTitle}
           projectId={drawerData?.projectId}
+          onUpdate={drawerData?.onUpdate}
+        />
+      );
+    case 'ecosystem-send':
+      return (
+        <EcosystemSendDrawer
+          isOpen
+          onClose={onClose}
+          resourceType={drawerData?.resourceType}
+          resourceId={drawerData?.resourceId}
+          resourceTitle={drawerData?.resourceTitle}
+          kind={drawerData?.kind}
+          isPublic={drawerData?.isPublic}
+          isGuest={drawerData?.isGuest}
+          projectId={drawerData?.projectId}
+          resolveShareUrl={drawerData?.resolveShareUrl}
           onUpdate={drawerData?.onUpdate}
         />
       );

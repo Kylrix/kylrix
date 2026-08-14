@@ -365,24 +365,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       }
     ] : []),
     { label: 'Collaborators', icon: <ShareIcon size={16} />, onClick: openShare },
-    {
-      label: 'Send',
-      icon: <ShareIcon size={16} className="text-[#F59E0B]" />,
-      onClick: () => {
-        openHangoutShare({
-          id: note.$id,
-          title: note.title || 'Untitled Idea',
-          kind: 'idea',
-          resourceType: 'note',
-          isPublic: !!liveNote.isPublic,
-          isGuest: !!liveNote.isGuest,
-          openSidebar,
-          openOverlay,
-          closeSidebar,
-          closeOverlay,
-        });
-      },
-    },
     { 
       label: 'Delete', 
       icon: <TrashIcon size={16} className="text-red-500" />, 

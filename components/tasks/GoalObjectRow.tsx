@@ -290,24 +290,6 @@ export default function GoalObjectRow({ task }: Props) {
         onClick: openCollaborators,
       },
       {
-        label: 'Send',
-        icon: <Share2 size={16} className="text-[#F59E0B]" />,
-        onClick: () => {
-          openHangoutShare({
-            id: task.id,
-            title: task.title || 'Untitled Goal',
-            kind: 'goal',
-            resourceType: 'goal',
-            isPublic: !!(task as any).isPublic,
-            isGuest: !!(task as any).isGuest,
-            openSidebar,
-            openOverlay,
-            closeSidebar,
-            closeOverlay,
-          });
-        },
-      },
-      {
         label: 'Delete',
         icon: <Trash2 size={16} className="text-red-500" />,
         variant: 'destructive' as const,

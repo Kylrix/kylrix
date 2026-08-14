@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Share2, ShieldAlert } from 'lucide-react';
+import { Share2, ShieldAlert, Send } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { useToast } from '@/hooks/useToast';
@@ -12,6 +12,7 @@ interface AccessControlMenuItemsProps {
   isPublic: boolean;
   isGuest: boolean;
   resourceTitle?: string;
+  kind?: string;
   projectId?: string;
   /** When set (e.g. vault/locked objects), clipboard uses DEK-in-URI share links. */
   resolveShareUrl?: () => Promise<string>;
@@ -24,6 +25,7 @@ export function useAccessControlMenuItems({
   isPublic,
   isGuest,
   resourceTitle,
+  kind,
   projectId,
   resolveShareUrl,
   onUpdate
@@ -117,6 +119,23 @@ export function useAccessControlMenuItems({
           }
         }
       })
-    }
+    },
+    {
+      label: 'Send',
+      icon: <Send size={16} className="text-[#F59E0B]" />,
+      onClick: () => {
+        openUnified('ecosystem-send', {
+          resourceType,
+          resourceId,
+          resourceTitle: resourceTitle || 'Item',
+          kind: kind || resourceType,
+          isPublic,
+          isGuest,
+          projectId,
+          resolveShareUrl,
+          onUpdate,
+        });
+      },
+    },
   ];
 }
