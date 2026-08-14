@@ -43,6 +43,12 @@ export function bytesToNsec(privkeyBytes: Uint8Array): string {
   return bech32.encode("nsec", words);
 }
 
+export function nsecToBytes(nsec: string): Uint8Array {
+  const { prefix, words } = bech32.decode(nsec);
+  if (prefix !== "nsec") throw new Error("Invalid nsec prefix");
+  return new Uint8Array(bech32.fromWords(words));
+}
+
 
 // Helper to encrypt a master private key (32 bytes nsec) with a derived symmetric key (32 bytes)
 

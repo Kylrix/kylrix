@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { RefreshCw, Sparkles, Sliders } from 'lucide-react';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { Sparkles, Sliders } from 'lucide-react';
 import { MomentCard } from '@/components/connect/MomentCard';
 import { useConnectMomentsFeed } from '@/components/connect/useConnectMomentsFeed';
 import { ConnectFeedSettingsPanel } from '@/components/connect/ConnectFeedSettingsPanel';
@@ -13,21 +13,11 @@ interface ConnectMomentsPanelProps {
 }
 
 export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps) {
-  const { items, total, loading, refreshing, hasMore, loadMore, refresh } =
+  const { items, total, loading, refreshing, hasMore, loadMore } =
     useConnectMomentsFeed();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const [manualSpin, setManualSpin] = useState(false);
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
-
-  const handleRefresh = async () => {
-    setManualSpin(true);
-    try {
-      await refresh();
-    } finally {
-      setTimeout(() => setManualSpin(false), 350);
-    }
-  };
 
   const onIntersect = useCallback(
     (entries: IntersectionObserverEntry[]) => {
@@ -72,18 +62,6 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
             aria-label="Live feed settings"
           >
             <Sliders size={16} className="text-white" />
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleRefresh()}
-            disabled={manualSpin || refreshing}
-            className="w-10 h-10 shrink-0 rounded-xl bg-[#161412] border border-[#34322F] flex items-center justify-center disabled:opacity-40 hover:border-white/15 transition-colors"
-            aria-label="Refresh moments"
-          >
-            <RefreshCw
-              size={16}
-              className={manualSpin || refreshing ? 'text-[#F59E0B] animate-spin' : 'text-white'}
-            />
           </button>
         </div>
       </header>

@@ -8,7 +8,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { account } from '@/lib/appwrite';
 import { sha256 } from '@noble/hashes/sha2.js';
 import * as secp256k1 from '@noble/secp256k1';
-import { bytesToNpub, bytesToNsec, bytesToHex, hexToBytes } from '@/lib/nostr/crypto';
+import { bytesToNpub, bytesToNsec, bytesToHex, hexToBytes, nsecToBytes } from '@/lib/nostr/crypto';
 
 export interface NostrIdentity {
   npub: string;
@@ -112,6 +112,91 @@ export function useNostrIdentity() {
     }
   }, [user?.$id]);
 
+  const importCustomNsec = useCallback(async (customNsec: string): Promise<NostrIdentity | null> => {
+    if (!user?.$id) return null;
+    const clean = customNsec.trim();
+    if (!clean) throw new Error('Private key cannot be empty');
+
+    let privKeyBytes: Uint8Array;
+    if (clean.startsWith('nsec')) {
+      privKeyBytes = nsecToBytes(clean);
+    } else if (/^[0-9a-fA-F]{64}$/.test(clean)) {
+      privKeyBytes = hexToBytes(clean);
+    } else {
+      throw new Error('Invalid Nostr private key. Must be nsec1... or 64-char hex.');
+    }
+
+    const masterKey = ecosystemSecurity.getMasterKey();
+    if (!masterKey) throw new Error('Vault is locked. Unlock vault first.');
+
+    const pubKeyBytes = secp256k1.schnorr.getPublicKey(privKeyBytes);
+    const npub = bytesToNpub(pubKeyBytes);
+    const nsec = bytesToNsec(privKeyBytes);
+
+    let jwtToken: string | undefined;
+    try {
+      const jwtResponse = await account.createJWT();
+      jwtToken = jwtResponse.jwt;
+    } catch {}
+
+    const hexNsec = bytesToHex(privKeyBytes);
+    const encryptedNsec = await ecosystemSecurity.encrypt(hexNsec);
+
+    await registerNostrIdentityAction({
+      npub,
+      encryptedNsec,
+      iv: 'aes-gcm-iv',
+      salt: 'mek-derived-salt',
+      jwt: jwtToken,
+    });
+
+    const newIdentity: NostrIdentity = {
+      npub,
+      nsec,
+      privateKeyBytes: privKeyBytes,
+    };
+    setIdentity(newIdentity);
+    return newIdentity;
+  }, [user?.$id]);
+
+  const resetToDefaultIdentity = useCallback(async (): Promise<NostrIdentity | null> => {
+    if (!user?.$id) return null;
+    const masterKey = ecosystemSecurity.getMasterKey();
+    if (!masterKey) throw new Error('Vault is locked. Unlock vault first.');
+
+    const rawMek = await window.crypto.subtle.exportKey('raw', masterKey);
+    const privKeyBytes = new Uint8Array(sha256(new Uint8Array(rawMek)));
+    const pubKeyBytes = secp256k1.schnorr.getPublicKey(privKeyBytes);
+
+    const npub = bytesToNpub(pubKeyBytes);
+    const nsec = bytesToNsec(privKeyBytes);
+
+    let jwtToken: string | undefined;
+    try {
+      const jwtResponse = await account.createJWT();
+      jwtToken = jwtResponse.jwt;
+    } catch {}
+
+    const hexNsec = bytesToHex(privKeyBytes);
+    const encryptedNsec = await ecosystemSecurity.encrypt(hexNsec);
+
+    await registerNostrIdentityAction({
+      npub,
+      encryptedNsec,
+      iv: 'aes-gcm-iv',
+      salt: 'mek-derived-salt',
+      jwt: jwtToken,
+    });
+
+    const newIdentity: NostrIdentity = {
+      npub,
+      nsec,
+      privateKeyBytes: privKeyBytes,
+    };
+    setIdentity(newIdentity);
+    return newIdentity;
+  }, [user?.$id]);
+
   const unlockAndLoad = useCallback(async () => {
     return new Promise<NostrIdentity | null>((resolve) => {
       requestSudo({
@@ -138,5 +223,8 @@ export function useNostrIdentity() {
     loading,
     isVaultLocked,
     unlockAndLoad,
+    loadOrMintIdentity,
+    importCustomNsec,
+    resetToDefaultIdentity,
   };
 }

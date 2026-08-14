@@ -24,16 +24,20 @@ import {
 } from '@/lib/connect/feed-settings';
 import toast from 'react-hot-toast';
 
-type Props = {
-  settings: ConnectFeedSettings;
-  onUpdate: (next: Partial<ConnectFeedSettings>) => void;
-  onBack: () => void;
-};
-
-export function ConnectNostrSettingsView({ settings, onUpdate, onBack }: Props) {
-  const { identity, loading: identityLoading, isVaultLocked, unlockAndLoad, loadOrMintIdentity } = useNostrIdentity();
+  const { 
+    identity, 
+    loading: identityLoading, 
+    isVaultLocked, 
+    unlockAndLoad, 
+    loadOrMintIdentity,
+    importCustomNsec,
+    resetToDefaultIdentity
+  } = useNostrIdentity();
   const [copiedKey, setCopiedKey] = useState<'npub' | 'nsec' | null>(null);
   const [showNsec, setShowNsec] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [importNsec, setImportNsec] = useState('');
+  const [importing, setImporting] = useState(false);
   const [newRelayUrl, setNewRelayUrl] = useState('');
   const [newRelayRead, setNewRelayRead] = useState(true);
   const [newRelayWrite, setNewRelayWrite] = useState(true);
@@ -44,6 +48,37 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack }: Props) 
       void loadOrMintIdentity();
     }
   }, [isVaultLocked, identity, loadOrMintIdentity]);
+
+  const handleImportAccount = async () => {
+    const clean = importNsec.trim();
+    if (!clean) return;
+    setImporting(true);
+    try {
+      if (isVaultLocked) {
+        await unlockAndLoad();
+      }
+      await importCustomNsec(clean);
+      setImportNsec('');
+      setShowImport(false);
+      toast.success('Nostr account switched successfully');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to switch Nostr account');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleResetToDefaultAccount = async () => {
+    try {
+      if (isVaultLocked) {
+        await unlockAndLoad();
+      }
+      await resetToDefaultIdentity();
+      toast.success('Reset to default derived Nostr identity');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to reset identity');
+    }
+  };
 
   const nostrConfig: NostrSettingsConfig = settings.nostrConfig || NOSTR_CONFIG_DEFAULTS;
 
@@ -274,6 +309,61 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack }: Props) 
                   <p className="text-[10px] text-amber-500/80 font-mono m-0 leading-tight">
                     Never share your nsec with anyone. It gives full control of your Nostr identity.
                   </p>
+                </div>
+              )}
+            </div>
+
+            {/* Switch / Import Nostr Account */}
+            <div className="pt-2 border-t border-white/[0.04] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-white/60 uppercase tracking-wider font-mono">Account switching</span>
+                <button
+                  type="button"
+                  onClick={() => setShowImport(prev => !prev)}
+                  className="text-[11px] font-bold text-[#F59E0B] hover:text-[#F59E0B]/80 font-mono"
+                >
+                  {showImport ? 'Cancel' : '+ Import custom nsec'}
+                </button>
+              </div>
+
+              {showImport ? (
+                <div className="space-y-2 rounded-lg bg-[#0A0908] border border-white/[0.06] p-2.5">
+                  <input
+                    type="password"
+                    value={importNsec}
+                    onChange={e => setImportNsec(e.target.value)}
+                    placeholder="nsec1... or 64-char hex private key"
+                    className="w-full h-8 rounded bg-[#161412] border border-white/[0.06] px-2.5 text-xs font-mono text-white placeholder:text-white/30 focus:outline-none focus:border-[#F59E0B]/40"
+                  />
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleResetToDefaultAccount}
+                      className="text-[10px] font-mono text-white/40 hover:text-white"
+                    >
+                      Reset to default derived key
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleImportAccount}
+                      disabled={importing || !importNsec.trim()}
+                      className="h-7 px-3 rounded bg-[#F59E0B] text-black text-xs font-extrabold disabled:opacity-40"
+                    >
+                      {importing ? 'Importing…' : 'Switch account'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-white/40">Using custom or default Nostr identity</span>
+                  <button
+                    type="button"
+                    onClick={handleResetToDefaultAccount}
+                    className="text-[11px] font-mono font-bold text-white/40 hover:text-white"
+                    title="Derive fresh key from vault MEK"
+                  >
+                    Reset to default
+                  </button>
                 </div>
               )}
             </div>
