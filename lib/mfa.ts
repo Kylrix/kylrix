@@ -96,8 +96,8 @@ export async function listCurrentMfaFactors(): Promise<MfaFactorsLike> {
     let passkey = false;
     if (userDoc?.$id) {
       try {
-        const { KeychainService } = await import('@/lib/appwrite/vault-service');
-        const entries = await KeychainService.listKeychainEntries(userDoc.$id);
+        const { VaultService } = await import('@/lib/appwrite/vault-service');
+        const entries = await VaultService.listKeychainEntries(userDoc.$id);
         passkey = entries.some((e: any) => e.type === 'passkey');
       } catch {}
     }

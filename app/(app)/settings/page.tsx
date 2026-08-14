@@ -58,7 +58,6 @@ import ConnectedIdentities from '@/components/ConnectedIdentities';
 import PreferencesManager from '@/components/PreferencesManager';
 import { TwoFactorPanel } from '@/components/overlays/TwoFactorDrawer';
 import { BillingDrawer } from '@/components/overlays/BillingDrawer';
-import { AppwriteService } from '@/lib/appwrite';
 import { account } from '@/lib/appwrite/client';
 import AdminDashboardPage from '@/components/admin/AdminDashboard';
 import UsersManagement from '@/components/admin/UsersManagement';

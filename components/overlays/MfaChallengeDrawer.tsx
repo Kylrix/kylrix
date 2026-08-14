@@ -11,7 +11,6 @@ import {
   type MfaFactorsLike,
   type MfaLoginMethod} from '@/lib/mfa';
 import toast from 'react-hot-toast';
-import { Close as CloseIcon } from '@/lib/openbricks/icons';
 import {
   Box,
   Button,
@@ -19,7 +18,6 @@ import {
   CircularProgress,
   Divider,
   Drawer,
-  IconButton,
   Stack,
   TextField,
   Typography,
@@ -28,12 +26,12 @@ import {
 
 type Props = {
   open: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   loginMethod: MfaLoginMethod;
   onSuccess: () => void;
 };
 
-export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Props) {
+export function MfaChallengeDrawer({ open, onClose: _onClose, loginMethod, onSuccess }: Props) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [loading, setLoading] = useState(false);
@@ -118,7 +116,8 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
     <Drawer
       anchor={isDesktop ? 'right' : 'bottom'}
       open={open}
-      onClose={onClose}
+      onClose={() => {}}
+      disableEscapeKeyDown
       PaperProps={{
         sx: {
           width: isDesktop ? 'min(480px, 90vw)' : '100%',
@@ -137,15 +136,12 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
           <Box>
             <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '1.2rem', letterSpacing: '-0.03em' }}>
-              Complete MFA
+              Two-Factor Authentication
             </Typography>
             <Typography sx={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.9rem' }}>
-              Finish login with a second factor.
+              Complete second factor verification to access your workspace.
             </Typography>
           </Box>
-          <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.7)' }}>
-            <CloseIcon />
-          </IconButton>
         </Box>
 
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25, mb: 3 }}>
