@@ -73,8 +73,17 @@ export async function pullAndSyncUserFlowInstalls(): Promise<string[]> {
       }
     }
 
-    // 2. Fetch authoritative active installs from Server Action
-    const res = await listMyFlowInstallsSecure();
+    // 2. Fetch authoritative active installs from Server Action with client JWT
+    let jwt: string | undefined;
+    if (typeof window !== 'undefined') {
+      try {
+        const { account } = await import('@/lib/appwrite/client');
+        const tokenRes = await account.createJWT().catch(() => null);
+        jwt = tokenRes?.jwt;
+      } catch {}
+    }
+
+    const res = await listMyFlowInstallsSecure(jwt);
     if (res.success && Array.isArray(res.data)) {
       const activeIds = res.data
         .filter((row: any) => row.status === 'active')
