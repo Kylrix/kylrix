@@ -158,9 +158,7 @@ export async function registerNostrIdentityAction(params: {
         isDefault: makeDefault
       },
       permissions: [
-        Permission.read(Role.user(userId)),
-        Permission.update(Role.user(userId)),
-        Permission.delete(Role.user(userId))
+        Permission.read(Role.user(userId))
       ]
     });
 
