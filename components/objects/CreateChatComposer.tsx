@@ -55,13 +55,20 @@ export function CreateChatComposer({
   const hasMissingKeys = missingKeyIds.size > 0;
   const [existingDirectInfo, setExistingDirectInfo] = useState<{ hasEncrypted: boolean; hasUnencrypted: boolean; checked: boolean }>({ hasEncrypted: false, hasUnencrypted: false, checked: false });
   const baseEncryptedEnabled = !userToggledOff && !hasMissingKeys;
-  // Duplicate prevention: two people can have at most two directs (encrypted + unencrypted). Default to opposite if one exists, grey out if both.
+  // Duplicate prevention: two people can have at most two directs (encrypted + unencrypted).
   const isDirectForDup = selectedUsers.length === 1;
   const hasBothDirects = isDirectForDup && existingDirectInfo.checked && existingDirectInfo.hasEncrypted && existingDirectInfo.hasUnencrypted;
   const hasOneDirect = isDirectForDup && existingDirectInfo.checked && (existingDirectInfo.hasEncrypted !== existingDirectInfo.hasUnencrypted);
-  const defaultOpposite = hasOneDirect ? !existingDirectInfo.hasEncrypted : baseEncryptedEnabled;
-  const encryptedEnabled = hasBothDirects ? baseEncryptedEnabled : hasOneDirect ? defaultOpposite : baseEncryptedEnabled;
-  const isToggleGreyed = hasBothDirects || hasOneDirect || hasMissingKeys;
+  
+  // Bug fix: If an unencrypted chat already exists (x = unencrypted), we want to create encrypted (1-x).
+  // But if a participant has not setup encryption (hasMissingKeys), encrypted cannot be created either.
+  // In that scenario, neither (x) nor (1-x) can be created, so isImpossibleDirect is true!
+  const isImpossibleDirect = isDirectForDup && existingDirectInfo.checked && existingDirectInfo.hasUnencrypted && hasMissingKeys;
+
+  // If one direct exists, target is the opposite (!hasEncrypted). But if missing keys forces encryption off, target becomes unencrypted (which already exists!).
+  const targetEncrypted = hasOneDirect ? !existingDirectInfo.hasEncrypted : baseEncryptedEnabled;
+  const encryptedEnabled = hasBothDirects || isImpossibleDirect ? false : (hasOneDirect ? targetEncrypted && !hasMissingKeys : baseEncryptedEnabled);
+  const isToggleGreyed = hasBothDirects || hasOneDirect || hasMissingKeys || isImpossibleDirect;
 
   useEffect(() => {
     onRegisterClose?.(() => onClose());
@@ -160,11 +167,17 @@ export function CreateChatComposer({
     }
 
     // Duplicate prevention: direct can have at most encrypted+unencrypted. If both exist, show chooser.
-    if (selectedUsers.length === 1 && existingDirectInfo.checked && existingDirectInfo.hasEncrypted && existingDirectInfo.hasUnencrypted) {
+    if (selectedUsers.length === 1 && existingDirectInfo.checked && (hasBothDirects || isImpossibleDirect)) {
       try {
         const otherId = (selectedUsers[0] as any).id || (selectedUsers[0] as any).$id;
         const all = await ChatService.getConversations(user.$id);
         const directs = (all.rows || []).filter((c: any) => c.type === 'direct' && Array.isArray(c.participants) && c.participants.includes(user.$id) && c.participants.includes(otherId) && c.participants.length === 2);
+        if (isImpossibleDirect) {
+          toast.error('Standard chat already exists, and this participant has not set up secure chat yet.', { id: 'dup-impossible' });
+          const existingUnenc = directs.find((c: any) => !c.isEncrypted);
+          if (existingUnenc) openConversation(existingUnenc.$id, 'chat');
+          return;
+        }
         toast('Both conversations already exist — choose one', { id: 'dup-both' });
         // Open the one matching current toggle, or first encrypted
         const preferred = directs.find((c: any) => !!c.isEncrypted === encryptedEnabled) || directs[0];
@@ -226,10 +239,10 @@ export function CreateChatComposer({
       return;
     }
     await doCreate(encryptedEnabled);
-  }, [user, selectedUsers, hangoutName, encryptedEnabled, existingDirectInfo, openConversation, requestSudo]);
+  }, [user, selectedUsers, hangoutName, encryptedEnabled, existingDirectInfo, hasBothDirects, isImpossibleDirect, openConversation, requestSudo]);
 
   const isGroup = selectedUsers.length > 1;
-  const canCreate = selectedUsers.length > 0 && !busy && (!isGroup || hangoutName.trim().length > 0 || !encryptedEnabled);
+  const canCreate = selectedUsers.length > 0 && !busy && !hasBothDirects && !isImpossibleDirect && (!isGroup || hangoutName.trim().length > 0 || !encryptedEnabled);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#161412] text-white font-satoshi">
@@ -278,7 +291,7 @@ export function CreateChatComposer({
             <div className="min-w-0">
               <p className="text-xs font-extrabold text-white m-0">End-to-end encrypted</p>
               <p className="text-[10px] font-semibold text-white/35 m-0 leading-tight">
-                {checkingKeys ? 'Checking keys…' : hasMissingKeys ? 'Off — someone lacks secure setup' : encryptedEnabled ? 'Messages stay private to participants' : 'Off — will create standard hangout'}
+                {checkingKeys ? 'Checking keys…' : isImpossibleDirect ? 'Cannot create — standard chat exists and participant lacks encryption' : hasMissingKeys ? 'Off — someone lacks secure setup' : encryptedEnabled ? 'Messages stay private to participants' : 'Off — will create standard hangout'}
               </p>
             </div>
           </div>
@@ -288,6 +301,10 @@ export function CreateChatComposer({
             aria-checked={encryptedEnabled}
             disabled={isToggleGreyed}
             onClick={() => {
+              if (isImpossibleDirect) {
+                toast('Standard chat already exists, and this participant has not set up secure chat yet.', { id: 'e2e-impossible-reason' });
+                return;
+              }
               if (hasMissingKeys) {
                 toast('Turn off encryption is automatic — a participant lacks secure setup', { id: 'e2e-disabled-reason' });
                 return;
@@ -298,7 +315,7 @@ export function CreateChatComposer({
               }
               setUserToggledOff((v) => !v);
             }}
-            title={hasMissingKeys ? 'Disabled — participant without public key' : hasBothDirects ? 'Greyed — both chat types already exist' : hasOneDirect ? `Greyed — opposite of existing (${existingDirectInfo.hasEncrypted ? 'standard' : 'encrypted'})` : encryptedEnabled ? 'Tap to turn off — will create unencrypted discussion' : 'Tap to turn on'}
+            title={isImpossibleDirect ? 'Cannot create — standard chat already exists and participant has not set up encryption' : hasMissingKeys ? 'Disabled — participant without public key' : hasBothDirects ? 'Greyed — both chat types already exist' : hasOneDirect ? `Greyed — opposite of existing (${existingDirectInfo.hasEncrypted ? 'standard' : 'encrypted'})` : encryptedEnabled ? 'Tap to turn off — will create unencrypted discussion' : 'Tap to turn on'}
             className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${encryptedEnabled ? 'bg-[#F59E0B] border-[#F59E0B]' : 'bg-white/10 border-white/10'} ${isToggleGreyed ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${encryptedEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -307,12 +324,14 @@ export function CreateChatComposer({
         {encryptedEnabled && !isUnlocked ? (
           <p className="text-[10px] font-semibold text-amber-400/80 mt-2 px-1">Vault locked — creating encrypted hangout will prompt unlock.</p>
         ) : null}
-        {!encryptedEnabled && hasMissingKeys ? (
+        {isImpossibleDirect ? (
+          <p className="text-[10px] font-semibold text-amber-400/90 mt-2 px-1">A standard chat already exists with this person, but they haven&apos;t set up encrypted chat yet. No new chat can be created.</p>
+        ) : !encryptedEnabled && hasMissingKeys ? (
           <p className="text-[10px] font-semibold text-white/35 mt-2 px-1">No conversation keys — standard chat uses same table with encryption off.</p>
         ) : null}
         {hasBothDirects ? (
           <p className="text-[10px] font-semibold text-white/35 mt-2 px-1">Both encrypted and standard chats already exist — choose one from your conversations.</p>
-        ) : hasOneDirect ? (
+        ) : hasOneDirect && !isImpossibleDirect ? (
           <p className="text-[10px] font-semibold text-white/35 mt-2 px-1">Defaults to {existingDirectInfo.hasEncrypted ? 'standard (unencrypted)' : 'encrypted'} — opposite of existing chat. Toggle greyed to prevent duplicate.</p>
         ) : null}
       </div>
@@ -357,7 +376,14 @@ export function CreateChatComposer({
             Add one person for a direct chat, or multiple for a hangout. {!encryptedEnabled ? 'Will create a standard hangout.' : 'Encrypted when possible.'}
           </p>
         ) : null}
-        {hasMissingKeys ? (
+        {isImpossibleDirect ? (
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2.5 flex gap-2.5">
+            <Shield size={14} className="text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-[11px] font-semibold text-amber-200/90 leading-relaxed m-0">
+              You already have a standard chat with this person. An encrypted chat cannot be created until they set up secure chat in Settings.
+            </p>
+          </div>
+        ) : hasMissingKeys ? (
           <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2.5 flex gap-2.5">
             <Shield size={14} className="text-amber-400 shrink-0 mt-0.5" />
             <p className="text-[11px] font-semibold text-amber-200/90 leading-relaxed m-0">
@@ -382,7 +408,7 @@ export function CreateChatComposer({
           onClick={() => void handleCreate()}
           className="flex-1 h-12 rounded-xl bg-[#F59E0B] text-black font-extrabold text-sm disabled:opacity-40 hover:bg-amber-500 transition-colors"
         >
-          {busy ? 'Creating…' : isGroup ? 'Create hangout' : 'Start hangout'}
+          {busy ? 'Creating…' : isImpossibleDirect ? 'Chat exists' : hasBothDirects ? 'Both exist' : isGroup ? 'Create hangout' : 'Start hangout'}
         </button>
       </div>
     </div>
