@@ -1,5 +1,7 @@
 'use client';
 
+import { BUILTIN_FLOWS } from '@/lib/flows/builtins';
+
 export type GlobalResultKind =
   | 'note'
   | 'goal'
@@ -58,10 +60,111 @@ const ACCENT: Record<GlobalResultKind, string> = {
   tag: '#F87171',
 };
 
+const ECOSYSTEM_DESTINATIONS: Array<{
+  kind: GlobalResultKind;
+  id: string;
+  title: string;
+  subtitle: string;
+  href: string;
+  accent: string;
+  keywords: string[];
+}> = [
+  {
+    kind: 'flow',
+    id: 'app-flows',
+    title: 'Workflows & Flows',
+    subtitle: 'Automate repetitive workflows, Math Mode & Sidekick',
+    href: '/flows',
+    accent: '#818CF8',
+    keywords: ['flow', 'flows', 'workflow', 'workflows', 'math mode', 'sidekick', 'automation', 'extensions'],
+  },
+  {
+    kind: 'note',
+    id: 'app-notes',
+    title: 'Ideas & Notes',
+    subtitle: 'Private and shared ideas workspace',
+    href: '/app',
+    accent: '#EC4899',
+    keywords: ['note', 'notes', 'idea', 'ideas', 'thought', 'thoughts', 'scratchpad'],
+  },
+  {
+    kind: 'goal',
+    id: 'app-goals',
+    title: 'Goals & Tasks',
+    subtitle: 'Deliverables, milestones and task tracking',
+    href: '/goals',
+    accent: '#A855F7',
+    keywords: ['goal', 'goals', 'task', 'tasks', 'todo', 'todos', 'milestones'],
+  },
+  {
+    kind: 'secret',
+    id: 'app-vault',
+    title: 'Security Enclave & Vault',
+    subtitle: 'Zero-knowledge passwords, TOTP and credentials',
+    href: '/vault',
+    accent: '#10B981',
+    keywords: ['vault', 'secret', 'secrets', 'password', 'passwords', 'totp', 'credentials', 'enclave'],
+  },
+  {
+    kind: 'form',
+    id: 'app-forms',
+    title: 'Forms & Surveys',
+    subtitle: 'Reactive input collectors and forms',
+    href: '/forms',
+    accent: '#A78BFA',
+    keywords: ['form', 'forms', 'survey', 'surveys', 'poll', 'polls', 'inputs'],
+  },
+  {
+    kind: 'event',
+    id: 'app-events',
+    title: 'Events & Schedule',
+    subtitle: 'Upcoming dates, reminders and calls',
+    href: '/events',
+    accent: '#F472B6',
+    keywords: ['event', 'events', 'calendar', 'schedule', 'reminder', 'reminders'],
+  },
+  {
+    kind: 'moment',
+    id: 'app-connect',
+    title: 'Connect & Feed',
+    subtitle: 'Public moments, channels and chat',
+    href: '/connect',
+    accent: '#F59E0B',
+    keywords: ['connect', 'feed', 'moment', 'moments', 'social', 'channels'],
+  },
+  {
+    kind: 'tag',
+    id: 'app-tags',
+    title: 'Tags & Taxonomy',
+    subtitle: 'Organize ideas and crosslink categories',
+    href: '/tags',
+    accent: '#F87171',
+    keywords: ['tag', 'tags', 'labels', 'categories', 'taxonomy'],
+  },
+];
+
 export function searchLocalEngine(qRaw: string, ctx: GlobalSearchCtx): GlobalResult[] {
   const q = qRaw.trim().toLowerCase();
   if (q.length < 2) return [];
   const out: GlobalResult[] = [];
+
+  // 0. Match Ecosystem Destinations
+  for (const dest of ECOSYSTEM_DESTINATIONS) {
+    if (
+      includes(dest.title, q) ||
+      includes(dest.subtitle, q) ||
+      dest.keywords.some((kw) => includes(kw, q) || includes(q, kw))
+    ) {
+      out.push({
+        kind: dest.kind,
+        id: dest.id,
+        title: dest.title,
+        subtitle: dest.subtitle,
+        href: dest.href,
+        accent: dest.accent,
+      });
+    }
+  }
 
   const notes = ctx.notes || [];
   for (const n of notes) {
@@ -143,15 +246,19 @@ export function searchLocalEngine(qRaw: string, ctx: GlobalSearchCtx): GlobalRes
     }
   }
 
-  const flows = ctx.flows || [];
-  for (const fl of flows) {
+  const allFlows = [...BUILTIN_FLOWS, ...(ctx.flows || [])];
+  const seenFlowIds = new Set<string>();
+  for (const fl of allFlows) {
+    const fid = fl.id || fl.$id;
+    if (seenFlowIds.has(fid)) continue;
+    seenFlowIds.add(fid);
     const title = fl.name || fl.title || 'Flow';
     if (includes(title, q) || includes(fl.description, q)) {
       out.push({
         kind: 'flow',
-        id: fl.id || fl.$id,
+        id: fid,
         title,
-        subtitle: `${fl.steps?.length || 0} steps`,
+        subtitle: fl.description ? fl.description.slice(0, 60) : `${fl.steps?.length || 0} steps`,
         href: `/flows`,
         accent: ACCENT.flow,
         raw: fl,
