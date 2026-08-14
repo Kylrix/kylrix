@@ -1387,25 +1387,31 @@ export const ChatService = {
 
     async getMessages(conversationId: string, limit = 50, offset = 0, userId?: string, options?: { prefetchedConversation?: any }) {
         console.log('[ChatService] getMessages for:', conversationId, 'limit:', limit);
-        // Ensure UI has explicitly unwrapped the Conversation Key before fetching messages
+        // Parallelize message list fetch and conversation/key resolution for maximum speed
         let _conv = options?.prefetchedConversation;
-        if (!_conv) {
-            try {
-                _conv = await this.getConversationById(conversationId, userId);
-            } catch (err) {
-                console.warn('[ChatService] Failed to pre-fetch conversation for messages:', err);
-            }
-        }
-        
-        const convKey = userId ? await resolveConversationKey(_conv, userId) : conversationKeyCache.get(conversationId) || ecosystemSecurity.getConversationKey(conversationId);
+        const convPromise = _conv
+            ? Promise.resolve(_conv)
+            : (userId ? this.getConversationById(conversationId, userId).catch(() => null) : Promise.resolve(null));
+
+        const keyPromise = convPromise.then(async (c) => {
+            if (userId && c) return await resolveConversationKey(c, userId);
+            return conversationKeyCache.get(conversationId) || ecosystemSecurity.getConversationKey(conversationId);
+        });
+
+        const listPromise = tablesDB.listRows(DB_ID, MSG_TABLE, [
+            Query.equal('conversationId', conversationId),
+            Query.orderDesc('createdAt'),
+            Query.limit(limit),
+            Query.offset(offset)
+        ]);
 
         try {
-            const res = await tablesDB.listRows(DB_ID, MSG_TABLE, [
-                Query.equal('conversationId', conversationId),
-                Query.orderDesc('createdAt'),
-                Query.limit(limit),
-                Query.offset(offset)
+            const [res, convKey, resolvedConv] = await Promise.all([
+                listPromise,
+                keyPromise,
+                convPromise
             ]);
+            _conv = resolvedConv || _conv;
 
             console.log('[ChatService] listRows returned:', res.total, 'rows:', res.rows.length);
 
