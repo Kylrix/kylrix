@@ -10347,8 +10347,19 @@
             ],
             "indexes": [
                 {
+                    "key": "idx_npub",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "npub"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
                     "key": "idx_user_id",
-                    "type": "unique",
+                    "type": "key",
                     "status": "available",
                     "columns": [
                         "userId"
@@ -10358,11 +10369,11 @@
                     ]
                 },
                 {
-                    "key": "idx_npub",
-                    "type": "key",
+                    "key": "idx_user_npub",
+                    "type": "unique",
                     "status": "available",
                     "columns": [
-                        "npub"
+                        "userId"
                     ],
                     "orders": [
                         "ASC"

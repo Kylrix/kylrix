@@ -1,11 +1,11 @@
 'use server';
 
-import { createServerClient } from '@/lib/appwrite/server';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getActor } from '../secure-ops/shared';
-import { Databases, Query } from 'node-appwrite';
+import { createSystemTablesDB } from '@/lib/appwrite-admin';
+import { ID, Permission, Query, Role } from 'node-appwrite';
 
-interface StoredIdentityItem {
+export interface NostrIdentityRow {
   id: string;
   npub: string;
   label: string;
@@ -17,10 +17,13 @@ interface StoredIdentityItem {
   createdAt: string;
 }
 
+const NOSTR_DB_ID = APPWRITE_CONFIG.DATABASE_ID;
+const NOSTR_TABLE_ID = APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES;
+
 /**
- * Retrieves all Nostr identities for the logged-in user.
+ * Retrieves all Nostr identity rows for the logged-in user.
  */
-export async function listNostrIdentitiesAction(params?: { jwt?: string }): Promise<StoredIdentityItem[]> {
+export async function listNostrIdentitiesAction(params?: { jwt?: string }): Promise<NostrIdentityRow[]> {
   try {
     const jwt = params?.jwt;
     const actor = await getActor(jwt);
@@ -29,55 +32,35 @@ export async function listNostrIdentitiesAction(params?: { jwt?: string }): Prom
     }
     const userId = actor.$id;
 
-    const { client } = await createServerClient(jwt);
-    const databases = new Databases(client);
-    const res = await databases.listDocuments(
-      APPWRITE_CONFIG.DATABASE_ID,
-      APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-      [Query.equal('userId', userId), Query.limit(25), Query.orderDesc('$createdAt')]
-    );
+    const tables = createSystemTablesDB();
+    const res = await tables.listRows<any>({
+      databaseId: NOSTR_DB_ID,
+      tableId: NOSTR_TABLE_ID,
+      queries: [Query.equal('userId', userId), Query.limit(50), Query.orderDesc('$createdAt')]
+    });
 
-    const rows = res.documents || [];
-    if (rows.length === 0) return [];
-
-    const identities: StoredIdentityItem[] = [];
-    for (const row of rows) {
-      // Check if this row stores bundled identities in label/encryptedNsec or individual identity
-      let bundled: StoredIdentityItem[] | null = null;
-      try {
-        if (row.encryptedNsec && row.encryptedNsec.startsWith('bundle:')) {
-          bundled = JSON.parse(row.encryptedNsec.slice(7));
-        }
-      } catch {}
-
-      if (bundled && Array.isArray(bundled)) {
-        identities.push(...bundled);
-      } else {
-        identities.push({
-          id: row.$id,
-          npub: row.npub,
-          label: row.label || '',
-          isDefault: Boolean(row.isDefault),
-          isDerived: Boolean(row.isDerived),
-          encryptedNsec: row.encryptedNsec,
-          iv: row.iv,
-          salt: row.salt,
-          createdAt: row.$createdAt
-        });
-      }
-    }
-
-    return identities;
+    const rows = res.rows || [];
+    return rows.map((row: any) => ({
+      id: row.$id,
+      npub: row.npub,
+      label: row.label || '',
+      isDefault: Boolean(row.isDefault),
+      isDerived: Boolean(row.isDerived),
+      encryptedNsec: row.encryptedNsec,
+      iv: row.iv,
+      salt: row.salt,
+      createdAt: row.$createdAt
+    }));
   } catch (err: any) {
-    console.error('Failed to list Nostr identity rows:', err);
+    console.error('[NostrOps] Failed to list Nostr identity rows:', err);
     return [];
   }
 }
 
 /**
- * Retrieves the active/default encrypted Nostr identity for the logged-in user.
+ * Retrieves the active/default encrypted Nostr identity row for the logged-in user.
  */
-export async function getNostrIdentityAction(params?: { jwt?: string }) {
+export async function getNostrIdentityAction(params?: { jwt?: string }): Promise<NostrIdentityRow | null> {
   try {
     const identities = await listNostrIdentitiesAction(params);
     if (!identities || identities.length === 0) {
@@ -86,7 +69,7 @@ export async function getNostrIdentityAction(params?: { jwt?: string }) {
     const active = identities.find(i => i.isDefault) || identities[0];
     return active;
   } catch (err: any) {
-    console.error('Failed to get Nostr identity row:', err);
+    console.error('[NostrOps] Failed to get Nostr identity row:', err);
     throw new Error(err.message || 'Failed to fetch Nostr identity');
   }
 }
@@ -112,129 +95,88 @@ export async function registerNostrIdentityAction(params: {
     }
     const userId = actor.$id;
 
-    const { client } = await createServerClient(jwt);
-    const databases = new Databases(client);
+    const tables = createSystemTablesDB();
     
-    // Check if user already has an existing row in nostr_identities table
-    const existing = await databases.listDocuments(
-      APPWRITE_CONFIG.DATABASE_ID,
-      APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-      [Query.equal('userId', userId), Query.limit(10)]
-    );
+    // Check if exact same npub already registered for this user
+    const existing = await tables.listRows<any>({
+      databaseId: NOSTR_DB_ID,
+      tableId: NOSTR_TABLE_ID,
+      queries: [Query.equal('userId', userId), Query.equal('npub', params.npub), Query.limit(1)]
+    });
 
     const makeDefault = params.makeDefault ?? true;
 
-    // If no row exists, create the first row for this user
-    if (existing.total === 0) {
-      const row = await databases.createDocument(
-        APPWRITE_CONFIG.DATABASE_ID,
-        APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-        'unique()',
-        {
-          userId,
-          npub: params.npub,
+    if (makeDefault) {
+      // Unset previous defaults for this user
+      const allRows = await tables.listRows<any>({
+        databaseId: NOSTR_DB_ID,
+        tableId: NOSTR_TABLE_ID,
+        queries: [Query.equal('userId', userId), Query.limit(50)]
+      });
+      for (const row of allRows.rows) {
+        if (row.isDefault) {
+          await tables.updateRow({
+            databaseId: NOSTR_DB_ID,
+            tableId: NOSTR_TABLE_ID,
+            rowId: row.$id,
+            data: { isDefault: false }
+          }).catch(() => {});
+        }
+      }
+    }
+
+    if (existing.total > 0) {
+      const targetRow = existing.rows[0];
+      const updated = await tables.updateRow({
+        databaseId: NOSTR_DB_ID,
+        tableId: NOSTR_TABLE_ID,
+        rowId: targetRow.$id,
+        data: {
           encryptedNsec: params.encryptedNsec,
           iv: params.iv,
           salt: params.salt,
-          label: params.label || '',
-          isDerived: Boolean(params.isDerived),
-          isDefault: true
+          label: params.label !== undefined ? params.label : (targetRow.label || ''),
+          isDerived: params.isDerived !== undefined ? params.isDerived : Boolean(targetRow.isDerived),
+          isDefault: makeDefault
         }
-      );
-
-      return {
-        success: true,
-        id: row.$id,
-        npub: row.npub
-      };
+      });
+      return { success: true, id: updated.$id, npub: updated.npub };
     }
 
-    // If an existing row exists, check if user is updating the same npub
-    const userRow = existing.documents[0];
-    let allIdentities: StoredIdentityItem[] = [];
-
-    let isBundled = false;
-    try {
-      if (userRow.encryptedNsec && userRow.encryptedNsec.startsWith('bundle:')) {
-        allIdentities = JSON.parse(userRow.encryptedNsec.slice(7));
-        isBundled = true;
-      }
-    } catch {}
-
-    if (!isBundled) {
-      allIdentities = [{
-        id: userRow.$id,
-        npub: userRow.npub,
-        label: userRow.label || '',
-        isDefault: Boolean(userRow.isDefault),
-        isDerived: Boolean(userRow.isDerived),
-        encryptedNsec: userRow.encryptedNsec,
-        iv: userRow.iv,
-        salt: userRow.salt,
-        createdAt: userRow.$createdAt
-      }];
-    }
-
-    // If making default, reset default flag on others
-    if (makeDefault) {
-      allIdentities = allIdentities.map(i => ({ ...i, isDefault: false }));
-    }
-
-    const existingIdx = allIdentities.findIndex(i => i.npub === params.npub);
-    const newEntry: StoredIdentityItem = {
-      id: existingIdx >= 0 ? allIdentities[existingIdx].id : `id_${Date.now()}`,
-      npub: params.npub,
-      label: params.label || (existingIdx >= 0 ? allIdentities[existingIdx].label : ''),
-      isDefault: makeDefault,
-      isDerived: params.isDerived !== undefined ? Boolean(params.isDerived) : (existingIdx >= 0 ? allIdentities[existingIdx].isDerived : false),
-      encryptedNsec: params.encryptedNsec,
-      iv: params.iv,
-      salt: params.salt,
-      createdAt: existingIdx >= 0 ? allIdentities[existingIdx].createdAt : new Date().toISOString()
-    };
-
-    if (existingIdx >= 0) {
-      allIdentities[existingIdx] = newEntry;
-    } else {
-      allIdentities.push(newEntry);
-    }
-
-    // Determine primary identity for top-level columns
-    const defaultIdentity = allIdentities.find(i => i.isDefault) || allIdentities[0];
-
-    // Store bundled JSON in encryptedNsec with bundle: prefix if multiple identities exist
-    const encryptedPayload = allIdentities.length > 1 
-      ? `bundle:${JSON.stringify(allIdentities)}`
-      : defaultIdentity.encryptedNsec;
-
-    await databases.updateDocument(
-      APPWRITE_CONFIG.DATABASE_ID,
-      APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-      userRow.$id,
-      {
-        npub: defaultIdentity.npub,
-        encryptedNsec: encryptedPayload,
-        iv: defaultIdentity.iv,
-        salt: defaultIdentity.salt,
-        label: defaultIdentity.label || '',
-        isDerived: defaultIdentity.isDerived,
-        isDefault: true
-      }
-    );
+    const row = await tables.createRow({
+      databaseId: NOSTR_DB_ID,
+      tableId: NOSTR_TABLE_ID,
+      rowId: ID.unique(),
+      data: {
+        userId,
+        npub: params.npub,
+        encryptedNsec: params.encryptedNsec,
+        iv: params.iv,
+        salt: params.salt,
+        label: params.label || '',
+        isDerived: Boolean(params.isDerived),
+        isDefault: makeDefault
+      },
+      permissions: [
+        Permission.read(Role.user(userId)),
+        Permission.update(Role.user(userId)),
+        Permission.delete(Role.user(userId))
+      ]
+    });
 
     return {
       success: true,
-      id: newEntry.id,
-      npub: newEntry.npub
+      id: row.$id,
+      npub: row.npub
     };
   } catch (err: any) {
-    console.error('Failed to register Nostr identity row:', err);
+    console.error('[NostrOps] Failed to register Nostr identity row:', err);
     throw new Error(err.message || 'Failed to register Nostr identity');
   }
 }
 
 /**
- * Sets an existing identity as the default active identity.
+ * Sets an existing identity row as the default active identity.
  */
 export async function setActiveNostrIdentityAction(params: { identityId: string; jwt?: string }) {
   try {
@@ -243,66 +185,28 @@ export async function setActiveNostrIdentityAction(params: { identityId: string;
     if (!actor) throw new Error('Unauthorized');
     const userId = actor.$id;
 
-    const { client } = await createServerClient(jwt);
-    const databases = new Databases(client);
+    const tables = createSystemTablesDB();
+    const allRows = await tables.listRows<any>({
+      databaseId: NOSTR_DB_ID,
+      tableId: NOSTR_TABLE_ID,
+      queries: [Query.equal('userId', userId), Query.limit(50)]
+    });
 
-    const existing = await databases.listDocuments(
-      APPWRITE_CONFIG.DATABASE_ID,
-      APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-      [Query.equal('userId', userId), Query.limit(1)]
-    );
-
-    if (existing.total === 0) return { success: true };
-
-    const userRow = existing.documents[0];
-    let allIdentities: StoredIdentityItem[] = [];
-
-    try {
-      if (userRow.encryptedNsec && userRow.encryptedNsec.startsWith('bundle:')) {
-        allIdentities = JSON.parse(userRow.encryptedNsec.slice(7));
-      } else {
-        allIdentities = [{
-          id: userRow.$id,
-          npub: userRow.npub,
-          label: userRow.label || '',
-          isDefault: true,
-          isDerived: Boolean(userRow.isDerived),
-          encryptedNsec: userRow.encryptedNsec,
-          iv: userRow.iv,
-          salt: userRow.salt,
-          createdAt: userRow.$createdAt
-        }];
+    for (const row of allRows.rows) {
+      const shouldBeDefault = row.$id === params.identityId;
+      if (Boolean(row.isDefault) !== shouldBeDefault) {
+        await tables.updateRow({
+          databaseId: NOSTR_DB_ID,
+          tableId: NOSTR_TABLE_ID,
+          rowId: row.$id,
+          data: { isDefault: shouldBeDefault }
+        });
       }
-    } catch {}
-
-    allIdentities = allIdentities.map(i => ({
-      ...i,
-      isDefault: i.id === params.identityId || i.npub === params.identityId
-    }));
-
-    const defaultIdentity = allIdentities.find(i => i.isDefault) || allIdentities[0];
-    const encryptedPayload = allIdentities.length > 1
-      ? `bundle:${JSON.stringify(allIdentities)}`
-      : defaultIdentity.encryptedNsec;
-
-    await databases.updateDocument(
-      APPWRITE_CONFIG.DATABASE_ID,
-      APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-      userRow.$id,
-      {
-        npub: defaultIdentity.npub,
-        encryptedNsec: encryptedPayload,
-        iv: defaultIdentity.iv,
-        salt: defaultIdentity.salt,
-        label: defaultIdentity.label || '',
-        isDerived: defaultIdentity.isDerived,
-        isDefault: true
-      }
-    );
+    }
 
     return { success: true };
   } catch (err: any) {
-    console.error('Failed to set active Nostr identity:', err);
+    console.error('[NostrOps] Failed to set active Nostr identity row:', err);
     throw new Error(err.message || 'Failed to set active Nostr identity');
   }
 }
@@ -317,76 +221,41 @@ export async function deleteNostrIdentityAction(params: { identityId: string; jw
     if (!actor) throw new Error('Unauthorized');
     const userId = actor.$id;
 
-    const { client } = await createServerClient(jwt);
-    const databases = new Databases(client);
+    const tables = createSystemTablesDB();
+    const target = await tables.getRow<any>({
+      databaseId: NOSTR_DB_ID,
+      tableId: NOSTR_TABLE_ID,
+      rowId: params.identityId
+    });
 
-    const existing = await databases.listDocuments(
-      APPWRITE_CONFIG.DATABASE_ID,
-      APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-      [Query.equal('userId', userId), Query.limit(1)]
-    );
+    if (target.userId !== userId) throw new Error('Unauthorized');
 
-    if (existing.total === 0) return { success: true };
+    await tables.deleteRow({
+      databaseId: NOSTR_DB_ID,
+      tableId: NOSTR_TABLE_ID,
+      rowId: params.identityId
+    });
 
-    const userRow = existing.documents[0];
-    let allIdentities: StoredIdentityItem[] = [];
-
-    try {
-      if (userRow.encryptedNsec && userRow.encryptedNsec.startsWith('bundle:')) {
-        allIdentities = JSON.parse(userRow.encryptedNsec.slice(7));
-      } else {
-        allIdentities = [{
-          id: userRow.$id,
-          npub: userRow.npub,
-          label: userRow.label || '',
-          isDefault: true,
-          isDerived: Boolean(userRow.isDerived),
-          encryptedNsec: userRow.encryptedNsec,
-          iv: userRow.iv,
-          salt: userRow.salt,
-          createdAt: userRow.$createdAt
-        }];
+    // If deleted row was default, elect another remaining row as default
+    if (target.isDefault) {
+      const remaining = await tables.listRows<any>({
+        databaseId: NOSTR_DB_ID,
+        tableId: NOSTR_TABLE_ID,
+        queries: [Query.equal('userId', userId), Query.limit(1), Query.orderDesc('$createdAt')]
+      });
+      if (remaining.total > 0) {
+        await tables.updateRow({
+          databaseId: NOSTR_DB_ID,
+          tableId: NOSTR_TABLE_ID,
+          rowId: remaining.rows[0].$id,
+          data: { isDefault: true }
+        });
       }
-    } catch {}
-
-    allIdentities = allIdentities.filter(i => i.id !== params.identityId && i.npub !== params.identityId);
-
-    if (allIdentities.length === 0) {
-      await databases.deleteDocument(
-        APPWRITE_CONFIG.DATABASE_ID,
-        APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-        userRow.$id
-      );
-      return { success: true };
     }
-
-    if (!allIdentities.some(i => i.isDefault)) {
-      allIdentities[0].isDefault = true;
-    }
-
-    const defaultIdentity = allIdentities.find(i => i.isDefault) || allIdentities[0];
-    const encryptedPayload = allIdentities.length > 1
-      ? `bundle:${JSON.stringify(allIdentities)}`
-      : defaultIdentity.encryptedNsec;
-
-    await databases.updateDocument(
-      APPWRITE_CONFIG.DATABASE_ID,
-      APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-      userRow.$id,
-      {
-        npub: defaultIdentity.npub,
-        encryptedNsec: encryptedPayload,
-        iv: defaultIdentity.iv,
-        salt: defaultIdentity.salt,
-        label: defaultIdentity.label || '',
-        isDerived: defaultIdentity.isDerived,
-        isDefault: true
-      }
-    );
 
     return { success: true };
   } catch (err: any) {
-    console.error('Failed to delete Nostr identity:', err);
+    console.error('[NostrOps] Failed to delete Nostr identity row:', err);
     throw new Error(err.message || 'Failed to delete Nostr identity');
   }
 }
@@ -396,48 +265,47 @@ export async function deleteNostrIdentityAction(params: { identityId: string; jw
  */
 export async function resolveNostrPubkeysAction(npubs: string[]) {
   try {
-    const { client } = await createServerClient();
-    const databases = new Databases(client);
-
     if (!npubs || npubs.length === 0) return {};
 
+    const tables = createSystemTablesDB();
+
     // 1. Fetch matching identity rows
-    const res = await databases.listDocuments(
-      APPWRITE_CONFIG.DATABASE_ID,
-      APPWRITE_CONFIG.TABLES.NOSTR_IDENTITIES,
-      [Query.equal('npub', npubs), Query.limit(100)]
-    );
+    const res = await tables.listRows<any>({
+      databaseId: NOSTR_DB_ID,
+      tableId: NOSTR_TABLE_ID,
+      queries: [Query.equal('npub', npubs), Query.limit(100)]
+    });
 
     if (res.total === 0) return {};
 
     // 2. Fetch corresponding profiles
-    const userIds = res.documents.map((doc: any) => doc.userId);
-    const profilesRes = await databases.listDocuments(
-      APPWRITE_CONFIG.DATABASE_ID,
-      APPWRITE_CONFIG.TABLES.CONNECT.PROFILES,
-      [Query.equal('userId', userIds), Query.limit(100)]
-    );
+    const userIds = res.rows.map((row: any) => row.userId);
+    const profilesRes = await tables.listRows<any>({
+      databaseId: NOSTR_DB_ID,
+      tableId: APPWRITE_CONFIG.TABLES.CONNECT.PROFILES,
+      queries: [Query.equal('userId', userIds), Query.limit(100)]
+    });
 
     const profileMap: Record<string, { userId: string; username: string; avatarUrl?: string }> = {};
-    for (const doc of profilesRes.documents) {
-      profileMap[doc.userId] = {
-        userId: doc.userId,
-        username: doc.username,
-        avatarUrl: doc.avatarUrl || doc.avatar
+    for (const row of profilesRes.rows) {
+      profileMap[row.userId] = {
+        userId: row.userId,
+        username: row.username,
+        avatarUrl: row.avatarUrl || row.avatar
       };
     }
 
     // 3. Map npub to profile
     const result: Record<string, { userId: string; username: string; avatarUrl?: string }> = {};
-    for (const doc of res.documents) {
-      if (profileMap[doc.userId]) {
-        result[doc.npub] = profileMap[doc.userId];
+    for (const row of res.rows) {
+      if (profileMap[row.userId]) {
+        result[row.npub] = profileMap[row.userId];
       }
     }
 
     return result;
   } catch (err: any) {
-    console.error('Failed to resolve Nostr pubkeys:', err);
+    console.error('[NostrOps] Failed to resolve Nostr pubkeys:', err);
     return {};
   }
 }
