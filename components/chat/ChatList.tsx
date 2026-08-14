@@ -223,19 +223,25 @@ export const ChatList = ({
         else openOverlay(node);
     }, [user?.$id, openSidebar, openOverlay, closeSidebar, closeOverlay]);
 
+    const getRecentTimestamp = useCallback((row: any) => {
+        if (!row) return 0;
+        const candidate = row.lastMessageAt || row.updatedAt || row.$updatedAt || row.createdAt || row.$createdAt;
+        if (!candidate) return 0;
+        const t = new Date(candidate).getTime();
+        return isNaN(t) ? 0 : t;
+    }, []);
+
     const sortConversations = useCallback((rows: any[]) => {
         const pinned = pinSets.conversation;
         return [...rows].sort((a, b) => {
-            const ap = pinned.has(a.$id) ? 1 : 0;
-            const bp = pinned.has(b.$id) ? 1 : 0;
+            const ap = pinned.has(a.$id || a.id) ? 1 : 0;
+            const bp = pinned.has(b.$id || b.id) ? 1 : 0;
             if (ap !== bp) return bp - ap;
-            if (a.isSelf && !a.lastMessageAt) return -1;
-            if (b.isSelf && !b.lastMessageAt) return 1;
-            const timeA = new Date(a.lastMessageAt || a.createdAt).getTime();
-            const timeB = new Date(b.lastMessageAt || b.createdAt).getTime();
+            const timeA = getRecentTimestamp(a);
+            const timeB = getRecentTimestamp(b);
             return timeB - timeA;
         });
-    }, [pinSets.conversation]);
+    }, [pinSets.conversation, getRecentTimestamp]);
 
     const [chatSettingsConv, setChatSettingsConv] = useState<any | null>(null);
 
@@ -1493,19 +1499,19 @@ export const ChatList = ({
         };
         const matchesKylie = !searchQuery || 'kylie assist'.includes(searchQuery.toLowerCase()) || 'ask kylie for help'.includes(searchQuery.toLowerCase());
 
-        const secureMapped = filteredConversations.map((c: any) => ({ ...c, _kind: 'secure' as const, _sortAt: c.lastMessageAt || c.createdAt }));
-        const threadMapped = filteredthreadConversations.map((c: any) => ({ ...c, _kind: 'thread' as const, _sortAt: c.lastMessageAt || c.$createdAt || c.createdAt }));
+        const secureMapped = filteredConversations.map((c: any) => ({ ...c, _kind: 'secure' as const, _sortAt: getRecentTimestamp(c) }));
+        const threadMapped = filteredthreadConversations.map((c: any) => ({ ...c, _kind: 'thread' as const, _sortAt: getRecentTimestamp(c) }));
         const combined = [...secureMapped, ...threadMapped];
         const pinned = pinSets.conversation;
         const sorted = combined.sort((a: any, b: any) => {
-            const ap = pinned.has(a.$id) ? 1 : 0;
-            const bp = pinned.has(b.$id) ? 1 : 0;
+            const ap = pinned.has(a.$id || a.id) ? 1 : 0;
+            const bp = pinned.has(b.$id || b.id) ? 1 : 0;
             if (ap !== bp) return bp - ap;
-            return new Date(b._sortAt || 0).getTime() - new Date(a._sortAt || 0).getTime();
+            return (b._sortAt || 0) - (a._sortAt || 0);
         });
 
         return matchesKylie ? [kylieItem, ...sorted] : sorted;
-    }, [filteredConversations, filteredthreadConversations, pinSets.conversation, searchQuery]);
+    }, [filteredConversations, filteredthreadConversations, pinSets.conversation, searchQuery, getRecentTimestamp]);
     useEffect(() => { setChatPage(1); setthreadPage(1); }, [searchQuery, conversations.length, threadConversations.length]);
     useEffect(() => {
       if (!chatSentinelRef.current || !hasMoreChats) return;
