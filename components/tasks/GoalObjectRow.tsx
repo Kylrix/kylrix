@@ -347,19 +347,28 @@ export default function GoalObjectRow({ task }: Props) {
     return Array.from(new Set([...userLabels, ...extractedTags])).filter(Boolean);
   }, [task.labels, (task as any).tags]);
 
+  const isActuallyLocked = locked && !(task as any)._dekViewDecrypted;
+
   const item = useMemo(() => {
     const base = goalToCard(task);
-    const contentText = String(task.description || (task as any).content || (task as any).summary || '').trim();
+    const contentText = String(
+      task.description ||
+      (task as any).content ||
+      (task as any).summary ||
+      (task.comments && task.comments.length > 0 ? task.comments[0].content : '') ||
+      ''
+    ).trim();
+
     return {
       ...base,
-      title: locked ? 'Locked' : (task.title || base.title || 'Untitled Goal'),
+      title: isActuallyLocked ? 'Locked' : (task.title || base.title || 'Untitled Goal'),
       isPinned: pinned,
       accent: null,
-      subtitle: locked
+      subtitle: isActuallyLocked
         ? 'Locked goal'
         : contentText.slice(0, 160) || undefined,
     };
-  }, [task, pinned, locked]);
+  }, [task, pinned, isActuallyLocked]);
 
   return (
     <ObjectCard
