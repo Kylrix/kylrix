@@ -71,6 +71,23 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack, isExpande
     }
   }, [isVaultLocked, identity, loadOrMintIdentity]);
 
+  const handleToggleImport = async () => {
+    if (showImport) {
+      setShowImport(false);
+      return;
+    }
+    if (isVaultLocked) {
+      try {
+        await unlockAndLoad();
+      } catch {
+        return;
+      }
+      setShowImport(true);
+      return;
+    }
+    setShowImport(true);
+  };
+
   const handleImportAccount = async () => {
     const clean = importNsec.trim();
     if (!clean) return;
@@ -394,7 +411,7 @@ export function ConnectNostrSettingsView({ settings, onUpdate, onBack, isExpande
             </h3>
             <button
               type="button"
-              onClick={() => setShowImport(prev => !prev)}
+              onClick={handleToggleImport}
               className="inline-flex items-center gap-1 text-[11px] font-bold text-[#F59E0B] hover:text-[#F59E0B]/80 font-mono"
             >
               {showImport ? 'Cancel' : <><Plus size={12} /> Import custom nsec</>}
