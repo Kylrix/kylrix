@@ -46,6 +46,29 @@ function ConnectHomeContent() {
     openUnified('new-chat', { mode: 'thread' });
   }, [openUnified]);
 
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleScroll = () => {
+      if (window.scrollY > 200) {
+        setIsScrolling(true);
+        if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = setTimeout(() => {
+          setIsScrolling(false);
+        }, 2500);
+      } else {
+        setIsScrolling(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     if (activeTab === 'mail') {
       setConfiguration({ isVisible: false });
@@ -83,7 +106,30 @@ function ConnectHomeContent() {
       return () => resetConfiguration();
     }
 
-    // Moments: bottom FAB on all viewports → expandable create sheet
+    // Moments: When scrolling, morph FAB to Back-to-Top & Refresh
+    if (isScrolling) {
+      setConfiguration({
+        isVisible: true,
+        mainColor: '#10B981',
+        mainIcon: (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m18 15-6-6-6 6"/>
+          </svg>
+        ),
+        onMainClick: () => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          setIsScrolling(false);
+          // Trigger soft refresh
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('kylrix:refresh-feed'));
+          }
+        },
+        actions: [],
+      });
+      return () => resetConfiguration();
+    }
+
+    // Moments default: bottom FAB on all viewports → expandable create sheet
     setConfiguration({
       isVisible: true,
       mainColor: '#F59E0B',
@@ -109,6 +155,7 @@ function ConnectHomeContent() {
     activeTab,
     chatsActiveTab,
     isDesktop,
+    isScrolling,
     openMomentComposer,
     openSecureChat,
     openThread,

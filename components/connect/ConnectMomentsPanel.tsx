@@ -147,19 +147,13 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
           {items.map((item) => (
             <MomentCard key={item.id} item={item} />
           ))}
-          {hasMore ? (
-            <div
-              ref={sentinelRef}
-              className="h-10 w-full flex items-center justify-center"
-              aria-hidden
-            >
-              <span className="w-5 h-5 rounded-full border-2 border-white/15 border-t-[#F59E0B] animate-spin" />
-            </div>
-          ) : (
-            <p className="text-center text-[11px] font-bold text-white/25 py-4 font-satoshi">
-              End of feed
-            </p>
-          )}
+          <div
+            ref={sentinelRef}
+            className="h-12 w-full flex items-center justify-center py-4"
+            aria-hidden
+          >
+            <span className="w-5 h-5 rounded-full border-2 border-white/10 border-t-[#F59E0B] animate-spin" />
+          </div>
         </div>
       )}
     </div>
