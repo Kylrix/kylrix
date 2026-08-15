@@ -65,6 +65,37 @@ function mapNostrReply(event: NostrEvent): MomentComment {
   };
 }
 
+/** Normalise privateKeyBytes: plain Uint8Array or serialised object → Uint8Array */
+function toUint8Array(raw: any): Uint8Array | null {
+  if (!raw) return null;
+  if (raw instanceof Uint8Array) return raw.length === 32 ? raw : null;
+  if (typeof raw === 'object') {
+    const arr = new Uint8Array(Object.values(raw) as number[]);
+    return arr.length === 32 ? arr : null;
+  }
+  return null;
+}
+
+/** Build, sign and fire-and-forget a Nostr event to all relays. */
+async function publishToNostr(
+  privBytes: Uint8Array,
+  kind: number,
+  tags: string[][],
+  content: string,
+): Promise<void> {
+  const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
+  const unsigned = {
+    pubkey,
+    created_at: Math.floor(Date.now() / 1000),
+    kind,
+    tags,
+    content,
+  };
+  const signed = signEvent(unsigned, privBytes);
+  const pool = new NostrRelayPool(RELAYS);
+  await pool.publishAndClose(signed);
+}
+
 export async function loadMomentEngagement(opts: {
   source: MomentSource;
   id: string;
@@ -128,55 +159,32 @@ export async function createMomentComment(opts: {
 
     // If moment was synced to Nostr and vault is unlocked, dual-sync reply to Nostr
     if (opts.nostrId && opts.privateKeyBytes) {
-      try {
-        let privBytes = opts.privateKeyBytes;
-        if (privBytes && !(privBytes instanceof Uint8Array)) {
-          privBytes = new Uint8Array(Object.values(privBytes));
-        }
-        if (privBytes && privBytes.length === 32) {
-          const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
-          const tags: string[][] = [['e', opts.nostrId, '', 'root']];
-          if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
-          const unsigned = {
-            pubkey,
-            created_at: Math.floor(Date.now() / 1000),
-            kind: 1,
-            tags,
-            content: text,
-          };
-          const signed = signEvent(unsigned, privBytes);
-          const pool = new NostrRelayPool(RELAYS);
-          pool.connect();
-          await pool.publish(signed);
-          setTimeout(() => pool.close(), 400);
-        }
-      } catch (nostrSyncErr) {
-        console.warn('[Engagement] Dual Nostr reply sync skipped:', nostrSyncErr);
+      const privBytes = toUint8Array(opts.privateKeyBytes);
+      if (privBytes) {
+        const tags: string[][] = [['e', opts.nostrId, '', 'root']];
+        if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
+        await publishToNostr(privBytes, 1, tags, text).catch((e) =>
+          console.warn('[Engagement] Dual Nostr reply sync skipped:', e),
+        );
       }
     }
 
     return row ? mapKylrixReply(row) : null;
   }
 
-  let privBytes = opts.privateKeyBytes;
-  if (privBytes && !(privBytes instanceof Uint8Array)) {
-    privBytes = new Uint8Array(Object.values(privBytes));
-  }
-  if ((!privBytes || privBytes.length !== 32) && opts.nsec) {
+  // Pure Nostr post: resolve private key
+  let privBytes = toUint8Array(opts.privateKeyBytes);
+  if (!privBytes && opts.nsec) {
     try {
       const { nsecToBytes } = await import('@/lib/nostr/crypto');
       privBytes = nsecToBytes(opts.nsec);
     } catch {}
   }
+  if (!privBytes) throw new Error('Unlock vault to comment on Nostr');
 
-  if (!privBytes || privBytes.length !== 32) {
-    throw new Error('Unlock vault to comment on Nostr');
-  }
-
-  const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
   const tags: string[][] = [['e', opts.id, '', 'root']];
   if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
-
+  const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
   const unsigned = {
     pubkey,
     created_at: Math.floor(Date.now() / 1000),
@@ -186,9 +194,7 @@ export async function createMomentComment(opts: {
   };
   const signed = signEvent(unsigned, privBytes);
   const pool = new NostrRelayPool(RELAYS);
-  pool.connect();
-  await pool.publish(signed);
-  setTimeout(() => pool.close(), 400);
+  await pool.publishAndClose(signed);
   return mapNostrReply(signed);
 }
 
@@ -211,63 +217,26 @@ export async function toggleMomentLike(opts: {
       opts.contentSnippet,
     );
 
-    // If moment was synced to Nostr, vault unlocked, and action was a like, dual-sync to Nostr
     if (res.liked && opts.nostrId && opts.privateKeyBytes) {
-      try {
-        let privBytes = opts.privateKeyBytes;
-        if (privBytes && !(privBytes instanceof Uint8Array)) {
-          privBytes = new Uint8Array(Object.values(privBytes));
-        }
-        if (privBytes && privBytes.length === 32) {
-          const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
-          const tags: string[][] = [['e', opts.nostrId, '', 'root']];
-          if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
-          const unsigned = {
-            pubkey,
-            created_at: Math.floor(Date.now() / 1000),
-            kind: 7,
-            tags,
-            content: '+',
-          };
-          const signed = signEvent(unsigned, privBytes);
-          const pool = new NostrRelayPool(RELAYS);
-          pool.connect();
-          await pool.publish(signed);
-          setTimeout(() => pool.close(), 400);
-        }
-      } catch (nostrLikeErr) {
-        console.warn('[Engagement] Dual Nostr like sync skipped:', nostrLikeErr);
+      const privBytes = toUint8Array(opts.privateKeyBytes);
+      if (privBytes) {
+        const tags: string[][] = [['e', opts.nostrId, '', 'root']];
+        if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
+        await publishToNostr(privBytes, 7, tags, '+').catch((e) =>
+          console.warn('[Engagement] Dual Nostr like sync skipped:', e),
+        );
       }
     }
 
     return res;
   }
 
-  if (!opts.privateKeyBytes) throw new Error('Unlock vault to like on Nostr');
-  let privBytes = opts.privateKeyBytes;
-  if (privBytes && !(privBytes instanceof Uint8Array)) {
-    privBytes = new Uint8Array(Object.values(privBytes));
-  }
-  if (!privBytes || privBytes.length !== 32) {
-    throw new Error('Unlock vault to like on Nostr');
-  }
+  const privBytes = toUint8Array(opts.privateKeyBytes);
+  if (!privBytes) throw new Error('Unlock vault to like on Nostr');
 
-  const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
   const tags: string[][] = [['e', opts.id, '', 'root']];
   if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
-
-  const unsigned = {
-    pubkey,
-    created_at: Math.floor(Date.now() / 1000),
-    kind: 7,
-    tags,
-    content: '+',
-  };
-  const signed = signEvent(unsigned, privBytes);
-  const pool = new NostrRelayPool(RELAYS);
-  pool.connect();
-  await pool.publish(signed);
-  setTimeout(() => pool.close(), 400);
+  await publishToNostr(privBytes, 7, tags, '+');
   return { liked: true };
 }
 
@@ -294,61 +263,25 @@ export async function repostMoment(opts: {
     );
 
     if (opts.nostrId && opts.privateKeyBytes) {
-      try {
-        let privBytes = opts.privateKeyBytes;
-        if (privBytes && !(privBytes instanceof Uint8Array)) {
-          privBytes = new Uint8Array(Object.values(privBytes));
-        }
-        if (privBytes && privBytes.length === 32) {
-          const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
-          const tags: string[][] = [['e', opts.nostrId, '', 'root']];
-          if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
-          const unsigned = {
-            pubkey,
-            created_at: Math.floor(Date.now() / 1000),
-            kind: 6,
-            tags,
-            content: '',
-          };
-          const signed = signEvent(unsigned, privBytes);
-          const pool = new NostrRelayPool(RELAYS);
-          pool.connect();
-          await pool.publish(signed);
-          setTimeout(() => pool.close(), 400);
-        }
-      } catch (nostrErr) {
-        console.warn('[Engagement] Dual Nostr pulse sync skipped:', nostrErr);
+      const privBytes = toUint8Array(opts.privateKeyBytes);
+      if (privBytes) {
+        const tags: string[][] = [['e', opts.nostrId, '', 'root']];
+        if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
+        await publishToNostr(privBytes, 6, tags, '').catch((e) =>
+          console.warn('[Engagement] Dual Nostr pulse sync skipped:', e),
+        );
       }
     }
 
     return { reposted: true };
   }
 
-  if (!opts.privateKeyBytes) throw new Error('Unlock vault to repost on Nostr');
-  let privBytes = opts.privateKeyBytes;
-  if (privBytes && !(privBytes instanceof Uint8Array)) {
-    privBytes = new Uint8Array(Object.values(privBytes));
-  }
-  if (!privBytes || privBytes.length !== 32) {
-    throw new Error('Unlock vault to repost on Nostr');
-  }
+  const privBytes = toUint8Array(opts.privateKeyBytes);
+  if (!privBytes) throw new Error('Unlock vault to repost on Nostr');
 
-  const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
   const tags: string[][] = [['e', opts.id, '', 'root']];
   if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
-
-  const unsigned = {
-    pubkey,
-    created_at: Math.floor(Date.now() / 1000),
-    kind: 6,
-    tags,
-    content: '',
-  };
-  const signed = signEvent(unsigned, privBytes);
-  const pool = new NostrRelayPool(RELAYS);
-  pool.connect();
-  await pool.publish(signed);
-  setTimeout(() => pool.close(), 400);
+  await publishToNostr(privBytes, 6, tags, '');
   return { reposted: true };
 }
 

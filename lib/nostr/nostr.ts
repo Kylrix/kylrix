@@ -125,17 +125,47 @@ export class NostrRelayPool {
   }
 
   public publish(event: NostrEvent): Promise<void> {
-    const promises = Array.from(this.sockets.values()).map((ws: any) => {
+    const entries = Array.from(this.sockets.entries());
+    const promises = entries.map(([, ws]) => {
       return new Promise<void>((resolve) => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify(["EVENT", event]));
+        const send = () => {
+          try { ws.send(JSON.stringify(['EVENT', event])); } catch { /* ignore */ }
           resolve();
+        };
+        if (ws.readyState === WebSocket.OPEN) {
+          send();
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+          // Wait for open, timeout after 5 s
+          const timer = setTimeout(resolve, 5000);
+          const prevOpen = ws.onopen as ((ev: Event) => void) | null;
+          ws.onopen = (ev: Event) => {
+            clearTimeout(timer);
+            send();
+            if (prevOpen) prevOpen.call(ws, ev);
+          };
+          const prevClose = ws.onclose as ((ev: CloseEvent) => void) | null;
+          ws.onclose = (ev: CloseEvent) => {
+            clearTimeout(timer);
+            resolve();
+            if (prevClose) prevClose.call(ws, ev);
+          };
         } else {
           resolve();
         }
       });
     });
     return Promise.all(promises).then(() => {});
+  }
+
+  /**
+   * Connect, publish, then close after all relays have acknowledged or timed out.
+   * Use this for fire-and-forget engagement events (replies, likes, reposts).
+   */
+  public async publishAndClose(event: NostrEvent): Promise<void> {
+    this.connect();
+    await this.publish(event);
+    // Give relays a moment to confirm receipt before tearing down
+    setTimeout(() => this.close(), 800);
   }
 
   public addListener(listener: (event: NostrEvent) => void) {
