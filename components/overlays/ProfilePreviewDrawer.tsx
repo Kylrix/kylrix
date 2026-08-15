@@ -12,6 +12,7 @@ import {
   Radio, 
   MessageSquare
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { NostrRelayPool, type NostrEvent } from '@/lib/nostr/nostr';
 import { getNostrReadRelays } from '@/lib/connect/feed-settings';
 import { extractPostImages, truncateMomentBody } from '@/lib/connect/moment-media';
@@ -67,6 +68,7 @@ export function ProfilePreviewDrawer({
 }: ProfilePreviewDrawerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'nostr-activity'>('overview');
+  const router = useRouter();
   const [resolvedNpub, setResolvedNpub] = useState<string | null>(initialNpub || null);
   const [resolvedPubkey, setResolvedPubkey] = useState<string | null>(initialPubkey || null);
   const [resolvedProfile, setResolvedProfile] = useState<{ name?: string; username?: string; avatar?: string; bio?: string }>({
@@ -333,15 +335,23 @@ export function ProfilePreviewDrawer({
 
             {nostrPosts.map((post) => {
               const { text: postBody, images: postImages } = extractPostImages(post.content, post.tags);
+              const openPost = () => {
+                onClose();
+                router.push(`/connect/post/nostr_${post.id}`);
+              };
               return (
                 <div
                   key={post.id}
-                  className="rounded-xl bg-[#0A0908] border border-white/[0.04] p-3.5 space-y-2 hover:border-white/10 transition-colors"
+                  role="button"
+                  tabIndex={0}
+                  onClick={openPost}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPost(); } }}
+                  className="rounded-xl bg-[#0A0908] border border-white/[0.04] p-3.5 space-y-2 hover:border-[#F59E0B]/30 hover:bg-[#161412] transition-colors cursor-pointer"
                 >
                   <div className="flex items-center justify-between text-[11px] font-mono text-white/40">
                     <span className="flex items-center gap-1">
                       <MessageSquare size={11} className="text-[#F59E0B]" />
-                      Kind {post.kind}
+                      {post.kind === 1 ? 'Note' : post.kind === 6 ? 'Repost' : post.kind === 7 ? 'Reaction' : `Kind ${post.kind}`}
                     </span>
                     <span>{formatRelative(new Date(post.created_at * 1000).toISOString())}</span>
                   </div>

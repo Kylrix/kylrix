@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { X, Sliders, Tag, Eye, Layers, Hash, RadioTower, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, Sliders, Tag, Eye, Layers, Hash, RadioTower, ChevronRight, ChevronUp, ChevronDown, UserCircle2 } from 'lucide-react';
 import { CONNECT_FEED_DEFAULTS, getConnectFeedSettings, setConnectFeedSettings, type ConnectFeedSettings } from '@/lib/connect/feed-settings';
 import { CURATED_TOPIC_CATEGORIES } from '@/lib/ecosystem/intelligence-topics';
 import { ConnectNostrSettingsView } from './ConnectNostrSettingsView';
+import { useAuth } from '@/context/auth/AuthContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 function Toggle({ label, value, onToggle, desc }: { label: string; value: boolean; onToggle: () => void; desc?: string }) {
   return (
@@ -33,6 +35,8 @@ export function ConnectFeedSettingsPanel({
   isExpanded?: boolean;
   onToggleExpand?: () => void;
 }) {
+  const { user, profile } = useAuth();
+  const { open: openUnifiedDrawer } = useUnifiedDrawer();
   const [view, setView] = useState<'feed' | 'nostr'>('feed');
   const [settings, setSettings] = useState<ConnectFeedSettings>(CONNECT_FEED_DEFAULTS);
   const [newTopic, setNewTopic] = useState('');
@@ -109,6 +113,46 @@ export function ConnectFeedSettingsPanel({
         <div className="rounded-xl bg-[#161412] border border-white/[0.06] p-3">
           <p className="text-xs text-white/45 font-satoshi m-0">Ultra-granular controls synced locally and to your live settings. Changes apply instantly.</p>
         </div>
+
+        {/* Profile Section */}
+        {user && (
+          <section className="space-y-3">
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-white/60 flex items-center gap-1.5 font-mono">
+              <UserCircle2 size={12} className="text-emerald-400" /> Your Profile
+            </h3>
+            <button
+              type="button"
+              onClick={() => openUnifiedDrawer('profile-preview', {
+                userId: user.$id,
+                username: profile?.username || user.name,
+                name: profile?.name || profile?.displayName || user.name,
+                avatar: profile?.avatar || profile?.avatarUrl,
+                source: 'ecosystem',
+              })}
+              className="w-full flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-[#161412] p-3.5 text-left hover:bg-[#1C1A18] hover:border-emerald-400/40 transition-all group"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="h-8 w-8 rounded-full bg-[#0A0908] border border-white/[0.06] grid place-items-center shrink-0 overflow-hidden">
+                  {profile?.avatar || profile?.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={profile.avatar || profile.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <UserCircle2 size={15} className="text-emerald-400" />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-white font-satoshi m-0 truncate">
+                    {profile?.name || profile?.displayName || user.name || 'Your profile'}
+                  </p>
+                  <p className="text-xs text-white/40 m-0 mt-0.5 truncate">
+                    View your posts, Nostr activity and identity
+                  </p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-white/40 group-hover:text-emerald-400 group-hover:translate-x-0.5 shrink-0 transition-all" />
+            </button>
+          </section>
+        )}
 
         {/* Curated Wide-Range Topics Section */}
         <section className="space-y-3.5">
