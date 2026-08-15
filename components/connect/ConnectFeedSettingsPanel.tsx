@@ -36,7 +36,8 @@ export function ConnectFeedSettingsPanel({
   isExpanded?: boolean;
   onToggleExpand?: () => void;
 }) {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
+  const profile = user as (typeof user & { username?: string; name?: string; displayName?: string; avatar?: string; avatarUrl?: string }) | null;
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
   const { identity } = useNostrIdentity();
   const [view, setView] = useState<'feed' | 'nostr'>('feed');
