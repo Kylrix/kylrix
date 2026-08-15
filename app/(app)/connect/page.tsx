@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Hash, MessageSquare, Phone, Plus, PlusCircle } from 'lucide-react';
 import { ChatList } from '@/components/chat/ChatList';
