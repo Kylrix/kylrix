@@ -2099,50 +2099,122 @@ export const ChatWindow = ({
                 }}
             />
 
-            {/* Message Context Menu */}
-            <Menu
+            {/* OpenBricks Message Actions Bottom Drawer */}
+            <Drawer
+                anchor="bottom"
                 open={Boolean(messageAnchorEl)}
-                anchorEl={messageAnchorEl?.el}
                 onClose={() => setMessageAnchorEl(null)}
+                keepMounted={false}
+                disablePortal={false}
+                sx={{ zIndex: 11000 }}
                 PaperProps={{
                     sx: {
-                        borderRadius: '12px',
-                        bgcolor: '#1F1D1B',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        minWidth: 160
+                        position: 'fixed !important',
+                        bottom: '0 !important',
+                        left: '0 !important',
+                        right: '0 !important',
+                        borderTopLeftRadius: '24px',
+                        borderTopRightRadius: '24px',
+                        bgcolor: '#161412',
+                        borderTop: '1px solid #34322F',
+                        backgroundImage: 'none',
+                        maxWidth: 600,
+                        width: '100%',
+                        mx: 'auto',
+                        p: 2.5,
+                        pb: 'max(24px, env(safe-area-inset-bottom))',
+                        pointerEvents: 'auto'
                     }
                 }}
+                ModalProps={{
+                    keepMounted: false,
+                    disableScrollLock: false
+                }}
             >
-                <MenuItem onClick={() => handleReply(messageAnchorEl!.msg)} sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', fontWeight: 600 }}>
-                    <Reply size={16} /> Reply
-                </MenuItem>
-                <MenuItem onClick={() => handleCopy(messageAnchorEl!.msg.content as string)} sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', fontWeight: 600 }}>
-                    <Copy size={16} /> Copy Text
-                </MenuItem>
-                <MenuItem onClick={handleTogglePinMessage} sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', fontWeight: 600 }}>
-                    <Pin size={16} color={messageAnchorEl?.msg.isPinned ? '#F59E0B' : 'white'} /> {messageAnchorEl?.msg.isPinned ? 'Unpin message' : 'Pin message'}
-                </MenuItem>
-                <Box sx={{ px: 1, py: 0.75, opacity: 0.6 }}>
+                {messageAnchorEl?.msg && (
+                    <div className="flex flex-col gap-3.5 select-none font-satoshi">
+                        <div className="w-10 h-1 rounded-full bg-white/20 mx-auto mb-1" aria-hidden />
 
-                    <Typography variant="caption" sx={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1 }}>
-                        React
-                    </Typography>
-                </Box>
-                <MenuItem onClick={() => handleReact('👍')} sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', fontWeight: 600 }}>
-                    👍 Like
-                </MenuItem>
-                <MenuItem onClick={() => handleReact('❤️')} sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', fontWeight: 600 }}>
-                    ❤️ Love
-                </MenuItem>
-                <MenuItem onClick={() => handleReact('😂')} sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', fontWeight: 600 }}>
-                    😂 Laugh
-                </MenuItem>
-                {messageAnchorEl?.msg.senderId === user?.$id && (
-                    <MenuItem onClick={() => { _handleDeleteMessage(messageAnchorEl!.msg.$id, true); setMessageAnchorEl(null); }} sx={{ gap: 1.5, py: 1, fontSize: '0.85rem', fontWeight: 600, color: '#ff4d4d' }}>
-                        <Trash2 size={16} /> Delete
-                    </MenuItem>
+                        {/* Scrollable Quick Reactions Row */}
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                            {['👍', '❤️', '🔥', '⚡', '😂', '😮', '😢', '👏', '🎉', '🚀', '💯'].map((emoji) => (
+                                <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={() => handleReact(emoji)}
+                                    className="h-10 w-10 shrink-0 rounded-2xl bg-[#0A0908] border border-white/[0.06] hover:border-amber-400/40 hover:bg-white/5 flex items-center justify-center text-lg transition-all"
+                                >
+                                    {emoji}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Actions List */}
+                        <div className="space-y-1.5 pt-1">
+                            {/* Zap Message */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const msg = messageAnchorEl.msg;
+                                    setMessageAnchorEl(null);
+                                    openUnifiedDrawer('zap', {
+                                        targetId: msg.$id,
+                                        source: 'ecosystem',
+                                        targetKind: 'chat',
+                                        targetOwnerId: msg.senderId,
+                                        authorName: conversation?.name || 'Message Author',
+                                    });
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-400/10 border border-amber-400/30 text-sm font-bold text-amber-300 hover:bg-amber-400/20 transition-all text-left cursor-pointer"
+                            >
+                                <Zap size={16} className="text-amber-400 fill-current" />
+                                <span>Zap Message (Send rix)</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => handleReply(messageAnchorEl.msg)}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0A0908] border border-white/[0.04] text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+                            >
+                                <Reply size={16} className="text-white/60" />
+                                <span>Reply</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => handleCopy(messageAnchorEl.msg.content as string)}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0A0908] border border-white/[0.04] text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+                            >
+                                <Copy size={16} className="text-white/60" />
+                                <span>Copy Text</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleTogglePinMessage}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0A0908] border border-white/[0.04] text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+                            >
+                                <Pin size={16} className={messageAnchorEl.msg.isPinned ? 'text-[#F59E0B]' : 'text-white/60'} />
+                                <span>{messageAnchorEl.msg.isPinned ? 'Unpin message' : 'Pin message'}</span>
+                            </button>
+
+                            {messageAnchorEl.msg.senderId === user?.$id && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        _handleDeleteMessage(messageAnchorEl.msg.$id, true);
+                                        setMessageAnchorEl(null);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm font-bold text-red-400 hover:bg-red-500/20 transition-all text-left cursor-pointer"
+                                >
+                                    <Trash2 size={16} className="text-red-400" />
+                                    <span>Delete</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 )}
-            </Menu>
+            </Drawer>
         </Box>
     );
 };

@@ -15,6 +15,7 @@ import { AgentByokSettings } from '@/components/settings/AgentByokSettings';
 import { UnlockOnDemandSettings } from '@/components/settings/UnlockOnDemandSettings';
 import { HardVerificationSettings } from '@/components/settings/HardVerificationSettings';
 import { FlowInstallSecuritySettings } from '@/components/settings/FlowInstallSecuritySettings';
+import { ZapSecuritySettings } from '@/components/settings/ZapSecuritySettings';
 import { formatDateWithFallback } from '@/lib/date-utils';
 import { useAppwriteVault } from '@/context/appwrite-context';
 
@@ -250,6 +251,8 @@ export function SecurityTab({
       <AgentByokSettings />
 
       <FlowInstallSecuritySettings />
+
+      <ZapSecuritySettings />
 
       <Section
         title="2FA"
