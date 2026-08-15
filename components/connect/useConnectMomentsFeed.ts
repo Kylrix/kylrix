@@ -27,6 +27,8 @@ export interface UnifiedFeedItem {
   zapsCount?: number;
   repostsCount?: number;
   isLiked?: boolean;
+  /** 0–100 quality rank; lower = worse; used for feed ordering. Default 50. */
+  rank?: number;
 }
 
 const PAGE_SIZE = 16;
@@ -45,11 +47,46 @@ const SPAM_KEYWORDS = [
   'presale is live', 'private key', 'seed phrase', 'nigger', 'faggot', 'kike', 'retard'
 ];
 
-export function sanitizeFeedContent(text: string, author: string): boolean {
-  const hay = `${text || ''} ${author || ''}`.toLowerCase();
+/** Returns false = hide completely, { rank } = show but with adjusted rank (0–100). */
+export function sanitizeFeedContent(text: string, author: string): false | { rank: number } {
+  const trimmed = (text || '').trim();
+  const hay = `${trimmed} ${author || ''}`.toLowerCase();
+
+  // Hard blocklist keywords
   if (SPAM_KEYWORDS.some((w) => hay.includes(w))) return false;
-  if (text.trim().length < 2) return false;
-  return true;
+
+  // Too short to convey anything meaningful
+  if (trimmed.length < 3) return false;
+
+  // Strip Nostr metadata markers (npub/note refs, URLs) from content to assess actual prose
+  const stripped = trimmed
+    .replace(/nostr:[a-z0-9]+/gi, '')
+    .replace(/https?:\/\/\S+/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // ── HASHTAG-ONLY FILTER ──────────────────────────────────────────────────
+  // Post whose entire visible body is one or more hashtags (and whitespace)
+  const isHashtagsOnly = stripped.length > 0 && /^(#\S+\s*)+$/.test(stripped);
+  if (isHashtagsOnly) return false;
+
+  // ── SYMBOLS / RANDOM NUMBERS ONLY ───────────────────────────────────────
+  // Post whose stripped body has no recognisable word characters at all —
+  // just punctuation, emoji sequences, raw numbers, arrows, etc.
+  // We require at least one Latin/Unicode letter in a run of 2+ chars.
+  const hasActualWords = /[a-zA-Z\u00C0-\u024F\u0400-\u04FF\u4E00-\u9FFF]{2,}/.test(stripped);
+  if (stripped.length > 0 && !hasActualWords) return false;
+
+  // ── HASHTAG SPAM DERANK (5+) ─────────────────────────────────────────────
+  const hashtagCount = (trimmed.match(/#\S+/g) || []).length;
+  if (hashtagCount >= 5) return { rank: 20 };
+  if (hashtagCount >= 3) return { rank: 40 };
+
+  // ── LINK-ONLY POSTS (no prose, just a URL or two) ───────────────────────
+  const isLinksOnly = stripped.length === 0 && /https?:\/\//.test(trimmed);
+  if (isLinksOnly) return { rank: 30 };
+
+  return { rank: 50 };
 }
 
 function buildItems(
@@ -82,7 +119,8 @@ function buildItems(
     const authorUsername = m.username || m.user?.username || m.userName;
     const authorKey = m.userId || authorUsername || authorName || m.$id;
 
-    if (!sanitizeFeedContent(rawContent, `${authorName} ${authorUsername || ''}`)) {
+    const sanitizeResult = sanitizeFeedContent(rawContent, `${authorName} ${authorUsername || ''}`);
+    if (!sanitizeResult) {
       continue;
     }
 
@@ -107,6 +145,7 @@ function buildItems(
       zapsCount: m.zapCount || 0,
       repostsCount: m.repostCount || 0,
       isLiked: Boolean(m.isLiked),
+      rank: sanitizeResult.rank,
       rawEvent: m,
     });
   }
@@ -150,7 +189,8 @@ function buildItems(
       }
     }
 
-    if (!sanitizeFeedContent(event.content || '', `${authorName} ${authorUsername || ''}`)) {
+    const nostrSanitize = sanitizeFeedContent(event.content || '', `${authorName} ${authorUsername || ''}`);
+    if (!nostrSanitize) {
       continue;
     }
 
@@ -196,6 +236,7 @@ function buildItems(
       repliesCount: nostrEngagement.replyCount[event.id] || 0,
       zapsCount: nostrEngagement.zapCount?.[event.id] || 0,
       repostsCount: nostrEngagement.repostCount?.[event.id] || 0,
+      rank: nostrSanitize.rank,
       rawEvent: event,
     });
   }
@@ -204,7 +245,15 @@ function buildItems(
     void queueNostrProfileFetch(pubkeysToFetch);
   }
 
-  return rows.sort((a, b) => b.createdAt - a.createdAt).slice(0, MAX_FEED);
+  return rows
+    .sort((a, b) => {
+      // Primary: rank descending (50 is neutral; lower = lower quality)
+      const rankDiff = (b.rank ?? 50) - (a.rank ?? 50);
+      if (rankDiff !== 0) return rankDiff;
+      // Secondary: recency
+      return b.createdAt - a.createdAt;
+    })
+    .slice(0, MAX_FEED);
 }
 
 /** Patch engagement / profile fields on existing rows — never drop rows. */
@@ -350,13 +399,14 @@ export function useConnectMomentsFeed() {
           // Backward-compatibility filter: prune spam and enforce slot caps on cached items
           const authorPostCount: Record<string, number> = {};
           const sanitizedCached = cached.filter((item) => {
-            if (!sanitizeFeedContent(item.content || '', `${item.authorName || ''} ${item.authorUsername || ''}`)) {
-              return false;
-            }
+            const result = sanitizeFeedContent(item.content || '', `${item.authorName || ''} ${item.authorUsername || ''}`);
+            if (!result) return false;
             const authorKey = item.authorUsername || item.authorName || item.id;
             const count = authorPostCount[authorKey] || 0;
             if (count >= 3) return false;
             authorPostCount[authorKey] = count + 1;
+            // Propagate rank if not already set
+            if (item.rank === undefined) item.rank = result.rank;
             return true;
           });
 
