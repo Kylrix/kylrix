@@ -270,6 +270,87 @@ export async function toggleMomentLike(opts: {
   return { liked: true };
 }
 
+export async function repostMoment(opts: {
+  source: MomentSource;
+  id: string;
+  userId?: string;
+  creatorId?: string;
+  privateKeyBytes?: Uint8Array;
+  rootPubkey?: string;
+  nostrId?: string;
+}): Promise<{ reposted: boolean }> {
+  if (opts.source === 'ecosystem') {
+    if (!opts.userId) throw new Error('Sign in to pulse/repost');
+    await SocialService.createMoment(
+      opts.userId,
+      '',
+      'pulse',
+      [],
+      'public',
+      undefined,
+      undefined,
+      opts.id,
+    );
+
+    if (opts.nostrId && opts.privateKeyBytes) {
+      try {
+        let privBytes = opts.privateKeyBytes;
+        if (privBytes && !(privBytes instanceof Uint8Array)) {
+          privBytes = new Uint8Array(Object.values(privBytes));
+        }
+        if (privBytes && privBytes.length === 32) {
+          const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
+          const tags: string[][] = [['e', opts.nostrId, '', 'root']];
+          if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
+          const unsigned = {
+            pubkey,
+            created_at: Math.floor(Date.now() / 1000),
+            kind: 6,
+            tags,
+            content: '',
+          };
+          const signed = signEvent(unsigned, privBytes);
+          const pool = new NostrRelayPool(RELAYS);
+          pool.connect();
+          await pool.publish(signed);
+          setTimeout(() => pool.close(), 400);
+        }
+      } catch (nostrErr) {
+        console.warn('[Engagement] Dual Nostr pulse sync skipped:', nostrErr);
+      }
+    }
+
+    return { reposted: true };
+  }
+
+  if (!opts.privateKeyBytes) throw new Error('Unlock vault to repost on Nostr');
+  let privBytes = opts.privateKeyBytes;
+  if (privBytes && !(privBytes instanceof Uint8Array)) {
+    privBytes = new Uint8Array(Object.values(privBytes));
+  }
+  if (!privBytes || privBytes.length !== 32) {
+    throw new Error('Unlock vault to repost on Nostr');
+  }
+
+  const pubkey = bytesToHex(secp256k1.schnorr.getPublicKey(privBytes));
+  const tags: string[][] = [['e', opts.id, '', 'root']];
+  if (opts.rootPubkey) tags.push(['p', opts.rootPubkey]);
+
+  const unsigned = {
+    pubkey,
+    created_at: Math.floor(Date.now() / 1000),
+    kind: 6,
+    tags,
+    content: '',
+  };
+  const signed = signEvent(unsigned, privBytes);
+  const pool = new NostrRelayPool(RELAYS);
+  pool.connect();
+  await pool.publish(signed);
+  setTimeout(() => pool.close(), 400);
+  return { reposted: true };
+}
+
 export function parseMomentRouteId(raw: string): { source: MomentSource; id: string } {
   if (raw.startsWith('nostr_')) return { source: 'nostr', id: raw.slice(6) };
   if (raw.startsWith('eco_')) return { source: 'ecosystem', id: raw.slice(4) };

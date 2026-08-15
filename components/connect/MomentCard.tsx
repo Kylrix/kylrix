@@ -60,8 +60,19 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
   const { openOverlay, closeOverlay } = useOverlay();
   const [likes, setLikes] = useState(item.likesCount || 0);
   const [liked, setLiked] = useState(Boolean(item.isLiked));
+  const [reposts, setReposts] = useState(item.repostsCount || 0);
+  const [reposted, setReposted] = useState(false);
+  const [zaps, setZaps] = useState(item.zapsCount || 0);
   const [busy, setBusy] = useState(false);
   const [feedSettings, setFeedSettings] = useState<any>(null);
+
+  // Sync state if item updates from live stream
+  React.useEffect(() => {
+    if (item.likesCount !== undefined) setLikes(item.likesCount);
+    if (item.isLiked !== undefined) setLiked(Boolean(item.isLiked));
+    if (item.repostsCount !== undefined) setReposts(item.repostsCount);
+    if (item.zapsCount !== undefined) setZaps(item.zapsCount);
+  }, [item.likesCount, item.isLiked, item.repostsCount, item.zapsCount]);
 
   const { text: bodyText, images } = useMemo(
     () => extractPostImages(item.content || '', item.rawEvent?.tags),
@@ -69,6 +80,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
   );
   const preview = truncateMomentBody(bodyText || '');
   const isNostr = item.source === 'nostr';
+
   // Respect live settings — auto-preview off → hide media, auto-play off → never autoplay
   React.useEffect(() => {
     let cancelled = false;
@@ -120,6 +132,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
       void import('@/lib/connect/feed-settings').then(({ recordFeedInteraction }) => recordFeedInteraction({ topics, mediaKind }));
     } catch {}
   };
+
   const onLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!momentId || busy) return;
@@ -141,6 +154,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     setLiked(!prevLiked);
     setLikes(prevLiked ? Math.max(0, prevLikes - 1) : prevLikes + 1);
     openWithAffinity();
+
     try {
       await toggleMomentLike({
         source: item.source,
@@ -160,6 +174,62 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  const onRepost = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!momentId || busy || reposted) return;
+
+    if (isNostr) {
+      if (isVaultLocked || !identity) {
+        toast.error('Unlock vault to pulse on Nostr');
+        void unlockAndLoad();
+        return;
+      }
+    } else if (!user?.$id) {
+      toast.error('Sign in to pulse');
+      return;
+    }
+
+    setBusy(true);
+    setReposted(true);
+    setReposts((prev) => prev + 1);
+    openWithAffinity();
+
+    try {
+      const { repostMoment } = await import('@/lib/connect/moment-engagement');
+      await repostMoment({
+        source: item.source,
+        id: momentId,
+        userId: user?.$id,
+        creatorId: item.rawEvent?.userId || item.rawEvent?.creatorId,
+        privateKeyBytes: identity?.privateKeyBytes,
+        rootPubkey: item.rawEvent?.pubkey,
+        nostrId: item.rawEvent?.nostrId,
+      });
+      toast.success('Pulsed to feed!');
+    } catch (err: any) {
+      setReposted(false);
+      setReposts((prev) => Math.max(0, prev - 1));
+      console.error(err);
+      toast.error(err?.message || 'Could not pulse moment');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onZap = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!momentId) return;
+    openUnifiedDrawer('zap', {
+      targetId: momentId,
+      source: item.source,
+      targetPubkey: item.rawEvent?.pubkey,
+      authorName: item.authorName,
+      onZapSuccess: (amount: number) => {
+        setZaps((prev) => prev + amount);
+      },
+    });
   };
 
   const onShare = async (e: React.MouseEvent) => {
@@ -306,33 +376,33 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
               <span className="text-xs font-mono">{(item.repliesCount || 0) > 0 ? item.repliesCount : ''}</span>
             </button>
 
-            {/* Reposts */}
+            {/* Reposts (Pulse) */}
             <button
               type="button"
-              className="group inline-flex items-center gap-1.5 text-[13px] font-semibold hover:text-[#00BA7C] transition-colors"
+              disabled={busy || reposted}
+              className={`group inline-flex items-center gap-1.5 text-[13px] font-semibold transition-colors ${
+                reposted ? 'text-[#00BA7C]' : 'hover:text-[#00BA7C]'
+              }`}
               aria-label="Repost"
-              onClick={(e) => e.stopPropagation()}
+              onClick={onRepost}
             >
               <span className="p-1.5 rounded-full group-hover:bg-[#0A0908]">
-                <Repeat2 size={16} />
+                <Repeat2 size={16} className={reposted ? 'text-[#00BA7C]' : ''} />
               </span>
-              <span className="text-xs font-mono">{(item.repostsCount || 0) > 0 ? item.repostsCount : ''}</span>
+              <span className="text-xs font-mono">{reposts > 0 ? reposts : ''}</span>
             </button>
 
-            {/* Zaps (Nostr Lightning) */}
+            {/* Zaps (Nostr Lightning / Ecosystem Rix) */}
             <button
               type="button"
               className="group inline-flex items-center gap-1.5 text-[13px] font-semibold hover:text-[#F59E0B] transition-colors"
               aria-label="Zap"
-              onClick={(e) => {
-                e.stopPropagation();
-                toast.success('Nostr Lightning Zaps');
-              }}
+              onClick={onZap}
             >
               <span className="p-1.5 rounded-full group-hover:bg-[#0A0908]">
-                <Zap size={16} className={(item.zapsCount || 0) > 0 ? 'text-[#F59E0B] fill-[#F59E0B]' : ''} />
+                <Zap size={16} className={zaps > 0 ? 'text-[#F59E0B] fill-[#F59E0B]' : ''} />
               </span>
-              <span className="text-xs font-mono">{(item.zapsCount || 0) > 0 ? item.zapsCount : ''}</span>
+              <span className="text-xs font-mono">{zaps > 0 ? zaps : ''}</span>
             </button>
 
             {/* Likes / Reactions */}

@@ -96,6 +96,8 @@ const AgenticPanelContent = dynamic(
   { ssr: false },
 );
 
+const ZapDrawer = dynamic(() => import('./ZapDrawer').then((m) => m.ZapDrawer), { ssr: false });
+
 export function unifiedDrawerWidth(content: DrawerContent): number {
   switch (content) {
     case 'delete-confirm':
@@ -110,6 +112,8 @@ export function unifiedDrawerWidth(content: DrawerContent): number {
       return 560;
     case 'agentic':
       return 440;
+    case 'zap':
+      return 420;
     default:
       return 420;
   }
@@ -373,6 +377,18 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           pubkey={drawerData?.pubkey}
           bio={drawerData?.bio}
           source={drawerData?.source}
+        />
+      );
+    case 'zap':
+      return (
+        <ZapDrawer
+          isOpen
+          onClose={onClose}
+          targetId={drawerData?.targetId}
+          source={drawerData?.source || 'ecosystem'}
+          targetPubkey={drawerData?.targetPubkey}
+          authorName={drawerData?.authorName}
+          onZapSuccess={drawerData?.onZapSuccess}
         />
       );
     default:
