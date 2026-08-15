@@ -154,3 +154,32 @@ export async function fetchNostrThread(eventId: string, timeoutMs = 4000) {
     repostCount: result.repostCount[eventId] || 0,
   };
 }
+
+/** Fetch a single Nostr event by ID from relays (for parent context in reply/reaction views). */
+export async function fetchNostrEventById(
+  eventId: string,
+  timeoutMs = 3000,
+): Promise<NostrEvent | null> {
+  if (!eventId || typeof WebSocket === 'undefined') return null;
+  return new Promise((resolve) => {
+    let found: NostrEvent | null = null;
+    const pool = new NostrRelayPool(DEFAULT_ENGAGEMENT_RELAYS);
+    pool.connect();
+    const timer = setTimeout(() => {
+      pool.unsubscribe('single-fetch');
+      pool.close();
+      resolve(found);
+    }, timeoutMs);
+    pool.addListener((ev) => {
+      if (ev.id === eventId && !found) {
+        found = ev;
+        clearTimeout(timer);
+        pool.unsubscribe('single-fetch');
+        pool.close();
+        resolve(found);
+      }
+    });
+    pool.subscribe('single-fetch', [{ ids: [eventId], limit: 1 }]);
+  });
+}
+
