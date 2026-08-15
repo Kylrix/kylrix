@@ -9,6 +9,7 @@ import { SocialService } from '@/lib/services/social';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useAuth } from '@/context/auth/AuthContext';
 import { getCachedNostrProfile, queueNostrProfileFetch } from '@/lib/nostr/metadata';
+import { parseInterestsWithWeights } from '@/lib/ecosystem/intelligence-topics';
 
 export interface UnifiedFeedItem {
   id: string;
@@ -366,10 +367,10 @@ export function useConnectMomentsFeed() {
       if (s.showNostr === false) incoming = incoming.filter(i => i.source !== 'nostr');
       if (s.showReplies === false) incoming = incoming.filter(i => (i.repliesCount || 0) === 0);
 
-      const phrases: string[] = [
-        ...((s.topics as string[]) || []),
+      const parsedInterests = parseInterestsWithWeights([
+        ...((s.topics as string[]) || []).map((t: string) => ({ name: t, weight: 2 })),
         ...((s.interests as string[]) || []),
-      ].map(t => String(t).toLowerCase().replace(/^#/, '').trim()).filter(Boolean);
+      ]);
 
       const spamKeywords = [
         'presale', 'pump', 'solana contract', 'airdrop claim', 'moonshot', '100x gem',
@@ -383,8 +384,8 @@ export function useConnectMomentsFeed() {
         return !isSpam;
       });
 
-      if (phrases.length) {
-        // Score items by user declared interest match count
+      if (parsedInterests.length) {
+        // Score items by user declared interest match count multiplied by weight
         const scored = incoming.map(item => {
           const hay = `${item.content || ''} ${item.authorName || ''} ${item.authorUsername || ''}`.toLowerCase();
           const tags = Array.isArray(item.rawEvent?.tags)
@@ -392,19 +393,44 @@ export function useConnectMomentsFeed() {
             : [];
           
           let score = 0;
-          for (const phrase of phrases) {
-            if (tags.includes(phrase)) score += 3;
-            else if (hay.includes(phrase)) score += 1;
+          let matchedTopics: string[] = [];
+          for (const interest of parsedInterests) {
+            const w = interest.weight || 1;
+            if (tags.includes(interest.name)) {
+              score += w * 4;
+              matchedTopics.push(interest.name);
+            } else if (hay.includes(interest.name)) {
+              score += w * 1.5;
+              matchedTopics.push(interest.name);
+            }
           }
-          return { item, score };
+          return { item, score, matchedTopics };
         });
 
         // Retain items matching declared interests or ecosystem content
         const matched = scored.filter(s => s.score > 0 || s.item.source === 'ecosystem');
         if (matched.length > 0) {
-          incoming = matched
-            .sort((a, b) => (b.score - a.score) || (b.item.createdAt - a.item.createdAt))
-            .map(s => s.item);
+          // Sort by affinity score + recency
+          const sorted = matched
+            .sort((a, b) => (b.score - a.score) || (b.item.createdAt - a.item.createdAt));
+
+          // Soft topic saturation: prevent identical single topic from dominating consecutively (>3 in a row)
+          const balanced: typeof sorted = [];
+          const topicRecentCount: Record<string, number> = {};
+
+          for (const entry of sorted) {
+            const primaryTopic = entry.matchedTopics[0] || 'general';
+            const count = topicRecentCount[primaryTopic] || 0;
+            if (count < 3 || primaryTopic === 'general') {
+              balanced.push(entry);
+              topicRecentCount[primaryTopic] = count + 1;
+            } else {
+              // Push slightly down to prevent saturation without dropping
+              balanced.push(entry);
+            }
+          }
+
+          incoming = balanced.map(s => s.item);
         }
       }
     }

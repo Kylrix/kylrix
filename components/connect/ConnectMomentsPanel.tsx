@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Sparkles, Sliders, RefreshCw } from 'lucide-react';
+import { Sparkles, Sliders, RefreshCw, Search } from 'lucide-react';
 import { MomentCard } from '@/components/connect/MomentCard';
 import { useConnectMomentsFeed } from '@/components/connect/useConnectMomentsFeed';
 import { ConnectFeedSettingsPanel } from '@/components/connect/ConnectFeedSettingsPanel';
@@ -66,6 +66,23 @@ export function ConnectMomentsPanel({ onCreateMoment }: ConnectMomentsPanelProps
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(
+                  new CustomEvent('kylrix:open-topbar-search', {
+                    detail: { mode: 'feed', placeholder: 'Search feed moments, topics, and authors...' }
+                  })
+                );
+              }
+            }}
+            className="w-10 h-10 shrink-0 rounded-xl bg-[#161412] border border-[#34322F] flex items-center justify-center hover:border-amber-400/40 hover:bg-white/5 transition-colors group"
+            aria-label="Feed search"
+            title="Search feed moments"
+          >
+            <Search size={16} className="text-white group-hover:text-[#F59E0B] transition-colors" />
+          </button>
           <button
             type="button"
             onClick={() => {

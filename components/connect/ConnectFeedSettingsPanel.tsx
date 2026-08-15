@@ -205,12 +205,32 @@ export function ConnectFeedSettingsPanel({
           </div>
 
           <div className="flex flex-wrap gap-1.5">
-            {settings.interests.map(t => (
-              <span key={t} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-400/15 border border-emerald-400/30 text-emerald-300 px-2.5 py-1 text-xs font-mono font-bold">
-                {t}
-                <button type="button" onClick={() => removeInterest(t)} className="text-emerald-300/60 hover:text-emerald-100">×</button>
-              </span>
-            ))}
+            {settings.interests.map(rawInterest => {
+              const parts = String(rawInterest).split(':');
+              const name = parts[0];
+              const isWeighted = parts.length > 1 && Number(parts[1]) > 1;
+              return (
+                <span
+                  key={rawInterest}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-mono font-bold transition-all ${
+                    isWeighted
+                      ? 'bg-amber-400/15 border border-amber-400/40 text-amber-300 shadow-sm'
+                      : 'bg-emerald-400/15 border border-emerald-400/30 text-emerald-300'
+                  }`}
+                  title={isWeighted ? 'High-intent weighted interest' : 'Standard interest'}
+                >
+                  {isWeighted ? <span className="text-[10px] text-amber-400">⚡</span> : null}
+                  {name}
+                  <button
+                    type="button"
+                    onClick={() => removeInterest(rawInterest)}
+                    className={isWeighted ? 'text-amber-300/60 hover:text-white' : 'text-emerald-300/60 hover:text-emerald-100'}
+                  >
+                    ×
+                  </button>
+                </span>
+              );
+            })}
           </div>
         </section>
 

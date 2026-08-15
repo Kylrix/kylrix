@@ -492,13 +492,57 @@ export default function ConnectTopbar({
     return () => window.removeEventListener('pointerdown', handlePointerDown, true);
   }, [activePanel, handleCloseAll]);
 
+  const [searchMode, setSearchMode] = useState<'global' | 'feed'>('global');
+  const [feedSearchResults, setFeedSearchResults] = useState<any[]>([]);
+
   useEffect(() => {
-    const handleOpenTopbarSearch = () => {
+    const handleOpenTopbarSearch = (event?: any) => {
+      const detail = event?.detail;
+      if (detail?.mode === 'feed') {
+        setSearchMode('feed');
+      } else {
+        setSearchMode('global');
+      }
       openSearch();
     };
     window.addEventListener('kylrix:open-topbar-search' as any, handleOpenTopbarSearch);
     return () => window.removeEventListener('kylrix:open-topbar-search' as any, handleOpenTopbarSearch);
   }, [openSearch]);
+
+  // Feed search results & High-intent interest weighting
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setFeedSearchResults([]);
+      return;
+    }
+
+    // High intent search interest extraction
+    const words = query.toLowerCase().match(/\b[a-z0-9]{3,}\b/g) || [];
+    if (words.length) {
+      void import('@/lib/connect/feed-settings').then(({ recordFeedInteraction }) => {
+        recordFeedInteraction({ topics: words, searchWeight: 3 });
+      });
+    }
+
+    // Live moments search in feed mode
+    let mounted = true;
+    void (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const moments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
+        const matches = moments.filter((m) => {
+          const text = `${m.caption || m.content || ''} ${m.userName || m.user?.name || ''} ${m.username || ''}`.toLowerCase();
+          return words.some((w) => text.includes(w));
+        });
+        if (mounted) setFeedSearchResults(matches.slice(0, 15));
+      } catch {}
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [searchQuery]);
 
   useEffect(() => {
     const handleGlobalEscape = (event: KeyboardEvent) => {
@@ -1141,6 +1185,51 @@ export default function ConnectTopbar({
           ) : (
             /* Results View */
             <Box sx={{ display: 'grid', gap: 2 }}>
+              {/* Live Feed Moments Results */}
+              {feedSearchResults.length > 0 && (
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  <Typography sx={{ color: '#F59E0B', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                    Feed Moments · {feedSearchResults.length}
+                  </Typography>
+                  <Box sx={{ display: 'grid', gap: 0.75 }}>
+                    {feedSearchResults.map((moment) => (
+                      <Box
+                        key={moment.$id || moment.id}
+                        component="button"
+                        onClick={() => {
+                          handleCloseAll();
+                          router.push(`/connect/post/${moment.$id || moment.id}`);
+                        }}
+                        sx={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.25,
+                          px: 2,
+                          py: 1.25,
+                          borderRadius: '16px',
+                          bgcolor: 'rgba(245, 158, 11, 0.04)',
+                          border: '1px solid rgba(245, 158, 11, 0.15)',
+                          color: 'white',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'rgba(245, 158, 11, 0.08)', borderColor: 'rgba(245, 158, 11, 0.3)' }
+                        }}
+                      >
+                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                          <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
+                            {moment.userName || moment.user?.name || moment.username || 'Moment'}
+                          </Typography>
+                          <Typography component="span" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 500, fontSize: '0.75rem', lineHeight: 1.3 }} noWrap>
+                            {moment.caption || moment.content || 'Shared an update'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
               {/* Global LocalEngine Results — miniature cards, desktop uses sidebar grid */}
               {globalResults.length > 0 && (
                 <Box sx={{ display: 'grid', gap: 1.25 }}>
