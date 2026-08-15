@@ -101,6 +101,34 @@ export function ProfilePreviewDrawer({
     }
   }, [initialNpub, resolvedPubkey]);
 
+  // When an ecosystem userId is provided but no npub/pubkey was passed,
+  // look up the user's linked Nostr identity from their profile record.
+  useEffect(() => {
+    if (!userId || resolvedNpub || resolvedPubkey) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { UsersService } = await import('@/lib/services/users');
+        const prof = await UsersService.getProfileById(userId).catch(() => null);
+        if (cancelled || !prof) return;
+        // Prefer stored npub field, fall back to stored pubkey
+        const storedNpub: string | undefined = (prof as any).nostrNpub || (prof as any).npub;
+        const storedPubkey: string | undefined = (prof as any).nostrPubkey || (prof as any).pubkey;
+        if (storedNpub && !resolvedNpub) setResolvedNpub(storedNpub);
+        if (storedPubkey && !resolvedPubkey) setResolvedPubkey(storedPubkey);
+        // Also fill in profile data if not yet set
+        setResolvedProfile(prev => ({
+          name: prev.name || prof.displayName || prof.name,
+          username: prev.username || prof.username,
+          avatar: prev.avatar || prof.avatar || prof.avatarUrl,
+          bio: prev.bio || prof.bio,
+        }));
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
   // Fetch Nostr Activity (posts, replies) when expanded or on Nostr tab
   useEffect(() => {
     if (!resolvedPubkey && !resolvedNpub) return;
@@ -184,7 +212,7 @@ export function ProfilePreviewDrawer({
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-emerald-400" />
           <span className="text-xs font-bold uppercase tracking-wider font-mono text-white/70">
-            {source === 'nostr' ? 'Nostr Profile' : 'Kylrix Member'}
+            {source === 'nostr' && !userId ? 'Nostr Profile' : resolvedNpub && userId ? 'Kylrix · Nostr' : source === 'nostr' ? 'Nostr Profile' : 'Kylrix Member'}
           </span>
         </div>
         <div className="flex items-center gap-1.5">

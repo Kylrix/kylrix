@@ -7,6 +7,7 @@ import { CURATED_TOPIC_CATEGORIES } from '@/lib/ecosystem/intelligence-topics';
 import { ConnectNostrSettingsView } from './ConnectNostrSettingsView';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useNostrIdentity } from '@/hooks/useNostrIdentity';
 
 function Toggle({ label, value, onToggle, desc }: { label: string; value: boolean; onToggle: () => void; desc?: string }) {
   return (
@@ -37,6 +38,7 @@ export function ConnectFeedSettingsPanel({
 }) {
   const { user, profile } = useAuth();
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
+  const { identity } = useNostrIdentity();
   const [view, setView] = useState<'feed' | 'nostr'>('feed');
   const [settings, setSettings] = useState<ConnectFeedSettings>(CONNECT_FEED_DEFAULTS);
   const [newTopic, setNewTopic] = useState('');
@@ -125,8 +127,9 @@ export function ConnectFeedSettingsPanel({
               onClick={() => openUnifiedDrawer('profile-preview', {
                 userId: user.$id,
                 username: profile?.username || user.name,
-                name: profile?.name || profile?.displayName || user.name,
-                avatar: profile?.avatar || profile?.avatarUrl,
+                name: profile?.name || (profile as any)?.displayName || user.name,
+                avatar: profile?.avatar || (profile as any)?.avatarUrl,
+                npub: identity?.npub || undefined,
                 source: 'ecosystem',
               })}
               className="w-full flex items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-[#161412] p-3.5 text-left hover:bg-[#1C1A18] hover:border-emerald-400/40 transition-all group"
