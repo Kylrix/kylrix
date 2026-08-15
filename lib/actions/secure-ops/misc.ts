@@ -103,6 +103,19 @@ export async function runTokenOperationSecure(body: any) {
       sourceId: String(body?.sourceId || ''),
       metadata: body?.metadata || undefined});
   }
+  if (action === 'zap') {
+    const fromUserId = String(body?.fromUserId || actor.$id || '').trim();
+    if (!isSERVERSDK && fromUserId !== actor.$id) throw new Error('Forbidden');
+    return InternalKylrixTokenService.zapObject({
+      fromUserId,
+      targetKind: body?.targetKind,
+      targetId: String(body?.targetId || '').trim(),
+      targetOwnerId: String(body?.targetOwnerId || '').trim(),
+      amountMicro: String(body?.amountMicro || '1'),
+      idempotencyKey: String(body?.idempotencyKey || `zap:${Date.now()}`),
+      comment: body?.comment,
+    });
+  }
   if (action === 'ledger') {
     const userId = String(body?.userId || actor.$id || '').trim();
     if (!isSERVERSDK && userId !== actor.$id) throw new Error('Forbidden');

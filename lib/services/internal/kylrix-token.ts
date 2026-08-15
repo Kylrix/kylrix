@@ -482,6 +482,80 @@ export const InternalKylrixTokenService = {
     return { accepted: true, debit, credit, amountMicro: toMicro(amount), amount: toToken(amount), symbol: contract.policy.symbol };
   },
 
+  async zapObject(input: {
+    fromUserId: string;
+    targetKind: 'note' | 'moment' | 'goal' | 'event' | 'form' | 'flow' | 'chat';
+    targetId: string;
+    targetOwnerId: string;
+    amountMicro: string;
+    idempotencyKey: string;
+    comment?: string;
+  }) {
+    await requireStateRow();
+    const amount = asMicro(input.amountMicro);
+    if (amount <= 0n) return { accepted: false, reason: 'INVALID_ZAP_AMOUNT' };
+    if (input.fromUserId === input.targetOwnerId) return { accepted: false, reason: 'SELF_ZAP_NOT_ALLOWED' };
+
+    const fromBalance = await getLatestBalanceMicro(input.fromUserId);
+    if (fromBalance < amount) return { accepted: false, reason: 'INSUFFICIENT_BALANCE' };
+    const toBalance = await getLatestBalanceMicro(input.targetOwnerId);
+    const tx = `zap:${input.fromUserId}:${input.targetKind}:${input.targetId}:${input.idempotencyKey}`;
+
+    const metadata = {
+      targetKind: input.targetKind,
+      targetId: input.targetId,
+      targetOwnerId: input.targetOwnerId,
+      comment: input.comment,
+    };
+
+    const debit = await appendEvent({
+      txId: `${tx}:out`,
+      idempotencyKey: `${input.idempotencyKey}:zap-out`,
+      eventType: 'transfer_out',
+      userId: input.fromUserId,
+      counterpartyUserId: input.targetOwnerId,
+      amountMicro: amount,
+      deltaMicro: -amount,
+      balanceAfterMicro: fromBalance - amount,
+      sourceType: `zap:${input.targetKind}`,
+      sourceId: input.targetId,
+      metadata,
+    });
+
+    const credit = await appendEvent({
+      txId: `${tx}:in`,
+      idempotencyKey: `${input.idempotencyKey}:zap-in`,
+      eventType: 'transfer_in',
+      userId: input.targetOwnerId,
+      counterpartyUserId: input.fromUserId,
+      amountMicro: amount,
+      deltaMicro: amount,
+      balanceAfterMicro: toBalance + amount,
+      sourceType: `zap:${input.targetKind}`,
+      sourceId: input.targetId,
+      metadata,
+    });
+
+    await updateStateRow({ lastActivityAt: nowIso() });
+    await notifyTokenTransferReceived({
+      fromUserId: input.fromUserId,
+      toUserId: input.targetOwnerId,
+      amountMicro: amount,
+      sourceType: `zap:${input.targetKind}`,
+      sourceId: input.targetId,
+      idempotencyKey: input.idempotencyKey,
+    });
+
+    return {
+      accepted: true,
+      debit,
+      credit,
+      amountMicro: toMicro(amount),
+      amount: toToken(amount),
+      symbol: contract.policy.symbol,
+    };
+  },
+
   async fineToRoot(input: {
     userId: string;
     amountMicro: string;

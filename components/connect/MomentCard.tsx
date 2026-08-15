@@ -224,6 +224,8 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
     openUnifiedDrawer('zap', {
       targetId: momentId,
       source: item.source,
+      targetKind: 'moment',
+      targetOwnerId: item.rawEvent?.userId || item.rawEvent?.creatorId,
       targetPubkey: item.rawEvent?.pubkey,
       authorName: item.authorName,
       onZapSuccess: (amount: number) => {

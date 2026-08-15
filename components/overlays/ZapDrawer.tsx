@@ -12,6 +12,8 @@ interface ZapDrawerProps {
   onClose: () => void;
   targetId: string;
   source: 'ecosystem' | 'nostr';
+  targetKind?: 'note' | 'moment' | 'goal' | 'event' | 'form' | 'flow' | 'chat';
+  targetOwnerId?: string;
   targetPubkey?: string;
   authorName?: string;
   onZapSuccess?: (amount: number, token: string) => void;
@@ -29,6 +31,8 @@ export function ZapDrawer({
   onClose,
   targetId,
   source,
+  targetKind = 'moment',
+  targetOwnerId,
   targetPubkey,
   authorName = 'Creator',
   onZapSuccess,
@@ -63,25 +67,22 @@ export function ZapDrawer({
     setZapping(true);
     try {
       if (source === 'ecosystem') {
-        // Ecosystem micro-zap token ledger transfer/mint
-        try {
-          const { runTokenOperation } = await import('@/lib/actions/client-ops');
-          await runTokenOperation({
-            action: 'mint_activity',
-            userId: user?.$id || 'anonymous',
-            idempotencyKey: `zap:${targetId}:${Date.now()}`,
-            activityType: 'comment_add',
-            uniqueActors: 1,
-            trustScore: 80,
-            sourceType: 'zap',
-            sourceId: targetId,
-            metadata: {
-              amount: effectiveAmount,
-              unit: 'rix',
-              comment: comment.trim() || undefined,
-            },
-          });
-        } catch {}
+        // Ecosystem micro-zap token ledger transfer/zap
+        const { runTokenOperation } = await import('@/lib/actions/client-ops');
+        const res = await runTokenOperation({
+          action: 'zap',
+          fromUserId: user?.$id,
+          targetKind,
+          targetId,
+          targetOwnerId: targetOwnerId || user?.$id,
+          amountMicro: String(effectiveAmount),
+          idempotencyKey: `zap:${targetKind}:${targetId}:${Date.now()}`,
+          comment: comment.trim() || undefined,
+        });
+
+        if (res && res.accepted === false) {
+          throw new Error(res.reason || 'Zap could not be settled');
+        }
 
         toast.success(`⚡ Sent ${effectiveAmount} rix zap to ${authorName}!`);
         onZapSuccess?.(effectiveAmount, 'rix');

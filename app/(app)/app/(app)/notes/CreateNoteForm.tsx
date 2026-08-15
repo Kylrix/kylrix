@@ -111,8 +111,6 @@ export default function CreateNoteForm({
   const [persistedIsGuest, setPersistedIsGuest] = useState(initialContent?.isGuest || false);
   const [isHydrated, setIsHydrated] = useState(false);
   const [lastSavedSnapshot, setLastSavedSnapshot] = useState('');
-  const [hasPaywall, setHasPaywall] = useState(false);
-  const [paywallAmount, setPaywallAmount] = useState<number | ''>(0);
   const [composerKind, setComposerKind] = useState<'note' | 'project'>(noteKind);
   const { ecosystemTags, refreshEcosystemTags } = useTask();
   const contentRef = useRef<HTMLTextAreaElement | null>(null);
@@ -513,10 +511,8 @@ export default function CreateNoteForm({
     composerKind,
     isPublic,
     isGuest,
-    hasPaywall,
-    paywallAmount: typeof paywallAmount === 'number' ? paywallAmount : parseFloat(paywallAmount as any) || 0,
     resolvedNoteId: resolvedNoteId || null,
-  }), [isTitleManuallyEdited, title, content, tags, composerKind, isPublic, isGuest, hasPaywall, paywallAmount, resolvedNoteId]);
+  }), [isTitleManuallyEdited, title, content, tags, composerKind, isPublic, isGuest, resolvedNoteId]);
 
   const isDirty = snapshot !== lastSavedSnapshot;
 
@@ -546,9 +542,6 @@ export default function CreateNoteForm({
         setIsGuest(cachedGuest);
         setPersistedIsGuest(cachedGuest);
         setIsArticle(cachedArticle);
-        const paywall = (cached as any).metadata?.paywall;
-        setHasPaywall(!!paywall?.enabled);
-        setPaywallAmount(paywall?.amount || 0);
         setLastSavedSnapshot(JSON.stringify({
           title: (cached as any).isTitleManuallyEdited || isTitleManuallyEdited ? (cached.title || '').trim() : '',
           content: cached.content || '',
@@ -558,8 +551,6 @@ export default function CreateNoteForm({
           isPublic: cachedPublic,
           isGuest: cachedGuest,
           isArticle: cachedArticle,
-          hasPaywall: !!paywall?.enabled,
-          paywallAmount: paywall?.amount || 0,
           resolvedNoteId: cached.$id,
         }));
       }
@@ -586,9 +577,6 @@ export default function CreateNoteForm({
         setIsGuest(loadedGuest);
         setPersistedIsGuest(loadedGuest);
         setIsArticle(loadedArticle);
-        const paywall = (loaded as any).metadata?.paywall;
-        setHasPaywall(!!paywall?.enabled);
-        setPaywallAmount(paywall?.amount || 0);
         setLastSavedSnapshot(JSON.stringify({
           title: (loaded as any).isTitleManuallyEdited || isTitleManuallyEdited ? (loaded.title || '').trim() : '',
           content: loaded.content || '',
@@ -598,8 +586,6 @@ export default function CreateNoteForm({
           isPublic: loadedPublic,
           isGuest: loadedGuest,
           isArticle: loadedArticle,
-          hasPaywall: !!paywall?.enabled,
-          paywallAmount: paywall?.amount || 0,
           resolvedNoteId: loaded.$id,
         }));
       } catch (error) {
@@ -910,17 +896,7 @@ export default function CreateNoteForm({
       article: isArticle,
       isWorkspace: Boolean(activeWorkspace && !activeWorkspace.isPersonal),
       projectId: activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : undefined,
-      metadata: JSON.stringify({
-        paywall: hasPaywall && paywallAmount ? {
-          enabled: true,
-          amount: typeof paywallAmount === 'number' ? paywallAmount : parseFloat(paywallAmount as any) || 0,
-          currency: 'USD',
-        } : {
-          enabled: false,
-          amount: 0,
-          currency: 'USD',
-        },
-      }),
+      metadata: JSON.stringify({}),
     };
 
     if (!user?.$id) {
@@ -1071,14 +1047,12 @@ export default function CreateNoteForm({
   }, [
     applyPersistSnapshot,
     composerKind,
-    hasPaywall,
     isArticle,
     isGuest,
     isPublic,
     isTitleManuallyEdited,
     migrateDraftId,
     onNoteCreated,
-    paywallAmount,
     persistedIsGuest,
     persistedIsPublic,
     promptSudo,

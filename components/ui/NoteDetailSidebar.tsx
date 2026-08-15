@@ -1812,6 +1812,24 @@ export function NoteDetailSidebar({
             <button
               type="button"
               onClick={() => {
+                setIsContextDrawerOpen(false);
+                openUnified('zap', {
+                  targetId: liveNote.$id,
+                  source: 'ecosystem',
+                  targetKind: 'note',
+                  targetOwnerId: (liveNote as any).userId || (note as any).userId,
+                  authorName: (liveNote as any).userName || (liveNote as any).title || 'Creator',
+                });
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-400/10 border border-amber-400/30 text-sm font-bold text-amber-300 hover:bg-amber-400/20 transition-all text-left cursor-pointer"
+            >
+              <Zap className="w-5 h-5 text-amber-400 fill-current" />
+              <span>Zap Idea (Send rix)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
                 navigator.clipboard.writeText(content);
                 showSuccess('Copied', 'Entire note content copied to clipboard.');
                 setIsContextDrawerOpen(false);
