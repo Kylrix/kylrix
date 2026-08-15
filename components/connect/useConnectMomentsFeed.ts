@@ -37,6 +37,21 @@ const MAX_FEED = 240;
 let memoryUnified: UnifiedFeedItem[] | null = null;
 let memoryEco: any[] | null = null;
 
+const SPAM_KEYWORDS = [
+  'presale', 'pump', 'solana contract', 'airdrop claim', 'moonshot', '100x gem',
+  'free btc', 't.me/', 'pumpex', 'ca:', 'buy now!', '0x', '$pepe', '$wif',
+  'airdrop', 'giveaway', 'join channel', 'telegram.me', 'casin', 'bonus claim',
+  'free spin', 'crypto signal', 'whatsapp', 'dm to buy', 'whitelist', 'mint now',
+  'presale is live', 'private key', 'seed phrase', 'nigger', 'faggot', 'kike', 'retard'
+];
+
+export function sanitizeFeedContent(text: string, author: string): boolean {
+  const hay = `${text || ''} ${author || ''}`.toLowerCase();
+  if (SPAM_KEYWORDS.some((w) => hay.includes(w))) return false;
+  if (text.trim().length < 2) return false;
+  return true;
+}
+
 function buildItems(
   ecosystemMoments: any[],
   nostrFeed: { id: string; pubkey: string; content: string; created_at: number; tags?: string[][] }[],
@@ -47,24 +62,44 @@ function buildItems(
     zapCount?: Record<string, number>;
     repostCount?: Record<string, number>;
   },
+  interestsConfig?: { topics?: string[]; interests?: string[] },
 ): UnifiedFeedItem[] {
   const rows: UnifiedFeedItem[] = [];
   const ecosystemNostrIds = new Set<string>();
+  const authorPostCount: Record<string, number> = {};
+
+  const parsedInterests = parseInterestsWithWeights([
+    ...((interestsConfig?.topics as string[]) || []).map((t: string) => ({ name: t, weight: 2 })),
+    ...((interestsConfig?.interests as string[]) || []),
+  ]);
 
   for (const m of ecosystemMoments) {
     if (m.nostrId) {
       ecosystemNostrIds.add(m.nostrId);
     }
+    const rawContent = m.caption || m.content || '';
+    const authorName = m.userName || m.user?.name || m.username || 'Creator';
+    const authorUsername = m.username || m.user?.username || m.userName;
+    const authorKey = m.userId || authorUsername || authorName || m.$id;
+
+    if (!sanitizeFeedContent(rawContent, `${authorName} ${authorUsername || ''}`)) {
+      continue;
+    }
+
+    const currentCount = authorPostCount[authorKey] || 0;
+    if (currentCount >= 3) continue;
+    authorPostCount[authorKey] = currentCount + 1;
+
     const rawDateStr = m.createdAt || m.$createdAt;
     const createdAtMs = rawDateStr ? new Date(rawDateStr).getTime() : 0;
     rows.push({
       id: `eco_${m.$id || m.id}`,
       source: 'ecosystem',
-      authorName: m.userName || m.user?.name || m.username || 'Kylrix User',
-      authorUsername: m.username || m.user?.username,
+      authorName,
+      authorUsername,
       authorAvatar: m.userAvatar || m.user?.avatarUrl,
       isEcosystemUser: true,
-      content: m.caption || m.content || '',
+      content: rawContent,
       createdAt: createdAtMs,
       likesCount: m.likeCount || 0,
       pulsesCount: m.pulseCount || 0,
@@ -80,7 +115,6 @@ function buildItems(
 
   for (const event of nostrFeed) {
     if ((event as any).tags?.some((t: string[]) => t[0] === 'e')) continue;
-    // Prioritize native Kylrix moment: if this Nostr event was already synced and exists natively, filter it out
     if (ecosystemNostrIds.has(event.id)) continue;
 
     let authorName = `npub…${event.pubkey.slice(-8)}`;
@@ -88,7 +122,6 @@ function buildItems(
     let authorUsername: string | undefined;
     let isEco = false;
 
-    // 1. Check Kylrix platform identity first
     try {
       const npubStr = bytesToNpub(hexToBytes(event.pubkey));
       const profile = resolvedProfiles[npubStr];
@@ -100,7 +133,6 @@ function buildItems(
       }
     } catch {}
 
-    // 2. If not a Kylrix user, check Nostr NIP-01/05 metadata cache
     if (!isEco) {
       const nostrProf = getCachedNostrProfile(event.pubkey);
       if (nostrProf) {
@@ -117,6 +149,39 @@ function buildItems(
         pubkeysToFetch.push(event.pubkey);
       }
     }
+
+    if (!sanitizeFeedContent(event.content || '', `${authorName} ${authorUsername || ''}`)) {
+      continue;
+    }
+
+    let score = 0;
+    if (parsedInterests.length) {
+      const hay = `${event.content || ''} ${authorName} ${authorUsername || ''}`.toLowerCase();
+      const tags = Array.isArray(event.tags)
+        ? event.tags.filter((t: any) => t[0] === 't').map((t: any) => String(t[1] || '').toLowerCase())
+        : [];
+      for (const interest of parsedInterests) {
+        const w = interest.weight || 1;
+        if (tags.includes(interest.name)) score += w * 4;
+        else if (hay.includes(interest.name)) score += w * 1.5;
+      }
+    } else {
+      score = 1;
+    }
+
+    if (parsedInterests.length > 0 && score === 0 && !isEco) {
+      continue;
+    }
+
+    const authorKey = event.pubkey || authorUsername || authorName;
+    const currentCount = authorPostCount[authorKey] || 0;
+    const allowedSlots = score >= 5 ? 3 : score >= 2 ? 2 : 1;
+
+    if (currentCount >= allowedSlots) {
+      continue;
+    }
+
+    authorPostCount[authorKey] = currentCount + 1;
 
     rows.push({
       id: `nostr_${event.id}`,
@@ -266,36 +331,49 @@ export function useConnectMomentsFeed() {
     return () => { cancelled = true; };
   }, []);
 
-  // 1) Hydrate unified feed from LocalEngine first — never flash empty. Use local copy engine directly.
-  // Instant paint: memory already set above; this just confirms from IndexedDB.
+  // 1) Hydrate unified feed from LocalEngine first — enforce system-level sanitization & slot allocation
   useEffect(() => {
     let cancelled = false;
-    // If memory already painted, mark hydrated immediately so background merges start
-    if (memoryUnified?.length) setHydrated(true);
     void (async () => {
       try {
-        // Read both caches in parallel for speed
+        const { getConnectFeedSettings } = await import('@/lib/connect/feed-settings');
+        const settings = await getConnectFeedSettings().catch(() => null);
+        if (!cancelled && settings) setFeedSettings(settings);
+
         const [cached, ecoCached] = await Promise.all([
           LocalEngine.cacheGet<UnifiedFeedItem[]>(UNIFIED_CACHE).catch(() => null),
           LocalEngine.cacheGet<any[]>('f_moments_list').catch(() => null),
         ]);
         if (cancelled) return;
+
         if (Array.isArray(cached) && cached.length) {
-          memoryUnified = cached;
-          // Only set if memory didn't already paint same content
-          setDisplayItems((prev) => (prev.length ? prev : cached));
-          setVisibleCount((prev) => (prev !== PAGE_SIZE ? prev : Math.min(PAGE_SIZE, cached.length)));
+          // Backward-compatibility filter: prune spam and enforce slot caps on cached items
+          const authorPostCount: Record<string, number> = {};
+          const sanitizedCached = cached.filter((item) => {
+            if (!sanitizeFeedContent(item.content || '', `${item.authorName || ''} ${item.authorUsername || ''}`)) {
+              return false;
+            }
+            const authorKey = item.authorUsername || item.authorName || item.id;
+            const count = authorPostCount[authorKey] || 0;
+            if (count >= 3) return false;
+            authorPostCount[authorKey] = count + 1;
+            return true;
+          });
+
+          memoryUnified = sanitizedCached;
+          setDisplayItems(sanitizedCached);
+          setVisibleCount(Math.min(PAGE_SIZE, sanitizedCached.length));
         }
+
         if (Array.isArray(ecoCached) && ecoCached.length) {
           memoryEco = ecoCached;
-          setEcosystemMoments((prev) => (prev.length ? prev : ecoCached));
-          // If no unified cache, build display immediately from local moments (no network wait)
+          setEcosystemMoments(ecoCached);
           if (!Array.isArray(cached) || !cached.length) {
-            const built = buildItems(ecoCached, [], {}, { replyCount: {}, likeCount: {} });
+            const built = buildItems(ecoCached, [], {}, { replyCount: {}, likeCount: {} }, settings || undefined);
             if (built.length) {
               memoryUnified = built;
-              setDisplayItems((prev) => (prev.length ? prev : built));
-              setVisibleCount((prev) => (prev !== PAGE_SIZE ? prev : Math.min(PAGE_SIZE, built.length)));
+              setDisplayItems(built);
+              setVisibleCount(Math.min(PAGE_SIZE, built.length));
             }
           }
         }
@@ -488,6 +566,32 @@ export function useConnectMomentsFeed() {
       return next;
     });
   }, [feedSettings, hydrated]);
+
+  // Feed search submit listener — instant in-page query filter and prioritize
+  useEffect(() => {
+    const handleFeedSearchSubmit = (event: any) => {
+      const query = String(event?.detail?.query || '').trim().toLowerCase();
+      if (!query) return;
+      const terms = query.match(/\b[a-z0-9]{2,}\b/g) || [query];
+      setDisplayItems((prev) => {
+        if (!prev.length) return prev;
+        const matched = prev.filter((i) => {
+          const text = `${i.content || ''} ${i.authorName || ''} ${i.authorUsername || ''}`.toLowerCase();
+          return terms.some((term) => text.includes(term));
+        });
+        if (matched.length > 0) {
+          // Bring exact matches to top
+          const matchedIds = new Set(matched.map((m) => m.id));
+          const rest = prev.filter((m) => !matchedIds.has(m.id));
+          return [...matched, ...rest];
+        }
+        return prev;
+      });
+    };
+
+    window.addEventListener('kylrix:feed-search-submit', handleFeedSearchSubmit);
+    return () => window.removeEventListener('kylrix:feed-search-submit', handleFeedSearchSubmit);
+  }, []);
 
   // Resolve Nostr handles quietly.
   useEffect(() => {

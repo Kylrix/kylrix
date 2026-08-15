@@ -1601,6 +1601,19 @@ export default function ConnectTopbar({
               onKeyDown={(event: React.KeyboardEvent) => {
                 if (event.key === 'Escape') {
                   handleCloseAll();
+                } else if (event.key === 'Enter' && searchQuery.trim()) {
+                  const query = searchQuery.trim();
+                  // In feed search mode or in connect routes: apply filter directly to live feed and close search drawer instantly
+                  if (typeof window !== 'undefined') {
+                    const words = query.toLowerCase().match(/\b[a-z0-9]{3,}\b/g) || [];
+                    if (words.length) {
+                      void import('@/lib/connect/feed-settings').then(({ recordFeedInteraction }) => {
+                        recordFeedInteraction({ topics: words, searchWeight: 3 });
+                      });
+                    }
+                    window.dispatchEvent(new CustomEvent('kylrix:feed-search-submit', { detail: { query } }));
+                  }
+                  handleCloseAll();
                 }
               }}
             />
