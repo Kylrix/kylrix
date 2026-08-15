@@ -423,6 +423,37 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
               <span className="text-xs font-mono">{likes > 0 ? likes : ''}</span>
             </button>
 
+            {/* Bookmark (Send to self/unencrypted chat) */}
+            <button
+              type="button"
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (!momentId) return;
+                try {
+                  const url = item.source === 'nostr'
+                    ? `${window.location.origin}/connect/post/nostr_${momentId}`
+                    : buildPublicResourceUrl('moment', momentId);
+                  const { LocalEngine } = await import('@/lib/services/LocalEngine');
+                  const currentBookmarks = (await LocalEngine.cacheGet<string[]>('kylrix:bookmarks')) || [];
+                  if (!currentBookmarks.includes(momentId)) {
+                    await LocalEngine.cacheSet('kylrix:bookmarks', [...currentBookmarks, momentId]);
+                  }
+                  toast.success('Saved to your notes & bookmarks');
+                } catch {
+                  toast.error('Could not bookmark');
+                }
+              }}
+              className="group inline-flex items-center gap-1.5 text-[13px] font-semibold hover:text-[#F59E0B] transition-colors"
+              aria-label="Bookmark"
+              title="Save to bookmarks"
+            >
+              <span className="p-1.5 rounded-full group-hover:bg-[#0A0908]">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+                </svg>
+              </span>
+            </button>
+
             {/* Share */}
             <button
               type="button"

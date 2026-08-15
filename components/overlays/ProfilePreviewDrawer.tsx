@@ -216,6 +216,31 @@ export function ProfilePreviewDrawer({
           </span>
         </div>
         <div className="flex items-center gap-1.5">
+          {/* Follow / Unfollow Button */}
+          {(userId || resolvedNpub || resolvedPubkey) && (
+            <button
+              type="button"
+              onClick={async () => {
+                const targetKey = resolvedNpub || resolvedPubkey || userId;
+                if (!targetKey) return;
+                try {
+                  const { LocalEngine } = await import('@/lib/services/LocalEngine');
+                  const follows = (await LocalEngine.cacheGet<string[]>('kylrix:follows')) || [];
+                  const isFollowing = follows.includes(targetKey);
+                  const nextFollows = isFollowing ? follows.filter(k => k !== targetKey) : [...follows, targetKey];
+                  await LocalEngine.cacheSet('kylrix:follows', nextFollows);
+                  toast.success(isFollowing ? 'Unfollowed' : 'Following');
+                  // Trigger live feed refresh with new weights
+                  window.dispatchEvent(new CustomEvent('kylrix:follows-updated', { detail: nextFollows }));
+                } catch {
+                  toast.error('Could not update follow');
+                }
+              }}
+              className="px-2.5 py-1 rounded-lg text-xs font-bold font-mono bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30 hover:bg-[#F59E0B] hover:text-black transition-colors"
+            >
+              Follow
+            </button>
+          )}
           {/* Popout to /u/username route if username exists */}
           {username && (
             <a
