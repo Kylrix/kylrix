@@ -210,13 +210,15 @@ function normalizeAffinity(raw: any): Affinity {
     updatedAt: typeof raw.updatedAt === 'number' ? raw.updatedAt : 0,
   };
 }
-export async function recordFeedInteraction(input: { topics?: string[]; mediaKind?: string }) {
+export async function recordFeedInteraction(input: { topics?: string[]; mediaKind?: string; searchWeight?: number }) {
+  const weight = input.searchWeight || 1;
   const topics = (input.topics || []).map(t => String(t).toLowerCase().trim()).filter(Boolean).slice(0, 5);
   const mediaKind = String(input.mediaKind || '').toLowerCase().trim();
   if (!topics.length && !mediaKind) return;
   try {
     const cur = normalizeAffinity(await LocalEngine.cacheGet<any>(AFFINITY_KEY).catch(() => null));
-    const nextInterests = Array.from(new Set([...topics, ...cur.interests])).slice(0, 30);
+    const formattedTopics = weight > 1 ? topics.map(t => `${t}:${weight}`) : topics;
+    const nextInterests = Array.from(new Set([...formattedTopics, ...cur.interests])).slice(0, 30);
     const nextMedia = mediaKind ? Array.from(new Set([mediaKind, ...cur.mediaKinds])).slice(0, 10) : cur.mediaKinds;
     const next: Affinity = { interests: nextInterests, mediaKinds: nextMedia, updatedAt: Date.now() };
     await LocalEngine.cacheSet(AFFINITY_KEY, next);
@@ -224,7 +226,7 @@ export async function recordFeedInteraction(input: { topics?: string[]; mediaKin
     // Merge affinity interests into live settings (offline + synced, curated phrases)
     if (topics.length) {
       const current = await getConnectFeedSettings();
-      const mergedInterests = Array.from(new Set([...topics, ...current.interests])).slice(0, 20);
+      const mergedInterests = Array.from(new Set([...formattedTopics, ...current.interests])).slice(0, 20);
       if (mergedInterests.join('|') !== current.interests.join('|')) {
         await setConnectFeedSettings({ interests: mergedInterests });
       }

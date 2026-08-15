@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Zap, X, Shield, Lock, ArrowRight, Check } from 'lucide-react';
+import { Zap, X, Shield, Check } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useNostrIdentity } from '@/hooks/useNostrIdentity';
-import { useTokenOps } from '@/context/TokenOpsContext';
 import toast from 'react-hot-toast';
 
 interface ZapDrawerProps {
@@ -33,13 +32,12 @@ export function ZapDrawer({
   source,
   targetKind = 'moment',
   targetOwnerId,
-  targetPubkey,
+  targetPubkey: _targetPubkey,
   authorName = 'Creator',
   onZapSuccess,
 }: ZapDrawerProps) {
   const { user } = useAuth();
   const { isVaultLocked, unlockAndLoad } = useNostrIdentity();
-  const { balance } = useTokenOps();
   const [selectedAmount, setSelectedAmount] = useState<number>(1);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [comment, setComment] = useState('');
@@ -80,8 +78,8 @@ export function ZapDrawer({
           comment: comment.trim() || undefined,
         });
 
-        if (res && res.accepted === false) {
-          throw new Error(res.reason || 'Zap could not be settled');
+        if (res && (res as any).accepted === false) {
+          throw new Error((res as any).reason || 'Zap could not be settled');
         }
 
         toast.success(`⚡ Sent ${effectiveAmount} rix zap to ${authorName}!`);
@@ -131,9 +129,9 @@ export function ZapDrawer({
           <p className="text-sm font-extrabold text-white m-0">{authorName}</p>
         </div>
         <div className="text-right">
-          <span className="text-[10px] uppercase font-bold text-white/40 font-mono">Balance</span>
+          <span className="text-[10px] uppercase font-bold text-white/40 font-mono">Speed</span>
           <p className="text-xs font-mono font-bold text-emerald-400 m-0">
-            {balance ? `${balance.totalBalanceFormatted} KYLR` : 'Available'}
+            Instant rix
           </p>
         </div>
       </div>

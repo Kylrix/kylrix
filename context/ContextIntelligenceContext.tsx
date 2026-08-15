@@ -25,7 +25,7 @@ const LOCAL_INTERACTIONS_KEY = 'kylrix_realtime_interactions_v1';
 const LOCAL_SESSION_KEY = 'kylrix_feed_session_active_v1';
 
 export function ContextIntelligenceProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const [interactions, setInteractions] = useState<InteractionRecord[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);

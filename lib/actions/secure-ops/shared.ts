@@ -40,6 +40,7 @@ export type TokenAction =
   | 'initialize'
   | 'mint_activity'
   | 'transfer'
+  | 'zap'
   | 'ledger'
   | 'balance'
   | 'fine_to_root'

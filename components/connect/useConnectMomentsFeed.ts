@@ -374,14 +374,21 @@ export function useConnectMomentsFeed() {
 
       const spamKeywords = [
         'presale', 'pump', 'solana contract', 'airdrop claim', 'moonshot', '100x gem',
-        'free btc', 't.me/', 'pumpex', 'ca:', 'buy now!', '0x', '$pepe', '$wif'
+        'free btc', 't.me/', 'pumpex', 'ca:', 'buy now!', '0x', '$pepe', '$wif',
+        'airdrop', 'giveaway', 'join channel', 'telegram.me', 'casin', 'bonus claim',
+        'free spin', 'crypto signal', 'whatsapp', 'dm to buy', 'whitelist', 'mint now',
+        'presale is live', 'private key', 'seed phrase'
       ];
 
-      // Filter out low-signal token shilling
+      // Aggressive anti-spam filter: eliminate shilling, bots, and spam links
       incoming = incoming.filter(i => {
         const text = (i.content || '').toLowerCase();
-        const isSpam = spamKeywords.some(w => text.includes(w));
-        return !isSpam;
+        const author = `${i.authorName || ''} ${i.authorUsername || ''}`.toLowerCase();
+        const isSpamText = spamKeywords.some(w => text.includes(w) || author.includes(w));
+        if (isSpamText) return false;
+        // Eliminate repetitive single-character or blank noise
+        if (text.trim().length < 3 && !i.rawEvent?.attachments) return false;
+        return true;
       });
 
       if (parsedInterests.length) {
@@ -407,26 +414,37 @@ export function useConnectMomentsFeed() {
           return { item, score, matchedTopics };
         });
 
-        // Retain items matching declared interests or ecosystem content
+        // Retain items matching declared interests, or native ecosystem posts (capped)
         const matched = scored.filter(s => s.score > 0 || s.item.source === 'ecosystem');
         if (matched.length > 0) {
-          // Sort by affinity score + recency
+          // Sort strictly by affinity score + recency
           const sorted = matched
             .sort((a, b) => (b.score - a.score) || (b.item.createdAt - a.item.createdAt));
 
-          // Soft topic saturation: prevent identical single topic from dominating consecutively (>3 in a row)
+          // Dynamic author slot allocation (0-3 posts per author in a single FYP view)
           const balanced: typeof sorted = [];
+          const authorPostCount: Record<string, number> = {};
           const topicRecentCount: Record<string, number> = {};
 
           for (const entry of sorted) {
-            const primaryTopic = entry.matchedTopics[0] || 'general';
-            const count = topicRecentCount[primaryTopic] || 0;
-            if (count < 3 || primaryTopic === 'general') {
-              balanced.push(entry);
-              topicRecentCount[primaryTopic] = count + 1;
-            } else {
-              // Push slightly down to prevent saturation without dropping
-              balanced.push(entry);
+            const authorKey = entry.item.authorUsername || entry.item.authorName || entry.item.id;
+            const count = authorPostCount[authorKey] || 0;
+
+            // Dynamic quota based on interest alignment:
+            // High affinity (score >= 5): up to 3 slots
+            // Medium affinity (score >= 2): up to 2 slots
+            // Low / baseline affinity: 1 slot
+            // Zero affinity external Nostr: 0 slots (already filtered)
+            const allowedSlots = entry.score >= 5 ? 3 : entry.score >= 2 ? 2 : 1;
+
+            if (count < allowedSlots) {
+              const primaryTopic = entry.matchedTopics[0] || 'general';
+              const topicCount = topicRecentCount[primaryTopic] || 0;
+              if (topicCount < 4 || primaryTopic === 'general') {
+                balanced.push(entry);
+                authorPostCount[authorKey] = count + 1;
+                topicRecentCount[primaryTopic] = topicCount + 1;
+              }
             }
           }
 

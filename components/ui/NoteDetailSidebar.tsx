@@ -30,7 +30,8 @@ import {
   Bold,
   Italic,
   Heading1,
-  Code2
+  Code2,
+  Zap,
 } from 'lucide-react';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';

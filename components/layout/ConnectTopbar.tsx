@@ -492,7 +492,7 @@ export default function ConnectTopbar({
     return () => window.removeEventListener('pointerdown', handlePointerDown, true);
   }, [activePanel, handleCloseAll]);
 
-  const [searchMode, setSearchMode] = useState<'global' | 'feed'>('global');
+  const [_searchMode, setSearchMode] = useState<'global' | 'feed'>('global');
   const [feedSearchResults, setFeedSearchResults] = useState<any[]>([]);
 
   useEffect(() => {

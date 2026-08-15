@@ -108,6 +108,7 @@ export async function createMomentComment(opts: {
   privateKeyBytes?: Uint8Array | Record<string, number> | any;
   nsec?: string;
   rootPubkey?: string;
+  nostrId?: string;
 }): Promise<MomentComment | null> {
   const text = opts.content.trim();
   if (!text) return null;

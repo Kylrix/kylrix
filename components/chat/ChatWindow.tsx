@@ -40,6 +40,7 @@ import {
     Copy,
     Pin,
     Lock,
+    Zap,
 } from 'lucide-react';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
@@ -145,6 +146,7 @@ export const ChatWindow = ({
     const [reactionPopoverMessageId, setReactionPopoverMessageId] = useState<string | null>(null);
     const initialLoadRef = useRef<string | null>(null);
     const { openFileDrawer } = useUnifiedFileDrawer();
+    const { open: openUnifiedDrawer } = useUnifiedDrawer();
     const { openSidebar, closeSidebar } = useDynamicSidebar();
     const { openOverlay, closeOverlay } = useOverlay();
     const [_isPending, startTransition] = useTransition();
