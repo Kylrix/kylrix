@@ -509,7 +509,7 @@ export default function ConnectTopbar({
     return () => window.removeEventListener('kylrix:open-topbar-search' as any, handleOpenTopbarSearch);
   }, [openSearch]);
 
-  // Feed search results & High-intent interest weighting
+  // Debounced feed search across LocalEngine & live Nostr relays
   useEffect(() => {
     const query = searchQuery.trim();
     if (query.length < 2) {
@@ -517,31 +517,63 @@ export default function ConnectTopbar({
       return;
     }
 
-    // High intent search interest extraction
-    const words = query.toLowerCase().match(/\b[a-z0-9]{3,}\b/g) || [];
-    if (words.length) {
-      void import('@/lib/connect/feed-settings').then(({ recordFeedInteraction }) => {
-        recordFeedInteraction({ topics: words, searchWeight: 3 });
-      });
-    }
-
-    // Live moments search in feed mode
-    let mounted = true;
-    void (async () => {
-      try {
-        const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const moments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
-        const matches = moments.filter((m) => {
-          const text = `${m.caption || m.content || ''} ${m.userName || m.user?.name || ''} ${m.username || ''}`.toLowerCase();
-          return words.some((w) => text.includes(w));
+    const timer = setTimeout(() => {
+      const words = query.toLowerCase().match(/\b[a-z0-9]{3,}\b/g) || [query.toLowerCase()];
+      if (words.length) {
+        void import('@/lib/connect/feed-settings').then(({ recordFeedInteraction }) => {
+          recordFeedInteraction({ topics: words, searchWeight: 3 });
         });
-        if (mounted) setFeedSearchResults(matches.slice(0, 15));
-      } catch {}
-    })();
+      }
 
-    return () => {
-      mounted = false;
-    };
+      let cancelled = false;
+      void (async () => {
+        try {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          const moments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
+          const localMatches = moments.filter((m) => {
+            const text = `${m.caption || m.content || ''} ${m.userName || m.user?.name || ''} ${m.username || ''}`.toLowerCase();
+            return words.some((w) => text.includes(w));
+          });
+
+          // Optimistically load matching Nostr posts from relays
+          const { NostrRelayPool } = await import('@/lib/nostr/nostr');
+          const { getNostrReadRelays } = await import('@/lib/connect/feed-settings');
+          const relays = await getNostrReadRelays();
+          const pool = new NostrRelayPool(relays);
+          await pool.connect();
+
+          const nostrMatches: any[] = [];
+          pool.addListener((ev) => {
+            if (cancelled || ev.kind !== 1) return;
+            const content = (ev.content || '').toLowerCase();
+            if (words.some((w) => content.includes(w))) {
+              if (!nostrMatches.some((m) => m.id === ev.id)) {
+                nostrMatches.push({
+                  id: `nostr_${ev.id}`,
+                  content: ev.content,
+                  userName: `npub…${ev.pubkey.slice(-8)}`,
+                  pubkey: ev.pubkey,
+                  source: 'nostr',
+                  createdAt: ev.created_at * 1000,
+                });
+                if (!cancelled) {
+                  setFeedSearchResults([...localMatches, ...nostrMatches].slice(0, 25));
+                }
+              }
+            }
+          });
+
+          pool.subscribe('feed-live-search', [{ kinds: [1], limit: 30 }]);
+          if (!cancelled) setFeedSearchResults(localMatches.slice(0, 20));
+
+          setTimeout(() => {
+            if (pool) pool.close();
+          }, 3000);
+        } catch {}
+      })();
+    }, 280);
+
+    return () => clearTimeout(timer);
   }, [searchQuery]);
 
   useEffect(() => {

@@ -210,21 +210,42 @@ function normalizeAffinity(raw: any): Affinity {
     updatedAt: typeof raw.updatedAt === 'number' ? raw.updatedAt : 0,
   };
 }
+function isSimilarTerm(a: string, b: string): boolean {
+  const cleanA = a.replace(/:\d+$/, '').toLowerCase();
+  const cleanB = b.replace(/:\d+$/, '').toLowerCase();
+  if (cleanA === cleanB) return true;
+  // Match common prefixes if length is >= 4 (e.g. productiv* matches productive & productivity)
+  const minLen = Math.min(cleanA.length, cleanB.length);
+  if (minLen >= 4) {
+    const prefixLen = Math.floor(minLen * 0.75);
+    if (cleanA.slice(0, prefixLen) === cleanB.slice(0, prefixLen)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export async function recordFeedInteraction(input: { topics?: string[]; mediaKind?: string; searchWeight?: number }) {
   const weight = input.searchWeight || 1;
-  const topics = (input.topics || []).map(t => String(t).toLowerCase().trim()).filter(Boolean).slice(0, 5);
+  const rawTopics = (input.topics || []).map(t => String(t).toLowerCase().trim()).filter(Boolean).slice(0, 5);
   const mediaKind = String(input.mediaKind || '').toLowerCase().trim();
-  if (!topics.length && !mediaKind) return;
+  if (!rawTopics.length && !mediaKind) return;
   try {
     const cur = normalizeAffinity(await LocalEngine.cacheGet<any>(AFFINITY_KEY).catch(() => null));
-    const formattedTopics = weight > 1 ? topics.map(t => `${t}:${weight}`) : topics;
+    
+    // Deduplicate against existing topics using dynamic stem/fuzzy matching
+    const filteredNewTopics = rawTopics.filter(newT => {
+      return !cur.interests.some(existing => isSimilarTerm(newT, existing));
+    });
+
+    const formattedTopics = weight > 1 ? filteredNewTopics.map(t => `${t}:${weight}`) : filteredNewTopics;
     const nextInterests = Array.from(new Set([...formattedTopics, ...cur.interests])).slice(0, 30);
     const nextMedia = mediaKind ? Array.from(new Set([mediaKind, ...cur.mediaKinds])).slice(0, 10) : cur.mediaKinds;
     const next: Affinity = { interests: nextInterests, mediaKinds: nextMedia, updatedAt: Date.now() };
     await LocalEngine.cacheSet(AFFINITY_KEY, next);
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('kylrix-connect-affinity', { detail: next }));
     // Merge affinity interests into live settings (offline + synced, curated phrases)
-    if (topics.length) {
+    if (formattedTopics.length) {
       const current = await getConnectFeedSettings();
       const mergedInterests = Array.from(new Set([...formattedTopics, ...current.interests])).slice(0, 20);
       if (mergedInterests.join('|') !== current.interests.join('|')) {
