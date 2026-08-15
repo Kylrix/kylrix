@@ -430,7 +430,7 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
                 e.stopPropagation();
                 if (!momentId) return;
                 try {
-                  const url = item.source === 'nostr'
+                  const _url = item.source === 'nostr'
                     ? `${window.location.origin}/connect/post/nostr_${momentId}`
                     : buildPublicResourceUrl('moment', momentId);
                   const { LocalEngine } = await import('@/lib/services/LocalEngine');

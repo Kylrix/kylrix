@@ -20,7 +20,7 @@ import { fetchNostrEventById } from '@/lib/nostr/thread';
 import type { NostrEvent } from '@/lib/nostr/nostr';
 import {
   ArrowLeft, Globe, Heart, Link2, Lock, MessageCircle,
-  Repeat2, Shield, Zap, X, ArrowUp, Flame, ThumbsUp
+  Repeat2, Shield, Zap, X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -183,7 +183,7 @@ function EngagementDetailDrawer({
                 <span className="text-xl font-bold text-[#F59E0B]">Zapped</span>
               )}
             </div>
-            <p className="text-sm text-white/50 font-satoshi">Lightning payment sent to this post's author</p>
+            <p className="text-sm text-white/50 font-satoshi">Lightning payment sent to this post&apos;s author</p>
           </div>
         )}
 
