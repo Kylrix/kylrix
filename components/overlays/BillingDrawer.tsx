@@ -72,7 +72,9 @@ export function BillingContent() {
       const jwtRes = await account.createJWT().then(r => r.jwt).catch(() => undefined);
       const res = await listBillingTransactionsAction(jwtRes);
       if (res.success && res.transactions) {
-        setTransactions(res.transactions);
+        // Belt-and-suspenders: only show transactions belonging to current user,
+        // guards against missing DB index on billing_transactions.userId
+        setTransactions((res.transactions as any[]).filter(tx => tx.userId === user.$id));
       }
     } catch (err) {
       console.warn('Failed to load transactions:', err);
