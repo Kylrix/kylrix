@@ -330,67 +330,6 @@ export function BillingContent() {
             </div>
           </div>
 
-          {/* Transaction History — user-scoped */}
-          <div className="bg-[#161412] border border-white/5 rounded-2xl p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Clock size={16} className="text-[#3B82F6]" />
-                <div>
-                  <h4 className="font-extrabold text-sm text-white">Statements & Invoices</h4>
-                  <p className="text-[10px] text-white/40">Your subscription history</p>
-                </div>
-              </div>
-              {transactions.length > 0 && (
-                <button
-                  type="button"
-                  onClick={printStatement}
-                  className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors cursor-pointer"
-                  title="Print Statement"
-                >
-                  <Printer size={14} />
-                </button>
-              )}
-            </div>
-
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-white/30" />
-              <input
-                type="text"
-                placeholder="Search transactions…"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:outline-none focus:border-[#6366F1] transition-all"
-              />
-            </div>
-
-            {loadingTransactions ? (
-              <div className="animate-pulse h-12 bg-white/5 rounded-xl" />
-            ) : filteredTx.length === 0 ? (
-              <p className="text-xs text-white/40 font-medium">No transactions found.</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {filteredTx.map((tx, idx) => {
-                  const displayDate = tx.createdAt || tx.$createdAt
-                    ? new Date(tx.createdAt || tx.$createdAt).toLocaleDateString()
-                    : 'N/A';
-                  const rawPlan = String(tx.plan || 'PRO').replace('_', ' ');
-                  const months = tx.months || 1;
-                  const amountStr = tx.amountUsd || (tx.amountCents != null ? `$${(tx.amountCents / 100).toFixed(2)}` : '$0.00');
-                  const statusStr = String(tx.status || 'completed');
-                  return (
-                    <div key={idx} className="flex justify-between items-start bg-white/[0.02] border border-white/5 p-3 rounded-xl text-xs">
-                      <div className="min-w-0">
-                        <span className="font-extrabold text-white uppercase truncate block">{rawPlan} — {months} Mo</span>
-                        <span className="block text-[9px] text-white/40 mt-0.5">{displayDate} · {statusStr}</span>
-                      </div>
-                      <span className="font-black text-white font-mono flex-shrink-0 ml-3">{amountStr}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
         </div>
   );
 }
