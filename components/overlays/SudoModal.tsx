@@ -449,7 +449,7 @@ export default function SudoModal({
         }
     };
 
-    const validateMasterPassword = (pwd: string, usernameOrEmail?: string): string | null => {
+    const validateMasterPassword = (pwd: string, usernameOrEmail?: string | null): string | null => {
         if (!pwd || pwd.length < 8) {
             return "Master password must be at least 8 characters.";
         }
@@ -470,7 +470,7 @@ export default function SudoModal({
         if (e) e.preventDefault();
         if (!user?.$id || !user.email) return;
         
-        const valError = validateMasterPassword(password, user.name || user.email);
+        const valError = validateMasterPassword(password, user.name ?? user.email);
         if (valError) {
             toast.error(valError);
             return;
