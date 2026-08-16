@@ -932,9 +932,7 @@ function SettingsPageInner() {
                         }}
                         onManageVault={() => {
                             if (isUnlocked) {
-                                // Already unlocked: open in manage state
                                 if (!isArgon) {
-                                    // Not on Argon engine — offer upgrade
                                     requestSudo({
                                         intent: 'upgrade',
                                         forcePrompt: true,
@@ -944,12 +942,10 @@ function SettingsPageInner() {
                                         }
                                     });
                                 } else {
-                                    // Argon vault, unlocked — open change master password flow
                                     requestSudo({
-                                        intent: 'reset',
+                                        intent: 'change-masterpass',
                                         forcePrompt: true,
                                         onSuccess: () => {
-                                            // Refresh masterpass changed timestamp after reset
                                             if (user?.$id) {
                                                 KeychainService.listKeychainEntries(user.$id).then((entries: any[]) => {
                                                     const pe = entries.find((e: any) => e.type === 'password');
@@ -961,20 +957,41 @@ function SettingsPageInner() {
                                     });
                                 }
                             } else {
-                                // Vault is locked — unlock first
                                 requestSudo({
                                     intent: 'unlock',
                                     forcePrompt: true,
                                     onSuccess: () => {
                                         setIsUnlocked(true);
-                                        if (!isArgon) {
-                                            toast('Vault unlocked. Upgrade recommended.', { icon: '🔓' });
-                                        } else {
-                                            toast.success('Vault unlocked');
-                                        }
+                                        toast.success('Vault unlocked');
                                     }
                                 });
                             }
+                        }}
+                        onChangeMasterpass={() => {
+                            requestSudo({
+                                intent: 'change-masterpass',
+                                forcePrompt: true,
+                                onSuccess: () => {
+                                    if (user?.$id) {
+                                        KeychainService.listKeychainEntries(user.$id).then((entries: any[]) => {
+                                            const pe = entries.find((e: any) => e.type === 'password');
+                                            setMasterpassChangedAt(pe?.$updatedAt || pe?.$createdAt || null);
+                                        }).catch(() => {});
+                                    }
+                                    toast.success('Master password updated');
+                                }
+                            });
+                        }}
+                        onResetVault={() => {
+                            requestSudo({
+                                intent: 'reset',
+                                forcePrompt: true,
+                                onSuccess: () => {
+                                    setHasMasterpass(false);
+                                    setIsUnlocked(false);
+                                    toast.success('Vault reset complete');
+                                }
+                            });
                         }}
                         loadingPasskeys={loadingPasskeys}
                         passkeyEntries={passkeyEntries}

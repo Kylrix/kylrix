@@ -28,7 +28,7 @@ interface SudoModalProps {
     onSuccess: () => void;
     onCancel?: () => void;
     onClose?: () => void;
-    intent?: "unlock" | "initialize" | "reset" | "upgrade";
+    intent?: "unlock" | "initialize" | "reset" | "upgrade" | "change-masterpass";
     app?: KylrixApp;
     /**
      * push — desktop native right rail (default on md+).
@@ -84,14 +84,18 @@ export default function SudoModal({
 
     const cancelHandler = useMemo(() => onCancel ?? onClose ?? (() => {}), [onCancel, onClose]);
     const { user } = useAuth();
+    const [currentPassword, setCurrentPassword] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [passkeyLoading, setPasskeyLoading] = useState(false);
     const [_hasPasskey, setHasPasskey] = useState(false);
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
     const [confirmPassword, setConfirmPassword] = useState("");
     const [resetConfirmation, setResetConfirmation] = useState("");
+    const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
+    const [resetStep, setResetStep] = useState<1 | 2>(1);
     const [mode, setMode] = useState<"passkey" | "password" | "initialize" | "change-masterpass" | "reset-confirm" | "migrating" | null>(null);
     const [isDetecting, setIsDetecting] = useState(true);
     const [isPendingVault, setIsPendingVault] = useState(false);
@@ -334,8 +338,11 @@ export default function SudoModal({
                 // Determine default mode
                 if (intent === "initialize") {
                     setMode("initialize");
+                } else if (intent === "change-masterpass") {
+                    setMode("change-masterpass");
                 } else if (intent === "reset") {
                     setMode("reset-confirm");
+                    setResetStep(1);
                 } else if (intent === "upgrade") {
                     setMode("password");
                 } else if (pending) {
@@ -373,9 +380,12 @@ export default function SudoModal({
     useEffect(() => {
         if (!isOpen) {
             passkeyTriggeredRef.current = false;
+            setCurrentPassword("");
             setPassword("");
             setConfirmPassword("");
             setResetConfirmation("");
+            setResetPasswordConfirm("");
+            setResetStep(1);
             setLoading(false);
             setPasskeyLoading(false);
             setMigrationStatus('idle');
@@ -439,11 +449,30 @@ export default function SudoModal({
         }
     };
 
+    const validateMasterPassword = (pwd: string, usernameOrEmail?: string): string | null => {
+        if (!pwd || pwd.length < 8) {
+            return "Master password must be at least 8 characters.";
+        }
+        const trimmed = pwd.trim().toLowerCase();
+        if (["password", "12345678", "qwertyui", "masterpassword", "admin123"].includes(trimmed)) {
+            return "Password is too common or easy to guess.";
+        }
+        if (usernameOrEmail) {
+            const cleanTarget = usernameOrEmail.toLowerCase().replace(/[@._-]/g, '');
+            if (cleanTarget.length >= 3 && trimmed.includes(cleanTarget)) {
+                return "Password must not contain your username or email.";
+            }
+        }
+        return null;
+    };
+
     const handleInitialize = async (e: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!user?.$id || !user.email) return;
-        if (password.length < 8) {
-            toast.error("Master password must be at least 8 characters.");
+        
+        const valError = validateMasterPassword(password, user.name || user.email);
+        if (valError) {
+            toast.error(valError);
             return;
         }
         if (password !== confirmPassword) {
@@ -481,16 +510,36 @@ export default function SudoModal({
     const handleChangeMasterpass = async (e: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!user?.$id) return;
-        if (password.length < 8) {
-            toast.error("New master password must be at least 8 characters.");
+        
+        // If current password input was provided, verify it first
+        if (!currentPassword) {
+            toast.error("Please enter your current master password.");
+            return;
+        }
+        const valError = validateMasterPassword(password, user.name || user.email);
+        if (valError) {
+            toast.error(valError);
             return;
         }
         if (password !== confirmPassword) {
-            toast.error("Passwords do not match.");
+            toast.error("New passwords do not match.");
             return;
         }
+        if (currentPassword === password) {
+            toast.error("New password must be different from current password.");
+            return;
+        }
+
         setLoading(true);
         try {
+            // First unlock/verify with the current password to ensure session MEK is active and valid
+            const unlocked = await masterPassCrypto.unlock(currentPassword, user.$id, false);
+            if (!unlocked) {
+                toast.error("Incorrect current master password.");
+                setLoading(false);
+                return;
+            }
+
             await masterPassCrypto.changeMasterPassword(password, user.$id);
             toast.success("MasterPass successfully updated.");
             handleSuccessWithSync();
@@ -502,23 +551,35 @@ export default function SudoModal({
         }
     };
 
+    const handleResetStepOne = (e: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (resetConfirmation.trim().toUpperCase() !== "PERMANENTLY DELETE") {
+            toast.error('Please type "PERMANENTLY DELETE" to proceed.');
+            return;
+        }
+        setResetStep(2);
+    };
+
     const handleResetWipe = async (e: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!user?.$id) return;
-        if (resetConfirmation !== "WIPE") {
-            toast.error("Please type WIPE to confirm.");
+        if (!resetPasswordConfirm) {
+            toast.error("Please enter your account or master password to confirm.");
             return;
         }
         setLoading(true);
         try {
             const success = await masterPassCrypto.resetMasterPassword();
             if (success) {
-                toast.success("Vault wiped successfully.");
+                toast.success("Vault wiped and reset successfully.");
                 setHasMasterpass(false);
                 setMode("initialize");
+                setCurrentPassword("");
                 setPassword("");
                 setConfirmPassword("");
                 setResetConfirmation("");
+                setResetPasswordConfirm("");
+                setResetStep(1);
             } else {
                 toast.error("Reset failed.");
             }
@@ -820,39 +881,81 @@ export default function SudoModal({
                             <div className="p-4 bg-[#6366F1]/5 border border-[#6366F1]/20 rounded-2xl flex gap-3 items-start">
                                 <Lock className="w-5 h-5 text-[#6366F1] mt-0.5 flex-shrink-0" />
                                 <div>
-                                    <h4 className="font-extrabold text-white text-sm">Change MasterPass</h4>
+                                    <h4 className="font-extrabold text-white text-sm">Change Master Password</h4>
                                     <p className="text-xs text-[#9B9691] leading-relaxed mt-1">
-                                        Re-encrypt your database with a new password. Existing active credentials will remain valid.
+                                        Re-encrypt your private vault with a new master password.
                                     </p>
                                 </div>
                             </div>
-                            <div className="space-y-4">
-                                <div className="space-y-2">
+                            <div className="space-y-3.5">
+                                <div className="space-y-1.5">
                                     <span className="text-[10px] text-white/40 font-bold tracking-wider uppercase block">
-                                        NEW PASSWORD
+                                        CURRENT MASTER PASSWORD
                                     </span>
-                                    <input
-                                        type="password"
-                                        placeholder="New Master Password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        required
-                                        autoFocus
-                                        className="w-full bg-white/[0.03] px-4 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:outline-none focus:border-[#6366F1] hover:border-white/20 transition-all"
-                                    />
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                            <Lock className="w-4 h-4 text-white/30" />
+                                        </div>
+                                        <input
+                                            type={showCurrentPassword ? "text" : "password"}
+                                            placeholder="Enter current master password"
+                                            value={currentPassword}
+                                            onChange={(e) => setCurrentPassword(e.target.value)}
+                                            required
+                                            autoFocus
+                                            className="w-full bg-white/[0.03] pl-11 pr-12 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:outline-none focus:border-[#6366F1] hover:border-white/20 transition-all font-satoshi"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                            className="absolute inset-y-0 right-4 flex items-center text-white/30 hover:text-white transition-all cursor-pointer"
+                                        >
+                                            {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
+                                <div className="space-y-1.5">
+                                    <span className="text-[10px] text-white/40 font-bold tracking-wider uppercase block">
+                                        NEW MASTER PASSWORD
+                                    </span>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                            <Lock className="w-4 h-4 text-white/30" />
+                                        </div>
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            placeholder="Create new master password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            required
+                                            className="w-full bg-white/[0.03] pl-11 pr-12 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:outline-none focus:border-[#6366F1] hover:border-white/20 transition-all font-satoshi"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute inset-y-0 right-4 flex items-center text-white/30 hover:text-white transition-all cursor-pointer"
+                                        >
+                                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
                                     <span className="text-[10px] text-white/40 font-bold tracking-wider uppercase block">
                                         CONFIRM NEW PASSWORD
                                     </span>
-                                    <input
-                                        type="password"
-                                        placeholder="Confirm New Master Password"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        required
-                                        className="w-full bg-white/[0.03] px-4 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:outline-none focus:border-[#6366F1] hover:border-white/20 transition-all"
-                                    />
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                                            <Lock className="w-4 h-4 text-white/30" />
+                                        </div>
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            placeholder="Confirm new master password"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            required
+                                            className="w-full bg-white/[0.03] pl-11 pr-12 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:outline-none focus:border-[#6366F1] hover:border-white/20 transition-all font-satoshi"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                             <button
@@ -863,42 +966,86 @@ export default function SudoModal({
                                     boxShadow: loading ? 'none' : `0 8px 25px ${accentColor}40`}}
                                 className="w-full py-3.5 rounded-xl text-white font-extrabold text-sm hover:scale-[1.01] hover:shadow-lg active:scale-100 transition-all cursor-pointer flex justify-center items-center disabled:opacity-50"
                             >
-                                {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> : "Change MasterPass"}
+                                {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> : "Update Master Password"}
                             </button>
                         </form>
                     ) : mode === "reset-confirm" ? (
-                        <form onSubmit={handleResetWipe} className="space-y-4 animate-fadeIn">
-                            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-3 items-start">
-                                <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
-                                <div>
-                                    <h4 className="font-extrabold text-white text-sm">Wipe and Reset Vault</h4>
-                                    <p className="text-xs text-red-400 leading-relaxed mt-1">
-                                        WARNING: This permanently purges your encrypted keys, passwords, and TOTP metadata. This action cannot be undone.
-                                    </p>
+                        resetStep === 1 ? (
+                            <form onSubmit={handleResetStepOne} className="space-y-4 animate-fadeIn">
+                                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-3 items-start">
+                                    <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <h4 className="font-extrabold text-white text-sm">Reset Vault — Step 1 of 2</h4>
+                                        <p className="text-xs text-red-400 leading-relaxed mt-1">
+                                            This permanently purges your encrypted keys and resets your vault. Type <strong className="text-white">PERMANENTLY DELETE</strong> below to proceed.
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="space-y-2">
-                                <span className="text-[10px] text-white/40 font-bold tracking-wider uppercase block">
-                                    {`TYPE "WIPE" TO CONFIRM`}
-                                </span>
-                                <input
-                                    type="text"
-                                    placeholder="Type WIPE"
-                                    value={resetConfirmation}
-                                    onChange={(e) => setResetConfirmation(e.target.value)}
-                                    required
-                                    autoFocus
-                                    className="w-full bg-red-500/5 px-4 py-3 rounded-xl border border-red-500/20 text-white text-sm font-semibold focus:outline-none focus:border-red-500 transition-all placeholder:text-red-500/30"
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={loading || resetConfirmation !== "WIPE"}
-                                className="w-full py-3.5 bg-red-600 hover:bg-red-700 disabled:bg-red-800/40 text-white font-extrabold text-sm rounded-xl transition-all cursor-pointer flex justify-center items-center"
-                            >
-                                {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> : "Permanently Destroy Vault"}
-                            </button>
-                        </form>
+                                <div className="space-y-2">
+                                    <span className="text-[10px] text-white/40 font-bold tracking-wider uppercase block">
+                                        TYPE &quot;PERMANENTLY DELETE&quot;
+                                    </span>
+                                    <input
+                                        type="text"
+                                        placeholder="Type PERMANENTLY DELETE"
+                                        value={resetConfirmation}
+                                        onChange={(e) => setResetConfirmation(e.target.value)}
+                                        required
+                                        autoFocus
+                                        className="w-full bg-red-500/5 px-4 py-3 rounded-xl border border-red-500/20 text-white text-sm font-semibold focus:outline-none focus:border-red-500 transition-all placeholder:text-red-500/30"
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={resetConfirmation.trim().toUpperCase() !== "PERMANENTLY DELETE"}
+                                    className="w-full py-3.5 bg-red-600 hover:bg-red-700 disabled:bg-red-800/40 text-white font-extrabold text-sm rounded-xl transition-all cursor-pointer flex justify-center items-center"
+                                >
+                                    Proceed to Final Step →
+                                </button>
+                            </form>
+                        ) : (
+                            <form onSubmit={handleResetWipe} className="space-y-4 animate-fadeIn">
+                                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex gap-3 items-start">
+                                    <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <h4 className="font-extrabold text-white text-sm">Confirm Account Wipe — Step 2 of 2</h4>
+                                        <p className="text-xs text-red-400 leading-relaxed mt-1">
+                                            Enter your current master password or sign-in password to finalize complete vault destruction.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <span className="text-[10px] text-white/40 font-bold tracking-wider uppercase block">
+                                        PASSWORD CONFIRMATION
+                                    </span>
+                                    <input
+                                        type="password"
+                                        placeholder="Enter password to confirm"
+                                        value={resetPasswordConfirm}
+                                        onChange={(e) => setResetPasswordConfirm(e.target.value)}
+                                        required
+                                        autoFocus
+                                        className="w-full bg-red-500/5 px-4 py-3 rounded-xl border border-red-500/20 text-white text-sm font-semibold focus:outline-none focus:border-red-500 transition-all placeholder:text-red-500/30"
+                                    />
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setResetStep(1)}
+                                        className="py-3.5 px-4 bg-white/5 hover:bg-white/10 text-white font-bold text-sm rounded-xl transition-all cursor-pointer"
+                                    >
+                                        Back
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={loading || !resetPasswordConfirm}
+                                        className="flex-1 py-3.5 bg-red-600 hover:bg-red-700 disabled:bg-red-800/40 text-white font-extrabold text-sm rounded-xl transition-all cursor-pointer flex justify-center items-center"
+                                    >
+                                        {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> : "Permanently Destroy Vault"}
+                                    </button>
+                                </div>
+                            </form>
+                        )
                     ) : (
                         <form onSubmit={handlePasswordVerify} className="space-y-4 animate-fadeIn">
                             {isPendingVault && (

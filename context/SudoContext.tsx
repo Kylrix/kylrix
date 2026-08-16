@@ -14,7 +14,7 @@ import { useUnlockOnDemand } from '@/hooks/useUnlockOnDemand';
 interface SudoOptions {
     onSuccess: () => void;
     onCancel?: () => void;
-    intent?: "unlock" | "initialize" | "reset" | "upgrade";
+    intent?: "unlock" | "initialize" | "reset" | "upgrade" | "change-masterpass";
     forcePrompt?: boolean;
     /**
      * Navigation / tab / open-surface auto prompts.
@@ -26,7 +26,7 @@ interface SudoOptions {
 interface SudoContextType {
     requestSudo: (options: SudoOptions) => void;
     promptSudo: (
-        intent?: "unlock" | "initialize" | "reset" | "upgrade",
+        intent?: "unlock" | "initialize" | "reset" | "upgrade" | "change-masterpass",
         forcePrompt?: boolean,
         auto?: boolean
     ) => Promise<boolean>;
@@ -120,13 +120,13 @@ export function SudoProvider({ children }: { children: ReactNode }) {
     }, [isUnlocked]);
 
     const promptSudo = useCallback((
-        intent: "unlock" | "initialize" | "reset" | "upgrade" = "unlock",
+        intent: "unlock" | "initialize" | "reset" | "upgrade" | "change-masterpass" = "unlock",
         forcePrompt = false,
         auto = false
     ) => {
         if (auto && unlockOnDemandRef.current) return Promise.resolve(false);
 
-        if (isUnlocked && !forcePrompt && intent !== "upgrade") return Promise.resolve(true);
+        if (isUnlocked && !forcePrompt && intent !== "upgrade" && intent !== "change-masterpass" && intent !== "reset") return Promise.resolve(true);
 
         return new Promise<boolean>((resolve) => {
             setSudoPromise({ resolve });

@@ -74,6 +74,8 @@ type Props = {
   onUnlockVault: () => void;
   onSetupVault?: () => void;
   onManageVault?: () => void;
+  onChangeMasterpass?: () => void;
+  onResetVault?: () => void;
   loadingPasskeys: boolean;
   passkeyEntries: PasskeyEntry[];
   onAddPasskey: () => void;
@@ -158,6 +160,8 @@ export function SecurityTab({
   onUnlockVault,
   onSetupVault,
   onManageVault,
+  onChangeMasterpass,
+  onResetVault,
   loadingPasskeys,
   passkeyEntries,
   onAddPasskey,
@@ -180,8 +184,8 @@ export function SecurityTab({
             <button
               type="button"
               onClick={isUnlocked ? onLockVault : onUnlockVault}
-              className={`py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border-none ${
-                isUnlocked ? 'bg-amber-500 text-black' : 'bg-[#6366F1] text-white'
+              className={`py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border-none transition-all ${
+                isUnlocked ? 'bg-amber-500 text-black' : 'bg-[#6366F1] text-white hover:bg-[#5254E8]'
               }`}
             >
               {isUnlocked ? 'Lock' : 'Unlock'}
@@ -190,7 +194,7 @@ export function SecurityTab({
             <button
               type="button"
               onClick={onSetupVault}
-              className="py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border-none bg-[#6366F1] text-white"
+              className="py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border-none bg-[#6366F1] text-white hover:bg-[#5254E8]"
             >
               Set up vault
             </button>
@@ -204,17 +208,19 @@ export function SecurityTab({
             vaultLoading
               ? 'Checking vault…'
               : needsSetup
-              ? 'Vault not set up'
+              ? 'Vault not configured'
               : isUnlocked
               ? 'Vault unlocked'
               : 'Vault locked'
           }
           meta={
             vaultLoading
-              ? 'Verifying setup status — may take a moment if offline'
+              ? 'Verifying status…'
               : needsSetup
-              ? 'Set up a master password to encrypt your secure chats and vault items'
-              : 'Encryption key loaded in memory for this session'
+              ? 'Set up a master password to encrypt your credentials and notes'
+              : isUnlocked
+              ? 'Decrypted encryption key active in memory'
+              : 'Locked with your master password or passkey'
           }
           trailing={
             needsSetup && !vaultLoading ? (
@@ -223,7 +229,15 @@ export function SecurityTab({
                 onClick={onSetupVault}
                 className="shrink-0 py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border border-[#6366F1]/40 bg-[#6366F1]/10 text-[#6366F1]"
               >
-                Set up
+                Configure
+              </button>
+            ) : vaultSetup ? (
+              <button
+                type="button"
+                onClick={onChangeMasterpass || onManageVault}
+                className="shrink-0 py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border border-white/[0.08] bg-white/5 text-white/70 hover:text-white hover:bg-white/10 transition-all"
+              >
+                Change password
               </button>
             ) : null
           }
@@ -242,8 +256,8 @@ export function SecurityTab({
             title={isArgon ? 'T5 Argon2id engine' : 'Legacy T4 engine'}
             meta={
               isArgon
-                ? 'Argon2id 64MB/3 iterations — maximum protection'
-                : 'Older encryption engine — upgrade recommended for stronger security'
+                ? 'Argon2id 64MB/3 iterations — maximum security'
+                : 'Older encryption engine — upgrade available'
             }
             trailing={
               !isArgon ? (
@@ -255,76 +269,35 @@ export function SecurityTab({
                   <ArrowUpCircle className="w-3 h-3" />
                   Upgrade
                 </button>
-              ) : null
+              ) : (
+                <span className="text-[10px] font-bold text-emerald-400/80 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                  Latest
+                </span>
+              )
             }
           />
         )}
 
-        {/* Last master password change */}
-        {vaultSetup && masterpassChangedAt && (
+        {/* Master password info & sign-in status */}
+        {vaultSetup && (
           <Row
             icon={<Clock className="w-4 h-4" />}
-            title="Master password"
+            title="Master password details"
             meta={
-              <>
-                Last changed{' '}
-                {formatDateWithFallback(masterpassChangedAt, {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </>
-            }
-            trailing={
-              <button
-                type="button"
-                onClick={onManageVault}
-                className="shrink-0 py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border border-white/[0.08] bg-white/5 text-white/60 hover:text-white"
-              >
-                Change
-              </button>
-            }
-          />
-        )}
-
-        {/* Use master password for sign-in */}
-        {vaultSetup && (
-          <Row
-            icon={<UserCheck className="w-4 h-4" />}
-            title="Use master password for sign-in"
-            meta={
-              isAuthPassConfigured
-                ? 'Master password also authenticates your account sign-in'
-                : 'Not enabled — sign-in uses email OTP or passkeys only'
-            }
-            trailing={
-              <span
-                className={`shrink-0 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
-                  isAuthPassConfigured
-                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                    : 'bg-white/5 border-white/10 text-white/35'
-                }`}
-              >
-                {isAuthPassConfigured ? 'Enabled' : 'Off'}
-              </span>
-            }
-          />
-        )}
-
-        {/* Manage vault button when set up */}
-        {vaultSetup && (
-          <Row
-            icon={<KeyRound className="w-4 h-4" />}
-            title="Manage vault"
-            meta="Change master password or upgrade encryption engine"
-            trailing={
-              <button
-                type="button"
-                onClick={onManageVault}
-                className="shrink-0 py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border border-white/[0.08] bg-white/5 text-white/60 hover:text-white"
-              >
-                Manage
-              </button>
+              masterpassChangedAt ? (
+                <>
+                  Last changed{' '}
+                  {formatDateWithFallback(masterpassChangedAt, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                  {' · '}
+                  {isAuthPassConfigured ? 'Used for sign-in' : 'Vault encryption only'}
+                </>
+              ) : (
+                isAuthPassConfigured ? 'Configured for sign-in & encryption' : 'Configured for vault encryption'
+              )
             }
           />
         )}
@@ -483,6 +456,33 @@ export function SecurityTab({
           />
         </button>
       </Section>
+
+      {/* Danger Zone — Reset Vault (isolated at bottom) */}
+      {vaultSetup && onResetVault && (
+        <section className="rounded-[22px] bg-[#161412] border border-red-500/20 p-5 space-y-3.5 mt-2">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-red-400/80 font-satoshi">
+              Danger Zone
+            </h3>
+          </div>
+          <div className="space-y-2.5">
+            <Row
+              icon={<ShieldAlert className="w-4 h-4 text-red-400" />}
+              title="Reset Vault"
+              meta="Permanently wipe vault keys and encrypted metadata. Multi-step confirmation required."
+              trailing={
+                <button
+                  type="button"
+                  onClick={onResetVault}
+                  className="shrink-0 py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all"
+                >
+                  Reset Vault…
+                </button>
+              }
+            />
+          </div>
+        </section>
+      )}
     </div>
   );
 }
