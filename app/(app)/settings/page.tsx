@@ -951,12 +951,10 @@ function SettingsPageInner() {
                                         onSuccess: () => {
                                             // Refresh masterpass changed timestamp after reset
                                             if (user?.$id) {
-                                                import('@/lib/services/keychain').then(({ KeychainService }) =>
-                                                    KeychainService.listKeychainEntries(user.$id).then((entries: any[]) => {
-                                                        const pe = entries.find((e: any) => e.type === 'password');
-                                                        setMasterpassChangedAt(pe?.$updatedAt || pe?.$createdAt || null);
-                                                    })
-                                                ).catch(() => {});
+                                                KeychainService.listKeychainEntries(user.$id).then((entries: any[]) => {
+                                                    const pe = entries.find((e: any) => e.type === 'password');
+                                                    setMasterpassChangedAt(pe?.$updatedAt || pe?.$createdAt || null);
+                                                }).catch(() => {});
                                             }
                                             toast.success('Master password updated');
                                         }
