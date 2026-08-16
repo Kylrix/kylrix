@@ -135,3 +135,65 @@ export function clearThreadsListMemory(): void {
 }
 
 export { isLikelyCiphertext as isLikelyChatCiphertext };
+
+// ---------------------------------------------------------------------------
+// Nuclear wipe pending state — local-only, never synced to DB
+// ---------------------------------------------------------------------------
+const NUCLEAR_PENDING_CACHE_KEY = 'f_nuclear_pending';
+const MAX_NUCLEAR_RETRIES = 3;
+
+export interface NuclearPendingEntry {
+  conversationId: string;
+  tries: number;
+  lastAttemptAt: string; // ISO
+  isPendingNuclear: true;
+}
+
+/** In-memory map: conversationId → entry */
+let nuclearPendingMap: Map<string, NuclearPendingEntry> = new Map();
+let nuclearPendingLoaded = false;
+
+async function loadNuclearPending(): Promise<void> {
+  if (nuclearPendingLoaded) return;
+  nuclearPendingLoaded = true;
+  const stored = await LocalEngine.cacheGet<NuclearPendingEntry[]>(NUCLEAR_PENDING_CACHE_KEY).catch(() => null);
+  if (stored?.length) {
+    for (const entry of stored) nuclearPendingMap.set(entry.conversationId, entry);
+  }
+}
+
+function persistNuclearPending(): void {
+  void LocalEngine.cacheSet(NUCLEAR_PENDING_CACHE_KEY, Array.from(nuclearPendingMap.values()));
+}
+
+export async function markNuclearPending(conversationId: string): Promise<NuclearPendingEntry> {
+  await loadNuclearPending();
+  const existing = nuclearPendingMap.get(conversationId);
+  const entry: NuclearPendingEntry = {
+    conversationId,
+    tries: (existing?.tries ?? 0) + 1,
+    lastAttemptAt: new Date().toISOString(),
+    isPendingNuclear: true,
+  };
+  nuclearPendingMap.set(conversationId, entry);
+  persistNuclearPending();
+  return entry;
+}
+
+export async function clearNuclearPending(conversationId: string): Promise<void> {
+  await loadNuclearPending();
+  nuclearPendingMap.delete(conversationId);
+  persistNuclearPending();
+}
+
+export async function getNuclearPending(conversationId: string): Promise<NuclearPendingEntry | null> {
+  await loadNuclearPending();
+  return nuclearPendingMap.get(conversationId) ?? null;
+}
+
+export async function getAllNuclearPending(): Promise<NuclearPendingEntry[]> {
+  await loadNuclearPending();
+  return Array.from(nuclearPendingMap.values());
+}
+
+export { MAX_NUCLEAR_RETRIES };

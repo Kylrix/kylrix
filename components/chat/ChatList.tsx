@@ -48,6 +48,11 @@ import {
     readThreadsListLocal,
     writeChatsListLocal,
     writeThreadsListLocal,
+    isLikelyChatCiphertext,
+    markNuclearPending,
+    clearNuclearPending,
+    getNuclearPending,
+    MAX_NUCLEAR_RETRIES,
 } from '@/lib/chat/local-chat-cache';
 const alpha = (hexColor: string, opacity: number) => {
     let hex = hexColor.replace('#', '');
@@ -308,31 +313,62 @@ export const ChatList = ({
           } catch (e: any) { toast.error(e?.message || 'Failed'); }
         };
         const handleNuclear = async () => {
-            try {
-              if (isConversation) {
-                const res: any = await ChatService.nuclearWipe(conv.$id);
-                ChatService.invalidateConversationsListCache(user?.$id);
-                try {
-                  const { LocalEngine } = await import('@/lib/services/LocalEngine');
-                  const { chatConversationCacheKey, chatMessagesCacheKey } = await import('@/lib/chat/local-chat-cache');
-                  await LocalEngine.cacheSet(chatConversationCacheKey(conv.$id), null as any).catch(() => null);
-                  await LocalEngine.cacheSet(chatMessagesCacheKey(conv.$id), []).catch(() => null);
-                } catch {}
-                if (res?.regeneratedConversationId) {
-                  toast.success('Self-chat wiped & fresh room ready');
-                } else {
-                  toast.success('Conversation permanently wiped');
+            if (isConversation) {
+              const convId = conv.$id;
+              const snap = { ...conv };
+              // Optimistic: yank from UI immediately
+              await markNuclearPending(convId);
+              setConversations(prev => {
+                const next = prev.filter(c => c.$id !== convId);
+                writeChatsListLocal(next);
+                return next;
+              });
+              conversationsRef.current = conversationsRef.current.filter(c => c.$id !== convId);
+              // Background atomic wipe with retry
+              void (async () => {
+                const attempt = async (): Promise<boolean> => {
+                  try {
+                    const res: any = await ChatService.nuclearWipe(convId);
+                    ChatService.invalidateConversationsListCache(user?.$id);
+                    try {
+                      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+                      const { chatConversationCacheKey, chatMessagesCacheKey } = await import('@/lib/chat/local-chat-cache');
+                      await LocalEngine.cacheSet(chatConversationCacheKey(convId), null as any).catch(() => null);
+                      await LocalEngine.cacheSet(chatMessagesCacheKey(convId), []).catch(() => null);
+                    } catch {}
+                    await clearNuclearPending(convId);
+                    if (res?.regeneratedConversationId) toast.success('Self-chat wiped & fresh room ready');
+                    else toast.success('Conversation cleared');
+                    void loadConversations({ forceRefresh: true });
+                    return true;
+                  } catch { return false; }
+                };
+                let succeeded = await attempt();
+                if (!succeeded) {
+                  // Retry up to MAX_NUCLEAR_RETRIES
+                  for (let i = 0; i < MAX_NUCLEAR_RETRIES - 1 && !succeeded; i++) {
+                    await new Promise(r => setTimeout(r, 3000 * (i + 1)));
+                    const entry = await getNuclearPending(convId);
+                    if (!entry) break; // cleared externally
+                    await markNuclearPending(convId); // increment tries
+                    succeeded = await attempt();
+                  }
                 }
-                // local-copy signal: filter memory+disk and explicit network refresh hook
-                setConversations(prev => {
-                  const next = prev.filter(c => c.$id !== conv.$id);
-                  writeChatsListLocal(next);
-                  return next;
-                });
-                conversationsRef.current = conversationsRef.current.filter(c => c.$id !== conv.$id);
-                void loadConversations({ forceRefresh: true });
-              } else {
-                // thread hangout wipe — Bookmarks thread retired, now handled as unencrypted hangout (conversations). No note spin.
+                if (!succeeded) {
+                  // Exhausted retries — restore conversation to UI
+                  await clearNuclearPending(convId);
+                  toast.error('Wipe failed — conversation restored');
+                  setConversations(prev => {
+                    if (prev.some(c => c.$id === convId)) return prev;
+                    const next = [snap, ...prev];
+                    writeChatsListLocal(next);
+                    return next;
+                  });
+                  conversationsRef.current = [snap, ...conversationsRef.current.filter(c => c.$id !== convId)];
+                }
+              })();
+            } else {
+              try {
                 await deletethreadThread(conv.$id);
                 toast.success('Hangout cleared');
                 setthreadConversations(prev => {
@@ -342,8 +378,8 @@ export const ChatList = ({
                 });
                 threadConversationsRef.current = threadConversationsRef.current.filter(x => x.$id !== conv.$id);
                 void loadthreadConversations({ forceRefresh: true } as any);
-              }
-            } catch (e: any) { toast.error(e?.message || 'Wipe failed'); }
+              } catch (e: any) { toast.error(e?.message || 'Wipe failed'); }
+            }
         };
         if (isDesktop) {
           const node = (
@@ -1002,6 +1038,14 @@ export const ChatList = ({
             let rows = [...response.rows];
             const listAuthoritative = (response as { authoritative?: boolean }).authoritative !== false;
 
+            // Strip any conversations that are pending nuclear wipe — don't let a background refresh restore them
+            const { getAllNuclearPending: _getAllNuclear } = await import('@/lib/chat/local-chat-cache');
+            const pendingNuclear = await _getAllNuclear().catch(() => []);
+            if (pendingNuclear.length) {
+                const pendingIds = new Set(pendingNuclear.map((e: any) => e.conversationId));
+                rows = rows.filter((r: any) => !pendingIds.has(r.$id));
+            }
+
             // Non-authoritative empty is not-yet-synced, not true empty — never overwrite local with empty. Self-chat guarantees ≥1 row.
             if (!listAuthoritative && rows.length === 0) {
                 setLoading(false);
@@ -1099,7 +1143,7 @@ export const ChatList = ({
                 if (conv.type !== 'direct') {
                     return {
                         ...conv,
-                        name: conv.name || 'Group Chat',
+                        name: (conv.isEncrypted && isLikelyChatCiphertext(conv.name)) ? '[Encrypted Group]' : (conv.name || 'Group Chat'),
                         lastMessageText: previewText,
                         lastMessageAt: previewAt,
                         lastMessageId: previewId,
@@ -1210,6 +1254,37 @@ export const ChatList = ({
             });
             setIsInitializing(false);
             setLoading(false);
+
+            // Background group name decrypt — for encrypted groups the name is stored as ciphertext.
+            // Uses ChatService._decryptConversation for full key resolution (cache → local store → lockbox).
+            // Decrypted names are persisted to local cache so they survive vault-locked sessions.
+            void (async () => {
+                if (!ecosystemSecurity.status.isUnlocked) return;
+                const encryptedGroups = sorted.filter(
+                    (conv: any) => conv.type !== 'direct' && conv.isEncrypted && isLikelyChatCiphertext(conv.name)
+                );
+                if (!encryptedGroups.length) return;
+                const patches: Array<{ id: string; name: string }> = [];
+                await Promise.allSettled(encryptedGroups.map(async (conv: any) => {
+                    try {
+                        const decrypted = await (ChatService as any)._decryptConversation({ ...conv }, user!.$id);
+                        if (decrypted?.name && decrypted.name !== conv.name && !isLikelyChatCiphertext(decrypted.name)) {
+                            patches.push({ id: conv.$id, name: decrypted.name });
+                        }
+                    } catch (_e) { /* keep placeholder if decryption fails */ }
+                }));
+                if (!patches.length) return;
+                startTransition(() => {
+                    setConversations((prev) => {
+                        const patchMap = new Map(patches.map((p) => [p.id, p.name]));
+                        const next = prev.map((c) => patchMap.has(c.$id) ? { ...c, name: patchMap.get(c.$id)! } : c);
+                        conversationsRef.current = next;
+                        // Persist plaintext names so vault-locked loads show the real name from cache
+                        writeChatsListLocal(next);
+                        return next;
+                    });
+                });
+            })();
 
             // Background identity enrich — never block list paint; only fill missing rows
             void (async () => {
@@ -1894,28 +1969,61 @@ export const ChatList = ({
                     onNuclear={async () => {
                       const c = chatSettingsConv; setChatSettingsConv(null);
                       const isConv3 = c._kind === 'secure' || c.type === 'direct' || c.type === 'group' || Array.isArray(c.participants);
-                      try {
-                        if (isConv3) {
-                          const res: any = await ChatService.nuclearWipe(c.$id);
-                          ChatService.invalidateConversationsListCache(user?.$id);
-                          try {
-                            const { LocalEngine } = await import('@/lib/services/LocalEngine');
-                            const { chatConversationCacheKey, chatMessagesCacheKey } = await import('@/lib/chat/local-chat-cache');
-                            await LocalEngine.cacheSet(chatConversationCacheKey(c.$id), null as any).catch(() => null);
-                            await LocalEngine.cacheSet(chatMessagesCacheKey(c.$id), []).catch(() => null);
-                          } catch {}
-                          const newId = res?.regeneratedConversationId || res?.newConversationId;
-                          if (newId) toast.success('Wiped — fresh hangout regenerated');
-                          else toast.success('Conversation deleted');
-                          setConversations(prev => {
-                            const next = prev.filter(x => x.$id !== c.$id);
-                            writeChatsListLocal(next);
-                            return next;
-                          });
-                          conversationsRef.current = conversationsRef.current.filter(x => x.$id !== c.$id);
-                          void loadConversations({ forceRefresh: true });
-                        } else {
-                          // Bookmarks thread retired — handled as hangout now, no note spin
+                      if (isConv3) {
+                        const convId = c.$id;
+                        const snap = { ...c };
+                        // Optimistic: yank from UI immediately
+                        await markNuclearPending(convId);
+                        setConversations(prev => {
+                          const next = prev.filter(x => x.$id !== convId);
+                          writeChatsListLocal(next);
+                          return next;
+                        });
+                        conversationsRef.current = conversationsRef.current.filter(x => x.$id !== convId);
+                        // Background atomic wipe with retry
+                        void (async () => {
+                          const attempt = async (): Promise<boolean> => {
+                            try {
+                              const res: any = await ChatService.nuclearWipe(convId);
+                              ChatService.invalidateConversationsListCache(user?.$id);
+                              try {
+                                const { LocalEngine } = await import('@/lib/services/LocalEngine');
+                                const { chatConversationCacheKey, chatMessagesCacheKey } = await import('@/lib/chat/local-chat-cache');
+                                await LocalEngine.cacheSet(chatConversationCacheKey(convId), null as any).catch(() => null);
+                                await LocalEngine.cacheSet(chatMessagesCacheKey(convId), []).catch(() => null);
+                              } catch {}
+                              await clearNuclearPending(convId);
+                              const newId = res?.regeneratedConversationId || res?.newConversationId;
+                              if (newId) toast.success('Wiped — fresh hangout regenerated');
+                              else toast.success('Conversation cleared');
+                              void loadConversations({ forceRefresh: true });
+                              return true;
+                            } catch { return false; }
+                          };
+                          let succeeded = await attempt();
+                          if (!succeeded) {
+                            for (let i = 0; i < MAX_NUCLEAR_RETRIES - 1 && !succeeded; i++) {
+                              await new Promise(r => setTimeout(r, 3000 * (i + 1)));
+                              const entry = await getNuclearPending(convId);
+                              if (!entry) break;
+                              await markNuclearPending(convId);
+                              succeeded = await attempt();
+                            }
+                          }
+                          if (!succeeded) {
+                            await clearNuclearPending(convId);
+                            toast.error('Wipe failed — conversation restored');
+                            setConversations(prev => {
+                              if (prev.some(x => x.$id === convId)) return prev;
+                              const next = [snap, ...prev];
+                              writeChatsListLocal(next);
+                              return next;
+                            });
+                            conversationsRef.current = [snap, ...conversationsRef.current.filter(x => x.$id !== convId)];
+                          }
+                        })();
+                      } else {
+                        try {
                           await deletethreadThread(c.$id);
                           toast.success('Hangout cleared');
                           setthreadConversations(prev => {
@@ -1925,8 +2033,8 @@ export const ChatList = ({
                           });
                           threadConversationsRef.current = threadConversationsRef.current.filter(x => x.$id !== c.$id);
                           void loadthreadConversations({ forceRefresh: true } as any);
-                        }
-                      } catch (e: any) { toast.error(e?.message || 'Wipe failed'); }
+                        } catch (e: any) { toast.error(e?.message || 'Wipe failed'); }
+                      }
                     }}
                   />
                 </div>

@@ -41,9 +41,9 @@ const normalizeHandleInput = (raw: string) =>
 
 export function AccountHealthDrawers() {
     const { user } = useAuth();
-    const { activeContent } = useUnifiedDrawer();
+    const { close: _close, activeContent } = useUnifiedDrawer();
     const { currentStep, dismissStep, profile, triggerCheck } = useSetup();
-    const { requestSudo } = useSudo();
+    const { requestSudo: _requestSudo } = useSudo();
 
     const [newHandle, setNewHandle] = useState('');
     const [displayName, setDisplayName] = useState('');
@@ -108,12 +108,10 @@ export function AccountHealthDrawers() {
     }, [newHandle, canonicalSavedHandle, currentStep]);
 
     const openVaultSetup = () => {
-        requestSudo({
-            intent: 'initialize',
-            onSuccess: () => {
-                triggerCheck();
-            }
-        });
+        // Direct users to Security settings where the full vault setup flow lives
+        if (typeof window !== 'undefined') {
+            window.location.href = '/settings?tab=security';
+        }
     };
 
     const commitUsername = async (normalizedHandle: string, displayTrim: string) => {

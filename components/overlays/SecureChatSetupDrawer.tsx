@@ -29,7 +29,7 @@ export function SecureChatSetupDrawer() {
   const router = useRouter();
   const { user } = useAuth();
   const { requestSudo } = useSudo();
-  const { close, open: openDrawer } = useUnifiedDrawer();
+  const { close, open: _openDrawer } = useUnifiedDrawer();
 
   const [status, setStatus] = useState(ecosystemSecurity.status);
   const [loading, setLoading] = useState(false);
@@ -49,7 +49,8 @@ export function SecureChatSetupDrawer() {
   const isUnlocked = status.isUnlocked;
 
   const handleSetupMasterpass = () => {
-    openDrawer('masterpass');
+    router.push('/settings?tab=security');
+    close();
   };
 
   const handleSetupUsername = () => {

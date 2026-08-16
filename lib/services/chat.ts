@@ -1211,7 +1211,6 @@ export const ChatService = {
         const { account: _chatAccount } = await import('../appwrite/client');
         const _jwt = await _chatAccount.createJWT().then((r: any) => r.jwt).catch(() => undefined);
         let lockboxRows: Array<{ resourceType: string; grantee: string; wrappedKey: string; metadata?: string }> = [];
-        let epochRows: Array<{ resourceType: string; grantee: string; wrappedKey: string; metadata?: string }> = [];
         if (convKey) {
             try {
                 const creatorPublicKey = ecosystemSecurity.status.hasIdentity ? await ecosystemSecurity.ensureE2EIdentity(creatorId) : null;
@@ -1222,9 +1221,6 @@ export const ChatService = {
                     if (!isValidX25519PublicKey(livePub)) throw new Error(`Invalid public key for user ${pid}`);
                     return { resourceType: 'chat', grantee: pid, wrappedKey: await ecosystemSecurity.wrapKeyWithECDH(convKey as CryptoKey, livePub), metadata: buildLockboxMetadata({ wrappedBy: creatorId, senderPublicKey: creatorPublicKey!, wrappedByPublicKey: creatorPublicKey!, conversationId: 'pending', conversationType: type, version: 't4' }) };
                 }));
-                if (type === 'group') {
-                    epochRows = lockboxRows.map((r) => ({ ...r, resourceType: 'epoch' }));
-                }
             } catch (e) {
                 // If wrapping fails, abort before transaction — no partial conversation
                 throw e;
@@ -1239,7 +1235,6 @@ export const ChatService = {
             isEncrypted: shouldEncrypt && !!convKey,
             encryptionVersion: shouldEncrypt && convKey ? 'T4' : '1.0',
             lockboxRows: shouldEncrypt ? lockboxRows : [],
-            epochRows: shouldEncrypt ? epochRows : [],
             jwt: _jwt,
         }) as any;
 
@@ -1248,15 +1243,17 @@ export const ChatService = {
             cacheResolvedConversationKey(newConv.$id, convKey);
             // Transactional path already persisted lockboxRows/epochRows; no separate sync needed — atomic commit ensures all-or-nothing.
             try {
-
                 const recipientIds = uniqueParticipants.filter((id) => id !== creatorId);
                 if (recipientIds.length > 0) {
+                    // Create a fresh JWT — the one used for the transactional action may be expired/consumed
+                    let _syncJwt = _jwt;
+                    try { const { account: _accSync } = await import('../appwrite/client'); _syncJwt = await _accSync.createJWT().then((r: any) => r.jwt).catch(() => _jwt); } catch {}
                     await syncConversationAccess(
                         newConv.$id,
                         recipientIds,
                         type === 'direct' ? 'write' : 'read',
                         creatorId,
-                        _jwt
+                        _syncJwt
                     );
                 }
             } catch (lockboxErr) {

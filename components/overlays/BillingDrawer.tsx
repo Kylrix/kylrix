@@ -27,11 +27,10 @@ interface BillingDrawerProps {
   onClose: () => void;
 }
 
-export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
+export function BillingContent() {
   const router = useRouter();
   const { user } = useAuth();
   const { currentTier, expiresAt, isLoading: planLoading } = useSubscription();
-  const [isExpanded, setIsExpanded] = useState(false);
 
   // Coupon states
   const [coupons, setCoupons] = useState<any[]>([]);
@@ -54,7 +53,6 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
       setLoadingCoupons(true);
       const jwtRes = await account.createJWT().then(r => r.jwt).catch(() => undefined);
       const list = await getMyCouponsAction(jwtRes);
-      // Only show active coupons
       const active = (list || []).filter((c: any) => {
         const s = String(c.status || '').toLowerCase();
         return s === 'active';
@@ -84,26 +82,11 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
   }, [user?.$id]);
 
   useEffect(() => {
-    if (user && isOpen) {
+    if (user) {
       loadCoupons();
       loadTransactions();
     }
-  }, [user, isOpen, loadCoupons, loadTransactions]);
-
-  // Reset expand state when closed
-  useEffect(() => {
-    if (!isOpen) setIsExpanded(false);
-  }, [isOpen]);
-
-  // Prevent body scroll when open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
-  }, [isOpen]);
+  }, [user, loadCoupons, loadTransactions]);
 
   const handleGiftCheckout = useCallback(async () => {
     const recipientQuery = giftUsername.trim();
@@ -129,14 +112,13 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
       checkoutUrl.searchParams.set('giftRecipientId', recipientUserId);
       checkoutUrl.searchParams.set('giftRecipientName', recipientLabel || recipientUserId);
       checkoutUrl.searchParams.set('months', String(normalizedMonths));
-      onClose();
       router.push(checkoutUrl.toString());
     } catch (error) {
       setGiftError((error as Error)?.message || 'Failed to start gift checkout.');
     } finally {
       setGiftLoading(false);
     }
-  }, [giftMonths, giftUsername, router, onClose]);
+  }, [giftMonths, giftUsername, router]);
 
   const printStatement = () => {
     const w = window.open();
@@ -181,72 +163,8 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
 
   const parseMeta = (val: any) => { try { return JSON.parse(val || '{}'); } catch { return {}; } };
 
-  if (!isOpen) return null;
-
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/70"
-        style={{ zIndex: 99998 }}
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Bottom Drawer Panel */}
-      <div
-        className="fixed bottom-0 left-0 right-0 flex flex-col bg-[#0A0908] border border-white/8 border-b-0 rounded-t-[28px] overflow-hidden"
-        style={{
-          zIndex: 99999,
-          height: isExpanded ? '100dvh' : '60dvh',
-          maxHeight: '100dvh',
-          transition: 'height 0.3s cubic-bezier(0.4,0,0.2,1)'}}
-      >
-        {/* Drag Handle + Header */}
-        <div className="flex-shrink-0">
-          {/* Drag handle — clicking toggles expand */}
-          <div
-            className="flex justify-center pt-3 pb-1 cursor-pointer"
-            onClick={() => setIsExpanded(v => !v)}
-            role="button"
-            aria-label={isExpanded ? 'Collapse' : 'Expand'}
-          >
-            <div className="w-10 h-1 rounded-full bg-white/20" />
-          </div>
-
-          <div className="flex items-center justify-between px-6 py-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center">
-                <CreditCard size={16} className="text-[#6366F1]" />
-              </div>
-              <div>
-                <h3 className="text-base font-black font-clash text-white leading-tight">Billing & Subscriptions</h3>
-                <p className="text-[10px] text-white/40 font-mono">Manage your plan and coupons</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsExpanded(v => !v)}
-                className="p-2 rounded-xl hover:bg-white/5 text-white/40 hover:text-white transition-all cursor-pointer"
-                aria-label={isExpanded ? 'Collapse' : 'Expand to full screen'}
-              >
-                {isExpanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="p-2 rounded-xl hover:bg-white/5 text-white/40 hover:text-white transition-all cursor-pointer"
-                aria-label="Close"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-8 space-y-4 min-h-0">
+    <div className="space-y-4 pb-8">
 
           {/* Active Plan Card */}
           <div className="bg-[#161412] border border-white/5 rounded-2xl p-5 space-y-4">
@@ -284,7 +202,7 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
               {!isPro && !isTeams && !planLoading && (
                 <button
                   type="button"
-                  onClick={() => { onClose(); router.push('/pricing'); }}
+                  onClick={() => { router.push('/pricing'); }}
                   className="px-4 py-2 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-xs transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>Upgrade</span>
@@ -336,7 +254,6 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
                       key={idx}
                       type="button"
                       onClick={() => {
-                        onClose();
                         router.push(`/billing/coupon/${coupon.$id}`);
                       }}
                       className="flex justify-between items-center bg-white/[0.02] border border-[#10B981]/20 hover:border-[#10B981]/40 hover:bg-[#10B981]/5 p-3.5 rounded-xl transition-all text-left cursor-pointer group w-full"
@@ -472,6 +389,55 @@ export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
             )}
           </div>
 
+        </div>
+  );
+}
+
+export function BillingDrawer({ isOpen, onClose }: BillingDrawerProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => { if (!isOpen) setIsExpanded(false); }, [isOpen]);
+  useEffect(() => {
+    if (isOpen) { document.body.style.overflow = 'hidden'; }
+    else { document.body.style.overflow = ''; }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/70" style={{ zIndex: 99998 }} onClick={onClose} aria-hidden="true" />
+      <div
+        className="fixed bottom-0 left-0 right-0 flex flex-col bg-[#0A0908] border border-white/8 border-b-0 rounded-t-[28px] overflow-hidden"
+        style={{ zIndex: 99999, height: isExpanded ? '100dvh' : '60dvh', maxHeight: '100dvh', transition: 'height 0.3s cubic-bezier(0.4,0,0.2,1)' }}
+      >
+        <div className="flex-shrink-0">
+          <div className="flex justify-center pt-3 pb-1 cursor-pointer" onClick={() => setIsExpanded(v => !v)} role="button" aria-label={isExpanded ? 'Collapse' : 'Expand'}>
+            <div className="w-10 h-1 rounded-full bg-white/20" />
+          </div>
+          <div className="flex items-center justify-between px-6 py-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center">
+                <CreditCard size={16} className="text-[#6366F1]" />
+              </div>
+              <div>
+                <h3 className="text-base font-black font-clash text-white leading-tight">Billing & Subscriptions</h3>
+                <p className="text-[10px] text-white/40 font-mono">Manage your plan and coupons</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setIsExpanded(v => !v)} className="p-2 rounded-xl hover:bg-white/5 text-white/40 hover:text-white transition-all cursor-pointer" aria-label={isExpanded ? 'Collapse' : 'Expand to full screen'}>
+                {isExpanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+              </button>
+              <button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-white/5 text-white/40 hover:text-white transition-all cursor-pointer" aria-label="Close">
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto overscroll-contain px-5 min-h-0">
+          <BillingContent />
         </div>
       </div>
     </>

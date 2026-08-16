@@ -23,7 +23,8 @@ import {
     Settings2 as RootAccountIcon,
     ShieldAlert as AdminIcon,
     Code2 as DevelopersIcon,
-    FolderKanban as WorkspaceIcon
+    FolderKanban as WorkspaceIcon,
+    CreditCard as BillingIcon,
 } from 'lucide-react';
 import { WorkspaceTab } from '@/components/settings/WorkspaceTab';
 import { AgentsSettingsTab } from '@/components/settings/AgentsSettingsTab';
@@ -57,7 +58,7 @@ import ActivityLogs from '@/components/ActivityLogs';
 import ConnectedIdentities from '@/components/ConnectedIdentities';
 import PreferencesManager from '@/components/PreferencesManager';
 import { TwoFactorPanel } from '@/components/overlays/TwoFactorDrawer';
-import { BillingDrawer } from '@/components/overlays/BillingDrawer';
+import { BillingDrawer, BillingContent } from '@/components/overlays/BillingDrawer';
 import { account } from '@/lib/appwrite/client';
 import AdminDashboardPage from '@/components/admin/AdminDashboard';
 import UsersManagement from '@/components/admin/UsersManagement';
@@ -109,7 +110,7 @@ function SettingsPageInner() {
     const _nativeSidebar = useNativeSidebarOptional();
 
     // Tab state
-    const [activeTab, setActiveTab] = useState<'general' | 'agents' | 'workspace' | 'profile' | 'security' | 'privacy' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'billing' | 'agents' | 'workspace' | 'profile' | 'security' | 'privacy' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
     const [billingDrawerOpen, setBillingDrawerOpen] = useState(false);
     const [mfaFactors, setMfaFactors] = useState<any>(null);
     const [accountMfaEnabled, setAccountMfaEnabled] = useState(false);
@@ -119,7 +120,7 @@ function SettingsPageInner() {
     useEffect(() => {
         const section = (searchParams.get('section') || '').toLowerCase();
         const tab = (searchParams.get('tab') || '').toLowerCase();
-        const allowed = new Set(['general', 'agents', 'workspace', 'profile', 'security', 'privacy', 'developers', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
+        const allowed = new Set(['general', 'billing', 'agents', 'workspace', 'profile', 'security', 'privacy', 'developers', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
         if (section.startsWith('admin') || tab === 'admin') {
             setActiveTab('admin');
             if (section.includes('user')) setAdminSubTab('users');
@@ -207,6 +208,7 @@ function SettingsPageInner() {
     const [isArgon, setIsArgon] = useState(ecosystemSecurity.status.isArgon);
     const [_hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
     const [_isAuthPassConfigured, setIsAuthPassConfigured] = useState<boolean>(false);
+    const [_masterpassChangedAt, setMasterpassChangedAt] = useState<string | null>(null);
 
     // Telegram state
     const [tgDrawerOpen, setTgDrawerOpen] = useState(false);
@@ -441,6 +443,7 @@ function SettingsPageInner() {
                     const passwordEntry = entries.find((e: any) => e.type === 'password');
                     setHasMasterpass(!!passwordEntry);
                     setIsAuthPassConfigured(!!passwordEntry?.authPass);
+                    setMasterpassChangedAt(passwordEntry?.$updatedAt || passwordEntry?.$createdAt || null);
                 } catch (e) {
                     console.error('Failed to check masterpass presence', e);
                     setHasMasterpass(null);
@@ -487,6 +490,7 @@ function SettingsPageInner() {
 
     const tabsList = [
         { id: 'general', label: 'General', icon: RootAccountIcon },
+        { id: 'billing', label: 'Billing', icon: BillingIcon },
         { id: 'agents', label: 'Smart Agents', icon: Bot },
         { id: 'workspace', label: 'Workspace', icon: WorkspaceIcon },
         { id: 'profile', label: 'Profile', icon: ProfileIcon },
@@ -865,28 +869,22 @@ function SettingsPageInner() {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                )}
 
-                        <div className="bg-white/[0.02] border border-white/5 rounded-[28px] p-6 md:p-8 space-y-4">
-                            <h3 className="text-lg font-black font-clash text-white">
-                                Billing & Subscriptions
-                            </h3>
-                            <p className="text-xs text-[#9B9691] leading-relaxed font-satoshi">
-                                Manage your premium subscription plans, active coupons, regional parameters, and gift subscriptions to other network nodes.
-                            </p>
-                            <button
-                                type="button"
-                                onClick={() => setBillingDrawerOpen(true)}
-                                className="px-6 py-3.5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-sm transition-all cursor-pointer border-none"
-                            >
-                                Manage Billing & Subscription
-                            </button>
-                        </div>
+                {activeTab === 'billing' && (
+                    <div className="pb-24 max-w-3xl">
+                        <BillingContent />
                     </div>
                 )}
 
                 {activeTab === 'security' && (
                     <SecurityTab
                         isUnlocked={isUnlocked}
+                        hasMasterpass={_hasMasterpass}
+                        isArgon={isArgon}
+                        isAuthPassConfigured={_isAuthPassConfigured}
+                        masterpassChangedAt={_masterpassChangedAt}
                         onLockVault={() => {
                             ecosystemSecurity.lock();
                             setIsUnlocked(false);
@@ -901,6 +899,84 @@ function SettingsPageInner() {
                                     toast.success('Vault unlocked successfully');
                                 }
                             });
+                        }}
+                        onSetupVault={() => {
+                            requestSudo({
+                                intent: 'initialize',
+                                onSuccess: () => {
+                                    // Refresh masterpass state
+                                    if (user?.$id) {
+                                        KeychainService.listKeychainEntries(user.$id).then(entries => {
+                                            const pe = entries.find((e: any) => e.type === 'password');
+                                            setHasMasterpass(!!pe);
+                                            setIsAuthPassConfigured(!!pe?.authPass);
+                                            setMasterpassChangedAt(pe?.$updatedAt || pe?.$createdAt || null);
+                                        }).catch(() => {});
+                                    }
+                                    // Prompt passkey setup after masterpass is configured
+                                    setTimeout(() => {
+                                        toast((t) => (
+                                            <span className="flex items-center gap-2 text-sm">
+                                                Vault set up! Add a passkey as a backup unlock method?
+                                                <button
+                                                    className="ml-2 px-2 py-1 rounded bg-[#6366F1] text-white text-xs font-bold"
+                                                    onClick={() => { toast.dismiss(t.id); setPasskeySetupOpen(true); }}
+                                                >
+                                                    Set up passkey
+                                                </button>
+                                            </span>
+                                        ), { duration: 8000 });
+                                    }, 600);
+                                }
+                            });
+                        }}
+                        onManageVault={() => {
+                            if (isUnlocked) {
+                                // Already unlocked: open in manage state
+                                if (!isArgon) {
+                                    // Not on Argon engine — offer upgrade
+                                    requestSudo({
+                                        intent: 'upgrade',
+                                        forcePrompt: true,
+                                        onSuccess: () => {
+                                            setIsArgon(true);
+                                            toast.success('Vault upgraded to T5 Argon2id');
+                                        }
+                                    });
+                                } else {
+                                    // Argon vault, unlocked — open change master password flow
+                                    requestSudo({
+                                        intent: 'reset',
+                                        forcePrompt: true,
+                                        onSuccess: () => {
+                                            // Refresh masterpass changed timestamp after reset
+                                            if (user?.$id) {
+                                                import('@/lib/services/keychain').then(({ KeychainService }) =>
+                                                    KeychainService.listKeychainEntries(user.$id).then((entries: any[]) => {
+                                                        const pe = entries.find((e: any) => e.type === 'password');
+                                                        setMasterpassChangedAt(pe?.$updatedAt || pe?.$createdAt || null);
+                                                    })
+                                                ).catch(() => {});
+                                            }
+                                            toast.success('Master password updated');
+                                        }
+                                    });
+                                }
+                            } else {
+                                // Vault is locked — unlock first
+                                requestSudo({
+                                    intent: 'unlock',
+                                    forcePrompt: true,
+                                    onSuccess: () => {
+                                        setIsUnlocked(true);
+                                        if (!isArgon) {
+                                            toast('Vault unlocked. Upgrade recommended.', { icon: '🔓' });
+                                        } else {
+                                            toast.success('Vault unlocked');
+                                        }
+                                    }
+                                });
+                            }
                         }}
                         loadingPasskeys={loadingPasskeys}
                         passkeyEntries={passkeyEntries}

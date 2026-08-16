@@ -1046,7 +1046,6 @@ export async function createConversationTransactionalInternal(payload: {
   isEncrypted: boolean;
   encryptionVersion: string;
   lockboxRows?: Array<{ resourceType: string; resourceId?: string; grantee: string; wrappedKey: string; metadata?: string }>;
-  epochRows?: Array<{ resourceType: string; resourceId?: string; grantee: string; wrappedKey: string; metadata?: string }>;
 }) {
   let verifiedActorId = payload.actorId;
   if (!verifiedActorId) {
@@ -1078,7 +1077,9 @@ export async function createConversationTransactionalInternal(payload: {
   const convPerms = [Permission.read(Role.user(verifiedActorId!)), ...uniqueParticipants.filter((id) => id !== verifiedActorId).map((id) => Permission.read(Role.user(id)))];
   // Normalize lockbox rows to target convId
   const lockbox = (payload.lockboxRows || []).map((r) => ({ ...r, resourceId: convId, resourceType: r.resourceType || 'chat' }));
-  const epochs = (payload.epochRows || []).map((r) => ({ ...r, resourceId: convId, resourceType: 'epoch' }));
+
+  // Pre-assign epoch row ID so key_mapping rows can reference it within the same transaction
+  const epochRowId = ID.unique();
 
   const result = await withSystemTransaction(async (txId) => {
     const tables: any = createSystemTablesDB();
@@ -1089,14 +1090,21 @@ export async function createConversationTransactionalInternal(payload: {
       const memberPerms = [Permission.read(Role.user(verifiedActorId!)), ...uniqueParticipants.filter((id) => id !== verifiedActorId).map((id) => Permission.read(Role.user(id)))];
       await tables.createRow({ databaseId: CHAT_DB_ID, tableId: CONVERSATION_MEMBERS_TABLE_ID, rowId: ID.unique(), data: { conversationId: convId, userId: pid, role: pid === verifiedActorId ? 'owner' : 'member' }, permissions: memberPerms, transactionId: txId });
     }
-    // Stage key_mappings (direct & group lockbox)
+    // Stage key_mappings (direct & group lockbox — resourceType: 'chat')
     for (const row of lockbox) {
       const perms = [Permission.read(Role.user(row.grantee))];
       await tables.createRow({ databaseId: CHAT_DB_ID, tableId: KEY_MAPPING_TABLE_ID, rowId: ID.unique(), data: { resourceId: row.resourceId, resourceType: row.resourceType, grantee: row.grantee, wrappedKey: row.wrappedKey, metadata: row.metadata || null }, permissions: perms, transactionId: txId });
     }
-    for (const row of epochs) {
-      const perms = [Permission.read(Role.user(row.grantee))];
-      await tables.createRow({ databaseId: CHAT_DB_ID, tableId: EPOCHS_TABLE_ID, rowId: ID.unique(), data: { resourceId: row.resourceId, resourceType: row.resourceType, grantee: row.grantee, wrappedKey: row.wrappedKey, metadata: row.metadata || null }, permissions: perms, transactionId: txId });
+    // Stage initial epoch for group conversations — epochs table requires { resourceId, epochNumber, createdBy }
+    if (payload.type === 'group') {
+      const epochPerms = [Permission.read(Role.user(verifiedActorId!)), ...uniqueParticipants.filter((id) => id !== verifiedActorId).map((id) => Permission.read(Role.user(id)))];
+      await tables.createRow({ databaseId: CHAT_DB_ID, tableId: EPOCHS_TABLE_ID, rowId: epochRowId, data: { resourceId: convId, epochNumber: 1, createdBy: verifiedActorId }, permissions: epochPerms, transactionId: txId });
+      // For encrypted groups, stage per-participant key_mapping rows pointing at the epoch row (resourceType: 'epoch')
+      // so fetchEpochKeyForConversation can unwrap the conversation key per user
+      for (const row of lockbox) {
+        const perms = [Permission.read(Role.user(row.grantee))];
+        await tables.createRow({ databaseId: CHAT_DB_ID, tableId: KEY_MAPPING_TABLE_ID, rowId: ID.unique(), data: { resourceId: epochRowId, resourceType: 'epoch', grantee: row.grantee, wrappedKey: row.wrappedKey, metadata: row.metadata || null }, permissions: perms, transactionId: txId });
+      }
     }
     return { $id: convId, ...convData } as any;
   }, { ttl: 60 });

@@ -9,6 +9,12 @@ import {
   Plus,
   Mail,
   Smartphone,
+  ShieldCheck,
+  ShieldAlert,
+  KeyRound,
+  ArrowUpCircle,
+  Clock,
+  UserCheck,
 } from 'lucide-react';
 import { RememberUnlockSettings } from '@/components/settings/RememberUnlockSettings';
 import { AgentByokSettings } from '@/components/settings/AgentByokSettings';
@@ -60,8 +66,14 @@ type PasskeyEntry = {
 
 type Props = {
   isUnlocked: boolean;
+  hasMasterpass?: boolean | null;
+  isArgon?: boolean | null;
+  isAuthPassConfigured?: boolean;
+  masterpassChangedAt?: string | null;
   onLockVault: () => void;
   onUnlockVault: () => void;
+  onSetupVault?: () => void;
+  onManageVault?: () => void;
   loadingPasskeys: boolean;
   passkeyEntries: PasskeyEntry[];
   onAddPasskey: () => void;
@@ -138,8 +150,14 @@ function Row({
 
 export function SecurityTab({
   isUnlocked,
+  hasMasterpass,
+  isArgon,
+  isAuthPassConfigured,
+  masterpassChangedAt,
   onLockVault,
   onUnlockVault,
+  onSetupVault,
+  onManageVault,
   loadingPasskeys,
   passkeyEntries,
   onAddPasskey,
@@ -148,29 +166,168 @@ export function SecurityTab({
   mfaFactors,
   onManageMfa,
 }: Props) {
+  // hasMasterpass === null means still loading / offline — don't show setup button in that state
+  const vaultSetup = hasMasterpass === true;
+  const vaultLoading = hasMasterpass === null;
+  const needsSetup = hasMasterpass === false;
+
   return (
     <div className="flex flex-col gap-4 pb-24 max-w-3xl text-white">
       <Section
         title="Vault"
         action={
-          <button
-            type="button"
-            onClick={isUnlocked ? onLockVault : onUnlockVault}
-            className={`py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border-none ${
-              isUnlocked
-                ? 'bg-amber-500 text-black'
-                : 'bg-[#6366F1] text-white'
-            }`}
-          >
-            {isUnlocked ? 'Lock' : 'Unlock'}
-          </button>
+          vaultSetup ? (
+            <button
+              type="button"
+              onClick={isUnlocked ? onLockVault : onUnlockVault}
+              className={`py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border-none ${
+                isUnlocked ? 'bg-amber-500 text-black' : 'bg-[#6366F1] text-white'
+              }`}
+            >
+              {isUnlocked ? 'Lock' : 'Unlock'}
+            </button>
+          ) : needsSetup ? (
+            <button
+              type="button"
+              onClick={onSetupVault}
+              className="py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border-none bg-[#6366F1] text-white"
+            >
+              Set up vault
+            </button>
+          ) : null
         }
       >
+        {/* Lock / unlock status */}
         <Row
           icon={isUnlocked ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-          title={isUnlocked ? 'Unlocked' : 'Locked'}
-          meta="This device"
+          title={
+            vaultLoading
+              ? 'Checking vault…'
+              : needsSetup
+              ? 'Vault not set up'
+              : isUnlocked
+              ? 'Vault unlocked'
+              : 'Vault locked'
+          }
+          meta={
+            vaultLoading
+              ? 'Verifying setup status — may take a moment if offline'
+              : needsSetup
+              ? 'Set up a master password to encrypt your secure chats and vault items'
+              : 'Encryption key loaded in memory for this session'
+          }
+          trailing={
+            needsSetup && !vaultLoading ? (
+              <button
+                type="button"
+                onClick={onSetupVault}
+                className="shrink-0 py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border border-[#6366F1]/40 bg-[#6366F1]/10 text-[#6366F1]"
+              >
+                Set up
+              </button>
+            ) : null
+          }
         />
+
+        {/* Encryption engine */}
+        {vaultSetup && (
+          <Row
+            icon={
+              isArgon ? (
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <ShieldAlert className="w-4 h-4 text-amber-400" />
+              )
+            }
+            title={isArgon ? 'T5 Argon2id engine' : 'Legacy T4 engine'}
+            meta={
+              isArgon
+                ? 'Argon2id 64MB/3 iterations — maximum protection'
+                : 'Older encryption engine — upgrade recommended for stronger security'
+            }
+            trailing={
+              !isArgon ? (
+                <button
+                  type="button"
+                  onClick={onManageVault}
+                  className="shrink-0 flex items-center gap-1 py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border border-amber-500/30 bg-amber-500/10 text-amber-400"
+                >
+                  <ArrowUpCircle className="w-3 h-3" />
+                  Upgrade
+                </button>
+              ) : null
+            }
+          />
+        )}
+
+        {/* Last master password change */}
+        {vaultSetup && masterpassChangedAt && (
+          <Row
+            icon={<Clock className="w-4 h-4" />}
+            title="Master password"
+            meta={
+              <>
+                Last changed{' '}
+                {formatDateWithFallback(masterpassChangedAt, {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </>
+            }
+            trailing={
+              <button
+                type="button"
+                onClick={onManageVault}
+                className="shrink-0 py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border border-white/[0.08] bg-white/5 text-white/60 hover:text-white"
+              >
+                Change
+              </button>
+            }
+          />
+        )}
+
+        {/* Use master password for sign-in */}
+        {vaultSetup && (
+          <Row
+            icon={<UserCheck className="w-4 h-4" />}
+            title="Use master password for sign-in"
+            meta={
+              isAuthPassConfigured
+                ? 'Master password also authenticates your account sign-in'
+                : 'Not enabled — sign-in uses email OTP or passkeys only'
+            }
+            trailing={
+              <span
+                className={`shrink-0 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
+                  isAuthPassConfigured
+                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                    : 'bg-white/5 border-white/10 text-white/35'
+                }`}
+              >
+                {isAuthPassConfigured ? 'Enabled' : 'Off'}
+              </span>
+            }
+          />
+        )}
+
+        {/* Manage vault button when set up */}
+        {vaultSetup && (
+          <Row
+            icon={<KeyRound className="w-4 h-4" />}
+            title="Manage vault"
+            meta="Change master password or upgrade encryption engine"
+            trailing={
+              <button
+                type="button"
+                onClick={onManageVault}
+                className="shrink-0 py-1.5 px-3 rounded-lg text-[11px] font-extrabold cursor-pointer border border-white/[0.08] bg-white/5 text-white/60 hover:text-white"
+              >
+                Manage
+              </button>
+            }
+          />
+        )}
       </Section>
 
       <Section
