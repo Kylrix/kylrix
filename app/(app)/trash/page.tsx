@@ -262,19 +262,35 @@ export default function TrashPage() {
       onConfirm: async () => {
         try {
           toast.loading('Deleting permanently...', { id: `del-${item.id}` });
-          // Use cascade where available, else direct
+          
+          // 1. Immediately cancel any pending sync engine queued mutations and local cache
+          const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+          autonomicSyncEngine.cancelPending(item.id);
+
           try {
-            const { executeCascadeDeleteSecure } = await import('@/lib/actions/cascade-delete');
-            await (executeCascadeDeleteSecure as any)(item.databaseId, item.tableId, item.id).catch(async ()=> {
-              await databases.deleteRow(item.databaseId, item.tableId, item.id);
-            });
-          } catch {
-            await databases.deleteRow(item.databaseId, item.tableId, item.id);
-          }
-          toast.success('Deleted permanently!', { id: `del-${item.id}` });
-          const nextAll = itemsAll.filter(i => !(i.id===item.id && i.tableId===item.tableId));
+            const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+            const db = await getRxDB();
+            await db.cache.findOne(`goal_${item.id}`).remove().catch(() => {});
+            await db.cache.findOne(`note_${item.id}`).remove().catch(() => {});
+            await db.notes.findOne(item.id).remove().catch(() => {});
+          } catch {}
+
+          // 2. Remove from local trash state instantly (0ms)
+          const nextAll = itemsAll.filter(i => !(i.id === item.id && i.tableId === item.tableId));
           setItemsAll(nextAll);
           if (cacheKeyAll) await LocalEngine.cacheSet(cacheKeyAll, nextAll);
+
+          // 3. Delete remote row if synced (catch 404 / offline gracefully for first-sync unsynced items)
+          try {
+            const { executeCascadeDeleteSecure } = await import('@/lib/actions/cascade-delete');
+            await (executeCascadeDeleteSecure as any)(item.databaseId, item.tableId, item.id).catch(async () => {
+              await databases.deleteRow(item.databaseId, item.tableId, item.id).catch(() => null);
+            });
+          } catch {
+            await databases.deleteRow(item.databaseId, item.tableId, item.id).catch(() => null);
+          }
+
+          toast.success('Deleted permanently!', { id: `del-${item.id}` });
         } catch (e: any) {
           toast.error(`Deletion failed: ${e.message}`, { id: `del-${item.id}` });
         }
@@ -293,21 +309,40 @@ export default function TrashPage() {
         try {
           setPurging(true);
           toast.loading(`Emptying ${wsItems.length} items...`, { id: 'empty-trash' });
-          // Parallel batch per cascade mechanic
+
+          const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+          const db = await getRxDB().catch(() => null);
+
+          // Clean local sync queues and caches for all items in batch
+          for (const it of wsItems) {
+            autonomicSyncEngine.cancelPending(it.id);
+            if (db) {
+              db.cache.findOne(`goal_${it.id}`).remove().catch(() => {});
+              db.cache.findOne(`note_${it.id}`).remove().catch(() => {});
+              db.notes.findOne(it.id).remove().catch(() => {});
+            }
+          }
+
+          // Remove from local trash view immediately
+          const remaining = itemsAll.filter(all => !wsItems.some(w => w.id === all.id && w.tableId === all.tableId));
+          setItemsAll(remaining);
+          if (cacheKeyAll) await LocalEngine.cacheSet(cacheKeyAll, remaining);
+
+          // Parallel remote delete (best-effort, ignoring 404s for hard-unsynced items)
           await Promise.all(wsItems.map(it => 
             (async () => {
               try {
                 const { executeCascadeDeleteSecure } = await import('@/lib/actions/cascade-delete');
-                await (executeCascadeDeleteSecure as any)(it.databaseId, it.tableId, it.id).catch(()=> databases.deleteRow(it.databaseId, it.tableId, it.id));
+                await (executeCascadeDeleteSecure as any)(it.databaseId, it.tableId, it.id).catch(() => 
+                  databases.deleteRow(it.databaseId, it.tableId, it.id).catch(() => null)
+                );
               } catch {
-                await databases.deleteRow(it.databaseId, it.tableId, it.id).catch(()=>null);
+                await databases.deleteRow(it.databaseId, it.tableId, it.id).catch(() => null);
               }
             })()
           ));
           toast.success('Trash emptied!', { id: 'empty-trash' });
-          const remaining = itemsAll.filter(all => !wsItems.some(w=> w.id===all.id && w.tableId===all.tableId));
-          setItemsAll(remaining);
-          if (cacheKeyAll) await LocalEngine.cacheSet(cacheKeyAll, remaining);
         } catch {
           toast.error('Failed to empty trash.');
         } finally { setPurging(false); }
