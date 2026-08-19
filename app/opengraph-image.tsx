@@ -11,7 +11,7 @@ export default async function Image() {
       productLabel: 'Kylrix',
       eyebrow: 'Build, ship and think',
       title: 'Build, ship and think in one living agentic workspace.',
-      description: 'Your workflow becomes a living, callable system that compounds daily leverage over time.',
+      description: 'Your workflow becomes a living, scalable system that compounds daily leverage over time.',
       accent: 'indigo',
       ownerLabel: 'Philosophy',
       ownerName: 'Every object → tool call → more context',

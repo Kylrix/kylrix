@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   title: {
     default: 'Build, ship and think in one living agentic workspace. — Kylrix',
     template: '%s · Kylrix'},
-  description: 'Your workflow becomes a living, callable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
+  description: 'Your workflow becomes a living, scalable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
   keywords: ['agentic workspace', 'local-first', 'PAT', 'OAuth2', 'WebRTC', 'offline-first', 'productivity system'],
   icons: {
     icon: '/favicon.ico',
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     url: 'https://www.kylrix.space',
     siteName: 'Kylrix',
     title: 'Build, ship and think in one living agentic workspace.',
-    description: 'Your workflow becomes a living, callable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
+    description: 'Your workflow becomes a living, scalable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
     images: [
       {
         url: '/opengraph-image',
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Build, ship and think in one living agentic workspace. — Kylrix',
-    description: 'Your workflow becomes a living, callable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
+    description: 'Your workflow becomes a living, scalable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
     images: ['/opengraph-image']}};
 
 export const viewport: Viewport = {
