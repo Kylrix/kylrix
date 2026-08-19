@@ -120,14 +120,15 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
                   resourceName: 'this event',
                   confirmLabel: 'Delete Event',
                   onConfirm: async () => {
+                    // Optimistic: remove locally first, then background remote.
+                    removeEvent(event.id);
+                    onDelete?.();
+                    toast.success('Event deleted');
                     try {
                       await eventApi.delete(event.id);
                     } catch {
                       /* quiet for offline deletion */
                     }
-                    removeEvent(event.id);
-                    onDelete?.();
-                    toast.success('Event deleted');
                   },
                 });
               },

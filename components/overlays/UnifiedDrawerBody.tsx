@@ -227,12 +227,11 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
             </button>
             <button
               type="button"
-              onClick={async () => {
-                try {
-                  await drawerData?.onConfirm?.();
-                } finally {
-                  onClose();
-                }
+              onClick={() => {
+                // Close immediately — never block UI on remote call.
+                // onConfirm must handle optimistic local removal itself before returning.
+                onClose();
+                void drawerData?.onConfirm?.();
               }}
               className="flex-1 py-3 rounded-xl border border-red-500/30 bg-red-600 hover:bg-red-700 text-white font-satoshi font-bold text-xs transition-all shadow-[0_4px_16px_rgba(220,38,38,0.3)] cursor-pointer"
             >

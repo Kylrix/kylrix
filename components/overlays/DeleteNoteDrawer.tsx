@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Box, Typography, IconButton, Stack } from '@/lib/openbricks/primitives';
 import { X } from 'lucide-react';
 import { Drawer } from '@/lib/openbricks/primitives';
@@ -14,24 +14,18 @@ export function DeleteNoteDrawer({ isOpen, onClose, onConfirm, noteTitle }: {
     noteTitle: string
 }) {
   const { setIsDrawerOpen } = useDrawerState();
-  const [loading, setLoading] = useState(false);
 
   React.useEffect(() => {
     setIsDrawerOpen(isOpen);
     return () => setIsDrawerOpen(false);
   }, [isOpen, setIsDrawerOpen]);
 
-  const handleDelete = async () => {
-    setLoading(true);
-    try {
-        await onConfirm();
-        toast.success('Note deleted');
-        onClose();
-    } catch {
-        toast.error('Failed to delete note');
-    } finally {
-        setLoading(false);
-    }
+  const handleDelete = () => {
+    // Close immediately — never block UI on remote call.
+    onClose();
+    void onConfirm().catch((err: unknown) => {
+      console.warn('[DeleteNoteDrawer] Remote delete failed (best-effort):', err);
+    });
   };
 
   return (
@@ -91,10 +85,9 @@ export function DeleteNoteDrawer({ isOpen, onClose, onConfirm, noteTitle }: {
           <button 
             type="button" 
             onClick={handleDelete} 
-            disabled={loading} 
-            className="flex-1 py-3 rounded-xl border border-red-500/30 bg-red-600 hover:bg-red-700 text-white font-satoshi font-bold text-xs transition-all shadow-[0_4px_16px_rgba(220,38,38,0.3)] disabled:opacity-50 cursor-pointer"
+            className="flex-1 py-3 rounded-xl border border-red-500/30 bg-red-600 hover:bg-red-700 text-white font-satoshi font-bold text-xs transition-all shadow-[0_4px_16px_rgba(220,38,38,0.3)] cursor-pointer"
           >
-            {loading ? 'Deleting...' : 'Delete Permanently'}
+            Delete Permanently
           </button>
         </Stack>
       </Box>
