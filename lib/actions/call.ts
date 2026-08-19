@@ -31,16 +31,7 @@ export async function createChatCallAction(input: any, jwt?: string) {
     ])
   );
 
-  const scope = validated.scope || (uniqueParticipants.length > 2 ? 'group' : 'direct');
-
-  if (scope === 'group' || uniqueParticipants.length > 2) {
-    const { getUserSubscriptionTier } = await import('@/lib/utils');
-    const userTier = getUserSubscriptionTier(actor);
-    const { allowsGroupCalls } = await import('@/lib/entitlements/policy');
-    if (!allowsGroupCalls(userTier)) {
-      throw new Error('Group calls (beyond one-on-one) are gated to the TEAMS tier to balance Cloudflare transport infrastructure costs. Upgrade to TEAMS to initiate group calls.');
-    }
-  }
+  const scope = 'direct';
 
   const metadata = createCallMetadata({
     scope,

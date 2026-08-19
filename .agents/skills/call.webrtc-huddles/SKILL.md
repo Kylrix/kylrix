@@ -1,33 +1,19 @@
 ---
 name: call.webrtc-huddles
-description: Deep dive into the WebRTC real-time calls and audio/video mesh architecture in Kylrix. Explains direct P2P vs Cloudflare SFU transport modes, device dynamic hot-swapping, and integrated MediaRecording archives.
+description: Deep dive into the WebRTC real-time calls architecture in Kylrix. Explains direct P2P transport, presence signaling, device dynamic hot-swapping, and integrated MediaRecording archives.
 ---
 
-# Why: WebRTC Mesh calls & SFU Cloudflare Signaling
+# Why: WebRTC Pure P2P Calling & Ephemeral Presence Signaling
 
-Real-time audio and video communications in web browsers must adapt dynamically to network conditions. Direct Peer-to-Peer (P2P) connections are great for one-on-one calls but fail in group calls due to high bandwidth demands. We also need high-quality audio call archiving.
+Real-time audio and video communications in web browsers must be fast, private, and maintenance-free. Direct Peer-to-Peer (P2P) connections link peers directly with zero intermediate server overhead.
 
-We solve these challenges using the hybrid connection engine in `lib/webrtc/WebRTCManager.ts`.
+We implement this in `lib/webrtc/WebRTCManager.ts`.
 
-## 1. Dual-Transport Architecture: P2P and SFU Modes
+## 1. Pure Direct P2P Architecture
 
-The manager implements both P2P (direct) and SFU (Selective Forwarding Unit) topologies to optimize performance:
-- **P2P Mode** (`p2pPeerConnection`): Links two peers directly using standard Google STUN/TURN servers to bypass firewalls and minimize network hop latency.
-- **SFU Mode** (`sfuPeerConnection`): Uses Cloudflare Calls API to route group call media. Instead of sending media to every participant, each client uploads their stream **once** to Cloudflare, which distributes it to the other group members:
-
-```typescript
-private get peerConnection(): RTCPeerConnection | null {
-  return this.isSfuMode ? this.sfuPeerConnection : this.p2pPeerConnection;
-}
-
-private async fetchCloudflareSession() {
-  if (this.sessionId) return { sessionId: this.sessionId, sessionToken: this.cloudflareSessionToken };
-  const data = await createCloudflareSession();
-  this.sessionId = data.sessionId;
-  this.cloudflareSessionToken = data.sessionToken;
-  return data;
-}
-```
+The manager uses direct P2P `RTCPeerConnection` for seamless voice/video communications with Google STUN / Cloudflare TURN for NAT traversal:
+- Links peers directly with minimal network hop latency.
+- Uses ephemeral presence channels for instant SDP offer/answer exchange without database writes.
 
 ## 2. Dynamic Input Device Hot-Swapping
 

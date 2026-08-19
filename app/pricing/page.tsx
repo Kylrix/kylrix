@@ -205,10 +205,7 @@ export default function PricingPage() {
                       { icon: Folder, text: 'Arbitrary file storage' },
                       { icon: Mic, text: 'Audio messages & recording features' },
                       { icon: Share2, text: 'Shared note duplication' },
-                      { icon: Share2, text: 'Shared Send claiming' },
-                      { icon: Users, text: 'Multi-user collaboration (shared databases)' },
-                      { icon: Users, text: 'Unlimited collaborators & team members' },
-                      { icon: Phone, text: 'WebRTC group calls (3+ participants)' },
+                      { icon: Phone, text: 'Unlimited direct WebRTC P2P calls (Free for all)' },
                       { icon: Share2, text: 'Edit access requests on shared screens' },
                     ]
                 ).map((feat, i) => (

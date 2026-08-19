@@ -9,8 +9,6 @@ export interface SignalData {
     candidate?: RTCIceCandidateInit;
     sender: string;
     target: string;
-    cloudflareSessionId?: string;
-    cloudflareTracks?: any[];
 }
 
 export interface PeerConnectionEvents {

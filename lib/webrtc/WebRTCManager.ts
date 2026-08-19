@@ -1,14 +1,8 @@
 import type { PeerConnectionEvents, SignalData, PeerState } from '@/types/p2p';
-import { 
-  createCloudflareSession, 
-  createCloudflareTracks, 
-  fetchTurnCredentials, 
-  subscribeToCloudflareTracks 
-} from '@/lib/server/api';
+import { fetchTurnCredentials } from '@/lib/server/api';
 import { PresenceService } from '@/lib/services/presence';
 
 export class WebRTCManager {
-  private sfuPeerConnection: RTCPeerConnection | null = null;
   private p2pPeerConnection: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
   private remoteStream: MediaStream | null = null;
@@ -21,32 +15,25 @@ export class WebRTCManager {
   private candidateQueue: RTCIceCandidateInit[] = [];
   private isRemoteDescriptionSet = false;
   private currentTargetId: string | null = null;
-  private sessionId: string | null = null;
-  private isSfuMode: boolean = false;
   private callId: string | null = null;
   private unsubscribeRealtime: (() => void) | null = null;
 
-  private cloudflareSessionToken: string | null = null;
   private screenStream: MediaStream | null = null;
   private recordedChunks: Blob[] = [];
   private mediaRecorder: MediaRecorder | null = null;
 
   private get peerConnection(): RTCPeerConnection | null {
-    return this.isSfuMode ? this.sfuPeerConnection : this.p2pPeerConnection;
+    return this.p2pPeerConnection;
   }
 
   private set peerConnection(pc: RTCPeerConnection | null) {
-    if (this.isSfuMode) {
-      this.sfuPeerConnection = pc;
-    } else {
-      this.p2pPeerConnection = pc;
-    }
+    this.p2pPeerConnection = pc;
   }
 
   constructor(events: PeerConnectionEvents, callId?: string) {
     this.events = events;
     this.callId = callId || null;
-    // Pre-fetch TURN servers
+    // Pre-fetch TURN/STUN servers
     this.initializeTurnServers();
     
     if (this.callId) {
@@ -99,7 +86,6 @@ export class WebRTCManager {
       try {
           const res = await fetchTurnCredentials();
           if (res && 'success' in res && res.success === false) {
-              console.warn('[WebRTCManager] TURN Servers not configured:', res.error);
               return;
           }
           const { iceServers } = res;
@@ -107,22 +93,8 @@ export class WebRTCManager {
           const newServers = Array.isArray(iceServers) ? iceServers : [];
           this.config.iceServers = [...currentServers, ...newServers];
       } catch (_err) {
-          console.warn('[WebRTCManager] Failed to fetch TURN servers, using STUN-only.');
+          // STUN fallback already set
       }
-  }
-
-  private async fetchCloudflareSession() {
-    if (this.sessionId) return { sessionId: this.sessionId, sessionToken: this.cloudflareSessionToken };
-    
-    console.log('[WebRTCManager] Fetching Cloudflare session...');
-    const data = await createCloudflareSession();
-    if (!data || (data && 'success' in data && data.success === false)) {
-      throw new Error((data as any)?.error || 'Cloudflare configuration missing');
-    }
-    console.log('[WebRTCManager] Cloudflare session created:', data.sessionId);
-    this.sessionId = data.sessionId;
-    this.cloudflareSessionToken = data.sessionToken;
-    return data;
   }
 
   public async getDevices() {
@@ -233,38 +205,30 @@ export class WebRTCManager {
     }
   }
 
-  public createPeerConnection(senderId: string, targetId: string, isSfu: boolean = false) {
-    this.isSfuMode = isSfu;
+  public createPeerConnection(senderId: string, targetId: string) {
     this.currentTargetId = targetId;
 
-    if (isSfu) {
-        if (this.sfuPeerConnection) return;
-        this.sfuPeerConnection = new RTCPeerConnection(this.config);
-    } else {
-        if (this.p2pPeerConnection) return;
-        this.p2pPeerConnection = new RTCPeerConnection(this.config);
-    }
+    if (this.p2pPeerConnection) return;
+    this.p2pPeerConnection = new RTCPeerConnection(this.config);
 
-    const pc = isSfu ? this.sfuPeerConnection : this.p2pPeerConnection;
+    const pc = this.p2pPeerConnection;
     if (!pc) return;
 
-    if (!isSfu) {
-        pc.onicecandidate = (event) => {
-            if (event.candidate && this.currentTargetId) {
-                const signalPayload = JSON.stringify(event.candidate);
-                if (this.callId) {
-                    this.sendPresenceSignal('candidate', signalPayload, senderId, this.currentTargetId);
-                }
-
-                this.events.onSignal({
-                    type: 'candidate',
-                    candidate: event.candidate.toJSON(),
-                    target: this.currentTargetId,
-                    sender: senderId
-                });
+    pc.onicecandidate = (event) => {
+        if (event.candidate && this.currentTargetId) {
+            const signalPayload = JSON.stringify(event.candidate);
+            if (this.callId) {
+                this.sendPresenceSignal('candidate', signalPayload, senderId, this.currentTargetId);
             }
-        };
-    }
+
+            this.events.onSignal({
+                type: 'candidate',
+                candidate: event.candidate.toJSON(),
+                target: this.currentTargetId,
+                sender: senderId
+            });
+        }
+    };
 
     pc.ontrack = (event) => {
       this.remoteStream = event.streams[0];
@@ -283,72 +247,22 @@ export class WebRTCManager {
     }
   }
 
-  public async createOffer(senderId: string, targetId: string, options?: { forceP2p?: boolean }) {
-    if (options?.forceP2p) {
-      // Skip Cloudflare SFU entirely — pure P2P path
-      this.createPeerConnection(senderId, targetId, false);
-      if (!this.peerConnection) return;
+  public async createOffer(senderId: string, targetId: string, _options?: { forceP2p?: boolean }) {
+    this.createPeerConnection(senderId, targetId);
+    if (!this.peerConnection) return;
 
-      const offer = await this.peerConnection.createOffer();
-      await this.peerConnection.setLocalDescription(offer);
-      if (this.callId) {
-          this.sendPresenceSignal('offer', JSON.stringify(offer), senderId, targetId);
-      }
-
-      this.events.onSignal({
-        type: 'offer',
-        sdp: offer.sdp,
-        target: targetId,
-        sender: senderId
-      });
-      return;
+    const offer = await this.peerConnection.createOffer();
+    await this.peerConnection.setLocalDescription(offer);
+    if (this.callId) {
+        this.sendPresenceSignal('offer', JSON.stringify(offer), senderId, targetId);
     }
 
-    try {
-      const { sessionId } = await this.fetchCloudflareSession();
-      this.createPeerConnection(senderId, targetId, true);
-      if (!this.peerConnection) return;
-
-      // Push local tracks to Cloudflare
-      const tracks = this.localStream?.getTracks().map((track: any) => ({
-        location: "local",
-        mid: track.kind === 'audio' ? '0' : '1',
-        trackName: `${track.kind}-${senderId}`
-      }));
-
-      const trackData = await createCloudflareTracks({ sessionId, tracks: tracks || [] });
-      if (trackData && 'success' in trackData && trackData.success === false) {
-        throw new Error(trackData.error);
-      }
-
-      const offer = await this.peerConnection.createOffer();
-      await this.peerConnection.setLocalDescription(offer);
-
-      this.events.onSignal({
-        type: 'offer',
-        sdp: offer.sdp,
-        target: targetId,
-        sender: senderId,
-        cloudflareSessionId: sessionId,
-        cloudflareTracks: trackData.tracks
-      });
-    } catch (error) {
-      console.error('Cloudflare SFU Initiation failed, falling back to pure P2P:', error);
-      
-      // Fallback to pure P2P signaling
-      this.createPeerConnection(senderId, targetId, false);
-      if (!this.peerConnection) return;
-
-      const offer = await this.peerConnection.createOffer();
-      await this.peerConnection.setLocalDescription(offer);
-
-      this.events.onSignal({
-        type: 'offer',
-        sdp: offer.sdp,
-        target: targetId,
-        sender: senderId
-      });
-    }
+    this.events.onSignal({
+      type: 'offer',
+      sdp: offer.sdp,
+      target: targetId,
+      sender: senderId
+    });
   }
 
   private async processCandidateQueue() {
@@ -365,21 +279,15 @@ export class WebRTCManager {
     }
   }
 
-  public async handleSignal(signal: SignalData & { cloudflareSessionId?: string, cloudflareTracks?: any[], ts?: number }) {
+  public async handleSignal(signal: SignalData & { ts?: number }) {
     if (!this.peerConnection && signal.type === 'offer') {
-      this.createPeerConnection(signal.target, signal.sender, Boolean(signal.cloudflareSessionId));
+      this.createPeerConnection(signal.target, signal.sender);
     }
 
     if (!this.peerConnection) return;
 
     if (signal.type === 'offer' && signal.sdp) {
       console.log(`[WebRTCManager] Offer received from ${signal.sender}`);
-      // Pull tracks from Cloudflare if specified
-      if (signal.cloudflareSessionId && signal.cloudflareTracks) {
-        // Logic to subscribe to remote tracks via Cloudflare SFU
-        // For simplicity in this surgical fix, we continue the signaling flow
-      }
-      
       try {
         await this.peerConnection.setRemoteDescription(new RTCSessionDescription({ type: 'offer', sdp: signal.sdp }));
         this.isRemoteDescriptionSet = true;
@@ -423,32 +331,6 @@ export class WebRTCManager {
         console.error('[WebRTCManager] Error handling candidate:', err);
       }
     }
-  }
-
-  public async subscribeToRemoteTracks(sessionId: string, trackNames: string[]) {
-    if (!this.sfuPeerConnection) return;
-    
-    // Cloudflare SFU subscription protocol
-    const tracks = trackNames.map((name: any) => ({
-      location: 'remote',
-      sessionId: sessionId, // Peer A's session ID
-      trackName: name
-    }));
-
-    const response = await subscribeToCloudflareTracks({ sessionId: this.sessionId!, tracks });
-    
-    // Accept SFU SDP offer
-    await this.sfuPeerConnection.setRemoteDescription(new RTCSessionDescription(response.sessionDescription));
-    const answer = await this.sfuPeerConnection.createAnswer();
-    await this.sfuPeerConnection.setLocalDescription(answer);
-
-    // Ship answer back (renegotiation)
-    this.events.onSignal({
-      type: 'renegotiate',
-      sdp: answer.sdp,
-      target: this.currentTargetId!,
-      sender: 'me'
-    });
   }
 
   public async cleanup() {

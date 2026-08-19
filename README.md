@@ -2,7 +2,7 @@
   <img src="public/logo.svg" width="120" alt="Kylrix Logo">
 </p>
 
-<h1 align="center">Build, think, and ship in one intelligent workspace.</h1>
+<h1 align="center">Build, ship and think in one living agentic workspace.</h1>
 
 <p align="center">
   <strong>Your workflow becomes a living, callable system that compounds daily leverage over time.</strong>
@@ -47,7 +47,7 @@ Local copy is truth. The network confirms. Guests get the same engine. No featur
 
 **Offline-first compounds trust.** Live copy (React context + RxDB `LocalEngine`) is the UI SoT; pending queue (`kylrix:sync:pending-queue`) is amber/green SoT; Appwrite confirms. `autonomicSyncEngine` coalesces ~450ms, `optimisticEngine` prefetches, `interpolationEngine` resolves (`isPending` wins else newer `$updatedAt`). Soft pull only on focus/visibility. Guests work offline with the same engine; no account, no data loss.
 
-**Calls are just presence.** WebRTC (`WebRTCManager`) no longer writes `call_signals` rows. SDP/ICE travel over ephemeral presence channels (`call.<callId>` via `PresenceService.broadcastState/subscribeToPresence`), TURN from Cloudflare, P2P for DMs (`forceP2p:true` — test a real call right in any `direct` hangout), SFU for groups. No cron purge, no latency spikes — same transport as typing.
+**Calls are pure P2P.** WebRTC (`WebRTCManager`) no longer relies on complex SFU or DB signal tables. Direct P2P connects peers seamlessly with SDP/ICE traveled over ephemeral presence channels (`call.<callId>` via `PresenceService.broadcastState/subscribeToPresence`), free for all users with zero server latency or maintenance overhead.
 
 **Agents read what you already linked.** Kylie buffers the last 30 events into `CompiledLocalContext`, builds a zone-aware prompt, calls Gemini, and dispatches tool calls through the same `client-executor → Server Actions` path. No compute fleet — small, grounded context beats orchestration. Pro-gated, `compute_balances` metered, `agent-action-guardrail` ownership-checked.
 

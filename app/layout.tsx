@@ -30,7 +30,7 @@ import GlobalShell from '@/components/GlobalShell';
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.kylrix.space'),
   title: {
-    default: 'Build, think, and ship in one intelligent workspace. — Kylrix',
+    default: 'Build, ship and think in one living agentic workspace. — Kylrix',
     template: '%s · Kylrix'},
   description: 'Your workflow becomes a living, callable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
   keywords: ['agentic workspace', 'local-first', 'PAT', 'OAuth2', 'WebRTC', 'offline-first', 'productivity system'],
@@ -42,18 +42,18 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://www.kylrix.space',
     siteName: 'Kylrix',
-    title: 'Build, think, and ship in one intelligent workspace.',
+    title: 'Build, ship and think in one living agentic workspace.',
     description: 'Your workflow becomes a living, callable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
     images: [
       {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'Build, think, and ship in one intelligent workspace.'},
+        alt: 'Build, ship and think in one living agentic workspace.'},
     ]},
   twitter: {
     card: 'summary_large_image',
-    title: 'Build, think, and ship in one intelligent workspace. — Kylrix',
+    title: 'Build, ship and think in one living agentic workspace. — Kylrix',
     description: 'Your workflow becomes a living, callable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
     images: ['/opengraph-image']}};
 

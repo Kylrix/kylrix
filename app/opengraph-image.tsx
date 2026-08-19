@@ -9,8 +9,8 @@ export default async function Image() {
   return new ImageResponse(
     renderKylrixShareCard({
       productLabel: 'Kylrix',
-      eyebrow: 'Build, think, and ship',
-      title: 'Build, think, and ship in one intelligent workspace.',
+      eyebrow: 'Build, ship and think',
+      title: 'Build, ship and think in one living agentic workspace.',
       description: 'Your workflow becomes a living, callable system that compounds daily leverage over time.',
       accent: 'indigo',
       ownerLabel: 'Philosophy',
