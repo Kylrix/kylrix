@@ -1433,6 +1433,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   const deleteTask = useCallback(async (id: string) => {
     dispatch({ type: 'DELETE_TASK', payload: id });
+    autonomicSyncEngine.cancelPending(id);
+    autonomicSyncEngine.cancelPending(goalPendingKey(id));
     try {
       const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
       const db = await getRxDB();
@@ -1451,15 +1453,22 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
       const descendantIds = collectDescendants(id);
       for (const childId of descendantIds) {
-        const childCollaborators = await taskCollaborators.list(childId);
-        await Promise.all(childCollaborators.map((collaborator) => taskCollaborators.delete(collaborator.id)));
-        await taskApi.delete(childId);
         dispatch({ type: 'DELETE_TASK', payload: childId });
+        autonomicSyncEngine.cancelPending(childId);
+        autonomicSyncEngine.cancelPending(goalPendingKey(childId));
+        try {
+          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
+          const db = await getRxDB();
+          await db.cache.findOne(`goal_${childId}`).remove().catch(() => {});
+        } catch {}
+        const childCollaborators = await taskCollaborators.list(childId).catch(() => []);
+        await Promise.all(childCollaborators.map((collaborator) => taskCollaborators.delete(collaborator.id).catch(() => {})));
+        await taskApi.delete(childId).catch(() => {});
       }
 
-      const currentCollaborators = await taskCollaborators.list(id);
-      await Promise.all(currentCollaborators.map((collaborator) => taskCollaborators.delete(collaborator.id)));
-      await taskApi.delete(id);
+      const currentCollaborators = await taskCollaborators.list(id).catch(() => []);
+      await Promise.all(currentCollaborators.map((collaborator) => taskCollaborators.delete(collaborator.id).catch(() => {})));
+      await taskApi.delete(id).catch(() => {});
       invalidateTasksNexus(state.userId || 'guest');
       dispatch({ type: 'DELETE_TASK', payload: id });
     } catch (error: unknown) {

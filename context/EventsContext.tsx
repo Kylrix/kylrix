@@ -187,6 +187,8 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const removeEvent = useCallback((eventId: string) => {
+    autonomicSyncEngine.cancelPending(eventId);
+    autonomicSyncEngine.cancelPending(`event:${eventId}`);
     setEvents((prev) => {
       const nextList = prev.filter((e) => (e.id || (e as any).$id) !== eventId);
       void LocalEngine.cacheSet('f_events_list', nextList);

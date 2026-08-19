@@ -1003,6 +1003,40 @@ export const autonomicSyncEngine = {
     notifyStatusListeners();
   },
 
+  /** Unconditionally cancel any pending create/update for an item (e.g. upon deletion) so it never resuscitates. */
+  cancelPending(noteOrGoalId: string) {
+    const id = String(noteOrGoalId || '').trim();
+    if (!id) return;
+    const goalId = parseGoalPendingKey(id);
+    pendingById.delete(id);
+    pendingPayloads.delete(id);
+    failedSyncAttempts.delete(id);
+    if (goalId) {
+      pendingById.delete(goalId);
+      pendingPayloads.delete(goalId);
+      failedSyncAttempts.delete(goalId);
+    } else {
+      pendingById.delete(goalPendingKey(id));
+      pendingPayloads.delete(goalPendingKey(id));
+      failedSyncAttempts.delete(goalPendingKey(id));
+      pendingById.delete(`event:${id}`);
+      pendingPayloads.delete(`event:${id}`);
+      failedSyncAttempts.delete(`event:${id}`);
+      pendingById.delete(`form:${id}`);
+      pendingPayloads.delete(`form:${id}`);
+      failedSyncAttempts.delete(`form:${id}`);
+      pendingById.delete(`tag:${id}`);
+      pendingPayloads.delete(`tag:${id}`);
+      failedSyncAttempts.delete(`tag:${id}`);
+    }
+    if (!parseGoalPendingKey(id)) {
+      markComposePersisted(id);
+      markNotePersistedRemote(id);
+    }
+    writePersistedQueue();
+    notifyStatusListeners();
+  },
+
   /**
    * Push pending live-copy notes + goals to Appwrite — now bulk-parallel + pre-warmed JWT.
    * Trending to 1000x perceived: UI already green via local copy (0ms); engine does

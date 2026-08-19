@@ -696,9 +696,22 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     setTotalNotes((prev) => Math.max(0, prev - 1));
     // Also remove from pinned if it was pinned
     setPinnedIds((prev) => prev.filter(id => id !== noteId));
+    // Cancel any pending sync mutation immediately so it never resuscitates
+    autonomicSyncEngine.cancelPending(noteId);
+    liveEditGuardsRef.current.delete(noteId);
+    activeComposeNoteIdsRef.current.delete(noteId);
     // Invalidate caches
     invalidate(`note_${noteId}`);
     if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
+    // Best-effort RxDB cleanup
+    if (typeof window !== 'undefined') {
+      import('@/lib/webrtc/RxDBManager').then(({ getRxDB }) => {
+        getRxDB().then((db) => {
+          db.notes.findOne(noteId).remove().catch(() => {});
+          db.cache.findOne(`note_${noteId}`).remove().catch(() => {});
+        }).catch(() => {});
+      }).catch(() => {});
+    }
   }, [invalidate, INITIAL_NOTES_CACHE_KEY]);
 
   const migrateDraftNoteId = useCallback((ephemeralId: string, savedId: string) => {
