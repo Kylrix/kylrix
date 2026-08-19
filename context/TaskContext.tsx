@@ -1190,13 +1190,23 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         }
 
         if (type === 'create') {
+          if ((payload as any).isTrash === true) {
+            dispatch({ type: 'DELETE_TASK', payload: payload.$id });
+            return;
+          }
           dispatch({ type: 'ADD_TASK', payload: mapAppwriteTaskToTask(payload) });
         } else if (type === 'update') {
+          if ((payload as any).isTrash === true) {
+            dispatch({ type: 'DELETE_TASK', payload: payload.$id });
+            invalidateTasksNexus(state.userId || 'guest');
+            return;
+          }
           const mapped = mapAppwriteTaskToTask(payload);
           if (shouldIgnoreRealtimeStatus(payload.$id, mapped.status)) return;
           dispatch({ type: 'UPDATE_TASK', payload: { id: payload.$id, updates: mapped } });
         } else if (type === 'delete') {
           dispatch({ type: 'DELETE_TASK', payload: payload.$id });
+          invalidateTasksNexus(state.userId || 'guest');
         }
       });
 

@@ -772,6 +772,14 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       const isDelete = response.events.some(e => e.endsWith('.delete'));
 
       if (isCreate) {
+        if ((payload as any).isTrash === true) {
+          setNotes(prev => prev.filter(n => n.$id !== payload.$id));
+          setTotalNotes(prev => Math.max(0, prev - 1));
+          setPinnedIds(prev => prev.filter(id => id !== payload.$id));
+          invalidate(`note_${payload.$id}`);
+          scheduleInvalidateInitialNotesPage();
+          return;
+        }
         if (activeComposeNoteIdsRef.current.has(payload.$id) || notesRef.current.some(n => n.$id === payload.$id)) {
           // Update the existing card with guard-merged content, but do NOT add a new row.
           setNotes(prev => {
@@ -820,6 +828,14 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
         void opportunisticallyDecryptNote(payload);
       } else if (isUpdate) {
+        if ((payload as any).isTrash === true) {
+          setNotes(prev => prev.filter(n => n.$id !== payload.$id));
+          setTotalNotes(prev => Math.max(0, prev - 1));
+          setPinnedIds(prev => prev.filter(id => id !== payload.$id));
+          invalidate(`note_${payload.$id}`);
+          scheduleInvalidateInitialNotesPage();
+          return;
+        }
         if (activeComposeNoteIdsRef.current.has(payload.$id) && !liveEditGuardsRef.current.has(payload.$id)) {
           return;
         }

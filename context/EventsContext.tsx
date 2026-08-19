@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Event } from '@/types';
-import { events as eventApi } from '@/lib/kylrixflow';
+import { events as eventApi, subscribeToTable } from '@/lib/kylrixflow';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { mergeServerPageWithLocalCopy } from '@/lib/sync/local-copy-sync';
@@ -128,6 +129,48 @@ export function EventsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void loadEvents();
+
+    let unsub: any;
+    try {
+      unsub = subscribeToTable<any>(APPWRITE_CONFIG.TABLES.EVENTS, ({ type, payload }) => {
+        if (!payload?.$id) return;
+        const normalized = mapRemoteEvent(payload);
+
+        if (type === 'create') {
+          if (payload.isTrash === true) {
+            setEvents((prev) => prev.filter((e) => (e.id || (e as any).$id) !== payload.$id));
+            return;
+          }
+          setEvents((prev) => {
+            const filtered = prev.filter((e) => (e.id || (e as any).$id) !== payload.$id);
+            const nextList = [normalized, ...filtered];
+            void LocalEngine.cacheSet('f_events_list', nextList);
+            return nextList;
+          });
+        } else if (type === 'update') {
+          if (payload.isTrash === true) {
+            setEvents((prev) => prev.filter((e) => (e.id || (e as any).$id) !== payload.$id));
+            return;
+          }
+          setEvents((prev) => {
+            const nextList = prev.map((e) => ((e.id || (e as any).$id) === payload.$id ? normalized : e));
+            void LocalEngine.cacheSet('f_events_list', nextList);
+            return nextList;
+          });
+        } else if (type === 'delete') {
+          setEvents((prev) => {
+            const nextList = prev.filter((e) => (e.id || (e as any).$id) !== payload.$id);
+            void LocalEngine.cacheSet('f_events_list', nextList);
+            return nextList;
+          });
+        }
+      });
+    } catch {}
+
+    return () => {
+      if (typeof unsub === 'function') unsub();
+      else if (unsub?.unsubscribe) unsub.unsubscribe();
+    };
   }, [loadEvents]);
 
   const pushLiveEvent = useCallback((event: Event, options?: { pending?: boolean }) => {
