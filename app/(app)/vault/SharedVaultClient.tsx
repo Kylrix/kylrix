@@ -35,6 +35,8 @@ interface DecryptedCredential {
   url: string | null;
   notes: string | null;
   itemType: string;
+  $createdAt?: string;
+  $updatedAt?: string;
 }
 
 
@@ -104,7 +106,9 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
             password: null,
             url: null,
             notes: null,
-            itemType: raw.itemType || 'login'});
+            itemType: raw.itemType || 'login',
+            $createdAt: raw.$createdAt,
+            $updatedAt: raw.$updatedAt});
           return;
         }
 
@@ -125,7 +129,9 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
           password: await decrypt(raw.password),
           url: await decrypt(raw.url),
           notes: await decrypt(raw.notes),
-          itemType: raw.itemType || 'login'};
+          itemType: raw.itemType || 'login',
+          $createdAt: raw.$createdAt,
+          $updatedAt: raw.$updatedAt};
 
         if (!cancelled) setCredential(decrypted);
       } catch (err: any) {
@@ -263,6 +269,40 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
             </div>
           )}
         </div>
+
+        {/* Timestamps */}
+        {(credential.$createdAt || credential.$updatedAt) && (
+          <div className="svc-timestamps">
+            {credential.$createdAt && (
+              <div className="svc-timestamp-row">
+                <span className="svc-timestamp-label">Created</span>
+                <span className="svc-timestamp-value">
+                  {new Date(credential.$createdAt).toLocaleString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+            )}
+            {credential.$updatedAt && credential.$updatedAt !== credential.$createdAt && (
+              <div className="svc-timestamp-row">
+                <span className="svc-timestamp-label">Updated</span>
+                <span className="svc-timestamp-value">
+                  {new Date(credential.$updatedAt).toLocaleString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Footer */}
         <div className="svc-footer">
@@ -437,6 +477,37 @@ const sharedVaultStyles = `
 
   .copied {
     color: #4ade80 !important;
+  }
+
+  .svc-timestamps {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    margin-bottom: 24px;
+  }
+
+  .svc-timestamp-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .svc-timestamp-label {
+    color: #666;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .svc-timestamp-value {
+    color: #999;
+    font-weight: 500;
   }
 
   .svc-footer {
