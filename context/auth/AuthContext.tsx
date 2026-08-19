@@ -209,21 +209,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [user?.$id, user?.isPulse]);
 
-  // 4. Centralized User Profile & Username Bootstrapping & Vault Account Sync + JWT cache (device-local, no masterpass)
+  // 4. Centralized User Profile & Username Bootstrapping
   useEffect(() => {
     if (user?.$id && !user.isPulse) {
       const initProfile = async () => {
         try {
           const { UsersService } = await import('@/lib/services/users');
           await UsersService.ensureProfileForUser(user);
-          const { ensureCurrentAccountInVault, storeAccountSession } = await import('@/lib/account/vault');
-          ensureCurrentAccountInVault(user);
-          // Cache JWT for instant switch (plaintext device cache, intentional UX exception)
-          try {
-            const { account } = await import('@/lib/appwrite/client');
-            const jwt = await account.createJWT().then((r: any) => r.jwt).catch(() => null);
-            if (jwt) await storeAccountSession(user.$id, { jwt });
-          } catch {}
         } catch (err) {
           console.warn('[AuthContext] Background profile bootstrapping failed:', err);
         }
@@ -328,11 +320,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
   const verifyEmailOTP = useCallback(async (_email: string, userId: string, secret: string): Promise<void> => {
     const session: any = await account.createSession({ userId, secret });
-    // Store the session secret so this account can be restored on switch without re-auth
-    try {
-      const { storeAccountSession } = await import('@/lib/account/vault');
-      await storeAccountSession(session.userId, { secret: session.secret, sessionId: session.$id, jwt: await account.createJWT().then((r: any) => r.jwt).catch(() => undefined) });
-    } catch {}
     try {
       await assertAuthenticatedAccount();
       await refreshUser(true);
@@ -343,7 +330,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw error;
     }
     return;
-    return session;
   }, [refreshUser]);
 
   const verifyMFA = useCallback(async (challengeId: string, otp: string) => {

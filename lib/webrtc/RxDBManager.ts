@@ -137,24 +137,16 @@ const EventSchema = {
 };
 
 let dbPromise: Promise<RxDatabase> | null = null;
-let currentDbPartition: string | null = null;
-
 export async function getRxDB(): Promise<RxDatabase> {
     if (typeof window === 'undefined') {
         throw new Error('RxDB can only be initialized on the client.');
     }
 
-    const { getActivePartitionId } = await import('@/lib/account/partition');
-    const activePid = getActivePartitionId() || 'acc_default';
-
-    if (dbPromise && currentDbPartition === activePid) return dbPromise;
-
-    currentDbPartition = activePid;
-    const partitionedDbName = activePid === 'acc_default' ? DB_NAME : `${DB_NAME}_${activePid}`;
+    if (dbPromise) return dbPromise;
 
     dbPromise = (async () => {
         const db = await createRxDatabase({
-            name: partitionedDbName,
+            name: DB_NAME,
             storage: getRxStorageDexie()
         });
 
