@@ -642,7 +642,7 @@ async function flushGoalPending(
   // Ack against the *queue* revision, not live updatedAt.
   // Goal realtime / UPDATE_TASK used to stamp `new Date()` and permanently
   // re-queue successful flushes (ideas guard live edits; goals did not).
-  const queuedAfter = pendingById.get(pendingKey) || '';
+  const queuedAfter = pendingById.get(pendingKey) || pendingById.get(goalId) || '';
   if (queuedAfter && flushRevision && queuedAfter !== flushRevision) {
     writePersistedQueue();
     notifyStatusListeners();
@@ -654,6 +654,7 @@ async function flushGoalPending(
     failedSyncAttempts.delete(pendingKey);
     failedSyncAttempts.delete(goalId);
     autonomicSyncEngine.ack(pendingKey, flushRevision);
+    autonomicSyncEngine.ack(goalId, flushRevision);
     window.dispatchEvent(
       new CustomEvent('kylrix:sync-complete', {
         detail: { noteId: pendingKey, goalId, syncedGoal: synced, revision: flushRevision, kind: 'goal' },
@@ -978,16 +979,21 @@ export const autonomicSyncEngine = {
       notifyStatusListeners();
       return;
     }
+    const cleanPayload = pendingPayloads.get(id) || (parseGoalPendingKey(id) ? pendingPayloads.get(parseGoalPendingKey(id)!) : null);
     pendingById.delete(id);
     pendingPayloads.delete(id);
     const goalId = parseGoalPendingKey(id);
     if (goalId) {
+      pendingById.delete(goalId);
       pendingPayloads.delete(goalId);
+    } else {
+      pendingById.delete(goalPendingKey(id));
+      pendingPayloads.delete(goalPendingKey(id));
     }
     // Update baseline snapshot to the clean acked state
-    const cleanPayload = pendingPayloads.get(id) || pendingPayloads.get(goalId || id);
     if (cleanPayload) {
       LocalEngine.snapshotBaseline(id, cleanPayload);
+      if (goalId) LocalEngine.snapshotBaseline(goalId, cleanPayload);
     }
     if (!parseGoalPendingKey(id)) {
       markComposePersisted(id);
