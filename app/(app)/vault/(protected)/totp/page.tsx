@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Shield, Copy, Pencil, Trash2, Search, Pin, Link as LinkIcon } from 'lucide-react';
+import { ArrowLeft, Plus, Shield, Copy, Pencil, Trash2, Search, Pin, Link as LinkIcon, CheckSquare } from 'lucide-react';
+import { useSelection } from '@/context/SelectionContext';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { getCurrentUserSnapshot } from '@/lib/appwrite/client';
 import { listTotpSecrets, deleteTotpSecret } from '@/lib/appwrite';
@@ -198,21 +199,56 @@ function TOTPCardStable({
       await navigator.clipboard.writeText(fullUrl); toast.success('Temporary sixty second sharing link copied.');
     } catch (err: any) { toast.error('Failed to copy sixty second link: ' + err.message); }
   };
+  const selection = useSelection();
+  const isSelected = selection.isSelected(totp.$id, 'totp');
+
   const contextMenuItems = useMemo(() => [
       { label: pinned ? 'Unpin Code' : 'Pin Code', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: handlePinToggle },
+      { label: 'Select', icon: <CheckSquare size={16} className="text-[#10B981]" />, onClick: () => selection.enterSelectMode('totp', totp.$id) },
       { label: 'Share Options', icon: <LinkIcon size={16} className="text-emerald-500" />, submenu: [
           { label: 'Share Seed (DEK)', icon: <LinkIcon size={14} />, onClick: handleShareDecryptedKey },
           { label: 'Share Sixty Seconds Only', icon: <LinkIcon size={14} className="text-[#F59E0B]" />, onClick: handleShareSixtySeconds }
         ]},
       { label: 'Edit', icon: <Pencil size={16} />, onClick: () => openEditDialog(totp) },
       { label: 'Delete', icon: <Trash2 size={16} />, variant: 'destructive' as const, onClick: () => openDeleteDialog(totp.$id) }
-  ], [pinned, totp]);
-  const handleContextMenu = (e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); if (openMenu) openMenu({ x: e.clientX, y: e.clientY, items: contextMenuItems, appType: 'vault' }); };
+  ], [pinned, totp, selection]);
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (selection.isSelectMode) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (openMenu) openMenu({ x: e.clientX, y: e.clientY, items: contextMenuItems, appType: 'vault' });
+  };
   const radius = 10; const circumference = 2 * Math.PI * radius; const strokeDashoffset = circumference - (progress / 100) * circumference;
   return (
-    <div onClick={() => requireUnlock(() => setSelectedTotp(displayTotp))} onContextMenu={handleContextMenu} className={`h-full p-5 rounded-3xl transition-all duration-300 flex flex-col gap-4 cursor-pointer border ${isSelected ? 'bg-[#1C1A18] border-emerald-500/40' : 'bg-[#161412] border-[#1C1A18] hover:bg-[#1C1A18] hover:border-emerald-500/20'} hover:-translate-y-0.5 shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),0_2px_3px_-3px_rgba(37,35,33,0.9)]`}>
+    <div
+      onClick={() => {
+        if (selection.isSelectMode) {
+          selection.toggleSelect(totp.$id, 'totp');
+          return;
+        }
+        requireUnlock(() => setSelectedTotp(displayTotp));
+      }}
+      onContextMenu={selection.isSelectMode ? (e) => e.preventDefault() : handleContextMenu}
+      className={`h-full p-5 rounded-3xl transition-all duration-300 flex flex-col gap-4 cursor-pointer border ${isSelected ? 'bg-[#1C1A18] border-emerald-500/40 ring-2 ring-emerald-500' : 'bg-[#161412] border-[#1C1A18] hover:bg-[#1C1A18] hover:border-emerald-500/20'} hover:-translate-y-0.5 shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),0_2px_3px_-3px_rgba(37,35,33,0.9)]`}
+    >
       <div className="flex items-center gap-3.5 min-w-0 w-full">
-        {faviconUrl ? (<div className="w-[52px] h-[52px] rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center flex-shrink-0 transition-colors"><img src={faviconUrl} alt={totp.issuer || 'app favicon'} onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} className="w-7 h-7 rounded-md" /></div>) : (<div className="w-[52px] h-[52px] rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center flex-shrink-0 transition-colors"><span className="font-black text-emerald-500 text-xl font-clash">{issuerInitials}</span></div>)}
+        {selection.isSelectMode ? (
+          <div
+            className="shrink-0 flex items-center justify-center pr-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              selection.toggleSelect(totp.$id, 'totp');
+            }}
+          >
+            <div
+              className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+                isSelected ? 'bg-[#10B981] border-[#10B981] text-[#0A0908]' : 'border-[#9B9691] bg-transparent'
+              }`}
+            >
+              {isSelected && <CheckSquare className="w-4 h-4" />}
+            </div>
+          </div>
+        ) : faviconUrl ? (<div className="w-[52px] h-[52px] rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center flex-shrink-0 transition-colors"><img src={faviconUrl} alt={totp.issuer || 'app favicon'} onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} className="w-7 h-7 rounded-md" /></div>) : (<div className="w-[52px] h-[52px] rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center flex-shrink-0 transition-colors"><span className="font-black text-emerald-500 text-xl font-clash">{issuerInitials}</span></div>)}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
             <div className="text-[1.05rem] font-extrabold text-white font-clash leading-tight truncate flex-1 min-w-0">{looksEncrypted((displayTotp as any).issuer) ? "Encrypted Code" : ((displayTotp as any).issuer || "Smart Code")}</div>

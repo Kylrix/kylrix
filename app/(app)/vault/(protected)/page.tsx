@@ -414,24 +414,6 @@ function DashboardPageContent() {
                         <Plus size={16} />
                         Add Secret
                       </button>
-                      {isSelectMode && selectedIds.length > 0 && (
-                        <button
-                          onClick={() => requestSudo({ onSuccess: () => handleDelete() })}
-                          disabled={isMultiDeleting}
-                          className="px-3 py-2 bg-[#FF453A]/10 text-[#FF453A] text-xs font-bold rounded-xl hover:bg-[#FF453A]/20 transition-colors"
-                        >
-                          {isMultiDeleting ? "Deleting..." : `Delete (${selectedIds.length})`}
-                        </button>
-                      )}
-                      
-                      <button
-                        onClick={handleToggleSelectMode}
-                        className={`px-3 py-2 border text-xs font-bold rounded-xl transition-colors ${
-                          isSelectMode ? 'border-[#10B981] bg-[#10B981]/10 text-[#10B981]' : 'border-[#1C1A18] text-white/60 hover:text-white hover:bg-[#1C1A18]'
-                        }`}
-                      >
-                        {isSelectMode ? 'Cancel' : 'Select'}
-                      </button>
 
                       <button
                         onClick={() => setVaultBlurEnabled(!isVaultBlurEnabled)}

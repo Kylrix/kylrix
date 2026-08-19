@@ -3,6 +3,7 @@ import type { Credentials } from '@/lib/appwrite/types';
 import { ExternalLink, Edit2, Trash2, User, Lock, Pin, CheckSquare, Sparkles, Share2, ShieldCheck } from 'lucide-react';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { useResourcePins } from '@/context/ResourcePinContext';
+import { useSelection } from '@/context/SelectionContext';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuItems';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
@@ -17,8 +18,8 @@ export default function CredentialItem({
   onClick,
   onTogglePin,
   isBlurEnabled = false,
-  isSelectMode = false,
-  isSelected = false,
+  isSelectMode: propSelectMode,
+  isSelected: propSelected,
   onToggleSelect,
   onShared}: {
   credential: Credentials;
@@ -34,6 +35,10 @@ export default function CredentialItem({
   onToggleSelect?: () => void;
   onShared?: (id: string) => void;
 }) {
+  const selection = useSelection();
+  const isSelectMode = propSelectMode ?? (selection.isSelectMode && selection.activeKind === 'credential');
+  const isSelected = propSelected ?? selection.isSelected(credential.$id, 'credential');
+  const toggleSelectionHandler = onToggleSelect ?? (() => selection.toggleSelect(credential.$id, 'credential'));
   const { isPinned: isResourcePinned } = useResourcePins();
   const pinned = isResourcePinned('credential', credential.$id, credential.userId, credential.isPinned);
   const contextMenu = useContextMenu();
@@ -195,6 +200,7 @@ export default function CredentialItem({
 
   const contextMenuItems = [
     { label: pinned ? "Unpin Secret" : "Pin Secret", icon: <Pin size={16} className={pinned ? "text-[#F59E0B]" : ""} />, onClick: () => onTogglePin?.() },
+    { label: "Select", icon: <CheckSquare size={16} className="text-[#10B981]" />, onClick: () => selection.enterSelectMode('credential', credential.$id) },
     { label: "Copy Public Link (DEK)", icon: <Share2 size={16} className="text-emerald-500" />, onClick: handleShareLink },
     ...accessControlItems,
     { 
@@ -243,8 +249,8 @@ export default function CredentialItem({
   return (
     <div
       onClick={() => {
-        if (isSelectMode && onToggleSelect) {
-          onToggleSelect();
+        if (isSelectMode) {
+          toggleSelectionHandler();
         } else if (onClick) {
           onClick();
         }

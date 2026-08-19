@@ -17,6 +17,8 @@ import {
   unifiedDrawerWidth,
 } from '@/components/overlays/UnifiedDrawerBody';
 import { AgenticPanelContent } from '@/components/overlays/AgenticPanelContent';
+import { useSelection } from '@/context/SelectionContext';
+import { UniversalSelectionActions } from '@/components/selection/UniversalSelectionActions';
 
 const WalletSidebar = dynamic(
   () => import('@/components/overlays/WalletSidebar').then((m) => m.WalletSidebar),
@@ -51,6 +53,7 @@ export function NativeSidebarBridge() {
   const agentic = useAgenticDrawer();
   const wallet = useWalletOverlay();
   const unified = useUnifiedDrawer();
+  const selection = useSelection();
   const isDesktop = useIsDesktopRail();
   const lastKeyRef = useRef<string | null>(null);
   const lastDynamicContentRef = useRef<React.ReactNode | null>(null);
@@ -67,6 +70,27 @@ export function NativeSidebarBridge() {
     dismissRef.current = dismiss;
     swapRef.current = swap;
   }, [open, close, dismiss, swap]);
+
+  useEffect(() => {
+    if (isDesktop && selection.isSelectMode) {
+      if (lastKeyRef.current === 'selection') return;
+      lastKeyRef.current = 'selection';
+      openRef.current(
+        <UniversalSelectionActions />,
+        {
+          key: 'selection',
+          width: NATIVE_SIDEBAR_WIDTHS.default,
+          sticky: true,
+          title: 'Selection',
+        }
+      );
+      return;
+    }
+    if (isDesktop && !selection.isSelectMode && lastKeyRef.current === 'selection') {
+      lastKeyRef.current = null;
+      closeRef.current('selection');
+    }
+  }, [isDesktop, selection.isSelectMode, selection.activeKind, selection.selectedIds]);
 
   useEffect(() => {
     if (agentic.isOpen) {

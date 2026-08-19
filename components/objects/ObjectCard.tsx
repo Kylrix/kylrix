@@ -4,6 +4,8 @@ import React, { useCallback, useRef } from 'react';
 import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import { goalPendingKey } from '@/lib/sync/goal-keys';
 import { triggerLocalSoftRefresh } from '@/lib/sync/local-soft-refresh';
+import { useSelection } from '@/context/SelectionContext';
+import { CheckSquare } from 'lucide-react';
 import {
   objectKindAccent,
   type ObjectKind,
@@ -61,6 +63,8 @@ export function ObjectCard({
   variant = 'idea',
   railColor,
 }: Props) {
+  const { isSelectMode, isSelected: checkIsSelected, toggleSelect } = useSelection();
+  const isSelected = checkIsSelected(item.id, item.kind);
   const accent = item.accent || objectKindAccent(item.kind);
   const done = item.status === 'done';
   const uniform = density === 'uniform';
@@ -77,6 +81,7 @@ export function ObjectCard({
 
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
+      if (isSelectMode) return;
       if (!onContextMenu) return;
       longPressFired.current = false;
       clearLongPress();
@@ -91,7 +96,7 @@ export function ObjectCard({
         } as unknown as React.MouseEvent);
       }, LONG_PRESS_MS);
     },
-    [clearLongPress, onContextMenu],
+    [clearLongPress, onContextMenu, isSelectMode],
   );
 
   const handleClick = useCallback(() => {
@@ -99,9 +104,13 @@ export function ObjectCard({
       longPressFired.current = false;
       return;
     }
+    if (isSelectMode) {
+      toggleSelect(item.id, item.kind);
+      return;
+    }
     triggerLocalSoftRefresh(item.kind, item.id);
     onOpen?.(item);
-  }, [item, onOpen]);
+  }, [item, onOpen, isSelectMode, toggleSelect]);
 
   return (
     <div
@@ -111,18 +120,24 @@ export function ObjectCard({
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
+          if (isSelectMode) {
+            toggleSelect(item.id, item.kind);
+            return;
+          }
           triggerLocalSoftRefresh(item.kind, item.id);
           onOpen?.(item);
         }
       }}
-      onContextMenu={onContextMenu}
+      onContextMenu={isSelectMode ? (e) => e.preventDefault() : onContextMenu}
       onTouchStart={handleTouchStart}
       onTouchEnd={clearLongPress}
       onTouchMove={clearLongPress}
       onTouchCancel={clearLongPress}
       className={[
         'w-full text-left overflow-hidden cursor-pointer select-none relative min-w-[260px] sm:min-w-[280px]',
-        isTask
+        isSelected
+          ? 'ring-2 ring-[#10B981] border-[#10B981]/50 bg-[#1A1816]'
+          : isTask
           ? [
               'rounded-2xl bg-[#12110F] border border-[#2A2826]',
               'hover:border-[#3C3A38] hover:bg-[#161412]',
@@ -159,7 +174,23 @@ export function ObjectCard({
         {/* Header */}
         <div className="flex items-start justify-between gap-2.5 flex-shrink-0">
           <div className="min-w-0 flex-1 flex items-start gap-2.5">
-            {leading ? (
+            {isSelectMode ? (
+              <div
+                className="flex-shrink-0 pt-0.5"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleSelect(item.id, item.kind);
+                }}
+              >
+                <div
+                  className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+                    isSelected ? 'bg-[#10B981] border-[#10B981] text-[#0A0908]' : 'border-[#9B9691] bg-transparent'
+                  }`}
+                >
+                  {isSelected && <CheckSquare className="w-4 h-4" />}
+                </div>
+              </div>
+            ) : leading ? (
               <div
                 className="flex-shrink-0 pt-0.5"
                 onClick={(e) => e.stopPropagation()}

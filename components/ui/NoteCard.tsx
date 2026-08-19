@@ -16,6 +16,7 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useNotes } from '@/context/NotesContext';
 import type { Notes } from '@/types/appwrite';
+import { useSelection } from '@/context/SelectionContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useSection } from '@/context/SectionContext';
 import { ShareLockButton } from '../share/ShareLockButton';
@@ -48,6 +49,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const [isAIProcessing, setIsAIProcessing] = React.useState(false);
   const [showSidekick, setShowSidekick] = React.useState(false);
 
+  const { enterSelectMode } = useSelection();
   const contextMenu = useContextMenu();
   const openMenu = contextMenu?.openMenu;
   const { isPinned, pinNote, unpinNote, upsertNote, notes: contextNotes, removeNote } = useNotes();
@@ -321,6 +323,13 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const useMemo = React.useMemo; const contextMenuItems = useMemo(() => [
     { label: pinned ? 'Unpin' : 'Pin', icon: <PinIcon size={16} className={pinned ? 'rotate-45 text-[#EC4899]' : ''} />, onClick: () => { handlePinToggle(); } },
     {
+      label: 'Select',
+      icon: <CheckSquare size={16} className="text-[#10B981]" />,
+      onClick: () => {
+        enterSelectMode('note', note.$id);
+      },
+    },
+    {
       label: 'Copy Public Link',
       icon: <ShareIcon size={16} className="text-emerald-500" />,
       onClick: async () => {
@@ -370,7 +379,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       variant: 'destructive' as const,
       onClick: openDelete,
     }
-  ], [pinned, accessControlItems, isPro, handlePinToggle, isLocked, handleLockToggle, handleAIAction, handleCreateTodo, openShare, openDelete, liveNote, note, onUpdate, resolveNoteShareUrl, showError, showSuccess, upsertNote, openSidebar, openOverlay, closeSidebar, closeOverlay]);
+  ], [pinned, enterSelectMode, accessControlItems, isPro, handlePinToggle, isLocked, handleLockToggle, handleAIAction, handleCreateTodo, openShare, openDelete, liveNote, note, onUpdate, resolveNoteShareUrl, showError, showSuccess, upsertNote, openSidebar, openOverlay, closeSidebar, closeOverlay]);
 
   const cardTitle = React.useMemo(
     () => (isLocked ? 'Locked' : isEncryptedNote ? 'Encrypted' : resolveNoteCardTitle(liveNote.title, liveNote.content) || 'Untitled'),

@@ -12,7 +12,9 @@ import {
   BellOff,
   Sparkles,
   FileText,
+  CheckSquare,
 } from 'lucide-react';
+import { useSelection } from '@/context/SelectionContext';
 import { Task } from '@/types';
 import { useTask } from '@/context/TaskContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
@@ -63,6 +65,7 @@ export default function GoalObjectRow({ task }: Props) {
     toggleTaskReminder,
     labels,
   } = useTask();
+  const { enterSelectMode } = useSelection();
   const { isPinned: isResourcePinned } = useResourcePins();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
@@ -222,6 +225,13 @@ export default function GoalObjectRow({ task }: Props) {
         },
       },
       {
+        label: 'Select',
+        icon: <CheckSquare size={16} className="text-[#10B981]" />,
+        onClick: () => {
+          enterSelectMode('goal', task.id);
+        },
+      },
+      {
         label: 'Copy Public Link',
         icon: <Share2 size={16} className="text-emerald-500" />,
         onClick: () => {
@@ -311,6 +321,7 @@ export default function GoalObjectRow({ task }: Props) {
       openProUpgrade,
       openSidebar,
       openUnified,
+      enterSelectMode,
       pinned,
       reminded,
       task.description,

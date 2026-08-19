@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { MapPin, Clock, Pin, Edit, Trash2, Users, Bell } from 'lucide-react';
+import { MapPin, Clock, Pin, Edit, Trash2, Users, Bell, CheckSquare } from 'lucide-react';
+import { useSelection } from '@/context/SelectionContext';
 import type { Event } from '@/types';
 import { formatTime } from '@/lib/time-util';
 import { generateEventPattern } from '@/utils/patternGenerator';
@@ -81,6 +82,9 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
     toast.success(next ? 'Reminder set for event' : 'Reminder turned off');
   }, [reminded]);
 
+  const { isSelectMode, isSelected: checkIsSelected, toggleSelect, enterSelectMode } = useSelection();
+  const isSelected = checkIsSelected(event.id, 'event');
+
   const accessControlItems = useAccessControlMenuItems({
     resourceType: 'event',
     resourceId: event.id,
@@ -95,6 +99,13 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
         label: pinned ? 'Unpin' : 'Pin',
         icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />,
         onClick: () => void handlePinToggle(),
+      },
+      {
+        label: 'Select',
+        icon: <CheckSquare size={16} className="text-[#10B981]" />,
+        onClick: () => {
+          enterSelectMode('event', event.id);
+        },
       },
       {
         label: reminded ? 'Stop Reminder' : 'Remind',
@@ -138,6 +149,7 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
     ],
     [
       pinned,
+      enterSelectMode,
       reminded,
       accessControlItems,
       isCreator,
@@ -152,6 +164,7 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
   );
 
   const handleContextMenu = (e: React.MouseEvent | React.TouchEvent) => {
+    if (isSelectMode) return;
     e.preventDefault?.();
     e.stopPropagation?.();
     if (!openMenu) return;
@@ -166,22 +179,51 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
     });
   };
 
+  const handleCardClick = () => {
+    if (isSelectMode) {
+      toggleSelect(event.id, 'event');
+      return;
+    }
+    onClick();
+  };
+
   return (
     <div
       role="button"
       tabIndex={0}
-      onContextMenu={handleContextMenu}
-      onClick={onClick}
+      onContextMenu={isSelectMode ? (e) => e.preventDefault() : handleContextMenu}
+      onClick={handleCardClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onClick();
+          handleCardClick();
         }
       }}
-      className="group flex flex-col bg-[#161412] hover:bg-[#1C1A18] border border-[#34322F] hover:border-[#22C55E]/55 rounded-[28px] cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.5)] h-full text-left min-w-[260px] sm:min-w-[280px]"
+      className={`group flex flex-col bg-[#161412] hover:bg-[#1C1A18] border rounded-[28px] cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.5)] h-full text-left min-w-[260px] sm:min-w-[280px] ${
+        isSelected
+          ? 'ring-2 ring-[#10B981] border-[#10B981]/50 bg-[#1A1816]'
+          : 'border-[#34322F] hover:border-[#22C55E]/55'
+      }`}
     >
       {/* Cover — image or deterministic colorful pattern */}
       <div className="relative overflow-hidden aspect-[16/9] w-full shrink-0">
+        {isSelectMode ? (
+          <div
+            className="absolute top-3 left-3 z-10 p-1 bg-black/80 rounded-lg border border-white/10"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleSelect(event.id, 'event');
+            }}
+          >
+            <div
+              className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+                isSelected ? 'bg-[#10B981] border-[#10B981] text-[#0A0908]' : 'border-[#9B9691] bg-transparent'
+              }`}
+            >
+              {isSelected && <CheckSquare className="w-4 h-4" />}
+            </div>
+          </div>
+        ) : null}
         {coverSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
