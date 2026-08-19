@@ -447,5 +447,16 @@ export const FormsService = {
             submissionId,
             data
         );
+    },
+
+    /**
+     * Delete a submission (permanent or soft)
+     */
+    async deleteSubmission(submissionId: string) {
+        return await tablesDB.deleteRow(
+            DATABASE_ID,
+            SUBMISSIONS_TABLE,
+            submissionId
+        );
     }
 };

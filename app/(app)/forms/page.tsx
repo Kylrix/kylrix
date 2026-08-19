@@ -496,6 +496,16 @@ function FormCard({
 
     const contextMenuItems = [
         { label: 'View Details', icon: <FileText size={16} />, onClick: onSelect },
+        { 
+            label: 'Sanitize', 
+            icon: <Sparkles size={16} className="text-[#6366F1]" />, 
+            onClick: () => openDrawer('sanitize', {
+                targetKind: 'form',
+                targetId: form.$id,
+                targetTitle: form.title,
+                onSanitized: onUpdate
+            })
+        },
         { label: pinned ? 'Unpin' : 'Pin', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: () => onTogglePin(form) },
         ...accessControlItems,
         { label: 'Edit Schema', icon: <Edit size={16} />, onClick: () => onEdit(form) },

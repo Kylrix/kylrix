@@ -97,6 +97,7 @@ const AgenticPanelContent = dynamic(
 );
 
 const ZapDrawer = dynamic(() => import('./ZapDrawer').then((m) => m.ZapDrawer), { ssr: false });
+const SanitizeDrawer = dynamic(() => import('./SanitizeDrawer').then((m) => m.SanitizeDrawer), { ssr: false });
 
 export function unifiedDrawerWidth(content: DrawerContent): number {
   switch (content) {
@@ -107,6 +108,7 @@ export function unifiedDrawerWidth(content: DrawerContent): number {
       return 400;
     case 'form':
     case 'form-response-detail':
+    case 'sanitize':
     case 'milestone-details':
     case 'agentic-preview':
       return 560;
@@ -287,6 +289,16 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           onClose={onClose}
           submission={drawerData?.submission}
           schemaMap={drawerData?.schemaMap}
+        />
+      );
+    case 'sanitize':
+      return (
+        <SanitizeDrawer
+          targetKind={drawerData?.targetKind || 'form'}
+          targetId={drawerData?.targetId || drawerData?.resourceId || drawerData?.formId}
+          targetTitle={drawerData?.targetTitle || drawerData?.resourceTitle || drawerData?.formTitle}
+          onClose={onClose}
+          onSanitized={drawerData?.onSanitized}
         />
       );
     case 'agentic-preview':

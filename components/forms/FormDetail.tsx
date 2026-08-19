@@ -8,12 +8,14 @@ import {
   Edit3, 
   FileText, 
   Copy, 
-  Check
+  Check,
+  Sparkles
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useToast } from '@/components/ui/Toast';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import FormSettingsDialog from './FormSettingsDialog';
 
 interface FormDetailProps {
@@ -35,6 +37,7 @@ export function FormDetail({
 }: FormDetailProps) {
   const { closeSidebar } = useDynamicSidebar();
   const { showSuccess, showError } = useToast();
+  const { open: openDrawer } = useUnifiedDrawer();
 
   const [form, setForm] = useState<Forms | null>(initialForm || null);
   const [loading, setLoading] = useState(!initialForm);
@@ -156,6 +159,20 @@ export function FormDetail({
               <Edit3 size={15} />
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => openDrawer('sanitize', {
+              targetKind: 'form',
+              targetId: form.$id,
+              targetTitle: form.title,
+              onSanitized: () => void loadForm()
+            })}
+            className="w-8 h-8 rounded-xl bg-[#0A0908] border border-white/10 hover:border-[#6366F1]/40 flex items-center justify-center text-[#6366F1] hover:text-white transition-all cursor-pointer"
+            title="Sanitize Responses (Spam & Duplicates)"
+          >
+            <Sparkles size={15} />
+          </button>
 
           <button
             type="button"
