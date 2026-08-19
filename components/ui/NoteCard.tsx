@@ -8,7 +8,8 @@ import {
   Lock as PrivateIcon,
   PlusSquare as TodoIcon,
   Unlock,
-  Sparkles
+  Sparkles,
+  CheckSquare
 } from 'lucide-react';
 
 import { useContextMenu } from './ContextMenuContext';
