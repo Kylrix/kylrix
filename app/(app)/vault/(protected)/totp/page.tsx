@@ -136,7 +136,7 @@ function TOTPCardStable({
   const folderName = displayTotp.folderId ? folders.get(displayTotp.folderId) : null;
   const faviconUrl = !looksEncrypted(displayTotp.url) ? getFaviconUrl(displayTotp.url) : null;
   const issuerInitials = !looksEncrypted(displayTotp.issuer) && displayTotp.issuer ? displayTotp.issuer.trim().charAt(0).toUpperCase() : "?";
-  const isSelected = selectedTotp?.$id === totp.$id;
+  const isCardActive = selectedTotp?.$id === totp.$id;
   const ownerId = totp.userId || user?.$id || '';
   const pinned = isResourcePinned('totp', totp.$id, ownerId, totp.isPinned);
   const handlePinToggle = async (e?: React.MouseEvent) => {

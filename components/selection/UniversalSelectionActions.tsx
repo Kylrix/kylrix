@@ -172,26 +172,26 @@ export function UniversalSelectionActions() {
   };
 
   return (
-    <div className="w-full h-full min-h-0 bg-[#161412] text-white p-5 flex flex-col gap-4 overflow-y-auto font-satoshi">
+    <div className="w-full h-full min-h-0 bg-[#161412] text-white p-3.5 sm:p-4 flex flex-col gap-2.5 overflow-y-auto font-satoshi">
       {/* Header */}
-      <div className="flex flex-col gap-1.5 shrink-0 border-b border-white/5 pb-3">
+      <div className="flex flex-col gap-1 shrink-0 border-b border-white/5 pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#10B981]">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#10B981]">
               Select Mode Active
             </p>
           </div>
           <button
             type="button"
             onClick={exitSelectMode}
-            className="text-xs font-bold text-[#9B9691] hover:text-white px-2 py-1 rounded-lg hover:bg-white/5 cursor-pointer flex items-center gap-1"
+            className="text-xs font-bold text-[#9B9691] hover:text-white px-2 py-0.5 rounded-lg hover:bg-white/5 cursor-pointer flex items-center gap-1"
           >
             <X size={14} />
             Done
           </button>
         </div>
-        <h4 className="text-base font-extrabold text-white truncate max-w-full font-clash leading-tight">
+        <h4 className="text-sm font-extrabold text-white truncate max-w-full font-clash leading-tight">
           {count === 0
             ? `Select ${kindLabel}s...`
             : `${count} ${kindLabel}${count === 1 ? '' : 's'} selected`}
@@ -199,20 +199,20 @@ export function UniversalSelectionActions() {
       </div>
 
       {/* Action list */}
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-1.5">
         <button
           type="button"
           disabled={count === 0 || isProcessing}
           onClick={handleDeleteSelected}
-          className={`w-full flex items-center justify-between gap-3.5 p-3.5 rounded-2xl text-sm font-semibold transition-all duration-200 text-left border cursor-pointer ${
+          className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 text-left border cursor-pointer ${
             count === 0
               ? 'opacity-40 bg-[#161412] border-[#1C1A18] text-[#9B9691] cursor-not-allowed'
               : 'bg-red-500/10 border-red-500/20 text-[#FF453A] hover:bg-red-500/20'
           }`}
         >
-          <div className="flex items-center gap-3.5 min-w-0 flex-1">
-            <div className="p-2 rounded-xl bg-[#0A0908] border border-red-500/20 text-[#FF453A] shrink-0">
-              <Trash2 size={16} />
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="p-1.5 rounded-lg bg-[#0A0908] border border-red-500/20 text-[#FF453A] shrink-0">
+              <Trash2 size={15} />
             </div>
             <span className="whitespace-normal leading-snug break-words">
               Delete Selected ({count})
@@ -224,23 +224,23 @@ export function UniversalSelectionActions() {
           type="button"
           disabled={count === 0 || isProcessing}
           onClick={() => setShowWorkspacePicker(!showWorkspacePicker)}
-          className={`w-full flex items-center justify-between gap-3.5 p-3.5 rounded-2xl text-sm font-semibold transition-all duration-200 text-left border cursor-pointer ${
+          className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 text-left border cursor-pointer ${
             count === 0
               ? 'opacity-40 bg-[#161412] border-[#1C1A18] text-[#9B9691] cursor-not-allowed'
               : 'bg-[#161412] border-[#1C1A18] text-[#F5F2ED] hover:border-[#6366F1] hover:text-white'
           }`}
         >
-          <div className="flex items-center gap-3.5 min-w-0 flex-1">
-            <div className="p-2 rounded-xl bg-[#0A0908] border border-[#1C1A18] text-[#6366F1] shrink-0">
-              <FolderInput size={16} />
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="p-1.5 rounded-lg bg-[#0A0908] border border-[#1C1A18] text-[#6366F1] shrink-0">
+              <FolderInput size={15} />
             </div>
             <span className="whitespace-normal leading-snug break-words">Move to Workspace...</span>
           </div>
         </button>
 
         {showWorkspacePicker && (
-          <div className="p-3 bg-[#0A0908] border border-[#1C1A18] rounded-2xl flex flex-col gap-2 animate-in fade-in-50 duration-200">
-            <p className="text-[10px] font-black uppercase tracking-wider text-[#9B9691] px-1">
+          <div className="p-2.5 bg-[#0A0908] border border-[#1C1A18] rounded-xl flex flex-col gap-1.5 animate-in fade-in-50 duration-150">
+            <p className="text-[9px] font-black uppercase tracking-wider text-[#9B9691] px-1">
               Select Destination
             </p>
             {workspaces.map((ws) => (
@@ -248,9 +248,9 @@ export function UniversalSelectionActions() {
                 key={ws.id}
                 type="button"
                 onClick={() => void handleMoveToWorkspace(ws)}
-                className="w-full flex items-center gap-2.5 p-2.5 rounded-xl bg-[#161412] border border-[#1C1A18] hover:border-[#6366F1] text-xs font-bold text-white text-left transition-colors cursor-pointer"
+                className="w-full flex items-center gap-2 p-2 rounded-lg bg-[#161412] border border-[#1C1A18] hover:border-[#6366F1] text-xs font-bold text-white text-left transition-colors cursor-pointer"
               >
-                <Folder size={14} className="text-[#6366F1]" />
+                <Folder size={13} className="text-[#6366F1]" />
                 <span className="truncate flex-1">{ws.title}</span>
               </button>
             ))}
@@ -261,15 +261,15 @@ export function UniversalSelectionActions() {
           type="button"
           disabled={count === 0 || isProcessing}
           onClick={handleTogglePinSelected}
-          className={`w-full flex items-center justify-between gap-3.5 p-3.5 rounded-2xl text-sm font-semibold transition-all duration-200 text-left border cursor-pointer ${
+          className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 text-left border cursor-pointer ${
             count === 0
               ? 'opacity-40 bg-[#161412] border-[#1C1A18] text-[#9B9691] cursor-not-allowed'
               : 'bg-[#161412] border-[#1C1A18] text-[#F5F2ED] hover:border-[#F59E0B] hover:text-white'
           }`}
         >
-          <div className="flex items-center gap-3.5 min-w-0 flex-1">
-            <div className="p-2 rounded-xl bg-[#0A0908] border border-[#1C1A18] text-[#F59E0B] shrink-0">
-              <Pin size={16} />
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="p-1.5 rounded-lg bg-[#0A0908] border border-[#1C1A18] text-[#F59E0B] shrink-0">
+              <Pin size={15} />
             </div>
             <span className="whitespace-normal leading-snug break-words">Pin / Unpin Selected</span>
           </div>
@@ -278,7 +278,7 @@ export function UniversalSelectionActions() {
         <button
           type="button"
           onClick={clearSelection}
-          className="w-full flex items-center justify-center gap-2 p-2.5 text-xs font-bold text-[#9B9691] hover:text-white transition-colors cursor-pointer mt-2"
+          className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-[#9B9691] hover:text-white transition-colors cursor-pointer mt-1"
         >
           Clear Selection
         </button>
