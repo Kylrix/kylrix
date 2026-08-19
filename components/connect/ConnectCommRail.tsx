@@ -314,7 +314,7 @@ export function ConnectCommRail({ mode = 'full', activeId = null, onSelect }: Pr
         {/* Unified: no separate tabs — secret chats show lock on avatar */}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div data-scroll-remember="connect-comm-rail" className="flex-1 min-h-0 overflow-y-auto">
         {mode === 'full' && (needsMasterPass || !isUnlocked) ? (
           <div className="m-2 rounded-2xl border border-[#F59E0B]/25 bg-[#161412] p-4 text-center">
             <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-[#F59E0B]/10 text-[#F59E0B]">

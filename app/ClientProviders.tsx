@@ -96,9 +96,12 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   AIProvider,
   SetupProvider,
 ];
+import { UniversalScrollRestoration } from '@/components/providers/UniversalScrollRestoration';
+
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
     <>
+      <UniversalScrollRestoration />
       <ComposeProviders providers={rootProvidersList}>
         {children}
       </ComposeProviders>
