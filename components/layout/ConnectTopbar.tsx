@@ -1312,6 +1312,62 @@ export default function ConnectTopbar({
                                 }
                                 return;
                               }
+                              if (r.kind === 'moment') {
+                                const MomentObjectDetailComp = require('@/components/objects/MomentObjectDetail').MomentObjectDetail;
+                                const isWide = typeof window !== 'undefined' && window.innerWidth >= 900;
+                                const source = r.raw?.source || (r.id.startsWith('nostr_') ? 'nostr' : 'internal');
+                                const cleanId = r.id.replace(/^nostr_/, '');
+                                const preview = r.raw ? {
+                                  authorName: r.raw.authorName || r.raw.author?.name || r.raw.authorUsername,
+                                  authorAvatar: r.raw.authorAvatar || r.raw.author?.avatar,
+                                  content: r.raw.content || r.raw.caption,
+                                } : undefined;
+                                if (isWide) {
+                                  openSidebar(
+                                    <MomentObjectDetailComp momentId={cleanId} source={source} embedded preview={preview} onClose={closeSidebar} />,
+                                    r.id,
+                                    { hideHeader: true }
+                                  );
+                                } else {
+                                  openOverlay(
+                                    <MomentObjectDetailComp momentId={cleanId} source={source} preview={preview} onClose={closeOverlay} embedded />
+                                  );
+                                }
+                                return;
+                              }
+                              if (r.kind === 'chat' || r.kind === 'thread') {
+                                const CommObjectDetailComp = require('@/components/objects/CommObjectDetail').CommObjectDetail;
+                                const isWide = typeof window !== 'undefined' && window.innerWidth >= 900;
+                                const commKind = r.kind === 'thread' ? 'thread' : 'chat';
+                                if (isWide) {
+                                  openSidebar(
+                                    <CommObjectDetailComp conversationId={r.id} kind={commKind} embedded title={r.title} onClose={closeSidebar} />,
+                                    r.id,
+                                    { hideHeader: true }
+                                  );
+                                } else {
+                                  openOverlay(
+                                    <CommObjectDetailComp conversationId={r.id} kind={commKind} title={r.title} onClose={closeOverlay} embedded />
+                                  );
+                                }
+                                return;
+                              }
+                              if (r.kind === 'event') {
+                                const EventDetailsComp = require('@/components/events/EventDetails').default;
+                                const isWide = typeof window !== 'undefined' && window.innerWidth >= 900;
+                                if (isWide) {
+                                  openSidebar(
+                                    <EventDetailsComp eventId={r.id} initialData={r.raw} onClose={closeSidebar} onBack={closeSidebar} />,
+                                    r.id,
+                                    { hideHeader: true }
+                                  );
+                                } else {
+                                  openOverlay(
+                                    <EventDetailsComp eventId={r.id} initialData={r.raw} onClose={closeOverlay} onBack={closeOverlay} />
+                                  );
+                                }
+                                return;
+                              }
                               navPush(r.href);
                             }}
                             sx={{
