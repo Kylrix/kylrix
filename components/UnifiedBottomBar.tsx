@@ -2,11 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import {
-  Box,
-  BottomNavigation,
-  BottomNavigationAction,
-  Paper} from '@/lib/openbricks/primitives';
+import Link from 'next/link';
 import {
   FileText as NotesIcon,
   Target as GoalsIcon,
@@ -60,14 +56,14 @@ export function UnifiedBottomBar() {
     }
   }, [appContext]);
 
-  const getCurrentTab = () => {
+  const currentTab = useMemo(() => {
     if (pathname?.startsWith('/app')) return 'note';
     if (pathname?.startsWith('/goals') || pathname?.startsWith('/events') || pathname?.startsWith('/goal')) return 'goal';
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/connect')) return 'connect';
     if (isFlowPath(pathname)) return 'flow';
     return null;
-  };
+  }, [pathname]);
 
   React.useEffect(() => {
     ['/app', '/goals', '/vault', '/connect', '/flows'].forEach((route) => {
@@ -75,34 +71,12 @@ export function UnifiedBottomBar() {
     });
   }, [router]);
 
-  const handleNavChange = (_: React.SyntheticEvent, newValue: string) => {
-    const routes: Record<string, string> = {
-      note: '/app',
-      goal: '/goals',
-      vault: '/vault',
-      connect: '/connect',
-      flow: '/flows',
-    };
-
-    const target = routes[newValue];
-    if (!target) return;
-
-    if (newValue === getCurrentTab()) {
-      if (pathname !== target) {
-        router.replace(target);
-      }
-      return;
-    }
-
-    router.push(target);
-  };
-
-  const renderNavItems = () => [
-    <BottomNavigationAction key="note" value="note" icon={<NotesIcon size={22} strokeWidth={1.5} className="lucide" />} />,
-    <BottomNavigationAction key="goal" value="goal" icon={<GoalsIcon size={22} strokeWidth={1.5} className="lucide" />} />,
-    <BottomNavigationAction key="vault" value="vault" icon={<VaultIcon size={22} strokeWidth={1.5} className="lucide" />} />,
-    <BottomNavigationAction key="connect" value="connect" icon={<ConnectIcon size={22} strokeWidth={1.5} className="lucide" />} />,
-    <BottomNavigationAction key="flow" value="flow" icon={<FlowIcon size={22} strokeWidth={1.5} className="lucide" />} />,
+  const navItems = [
+    { key: 'note', route: '/app', icon: NotesIcon, label: 'Notes' },
+    { key: 'goal', route: '/goals', icon: GoalsIcon, label: 'Goals' },
+    { key: 'vault', route: '/vault', icon: VaultIcon, label: 'Vault' },
+    { key: 'connect', route: '/connect', icon: ConnectIcon, label: 'Connect' },
+    { key: 'flow', route: '/flows', icon: FlowIcon, label: 'Flows' },
   ];
 
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/app\/notes\/[^/]+$/));
@@ -142,42 +116,49 @@ export function UnifiedBottomBar() {
   }
 
   return (
-    <Box
-      component="footer"
-      sx={{
-        position: 'fixed',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 1300,
-        display: { xs: 'block', md: 'none' }}}
+    <footer
+      className="fixed left-0 right-0 bottom-0 z-[1300] block md:hidden pointer-events-auto select-none"
+      style={{ touchAction: 'manipulation' }}
     >
-      <Paper
-        elevation={0}
-        sx={{
-          width: '100%',
-          bgcolor: '#161412',
-          backgroundImage: 'none',
-          border: '1px solid rgba(255, 255, 255, 0.05)',
-          borderBottom: 0,
-          borderRadius: '24px 24px 0 0',
-          px: 1.5,
-          pt: 0.5,
-          pb: 'max(0.5rem, env(safe-area-inset-bottom))'}}
-      >
-        <BottomNavigation
-          value={getCurrentTab()}
-          onChange={handleNavChange}
-          actionColor={appColor}
-          showLabels={false}
-          sx={{
-            backgroundColor: 'transparent',
-            height: 72,
-            width: '100%'}}
-        >
-          {renderNavItems()}
-        </BottomNavigation>
-      </Paper>
-    </Box>
+      <div className="w-full bg-[#161412] border-t border-white/[0.08] rounded-t-[24px] px-2 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-2xl">
+        <nav className="flex w-full items-center justify-around h-[64px]" aria-label="Bottom Navigation">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isSelected = currentTab === item.key;
+            return (
+              <Link
+                key={item.key}
+                href={item.route}
+                prefetch
+                onClick={(e) => {
+                  if (isSelected && pathname === item.route) {
+                    e.preventDefault();
+                  }
+                }}
+                className="flex flex-col items-center justify-center flex-1 h-full py-1 rounded-xl transition-transform active:scale-95 cursor-pointer no-underline group"
+                style={{
+                  color: isSelected ? appColor : 'rgba(255, 255, 255, 0.4)',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                <div className="relative flex items-center justify-center">
+                  <Icon
+                    size={22}
+                    strokeWidth={isSelected ? 2.2 : 1.6}
+                    className="transition-colors duration-200"
+                  />
+                  {isSelected && (
+                    <div
+                      className="absolute -bottom-1.5 w-1 h-1 rounded-full animate-fadeIn"
+                      style={{ backgroundColor: appColor }}
+                    />
+                  )}
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+    </footer>
   );
 }
