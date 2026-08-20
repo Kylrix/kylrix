@@ -184,32 +184,40 @@ class ErrorBoundary extends Component<Props, State> {
 }
 
 // Specialized error boundary for notes section
-export const NotesErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => (
-  <ErrorBoundary
-    onError={(error, errorInfo) => {
-      console.error('Notes section error:', error, errorInfo);
-    }}
-    fallback={
-      <Box sx={{ p: 4, textAlign: 'center' }}>
-        <DescriptionIcon sx={{ fontSize: 32, color: 'warning.main', mb: 2 }} />
-        <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>Notes Unavailable</Typography>
-        <Typography variant="body2" color="text.secondary">
-          We&apos;re having trouble loading your notes. This might be a temporary issue.
-        </Typography>
-      </Box>
-    }
-  >
-    {children}
-  </ErrorBoundary>
-);
+export class NotesErrorBoundary extends Component<{ children: ReactNode }> {
+  render() {
+    return (
+      <ErrorBoundary
+        onError={(error, errorInfo) => {
+          console.error('Notes section error:', error, errorInfo);
+        }}
+        fallback={
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <DescriptionIcon sx={{ fontSize: 32, color: 'warning.main', mb: 2 }} />
+            <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>Notes Unavailable</Typography>
+            <Typography variant="body2" color="text.secondary">
+              We&apos;re having trouble loading your notes. This might be a temporary issue.
+            </Typography>
+          </Box>
+        }
+      >
+        {this.props.children}
+      </ErrorBoundary>
+    );
+  }
+}
 
-export const AuthErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => (
-  <ErrorBoundary
-    onError={(error, errorInfo) => {
-      console.error('Authentication section error:', error, errorInfo);
-    }}
-  >
-    {children}
-  </ErrorBoundary>
-);
+export class AuthErrorBoundary extends Component<{ children: ReactNode }> {
+  render() {
+    return (
+      <ErrorBoundary
+        onError={(error, errorInfo) => {
+          console.error('Authentication section error:', error, errorInfo);
+        }}
+      >
+        {this.props.children}
+      </ErrorBoundary>
+    );
+  }
+}
 
