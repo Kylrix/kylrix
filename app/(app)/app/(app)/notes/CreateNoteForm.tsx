@@ -666,8 +666,6 @@ export default function CreateNoteForm({
       composerKind,
       isPublic,
       isGuest,
-      hasPaywall: false,
-      paywallAmount: 0,
       resolvedNoteId: id,
     }));
 
@@ -837,9 +835,6 @@ export default function CreateNoteForm({
     setIsPublic(livePublicState);
     setPersistedIsGuest(liveGuestState);
     setIsGuest(liveGuestState);
-    const paywall = (() => {
-      try { return JSON.parse(saved.metadata || '{}')?.paywall; } catch { return undefined; }
-    })();
     setLastSavedSnapshot(JSON.stringify({
       title: isTitleManuallyEdited ? (source.title || '').trim() : '',
       content: (source.content || '').trim(),
@@ -848,8 +843,6 @@ export default function CreateNoteForm({
       composerKind,
       isPublic: livePublicState,
       isGuest: liveGuestState,
-      hasPaywall: !!paywall?.enabled,
-      paywallAmount: paywall?.amount || 0,
       resolvedNoteId: saved.$id,
     }));
   }, [composerKind, isTitleManuallyEdited]);

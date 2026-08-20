@@ -174,8 +174,105 @@ export function AgentsSettingsTab() {
     ? JSON.parse(activeDefaultCustom.config || '{}').name || 'Custom Agent'
     : 'Kylie';
 
+  // Compute Balance State
+  const [computeState, setComputeState] = useState<{
+    balance: number;
+    maxBalance: number;
+    tier: string;
+    percent: number;
+  } | null>(null);
+  const [loadingCompute, setLoadingCompute] = useState(true);
+
+  // Fetch compute credits
+  const loadComputeBalance = useCallback(async () => {
+    try {
+      setLoadingCompute(true);
+      const { getComputeBalanceAction } = await import('@/lib/actions/ai');
+      const { account } = await import('@/lib/appwrite/client');
+      const jwt = await account.createJWT().then((r) => r.jwt).catch(() => undefined);
+      const res = await getComputeBalanceAction(jwt);
+      if (res) {
+        setComputeState(res);
+      }
+    } catch {
+      // Non-blocking fail-safe
+    } finally {
+      setLoadingCompute(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user?.$id) {
+      void loadComputeBalance();
+    }
+  }, [user?.$id, loadComputeBalance]);
+
   return (
     <div className="space-y-8 font-satoshi">
+      {/* ── Section 0: Live AI Compute Credits & Allocation Meter ── */}
+      <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl space-y-4">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-[#10B981]/12 border border-[#10B981]/25 text-[#10B981] flex items-center justify-center shrink-0">
+              <Sparkles size={22} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-white font-black text-base font-clash m-0">AI Compute Credits</h3>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#10B981]/10 text-[#10B981] font-bold uppercase tracking-wider">
+                  {hasByok ? 'BYOK Unlimited' : `${computeState?.tier || 'Pro'} Active`}
+                </span>
+              </div>
+              <p className="text-white/40 text-xs font-semibold m-0 mt-0.5">
+                Dynamic compute allocation for in-app assistant queries, summarization, and workflow automation.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={loadComputeBalance}
+            disabled={loadingCompute}
+            className="h-9 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white/70 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40"
+          >
+            <RefreshCw size={13} className={loadingCompute ? 'animate-spin' : ''} />
+            <span>Refresh Meter</span>
+          </button>
+        </div>
+
+        {/* Meter Progress Bar */}
+        <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2.5">
+          <div className="flex items-center justify-between text-xs font-mono">
+            <span className="text-white/60">
+              {hasByok ? 'Compute Mode: Dedicated Private API Key' : 'Daily Available Pool:'}
+            </span>
+            <span className="text-white font-bold">
+              {hasByok
+                ? '∞ (Unthrottled BYOK)'
+                : `${(computeState?.balance ?? 100000).toLocaleString()} / ${(computeState?.maxBalance ?? 100000).toLocaleString()} Tokens (${Math.round(computeState?.percent ?? 100)}%)`}
+            </span>
+          </div>
+
+          <div className="w-full h-2 rounded-full bg-white/[0.06] overflow-hidden">
+            <div
+              className={`h-full transition-all duration-500 rounded-full ${
+                hasByok
+                  ? 'w-full bg-[#10B981]'
+                  : (computeState?.percent ?? 100) > 30
+                  ? 'bg-[#10B981]'
+                  : (computeState?.percent ?? 100) > 10
+                  ? 'bg-amber-500'
+                  : 'bg-red-500'
+              }`}
+              style={{ width: hasByok ? '100%' : `${computeState?.percent ?? 100}%` }}
+            />
+          </div>
+
+          <p className="text-[11px] text-white/40 leading-relaxed m-0 font-sans">
+            Kylrix dynamically balances compute credits across active operations each cycle. BYOK bypasses ecosystem rate governors completely.
+          </p>
+        </div>
+      </div>
       {/* ── Section 1: Default Agent Partner ─────────────────────── */}
       <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
