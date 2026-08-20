@@ -30,6 +30,7 @@ function useIsDesktop() {
   return isDesktop;
 }
 
+export function LoginDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
   const { loginWithEmailOTP, verifyEmailOTP, refreshUser } = useAuth();
   const { setIsDrawerOpen } = useDrawerState();
