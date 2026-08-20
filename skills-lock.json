@@ -18,12 +18,6 @@
       "sourceType": "github",
       "skillPath": "skills/ota/SKILL.md",
       "computedHash": "29eda00713fa8e0afa54496d0f563ba9a7efcc539ce731e3630066e223169a1a"
-    },
-    "upstash": {
-      "source": "upstash/skills",
-      "sourceType": "github",
-      "skillPath": "skills/upstash/SKILL.md",
-      "computedHash": "d10c5c93733bf706e920c46c04d2bfa0815fde108a1fc233ba6a25330828d1e8"
     }
   }
 }
