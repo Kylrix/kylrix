@@ -73,13 +73,14 @@ export const UserResourcePinService = {
     userId: string,
     resourceType: PinnableResourceType,
     resourceId: string): Promise<UserResourcePinRow | null> {
-    const res = await databases.listRows(DATABASE_ID, TABLE_ID, [
+    const res: any = await databases.listRows(DATABASE_ID, TABLE_ID, [
       Query.equal('userId', userId),
       Query.equal('resourceType', resourceType),
       Query.equal('resourceId', resourceId),
       Query.limit(1),
-    ]);
-    return res.rows[0] ?? null;
+    ]).catch(() => ({ rows: [] }));
+    const rows = res?.rows ?? res?.documents ?? [];
+    return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
   },
 
   async isPinned(userId: string, resourceType: PinnableResourceType, resourceId: string): Promise<boolean> {
