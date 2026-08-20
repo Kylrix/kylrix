@@ -32,6 +32,10 @@ interface TrashItem {
   tableId: string;
   projectId?: string;
   isWorkspace?: boolean;
+  parentFormId?: string;
+  parentFormTitle?: string;
+  responseCount?: number;
+  childResponseIds?: string[];
 }
 
 export default function TrashPage() {
@@ -70,7 +74,6 @@ export default function TrashPage() {
     { type: 'Goal', db: APPWRITE_CONFIG.DATABASES.FLOW, table: APPWRITE_CONFIG.TABLES.FLOW.TASKS, titleField: 'title', defaultTitle: 'Untitled Goal', userField: 'userId' },
     { type: 'Event', db: APPWRITE_CONFIG.DATABASES.FLOW, table: APPWRITE_CONFIG.TABLES.FLOW.EVENTS, titleField: 'title', defaultTitle: 'Untitled Event', userField: 'userId' },
     { type: 'Form', db: APPWRITE_CONFIG.DATABASES.FLOW, table: APPWRITE_CONFIG.TABLES.FLOW.FORMS, titleField: 'title', defaultTitle: 'Untitled Form', userField: 'userId' },
-    { type: 'Form Response', db: APPWRITE_CONFIG.DATABASES.FLOW, table: APPWRITE_CONFIG.TABLES.FLOW.FORM_SUBMISSIONS, titleField: '$id', defaultTitle: 'Submission Response', userField: 'submitterId' },
     { type: 'Credential', db: APPWRITE_CONFIG.DATABASES.VAULT, table: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS, titleField: 'name', defaultTitle: 'Untitled Credential', userField: 'userId' },
     { type: 'TOTP Secret', db: APPWRITE_CONFIG.DATABASES.VAULT, table: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS, titleField: 'issuer', defaultTitle: 'Untitled TOTP Secret', userField: 'userId' },
     { type: 'Project', db: APPWRITE_CONFIG.DATABASES.CHAT, table: 'projects', titleField: 'title', defaultTitle: 'Untitled Project', userField: 'ownerId' },
@@ -141,6 +144,74 @@ export default function TrashPage() {
     };
 
     await Promise.all(queriesCfg.map(fetchOneTable));
+
+    // Also fetch trashed form responses:
+    // 1. Fetch user's forms to find responses belonging to user's forms
+    // 2. Fetch trashed responses submitted by user OR belonging to user's forms, bunched together
+    try {
+      const userFormsRes: any = await databases.listRows(
+        APPWRITE_CONFIG.DATABASES.FLOW,
+        APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+        [Query.equal('userId', user.$id), Query.limit(100)]
+      ).catch(() => ({ rows: [] }));
+      const userForms = userFormsRes?.rows || [];
+      const formMap = new Map<string, any>(userForms.map((f: any) => [f.$id, f]));
+      const userFormIds = Array.from(formMap.keys());
+
+      const rawTrashedSubs: any[] = [];
+      // Submissions submitted by current user
+      const mySubs: any = await databases.listRows(
+        APPWRITE_CONFIG.DATABASES.FLOW,
+        APPWRITE_CONFIG.TABLES.FLOW.FORM_SUBMISSIONS,
+        [Query.equal('submitterId', user.$id), Query.equal('isTrash', true), Query.limit(100)]
+      ).catch(() => ({ rows: [] }));
+      rawTrashedSubs.push(...(mySubs?.rows || []));
+
+      // Submissions on user's forms
+      if (userFormIds.length > 0) {
+        const formSubs: any = await databases.listRows(
+          APPWRITE_CONFIG.DATABASES.FLOW,
+          APPWRITE_CONFIG.TABLES.FLOW.FORM_SUBMISSIONS,
+          [Query.equal('formId', userFormIds), Query.equal('isTrash', true), Query.limit(100)]
+        ).catch(() => ({ rows: [] }));
+        rawTrashedSubs.push(...(formSubs?.rows || []));
+      }
+
+      // Deduplicate submissions by $id
+      const subMap = new Map<string, any>();
+      rawTrashedSubs.forEach((s) => subMap.set(s.$id, s));
+      const uniqueTrashedSubs = Array.from(subMap.values());
+
+      // Group responses by parent formId
+      const groupedByForm = new Map<string, any[]>();
+      uniqueTrashedSubs.forEach((s) => {
+        const fId = s.formId || 'unknown';
+        if (!groupedByForm.has(fId)) groupedByForm.set(fId, []);
+        groupedByForm.get(fId)!.push(s);
+      });
+
+      groupedByForm.forEach((subs, fId) => {
+        const parentForm = formMap.get(fId);
+        const formTitle = parentForm?.title || (fId !== 'unknown' ? `Form (${fId.slice(0, 6)}...)` : 'Deleted Form Responses');
+        const newestUpdated = subs.reduce((max, s) => (s.$updatedAt > max ? s.$updatedAt : max), subs[0].$updatedAt);
+        trashList.push({
+          id: `form_responses_${fId}`,
+          title: `${formTitle} Responses (${subs.length})`,
+          type: 'Form Response',
+          deletedAt: newestUpdated || new Date().toISOString(),
+          databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+          tableId: APPWRITE_CONFIG.TABLES.FLOW.FORM_SUBMISSIONS,
+          parentFormId: fId,
+          parentFormTitle: formTitle,
+          responseCount: subs.length,
+          childResponseIds: subs.map(s => s.$id),
+          projectId: parentForm?.projectId || undefined,
+          isWorkspace: Boolean(parentForm?.projectId),
+        });
+      });
+    } catch (e) {
+      console.warn('[TrashPage] Form submissions grouping error:', e);
+    }
 
     // Aging — 30 days, background cascade (fault-tolerant per why.cascade-delete-mechanic)
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
@@ -241,7 +312,16 @@ export default function TrashPage() {
   const handleRestore = async (item: TrashItem) => {
     try {
       toast.loading('Restoring item...', { id: `restore-${item.id}` });
-      await databases.updateRow(item.databaseId, item.tableId, item.id, { isTrash: false });
+      if (item.type === 'Form Response' && item.childResponseIds && item.childResponseIds.length > 0) {
+        // Batch restore form responses
+        await Promise.all(
+          item.childResponseIds.map(subId =>
+            databases.updateRow(item.databaseId, item.tableId, subId, { isTrash: false }).catch(() => null)
+          )
+        );
+      } else {
+        await databases.updateRow(item.databaseId, item.tableId, item.id, { isTrash: false });
+      }
       toast.success(`${item.type} restored!`, { id: `restore-${item.id}` });
       // Local-first: remove from local copy instantly
       const nextAll = itemsAll.filter(i => !(i.id===item.id && i.tableId===item.tableId));
@@ -280,14 +360,22 @@ export default function TrashPage() {
           setItemsAll(nextAll);
           if (cacheKeyAll) await LocalEngine.cacheSet(cacheKeyAll, nextAll);
 
-          // 3. Delete remote row if synced (catch 404 / offline gracefully for first-sync unsynced items)
-          try {
-            const { executeCascadeDeleteSecure } = await import('@/lib/actions/cascade-delete');
-            await (executeCascadeDeleteSecure as any)(item.databaseId, item.tableId, item.id).catch(async () => {
+          // 3. Delete remote row if synced (batch delete child responses if bunched form response group)
+          if (item.type === 'Form Response' && item.childResponseIds && item.childResponseIds.length > 0) {
+            await Promise.all(
+              item.childResponseIds.map(subId =>
+                databases.deleteRow(item.databaseId, item.tableId, subId).catch(() => null)
+              )
+            );
+          } else {
+            try {
+              const { executeCascadeDeleteSecure } = await import('@/lib/actions/cascade-delete');
+              await (executeCascadeDeleteSecure as any)(item.databaseId, item.tableId, item.id).catch(async () => {
+                await databases.deleteRow(item.databaseId, item.tableId, item.id).catch(() => null);
+              });
+            } catch {
               await databases.deleteRow(item.databaseId, item.tableId, item.id).catch(() => null);
-            });
-          } catch {
-            await databases.deleteRow(item.databaseId, item.tableId, item.id).catch(() => null);
+            }
           }
 
           toast.success('Deleted permanently!', { id: `del-${item.id}` });
@@ -366,6 +454,15 @@ export default function TrashPage() {
           <button onClick={() => isDesktop ? closeSidebar() : closeOverlay()} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 flex items-center justify-center">✕</button>
         </div>
         <div className="p-6 flex flex-col gap-4 flex-1 overflow-auto">
+          {item.parentFormTitle && (
+            <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Parent Form</p>
+              <p className="text-sm font-bold text-white mt-1">{item.parentFormTitle}</p>
+              {item.responseCount && (
+                <p className="text-xs text-white/50 mt-0.5">{item.responseCount} trashed submission response(s)</p>
+              )}
+            </div>
+          )}
           <div className="p-4 rounded-xl bg-white/[0.03] border border-white/5">
             <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Workspace</p>
             <p className="text-sm font-bold text-white mt-1">{item.projectId ? item.projectId : isCustomWorkspace ? workspaceId : 'Personal'} {item.isWorkspace ? '• Workspace' : ''}</p>

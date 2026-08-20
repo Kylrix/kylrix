@@ -860,6 +860,81 @@ export async function deleteRowSecure(
   return JSON.parse(JSON.stringify(result));
 }
 
+/**
+ * Batch trash form submissions atomically with single permission verification.
+ * Avoids spinning up multiple token/permission checks per operation.
+ * Form creator or submitter can trash.
+ */
+export async function batchTrashFormSubmissionsSecure(
+  formId: string,
+  submissionIds: string[],
+  jwt?: string
+) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) throw new Error('Unauthorized');
+
+  const fId = String(formId || '').trim();
+  const ids = (submissionIds || []).map(id => String(id).trim()).filter(Boolean);
+  if (!fId || !ids.length) return { success: true, count: 0 };
+
+  const dbId = APPWRITE_CONFIG.DATABASES.FLOW;
+  const formsTable = APPWRITE_CONFIG.TABLES.FLOW.FORMS;
+  const submissionsTable = APPWRITE_CONFIG.TABLES.FLOW.FORM_SUBMISSIONS;
+
+  // Single permission check for the parent form
+  const isFormOwner = await verifyResourcePermissionSecure({
+    databaseId: dbId,
+    tableId: formsTable,
+    rowId: fId,
+    actorId: actor.$id,
+    action: 'delete'
+  });
+
+  if (!isFormOwner) {
+    // If not form owner, verify each submission belongs to the submitter
+    const tables: any = createSystemTablesDB();
+    for (const subId of ids) {
+      try {
+        const sub = await tables.getRow({ databaseId: dbId, tableId: submissionsTable, rowId: subId });
+        if (sub?.submitterId !== actor.$id) throw new Error('Forbidden');
+      } catch (err: any) {
+        throw new Error(`Forbidden: Cannot delete submission ${subId}`);
+      }
+    }
+  }
+
+  // Atomically update all submissions to isTrash: true using Appwrite Transactions API
+  try {
+    await withSystemTransaction(async (txId) => {
+      const tables: any = createSystemTablesDB();
+      for (const subId of ids) {
+        await tables.updateRow({
+          databaseId: dbId,
+          tableId: submissionsTable,
+          rowId: subId,
+          data: { isTrash: true },
+          transactionId: txId
+        });
+      }
+    }, { ttl: 60 });
+  } catch (err) {
+    // Fallback: batch update with system client
+    const tables: any = createSystemTablesDB();
+    await Promise.all(
+      ids.map(subId =>
+        tables.updateRow({
+          databaseId: dbId,
+          tableId: submissionsTable,
+          rowId: subId,
+          data: { isTrash: true }
+        }).catch(() => null)
+      )
+    );
+  }
+
+  return JSON.parse(JSON.stringify({ success: true, count: ids.length }));
+}
+
 export async function searchGlobalUsersSecure(query: string, limit = 10) {
   const cleaned = String(query || '').trim().replace(/^@/, '');
   if (!cleaned) return [];

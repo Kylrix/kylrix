@@ -458,5 +458,14 @@ export const FormsService = {
             SUBMISSIONS_TABLE,
             submissionId
         );
+    },
+
+    /**
+     * Batch soft-delete / trash submissions for a form
+     */
+    async batchTrashSubmissions(formId: string, submissionIds: string[]) {
+        if (!submissionIds.length) return { success: true, count: 0 };
+        const { batchTrashFormSubmissionsSecure } = await import('@/lib/actions/secure-ops/misc');
+        return await batchTrashFormSubmissionsSecure(formId, submissionIds);
     }
 };

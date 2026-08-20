@@ -167,21 +167,22 @@ export function SanitizeDrawer({
       const cacheKey = `form_responses_${targetId}`;
       const cached = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
 
-      // 1. Instant local engine update
+      // 1. Instant local engine update (mark responses as trashed locally)
       const updatedLocal = cached.filter((item) => !selectedIssueIds.has(item.$id));
       await LocalEngine.cacheSet(cacheKey, updatedLocal);
 
-      // 2. Perform background deletions
-      const idsToDelete = Array.from(selectedIssueIds);
-      for (const id of idsToDelete) {
-        try {
-          await FormsService.deleteSubmission(id);
-        } catch (e) {
-          console.warn(`[Sanitize] Remote delete failed for ${id}, handled locally:`, e);
-        }
-      }
+      // 2. Perform batched transactional soft-delete on server (single ceremony/permission check)
+      const idsToTrash = Array.from(selectedIssueIds);
+      await FormsService.batchTrashSubmissions(targetId, idsToTrash);
 
-      toast.success(`Sanitized! Removed ${count} junk response(s).`, { id: toastId });
+      // 3. Dispatch trash update event so Trash UI updates seamlessly
+      try {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('kylrix:trash-updated'));
+        }
+      } catch {}
+
+      toast.success(`Sanitized! Trashed ${count} junk response(s).`, { id: toastId });
       onSanitized?.();
       onClose();
     } catch (err: any) {
