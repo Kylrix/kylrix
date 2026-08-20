@@ -162,9 +162,46 @@ export function ProUpgradeDrawer() {
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center text-[#6366F1] shadow-lg">
-                <Sparkles size={20} />
+            <div className="flex items-center gap-3.5">
+              <div className="relative flex items-center justify-center">
+                {/* Brand Glow Aura */}
+                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-[#6366F1] via-[#EC4899] to-[#10B981] opacity-40 blur-md animate-pulse" />
+                
+                {/* Logo Frame */}
+                <div className="relative w-11 h-11 rounded-2xl bg-[#0A0908] border border-white/15 flex items-center justify-center p-2 shadow-xl shadow-[#6366F1]/20">
+                  <svg
+                    width="100%"
+                    height="100%"
+                    viewBox="0 0 100 100"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="drop-shadow-[0_0_8px_rgba(99,102,241,0.6)]"
+                  >
+                    {/* Outer Boundary Edges */}
+                    <line x1="15" y1="30" x2="50" y2="10" stroke="#EC4899" strokeWidth="4" strokeLinecap="round" />
+                    <line x1="50" y1="10" x2="85" y2="30" stroke="#10B981" strokeWidth="4" strokeLinecap="round" />
+                    <line x1="85" y1="30" x2="85" y2="70" stroke="#EC4899" strokeWidth="4" strokeLinecap="round" />
+                    <line x1="85" y1="70" x2="50" y2="90" stroke="#A855F7" strokeWidth="4" strokeLinecap="round" />
+                    <line x1="50" y1="90" x2="15" y2="70" stroke="#EC4899" strokeWidth="4" strokeLinecap="round" />
+                    <line x1="15" y1="70" x2="15" y2="30" stroke="#F59E0B" strokeWidth="4" strokeLinecap="round" />
+
+                    {/* Inner Seam Edges */}
+                    <line x1="50" y1="50" x2="15" y2="30" stroke="#A855F7" strokeWidth="4" strokeLinecap="round" />
+                    <line x1="50" y1="50" x2="85" y2="30" stroke="#F59E0B" strokeWidth="4" strokeLinecap="round" />
+                    <line x1="50" y1="50" x2="50" y2="90" stroke="#10B981" strokeWidth="4" strokeLinecap="round" />
+
+                    {/* Vertices */}
+                    <circle cx="50" cy="10" r="5" fill="#6366F1" stroke="#000000" strokeWidth="2" />
+                    <circle cx="85" cy="30" r="5" fill="#6366F1" stroke="#000000" strokeWidth="2" />
+                    <circle cx="85" cy="70" r="5" fill="#6366F1" stroke="#000000" strokeWidth="2" />
+                    <circle cx="50" cy="90" r="5" fill="#6366F1" stroke="#000000" strokeWidth="2" />
+                    <circle cx="15" cy="70" r="5" fill="#6366F1" stroke="#000000" strokeWidth="2" />
+                    <circle cx="15" cy="30" r="5" fill="#6366F1" stroke="#000000" strokeWidth="2" />
+                    
+                    {/* Core Hub */}
+                    <circle cx="50" cy="50" r="6" fill="#6366F1" stroke="#000000" strokeWidth="2.5" />
+                  </svg>
+                </div>
               </div>
               <div>
                 <h3 className="text-lg font-black font-clash text-white tracking-tight leading-tight m-0">
