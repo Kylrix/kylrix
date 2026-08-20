@@ -60,6 +60,27 @@ export function ResourcePinProvider({ children }: { children: ReactNode }) {
   const [pinSets, setPinSets] = useState<Record<PinnableResourceType, Set<string>>>(defaultPinSets);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Fast initial hydration from LocalEngine / IndexedDB
+  useEffect(() => {
+    if (!user?.$id) return;
+    const cacheKey = `user_pins_${user.$id}`;
+    void (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cached = await LocalEngine.cacheGet<Record<PinnableResourceType, string[]>>(cacheKey);
+        if (cached && typeof cached === 'object') {
+          const next = defaultPinSets();
+          (Object.keys(cached) as PinnableResourceType[]).forEach((rt) => {
+            if (Array.isArray(cached[rt])) {
+              next[rt] = new Set(cached[rt]);
+            }
+          });
+          setPinSets(next);
+        }
+      } catch {}
+    })();
+  }, [user?.$id]);
+
   const refreshPins = useCallback(async (resourceType?: PinnableResourceType) => {
     if (!user?.$id) {
       setPinSets(defaultPinSets());
@@ -70,9 +91,25 @@ export function ResourcePinProvider({ children }: { children: ReactNode }) {
       const rows = (await UserResourcePinService.listForUser(user.$id, resourceType)) ?? [];
       const safeRows = Array.isArray(rows) ? rows : [];
       if (resourceType) {
-        setPinSets((prev) => ({
-          ...prev,
-          [resourceType]: new Set(safeRows.map((row) => row.resourceId))}));
+        setPinSets((prev) => {
+          const updated = {
+            ...prev,
+            [resourceType]: new Set(safeRows.map((row) => row.resourceId)),
+          };
+          // Persist to LocalEngine
+          void (async () => {
+            try {
+              const { LocalEngine } = await import('@/lib/services/LocalEngine');
+              const cacheKey = `user_pins_${user.$id}`;
+              const serializable: any = {};
+              (Object.keys(updated) as PinnableResourceType[]).forEach((rt) => {
+                serializable[rt] = Array.from(updated[rt]);
+              });
+              await LocalEngine.cacheSet(cacheKey, serializable);
+            } catch {}
+          })();
+          return updated;
+        });
         return;
       }
 
@@ -83,6 +120,18 @@ export function ResourcePinProvider({ children }: { children: ReactNode }) {
         }
       }
       setPinSets(next);
+      // Persist to LocalEngine
+      void (async () => {
+        try {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          const cacheKey = `user_pins_${user.$id}`;
+          const serializable: any = {};
+          (Object.keys(next) as PinnableResourceType[]).forEach((rt) => {
+            serializable[rt] = Array.from(next[rt]);
+          });
+          await LocalEngine.cacheSet(cacheKey, serializable);
+        } catch {}
+      })();
     } catch (error) {
       console.error('[ResourcePin] Failed to load pins', error);
     } finally {
@@ -99,9 +148,23 @@ export function ResourcePinProvider({ children }: { children: ReactNode }) {
       const nextSet = new Set(prev[resourceType]);
       if (pinned) nextSet.add(resourceId);
       else nextSet.delete(resourceId);
-      return { ...prev, [resourceType]: nextSet };
+      const updated = { ...prev, [resourceType]: nextSet };
+      if (user?.$id) {
+        void (async () => {
+          try {
+            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+            const cacheKey = `user_pins_${user.$id}`;
+            const serializable: any = {};
+            (Object.keys(updated) as PinnableResourceType[]).forEach((rt) => {
+              serializable[rt] = Array.from(updated[rt]);
+            });
+            await LocalEngine.cacheSet(cacheKey, serializable);
+          } catch {}
+        })();
+      }
+      return updated;
     });
-  }, []);
+  }, [user?.$id]);
 
   const isPinned = useCallback(
     (
@@ -136,14 +199,28 @@ export function ResourcePinProvider({ children }: { children: ReactNode }) {
         params.ownerId,
         params.rowIsPinned,
       );
-      const next = await toggleResourcePin({
-        actorId: user.$id,
-        ownerId: params.ownerId,
-        resourceType: params.resourceType,
-        resourceId: params.resourceId,
-        currentlyPinned,
-        setOwnerRowPin: params.setOwnerRowPin});
+      const next = !currentlyPinned;
+
+      // 1. Optimistic LocalEngine & in-memory update (instant 0ms response)
       setLocalPin(params.resourceType, params.resourceId, next);
+
+      // 2. Perform asynchronous remote synchronization in the background
+      void (async () => {
+        try {
+          await toggleResourcePin({
+            actorId: user.$id,
+            ownerId: params.ownerId,
+            resourceType: params.resourceType,
+            resourceId: params.resourceId,
+            currentlyPinned,
+            setOwnerRowPin: params.setOwnerRowPin,
+          });
+        } catch (err) {
+          console.warn('[ResourcePin] Background sync failed, rolling back local pin:', err);
+          setLocalPin(params.resourceType, params.resourceId, currentlyPinned);
+        }
+      })();
+
       return next;
     },
     [user?.$id, isPinned, setLocalPin],
