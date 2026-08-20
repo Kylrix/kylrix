@@ -101,6 +101,15 @@ export const FormsService = {
         return await updateFormSecure(formId, data);
     },
 
+    async deleteForm(formId: string) {
+        if (typeof window !== 'undefined') {
+            const { deleteForm } = await import('@/lib/actions/client-ops');
+            return await deleteForm(formId);
+        }
+        const { deleteFormSecure } = await import('@/lib/actions/secure-ops');
+        return await deleteFormSecure(formId);
+    },
+
     /**
      * Get a draft if it exists for a user and form
      */
@@ -465,6 +474,10 @@ export const FormsService = {
      */
     async batchTrashSubmissions(formId: string, submissionIds: string[]) {
         if (!submissionIds.length) return { success: true, count: 0 };
+        if (typeof window !== 'undefined') {
+            const { batchTrashFormSubmissions } = await import('@/lib/actions/client-ops');
+            return await batchTrashFormSubmissions(formId, submissionIds);
+        }
         const { batchTrashFormSubmissionsSecure } = await import('@/lib/actions/secure-ops/misc');
         return await batchTrashFormSubmissionsSecure(formId, submissionIds);
     }

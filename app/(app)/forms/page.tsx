@@ -102,7 +102,8 @@ export default function FormsDashboard() {
             }
 
             if (items.length > 0) {
-                setForms(sortForms(items as unknown as Forms[]));
+                const activeLocal = items.filter((f: any) => !f.isTrash);
+                setForms(sortForms(activeLocal as unknown as Forms[]));
                 setLoading(false);
             }
 
@@ -117,8 +118,8 @@ export default function FormsDashboard() {
 
             if (Array.isArray(remoteRows)) {
                 const byId = new Map<string, Forms>();
-                items.forEach((item: any) => item?.$id && byId.set(item.$id, item));
-                remoteRows.forEach((row: any) => row?.$id && byId.set(row.$id, row));
+                items.filter((item: any) => !item.isTrash).forEach((item: any) => item?.$id && byId.set(item.$id, item));
+                remoteRows.filter((row: any) => !row.isTrash).forEach((row: any) => row?.$id && byId.set(row.$id, row));
                 const merged = Array.from(byId.values());
 
                 setForms(sortForms(merged as unknown as Forms[]));

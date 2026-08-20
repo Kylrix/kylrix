@@ -887,7 +887,9 @@ export async function batchTrashFormSubmissionsSecure(
     tableId: formsTable,
     rowId: fId,
     actorId: actor.$id,
-    action: 'delete'
+    action: 'delete',
+    ownerFields: ['userId', 'creatorId', 'ownerId'],
+    metadataField: 'settings'
   });
 
   if (!isFormOwner) {

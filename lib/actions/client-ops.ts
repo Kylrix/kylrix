@@ -204,6 +204,12 @@ export async function removeFormCollaborator(formId: string, userId: string) {
   return removeFormCollaboratorSecure(formId, userId, jwt);
 }
 
+export async function batchTrashFormSubmissions(formId: string, submissionIds: string[]) {
+  const jwt = await getJwt();
+  const { batchTrashFormSubmissionsSecure } = await import('./secure-ops/misc');
+  return batchTrashFormSubmissionsSecure(formId, submissionIds, jwt);
+}
+
 // --- Events CRUD ---
 export async function createEvent(data: any) {
   const jwt = await getJwt();

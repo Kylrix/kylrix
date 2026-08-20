@@ -1018,6 +1018,7 @@ export async function listUserFormsSecure(userId?: string, jwt?: string) {
     tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
     queries: [
       Query.equal('userId', targetUserId),
+      Query.notEqual('isTrash', true),
       Query.orderDesc('$createdAt'),
       Query.limit(100),
     ]});
