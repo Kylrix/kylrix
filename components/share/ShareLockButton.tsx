@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react';
 import { Share2, Loader2 } from 'lucide-react';
-import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
-import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { useToast } from '@/hooks/useToast';
 import { IconButton } from '@/lib/openbricks/primitives';
+import { executeInstantShare } from '@/lib/share/instant-share';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useAuth } from '@/context/auth/AuthContext';
 
 interface ShareLockButtonProps {
   resourceType: PublicResourceType;
@@ -15,6 +16,8 @@ interface ShareLockButtonProps {
   isGuest: boolean;
   accentColor?: string;
   projectId?: string;
+  resourceTitle?: string;
+  dek?: string | null;
   onPublished?: (result: { isPublic: boolean; isGuest: boolean; publicUrl: string }) => void;
   canPublish?: boolean;
   blockReason?: string;
@@ -22,7 +25,8 @@ interface ShareLockButtonProps {
 }
 
 /**
- * Ruthless Sharing: One-tap publish button using a unified share icon.
+ * Ruthless Instant Sharing: One-tap unblocked share button.
+ * Immediately copies share link and proactively syncs state in background.
  */
 export function ShareLockButton({
   resourceType,
@@ -31,6 +35,8 @@ export function ShareLockButton({
   isGuest,
   accentColor = '#6366F1',
   projectId,
+  resourceTitle,
+  dek,
   onPublished,
   canPublish = true,
   blockReason,
@@ -38,86 +44,75 @@ export function ShareLockButton({
 }: ShareLockButtonProps) {
   const [loading, setLoading] = useState(false);
   const { showSuccess, showError } = useToast();
-
-  const copyPublicUrl = async (url: string) => {
-    try {
-      await navigator.clipboard.writeText(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const errorMessage = (err: unknown, fallback: string) =>
-    err instanceof Error && err.message ? err.message : fallback;
-
-  const getClipboardUrl = async () => {
-    if (getCustomShareUrl) {
-      return await getCustomShareUrl();
-    }
-    return buildPublicResourceUrl(resourceType, resourceId, { projectId });
-  };
+  const { open } = useUnifiedDrawer();
+  const { user } = useAuth();
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (loading) return;
-    
-    // 1. Check blockages (e.g. TOTP or encrypted notes)
+
+    // 1. If not authenticated, prompt contextual login drawer
+    if (!user?.$id) {
+      const friendlyName = resourceTitle ? `"${resourceTitle}"` : resourceType;
+      open('login', {
+        title: `Share ${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)}`,
+        subtitle: `Create an account or log in to share ${friendlyName} with others.`,
+        objectKind: resourceType,
+      });
+      return;
+    }
+
+    // 2. Check hard blockages if any
     if (!canPublish && !isPublic) {
       showError('Cannot share: ' + (blockReason || 'This resource cannot be shared publicly.'));
       return;
     }
 
-    // 2. If already public, just re-copy link (no accidental unpublish)
-    if (isPublic || isGuest) {
-      setLoading(true);
-      try {
-        const publicUrl = await getClipboardUrl();
-        const copied = await copyPublicUrl(publicUrl);
-        if (copied) {
-          showSuccess('Link copied');
-        } else {
-          showSuccess('Public link ready: ' + publicUrl);
-        }
-      } catch (err: unknown) {
-        showError('Could not copy link: ' + errorMessage(err, 'Try again in a moment.'));
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    // 3. Publish to web — save first, copy second (clipboard must not fail the publish)
     setLoading(true);
     try {
-      const res = await toggleResourcePublicGuest({
-        resourceType,
-        resourceId,
-        mode: 'publish',
-        projectId
-      });
-      if (!res?.success) {
-        showError('Could not publish: Sharing settings were not saved. Try again.');
+      if (getCustomShareUrl) {
+        const customUrl = await getCustomShareUrl();
+        await navigator.clipboard.writeText(customUrl).catch(() => {});
+        showSuccess('Share link copied');
+        onPublished?.({ isPublic: true, isGuest: true, publicUrl: customUrl });
         return;
       }
 
-      const publicUrl = await getClipboardUrl();
+      // Universal Instant Share: Instant unblocked copy + prioritized sync
+      const result = await executeInstantShare(resourceType, resourceId, {
+        dek,
+        isPublic,
+        isGuest,
+        resourceTitle,
+        projectId,
+        openLoginDrawer: (ctx) => open('login', ctx),
+        openMasterpassPrompt: () => open('masterpass'),
+      });
+
+      if (result.requiresAuth) {
+        return;
+      }
+
+      if (result.requiresMasterpass) {
+        showError('Unlock your vault to copy decrypted link');
+        return;
+      }
+
+      if (result.copied) {
+        showSuccess('Link copied to clipboard');
+      } else {
+        showSuccess('Share link ready: ' + result.url);
+      }
 
       onPublished?.({
-        isPublic: !!res.isPublic,
-        isGuest: !!res.isGuest,
-        publicUrl});
-
-      const copied = await copyPublicUrl(publicUrl);
-      if (copied) {
-        showSuccess('Published & Link copied');
-      } else {
-        showSuccess('Published: ' + publicUrl);
-      }
-    } catch (err: unknown) {
-      showError('Could not publish: ' + errorMessage(err, 'Sharing settings were not saved.'));
+        isPublic: true,
+        isGuest: true,
+        publicUrl: result.url,
+      });
+    } catch (err: any) {
+      showError('Could not share: ' + (err?.message || 'Try again in a moment.'));
     } finally {
       setLoading(false);
     }

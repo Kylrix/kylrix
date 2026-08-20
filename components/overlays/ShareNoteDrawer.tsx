@@ -209,12 +209,27 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
     return () => setIsDrawerOpen(false);
   }, [isOpen, activeResourceId, setIsDrawerOpen, fetchExistingCollaborators, drawerData?.initialCollaborator]);
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     try {
-      navigator.clipboard.writeText(inviteUrl);
-      setCopiedLink(true);
-      toast.success('Secure invite link copied!');
-      setTimeout(() => setCopiedLink(false), 2000);
+      const { executeInstantShare } = await import('@/lib/share/instant-share');
+      const res = await executeInstantShare((resourceType === 'goal' ? 'task' : resourceType) as any, activeResourceId, {
+        resourceTitle: activeResourceTitle,
+        openLoginDrawer: (ctx) => open('login', ctx),
+        openMasterpassPrompt: () => open('masterpass'),
+      });
+
+      if (res.requiresAuth) return;
+
+      if (res.copied) {
+        setCopiedLink(true);
+        toast.success('Secure invite link copied!');
+        setTimeout(() => setCopiedLink(false), 2000);
+      } else if (res.url) {
+        await navigator.clipboard.writeText(res.url).catch(() => {});
+        setCopiedLink(true);
+        toast.success('Invite link ready & copied!');
+        setTimeout(() => setCopiedLink(false), 2000);
+      }
     } catch (err: any) {
       toast.error('Failed to copy link: ' + err.message);
     }

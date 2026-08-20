@@ -30,11 +30,13 @@ function useIsDesktop() {
   return isDesktop;
 }
 
-export function LoginDrawer() {
-  const { activeContent, close } = useUnifiedDrawer();
+  const { activeContent, drawerData, close } = useUnifiedDrawer();
   const { loginWithEmailOTP, verifyEmailOTP, refreshUser } = useAuth();
   const { setIsDrawerOpen } = useDrawerState();
   const isDesktop = useIsDesktop();
+
+  const customTitle = drawerData?.title || 'Continue to Kylrix';
+  const customSubtitle = drawerData?.subtitle;
 
   const [step, setStep] = useState<LoginStep>('initial');
   const [email, setEmail] = useState('');
@@ -474,14 +476,21 @@ export function LoginDrawer() {
                   <ArrowLeft className="w-4.5 h-4.5" />
                 </button>
               )}
-              <h3 className="font-clash font-black text-white text-xl tracking-tight leading-tight">
-                Continue to Kylrix
-              </h3>
+              <div>
+                <h3 className="font-clash font-black text-white text-xl tracking-tight leading-tight m-0">
+                  {customTitle}
+                </h3>
+                {customSubtitle && step === 'initial' && (
+                  <p className="text-xs text-white/50 font-sans mt-1 m-0">
+                    {customSubtitle}
+                  </p>
+                )}
+              </div>
             </div>
             <button 
               type="button" 
               onClick={handleClose} 
-              className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/[0.04] border border-white/5 hover:border-white/20 text-[#9B9691] hover:text-white transition-all cursor-pointer"
+              className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/[0.04] border border-white/5 hover:border-white/20 text-[#9B9691] hover:text-white transition-all cursor-pointer flex-shrink-0"
             >
               <X className="w-4.5 h-4.5" />
             </button>
