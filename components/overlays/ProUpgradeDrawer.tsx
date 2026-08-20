@@ -260,7 +260,7 @@ export function ProUpgradeDrawer() {
         </div>
 
         {/* Footer Actions */}
-        <div className="flex-shrink-0 p-5 bg-[#0A0908] border-t border-white/5 space-y-2 rounded-b-[32px]">
+        <div className="flex-shrink-0 p-5 bg-[#0A0908] border-t border-white/5 rounded-b-[32px]">
           <button
             type="button"
             onClick={handleGoPricing}
@@ -268,14 +268,6 @@ export function ProUpgradeDrawer() {
           >
             <span>Upgrade to Pro Now</span>
             <ArrowRight size={16} />
-          </button>
-
-          <button
-            type="button"
-            onClick={closeProUpgrade}
-            className="w-full h-9 text-xs font-bold text-white/40 hover:text-white transition-colors text-center cursor-pointer"
-          >
-            Maybe Later
           </button>
         </div>
       </div>
