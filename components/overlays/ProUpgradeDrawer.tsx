@@ -1,283 +1,284 @@
 'use client';
 
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import {
-  Drawer,
-  Box,
-  Typography,
-  Button,
-  Stack,
-  useTheme,
-  useMediaQuery,
-  alpha
-} from '@/lib/openbricks/primitives';
-import { Zap, ArrowRight, Check } from 'lucide-react';
-import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
+  Sparkles,
+  ArrowRight,
+  Check,
+  X,
+  Bot,
+  HardDrive,
+  Users,
+  Shield,
+  Layers,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 
-const featureDescriptions: Record<string, { desc: string; fix: string }> = {
+const FEATURE_CONTEXT_HIGHLIGHTS: Record<string, { desc: string; fix: string }> = {
   'Voice recording': {
-    desc: 'Voice capture requires higher storage limits.',
-    fix: 'Upgrade to Pro to record and store high-fidelity audio.'
+    desc: 'Voice notes and attachments are part of Pro capabilities.',
+    fix: 'Upgrade to Pro to capture, attach, and stream voice updates seamlessly.',
   },
   'Discussions': {
-    desc: 'Real-time discussions need a Pro plan.',
-    fix: 'Upgrade to Pro to collaborate on ideas in real time.'
+    desc: 'Real-time collaborative discussions require an active Pro workspace.',
+    fix: 'Upgrade to Pro to participate and spin discussions on any object.',
   },
   'New Project': {
-    desc: 'Free tier limits workspace projects.',
-    fix: 'Upgrade to Pro for more projects, or Teams for unlimited.'
+    desc: 'You have hit the free workspace limit.',
+    fix: 'Upgrade to Pro for unlimited workspaces and projects.',
   },
   'New Channel': {
-    desc: 'Custom channels need a Teams plan.',
-    fix: 'Upgrade to Teams to create group channels across your team.'
+    desc: 'Shared group communication channels are part of Pro & Teams.',
+    fix: 'Upgrade to create unlimited shared and dedicated channels.',
   },
   'Collaborators': {
-    desc: 'Sharing with collaborators needs a paid plan.',
-    fix: 'Upgrade to Pro to invite collaborators, or Teams for groups.'
+    desc: 'Multi-member real-time collaboration requires a Pro subscription.',
+    fix: 'Upgrade to Pro to invite unlimited collaborators across your workspace.',
   },
   'Project Collaboration': {
-    desc: 'Project-level invites need a Teams plan.',
-    fix: 'Upgrade to Teams to collaborate on entire projects.'
+    desc: 'Direct project-level invitations and shared scopes are enabled on paid tiers.',
+    fix: 'Upgrade to Pro to co-author and share full project workspaces.',
   },
   'Pinned Notes': {
-    desc: 'You reached the free pin limit.',
-    fix: 'Upgrade to Pro to pin unlimited notes for instant access.'
+    desc: 'Free tier limits the number of pinned items.',
+    fix: 'Upgrade to Pro to pin unlimited notes, goals, forms, and tools to the top.',
   },
   'Article Mode': {
-    desc: 'Long-form tools need Pro.',
-    fix: 'Upgrade to Pro to unlock article mode and rich editing.'
+    desc: 'Long-form article formatting and rich publishing require Pro.',
+    fix: 'Upgrade to Pro for article publishing and extended note layouts.',
   },
   'Kylie Assist': {
-    desc: 'AI Assistant features require a Pro subscription.',
-    fix: 'Upgrade to Pro to chat with Kylie and automate your workflow.'
+    desc: 'Autonomous agent partners and custom AI compute require Pro.',
+    fix: 'Upgrade to Pro to unlock Kylie and unmetered custom agent personas.',
   },
 };
 
-const TEAMS_ONLY_FEATURES = new Set(['Project Collaboration', 'New Channel']);
-
-const TEAMS_BENEFITS = [
-  'Unlimited projects and team workspaces',
-  'Invite collaborators to full projects',
-  'Group channels and workflow routing',
-];
-
-const PRO_BENEFITS = [
-  'Unlimited AI Assistant (Kylie) chat & tools',
-  'Higher storage & file upload limits',
-  'Unlimited pins, projects & workspace sharing',
+const PLAN_BENEFIT_GROUPS = [
+  {
+    title: 'Autonomous AI Agents',
+    icon: Bot,
+    color: 'text-[#6366F1]',
+    bg: 'bg-[#6366F1]/10',
+    border: 'border-[#6366F1]/20',
+    free: 'Basic system guidance',
+    pro: 'Unlimited AI agents (Kylie & custom personas), background tool calling & daily compute',
+  },
+  {
+    title: 'Storage & File Uploads',
+    icon: HardDrive,
+    color: 'text-[#10B981]',
+    bg: 'bg-[#10B981]/10',
+    border: 'border-[#10B981]/20',
+    free: 'Standard media view',
+    pro: 'Unlimited images/storage and file uploads, voice notes & attachment archives',
+  },
+  {
+    title: 'Workspaces & Collaboration',
+    icon: Users,
+    color: 'text-[#F59E0B]',
+    bg: 'bg-[#F59E0B]/10',
+    border: 'border-[#F59E0B]/20',
+    free: 'Personal private workspace',
+    pro: 'Unlimited projects, workspaces, team collaborators & real-time discussions',
+  },
+  {
+    title: 'Objects, Tools & Pins',
+    icon: Layers,
+    color: 'text-[#EC4899]',
+    bg: 'bg-[#EC4899]/10',
+    border: 'border-[#EC4899]/20',
+    free: 'Standard creation limits',
+    pro: 'Unlimited pinned items, forms, goals, automations & developer PATs',
+  },
+  {
+    title: 'Privacy & Cryptographic Vault',
+    icon: Shield,
+    color: 'text-[#38BDF8]',
+    bg: 'bg-[#38BDF8]/10',
+    border: 'border-[#38BDF8]/20',
+    free: 'Local-first offline copy',
+    pro: 'Zero-knowledge T5 Argon2id vault, passkey biometric sync & P2P WebRTC calls',
+  },
 ];
 
 export function ProUpgradeDrawer() {
+  const router = useRouter();
   const { showProUpgrade, closeProUpgrade, feature } = useProUpgrade();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [isExpanded, setIsExpanded] = useState(false);
 
-  const featureName = feature ? ` ${feature}` : '';
-  const spec = feature ? featureDescriptions[feature] : null;
-  const isTeamsUpgrade = Boolean(feature && TEAMS_ONLY_FEATURES.has(feature));
-  const accent = isTeamsUpgrade ? '#F59E0B' : '#6366F1';
-  const benefits = isTeamsUpgrade ? TEAMS_BENEFITS : PRO_BENEFITS;
-  const upgradeLabel = isTeamsUpgrade ? 'Upgrade to Teams' : 'Upgrade to Pro';
-  const checkoutHref = isTeamsUpgrade ? '/pricing?tier=teams' : '/pricing';
+  useEffect(() => {
+    if (!showProUpgrade) setIsExpanded(false);
+  }, [showProUpgrade]);
 
-  const goCheckout = () => {
-    closeProUpgrade();
-    if (typeof window !== 'undefined') {
-      window.location.assign(checkoutHref);
+  useEffect(() => {
+    if (showProUpgrade) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showProUpgrade]);
+
+  if (!showProUpgrade) return null;
+
+  const highlight = feature ? FEATURE_CONTEXT_HIGHLIGHTS[feature] : null;
+
+  const handleGoPricing = () => {
+    closeProUpgrade();
+    router.push('/pricing');
   };
 
   return (
-    <Drawer
-      anchor={isMobile ? 'bottom' : 'right'}
-      open={showProUpgrade}
-      onClose={closeProUpgrade}
-      ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
-      slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
-      sx={{
-        zIndex: 14000,
-        '& .ob-drawer-panel': {
-          bgcolor: '#161412',
-          backgroundImage: 'none',
-          borderTop: isMobile ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
-          borderLeft: !isMobile ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
-          maxHeight: isMobile ? '80vh' : '100vh',
-          width: isMobile ? '100%' : 420,
-          borderRadius: isMobile ? '24px 24px 0 0' : 0,
-        }
-      }}
-    >
-      <Box
-        sx={{
-          p: { xs: 3, md: 4 },
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%',
-          maxWidth: 420,
-          mx: 'auto',
-          justifyContent: 'space-between',
-        }}
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[99998] transition-opacity duration-300 pointer-events-auto"
+        onClick={closeProUpgrade}
+        aria-hidden="true"
+      />
+
+      {/* Drawer Container */}
+      <div
+        className={`fixed z-[99999] pointer-events-auto flex flex-col bg-[#161412] border border-white/10 shadow-2xl transition-all duration-300 ${
+          isExpanded
+            ? 'inset-0 h-[100dvh] max-h-[100dvh] w-full rounded-none'
+            : 'inset-x-0 bottom-0 h-[72dvh] max-h-[72dvh] md:h-auto md:max-h-[85vh] md:w-[480px] md:right-6 md:bottom-6 md:left-auto rounded-t-[32px] md:rounded-[32px]'
+        }`}
       >
-        <Box>
-          <Box
-            sx={{
-              width: 48,
-              height: 48,
-              borderRadius: '16px',
-              bgcolor: alpha(accent, 0.12),
-              border: `1px solid ${alpha(accent, 0.25)}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              mb: 3,
-            }}
+        {/* Mobile Pull Bar & Header */}
+        <div className="flex-shrink-0 px-6 pt-4 pb-3 border-b border-white/5">
+          <div
+            className="flex md:hidden justify-center pb-2 cursor-pointer"
+            onClick={() => setIsExpanded((v) => !v)}
+            role="button"
+            aria-label={isExpanded ? 'Collapse' : 'Expand'}
           >
-            <Zap size={24} color={accent} strokeWidth={2.2} />
-          </Box>
+            <div className="w-10 h-1 rounded-full bg-white/20" />
+          </div>
 
-          <Typography
-            sx={{
-              fontSize: '1.5rem',
-              fontWeight: 900,
-              color: '#FFFFFF',
-              mb: 1,
-              letterSpacing: '-0.02em',
-              fontFamily: 'var(--font-clash), sans-serif',
-            }}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center text-[#6366F1] shadow-lg">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-black font-clash text-white tracking-tight leading-tight m-0">
+                  Upgrade to Kylrix Pro
+                </h3>
+                <p className="text-[11px] text-white/40 font-mono m-0 mt-0.5">
+                  Supercharge your living agentic workspace
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setIsExpanded((v) => !v)}
+                className="hidden md:flex p-2 rounded-xl hover:bg-white/5 text-white/40 hover:text-white transition-colors cursor-pointer"
+                aria-label={isExpanded ? 'Collapse' : 'Expand'}
+              >
+                {isExpanded ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+              </button>
+              <button
+                type="button"
+                onClick={closeProUpgrade}
+                className="p-2 rounded-xl hover:bg-white/5 text-white/40 hover:text-white transition-colors cursor-pointer"
+                aria-label="Close upgrade drawer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Benefits List */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-5 space-y-4 min-h-0">
+          {/* Contextual Pain Point Alert if triggered by a specific feature */}
+          {highlight && (
+            <div className="p-4 rounded-2xl bg-[#0A0908] border border-[#6366F1]/25 space-y-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider font-extrabold text-[#6366F1] block">
+                {feature}
+              </span>
+              <p className="text-xs font-bold text-white m-0 font-sans">{highlight.desc}</p>
+              <p className="text-[11px] text-white/50 m-0 leading-relaxed font-sans">{highlight.fix}</p>
+            </div>
+          )}
+
+          {/* Value Header Banner */}
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-[#6366F1]/10 to-transparent border border-white/5">
+            <div>
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-white/40 block">
+                One Clean Subscription
+              </span>
+              <span className="text-xl font-black text-white font-clash">$10 / month</span>
+            </div>
+            <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold uppercase">
+              Cancel Anytime
+            </span>
+          </div>
+
+          {/* 5 Categorized Core Benefits */}
+          <div className="space-y-2.5">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-white/40 block px-1">
+              What You Unlock
+            </span>
+
+            {PLAN_BENEFIT_GROUPS.map((group, idx) => {
+              const Icon = group.icon;
+              return (
+                <div
+                  key={idx}
+                  className="p-3.5 rounded-2xl bg-[#0A0908] border border-white/[0.06] hover:border-white/10 transition-all space-y-1.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`w-7 h-7 rounded-lg ${group.bg} ${group.border} border flex items-center justify-center shrink-0`}>
+                        <Icon size={14} className={group.color} />
+                      </div>
+                      <h4 className="text-xs font-extrabold text-white font-clash truncate m-0">
+                        {group.title}
+                      </h4>
+                    </div>
+                    <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#6366F1]/15 text-[#6366F1] font-bold shrink-0">
+                      UNLIMITED
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-white/70 font-sans leading-relaxed m-0 pl-9">
+                    {group.pro}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex-shrink-0 p-5 bg-[#0A0908] border-t border-white/5 space-y-2 rounded-b-[32px]">
+          <button
+            type="button"
+            onClick={handleGoPricing}
+            className="w-full h-12 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-[#6366F1]/20 transition-all cursor-pointer"
           >
-            {upgradeLabel}
-          </Typography>
+            <span>Upgrade to Pro Now</span>
+            <ArrowRight size={16} />
+          </button>
 
-          <Typography
-            sx={{
-              fontSize: '0.875rem',
-              color: 'rgba(255, 255, 255, 0.65)',
-              lineHeight: 1.6,
-              mb: 3,
-              fontFamily: 'var(--font-satoshi), sans-serif',
-            }}
-          >
-            {spec ? (
-              <>
-                <strong style={{ display: 'block', color: '#FFFFFF', fontWeight: 800, marginBottom: '4px' }}>
-                  {spec.desc}
-                </strong>
-                <span>{spec.fix}</span>
-              </>
-            ) : (
-              <>
-                {featureName
-                  ? `${featureName.trim()} requires a ${isTeamsUpgrade ? 'Teams' : 'Pro'} plan.`
-                  : `Unlock advanced productivity tools and AI agents with ${isTeamsUpgrade ? 'Teams' : 'Pro'}.`}
-              </>
-            )}
-          </Typography>
-
-          <Box
-            sx={{
-              p: 2.5,
-              borderRadius: '18px',
-              bgcolor: '#0B0A09',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
-              mb: 3,
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: '0.725rem',
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                tracking: '0.08em',
-                color: 'rgba(255, 255, 255, 0.45)',
-                mb: 2,
-                fontFamily: 'var(--font-mono), monospace',
-              }}
-            >
-              Included in {isTeamsUpgrade ? 'Teams' : 'Pro'}
-            </Typography>
-
-            <Stack spacing={2}>
-              {benefits.map((benefit) => (
-                <Box key={benefit} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                  <Box
-                    sx={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: '50%',
-                      bgcolor: alpha(accent, 0.2),
-                      border: `1px solid ${alpha(accent, 0.4)}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      mt: 0.2,
-                    }}
-                  >
-                    <Check size={10} color={accent} strokeWidth={3} />
-                  </Box>
-                  <Typography
-                    sx={{
-                      color: 'rgba(255, 255, 255, 0.85)',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                      lineHeight: 1.4,
-                      fontFamily: 'var(--font-satoshi), sans-serif',
-                    }}
-                  >
-                    {benefit}
-                  </Typography>
-                </Box>
-              ))}
-            </Stack>
-          </Box>
-        </Box>
-
-        <Stack spacing={1.5} sx={{ mt: 'auto' }}>
-          <Button
-            fullWidth
-            onClick={goCheckout}
-            sx={{
-              bgcolor: accent,
-              color: isTeamsUpgrade ? '#000000' : '#FFFFFF',
-              fontWeight: 900,
-              py: 1.5,
-              fontSize: '0.9rem',
-              borderRadius: '14px',
-              textTransform: 'none',
-              fontFamily: 'var(--font-satoshi), sans-serif',
-              boxShadow: `0 8px 20px ${alpha(accent, 0.3)}`,
-              '&:hover': {
-                bgcolor: isTeamsUpgrade ? '#D97706' : '#5254E8',
-                transform: 'translateY(-1px)',
-              },
-              transition: 'all 0.2s ease',
-            }}
-            endIcon={<ArrowRight size={18} />}
-          >
-            {isTeamsUpgrade ? 'Upgrade to Teams' : 'Upgrade to Pro'}
-          </Button>
-
-          <Button
-            fullWidth
+          <button
+            type="button"
             onClick={closeProUpgrade}
-            sx={{
-              color: 'rgba(255, 255, 255, 0.45)',
-              fontWeight: 700,
-              py: 1.2,
-              fontSize: '0.85rem',
-              borderRadius: '14px',
-              textTransform: 'none',
-              fontFamily: 'var(--font-satoshi), sans-serif',
-              '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.04)',
-                color: '#FFFFFF',
-              },
-            }}
+            className="w-full h-9 text-xs font-bold text-white/40 hover:text-white transition-colors text-center cursor-pointer"
           >
             Maybe Later
-          </Button>
-        </Stack>
-      </Box>
-    </Drawer>
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
