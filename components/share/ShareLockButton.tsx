@@ -128,12 +128,7 @@ export function ShareLockButton({
         '&.ob-disabled': {
            color: 'rgba(255, 255, 255, 0.1)'}
       }}
-    >
-      {loading ? (
-        <Loader2 size={14} className="animate-spin" />
-      ) : (
-        <Share2 size={14} />
-      )}
+      <Share2 size={14} />
     </IconButton>
   );
 }
