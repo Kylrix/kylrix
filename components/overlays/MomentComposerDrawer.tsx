@@ -191,6 +191,11 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
     }
   };
 
+  const handlePublish = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!content.trim() && !attachments.length) return;
+    if (!user?.$id) return;
+
     setPublishing(true);
     const mediaIds = attachments.map((a) => a.id);
     let body = content.trim();
