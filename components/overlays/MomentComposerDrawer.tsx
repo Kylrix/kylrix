@@ -191,28 +191,63 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
     }
   };
 
-  const handlePublish = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!content.trim() && !attachments.length) return;
-    if (!user?.$id) return;
-
     setPublishing(true);
-    try {
-      const mediaIds = attachments.map((a) => a.id);
-      let body = content.trim();
-      for (const a of attachments) {
-        if (a.url && /^https?:\/\//.test(a.url) && !body.includes(a.url)) {
-          body = `${body}\n${a.url}`.trim();
-        }
+    const mediaIds = attachments.map((a) => a.id);
+    let body = content.trim();
+    for (const a of attachments) {
+      if (a.url && /^https?:\/\//.test(a.url) && !body.includes(a.url)) {
+        body = `${body}\n${a.url}`.trim();
       }
+    }
+    const finalBody = body || 'Shared an update';
+    const finalAttachments = attachments.length ? [...attachments] : null;
+    const shouldSyncNostr = syncToNostr && !isVaultLocked && !!identity;
 
+    // 1. Optimistic LocalEngine cache creation so user sees moment instantly in feed
+    const tempId = `temp_moment_${Date.now()}`;
+    const optimisticMoment: any = {
+      $id: tempId,
+      userId: user.$id,
+      caption: finalBody,
+      type: 'image',
+      momentKind: 'post',
+      sourceId: null,
+      searchTitle: finalBody,
+      fileId: JSON.stringify({ type: 'post' }),
+      nostrId: null,
+      attachments: finalAttachments,
+      isPublic: true,
+      isGuest: true,
+      $createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    };
+
+    void (async () => {
+      try {
+        const cachedMoments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
+        await LocalEngine.cacheSet('f_moments_list', [optimisticMoment, ...cachedMoments]);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('kylrix:moment-created', { detail: optimisticMoment }));
+        }
+      } catch {}
+    })();
+
+    // 2. Instant UI feedback & dismissal (0ms UI lag)
+    toast.success('Publishing moment in background...');
+    setContent('');
+    setAttachments([]);
+    setPublishing(false);
+    onClose();
+
+    // 3. Background execution pipeline for Nostr broadcast and remote TablesDB persistence
+    void (async () => {
       let nostrId: string | null = null;
       let nostrSynced = false;
 
-      // If Nostr sync enabled, publish to Nostr relays first to obtain eventId and Blossom media URLs
-      if (syncToNostr && !isVaultLocked && identity) {
+      if (shouldSyncNostr) {
         try {
-          const nostrRes = await publishPost(body || content.trim());
+          const nostrRes = await publishPost(finalBody);
           if (nostrRes && typeof nostrRes === 'object' && nostrRes.success && nostrRes.eventId) {
             nostrId = nostrRes.eventId;
             nostrSynced = true;
@@ -220,46 +255,48 @@ export function MomentComposerDrawer({ onClose }: MomentComposerDrawerProps) {
             nostrSynced = true;
           }
         } catch (nostrErr) {
-          console.warn('[MomentComposer] Nostr sync warning:', nostrErr);
+          console.warn('[MomentComposer] Background Nostr sync warning:', nostrErr);
         }
-      } else if (syncToNostr && isVaultLocked) {
-        toast.error('Unlock vault to sync to Nostr');
       }
 
-      // ALWAYS create in native Kylrix feed with attached nostrId and attachments payload
-      const createdMoment = await SocialService.createMoment(
-        user.$id,
-        body || 'Shared an update',
-        'post',
-        mediaIds,
-        'public',
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        null,
-        nostrId,
-        attachments.length ? attachments : null,
-      );
+      try {
+        const createdMoment = await SocialService.createMoment(
+          user.$id,
+          finalBody,
+          'post',
+          mediaIds,
+          'public',
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          null,
+          nostrId,
+          finalAttachments,
+        );
 
-      if (createdMoment) {
-        const cachedMoments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
-        await LocalEngine.cacheSet('f_moments_list', [createdMoment, ...cachedMoments]);
+        if (createdMoment) {
+          const cachedMoments = (await LocalEngine.cacheGet<any[]>('f_moments_list')) || [];
+          const updated = [
+            createdMoment,
+            ...cachedMoments.filter((m: any) => m.$id !== tempId && m.$id !== createdMoment.$id),
+          ];
+          await LocalEngine.cacheSet('f_moments_list', updated);
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('kylrix:moment-created', { detail: createdMoment }));
+          }
+        }
+
+        toast.success(
+          nostrSynced
+            ? 'Moment published to Kylrix and Nostr!'
+            : 'Moment published to your feed!',
+        );
+      } catch (remoteErr) {
+        console.error('[MomentComposer] Background publish error:', remoteErr);
+        toast.error('Failed to sync moment to remote server.');
       }
-
-      toast.success(
-        nostrSynced ? 'Published to Kylrix and Nostr' : 'Published to your moments feed',
-      );
-
-      setContent('');
-      setAttachments([]);
-      onClose();
-    } catch (err) {
-      console.error('Failed to create moment:', err);
-      toast.error('Failed to publish moment');
-    } finally {
-      setPublishing(false);
-    }
+    })();
   };
 
   if (!mounted) return null;
