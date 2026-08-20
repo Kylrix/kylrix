@@ -102,13 +102,15 @@ export async function executeInstantShare(
   }
 
   // 4. Aggressive Background Synchronizer
-  // Ensures the object is synced upstream and marked isPublic/isGuest
+  // Ensures the object is flushed upstream FIRST before publishing permissions
   void (async () => {
     try {
-      // Flush any pending uncommitted edits for this specific resource immediately
-      autonomicSyncEngine.flushImmediately();
+      // 4a. If object is pending in LocalEngine / SyncEngine, run the sync cycle immediately and wait for creation
+      if (autonomicSyncEngine.isPending(resourceId)) {
+        await autonomicSyncEngine.runCycle().catch(() => {});
+      }
 
-      // If not already marked public/guest, toggle on remote server
+      // 4b. Now that the row is guaranteed to exist upstream, ensure public & guest flags are active
       if (!isPublic || !isGuest) {
         await toggleResourcePublicGuest({
           resourceType,
