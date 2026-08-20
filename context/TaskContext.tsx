@@ -881,11 +881,11 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     const taskQueries = [
       Query.equal('userId', uid),
       Query.limit(1000),
-      Query.select(['$id', 'userId', 'title', 'description', 'status', 'priority', 'dueDate', 'recurrenceRule', 'tags', 'assigneeIds', 'attachmentIds', '$createdAt', '$updatedAt', 'isPinned', 'isArchived', 'isPublic', 'isGuest', 'parentId', 'comments', 'discussionId'])];
+    ];
     const calQueries = [
       Query.equal('userId', uid),
       Query.limit(100),
-      Query.select(['$id', 'userId', 'name', 'color', 'isDefault', 'isPinned', '$createdAt', '$updatedAt'])];
+    ];
 
     const [tList, cList] = await Promise.all([
       fetchOptimized(tasksKey, () => taskApi.list(taskQueries), force ? 0 : FLOW_WARM_TTL),

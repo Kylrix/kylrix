@@ -62,7 +62,19 @@ async function listRows<T extends Models.Row>(tableId: string, queries: string[]
     }
     const key = `list:${tableId}:${JSON.stringify(finalQueries)}`;
     return await fetchOptimized(key, async () => {
-        return await tablesDB.listRows<T>({ databaseId: FLOW_DATABASE_ID, tableId, queries: finalQueries });
+        try {
+            const res = await tablesDB.listRows<T>(FLOW_DATABASE_ID, tableId, finalQueries);
+            return res;
+        } catch (_err) {
+            // Fallback for object syntax or select column variances
+            try {
+                return await tablesDB.listRows<T>({ databaseId: FLOW_DATABASE_ID, tableId, queries: finalQueries });
+            } catch {
+                // If strict select query failed due to missing columns in table schema, fallback to base query
+                const fallbackQueries = finalQueries.filter(q => !q.includes('select('));
+                return await tablesDB.listRows<T>(FLOW_DATABASE_ID, tableId, fallbackQueries);
+            }
+        }
     }, FLOW_TTL);
 }
 
