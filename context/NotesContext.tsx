@@ -938,19 +938,24 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
   const applyNotePin = useCallback(async (noteId: string, pinned: boolean) => {
     const note = notes.find(n => n.$id === noteId);
-    if (!note || !user?.$id) return;
-    const ownerId = noteOwnerId(note);
-    const currentlyPinned = isResourcePinned('note', noteId, ownerId, note.isPinned);
+    const ownerId = note ? noteOwnerId(note) : (user?.$id || '');
+    const currentlyPinned = isPinned(noteId);
     if (currentlyPinned === pinned) return;
 
-    const isOwner = user.$id === ownerId;
+    const isOwner = !user?.$id || !ownerId || user.$id === ownerId;
+
+    // 1. Optimistic instant local update
+    setNotes((prev) => prev.map((n) => (n.$id === noteId ? { ...n, isPinned: pinned } : n)));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('kylrix:note-pinned', { detail: { noteId, isPinned: pinned } }));
+    }
 
     try {
       await togglePin({
         resourceType: 'note',
         resourceId: noteId,
         ownerId,
-        rowIsPinned: note.isPinned,
+        rowIsPinned: note?.isPinned,
         setOwnerRowPin: async (nextPinned) => {
           await updateNote(noteId, { isPinned: nextPinned } as any);
         },
@@ -959,9 +964,11 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         setNotes((prev) => prev.map((n) => (n.$id === noteId ? { ...n, isPinned: pinned } : n)));
       }
     } catch (err) {
+      // Revert optimistic update on failure
+      setNotes((prev) => prev.map((n) => (n.$id === noteId ? { ...n, isPinned: currentlyPinned } : n)));
       throw err;
     }
-  }, [notes, user?.$id, noteOwnerId, isResourcePinned, togglePin]);
+  }, [notes, user?.$id, noteOwnerId, isPinned, togglePin]);
 
   const pinNote = useCallback(async (noteId: string) => {
     await applyNotePin(noteId, true);

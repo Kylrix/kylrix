@@ -206,6 +206,20 @@ export default function IdeasPage() {
     })();
   }, []);
 
+  // Listen for instant optimistic pin toggles across cards, sidebars, and drawers
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handlePinEvent = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail;
+      if (!detail?.noteId) return;
+      setNotes((prev) =>
+        prev.map((n) => (n.$id === detail.noteId ? { ...n, isPinned: detail.isPinned } : n))
+      );
+    };
+    window.addEventListener('kylrix:note-pinned', handlePinEvent);
+    return () => window.removeEventListener('kylrix:note-pinned', handlePinEvent);
+  }, []);
+
   const [ecosystemTagsList, setEcosystemTagsList] = useState<{ name: string; color?: string }[]>([]);
 
   const activeNotes = notes.filter((n) => !n.isTrash);
