@@ -422,8 +422,9 @@ export default function GoalObjectRow({ task }: Props) {
             resourceId={task.id}
             isPublic={!!task.isPublic}
             isGuest={!!task.isGuest}
+            resourceTitle={task.title}
+            dek={task.dek}
             accentColor="#A855F7"
-            getCustomShareUrl={() => getGoalShareUrlWithDek(task.id, task.dek)}
             onPublished={({ isPublic, isGuest }) => {
               updateTask(task.id, { isPublic, isGuest });
             }}

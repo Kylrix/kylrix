@@ -51,6 +51,7 @@ import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { MILESTONES_UPGRADE_LABEL } from '@/lib/agentic/access';
+import { ShareLockButton } from '@/components/share/ShareLockButton';
 import {
   Drawer,
   Box,
@@ -600,6 +601,18 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             >
               <Sparkles className="w-4 h-4" />
             </button>
+            <ShareLockButton
+              resourceType="goal"
+              resourceId={task.id}
+              isPublic={!!task.isPublic}
+              isGuest={!!task.isGuest}
+              resourceTitle={task.title}
+              dek={task.dek}
+              accentColor="#A855F7"
+              onPublished={({ isPublic, isGuest }) => {
+                updateTask(task.id, { isPublic, isGuest });
+              }}
+            />
             <button
               type="button"
               onClick={handleStartEditTitle}
