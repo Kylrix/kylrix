@@ -10,6 +10,9 @@ const NoteDrawer = dynamic(() => import('./NoteDrawer').then((m) => m.NoteDrawer
 const ShareNoteDrawer = dynamic(() => import('./ShareNoteDrawer').then((m) => m.ShareNoteDrawer), {
   ssr: false,
 });
+const ShareContextDrawer = dynamic(() => import('./ShareContextDrawer').then((m) => m.ShareContextDrawer), {
+  ssr: false,
+});
 const DeleteNoteDrawer = dynamic(() => import('./DeleteNoteDrawer').then((m) => m.DeleteNoteDrawer), {
   ssr: false,
 });
@@ -160,6 +163,8 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
       return <NewProjectDrawer />;
     case 'agent-create':
       return <AgentCreateDrawer />;
+    case 'share-context':
+      return <ShareContextDrawer />;
     case 'share-note':
       return (
         <ShareNoteDrawer

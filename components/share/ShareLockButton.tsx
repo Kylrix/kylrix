@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Share2, Loader2 } from 'lucide-react';
+import React from 'react';
+import { Share2 } from 'lucide-react';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { useToast } from '@/hooks/useToast';
 import { IconButton } from '@/lib/openbricks/primitives';
-import { executeInstantShare } from '@/lib/share/instant-share';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
 
@@ -42,16 +41,13 @@ export function ShareLockButton({
   blockReason,
   getCustomShareUrl
 }: ShareLockButtonProps) {
-  const [loading, setLoading] = useState(false);
-  const { showSuccess, showError } = useToast();
+  const { showError } = useToast();
   const { open } = useUnifiedDrawer();
   const { user } = useAuth();
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (loading) return;
 
     // 1. If not authenticated, prompt contextual login drawer
     if (!user?.$id) {
@@ -70,52 +66,17 @@ export function ShareLockButton({
       return;
     }
 
-    setLoading(true);
-    try {
-      if (getCustomShareUrl) {
-        const customUrl = await getCustomShareUrl();
-        await navigator.clipboard.writeText(customUrl).catch(() => {});
-        showSuccess('Share link copied');
-        onPublished?.({ isPublic: true, isGuest: true, publicUrl: customUrl });
-        return;
-      }
-
-      // Universal Instant Share: Instant unblocked copy + prioritized sync
-      const result = await executeInstantShare(resourceType, resourceId, {
-        dek,
-        isPublic,
-        isGuest,
-        resourceTitle,
-        projectId,
-        openLoginDrawer: (ctx) => open('login', ctx),
-        openMasterpassPrompt: () => open('masterpass'),
-      });
-
-      if (result.requiresAuth) {
-        return;
-      }
-
-      if (result.requiresMasterpass) {
-        showError('Unlock your vault to copy decrypted link');
-        return;
-      }
-
-      if (result.copied) {
-        showSuccess('Link copied to clipboard');
-      } else {
-        showSuccess('Share link ready: ' + result.url);
-      }
-
-      onPublished?.({
-        isPublic: true,
-        isGuest: true,
-        publicUrl: result.url,
-      });
-    } catch (err: any) {
-      showError('Could not share: ' + (err?.message || 'Try again in a moment.'));
-    } finally {
-      setLoading(false);
-    }
+    // 3. Open the native Share Context Sheet
+    open('share-context', {
+      resourceType,
+      resourceId,
+      resourceTitle,
+      isPublic,
+      isGuest,
+      dek,
+      projectId,
+      accentColor,
+    });
   };
 
   const isActive = isPublic || isGuest;
@@ -128,7 +89,6 @@ export function ShareLockButton({
   return (
     <IconButton
       onClick={handleToggle}
-      disabled={loading}
       title={tip}
       aria-label={tip}
       sx={{
