@@ -5,6 +5,7 @@ import { Share2 } from 'lucide-react';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { useToast } from '@/hooks/useToast';
 import { IconButton } from '@/lib/openbricks/primitives';
+import { executeInstantShare } from '@/lib/share/instant-share';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
 
@@ -66,13 +67,29 @@ export function ShareLockButton({
       return;
     }
 
-    // 3. Open the native Share Context Sheet
+    // 3. Trigger immediate aggressive sync flush and mark local states as published optimistically
+    try {
+      void executeInstantShare(resourceType, resourceId, {
+        dek,
+        isPublic: true,
+        isGuest: true,
+        resourceTitle,
+        projectId,
+      });
+      onPublished?.({
+        isPublic: true,
+        isGuest: true,
+        publicUrl: '',
+      });
+    } catch {}
+
+    // 4. Open the native Share Context Sheet
     open('share-context', {
       resourceType,
       resourceId,
       resourceTitle,
-      isPublic,
-      isGuest,
+      isPublic: true,
+      isGuest: true,
       dek,
       projectId,
       accentColor,
