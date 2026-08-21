@@ -95,7 +95,8 @@ import {
   getObjectsByParentSecure,
   syncMasterpassToAccountPasswordAction,
   createStandaloneTagSecure,
-  toggleTaskReminderSecure} from './secure-ops/misc';
+  toggleTaskReminderSecure,
+  purgeExpiredTrashSecure} from './secure-ops/misc';
 
 import {
   installFlowSecure,
@@ -235,6 +236,7 @@ export {
   
   createStandaloneTagSecure,
   toggleTaskReminderSecure,
+  purgeExpiredTrashSecure,
   installFlowSecure,
   listMyFlowInstallsSecure,
   revokeFlowInstallSecure,

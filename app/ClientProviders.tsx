@@ -28,6 +28,7 @@ import { SudoProvider } from '@/context/SudoContext';
 import { DrawerStateProvider } from '@/components/ui/DrawerStateContext';
 import { LocalContextProvider } from '@/lib/context-engine';
 import { SetupProvider } from '@/context/SetupContext';
+import { TrashPurgeProvider } from '@/context/TrashPurgeContext';
 
 import { SpineProvider } from '@/context/SpineContext';
 import { NeuralProvider } from '@/context/NeuralContext';
@@ -95,6 +96,7 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   TokenOpsProvider,
   AIProvider,
   SetupProvider,
+  TrashPurgeProvider,
 ];
 import { UniversalScrollRestoration } from '@/components/providers/UniversalScrollRestoration';
 

@@ -540,3 +540,9 @@ export async function listOAuthAppInstalls() {
   return listOAuthAppInstallsSecure(jwt);
 }
 
+export async function purgeExpiredTrash(retentionDays: number = 90) {
+  const jwt = await getJwt();
+  const { purgeExpiredTrashSecure } = await import('./secure-ops');
+  return purgeExpiredTrashSecure({ retentionDays, jwt });
+}
+

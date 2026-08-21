@@ -531,7 +531,7 @@ export default function TrashPage() {
                 <span className="hidden sm:inline text-xs font-bold px-2 py-1 rounded-full bg-white/5 border border-white/10 text-white/50">{wsLabel}</span>
               </h1>
               <p className="text-white/40 text-xs font-semibold mt-1">
-                Workspace: <span className="text-white/70">{wsLabel}</span> • {items.length} trashed • Auto-purge after 30 days • Local-first
+                Workspace: <span className="text-white/70">{wsLabel}</span> • {items.length} trashed • Auto-purge after 90 days • Local-first
               </p>
             </div>
           </div>
