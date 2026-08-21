@@ -569,25 +569,7 @@ export async function executeCascadeDeleteSecure(
       });
     }
 
-    // B. Clean up linked Call Link
-    if (meetingUrl && meetingUrl.includes('/connect/call/')) {
-      const parts = meetingUrl.split('/connect/call/');
-      const callId = parts[parts.length - 1];
-      if (callId) {
-        console.log(`[Cascade Delete] Cleaning up linked call link: ${callId}`);
-        try {
-          await executeCascadeDeleteSecure(CHAT_DB, CALL_LINKS_TABLE, callId);
-          await tables.deleteRow({
-            databaseId: CHAT_DB,
-            tableId: CALL_LINKS_TABLE,
-            rowId: callId});
-        } catch (err: any) {
-          console.warn(`[Cascade Delete] Failed to delete linked call ${callId}:`, err?.message);
-        }
-      }
-    }
-
-    // C. Clean up linked thread Note (Discussion Thread)
+    // B. Clean up linked thread Note (Discussion Thread)
     try {
       console.log(`[Cascade Delete] Cleaning up linked event thread huddle: ${rowId}`);
       await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, rowId);

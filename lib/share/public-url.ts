@@ -46,9 +46,6 @@ function buildPublicResourcePath(
       return `/events/${id}`;
     case 'project':
       return `/workspace/${id}`;
-    case 'huddle':
-    case 'call':
-      return `/connect/call/${id}`;
     case 'moment':
       return `/moment/${id}`;
     case 'agent_session':

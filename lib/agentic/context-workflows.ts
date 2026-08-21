@@ -363,13 +363,6 @@ export function getQuickWorkflows(context: AgenticPageContext): QuickWorkflowAct
           kind: 'prompt',
           prompt: 'Turn this conversation into meeting notes with decisions, owners, and next tasks.'},
         {
-          id: 'connect-huddle',
-          label: 'Start huddle',
-          description: 'Live call room',
-          icon: 'video',
-          kind: 'navigate',
-          href: '/connect/calls'},
-        {
           id: 'connect-chats',
           label: 'Open chats',
           description: 'Continue conversations',

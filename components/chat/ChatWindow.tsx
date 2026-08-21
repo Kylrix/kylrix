@@ -58,7 +58,6 @@ import { getCachedIdentityById, seedIdentityCache, subscribeIdentityCache } from
 import { getVerificationState } from '@/lib/verification';
 import { markConversationRead } from '@/lib/chat-read-state';
 import { useChatNotifications } from '../providers/ChatNotificationProvider';
-import { useCallLauncher } from '@/context/CallLauncherContext';
 import MuralPattern from './MuralPattern';
 import { IdentityAvatar, IdentityName } from '../common/IdentityBadge';
 import { buildNoteAttachmentMetadata } from '@/lib/sdk';
@@ -102,7 +101,6 @@ export const ChatWindow = ({
     const { user } = useAuth();
     const { openProUpgrade } = useProUpgrade();
     const { markConversationRead: markConversationReadInContext } = useChatNotifications();
-    const { openCallLauncher } = useCallLauncher();
     const { globalPresence} = usePresence();
     // Typing/online via Appwrite presence (ephemeral) — mutual prefs from profile.preferences (privacy tab)
     const [typingUsers, _setTypingUsers] = useState<string[]>([]);
@@ -152,21 +150,7 @@ export const ChatWindow = ({
     const [_isPending, startTransition] = useTransition();
     const isProPlan = hasPaidKylrixPlan(user);
     const { openWalletWithIntent } = useWalletOverlay();
-    const searchParams = useSearchParams();
-    const startCallParam = searchParams.get('startCall');
-    const callInitiatedRef = useRef(false);
-
-    useEffect(() => {
-        if (conversation && startCallParam === '1' && !callInitiatedRef.current) {
-            callInitiatedRef.current = true;
-            openCallLauncher({
-                source: 'chat',
-                conversationId,
-                conversationName: conversation?.name,
-                participantIds: Array.isArray(conversation?.participants) ? conversation.participants : [],
-                title: 'Audio Call'});
-        }
-    }, [conversation, startCallParam, conversationId, openCallLauncher]);
+    const _searchParams = useSearchParams();
 
     const partnerId = useMemo(() => {
         if (!conversation || conversation.type !== 'direct' || !user?.$id) return null;
@@ -1259,15 +1243,6 @@ export const ChatWindow = ({
         return true;
     };
 
-    const handleCall = (type: 'audio' | 'video' = 'audio') => {
-        openCallLauncher({
-            source: 'chat',
-            conversationId,
-            conversationName: conversation?.name,
-            participantIds: Array.isArray(conversation?.participants) ? conversation.participants : [],
-            title: type === 'audio' ? 'Audio Call' : 'Video Call'});
-    };
-
     const _handleAttachClick = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
     };
@@ -1588,11 +1563,6 @@ export const ChatWindow = ({
                         </Box>
                     </Box>
                     <Stack direction="row" spacing={0.5} sx={{ pointerEvents: 'auto' }}>
-                        {!isSelf && (
-                            <IconButton onClick={() => handleCall('audio')} sx={{ color: 'text.secondary' }}>
-                                <Phone size={20} strokeWidth={1.5} />
-                            </IconButton>
-                        )}
                         <IconButton
                             onClick={(e: React.MouseEvent) => {
                                 e.preventDefault();

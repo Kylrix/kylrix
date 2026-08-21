@@ -36,7 +36,6 @@ import { ChatService } from '@/lib/services/chat';
 import { UsersService } from '@/lib/services/users';
 import { getCachedIdentityById, seedIdentityCache } from '@/lib/identity-cache';
 import { fetchProfilePreview } from '@/lib/profile-preview';
-import { useCallLauncher } from '@/context/CallLauncherContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 type ConversationActionsSheetProps = {
@@ -155,7 +154,6 @@ export default function ConversationActionsSheet({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
   const { user } = useAuth();
-  const { openCallLauncher } = useCallLauncher();
   const { open: openUnified } = useUnifiedDrawer();
 
   const [currentConversation, setCurrentConversation] = useState<any | null>(conversation);
@@ -384,17 +382,6 @@ export default function ConversationActionsSheet({
     onClose();
   };
 
-  const handleCall = () => {
-    if (!currentConversation) return;
-    openCallLauncher({
-      source: currentConversation?.type === 'group' ? 'group' : 'chat',
-      conversationId: currentConversation.$id,
-      conversationName: currentConversation.name,
-      participantIds: Array.isArray(currentConversation?.participants) ? currentConversation.participants : [],
-      title: currentConversation.name || 'Call'});
-    onClose();
-  };
-
   const handleOpenInfo = () => {
     const username = directProfile?.username;
     if (!username) return;
@@ -601,9 +588,6 @@ export default function ConversationActionsSheet({
                   <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
                     <Button fullWidth variant="contained" startIcon={<MessageCircle size={18} />} onClick={handleOpenDirectChat}>
                       Message
-                    </Button>
-                    <Button fullWidth variant="outlined" startIcon={<Phone size={18} />} onClick={handleCall} disabled={currentConversation.isSelf}>
-                      Call
                     </Button>
                   </Stack>
                   <Button

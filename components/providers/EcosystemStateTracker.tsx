@@ -25,13 +25,9 @@ export function EcosystemStateTracker({ children }: { children: React.ReactNode 
       pathname.startsWith('/idea') ||
       pathname.startsWith('/u/') ||
       pathname.startsWith('/p/') ||
-      pathname.startsWith('/call/') ||
-      pathname.startsWith('/connect/call/') ||
       pathname.startsWith('/forms/') ||
       pathname.startsWith('/events/') ||
-      pathname.startsWith('/goals/') ||
-      pathname.startsWith('/forms/') ||
-      pathname.startsWith('/events/');
+      pathname.startsWith('/goals/');
 
     if (isPublic) {
       return;

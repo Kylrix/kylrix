@@ -26,7 +26,6 @@ import { AIProvider } from '@/context/AIContext';
 import { AppChromeProvider } from '@/components/providers/AppChromeProvider';
 import { SudoProvider } from '@/context/SudoContext';
 import { DrawerStateProvider } from '@/components/ui/DrawerStateContext';
-import { CallLauncherProvider } from '@/context/CallLauncherContext';
 import { LocalContextProvider } from '@/lib/context-engine';
 import { SetupProvider } from '@/context/SetupContext';
 
@@ -73,7 +72,6 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   AppwriteProvider,
   LocalContextProvider,
   AppChromeProvider,
-  CallLauncherProvider,
   ThemeProvider,
   ToastProvider,
   UnifiedDrawerProvider,

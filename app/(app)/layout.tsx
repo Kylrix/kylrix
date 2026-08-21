@@ -50,8 +50,6 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
         path.startsWith('/i/') ||
         path.startsWith('/u/') ||
         path.startsWith('/p/') ||
-        path.startsWith('/call/') ||
-        path.startsWith('/connect/call/') ||
         path.startsWith('/form/') ||
         path.startsWith('/goal/') ||
         path.startsWith('/forms/') ||

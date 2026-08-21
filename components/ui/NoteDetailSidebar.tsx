@@ -86,7 +86,6 @@ import {
 } from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { StorageService } from '@/lib/services/storage';
-import { useCallLauncher } from '@/context/CallLauncherContext';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { isValidAppwriteRowId } from '@/lib/utils/resource-ids';
@@ -138,7 +137,6 @@ export function NoteDetailSidebar({
   const { showSuccess, showError } = useToast();
   const { closeSidebar } = useDynamicSidebar();
   const { closeOverlay } = useOverlay();
-  const { openCallLauncher } = useCallLauncher();
   const [isTagSelectorOpen, setIsTagSelectorOpen] = useState(false);
   const { ecosystemTags, refreshEcosystemTags } = useTask();
   const { persistScrollPosition, getScrollPosition } = useSection();
@@ -677,20 +675,6 @@ export function NoteDetailSidebar({
     }
   }, [liveNote, updateLocalAndParentNote, showSuccess, showError, createTaskFromNote]);
 
-  const handleStartNoteHuddle = useCallback(() => {
-    const ownerId = liveNote.userId;
-    const collaborators = Array.isArray(liveNote.collaborators) 
-        ? liveNote.collaborators.map((c: any) => typeof c === 'string' ? c : c.userId || c.id)
-        : [];
-    const participantIds = Array.from(new Set([ownerId, ...collaborators].filter(Boolean)));
-
-    openCallLauncher({
-      source: 'note',
-      noteId: liveNote.$id,
-      participantIds,
-      title: liveNote.title ? `Huddle: ${liveNote.title}` : 'Note Huddle'});
-  }, [liveNote, openCallLauncher]);
-
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [isContextDrawerOpen, setIsContextDrawerOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
@@ -1148,18 +1132,6 @@ export function NoteDetailSidebar({
               <AgenticDiffViewer changes={(liveNote as any).agenticDiffs} />
             </div>
           ) : null}
-
-          {/* Start Huddle */}
-          {!readOnly && (
-            <button 
-              type="button"
-              onClick={handleStartNoteHuddle} 
-              className="p-1.5 rounded-lg bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/25 transition-colors flex items-center justify-center"
-              title="Start Huddle"
-            >
-              <VideoCallIcon className="w-4 h-4" />
-            </button>
-          )}
 
           {/* Voice recorder — only for editors */}
           {!readOnly && !shouldMaskEncrypted && (

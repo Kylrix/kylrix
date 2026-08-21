@@ -8,7 +8,6 @@ import { UsersService } from '@/lib/services/users';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getCachedIdentityById } from '@/lib/identity-cache';
 import { useAuth } from '@/lib/auth';
-import { useCallLauncher } from '@/context/CallLauncherContext';
 import toast from 'react-hot-toast';
 
 /**
@@ -37,7 +36,6 @@ export function ProfileSidebar({
 }) {
   const router = useRouter();
   const { user } = useAuth();
-  const { openCallLauncher } = useCallLauncher();
   const [profile, setProfile] = useState<any>(seed || null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
     seed?.avatar?.startsWith?.('http') ? seed.avatar : null,
@@ -108,29 +106,6 @@ export function ProfileSidebar({
     }
     if (conversationId) return;
     router.push(`/connect/chats?userId=${encodeURIComponent(uid)}`);
-  };
-
-  const goCall = () => {
-    if (onClose) onClose();
-    if (isGroup) {
-      openCallLauncher({
-        source: 'chat',
-        conversationId: conversation?.$id || conversationId || undefined,
-        conversationName: name,
-        participantIds: Array.isArray(conversation?.participants) ? conversation.participants : [],
-        title: 'Group Audio Call',
-      });
-      return;
-    }
-    if (!uid || isOwn) return;
-    const participants = user?.$id ? [user.$id, uid] : [uid];
-    openCallLauncher({
-      source: 'chat',
-      conversationId: conversationId || undefined,
-      conversationName: displayName,
-      participantIds: participants,
-      title: 'Audio Call',
-    });
   };
 
   return (
@@ -297,27 +272,18 @@ export function ProfileSidebar({
           )}
 
           {/* Action buttons */}
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            {!isGroup ? (
+          {!isGroup ? (
+            <div className="pt-1">
               <button
                 type="button"
                 onClick={goMessage}
-                className="h-9 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs inline-flex items-center justify-center gap-1.5 transition-all shadow-md"
+                className="w-full h-9 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs inline-flex items-center justify-center gap-1.5 transition-all shadow-md"
               >
                 <MessageSquare size={13} strokeWidth={2.5} />
                 <span>{isOwn ? 'Notes to self' : 'Message'}</span>
               </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={goCall}
-              disabled={!isGroup && isOwn}
-              className={`h-9 rounded-xl ${isGroup ? 'col-span-2 bg-[#6366F1] hover:bg-[#5254E8] text-white' : 'bg-white/5 border border-white/8 hover:bg-white/10 text-white'} font-extrabold text-xs inline-flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all`}
-            >
-              <PhoneCall size={13} strokeWidth={2.5} />
-              <span>{isGroup ? 'Start Group Call' : 'Call'}</span>
-            </button>
-          </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

@@ -52,7 +52,6 @@ import {
 import { FormsService } from '@/lib/services/forms';
 import { EcosystemService } from '@/lib/services/ecosystem';
 import { SocialService } from '@/lib/services/social';
-import { CallService } from '@/lib/services/call';
 import { events as eventApi } from '@/lib/kylrixflow';
 import { permissions } from '@/lib/permissions';
 
@@ -61,7 +60,6 @@ import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
 import FormDialog from '@/components/forms/FormDialog';
 import { EventDialog } from '@/components/events/EventDialog';
 import NewTotpDialog from '@/components/app/totp/new';
-import { CallActionModal } from '@/components/call/CallActionModal';
 
 interface ProjectAddObjectModalProps {
   open: boolean;
@@ -94,7 +92,6 @@ function kindForTab(tab: number): string {
     case 5: return 'tag';
     case 6: return 'totp';
     case 7: return 'moment';
-    case 8: return 'call';
     default: return 'note';
   }
 }
@@ -332,16 +329,6 @@ export default function ProjectAddObjectModal({
             }
             return rows;
           }
-          case 8: { // Call
-            const callRes = await CallService.getCallHistory(user.$id, true);
-            const rows = Array.isArray(callRes) ? callRes : [];
-            if (query.trim()) {
-              return rows.filter((c: any) => 
-                (c.title || '').toLowerCase().includes(query.toLowerCase())
-              );
-            }
-            return rows;
-          }
           default:
             return [];
         }
@@ -482,19 +469,7 @@ export default function ProjectAddObjectModal({
                 const calendarId = 'default';
                 const visibility = eventData.visibility || 'public';
                 const eventPermissions = permissions.forVisibility(visibility, user.$id);
-                let meetingUrl = eventData.url || '';
-
-                if (eventData.autoCreateCall) {
-                  const call = await CallService.createCallLink(
-                    user.$id,
-                    'video',
-                    undefined,
-                    eventData.title,
-                    eventData.startTime.toISOString(),
-                    60
-                  );
-                  meetingUrl = `/connect/call/${call.$id}`;
-                }
+                const meetingUrl = eventData.url || '';
 
                 const newDoc = await eventApi.create({
                   title: eventData.title,
@@ -547,17 +522,6 @@ export default function ProjectAddObjectModal({
       case 7: // Moment
         setIsMomentDialogOpen(true);
         break;
-      case 8: // Call
-        openOverlay(
-          <CallActionModal
-            open={true}
-            onClose={() => {
-              closeOverlay();
-              fetchResults();
-            }}
-          />
-        );
-        break;
       default:
         break;
     }
@@ -573,7 +537,6 @@ export default function ProjectAddObjectModal({
       case 5: return 'Tag';
       case 6: return 'TOTP';
       case 7: return 'Moment';
-      case 8: return 'Call';
       default: return 'Object';
     }
   };
@@ -639,7 +602,6 @@ export default function ProjectAddObjectModal({
             <Tab icon={<TagIcon size={14} />} iconPosition="start" label="Tag" />
             <Tab icon={<KeyRound size={14} />} iconPosition="start" label="TOTP" />
             <Tab icon={<Sparkles size={14} />} iconPosition="start" label="Moment" />
-            <Tab icon={<PhoneCall size={14} />} iconPosition="start" label="Call" />
         </Tabs>
       </Box>
 

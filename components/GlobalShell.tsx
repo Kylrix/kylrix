@@ -27,7 +27,6 @@ import UniversalFAB from '@/components/layout/UniversalFAB';
 
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
-import { useCallLauncher } from '@/context/CallLauncherContext';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { useServiceWorker } from '@/hooks/useServiceWorker';
 import { isFlowPath, isGoalsSurfacePath } from '@/lib/routing/app-paths';
@@ -58,9 +57,9 @@ const AppDynamicSidebarPortal = dynamic(
 
 function useIsDesktopShell() {
   const [isDesktop, setIsDesktop] = React.useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches,
+    typeof window !== 'undefined' ? window.innerWidth >= 768 : false,
   );
-  React.useEffect(() => {
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     const media = window.matchMedia('(min-width: 768px)');
     const sync = () => setIsDesktop(media.matches);
@@ -99,7 +98,6 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       pathname.startsWith('/goal/') ||
       pathname.startsWith('/form/') ||
       pathname.startsWith('/events/') ||
-      pathname.startsWith('/connect/call/') ||
       pathname.startsWith('/agents/session/') ||
       pathname.startsWith('/agents/chat/') ||
       pathname.startsWith('/send') ||
@@ -122,7 +120,6 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const { isWalletOpen, closeWallet } = useWalletOverlay();
   const { } = useAppChrome();
   const { isDrawerOpen, setIsDrawerOpen } = useDrawerState();
-  const { } = useCallLauncher();
   const { isOpen: isUnifiedFileDrawerOpen } = useUnifiedFileDrawer();
 
   // Smart responsive Left Sidebar visibility

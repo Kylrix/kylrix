@@ -390,8 +390,6 @@ export async function deleteConversationFullyInternal(payload: {
     Query.equal('resourceId', payload.conversationId)]);
   const projectObjects = await listAllDocuments(databases, CHAT_DB_ID, 'project_objects', [
     Query.equal('entityId', payload.conversationId)]).catch(() => []);
-  const callLinks = await listAllDocuments(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CONNECT.CALL_LINKS || 'calls', [
-    Query.equal('conversationId', payload.conversationId)]).catch(() => []);
 
   // Wipe storage files, media attachments, and message reactions
   await deleteConversationArtifacts(databases, storage, payload.conversationId, messages);
@@ -402,17 +400,6 @@ export async function deleteConversationFullyInternal(payload: {
     typeof conversation?.avatar === 'string' && !conversation.avatar.startsWith('http') ? conversation.avatar : '',
   ].filter(Boolean);
   await Promise.all(avatarFileIds.map((fileId: string) => storage.deleteFile(APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS, fileId).catch(() => null)));
-
-  // Wipe linked call links files/records — transactional when possible (CHAT DB)
-  if (callLinks.length) {
-    try {
-      await withSystemTransaction(async (txId) => {
-        await deleteRowsTransactional(txId, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CONNECT.CALL_LINKS || 'calls', callLinks.map((row: any) => row.$id));
-      }, { ttl: 60 });
-    } catch {
-      await deleteRowsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CONNECT.CALL_LINKS || 'calls', callLinks.map((row: any) => row.$id));
-    }
-  }
 
   // Wipe linked project object bindings — transactional when possible
   if (projectObjects.length) {

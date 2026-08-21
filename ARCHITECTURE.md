@@ -129,7 +129,7 @@ Paint local first; live copy = content SoT; pending = separate; auth late-bindin
 | `/app` (`/idea/[id]`) | Notes | `lib/appwrite/note.ts`, `NotesContext`, `lib/sync/` |
 | `/flow` `/goals` | Tasks/Goals/Events | `kylrixflow.ts`, `TaskContext` |
 | `/vault` `/vault/totp` | Secrets/TOTP | `lib/appwrite/vault.ts`, `masterpass-crypto.ts` |
-| `/connect` `/connect/chats/*` `/connect/calls` | Hangouts/Moments/Calls | `lib/services/chat.ts`, `lib/webrtc/`, `presence.ts` |
+| `/connect` `/connect/chats/*` | Hangouts/Moments | `lib/services/chat.ts`, `presence.ts` |
 | `/agents` | Kylie | `lib/agentic/`, `lib/actions/agentic.ts` |
 | `/workspaces` `/workspaces/[projectId]` | Workspaces (=projects) | `lib/appwrite/projects.ts`, `useProjectObjects`, `useWorkspaceFilteredItems` |
 | `/settings` | Profile/MFA/Sessions/Developers/Privacy | `ProfileManager`, `WorkspaceTab→CreatePatDrawer`, `PrivacyTab` |

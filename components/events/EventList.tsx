@@ -9,7 +9,6 @@ import { events as eventApi } from '@/lib/kylrixflow';
 import { useTask } from '@/context/TaskContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { permissions, EventVisibility } from '@/lib/permissions';
-import { CallService } from '@/lib/services/call';
 import toast from 'react-hot-toast';
 import { MultiSectionContainer } from '@/context/SectionContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
@@ -93,25 +92,7 @@ export default function EventList() {
           (eventData.visibility as EventVisibility) ||
           (eventData.isPublic ? 'public' : 'private');
         const eventPermissions = permissions.forVisibility(visibility, currentUserId);
-
-        let meetingUrl = eventData.url || '';
-        if (eventData.autoCreateCall && currentUserId !== 'guest') {
-          try {
-            const call = await CallService.createCallLink(
-              currentUserId,
-              'video',
-              undefined,
-              eventData.title,
-              new Date(eventData.startTime).toISOString(),
-              60,
-            );
-            meetingUrl = `/connect/call/${call.$id}`;
-            toast.success('Call link scheduled');
-          } catch (callErr) {
-            console.error('Failed to create call link', callErr);
-            toast.error('Call link failed — saving event anyway');
-          }
-        }
+        const meetingUrl = eventData.url || '';
 
         const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
         const newDoc = await eventApi.create(

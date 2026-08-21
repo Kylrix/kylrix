@@ -13,7 +13,6 @@ import EventDetails from '@/components/events/EventDetails';
 import FormDetailsPage from '@/app/(app)/forms/[formId]/page';
 import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
 import { TagNotesListSidebar } from '@/components/ui/TagNotesListSidebar';
-import { PublicCall } from '@/app/(app)/connect/call/[id]/PublicCall';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 
 // Helper imports for note detail (live-copy plugin — no open-path getNote)
@@ -27,7 +26,7 @@ import NoteReactions from '@/app/(app)/app/(app)/notes/NoteReactions';
 import { useNotes } from '@/context/NotesContext';
 
 export interface ActiveDetail {
-  type: 'note' | 'moment' | 'goal' | 'form' | 'event' | 'tag' | 'secret' | 'chat' | 'call' | 'huddle';
+  type: 'note' | 'moment' | 'goal' | 'form' | 'event' | 'tag' | 'secret' | 'chat';
   id: string;
   data?: any; // Extra initial payload if we have it
 }
@@ -77,7 +76,6 @@ const DEFAULT_LAYOUTS: Record<string, PanelType[]> = {
   '/vault': ['note', 'totp', 'projects'],
   '/vault/totp': ['secrets', 'secret_chat'],
   '/connect/chats': ['projects', 'huddles', 'note'],
-  '/connect/calls': ['projects', 'threads'],
   '/send': ['stash'],
 };
 
@@ -466,8 +464,6 @@ function DetailSectionWrapper({ detail, onClose }: { detail: ActiveDetail; onClo
           onNoteDelete={() => {}}
         />
       );
-    case 'call':
-      return <PublicCall id={detail.id} />;
     case 'chat':
       return <ChatDetailContainer conversationId={detail.id} onBack={onClose} />;
     default:

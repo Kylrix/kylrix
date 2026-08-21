@@ -15,7 +15,6 @@ import {
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
-import { useCallLauncher } from '@/context/CallLauncherContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -46,7 +45,6 @@ export function UnifiedLeftSidebar() {
   const { open: openUnified } = useUnifiedDrawer();
   const { } = useAppChrome();
   const { } = useDrawerState();
-  const { isOpen: _isCallLauncherOpen } = useCallLauncher();
   const { isOpen: _isOverlayOpen } = useOverlay();
   const { isCollapsed } = useSidebar();
   const { user: _user, updatePreferences } = useAuth();
@@ -80,8 +78,8 @@ export function UnifiedLeftSidebar() {
     if (pathname?.startsWith('/app')) return 'note';
     if (pathname?.startsWith('/goals') || pathname?.startsWith('/events') || pathname?.startsWith('/goal')) return 'goal';
     if (pathname?.startsWith('/vault')) return 'vault';
-    // Desktop split: /connect → moments, /connect/chats (+ calls/chat) → hangout
-    if (pathname?.startsWith('/connect/chats') || pathname?.startsWith('/connect/chat') || pathname?.startsWith('/connect/calls') || pathname?.startsWith('/connect/call')) return 'hangout';
+    // Desktop split: /connect → moments, /connect/chats (+ chat) → hangout
+    if (pathname?.startsWith('/connect/chats') || pathname?.startsWith('/connect/chat')) return 'hangout';
     if (pathname?.startsWith('/connect')) return 'moments';
     if (isFlowPath(pathname)) return 'flow';
     return null;

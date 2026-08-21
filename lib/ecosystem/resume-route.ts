@@ -7,8 +7,6 @@ const PUBLIC_PREFIXES = [
   '/idea',
   '/u/',
   '/p/',
-  '/call/',
-  '/connect/call/',
   '/form/',
   '/forms/',
   '/events/',

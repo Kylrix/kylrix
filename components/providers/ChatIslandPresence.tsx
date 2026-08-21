@@ -67,11 +67,7 @@ export default function ChatIslandPresence({ notification, onDismiss }: ChatIsla
                 pointerEvents: 'auto',
                 cursor: 'pointer'}}
               onClick={() => {
-                if (notification.type === 'call' && notification.callId) {
-                  router.push(`/connect/call/${notification.callId}`);
-                } else {
-                  router.push(`/connect/chats?c=${notification.id}`);
-                }
+                router.push(`/connect/chats?c=${notification.id}`);
                 onDismiss();
               }}
             >

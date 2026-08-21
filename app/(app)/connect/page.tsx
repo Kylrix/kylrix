@@ -2,14 +2,13 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Hash, MessageSquare, Phone, Plus, PlusCircle } from 'lucide-react';
+import { Hash, MessageSquare, Plus, PlusCircle } from 'lucide-react';
 import { ChatList } from '@/components/chat/ChatList';
-import { MailBox } from '@/components/connect/MailBox';
 import { ConnectMomentsPanel } from '@/components/connect/ConnectMomentsPanel';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
-type ConnectTab = 'moments' | 'chats' | 'mail';
+type ConnectTab = 'moments' | 'chats';
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false);
@@ -70,11 +69,6 @@ function ConnectHomeContent() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'mail') {
-      setConfiguration({ isVisible: false });
-      return () => resetConfiguration();
-    }
-
     if (activeTab === 'chats') {
       if (isDesktop) {
         setConfiguration({ isVisible: false });
@@ -94,12 +88,6 @@ function ConnectHomeContent() {
                   label: 'SECURE CHAT',
                   icon: <MessageSquare size={18} />,
                   onClick: openSecureChat,
-                },
-                {
-                  id: 'huddle',
-                  label: 'START HUDDLE',
-                  icon: <Phone size={18} />,
-                  onClick: () => router.push('/connect/calls?start=1'),
                 },
               ],
       });
@@ -185,7 +173,6 @@ function ConnectHomeContent() {
         {[
           { id: 'moments', label: 'moments' },
           { id: 'chats', label: 'hangout' },
-          { id: 'mail', label: 'mail' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -230,22 +217,6 @@ function ConnectHomeContent() {
           </header>
           <div className="p-4 md:p-5 bg-[#161412] border border-[#34322F] rounded-[28px]">
             <ChatList activeTab={chatsActiveTab} onTabChange={setChatsActiveTab} />
-          </div>
-        </div>
-      ) : null}
-
-      {activeTab === 'mail' ? (
-        <div className="flex flex-col gap-6 w-full">
-          <header>
-            <h1 className="text-white font-black text-2xl md:text-3xl font-clash tracking-tight">
-              Mail
-            </h1>
-            <p className="text-white/45 text-xs font-semibold mt-1 font-satoshi">
-              Inbound messages and delivery
-            </p>
-          </header>
-          <div className="p-4 md:p-5 bg-[#161412] border border-[#34322F] rounded-[28px]">
-            <MailBox />
           </div>
         </div>
       ) : null}

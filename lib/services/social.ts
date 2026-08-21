@@ -302,18 +302,6 @@ export const SocialService = {
                                 APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
                                 att.id));
                     enriched.attachedEvent = event;
-                } else if (att.type === 'call') {
-                    const call = await getTablesDbRowCached(
-                        {
-                            databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-                            tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-                            rowId: att.id},
-                        () =>
-                            tablesDB.getRow(
-                                APPWRITE_CONFIG.DATABASES.CHAT,
-                                APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-                                att.id));
-                    enriched.attachedCall = call;
                 } else if (att.type === 'image' || att.type === 'video') {
                     // For now, we just keep the IDs in enriched.attachments
                     if (!enriched.attachments) enriched.attachments = [];
@@ -491,33 +479,28 @@ export const SocialService = {
                 if (!attachment?.id) return;
                 if (attachment.type === 'note') attachmentGroups.note.add(attachment.id);
                 if (attachment.type === 'event') attachmentGroups.event.add(attachment.id);
-                if (attachment.type === 'call') attachmentGroups.call.add(attachment.id);
             });
         });
 
-        const [sourceMoments, noteRows, eventRows, callRows] = await Promise.all([
+        const [sourceMoments, noteRows, eventRows] = await Promise.all([
             fetchRowsByIds(DB_ID, MOMENTS_TABLE, sourceIds),
             fetchRowsByIds(APPWRITE_CONFIG.DATABASES.KYLRIXNOTE, APPWRITE_CONFIG.TABLES.KYLRIXNOTE.USERS === '67ff05c900247b5673d3' ? '67ff05f3002502ef239e' : 'notes', Array.from(attachmentGroups.note)),
-            fetchRowsByIds(APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, 'events', Array.from(attachmentGroups.event)),
-            fetchRowsByIds(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS, Array.from(attachmentGroups.call))]);
+            fetchRowsByIds(APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, 'events', Array.from(attachmentGroups.event))]);
 
         const sourceMomentMap = new Map<string, any>(sourceMoments.map((row: any) => [row.$id, row]));
         const noteMap = new Map<string, any>(noteRows.map((row: any) => [row.$id, row]));
         const eventMap = new Map<string, any>(eventRows.map((row: any) => [row.$id, row]));
-        const callMap = new Map<string, any>(callRows.map((row: any) => [row.$id, row]));
 
         const hydratedRows = topRows.map((moment: any) => {
             const attachments = moment.metadata?.attachments || [];
             const attachedNote = attachments.find((attachment: any) => attachment.type === 'note' && noteMap.has(attachment.id));
             const attachedEvent = attachments.find((attachment: any) => attachment.type === 'event' && eventMap.has(attachment.id));
-            const attachedCall = attachments.find((attachment: any) => attachment.type === 'call' && callMap.has(attachment.id));
 
             return {
                 ...moment,
                 sourceMoment: moment.metadata?.sourceId ? sourceMomentMap.get(moment.metadata.sourceId) || null : null,
                 attachedNote: attachedNote ? noteMap.get(attachedNote.id) : undefined,
-                attachedEvent: attachedEvent ? eventMap.get(attachedEvent.id) : undefined,
-                attachedCall: attachedCall ? callMap.get(attachedCall.id) : undefined};
+                attachedEvent: attachedEvent ? eventMap.get(attachedEvent.id) : undefined};
         });
 
         return { ...moments, rows: hydratedRows, total: sortedRows.length };

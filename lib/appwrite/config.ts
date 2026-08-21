@@ -121,7 +121,6 @@ export const APPWRITE_CONFIG = {
             UNORGANIC_EMAILS: 'unorganic_emails',
             ACCOUNT_EVENTS: 'accountEvents',
             APP_ACTIVITY: 'app_activity',
-            CALL_LINKS: 'calls',
             FOLLOWS: 'follows',
             MOMENTS: 'moments',
             INTERACTIONS: 'interactions',

@@ -641,7 +641,7 @@ export default function ConnectTopbar({
         g: '/goals',
         q: '/forms',
         e: '/events',
-        h: '/connect/calls'};
+        h: '/connect/chats'};
 
       const action = builtInActions[key];
       if (action) {
