@@ -160,18 +160,17 @@ export async function getRxDB(): Promise<RxDatabase> {
                 cache: { schema: GenericCacheSchema }
             });
         } catch (addErr: any) {
-            console.warn('[RxDBManager] Schema mismatch or DB6 error, purging outdated partition DB:', partitionedDbName, addErr?.message);
+            console.warn('[RxDBManager] Schema mismatch or DB6 error, purging outdated partition DB:', DB_NAME, addErr?.message);
             if (db && typeof (db as any).remove === 'function') {
                 await (db as any).remove().catch(() => {});
             } else if (db && typeof (db as any).destroy === 'function') {
                 await (db as any).destroy().catch(() => {});
             }
-            await removeDatabaseSafely(partitionedDbName);
-            await removeDatabaseSafely(`kylrix_nexus_db_v2_${activePid}`);
+            await removeDatabaseSafely(DB_NAME);
             await removeDatabaseSafely(`kylrix_nexus_db_v2`);
 
             const freshDb = await createRxDatabase({
-                name: partitionedDbName,
+                name: DB_NAME,
                 storage: getRxStorageDexie()
             });
             try {
