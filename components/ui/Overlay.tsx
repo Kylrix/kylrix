@@ -84,7 +84,10 @@ const Overlay: React.FC = () => {
     (content.type as any).name === 'CommObjectDetail' ||
     (content.type as any).name === 'MomentObjectDetail' ||
     (content.type as any).name === 'EventDetails' ||
-    (content.type as any).name === 'AgenticPanelContent'
+    (content.type as any).name === 'AgenticPanelContent' ||
+    (content.type as any).name === 'PricingDrawer' ||
+    (content.type as any).name === 'TagObjectDetail' ||
+    (content.type as any).name === 'TrashObjectDetail'
   );
 
   const drawerHeight = isMobile && !isFlapover

@@ -76,6 +76,9 @@ export function DynamicSidebar() {
     typeName === 'TaskDetails' ||
     typeName === 'EventDetails' ||
     typeName === 'MomentObjectDetail' ||
+    typeName === 'PricingDrawer' ||
+    typeName === 'TagObjectDetail' ||
+    typeName === 'TrashObjectDetail' ||
     (content &&
       React.isValidElement(content) &&
       ((content.props as { note?: unknown })?.note !== undefined ||

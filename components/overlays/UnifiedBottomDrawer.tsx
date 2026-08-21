@@ -38,6 +38,8 @@ export function UnifiedBottomDrawer() {
     />
   );
 
+  const isFullscreenMobile = ['pricing', 'tags', 'trash'].includes(activeContent as string);
+
   return (
     <Drawer
       anchor="bottom"
@@ -48,22 +50,28 @@ export function UnifiedBottomDrawer() {
         sx: {
           bgcolor: '#161412',
           backgroundImage: 'none',
-          borderTopLeftRadius: '28px',
-          borderTopRightRadius: '28px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderTopLeftRadius: isFullscreenMobile ? 0 : '28px',
+          borderTopRightRadius: isFullscreenMobile ? 0 : '28px',
+          border: isFullscreenMobile ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
           borderBottom: 0,
-          maxHeight: '90dvh',
-          maxWidth: '640px',
+          height: isFullscreenMobile ? '100dvh' : 'auto',
+          maxHeight: isFullscreenMobile ? '100dvh' : '90dvh',
+          maxWidth: isFullscreenMobile ? '100vw' : '640px',
+          width: '100%',
           mx: 'auto',
-          boxShadow: '0 -24px 60px rgba(0,0,0,0.85)',
+          boxShadow: isFullscreenMobile ? 'none' : '0 -24px 60px rgba(0,0,0,0.85)',
           overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
         },
       }}
     >
-      <Box sx={{ p: 0, position: 'relative', bgcolor: '#161412' }}>
-        <div className="w-full flex justify-center pt-2.5 pb-1">
-          <div className="w-10 h-1 rounded-full bg-white/20" />
-        </div>
+      <Box sx={{ p: 0, position: 'relative', bgcolor: '#161412', flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+        {!isFullscreenMobile && (
+          <div className="w-full flex justify-center pt-2.5 pb-1">
+            <div className="w-10 h-1 rounded-full bg-white/20" />
+          </div>
+        )}
         {content}
       </Box>
     </Drawer>
