@@ -112,10 +112,8 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
           jwt,
         }).catch(() => {});
 
-        // Open BlockBee checkout in new tab on both desktop and mobile
-        window.open(session.url, '_blank', 'noopener,noreferrer');
-        toast.success('Checkout opened in new tab');
-        onClose?.();
+        // Redirect in current tab to prevent popup blocking
+        window.location.href = session.url;
         return;
       }
 
@@ -339,7 +337,7 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
             disabled={checkoutLoading}
             className="w-full py-3.5 bg-white hover:bg-white/90 disabled:opacity-50 text-black font-black text-sm rounded-xl transition-all cursor-pointer"
           >
-            {checkoutLoading ? 'Starting checkout…' : 'Continue to Checkout (Opens in new tab)'}
+            {checkoutLoading ? 'Starting checkout…' : 'Continue to Checkout'}
           </button>
         </div>
 
