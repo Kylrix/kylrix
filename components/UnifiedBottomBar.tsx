@@ -78,7 +78,6 @@ export function UnifiedBottomBar() {
   ];
 
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/app\/notes\/[^/]+$/));
-  const isConnectCallDetail = Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/));
   const isSpecificChatPage = Boolean(pathname?.match(/^\/connect\/chat\/[^/]+$/));
   const isConnectChatsSurface = Boolean(
     pathname === '/connect/chats' || pathname?.startsWith('/connect/chats/'),
@@ -105,8 +104,6 @@ export function UnifiedBottomBar() {
     mode === 'compact' ||
     isDrawerOpen ||
     isNoteFullPageDetail ||
-    isConnectCallDetail ||
-    isCallLauncherOpen ||
     isOverlayOpen ||
     contextMenu?.isOpen
   ) {
