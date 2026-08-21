@@ -101,6 +101,9 @@ const AgenticPanelContent = dynamic(
 
 const ZapDrawer = dynamic(() => import('./ZapDrawer').then((m) => m.ZapDrawer), { ssr: false });
 const SanitizeDrawer = dynamic(() => import('./SanitizeDrawer').then((m) => m.SanitizeDrawer), { ssr: false });
+const PricingDrawer = dynamic(() => import('../objects/PricingDrawer').then((m) => m.PricingDrawer), { ssr: false });
+const TagObjectDetail = dynamic(() => import('../objects/TagObjectDetail').then((m) => m.TagObjectDetail), { ssr: false });
+const TrashObjectDetail = dynamic(() => import('../objects/TrashObjectDetail').then((m) => m.TrashObjectDetail), { ssr: false });
 
 export function unifiedDrawerWidth(content: DrawerContent): number {
   switch (content) {
@@ -114,6 +117,9 @@ export function unifiedDrawerWidth(content: DrawerContent): number {
     case 'sanitize':
     case 'milestone-details':
     case 'agentic-preview':
+    case 'pricing':
+    case 'tags':
+    case 'trash':
       return 560;
     case 'agentic':
       return 440;
@@ -395,16 +401,27 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           source={drawerData?.source}
         />
       );
-    case 'zap':
+    case 'pricing':
       return (
-        <ZapDrawer
-          isOpen
+        <PricingDrawer
           onClose={onClose}
-          targetId={drawerData?.targetId}
-          source={drawerData?.source || 'ecosystem'}
-          targetPubkey={drawerData?.targetPubkey}
-          authorName={drawerData?.authorName}
-          onZapSuccess={drawerData?.onZapSuccess}
+          initialTier={drawerData?.tier || 'PRO'}
+          featureHighlight={drawerData?.featureHighlight}
+        />
+      );
+    case 'tags':
+      return (
+        <TagObjectDetail
+          onClose={onClose}
+          initialTagId={drawerData?.tagId}
+          embedded
+        />
+      );
+    case 'trash':
+      return (
+        <TrashObjectDetail
+          onClose={onClose}
+          embedded
         />
       );
     default:

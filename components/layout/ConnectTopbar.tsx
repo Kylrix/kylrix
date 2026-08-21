@@ -154,6 +154,26 @@ export default function ConnectTopbar({
     setOnPageResults(matches);
   }, [searchQuery]);
 
+  const [localTags, setLocalTags] = useState<any[]>([]);
+  const [localTrash, setLocalTrash] = useState<any[]>([]);
+  const [localForms, setLocalForms] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    const uid = user?.$id || 'guest';
+    import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+      Promise.all([
+        LocalEngine.cacheGet<any[]>(`f_tags_list_${uid}`).catch(() => []),
+        LocalEngine.cacheGet<any[]>(`trash_all_${uid}`).catch(() => []),
+        LocalEngine.cacheGet<any[]>(`f_forms_${uid}`).catch(() => []),
+      ]).then(([tagsData, trashData, formsData]) => {
+        if (Array.isArray(tagsData)) setLocalTags(tagsData);
+        if (Array.isArray(trashData)) setLocalTrash(trashData);
+        if (Array.isArray(formsData)) setLocalForms(formsData);
+      });
+    });
+  }, [searchOpen, user?.$id]);
+
   const { events: localEvents } = useLocalContext();
   const globalResults = useMemo(() => {
     return searchLocalEngine(searchQuery, {
@@ -161,17 +181,17 @@ export default function ConnectTopbar({
       tasks,
       workspaces: projects,
       events: localEvents,
-      // forms/flows/vault/moments/chats/threads/tags are LocalEngine-backed — extend ctx as providers hydrate
-      forms: [],
+      forms: localForms,
       flows: [],
       vaultCreds: [],
       vaultTotp: [],
       moments: [],
       chats: [],
       threads: [],
-      tags: [],
+      tags: localTags,
+      trash: localTrash,
     });
-  }, [searchQuery, notes, tasks, projects, localEvents]);
+  }, [searchQuery, notes, tasks, projects, localEvents, localForms, localTags, localTrash]);
   const groupedGlobalResults = useMemo(() => {
     const byKind: Record<string, GlobalResult[]> = {};
     for (const r of globalResults) {
@@ -1076,6 +1096,8 @@ export default function ConnectTopbar({
                     { name: 'goals', label: 'Goals', color: '#A855F7', href: '/goals', Icon: Target },
                     { name: 'vault', label: 'Vault', color: '#10B981', href: '/vault', Icon: Lock },
                     { name: 'connect', label: 'Connect', color: '#F59E0B', href: '/connect', Icon: MessageCircle },
+                    { name: 'tags', label: 'Tags', color: '#F87171', action: () => openUnified('tags'), Icon: TagIcon },
+                    { name: 'trash', label: 'Trash', color: '#EF4444', action: () => openUnified('trash'), Icon: CloseIcon },
                   ].map((app) => {
                     const AppIcon = app.Icon;
                     return (
@@ -1083,7 +1105,11 @@ export default function ConnectTopbar({
                       key={app.name}
                       onClick={() => {
                         handleCloseAll();
-                        router.push(app.href);
+                        if (app.action) {
+                          app.action();
+                        } else if (app.href) {
+                          router.push(app.href);
+                        }
                       }}
                       sx={{
                         borderRadius: '20px',
@@ -1366,6 +1392,14 @@ export default function ConnectTopbar({
                                     <EventDetailsComp eventId={r.id} initialData={r.raw} onClose={closeOverlay} onBack={closeOverlay} />
                                   );
                                 }
+                                return;
+                              }
+                              if (r.kind === 'tag') {
+                                openUnified('tags', { tagId: r.id });
+                                return;
+                              }
+                              if (r.kind === 'trash') {
+                                openUnified('trash');
                                 return;
                               }
                               navPush(r.href);

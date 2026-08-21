@@ -85,8 +85,6 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     isGoalsSurfacePath(pathname) ||
     pathname?.startsWith('/vault') ||
     pathname?.startsWith('/connect') ||
-    pathname?.startsWith('/tags') ||
-    pathname?.startsWith('/trash') ||
     pathname?.startsWith('/accounts') ||
     pathname?.startsWith('/settings')
   ), [pathname]);

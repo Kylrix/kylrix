@@ -156,10 +156,10 @@ export default function ProSuccessPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <NextLink
-                href="/pricing"
-                className="py-4 px-10 rounded-[16px] bg-[#6366F1] hover:bg-[#6366F1]/90 text-black font-black text-sm md:text-base transition-all"
+                href="/app"
+                className="py-4 px-10 rounded-[16px] bg-[#6366F1] hover:bg-[#6366F1]/90 text-white font-black text-sm md:text-base transition-all"
               >
-                View pricing
+                Return to Workspace
               </NextLink>
               <NextLink
                 href="/billing/checkout?planId=PRO_MONTH&months=1&countryCode=US&paymentMethod=CRYPTO"

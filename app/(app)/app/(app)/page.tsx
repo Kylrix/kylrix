@@ -305,12 +305,6 @@ export default function IdeasPage() {
             >
               Forms
             </Link>
-            <Link
-              href="/tags"
-              className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
-            >
-              Tags
-            </Link>
           </div>
 
           {/* Tags Filter Row (positioned under top nav switcher like Goals) */}

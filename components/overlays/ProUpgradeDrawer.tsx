@@ -126,11 +126,12 @@ export function ProUpgradeDrawer() {
 
   if (!showProUpgrade) return null;
 
+  const { open: openUnified } = useUnifiedDrawer();
   const highlight = feature ? FEATURE_CONTEXT_HIGHLIGHTS[feature] : null;
 
   const handleGoPricing = () => {
     closeProUpgrade();
-    router.push('/pricing');
+    openUnified('pricing', { featureHighlight: feature });
   };
 
   return (

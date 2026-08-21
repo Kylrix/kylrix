@@ -1427,7 +1427,7 @@ export default function CreateNoteForm({
               onClick={() => {
                 if (onClose) onClose();
                 closeOverlay();
-                router.push('/tags');
+                openUnified('tags');
               }}
             >
               <Tag className="w-3.5 h-3.5 text-white/40" />

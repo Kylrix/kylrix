@@ -14,7 +14,8 @@ export type GlobalResultKind =
   | 'moment'
   | 'chat'
   | 'thread'
-  | 'tag';
+  | 'tag'
+  | 'trash';
 
 export interface GlobalResult {
   kind: GlobalResultKind;
@@ -43,6 +44,7 @@ export interface GlobalSearchCtx {
   chats?: any[];
   threads?: any[];
   tags?: any[];
+  trash?: any[];
 }
 
 const ACCENT: Record<GlobalResultKind, string> = {
@@ -58,6 +60,7 @@ const ACCENT: Record<GlobalResultKind, string> = {
   chat: '#F59E0B',
   thread: '#34D399',
   tag: '#F87171',
+  trash: '#EF4444',
 };
 
 const ECOSYSTEM_DESTINATIONS: Array<{
@@ -362,13 +365,29 @@ export function searchLocalEngine(qRaw: string, ctx: GlobalSearchCtx): GlobalRes
     }
   }
 
+  const trash = ctx.trash || [];
+  for (const tr of trash) {
+    const title = tr.title || tr.name || 'Trashed Item';
+    if (includes(title, q) || includes(tr.type, q)) {
+      out.push({
+        kind: 'trash',
+        id: tr.id || tr.$id,
+        title,
+        subtitle: `Trash (${tr.type || 'Item'}) · Deleted ${tr.deletedAt ? new Date(tr.deletedAt).toLocaleDateString() : ''}`,
+        href: `/trash`,
+        accent: ACCENT.trash,
+        raw: tr,
+      });
+    }
+  }
+
   // Cap per kind to keep UI fast, sort by title relevance (startsWith first)
   const byKind: Record<string, GlobalResult[]> = {};
   for (const r of out) {
     byKind[r.kind] = byKind[r.kind] || [];
     byKind[r.kind].push(r);
   }
-  const orderedKinds: GlobalResultKind[] = ['note','goal','workspace','event','form','flow','secret','totp','moment','chat','thread','tag'];
+  const orderedKinds: GlobalResultKind[] = ['note','goal','workspace','event','form','flow','secret','totp','moment','chat','thread','tag','trash'];
   const capped: GlobalResult[] = [];
   for (const k of orderedKinds) {
     const arr = byKind[k];

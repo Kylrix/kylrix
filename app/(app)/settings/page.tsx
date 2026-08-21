@@ -780,7 +780,7 @@ function SettingsPageInner() {
                             {/* Trash Management Card */}
                             <button
                                 type="button"
-                                onClick={() => router.push('/trash')}
+                                onClick={() => openUnified('trash')}
                                 className="w-full text-left p-6 bg-[#161412] border border-white/5 hover:border-white/10 hover:bg-[#1C1A18] rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group"
                             >
                                 <div className="flex items-center gap-3 min-w-0">

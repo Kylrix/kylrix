@@ -204,7 +204,7 @@ export function BillingContent() {
               {!isPro && !isTeams && !planLoading && (
                 <button
                   type="button"
-                  onClick={() => { router.push('/pricing'); }}
+                  onClick={() => { openUnified('pricing'); }}
                   className="px-4 py-2 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-xs transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>Upgrade</span>
