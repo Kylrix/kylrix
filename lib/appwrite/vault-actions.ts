@@ -239,6 +239,15 @@ export async function deleteCredential(id: string) {
 }
 
 /**
+ * Delete a TOTP secret by row ID.
+ */
+export async function deleteTOTPSecret(id: string) {
+  return await VaultService.deleteTOTPSecret(id);
+}
+
+export const deleteTotp = deleteTOTPSecret;
+
+/**
  * Logs out the current user from Appwrite and clears session/local storage.
  * Use this everywhere for a consistent logout experience.
  */
