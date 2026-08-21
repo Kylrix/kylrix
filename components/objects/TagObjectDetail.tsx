@@ -32,7 +32,7 @@ export function TagObjectDetail({ onClose, initialTagId = null, embedded = false
   const router = useRouter();
   const { open: openUnified } = useUnifiedDrawer();
   const { showError } = useToast();
-  const { openSidebar, openSecondarySidebar, closeSidebar } = useDynamicSidebar();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
 
   const [tags, setTags] = useState<Tags[]>([]);
@@ -226,7 +226,7 @@ export function TagObjectDetail({ onClose, initialTagId = null, embedded = false
               <TaggedResourcesTabs
                 resources={taggedResources}
                 openSidebar={openSidebar}
-                openSecondarySidebar={openSecondarySidebar}
+                openSecondarySidebar={openSidebar}
                 openOverlay={openOverlay}
                 closeOverlay={closeOverlay}
                 fetchProjectData={async () => {
