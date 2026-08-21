@@ -1,7 +1,7 @@
 'use server';
 
 import { createSystemClient } from '@/lib/appwrite-admin';
-import { getActor } from '@/lib/actions/secure-ops/auth-helper';
+import { getActor } from '@/lib/actions/secure-ops';
 import { dispatchTelegramNotification } from '@/lib/services/internal/telegram-dispatch';
 import { renderEmailTemplate } from '@/lib/email-renderer';
 import { ID } from 'node-appwrite';
