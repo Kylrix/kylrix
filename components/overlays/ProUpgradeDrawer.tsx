@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import {
   Sparkles,
   ArrowRight,
