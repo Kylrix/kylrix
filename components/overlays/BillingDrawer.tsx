@@ -17,6 +17,7 @@ import {
   X} from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { AppwriteService } from '@/lib/appwrite';
 import { account } from '@/lib/appwrite/client';
 import { getMyCouponsAction } from '@/lib/actions/billing/coupons';
@@ -30,6 +31,7 @@ interface BillingDrawerProps {
 export function BillingContent() {
   const router = useRouter();
   const { user } = useAuth();
+  const { open: openUnified } = useUnifiedDrawer();
   const { currentTier, expiresAt, isLoading: planLoading } = useSubscription();
 
   // Coupon states
