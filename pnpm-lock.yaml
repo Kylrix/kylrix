@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@codemirror/autocomplete':
+        specifier: ^6.20.3
+        version: 6.20.3
+      '@codemirror/commands':
+        specifier: ^6.11.0
+        version: 6.11.0
       '@codemirror/lang-markdown':
         specifier: ^6.5.2
         version: 6.5.2
@@ -273,6 +279,9 @@ packages:
 
   '@codemirror/autocomplete@6.20.3':
     resolution: {integrity: sha512-tlosUqb+3BbxCxZdu4tKeRghPFC+QM7q4X5YhKV2eCmPG+1r2F3f4AaSz5sCrFqUtX4Jh20VFTKecl16MgiV9g==}
+
+  '@codemirror/commands@6.11.0':
+    resolution: {integrity: sha512-/K4Rl5BN0OtTiPWmJCdqODu38XnDMsDxKY5rgrPnCkutPTJf2wVbkoixLfealF5Kwse/s8P8M5jAiURiwSwnFA==}
 
   '@codemirror/lang-css@6.3.1':
     resolution: {integrity: sha512-kr5fwBGiGtmz6l0LSJIbno9QrifNMUusivHbnA1H6Dmqy4HZFte3UAICix1VuKo0lMPKQr2rqB+0BkKi/S3Ejg==}
@@ -4018,6 +4027,13 @@ snapshots:
   '@bcoe/v8-coverage@1.0.2': {}
 
   '@codemirror/autocomplete@6.20.3':
+    dependencies:
+      '@codemirror/language': 6.12.4
+      '@codemirror/state': 6.7.1
+      '@codemirror/view': 6.43.9
+      '@lezer/common': 1.5.2
+
+  '@codemirror/commands@6.11.0':
     dependencies:
       '@codemirror/language': 6.12.4
       '@codemirror/state': 6.7.1
