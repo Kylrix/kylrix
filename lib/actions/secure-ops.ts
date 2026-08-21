@@ -68,12 +68,6 @@ import {
   approveProjectJoinRequestSecure} from './secure-ops/projects';
 
 import {
-  addCallCohostSecureAction,
-  endCallSecureAction,
-  updateCallMetadataSecureAction,
-  createCallSecure} from './secure-ops/chats';
-
-import {
   mintDailyLoginSecure,
   runTokenOperationSecure,
   recordAnonymizedTelemetrySecure,
@@ -207,10 +201,6 @@ export {
   listThreadMessagesSecure,
   postThreadMessageSecure,
   approveProjectJoinRequestSecure,
-  addCallCohostSecureAction,
-  endCallSecureAction,
-  updateCallMetadataSecureAction,
-  createCallSecure,
   mintDailyLoginSecure,
   runTokenOperationSecure,
   recordAnonymizedTelemetrySecure,
