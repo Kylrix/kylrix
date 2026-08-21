@@ -440,7 +440,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
                   resourceId={note.$id}
                   isPublic={getNotePublicState(liveNote)}
                   isGuest={!!liveNote.isGuest}
-                  resourceTitle={note.title}
+                  resourceTitle={note.title ?? undefined}
                   dek={note.dek}
                   accentColor="#EC4899"
                   onPublished={({ isPublic, isGuest }) => {
