@@ -4,7 +4,6 @@ import {
 } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
-import { deleteCallIfExpired } from '@/lib/services/internal/calls';
 import { validatePublicNoteAccess } from '@/lib/appwrite/note';
 import { inferAttachmentMimeType, resolveAttachmentVisualKind } from '@/lib/note-object-visual';
 import {
@@ -66,18 +65,7 @@ export async function getSharedNoteDataSecure(noteId: string, jwt?: string) {
   const canRead = await canReadSharedNoteSecure(noteId, actor?.$id);
   if (!canRead) return null;
 
-  const note = await hydrateSharedNoteRow(noteId);
-
-  const metadata = JSON.parse(String((note as any).metadata || '{}'));
-  const huddleCallId = (note as any).huddleCallId || metadata.huddleCallId;
-  if (huddleCallId) {
-    try {
-      const { databases } = createSystemClient();
-      await deleteCallIfExpired(databases as any, huddleCallId);
-    } catch {}
-  }
-
-  return note;
+  return await hydrateSharedNoteRow(noteId);
 }
 
 export async function getNoteSecondaryObjectPreviewSecure(
