@@ -449,6 +449,9 @@ export async function attachObject(params: {
 export async function detachObjectByRelation(params: {
   parentId: string;
   childId: string;
+  childKind?: string;
+  isSecondary?: boolean;
+  bucketId?: string;
 }) {
   const jwt = await getJwt();
   return detachObjectByRelationSecure({ ...params, jwt });

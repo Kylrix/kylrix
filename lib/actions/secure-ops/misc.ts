@@ -1608,6 +1608,9 @@ export async function attachObjectSecure(params: {
 export async function detachObjectByRelationSecure(params: {
   parentId: string;
   childId: string;
+  childKind?: string;
+  isSecondary?: boolean;
+  bucketId?: string;
   jwt?: string;
 }) {
   const actor = await getActor(params.jwt);
@@ -1627,6 +1630,20 @@ export async function detachObjectByRelationSecure(params: {
     ] as any
   });
 
+  // Check metadata from rows to see if any record was secondary
+  let isSecondary = Boolean(params.isSecondary);
+  let bucketId = params.bucketId;
+  let childKind = params.childKind;
+
+  for (const row of res.rows as any[]) {
+    try {
+      const meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+      if (meta?.isSecondary) isSecondary = true;
+      if (meta?.bucketId && !bucketId) bucketId = meta.bucketId;
+      if (row.childKind && !childKind) childKind = row.childKind;
+    } catch {}
+  }
+
   await Promise.all(res.rows.map((row: any) => 
     tables.deleteRow({
       databaseId,
@@ -1634,6 +1651,19 @@ export async function detachObjectByRelationSecure(params: {
       rowId: row.$id
     })
   ));
+
+  // If this was a secondary object (created in-situ directly on the parent), wipe its storage or row
+  if (isSecondary) {
+    try {
+      if (childKind === 'voice' || childKind === 'file' || childKind === 'image') {
+        const { storage } = createSystemClient();
+        const targetBucket = bucketId || (childKind === 'voice' ? APPWRITE_CONFIG.BUCKETS.VOICE : APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE);
+        await storage.deleteFile(targetBucket, params.childId).catch(() => {});
+      }
+    } catch (storageErr) {
+      console.warn('[detachObjectByRelationSecure] Could not delete secondary storage file:', storageErr);
+    }
+  }
 
   return { success: true, count: res.rows.length };
 }

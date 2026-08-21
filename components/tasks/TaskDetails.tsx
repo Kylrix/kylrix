@@ -38,6 +38,7 @@ import { useLayout } from '@/context/LayoutContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
+import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
 import { useTask } from '@/context/TaskContext';
 import { useAI } from '@/hooks/useAI';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -814,25 +815,16 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               </button>
             )}
           </div>
-          <div className="min-h-[100px] md:min-h-[140px] w-full">
-            {isEditingDescription ? (
-              <textarea
-                rows={5}
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                onBlur={handleSaveEditDescription}
-                className="w-full bg-transparent border-0 outline-none text-sm text-[#F5F2ED]/90 leading-relaxed resize-none focus:ring-0 focus:outline-none"
-                placeholder="Provide detailed parameters for this goal..."
-                autoFocus
-              />
-            ) : (
-              <p
-                onClick={handleStartEditDescription}
-                className="text-sm text-[#9B9691] leading-relaxed font-satoshi whitespace-pre-wrap cursor-text w-full"
-              >
-                {task.description || 'No detailed parameters provided. Click to add.'}
-              </p>
-            )}
+          <div className="min-h-[120px] w-full">
+            <KylrixWYSIWYGEditor
+              value={editDescription}
+              onChange={(nextVal) => setEditDescription(nextVal)}
+              parentId={task.id}
+              parentKind="task"
+              placeholder="Provide detailed parameters, voice notes, or attached objects for this goal..."
+              minHeight="120px"
+              className="w-full"
+            />
           </div>
         </div>
 

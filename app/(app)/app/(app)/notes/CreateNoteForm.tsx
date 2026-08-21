@@ -42,6 +42,7 @@ import { useSudo } from '@/context/SudoContext';
 import { useSection } from '@/context/SectionContext';
 import { useTask } from '@/context/TaskContext';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
+import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
 
 import { useRouter } from 'next/navigation';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -1256,28 +1257,14 @@ export default function CreateNoteForm({
             }}
             className="w-full flex-1 flex flex-col relative"
           >
-            <BareMetalTextarea
-              key="create-content-stable"
-              forwardedRef={contentRef}
-              defaultValue={content}
-              syncKey={resolvedNoteId ? `note_${resolvedNoteId}` : undefined}
-              enableLocalEngine={true}
-              syncDataBuilder={(next) => {
-                const draftId = resolvedNoteId || liveDraftIdRef.current || 'live-note';
-                const curTitle = editorStateRef.current.title;
-                const curTags = editorStateRef.current.tags as string[];
-                const previewTitle = resolveNoteCardTitle(isTitleManuallyEdited ? curTitle : null, next) || '';
-                return { $id: draftId, title: previewTitle, content: next, tags: curTags } as any;
-              }}
-              onValueChange={(v) => handleContentChange(v)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey && !isExpanded && !isPastedRef.current) {
-                  event.preventDefault();
-                  handleClose();
-                }
-              }}
+            <KylrixWYSIWYGEditor
+              value={content}
+              onChange={(v) => handleContentChange(v)}
+              parentId={resolvedNoteId || liveDraftIdRef.current || undefined}
+              parentKind="note"
               placeholder="Write your idea..."
-              className="w-full h-full min-h-[160px] resize-none bg-white/[0.03] text-white placeholder-white/20 border border-white/[0.06] hover:border-white/10 focus:border-pink-500/30 rounded-xl px-3 py-2 text-lg focus:outline-none transition-all scrollbar-thin"
+              minHeight="180px"
+              className="w-full h-full"
             />
 
             {/* Offline fast suggestion system matching goals or tags as user types */}

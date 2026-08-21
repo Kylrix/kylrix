@@ -5,6 +5,7 @@ import { Notes } from '@/types/appwrite';
 
 import NoteContentRenderer from '@/components/NoteContentRenderer';
 import { AgenticDiffViewer } from '@/components/agentic/AgenticDiffViewer';
+import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
 
 import {
   Mic,
@@ -1227,7 +1228,7 @@ export function NoteDetailSidebar({
           isPageLayout ? 'px-4 md:px-5 py-4' : 'p-4 gap-4'
         }`}
       >
-        {/* Editor / preview */}
+        {/* Unified WYSIWYG Editor */}
         <div className="flex flex-col rounded-[24px] bg-[#161412] border border-white/5 overflow-hidden flex-shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-5 pt-4 pb-3 border-b border-white/5">
             <div className="min-w-0 flex flex-col gap-0.5">
@@ -1243,34 +1244,6 @@ export function NoteDetailSidebar({
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              {/* Write/Preview switcher — hidden in readOnly mode */}
-              {!shouldMaskEncrypted && !readOnly && (
-                <div className="flex rounded-xl border border-white/8 bg-[#0B0A09] p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setContentMode('edit')}
-                    className={`px-3 py-1.5 rounded-[10px] text-[11px] font-extrabold transition-colors ${
-                      contentMode === 'edit'
-                        ? 'bg-[#6366F1] text-white'
-                        : 'text-[#9B9691] hover:text-white'
-                    }`}
-                  >
-                    Write
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setContentMode('preview')}
-                    className={`px-3 py-1.5 rounded-[10px] text-[11px] font-extrabold transition-colors ${
-                      contentMode === 'preview'
-                        ? 'bg-[#6366F1] text-white'
-                        : 'text-[#9B9691] hover:text-white'
-                    }`}
-                  >
-                    Preview
-                  </button>
-                </div>
-              )}
-
               {/* Copy button — always visible */}
               {!shouldMaskEncrypted && content && (
                 <button
@@ -1280,42 +1253,11 @@ export function NoteDetailSidebar({
                     navigator.clipboard.writeText(content);
                     showSuccess('Copied', 'Note content copied to clipboard');
                   }}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0B0A09] border border-white/8 text-white/55 hover:text-white hover:bg-white/[0.04] transition-colors"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#0B0A09] border border-white/8 text-white/55 hover:text-white hover:bg-white/[0.04] transition-colors cursor-pointer"
                   title="Copy content"
                 >
                   <CopyIcon className="w-3.5 h-3.5" />
                 </button>
-              )}
-
-              {/* Voice recorder in content area — editors only */}
-              {!readOnly && !shouldMaskEncrypted && contentMode === 'edit' && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button type="button" onClick={() => applyInlineFormatting('**')} className="h-8 px-2 rounded-lg border border-white/8 text-[#9B9691] hover:text-white bg-[#0B0A09]"><Bold className="w-3 h-3" /></button>
-                  <button type="button" onClick={() => applyInlineFormatting('*')} className="h-8 px-2 rounded-lg border border-white/8 text-[#9B9691] hover:text-white bg-[#0B0A09]"><Italic className="w-3 h-3" /></button>
-                  <button type="button" onClick={() => applyInlineFormatting('# ', '')} className="h-8 px-2 rounded-lg border border-white/8 text-[#9B9691] hover:text-white bg-[#0B0A09]"><Heading1 className="w-3 h-3" /></button>
-                  <button type="button" onClick={() => applyInlineFormatting('`')} className="h-8 px-2 rounded-lg border border-white/8 text-[#9B9691] hover:text-white bg-[#0B0A09]"><Code2 className="w-3 h-3" /></button>
-                  <button
-                    type="button"
-                    onClick={toggleRecording}
-                    className={`h-8 px-2.5 rounded-lg flex items-center gap-1.5 text-[11px] font-extrabold border transition-colors voice-recorder-btn ${
-                      isRecording
-                        ? 'bg-red-500/10 border-red-500/25 text-red-400 animate-pulse'
-                        : 'bg-[#0B0A09] border-white/8 text-[#9B9691] hover:text-white'
-                    }`}
-                    title={isRecording ? 'Stop and insert' : 'Record voice'}
-                  >
-                    {isRecording ? (
-                      <Square className="w-3 h-3 fill-red-500 text-red-500" />
-                    ) : (
-                      <Mic className="w-3 h-3" />
-                    )}
-                    <span className="hidden sm:inline">
-                      {isRecording
-                        ? `${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60 < 10 ? '0' : '') + (recordingDuration % 60)}`
-                        : 'Voice'}
-                    </span>
-                  </button>
-                </div>
               )}
             </div>
           </div>
@@ -1325,7 +1267,7 @@ export function NoteDetailSidebar({
               <button
                 type="button"
                 onClick={() => !vaultUnlocked && promptSudo()}
-                className="min-h-[200px] w-full text-left"
+                className="min-h-[200px] w-full text-left cursor-pointer"
               >
                 <p className="text-[#9B9691] text-sm font-semibold leading-relaxed">
                   {vaultUnlocked
@@ -1333,81 +1275,21 @@ export function NoteDetailSidebar({
                     : 'Secure content hidden. Unlock your vault to view and edit this note.'}
                 </p>
               </button>
-            ) : liveNote.format === 'doodle' ? (
-              <NoteContentRenderer content={content} format="doodle" primaryNoteId={liveNote.$id} />
             ) : (
-              <>
-                <div
-                  className={`note-markdown-preview min-h-[240px] ${contentMode !== 'preview' ? 'hidden' : ''}`}
-                  aria-hidden={contentMode !== 'preview'}
-                  style={{ contain: 'layout paint', contentVisibility: 'auto' } as React.CSSProperties}
-                >
-                  {content.trim() ? (
-                    <div style={{ minHeight: 200 }}>
-                      <NoteContentRenderer
-                        content={content}
-                        format={liveNote.format || 'markdown'}
-                        primaryNoteId={liveNote.$id}
-                      />
-                    </div>
-                  ) : (
-                    <p className="text-[#9B9691] text-sm font-semibold italic leading-relaxed">
-                      Nothing to preview yet. Switch to Write and add markdown.
-                    </p>
-                  )}
-                </div>
-                <div
-                  className={contentMode === 'preview' ? 'hidden' : 'w-full flex flex-col min-h-[240px]'}
-                  aria-hidden={contentMode === 'preview'}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    setIsContextDrawerOpen(true);
-                  }}
-                >
-                  <BareMetalTextarea
-                    key={`content-${liveNote.$id}`}
-                    defaultValue={content}
-                    value={content}
-                    forwardedRef={contentTextareaRef}
-                    enableLocalEngine={false}
-                    onValueChange={(nextValue) => {
-                      // Proper block guard — only when edit directly overlaps a protected block (scoped, not whole doc)
-                      const blocks = parseObjectBlocks(content);
-                      let changedBlock: typeof blocks[0] | null = null;
-                      if (blocks.length) {
-                        let s = 0;
-                        while (s < content.length && s < nextValue.length && content[s] === nextValue[s]) s++;
-                        let ePrev = content.length - 1;
-                        let eNext = nextValue.length - 1;
-                        while (ePrev >= s && eNext >= s && content[ePrev] === nextValue[eNext]) { ePrev--; eNext--; }
-                        const changedStart = s;
-                        const changedEndPrev = ePrev + 1;
-                        changedBlock = blocks.find((b) => changedStart < b.end && changedEndPrev > b.start) || null;
-                      }
-                      if (changedBlock) {
-                        setPendingBlockDelete(changedBlock);
-                        // Revert DOM to previous content (bare-metal uncontrolled) — keep cursor at block start
-                        const ta = contentTextareaRef.current;
-                        if (ta) {
-                          ta.value = content;
-                          try { ta.setSelectionRange(changedBlock.start, changedBlock.start); } catch {}
-                        }
-                        return;
-                      }
-                      handleContentChange(nextValue);
-                    }}
-                    onKeyDown={onEditorKeyDown as any}
-                    className="w-full min-h-[320px] bg-transparent text-white/92 text-[15px] leading-[1.75] border-none focus:outline-none resize-y scrollbar-thin placeholder:text-[#9B9691]/45 font-satoshi"
-                    placeholder="Write in markdown — headings, lists, links, and voice tags are supported."
-                  />
-                </div>
-              </>
+              <KylrixWYSIWYGEditor
+                value={content}
+                onChange={handleContentChange}
+                parentId={liveNote.$id}
+                parentKind="note"
+                readOnly={readOnly || shouldMaskEncrypted}
+                placeholder="Write in markdown — headings, lists, links, voice notes, and attachments are rendered live."
+                minHeight="280px"
+              />
             )}
 
             {!shouldMaskEncrypted && (
               <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/5 text-[10px] text-[#9B9691] font-semibold select-none">
-                <span>{liveNote.article ? 'Article' : 'Note'} · Markdown</span>
+                <span>{liveNote.article ? 'Article' : 'Note'} · Live Markdown</span>
                 <span>{content.length.toLocaleString()} characters</span>
               </div>
             )}

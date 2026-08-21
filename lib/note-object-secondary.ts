@@ -9,6 +9,7 @@ export interface SecondaryObjectPayload {
   label?: string;
   line?: number;
   appTheme?: 'idea' | 'vault' | 'flow' | 'connect' | 'default';
+  isSecondary?: boolean; // If true, object was created in-situ and gets hard deleted on detachment
   metadata?: Record<string, unknown>;
 }
 
