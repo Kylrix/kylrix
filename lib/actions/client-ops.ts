@@ -24,16 +24,11 @@ import {
   deleteEventSecure,
   addEventManagerSecure,
   removeEventManagerSecure,
-  addCallCohostSecureAction,
-  endCallSecureAction,
-  updateCallMetadataSecureAction,
   runTokenOperationSecure,
   addObjectToProjectSecure,
   removeObjectFromProjectSecure,
-  createCallSecure,
   createthreadNoteSecure,
   createSendthreadObjectSecure,
-  createthreadNoteForCallSecure,
   createRowSecure,
   updateRowSecure,
   deleteRowSecure,
@@ -236,22 +231,6 @@ export async function removeEventManager(eventId: string, userId: string) {
   return removeEventManagerSecure(eventId, userId, jwt);
 }
 
-// --- Calls ---
-export async function addCallCohost(callId: string, cohostId: string, allowEndCall: boolean = false) {
-  const jwt = await getJwt();
-  return addCallCohostSecureAction(callId, cohostId, allowEndCall, jwt);
-}
-
-export async function endCall(callId: string) {
-  const jwt = await getJwt();
-  return endCallSecureAction(callId, jwt);
-}
-
-export async function updateCallMetadata(callId: string, extraMetadata: any) {
-  const jwt = await getJwt();
-  return updateCallMetadataSecureAction(callId, extraMetadata, jwt);
-}
-
 // --- Operations & Engagement ---
 export async function runTokenOperation(body: any) {
   // If JWT is needed inside body or operation, secure action can use getActor(jwt)
@@ -265,11 +244,6 @@ export async function secureUploadFile(formData: FormData) {
   return secureUploadFileServer(formData, jwt);
 }
 
-export async function createCall(data: any) {
-  const jwt = await getJwt();
-  return createCallSecure(data, jwt);
-}
-
 export async function createthreadNote(data: any) {
   return createthreadNoteSecure(data);
 }
@@ -277,11 +251,6 @@ export async function createthreadNote(data: any) {
 export async function createSendthreadObject(data: any) {
   const jwt = await getJwt();
   return createSendthreadObjectSecure({ ...data, jwt });
-}
-
-export async function createthreadNoteForCall(callId: string, title?: string) {
-  const jwt = await getJwt();
-  return createthreadNoteForCallSecure(callId, title, jwt);
 }
 
 export async function createRow(databaseId: string, tableId: string, data: any, permissions?: string[]) {
