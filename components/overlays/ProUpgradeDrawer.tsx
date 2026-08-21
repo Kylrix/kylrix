@@ -1,13 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import {
-  Sparkles,
   ArrowRight,
-  Check,
   X,
   Bot,
   HardDrive,
@@ -130,8 +127,8 @@ const PLAN_BENEFIT_GROUPS = [
 ];
 
 export function ProUpgradeDrawer() {
-  const router = useRouter();
   const { showProUpgrade, closeProUpgrade, feature } = useProUpgrade();
+  const { open: openUnified } = useUnifiedDrawer();
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
@@ -151,7 +148,6 @@ export function ProUpgradeDrawer() {
 
   if (!showProUpgrade) return null;
 
-  const { open: openUnified } = useUnifiedDrawer();
   const highlight = feature ? FEATURE_CONTEXT_HIGHLIGHTS[feature] : null;
 
   const handleGoPricing = () => {

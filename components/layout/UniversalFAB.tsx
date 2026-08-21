@@ -10,11 +10,10 @@ import {
   alpha,
   useMediaQuery,
   useTheme} from '@/lib/openbricks/primitives';
-import { Plus, X, Trash2, FolderInput, Pin, CheckSquare } from 'lucide-react';
+import { Plus, X, Trash2, Pin, CheckSquare } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import { useSelection } from '@/context/SelectionContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { useWorkspace, type WorkspaceItem } from '@/context/WorkspaceContext';
 import { useNotes } from '@/context/NotesContext';
 import { useTask } from '@/context/TaskContext';
 import { useEvents } from '@/context/EventsContext';
@@ -35,7 +34,6 @@ const FAB_BOTTOM = {
 export default function UniversalFAB() {
   const { config } = useFAB();
   const selection = useSelection();
-  const { workspaces } = useWorkspace();
   const { removeNote, pinNote, unpinNote, isPinned: checkNotePinned } = useNotes();
   const { deleteTask, togglePinTask } = useTask();
   const { removeEvent } = useEvents();
@@ -47,7 +45,7 @@ export default function UniversalFAB() {
   const { isOpen: isAgenticDrawerOpen } = useAgenticDrawer();
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [_isProcessing, setIsProcessing] = useState(false);
   const {} = useLocalContext();
 
   const theme = useTheme();

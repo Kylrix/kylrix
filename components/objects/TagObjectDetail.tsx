@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Tags } from '@/types/appwrite';
 import { listTagsByUser, deleteTag } from '@/lib/appwrite';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -27,7 +27,7 @@ interface TagObjectDetailProps {
   embedded?: boolean;
 }
 
-export function TagObjectDetail({ onClose, initialTagId = null, embedded = false }: TagObjectDetailProps) {
+export function TagObjectDetail({ onClose, initialTagId = null, embedded: _embedded = false }: TagObjectDetailProps) {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
   const { open: openUnified } = useUnifiedDrawer();
@@ -40,7 +40,6 @@ export function TagObjectDetail({ onClose, initialTagId = null, embedded = false
   const [error, setError] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<Tags | null>(null);
   const [page, setPage] = useState(1);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const [taggedResources, setTaggedResources] = useState<any>({
     notes: [],
@@ -87,7 +86,6 @@ export function TagObjectDetail({ onClose, initialTagId = null, embedded = false
     setSelectedTag(tag);
     setResolvingResources(true);
     try {
-      const { searchLocalEngine } = await import('@/lib/search/globalLocalSearch');
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
       const uid = user?.$id || 'guest';
       const [notes, tasks, creds, totps, events, forms] = await Promise.all([
@@ -259,15 +257,18 @@ export function TagObjectDetail({ onClose, initialTagId = null, embedded = false
                   e.preventDefault();
                   handleResolveResources(tag);
                 }}
-                onEdit={() => {
-                  openUnified('new-tag', {
-                    tag,
-                    onSuccess: () => void fetchTags(),
-                  });
-                }}
                 onDelete={() => handleDeleteTag(tag.$id, tag.name || 'Untitled Tag')}
               />
             ))}
+            {hasMore && (
+              <button
+                type="button"
+                onClick={() => setPage(p => p + 1)}
+                className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-bold transition-all mt-2 cursor-pointer"
+              >
+                Load More Tags
+              </button>
+            )}
           </div>
         )}
       </div>

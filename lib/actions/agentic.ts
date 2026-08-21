@@ -1,6 +1,5 @@
 'use server';
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ID, Query } from 'node-appwrite';
 
 import { createSystemClient } from '@/lib/appwrite-admin';

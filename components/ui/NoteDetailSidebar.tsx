@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Notes } from '@/types/appwrite';
 
-import NoteContentRenderer from '@/components/NoteContentRenderer';
 import { AgenticDiffViewer } from '@/components/agentic/AgenticDiffViewer';
 import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
 
@@ -21,17 +20,12 @@ import {
   Unlock as UnlockIcon,
   X as CloseIcon,
   Sparkles as ActionIcon,
-  Video as VideoCallIcon,
   CheckSquare as TaskIcon,
   Copy as CopyIcon,
   Tag as TagIcon,
   Plus,
   Clipboard,
   MoreVertical,
-  Bold,
-  Italic,
-  Heading1,
-  Code2,
   Zap,
 } from 'lucide-react';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
@@ -53,7 +47,7 @@ import { useTask } from '@/context/TaskContext';
 import { useToast } from '@/components/ui/Toast';
 import { useSudo } from '@/context/SudoContext';
 import { useInstantNoteInput } from '@/lib/note/useInstantNoteInput';
-import { BareMetalInput, BareMetalTextarea } from '@/components/ui/BareMetalInput';
+import { BareMetalInput } from '@/components/ui/BareMetalInput';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -95,9 +89,7 @@ import ProjectLinker from '@/components/projects/ProjectLinker';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
 import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
 import {
-  applyMarkdownWrap,
   getRemovedObjectBlocks,
-  parseObjectBlocks,
   serializeObjectBlock,
   type ParsedObjectBlock} from '@/lib/note-object-secondary';
 import { storage } from '@/lib/appwrite/client';
@@ -694,16 +686,10 @@ export function NoteDetailSidebar({
   const [pendingBlockDelete, setPendingBlockDelete] = useState<ParsedObjectBlock | null>(null);
   const [_isAttachingObject, setIsAttachingObject] = useState(false);
   const objectUploadInputRef = useRef<HTMLInputElement | null>(null);
-  const [contentMode, setContentMode] = useState<'edit' | 'preview'>(readOnly ? 'preview' : 'edit');
   // Allow attachment when: not readOnly AND (no role set = own-notes drawer context, OR explicitly owner/write-collab).
   // accessRole is only set by IdeaPageClient for shared/public note views — undefined means user is in their own notes.
   const canAttachSecondaryObject = !readOnly && (!accessRole || accessRole === 'owner' || accessRole === 'write-collab');
   const previousContentRef = useRef(content);
-
-  // Force preview mode when readOnly
-  useEffect(() => {
-    if (readOnly) setContentMode('preview');
-  }, [readOnly]);
   const isPageLayout = layout === 'page';
 
   useEffect(() => {
@@ -924,34 +910,6 @@ export function NoteDetailSidebar({
       setIsContextDrawerOpen(false);
     }
   }, [canAttachSecondaryObject, showError, liveNote.$id, getCursorLineNumber, insertObjectBlockAtCursor, showSuccess]);
-
-  const applyInlineFormatting = useCallback((left: string, right = left) => {
-    const textarea = contentTextareaRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const { next, cursorStart, cursorEnd } = applyMarkdownWrap(content, start, end, left, right);
-    pendingSelRef.current = { start: cursorStart, end: cursorEnd };
-    handleContentChange(next);
-    requestAnimationFrame(() => {
-      try { textarea.focus(); textarea.setSelectionRange(cursorStart, cursorEnd); } catch {}
-    });
-  }, [content, handleContentChange]);
-
-  const onEditorKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== 'Backspace' && event.key !== 'Delete') return;
-    const textarea = event.currentTarget;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const hit = parseObjectBlocks(content).find((block) => (
-      (end > block.start && start < block.end)
-      || (event.key === 'Backspace' && start === end && start > block.start && start <= block.end)
-      || (event.key === 'Delete' && start === end && start >= block.start && start < block.end)
-    ));
-    if (!hit) return;
-    event.preventDefault();
-    setPendingBlockDelete(hit);
-  }, [content]);
 
   useEffect(() => {
     const previous = previousContentRef.current;

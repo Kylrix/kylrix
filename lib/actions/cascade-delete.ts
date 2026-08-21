@@ -551,11 +551,11 @@ export async function executeCascadeDeleteSecure(
   else if (databaseId === FLOW_DB && tableId === EVENTS_TABLE) {
     console.log(`[Cascade Delete] Triggered event cascade cleanup for: ${rowId}`);
 
-    let meetingUrl = '';
+    let _meetingUrl = '';
     let coverImageId = '';
     try {
       const eventDoc = await tables.getRow<any>(FLOW_DB, EVENTS_TABLE, rowId);
-      meetingUrl = eventDoc?.meetingUrl || '';
+      _meetingUrl = eventDoc?.meetingUrl || '';
       coverImageId = eventDoc?.coverImageId || '';
     } catch (err) {
       console.warn(`[Cascade Delete] Failed to fetch event row ${rowId} for meetingUrl/cover:`, err);

@@ -40,7 +40,7 @@ export function ShareLockButton({
   onPublished,
   canPublish = true,
   blockReason,
-  getCustomShareUrl
+  getCustomShareUrl: _getCustomShareUrl
 }: ShareLockButtonProps) {
   const { showError } = useToast();
   const { open } = useUnifiedDrawer();

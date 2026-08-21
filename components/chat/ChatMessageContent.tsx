@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { Box, Typography } from '@/lib/openbricks/primitives';
 import { Lock, File as FileIcon } from 'lucide-react';
 import { VoiceMessage } from './VoiceMessage';

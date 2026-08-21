@@ -5,7 +5,6 @@ import { Box, Typography, IconButton, Stack } from '@/lib/openbricks/primitives'
 import { X } from 'lucide-react';
 import { Drawer } from '@/lib/openbricks/primitives';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
-import toast from 'react-hot-toast';
 
 export function DeleteNoteDrawer({ isOpen, onClose, onConfirm, noteTitle }: { 
     isOpen: boolean, 

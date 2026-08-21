@@ -899,7 +899,7 @@ export async function batchTrashFormSubmissionsSecure(
       try {
         const sub = await tables.getRow({ databaseId: dbId, tableId: submissionsTable, rowId: subId });
         if (sub?.submitterId !== actor.$id) throw new Error('Forbidden');
-      } catch (err: any) {
+      } catch (_err: any) {
         throw new Error(`Forbidden: Cannot delete submission ${subId}`);
       }
     }
@@ -919,7 +919,7 @@ export async function batchTrashFormSubmissionsSecure(
         });
       }
     }, { ttl: 60 });
-  } catch (err) {
+  } catch (_err) {
     // Fallback: batch update with system client
     const tables: any = createSystemTablesDB();
     await Promise.all(

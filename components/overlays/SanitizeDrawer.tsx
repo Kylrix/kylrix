@@ -30,7 +30,7 @@ interface DetectedIssue {
 }
 
 export function SanitizeDrawer({
-  targetKind = 'form',
+  targetKind: _targetKind = 'form',
   targetId,
   targetTitle,
   onClose,

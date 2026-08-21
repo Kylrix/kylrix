@@ -11,10 +11,8 @@ import {
   Smartphone,
   ShieldCheck,
   ShieldAlert,
-  KeyRound,
   ArrowUpCircle,
   Clock,
-  UserCheck,
 } from 'lucide-react';
 import { RememberUnlockSettings } from '@/components/settings/RememberUnlockSettings';
 import { AgentByokSettings } from '@/components/settings/AgentByokSettings';

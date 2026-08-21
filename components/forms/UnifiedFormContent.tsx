@@ -7,7 +7,6 @@ import {
     Upload as UploadIcon, 
     X as XIcon, 
     ChevronDown, 
-    ChevronUp, 
     ArrowUpRight 
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
@@ -15,7 +14,6 @@ import { Forms } from '@/generated/appwrite/types';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { secureUploadFile } from '@/lib/actions/client-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { useSection } from '@/context/SectionContext';
 
 interface UnifiedFormContentProps {
     formId: string;
@@ -23,8 +21,6 @@ interface UnifiedFormContentProps {
 }
 
 export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps) {
-    const { setActiveDetail } = useSection();
-    const [isExpanded, setIsExpanded] = useState(false);
     const { fetchOptimized } = useDataNexus();
     const [form, setForm] = useState<Forms | null>(null);
     const [loading, setLoading] = useState(true);
@@ -33,18 +29,11 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
     const [error, setError] = useState<string | null>(null);
     const [formData, setFormData] = useState<Record<string, any>>({});
     const [isHydrated, setIsHydrated] = useState(false);
-    const [isDesktop, setIsDesktop] = useState(false);
 
-    useEffect(() => {
-        const checkSize = () => setIsDesktop(window.innerWidth >= 768);
-        checkSize();
-        window.addEventListener('resize', checkSize);
-        return () => window.removeEventListener('resize', checkSize);
-    }, []);
-
-    const handleMorphToDetail = () => {
-        setActiveDetail({ type: 'form', id: formId });
-        onClose();
+    const handleOpenStandalone = () => {
+        if (typeof window !== 'undefined') {
+            window.open(`/form/${formId}`, '_blank', 'noopener,noreferrer');
+        }
     };
 
     // Load draft when form schema is loaded
@@ -53,14 +42,13 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
             setIsHydrated(false);
             return;
         }
-        const raw = localStorage.getItem(`kylrix:draft:form:${formId}`);
-        if (raw) {
-            try {
-                const draft = JSON.parse(raw);
-                setFormData(draft);
-            } catch (e) {
-                console.error('Failed to parse form draft', e);
+        try {
+            const raw = localStorage.getItem(`kylrix:draft:form:${formId}`);
+            if (raw) {
+                setFormData(JSON.parse(raw));
             }
+        } catch (e) {
+            console.error('Failed to parse form draft', e);
         }
         setIsHydrated(true);
     }, [formId, form]);
@@ -68,16 +56,19 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
     // Save draft when formData changes
     useEffect(() => {
         if (!formId || typeof window === 'undefined' || !isHydrated) return;
-        if (Object.keys(formData).length > 0) {
-            localStorage.setItem(`kylrix:draft:form:${formId}`, JSON.stringify(formData));
-        } else {
-            localStorage.removeItem(`kylrix:draft:form:${formId}`);
-        }
+        try {
+            if (Object.keys(formData).length > 0) {
+                localStorage.setItem(`kylrix:draft:form:${formId}`, JSON.stringify(formData));
+            } else {
+                localStorage.removeItem(`kylrix:draft:form:${formId}`);
+            }
+        } catch {}
     }, [formId, isHydrated, formData]);
 
     useEffect(() => {
         if (!formId) return;
 
+        let isMounted = true;
         const fetchForm = async () => {
             setLoading(true);
             setError(null);
@@ -85,14 +76,15 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                 const data = await fetchOptimized(`f_form_schema_${formId}`, () => 
                     FormsService.getForm(formId)
                 );
-                setForm(data);
+                if (isMounted) setForm(data);
             } catch (err: any) {
-                setError(err.message || 'Form not found or inaccessible.');
+                if (isMounted) setError(err.message || 'Form not found or inaccessible.');
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
         fetchForm();
+        return () => { isMounted = false; };
     }, [formId, fetchOptimized]);
 
     const handleFieldChange = (fieldId: string, value: any) => {
@@ -113,13 +105,22 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
         setError(null);
 
         try {
+            let schema: any[] = [];
+            try { schema = JSON.parse(form?.schema || '[]'); } catch (_e) {}
+
+            for (const field of schema) {
+                if (field.required && (!formData[field.id] || formData[field.id] === '')) {
+                    throw new Error(`Field "${field.label}" is required.`);
+                }
+            }
+
             await FormsService.submitForm(formId, JSON.stringify(formData));
             if (typeof window !== 'undefined') {
                 localStorage.removeItem(`kylrix:draft:form:${formId}`);
             }
             setSubmitted(true);
         } catch (err: any) {
-            setError(err.message || 'Failed to submit form. Please try again.');
+            setError(err.message || 'Failed to submit response.');
         } finally {
             setSubmitting(false);
         }
@@ -134,48 +135,48 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                             value={formData[field.id] || ''}
                             onChange={(e) => handleFieldChange(field.id, e.target.value)}
                             required={field.required}
-                            className="w-full px-4.5 py-3.5 rounded-xl bg-[#0B0A09] border border-[#34322F] text-white focus:outline-none focus:border-[#6366F1] focus:ring-1 focus:ring-[#6366F1]/30 hover:border-[#6366F1] transition-all cursor-pointer font-satoshi text-sm appearance-none"
+                            className="w-full px-3.5 py-2.5 rounded-xl bg-[#161412] border border-white/10 text-white focus:outline-none focus:border-[#6366F1] transition-colors text-xs font-sans appearance-none cursor-pointer"
                         >
-                            <option value="" disabled hidden>Select an option</option>
+                            <option value="" disabled hidden className="bg-[#161412] text-white/40">Select an option…</option>
                             {(field.options || []).map((opt: string) => (
-                                <option key={opt} value={opt} className="bg-[#161412] text-white font-satoshi">{opt}</option>
+                                <option key={opt} value={opt} className="bg-[#161412] text-white">{opt}</option>
                             ))}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-zinc-400">
-                            <ChevronDown size={16} />
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-white/40">
+                            <ChevronDown size={14} />
                         </div>
                     </div>
                 );
             case 'radio':
                 return (
-                    <div className="grid gap-2.5 pl-1">
+                    <div className="grid gap-2 pl-0.5">
                         {(field.options || []).map((opt: string) => (
-                            <label key={opt} className="flex items-center gap-3 cursor-pointer group select-none">
+                            <label key={opt} className="flex items-center gap-2.5 cursor-pointer select-none">
                                 <input 
                                     type="radio" 
                                     name={field.id}
                                     value={opt}
                                     checked={formData[field.id] === opt}
                                     onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                                    className="w-4.5 h-4.5 text-[#6366F1] bg-[#0B0A09] border border-[#34322F] checked:bg-[#6366F1] checked:border-[#6366F1] focus:ring-0 focus:ring-offset-0 focus:outline-none transition-all cursor-pointer"
+                                    className="w-4 h-4 text-[#6366F1] bg-[#161412] border border-white/10 focus:ring-0 focus:ring-offset-0 cursor-pointer"
                                 />
-                                <span className="text-sm font-satoshi text-zinc-300 group-hover:text-white transition-colors">{opt}</span>
+                                <span className="text-xs text-white/80 font-sans">{opt}</span>
                             </label>
                         ))}
                     </div>
                 );
             case 'checkbox':
                 return (
-                    <div className="grid gap-2.5 pl-1">
+                    <div className="grid gap-2 pl-0.5">
                         {(field.options || []).map((opt: string) => (
-                            <label key={opt} className="flex items-center gap-3 cursor-pointer group select-none">
+                            <label key={opt} className="flex items-center gap-2.5 cursor-pointer select-none">
                                 <input 
-                                    type="checkbox"
+                                    type="checkbox" 
                                     checked={(formData[field.id] || []).includes(opt)}
                                     onChange={(e) => handleCheckboxChange(field.id, opt, e.target.checked)}
-                                    className="w-4.5 h-4.5 text-[#6366F1] bg-[#0B0A09] border border-[#34322F] rounded checked:bg-[#6366F1] checked:border-[#6366F1] focus:ring-0 focus:ring-offset-0 focus:outline-none transition-all cursor-pointer"
+                                    className="w-4 h-4 rounded border-white/10 bg-[#161412] text-[#6366F1] focus:ring-0 focus:ring-offset-0 cursor-pointer"
                                 />
-                                <span className="text-sm font-satoshi text-zinc-300 group-hover:text-white transition-colors">{opt}</span>
+                                <span className="text-xs text-white/80 font-sans">{opt}</span>
                             </label>
                         ))}
                     </div>
@@ -183,12 +184,12 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
             case 'textarea':
                 return (
                     <textarea
-                        rows={4}
+                        rows={3}
                         required={field.required}
                         value={formData[field.id] || ''}
                         onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                        className="w-full px-4.5 py-3.5 rounded-xl bg-[#0B0A09] border border-[#34322F] text-white focus:outline-none focus:border-[#6366F1] focus:ring-1 focus:ring-[#6366F1]/30 hover:border-[#6366F1] transition-all resize-y font-satoshi leading-relaxed text-sm"
-                        placeholder="Type your response here..."
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#161412] border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-[#6366F1] transition-colors text-xs font-sans resize-none"
+                        placeholder="Enter response…"
                     />
                 );
             case 'file':
@@ -196,77 +197,57 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                 return (
                     <div className="flex flex-col gap-2">
                         {selectedFile ? (
-                            <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#0B0A09] border border-[#34322F] transition-all">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                    <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400 shrink-0" />
-                                    <span className="text-sm font-semibold text-zinc-200 truncate max-w-[200px] font-satoshi">
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-[#161412] border border-white/10">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                    <span className="text-xs font-semibold text-white/80 truncate max-w-[200px] font-sans">
                                         {selectedFile.originalName || 'File uploaded'}
                                     </span>
                                 </div>
                                 <button 
                                     type="button" 
                                     onClick={() => handleFieldChange(field.id, null)} 
-                                    className="p-1 text-zinc-400 hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors"
+                                    className="p-1 text-white/40 hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
                                 >
-                                    <XIcon size={16} />
+                                    <XIcon size={14} />
                                 </button>
                             </div>
                         ) : (
-                            <label
-                                className={`w-full py-3 px-4 rounded-xl border border-dashed border-[#34322F] bg-[#1C1A18] hover:bg-[#34322F]/20 hover:border-[#6366F1] transition-all cursor-pointer flex items-center justify-center gap-2 text-sm font-bold text-zinc-400 hover:text-white font-satoshi ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                {submitting ? (
-                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
-                                ) : (
-                                    <UploadIcon size={18} />
-                                )}
-                                <span>{submitting ? 'Uploading...' : 'Choose File (Max 5MB)'}</span>
-                                {!submitting && (
-                                    <input
-                                        type="file"
-                                        className="hidden"
-                                        required={field.required && !selectedFile}
-                                        onChange={async (e) => {
-                                            const file = e.target.files?.[0];
-                                            if (!file) return;
-                                            if (file.size > 5 * 1024 * 1024) {
-                                                alert('File exceeds 5MB limit.');
-                                                return;
-                                            }
-                                            setSubmitting(true);
-                                            try {
-                                                const fData = new FormData();
-                                                fData.append('file', file);
-                                                fData.append('bucketId', APPWRITE_CONFIG.BUCKETS.FORM_ATTACHMENTS);
-                                                const uploaded = await secureUploadFile(fData);
-                                                handleFieldChange(field.id, {
-                                                    fileId: uploaded.$id,
-                                                    bucketId: APPWRITE_CONFIG.BUCKETS.FORM_ATTACHMENTS,
-                                                    originalName: file.name
-                                                });
-                                            } catch (err: any) {
-                                                alert(err.message || 'Failed to upload file.');
-                                            } finally {
-                                                setSubmitting(false);
-                                            }
-                                        }}
-                                    />
-                                )}
+                            <label className="cursor-pointer px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-semibold flex items-center gap-2 transition-colors w-fit">
+                                <UploadIcon size={14} className="text-[#6366F1]" />
+                                <span>{submitting ? 'Uploading…' : 'Upload File (Max 5MB)'}</span>
+                                <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    required={field.required && !selectedFile}
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        if (file.size > 5 * 1024 * 1024) {
+                                            setError('File exceeds 5MB limit.');
+                                            return;
+                                        }
+                                        setSubmitting(true);
+                                        try {
+                                            const fData = new FormData();
+                                            fData.append('file', file);
+                                            fData.append('bucketId', APPWRITE_CONFIG.BUCKETS.FORM_ATTACHMENTS);
+                                            const uploaded = await secureUploadFile(fData);
+                                            handleFieldChange(field.id, {
+                                                fileId: uploaded.$id,
+                                                bucketId: APPWRITE_CONFIG.BUCKETS.FORM_ATTACHMENTS,
+                                                originalName: file.name
+                                            });
+                                        } catch (err: any) {
+                                            setError(err.message || 'Failed to upload file.');
+                                        } finally {
+                                            setSubmitting(false);
+                                        }
+                                    }}
+                                />
                             </label>
                         )}
                     </div>
-                );
-            case 'checkbox':
-                return (
-                    <label className="flex items-center gap-2.5 cursor-pointer py-1">
-                        <input
-                            type="checkbox"
-                            checked={!!formData[field.id]}
-                            onChange={(e) => handleFieldChange(field.id, e.target.checked)}
-                            className="w-4 h-4 rounded border-white/10 bg-[#161412] text-[#6366F1] focus:ring-0 focus:ring-offset-0"
-                        />
-                        <span className="text-xs text-white/70 font-sans">{field.label}</span>
-                    </label>
                 );
             default:
                 return (
@@ -385,3 +366,4 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
             </div>
         </div>
     );
+}

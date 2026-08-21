@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { databases } from '@/lib/appwrite/client';
@@ -14,7 +14,6 @@ import {
   Trash2,
   X,
   Loader2 as SpinnerIcon,
-  Clock,
   Trash,
   RotateCcw,
 } from 'lucide-react';
@@ -43,12 +42,9 @@ interface TrashObjectDetailProps {
 export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
   const { user, isAuthenticated } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
-  const { activeWorkspace } = useWorkspace();
   const { closeSidebar } = useDynamicSidebar();
   const { closeOverlay } = useOverlay();
 
-  const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
-  const workspaceId = isCustomWorkspace ? activeWorkspace!.id : 'personal';
   const cacheKeyAll = user?.$id ? `trash_all_${user.$id}` : null;
 
   const [itemsAll, setItemsAll] = useState<TrashItem[]>([]);
@@ -365,6 +361,15 @@ export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
                 </div>
               </div>
             ))}
+            {hasMore && (
+              <button
+                type="button"
+                onClick={() => setPage(p => p + 1)}
+                className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs font-bold transition-all"
+              >
+                Load More
+              </button>
+            )}
           </div>
         )}
       </div>

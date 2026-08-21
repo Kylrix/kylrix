@@ -9,9 +9,6 @@ import {
   Check,
   ArrowRight,
   Sparkles,
-  Clock,
-  Printer,
-  Search,
   ChevronUp,
   ChevronDown,
   X} from 'lucide-react';
@@ -43,11 +40,6 @@ export function BillingContent() {
   const [giftMonths, setGiftMonths] = useState('1');
   const [giftLoading, setGiftLoading] = useState(false);
   const [giftError, setGiftError] = useState<string | null>(null);
-
-  // Transaction History States
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [loadingTransactions, setLoadingTransactions] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const loadCoupons = useCallback(async () => {
     if (!user?.$id) return;
@@ -123,39 +115,6 @@ export function BillingContent() {
       setGiftLoading(false);
     }
   }, [giftMonths, giftUsername, router]);
-
-  const printStatement = () => {
-    const w = window.open();
-    if (!w) return;
-    const currentDate = new Date().toLocaleDateString();
-    const filtered = filteredTx;
-    const detailsHtml = filtered.map(tx => `
-      <tr>
-        <td>${new Date(tx.createdAt || tx.$createdAt).toLocaleDateString()}</td>
-        <td>${tx.$id}</td>
-        <td>${String(tx.plan || 'PRO').replace('_', ' ')} — ${tx.months || 1} Month(s)${tx.isGift ? ' (Gift)' : ''}</td>
-        <td style="text-align:right">$${tx.amountUsd || (tx.amountCents ? (tx.amountCents / 100).toFixed(2) : '0.00')}</td>
-      </tr>
-    `).join('');
-    w.document.write(`<!DOCTYPE html><html><head><title>Statement - Kylrix</title>
-      <style>body{font-family:monospace;color:#000;padding:40px;max-width:800px;margin:auto}table{width:100%;border-collapse:collapse;margin:20px 0}th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}th{font-weight:900;border-bottom:2px solid #000}.total{font-weight:900;font-size:16px;margin-top:20px;display:flex;justify-content:space-between}@media print{button{display:none}}</style>
-      </head><body>
-      <button onclick="window.print()" style="margin-bottom:20px;padding:8px 16px;cursor:pointer">Print / Save PDF</button>
-      <h2>KYLRIX — Subscription Statement</h2>
-      <p>Customer: ${user?.email || 'N/A'} (${user?.$id || ''})</p>
-      <p>Generated: ${currentDate}</p>
-      <table><thead><tr><th>Date</th><th>ID</th><th>Plan</th><th style="text-align:right">Amount</th></tr></thead>
-      <tbody>${detailsHtml || '<tr><td colspan="4" style="text-align:center;color:#888">No transactions.</td></tr>'}</tbody></table>
-      <div class="total"><span>Total</span><span>$${filtered.reduce((a, t) => a + (t.amountCents || 0), 0) / 100 || '0.00'}</span></div>
-      <script>window.onload=function(){setTimeout(function(){window.print()},300)}</script>
-      </body></html>`);
-    w.document.close();
-  };
-
-  const filteredTx = transactions.filter(tx =>
-    tx.$id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (tx.plan || '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const isPro = currentTier === 'PRO' || currentTier === 'LIFETIME' || currentTier === 'ORG';
   const isTeams = currentTier === 'TEAMS';

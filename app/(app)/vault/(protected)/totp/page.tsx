@@ -229,7 +229,7 @@ function TOTPCardStable({
         requireUnlock(() => setSelectedTotp(displayTotp));
       }}
       onContextMenu={selection.isSelectMode ? (e) => e.preventDefault() : handleContextMenu}
-      className={`h-full p-5 rounded-3xl transition-all duration-300 flex flex-col gap-4 cursor-pointer border ${isSelected ? 'bg-[#1C1A18] border-emerald-500/40 ring-2 ring-emerald-500' : 'bg-[#161412] border-[#1C1A18] hover:bg-[#1C1A18] hover:border-emerald-500/20'} hover:-translate-y-0.5 shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),0_2px_3px_-3px_rgba(37,35,33,0.9)]`}
+      className={`h-full p-5 rounded-3xl transition-all duration-300 flex flex-col gap-4 cursor-pointer border ${isCardActive ? 'ring-1 ring-[#10B981]' : ''} ${isSelected ? 'bg-[#1C1A18] border-emerald-500/40 ring-2 ring-emerald-500' : 'bg-[#161412] border-[#1C1A18] hover:bg-[#1C1A18] hover:border-emerald-500/20'} hover:-translate-y-0.5 shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),0_2px_3px_-3px_rgba(37,35,33,0.9)]`}
     >
       <div className="flex items-center gap-3.5 min-w-0 w-full">
         {selection.isSelectMode ? (

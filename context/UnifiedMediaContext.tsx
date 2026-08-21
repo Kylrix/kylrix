@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { UnifiedMediaViewer, UnifiedMediaViewerProps } from '@/components/objects/UnifiedMediaViewer';
+import { UnifiedMediaViewer } from '@/components/objects/UnifiedMediaViewer';
 
 interface MediaViewerState {
   isOpen: boolean;

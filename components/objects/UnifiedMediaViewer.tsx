@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { X, Download, ZoomIn, ZoomOut, RotateCw, ExternalLink } from 'lucide-react';
-import { StorageService } from '@/lib/services/storage';
 
 export interface UnifiedMediaViewerProps {
   src: string;
@@ -17,8 +16,8 @@ export function UnifiedMediaViewer({
   src,
   type = 'image',
   title = 'Media Viewer',
-  fileId,
-  bucketId,
+  fileId: _fileId,
+  bucketId: _bucketId,
   onClose,
 }: UnifiedMediaViewerProps) {
   const [zoom, setZoom] = useState(1);

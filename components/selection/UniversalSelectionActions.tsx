@@ -21,7 +21,7 @@ import toast from 'react-hot-toast';
 
 export function UniversalSelectionActions() {
   const { isSelectMode, activeKind, selectedIds, exitSelectMode, clearSelection } = useSelection();
-  const { workspaces, activeWorkspace } = useWorkspace();
+  const { workspaces } = useWorkspace();
   const { removeNote, pinNote, unpinNote, isPinned: checkNotePinned } = useNotes();
   const { deleteTask, togglePinTask } = useTask();
   const { removeEvent } = useEvents();

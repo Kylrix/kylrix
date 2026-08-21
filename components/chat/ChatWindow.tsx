@@ -28,7 +28,6 @@ import {
 } from '@/lib/openbricks/primitives';
 import { ChatSettingsPanel } from '@/components/chat/ChatSettingsPanel';
 import {
-    Phone,
     ChevronLeft,
     File as FileIcon,
     MoreVertical,

@@ -424,6 +424,18 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           embedded
         />
       );
+    case 'zap':
+      return (
+        <ZapDrawer
+          isOpen
+          onClose={onClose}
+          recipientPubkey={drawerData?.recipientPubkey}
+          recipientName={drawerData?.recipientName}
+          recipientAvatar={drawerData?.recipientAvatar}
+          recipientLud16={drawerData?.recipientLud16}
+          noteId={drawerData?.noteId}
+        />
+      );
     default:
       return null;
   }

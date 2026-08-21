@@ -165,7 +165,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const [_isSearchingNotes, setIsSearchingNotes] = useState(false);
   const [_linkedNoteTitles, setLinkedNoteTitles] = useState<Record<string, string>>({});
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [isEditingDescription, _setIsEditingDescription] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [isStatusOpen, setIsStatusOpen] = useState(false);
@@ -342,17 +342,6 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const handleSaveEditTitle = () => {
     // Live copy already mirrored via pushLiveGoal while typing (notes 1:1).
     setIsEditingTitle(false);
-  };
-
-  const handleStartEditDescription = () => {
-    const currentTask = task;
-    if (!currentTask) return;
-    setEditDescription(currentTask.description || '');
-    setIsEditingDescription(true);
-  };
-
-  const handleSaveEditDescription = () => {
-    setIsEditingDescription(false);
   };
 
   // 1:1 NoteDetailSidebar: dirty editor → pushLiveGoal (engine enqueues amber).

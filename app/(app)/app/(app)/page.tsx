@@ -8,7 +8,6 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { toast } from 'react-hot-toast';
 
 import Link from 'next/link';
 

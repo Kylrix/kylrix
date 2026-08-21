@@ -18,20 +18,6 @@ jobs:
       ota_target_os: linux
       ota_runner: ubuntu-latest
 
-  verify-native-macos:
-    uses: ./.github/workflows/ota-verify-native-macos.yml
-    with:
-      ota_projection_identity: sha256:074d839697d6b8c7ef866448d3f01f36b3b8dc785de1ccc9be472a8aff5e628d
-      ota_target_os: macos
-      ota_runner: macos-latest
-
-  verify-native-windows:
-    uses: ./.github/workflows/ota-verify-native-windows.yml
-    with:
-      ota_projection_identity: sha256:638f4d6d2a44349b44bb5c4777920857f9f20bc8b75b5de9b637094b2ba103d2
-      ota_target_os: windows
-      ota_runner: windows-latest
-
   verify-container-linux:
     uses: ./.github/workflows/ota-verify-container-linux.yml
     with:

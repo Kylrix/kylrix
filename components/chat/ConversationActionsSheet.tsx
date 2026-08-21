@@ -26,7 +26,7 @@ import {
   useMediaQuery,
   useTheme} from '@/lib/openbricks/primitives';
 import { Query } from 'appwrite';
-import { Link as LinkIcon, MessageCircle, Phone, Search, Shield, Trash2, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { Link as LinkIcon, MessageCircle, Search, Shield, Trash2, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/lib/auth';

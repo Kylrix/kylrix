@@ -76,14 +76,8 @@ function DashboardPageContent() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Multi-select state
-  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [isSelectMode, _setIsSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isMultiDeleting, _setIsMultiDeleting] = useState(false);
-
-  const handleToggleSelectMode = () => {
-    setIsSelectMode(!isSelectMode);
-    setSelectedIds([]);
-  };
 
   const toggleSelection = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);

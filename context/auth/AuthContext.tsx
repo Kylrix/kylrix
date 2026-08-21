@@ -319,7 +319,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return result.userId;
   }, []);
   const verifyEmailOTP = useCallback(async (_email: string, userId: string, secret: string): Promise<void> => {
-    const session: any = await account.createSession({ userId, secret });
+    const _session: any = await account.createSession({ userId, secret });
     try {
       await assertAuthenticatedAccount();
       await refreshUser(true);

@@ -33,8 +33,7 @@ import {
   Tag as TagIcon,
   ClipboardList,
   KeyRound,
-  Sparkles,
-  PhoneCall} from 'lucide-react';
+  Sparkles} from 'lucide-react';
 import { listFlowTasks, listKeepCredentials, Query, listTagsByUser } from '@/lib/appwrite';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';

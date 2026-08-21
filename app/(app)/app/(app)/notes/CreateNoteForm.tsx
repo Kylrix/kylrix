@@ -34,7 +34,7 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { serializeObjectBlock, parseObjectBlocks } from '@/lib/note-object-secondary';
 import type { ParsedObjectBlock } from '@/lib/note-object-secondary';
 import { useNotes } from '@/context/NotesContext';
-import { BareMetalInput, BareMetalTextarea } from '@/components/ui/BareMetalInput';
+import { BareMetalInput } from '@/components/ui/BareMetalInput';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -44,7 +44,6 @@ import { useTask } from '@/context/TaskContext';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
 import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
 
-import { useRouter } from 'next/navigation';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
@@ -90,7 +89,6 @@ export default function CreateNoteForm({
   const { fetchOptimized, getCachedData, setCachedData } = useDataNexus();
   const { promptSudo } = useSudo();
   const { setActiveDetail } = useSection();
-  const router = useRouter();
   const { open: openUnified } = useUnifiedDrawer();
   const { user } = useAuth();
   const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
