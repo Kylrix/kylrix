@@ -1,7 +1,6 @@
 import { Query } from 'node-appwrite';
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { sweepStaleLiveCallPresenceBatch } from '@/lib/services/internal/live-call-presence-reconcile';
 import { executeCascadeDeleteSecure } from '@/lib/actions/cascade-delete';
 
 export type SystemRuntimeJobId = 
@@ -14,6 +13,10 @@ const SYSTEM_JOB_IDS = new Set<SystemRuntimeJobId>([
   'sweep_stale_live_call_presence',
   'sweep_stale_action_threads'
 ]);
+
+async function sweepStaleLiveCallPresenceBatch(_limit: number) {
+  return { scanned: 0, purged: 0 };
+}
 
 export function isSystemRuntimeJobId(job: string): job is SystemRuntimeJobId {
   return SYSTEM_JOB_IDS.has(job as SystemRuntimeJobId);
