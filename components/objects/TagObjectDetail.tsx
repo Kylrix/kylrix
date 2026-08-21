@@ -8,6 +8,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useToast } from '@/components/ui/Toast';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { useRouter } from 'next/navigation';
 import { TaggedResourcesTabs } from '@/components/share/TaggedResourcesTabs';
 import { TagObjectRow } from '@/components/ui/TagObjectRow';
 import {
@@ -28,10 +29,11 @@ interface TagObjectDetailProps {
 
 export function TagObjectDetail({ onClose, initialTagId = null, embedded = false }: TagObjectDetailProps) {
   const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
   const { open: openUnified } = useUnifiedDrawer();
   const { showError } = useToast();
-  const { closeSidebar } = useDynamicSidebar();
-  const { closeOverlay } = useOverlay();
+  const { openSidebar, openSecondarySidebar, closeSidebar } = useDynamicSidebar();
+  const { openOverlay, closeOverlay } = useOverlay();
 
   const [tags, setTags] = useState<Tags[]>([]);
   const [loading, setLoading] = useState(true);
@@ -222,9 +224,17 @@ export function TagObjectDetail({ onClose, initialTagId = null, embedded = false
               </div>
             ) : (
               <TaggedResourcesTabs
-                tag={selectedTag}
                 resources={taggedResources}
-                onRefresh={() => handleResolveResources(selectedTag)}
+                openSidebar={openSidebar}
+                openSecondarySidebar={openSecondarySidebar}
+                openOverlay={openOverlay}
+                closeOverlay={closeOverlay}
+                fetchProjectData={async () => {
+                  if (selectedTag) void handleResolveResources(selectedTag);
+                }}
+                handleRemoveObject={async () => {}}
+                router={router}
+                showError={showError}
               />
             )}
           </div>
