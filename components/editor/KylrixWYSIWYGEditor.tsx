@@ -149,7 +149,8 @@ class ObjectBlockWidget extends WidgetType {
       link.className = 'inline-flex items-center gap-2 text-xs font-bold text-[#6366F1] hover:underline cursor-pointer';
       link.textContent = `Open ${this.payload.label || 'attachment'} ↗`;
       link.onclick = (e) => {
-        if (this.payload.childKind === 'pdf' || this.payload.metadata?.mimeType?.toString().includes('pdf')) {
+        const isPdf = Boolean(this.payload.metadata?.mimeType?.toString().includes('pdf') || this.payload.label?.toLowerCase().endsWith('.pdf'));
+        if (isPdf) {
           e.preventDefault();
           window.dispatchEvent(new CustomEvent('kylrix:open-unified-media', {
             detail: {
