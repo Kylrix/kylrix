@@ -2,7 +2,24 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Globe, ShieldCheck, ArrowRight, ArrowLeft, MessageSquare, Phone, Folder, Users, Share2, Mic } from 'lucide-react';
+import {
+  Sparkles,
+  ShieldCheck,
+  ArrowRight,
+  ArrowLeft,
+  MessageSquare,
+  Folder,
+  Share2,
+  Mic,
+  Lightbulb,
+  CheckSquare,
+  Key,
+  FileText,
+  Calendar,
+  Layers,
+  Bot,
+  Users,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/context/auth/AuthContext';
@@ -39,9 +56,7 @@ export default function PricingPage() {
 
   const yearlyListPrice = useMemo(() => getYearlyListPrice(selectedTier), [selectedTier]);
   const yearlyDiscountedPrice = useMemo(() => getYearlyDiscountedPrice(selectedTier), [selectedTier]);
-
   const freeMonthsIncluded = useMemo(() => getBundledFreeMonths(months), [months]);
-
   const isYearly = months >= 12;
 
   const totalPrice = useMemo(() => {
@@ -57,7 +72,8 @@ export default function PricingPage() {
         method: 'CRYPTO',
         countryCode,
         months: checkoutMonths,
-        jwt});
+        jwt,
+      });
 
       if (session?.url) {
         sessionStorage.removeItem(CHECKOUT_CACHE_KEY);
@@ -99,7 +115,8 @@ export default function PricingPage() {
         planId,
         months,
         countryCode: 'US',
-        tier: selectedTier};
+        tier: selectedTier,
+      };
       sessionStorage.setItem(CHECKOUT_CACHE_KEY, JSON.stringify(intent));
       openUnified('login');
       return;
@@ -108,32 +125,66 @@ export default function PricingPage() {
     void proceedToBlockBee(planId, months, 'US');
   };
 
+  const proFeatures = [
+    { icon: Lightbulb, text: 'Unlimited ideas & notes' },
+    { icon: CheckSquare, text: 'Unlimited tasks & goals' },
+    { icon: Key, text: 'Unlimited passwords & vaults' },
+    { icon: FileText, text: 'Unlimited forms & responses' },
+    { icon: Calendar, text: 'Unlimited events & calendar sync' },
+    { icon: Layers, text: 'Unlimited workspaces & collaboration' },
+    { icon: MessageSquare, text: 'Private chats & Hangouts' },
+    { icon: ShieldCheck, text: 'Moments & feeds' },
+    { icon: Folder, text: 'Cloud file storage & attachments' },
+    { icon: Bot, text: 'Intelligent AI Sidekick & Agents' },
+    { icon: Sparkles, text: 'Neural graph exploration' },
+    { icon: Mic, text: 'Audio messages & voice notes' },
+    { icon: Share2, text: 'Direct link sharing & duplication' },
+  ];
+
+  const teamsFeatures = [
+    { icon: Users, text: 'All Pro features for multiple team members' },
+    { icon: Layers, text: 'Shared team workspaces & permissions' },
+    { icon: Lightbulb, text: 'Unlimited shared ideas & notes' },
+    { icon: CheckSquare, text: 'Unlimited team goals & tracking' },
+    { icon: Key, text: 'Unlimited shared vaults & credentials' },
+    { icon: FileText, text: 'Unlimited team forms & workflows' },
+    { icon: Folder, text: 'Team cloud file storage & asset sharing' },
+    { icon: Bot, text: 'Shared AI agents & automated tooling' },
+    { icon: MessageSquare, text: 'Team discussion channels & Hangouts' },
+    { icon: Share2, text: 'Custom team access controls' },
+  ];
+
+  const currentFeatures = selectedTier === 'PRO' ? proFeatures : teamsFeatures;
+
   return (
-    <div className="min-h-screen bg-black text-white relative pt-12 pb-20 px-4 md:px-6">
-      <div className="max-w-4xl mx-auto relative z-10">
+    <div className="min-h-screen bg-black text-white pt-10 pb-20 px-4 md:px-6">
+      <div className="max-w-4xl mx-auto flex flex-col gap-6">
         <button
           onClick={() => router.back()}
-          className="w-11 h-11 mb-6 bg-[#161412] text-white border border-white/6 rounded-[14px] flex items-center justify-center hover:bg-[#1C1A18] hover:-translate-x-0.5 transition-all"
+          className="w-10 h-10 bg-[#161412] text-white/80 hover:text-white border border-white/6 rounded-xl flex items-center justify-center transition-colors cursor-pointer self-start"
+          aria-label="Back"
         >
           <ArrowLeft size={18} />
         </button>
 
-        <div className="text-center mb-6">
-          <h1 className="text-white font-black text-4xl md:text-6xl tracking-tight leading-tight mb-3 font-mono">
+        {/* Header */}
+        <div className="text-center flex flex-col items-center gap-2">
+          <h1 className="text-white font-black text-3xl md:text-5xl tracking-tight font-clash">
             Kylrix {selectedTier === 'PRO' ? 'Pro' : 'Teams'}
           </h1>
-          <p className="text-white/60 text-sm md:text-base font-medium max-w-xl mx-auto leading-relaxed">
-            Get full access to the ecosystem with a plan that scales with you.
+          <p className="text-white/60 text-sm md:text-base font-satoshi max-w-md">
+            Full private suite. All core features unlimited.
           </p>
         </div>
 
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex p-1 bg-[#161514] border border-white/8 rounded-[16px]">
+        {/* Tier Selector */}
+        <div className="flex justify-center">
+          <div className="inline-flex p-1 bg-[#161412] border border-white/6 rounded-2xl">
             <button
               onClick={() => setSelectedTier('PRO')}
-              className={`px-6 py-2 rounded-[12px] text-xs md:text-sm font-black transition-all ${
+              className={`px-5 py-2 rounded-xl text-xs md:text-sm font-black transition-all cursor-pointer ${
                 selectedTier === 'PRO'
-                  ? 'bg-[#6366F1] text-black'
+                  ? 'bg-[#6366F1] text-white'
                   : 'text-white/60 hover:text-white'
               }`}
             >
@@ -141,9 +192,9 @@ export default function PricingPage() {
             </button>
             <button
               onClick={() => setSelectedTier('TEAMS')}
-              className={`px-6 py-2 rounded-[12px] text-xs md:text-sm font-black transition-all ${
+              className={`px-5 py-2 rounded-xl text-xs md:text-sm font-black transition-all cursor-pointer ${
                 selectedTier === 'TEAMS'
-                  ? 'bg-[#6366F1] text-black'
+                  ? 'bg-[#6366F1] text-white'
                   : 'text-white/60 hover:text-white'
               }`}
             >
@@ -152,14 +203,16 @@ export default function PricingPage() {
           </div>
         </div>
 
-        <div className="bg-[#161514] border border-white/8 rounded-[28px] p-6 md:p-10 shadow-2xl">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
+        {/* Main Pricing Box */}
+        <div className="bg-[#161412] border border-white/6 rounded-3xl p-6 md:p-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            {/* Left: Duration Slider & Features */}
             <div className="flex flex-col gap-6">
-              <div>
-                <span className="text-[10px] text-[#6366F1] font-black uppercase tracking-wider block mb-2 font-mono">
+              <div className="bg-[#0A0908] border border-white/6 rounded-2xl p-4">
+                <span className="text-[10px] text-white/55 font-bold uppercase tracking-wider block mb-1">
                   Plan Duration
                 </span>
-                <h3 className="text-white text-xl md:text-2xl font-black tracking-tight leading-tight mb-4">
+                <h3 className="text-white text-lg md:text-xl font-black font-clash mb-3">
                   {months} {months === 1 ? 'Month' : 'Months'}
                 </h3>
 
@@ -173,53 +226,33 @@ export default function PricingPage() {
                 />
 
                 {isYearly && (
-                  <p className="mt-3 text-[11px] font-bold text-emerald-400/80">
-                    {freeMonthsIncluded} {freeMonthsIncluded === 1 ? 'month' : 'months'} free included in your total
+                  <p className="mt-2.5 text-xs font-bold text-emerald-400">
+                    {freeMonthsIncluded} {freeMonthsIncluded === 1 ? 'month' : 'months'} free included
                   </p>
                 )}
               </div>
 
-              <div className="flex flex-col gap-3.5 pt-2">
-                {(selectedTier === 'PRO'
-                  ? [
-                      { icon: ShieldCheck, text: 'Full personal database (unlimited solo use)' },
-                      { icon: MessageSquare, text: 'Secure chats & Hangouts (groups)' },
-                      { icon: Globe, text: 'Moments & social feed access' },
-                      { icon: Folder, text: 'Profile picture storage' },
-                      { icon: Phone, text: '1-on-1 direct voice/video calls' },
-                      { icon: Globe, text: 'Universal Identity across all apps' },
-                      { icon: Sparkles, text: 'Full AI Neural Graph access' },
-                      { icon: Folder, text: 'Arbitrary file storage' },
-                      { icon: Mic, text: 'Audio messages & recording features' },
-                      { icon: Share2, text: 'Shared note duplication' },
-                      { icon: Share2, text: 'Shared Send claiming' },
-                    ]
-                  : [
-                      { icon: ShieldCheck, text: 'Full personal database (unlimited solo use)' },
-                      { icon: MessageSquare, text: 'Secure chats & Hangouts (groups)' },
-                      { icon: Globe, text: 'Moments & social feed access' },
-                      { icon: Folder, text: 'Profile picture storage' },
-                      { icon: Phone, text: '1-on-1 direct voice/video calls' },
-                      { icon: Globe, text: 'Universal Identity across all apps' },
-                      { icon: Sparkles, text: 'Full AI Neural Graph access' },
-                      { icon: Folder, text: 'Arbitrary file storage' },
-                      { icon: Mic, text: 'Audio messages & recording features' },
-                      { icon: Share2, text: 'Shared note duplication' },
-                      { icon: Phone, text: 'Unlimited direct WebRTC P2P calls (Free for all)' },
-                      { icon: Share2, text: 'Edit access requests on shared screens' },
-                    ]
-                ).map((feat, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <feat.icon size={18} className="text-[#6366F1] flex-shrink-0" />
-                    <span className="text-sm font-bold text-white/80">{feat.text}</span>
-                  </div>
-                ))}
+              <div className="flex flex-col gap-2.5">
+                <span className="text-[10px] text-white/55 font-bold uppercase tracking-wider px-1">
+                  Included Features
+                </span>
+                <div className="grid grid-cols-1 gap-2">
+                  {currentFeatures.map((feat, i) => (
+                    <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-[#0A0908] border border-white/4">
+                      <div className="w-7 h-7 rounded-lg bg-[#161412] flex items-center justify-center shrink-0 text-[#6366F1]">
+                        <feat.icon size={15} />
+                      </div>
+                      <span className="text-xs font-bold text-white/90 font-satoshi">{feat.text}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
-            <div className="p-6 rounded-[24px] bg-[#1F1D1B] border border-white/8 text-center flex flex-col items-center justify-center gap-3 min-h-[200px]">
+            {/* Right: Checkout Summary Tile */}
+            <div className="p-6 rounded-2xl bg-[#0A0908] border border-white/6 flex flex-col items-center justify-center gap-4 text-center sticky top-6">
               <div>
-                <span className="text-white/40 text-[11px] font-bold block mb-1">
+                <span className="text-white/40 text-xs font-bold block mb-1">
                   Total for {months} {months === 1 ? 'month' : 'months'}
                 </span>
                 <span className="text-4xl md:text-5xl font-black text-white font-mono leading-none tracking-tight">
@@ -227,61 +260,60 @@ export default function PricingPage() {
                 </span>
               </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-[11px] font-semibold leading-tight">
-                <span className="line-through text-white/25 font-mono">${yearlyListPrice}</span>
-                <span className="text-white/55 font-mono">${yearlyDiscountedPrice}</span>
-                <span className="text-white/35">/year</span>
+              <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 text-xs font-semibold">
+                <span className="line-through text-white/30 font-mono">${yearlyListPrice}</span>
+                <span className="text-white/70 font-mono">${yearlyDiscountedPrice}</span>
+                <span className="text-white/40">/year</span>
                 <span className="text-white/20">·</span>
-                <span className="text-emerald-400/75">2 mo. free</span>
+                <span className="text-emerald-400">2 months free</span>
               </div>
 
               <button
                 onClick={handleSubscribe}
                 disabled={checkoutLoading}
-                className="w-full py-3.5 mt-4 bg-white hover:bg-neutral-200 disabled:opacity-60 disabled:cursor-not-allowed text-black font-black text-sm md:text-base rounded-[16px] transition-all shadow-[0_4px_12px_rgba(255,255,255,0.05)]"
+                className="w-full py-3.5 bg-white hover:bg-white/90 disabled:opacity-50 text-black font-black text-sm rounded-xl transition-all cursor-pointer"
               >
                 {checkoutLoading ? 'Starting checkout…' : 'Continue to Checkout'}
               </button>
 
-              <p className="text-[10px] text-white/30 font-medium leading-normal px-2 mt-2">
-                Your subscription time is calculated based on your contribution. Any payment amount is
-                automatically converted into active {selectedTier === 'PRO' ? 'Pro' : 'Teams'} time.
+              <p className="text-[11px] text-white/40 font-satoshi px-2 leading-relaxed">
+                Crypto payments are automatically converted into active {selectedTier === 'PRO' ? 'Pro' : 'Teams'} duration.
               </p>
             </div>
           </div>
         </div>
 
-        <div className="mt-8 rounded-[20px] border border-white/8 bg-[#161514] px-5 py-4 md:px-6 md:py-5">
-          <p className="text-[11px] font-black uppercase tracking-wider text-[#6366F1] mb-2 font-mono">
-            Plan switching
+        {/* Plan Switching Note */}
+        <div className="rounded-2xl border border-white/6 bg-[#161412] p-5">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-white/55 mb-1.5">
+            Plan Switching
           </p>
-          <p className="text-sm text-white/70 font-medium leading-relaxed">
-            Pro and Teams do not run at the same time on one account. If you are on Pro and upgrade to Teams,
-            Teams time starts when your current Pro period ends—not alongside it. The same applies in reverse:
-            Pro purchased while Teams is active begins after Teams ends. You can always create a separate account
-            for a second plan, but one account holds only one active paid tier at a time, billed sequentially.
+          <p className="text-xs text-white/70 font-satoshi leading-relaxed">
+            One account holds one active paid tier at a time. Upgrading from Pro to Teams (or vice versa) queues the new plan to start automatically when your current period ends.
           </p>
         </div>
 
-        <div className="mt-12 text-center">
-          <div className="inline-flex flex-col sm:flex-row items-center gap-6 sm:gap-8 px-10 py-6 rounded-[24px] bg-[#1F1D1B] border border-white/8 max-w-2xl mx-auto">
-            <div className="text-left sm:text-left flex flex-col gap-1">
-              <span className="text-sm md:text-base font-black text-white">Kylrix Free is free forever. No pressure.</span>
-              <span className="text-xs text-white/50 font-bold">Includes full personal database, secure chats, moments, and 1-on-1 direct calls.</span>
-            </div>
-
-            <div className="hidden sm:block w-px h-10 bg-white/10 flex-shrink-0" />
-
-            <button
-              onClick={() => router.push('/')}
-              className="inline-flex items-center gap-1.5 text-black bg-[#6366F1] hover:bg-[#6366F1]/90 font-black text-xs px-6 py-3 rounded-full transition-all group flex-shrink-0"
-            >
-              <span>Continue Free</span>
-              <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
-            </button>
+        {/* Continue Free Section */}
+        <div className="rounded-2xl bg-[#161412] border border-white/6 p-6 flex flex-col sm:flex-row items-center justify-between gap-5">
+          <div className="flex flex-col gap-1 text-center sm:text-left">
+            <span className="text-sm font-black text-white font-clash">
+              Kylrix Free is unlimited forever.
+            </span>
+            <span className="text-xs text-white/50 font-satoshi">
+              Includes unlimited ideas, tasks, vaults, forms, events, workspaces, and chats.
+            </span>
           </div>
+
+          <button
+            onClick={() => router.push('/')}
+            className="inline-flex items-center gap-2 text-white bg-white/10 hover:bg-white/15 border border-white/10 font-black text-xs px-5 py-3 rounded-xl transition-all group shrink-0 cursor-pointer"
+          >
+            <span>Continue Free</span>
+            <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+          </button>
         </div>
       </div>
     </div>
   );
 }
+
