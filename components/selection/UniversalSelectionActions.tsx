@@ -159,6 +159,7 @@ export function UniversalSelectionActions() {
             resourceId: id,
             ownerId: user?.$id || 'guest',
             rowIsPinned: false,
+            setOwnerRowPin: async () => {},
           }).catch(() => {});
         }
       }
