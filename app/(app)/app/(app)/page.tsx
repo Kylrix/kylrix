@@ -8,7 +8,6 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
 import { toast } from 'react-hot-toast';
 
 import Link from 'next/link';
@@ -38,6 +37,17 @@ export default function IdeasPage() {
   const [error, setError] = useState<string | null>(null);
   const { upsertNote } = useNotes();
   const { openSidebar } = useDynamicSidebar();
+
+  const { open: openUnified } = useUnifiedDrawer();
+  const { setConfiguration, resetConfiguration } = useFAB();
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsDesktop(window.innerWidth >= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const fetchNotesBarebones = async (hasLocal = false) => {
     if (!hasLocal) {
@@ -143,20 +153,7 @@ export default function IdeasPage() {
     }
   };
 
-  const { open: openUnified } = useUnifiedDrawer();
-  const { setConfiguration, resetConfiguration } = useFAB();
-  const [isDesktop, setIsDesktop] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsDesktop(window.innerWidth >= 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
-
   const openCreateNote = useCallback(() => {
-    setCreateOpen(true);
     openUnified('note', { isPublic: false, isGuest: false });
   }, [openUnified]);
 
@@ -405,23 +402,6 @@ export default function IdeasPage() {
       )}
         </div>
       </div>
-
-      <ObjectCreateDrawer
-        open={createOpen}
-        kind="note"
-        onClose={() => setCreateOpen(false)}
-        onNoteCreated={(note) => {
-          if (!note?.$id) return;
-          upsertNote(note as any);
-          setNotes((prev) => {
-            if (prev.some((n) => n.$id === note.$id)) {
-              return prev.map((n) => (n.$id === note.$id ? { ...n, ...note } : n));
-            }
-            return [note, ...prev];
-          });
-          toast.success('Idea saved locally');
-        }}
-      />
     </div>
   );
 }
