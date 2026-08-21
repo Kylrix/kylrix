@@ -6,11 +6,11 @@
 # ── Stage 0 ── Base with pnpm via corepack ──────────────────────────────────
 FROM node:20-alpine AS base
 
-# Enable corepack (ships with Node 20) and activate pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 # libc6-compat is required by some native Node modules on Alpine
 RUN apk add --no-cache libc6-compat
+
+# Enable corepack and prepare pinned pnpm version
+RUN corepack enable && corepack prepare pnpm@11.5.1 --activate
 
 # ── Stage 1 ── Install dependencies ────────────────────────────────────────
 FROM base AS deps
@@ -20,7 +20,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 
 # Frozen lockfile = deterministic installs
-RUN pnpm install --frozen-lockfile --prefer-offline
+RUN pnpm install --frozen-lockfile
 
 # ── Stage 2 ── Build the Next.js application ───────────────────────────────
 FROM base AS builder

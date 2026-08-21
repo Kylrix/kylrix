@@ -57,6 +57,12 @@ Local copy is truth. The network confirms. Guests get the same engine. No featur
 
 ## Quick start
 
+### Self-Hosting (1-Command Install)
+```bash
+curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/selfhost.sh | bash
+```
+
+### Local Development
 ```bash
 git clone https://github.com/Kylrix/kylrix.git
 cd kylrix
@@ -77,16 +83,14 @@ ota up --workflow verify --mode native
 ota up --workflow sqlite-dev
 ```
 
-See `ota.yaml` (verify, sqlite-dev, selfhost) and `appwrite.config.json` (full schema → `appwrite push`).
+See `ota.yaml` (verify, sqlite-dev, selfhost) and `appwrite.config.json`.
 
-## Stack
+## SDK & Extensibility
 
-Next.js 16 · React 19 · TypeScript · Appwrite (TablesDB/Realtime) · Tailwind 4 · RxDB/Dexie · WebRTC (P2P + Cloudflare SFU) · Argon2id (hash-wasm) · WebAuthn · Gemini
+- **Workflows & Automation:** Build declarative trigger-action routines at `/flows` to automate tasks, form reactions, and cross-object event pipelines.
+- **REST & Agentic API:** Integrate via `/api/v1` using Personal Access Tokens (PATs) across notes, goals, workspaces, events, forms, and vault metadata (`npx skills add kylrix/kylrix/api`).
+- **Sign in with Kylrix (OAuth 2.1 / OIDC):** Build custom third-party apps and services authenticated directly through Kylrix accounts with granular permission scopes.
 
-## Security
+## Bug Reports, Feature Requests & Security
 
-Report privately via [kylrix bug report](https://www.kylrix.space/flow/form/6a19dc99002634bd33ae) — not a public issue. Details: `ARCHITECTURE.md` §4 + §13/14.
-
-## Downloads
-
-Web: **[kylrix.space](https://www.kylrix.space)** · Native: [kylrix-app](https://github.com/Kylrix/kylrix-app) · Agent skill: `npx skills add kylrix/kylrix/api`
+Submit bug reports, feature suggestions, or responsible vulnerability disclosures directly through our [Unified Feedback & Security Portal](https://www.kylrix.space/form/6a2a653f002b0f296958). For architecture specs, see `ARCHITECTURE.md`.

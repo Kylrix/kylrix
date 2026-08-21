@@ -256,15 +256,27 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                         )}
                     </div>
                 );
+            case 'checkbox':
+                return (
+                    <label className="flex items-center gap-2.5 cursor-pointer py-1">
+                        <input
+                            type="checkbox"
+                            checked={!!formData[field.id]}
+                            onChange={(e) => handleFieldChange(field.id, e.target.checked)}
+                            className="w-4 h-4 rounded border-white/10 bg-[#161412] text-[#6366F1] focus:ring-0 focus:ring-offset-0"
+                        />
+                        <span className="text-xs text-white/70 font-sans">{field.label}</span>
+                    </label>
+                );
             default:
                 return (
                     <input
-                        type={field.type === 'email' ? 'email' : field.type === 'number' ? 'number' : 'text'}
+                        type={field.type || 'text'}
                         required={field.required}
                         value={formData[field.id] || ''}
                         onChange={(e) => handleFieldChange(field.id, e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl bg-[#0B0A09] border border-[#34322F] text-white focus:outline-none focus:border-[#6366F1] focus:ring-1 focus:ring-[#6366F1]/30 hover:border-[#6366F1] transition-all font-satoshi text-sm"
-                        placeholder="Type response..."
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-[#161412] border border-white/10 text-white placeholder-white/20 focus:outline-none focus:border-[#6366F1] transition-colors text-xs font-sans"
+                        placeholder="Enter response…"
                     />
                 );
         }
@@ -274,126 +286,102 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
     try { schema = JSON.parse(form?.schema || '[]'); } catch (_e) {}
 
     return (
-        <>
-            {/* Backdrop */}
-            <div 
-                className="fixed inset-0 bg-black/60 z-[1399] animate-in fade-in duration-200 cursor-pointer" 
-                onClick={onClose}
-            />
-
-            {/* Side/Bottom Drawer */}
-            <div 
-                className={`fixed z-[1400] bg-[#050505] text-white overflow-hidden transition-all duration-300 ${
-                    isDesktop 
-                        ? 'right-0 top-0 bottom-0 h-full w-full max-w-[480px] border-l border-white/5 shadow-2xl animate-in slide-in-from-right duration-300' 
-                        : 'bottom-0 left-0 right-0 w-full rounded-t-[32px] border-t border-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom duration-300'
-                }`}
-                style={!isDesktop ? { height: isExpanded ? '100dvh' : '60dvh' } : undefined}
-            >
-                <div 
-                    className="flex flex-col h-full bg-[#050505] overflow-hidden"
-                    style={{ backgroundImage: 'radial-gradient(circle at 50% -20%, rgba(99, 102, 241, 0.08) 0%, transparent 60%)' }}
-                >
-                    {/* Header */}
-                    <div className="p-5 flex justify-between items-center border-b border-white/5">
-                        <h3 className="font-bold text-lg font-clash text-white tracking-wide truncate pr-2">
-                            {form?.title || 'Intelligence Portal'}
-                        </h3>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <button 
-                                type="button"
-                                onClick={handleMorphToDetail} 
-                                className="p-1.5 text-amber-500 hover:text-amber-400 hover:bg-white/5 rounded-lg transition-colors"
-                                title="Go Full Detail"
-                            >
-                                <ArrowUpRight size={20} />
-                            </button>
-                            {!isDesktop && (
-                                <button 
-                                    type="button"
-                                    onClick={() => setIsExpanded(!isExpanded)} 
-                                    className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                                >
-                                    {isExpanded ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
-                                </button>
-                            )}
-                            <button 
-                                type="button"
-                                onClick={onClose} 
-                                className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                            >
-                                <XIcon size={20} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Scrollable Body */}
-                    <div className="flex-1 overflow-y-auto p-6 md:p-8 scrollbar-thin">
-                        {loading ? (
-                            <div className="flex justify-center items-center py-12">
-                                <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#6366F1] border-t-transparent" />
-                            </div>
-                        ) : submitted ? (
-                            <div className="text-center py-6 flex flex-col items-center animate-in fade-in duration-300">
-                                <div className="w-16 h-16 rounded-full bg-[#6366F1]/10 border border-[#6366F1]/20 flex items-center justify-center mb-6">
-                                    <CheckCircle2 className="w-8 h-8 text-[#6366F1]" />
-                                </div>
-                                <h4 className="text-xl md:text-2xl font-bold font-clash text-white mb-2">Transmission Complete</h4>
-                                <p className="text-zinc-400 font-satoshi text-sm mb-6 leading-relaxed">
-                                    Your request has been securely injected into the Kylrix nexus.
-                                </p>
-                                <button 
-                                    type="button" 
-                                    onClick={onClose}
-                                    className="px-6 py-2.5 rounded-xl border border-white/10 hover:border-[#6366F1] hover:bg-white/5 text-white font-bold transition-all font-satoshi text-sm"
-                                >
-                                    Done
-                                </button>
-                            </div>
-                        ) : (
-                            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                                {form?.description && (
-                                    <p className="text-zinc-400 font-satoshi text-sm leading-relaxed mb-2">
-                                        {form.description}
-                                    </p>
-                                )}
-
-                                <div className="flex flex-col gap-6">
-                                    {schema.map((field) => (
-                                        <div key={field.id} className="flex flex-col gap-2.5">
-                                            <label className="text-xs font-bold text-zinc-300 font-satoshi tracking-wide">
-                                                {field.label} {field.required && <span className="text-rose-500 font-bold ml-0.5">*</span>}
-                                            </label>
-                                            {renderField(field)}
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {error && (
-                                    <div className="p-4 bg-red-500/10 border border-red-500/20 text-[#ff1744] rounded-xl text-sm font-semibold font-satoshi leading-relaxed text-center mt-2">
-                                        {error}
-                                    </div>
-                                )}
-
-                                <div className="mt-8 pb-4">
-                                    <button
-                                        type="submit"
-                                        disabled={submitting}
-                                        className="w-full py-3.5 px-6 rounded-xl font-bold bg-[#6366F1] text-zinc-950 shadow-[0_8px_30px_rgb(99,102,241,0.2)] hover:bg-[#5254E8] hover:translate-y-[-1px] transition-all duration-200 flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed font-clash text-base md:text-lg tracking-wide"
-                                    >
-                                        {submitting ? (
-                                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-zinc-950 border-t-transparent" />
-                                        ) : (
-                                            <Send size={18} />
-                                        )}
-                                        <span>{submitting ? 'Transmitting...' : 'Submit Request'}</span>
-                                    </button>
-                                </div>
-                            </form>
-                        )}
-                    </div>
+        <div className="flex flex-col h-full bg-[#0A0908] text-white select-none">
+            {/* Header */}
+            <div className="px-5 py-4 flex items-center justify-between border-b border-white/5 bg-[#0E0D0B] shrink-0">
+                <div className="min-w-0 pr-3">
+                    <h3 className="font-extrabold text-sm text-white truncate font-sans">
+                        {form?.title || 'Form Submission'}
+                    </h3>
+                    <p className="text-[11px] text-white/40 font-mono truncate mt-0.5">
+                        {formId}
+                    </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                    <button 
+                        type="button"
+                        onClick={handleOpenStandalone} 
+                        className="p-1.5 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                        title="Open in Standalone Page"
+                    >
+                        <ArrowUpRight size={16} />
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={onClose} 
+                        className="p-1.5 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                        title="Close"
+                    >
+                        <XIcon size={16} />
+                    </button>
                 </div>
             </div>
-        </>
+
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-5 md:p-6 scrollbar-thin">
+                {loading ? (
+                    <div className="flex flex-col justify-center items-center py-16 gap-3">
+                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#6366F1] border-t-transparent" />
+                        <span className="text-[11px] font-mono text-white/40 uppercase tracking-wider">Loading…</span>
+                    </div>
+                ) : submitted ? (
+                    <div className="text-center py-10 flex flex-col items-center">
+                        <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4 text-emerald-400">
+                            <CheckCircle2 className="w-6 h-6" />
+                        </div>
+                        <h4 className="text-base font-extrabold text-white mb-1.5">Submitted Successfully</h4>
+                        <p className="text-white/40 text-xs font-sans mb-6 max-w-xs leading-relaxed">
+                            Your submission has been recorded.
+                        </p>
+                        <button 
+                            type="button" 
+                            onClick={onClose}
+                            className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold transition-all text-xs cursor-pointer"
+                        >
+                            Done
+                        </button>
+                    </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                        {form?.description && (
+                            <p className="text-white/60 text-xs font-sans leading-relaxed pb-1 border-b border-white/5">
+                                {form.description}
+                            </p>
+                        )}
+
+                        <div className="flex flex-col gap-4">
+                            {schema.map((field) => (
+                                <div key={field.id} className="flex flex-col gap-1.5">
+                                    <label className="text-[11px] font-extrabold text-white/80 font-sans tracking-wide">
+                                        {field.label} {field.required && <span className="text-rose-400 font-bold ml-0.5">*</span>}
+                                    </label>
+                                    {renderField(field)}
+                                </div>
+                            ))}
+                        </div>
+
+                        {error && (
+                            <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold leading-relaxed text-center">
+                                {error}
+                            </div>
+                        )}
+
+                        <div className="pt-3">
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className="w-full py-2.5 px-4 rounded-xl font-bold bg-[#6366F1] text-white hover:bg-[#5254E8] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs cursor-pointer shadow-lg shadow-[#6366F1]/10"
+                            >
+                                {submitting ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                                ) : (
+                                    <Send size={14} />
+                                )}
+                                <span>{submitting ? 'Submitting…' : 'Submit'}</span>
+                            </button>
+                        </div>
+                    </form>
+                )}
+            </div>
+        </div>
     );
-}
