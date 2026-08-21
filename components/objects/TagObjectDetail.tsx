@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Tags } from '@/types/appwrite';
-import { listTags, deleteTag } from '@/lib/appwrite';
+import { listTagsByUser, deleteTag } from '@/lib/appwrite';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useToast } from '@/components/ui/Toast';
@@ -59,7 +59,7 @@ export function TagObjectDetail({ onClose, initialTagId = null, embedded = false
     setLoading(true);
     setError(null);
     try {
-      const res = await listTags(user.$id);
+      const res = await listTagsByUser(user.$id);
       const rows = (res.rows || []) as Tags[];
       setTags(rows);
       if (initialTagId) {
