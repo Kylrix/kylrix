@@ -91,11 +91,16 @@ export async function loadNotesFromLocalCopy(opts: {
     }
   }
 
-  // 3) LocalEngine flat list — only use userId-keyed cache, never fall back to shared key
+  // 3) LocalEngine flat list — check f_notes_list_${userId} and f_ideas_${userId}
   try {
     const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    const list = await LocalEngine.cacheGet<any[]>(`f_notes_list_${userId}`);
-    const notes = (list || []).map(normalizeNoteRow).filter((n): n is Notes => !!n);
+    const [list, ideasObj] = await Promise.all([
+      LocalEngine.cacheGet<any[]>(`f_notes_list_${userId}`).catch(() => null),
+      LocalEngine.cacheGet<{ rows?: any[] } | any[]>(`f_ideas_${userId}`).catch(() => null),
+    ]);
+    const ideasList = Array.isArray(ideasObj) ? ideasObj : ideasObj?.rows;
+    const candidates = (list && list.length > 0 ? list : ideasList) || [];
+    const notes = candidates.map(normalizeNoteRow).filter((n): n is Notes => !!n);
     if (notes.length) {
       return {
         notes,

@@ -45,14 +45,22 @@ export default function IdeasPage() {
     }
     setError(null);
 
+    // If offline, don't stall on network
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const { Query, Client, TablesDB } = await import('appwrite');
-      const { account, databases } = await import('@/lib/appwrite/client');
+      const { account, databases, getCurrentUserSnapshot } = await import('@/lib/appwrite/client');
       const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
 
-      const user = await account.get().catch(() => null);
+      const user = (await account.get().catch(() => null)) || getCurrentUserSnapshot();
       if (!user?.$id) {
-        setError('Unauthenticated user session');
+        if (!hasLocal) {
+          setError('Unauthenticated user session');
+        }
         setLoading(false);
         return;
       }
@@ -123,10 +131,13 @@ export default function IdeasPage() {
         try {
           const { LocalEngine } = await import('@/lib/services/LocalEngine');
           await LocalEngine.cacheSet(`f_ideas_${user.$id}`, { rows: stamped, total: stamped.length });
+          await LocalEngine.cacheSet(`f_notes_list_${user.$id}`, stamped);
         } catch {}
       })();
     } catch (err: any) {
-      setError(err?.message || String(err));
+      if (!hasLocal) {
+        setError(err?.message || String(err));
+      }
     } finally {
       setLoading(false);
     }
@@ -168,39 +179,74 @@ export default function IdeasPage() {
   useEffect(() => {
     let hasLocalCopy = false;
 
-    // Fast initial render from LocalEngine cache if available (Goals/Vault local-first pattern)
+    // Instant local-first render (0ms) from LocalEngine, RxDB, and Nexus caches
     void (async () => {
       try {
-        const { account } = await import('@/lib/appwrite/client');
-        const user = await account.get().catch(() => null);
-        if (user?.$id) {
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const [cachedIdeas, cachedInitial, cachedTags] = await Promise.all([
-            LocalEngine.cacheGet<{ rows: any[] }>(`f_ideas_${user.$id}`),
-            LocalEngine.cacheGet<any[]>(`initial_notes_${user.$id}`),
-            LocalEngine.cacheGet<any>(`f_tags_${user.$id}`),
-          ]);
+        const { getCurrentUserSnapshot } = await import('@/lib/appwrite/client');
+        const snap = getCurrentUserSnapshot();
+        const userId = snap?.$id || (typeof window !== 'undefined' ? (localStorage.getItem('kylrix_last_logged_in_user_acc_default') ? JSON.parse(localStorage.getItem('kylrix_last_logged_in_user_acc_default') || '{}').$id : null) : null) || 'guest';
 
-          const localRows =
-            cachedIdeas?.rows && Array.isArray(cachedIdeas.rows) && cachedIdeas.rows.length > 0
-              ? cachedIdeas.rows
-              : Array.isArray(cachedInitial) && cachedInitial.length > 0
-                ? cachedInitial
-                : [];
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const [cachedIdeas, cachedNotesList, cachedInitial, cachedTags] = await Promise.all([
+          LocalEngine.cacheGet<{ rows?: any[] } | any[]>(`f_ideas_${userId}`).catch(() => null),
+          LocalEngine.cacheGet<any[]>(`f_notes_list_${userId}`).catch(() => null),
+          LocalEngine.cacheGet<{ notes?: any[]; rows?: any[] } | any[]>(`initial_notes_${userId}`).catch(() => null),
+          LocalEngine.cacheGet<any>(`f_tags_${userId}`).catch(() => null),
+        ]);
 
-          if (localRows.length > 0) {
-            hasLocalCopy = true;
-            setNotes(localRows);
-            setLoading(false);
-          }
+        const rawRows =
+          (Array.isArray(cachedIdeas) ? cachedIdeas : cachedIdeas?.rows) ||
+          cachedNotesList ||
+          (Array.isArray(cachedInitial) ? cachedInitial : cachedInitial?.notes || cachedInitial?.rows) ||
+          [];
 
-          if (cachedTags?.rows && Array.isArray(cachedTags.rows) && cachedTags.rows.length > 0) {
-            setEcosystemTagsList(cachedTags.rows);
-          } else if (Array.isArray(cachedTags) && cachedTags.length > 0) {
-            setEcosystemTagsList(cachedTags);
-          }
+        if (Array.isArray(rawRows) && rawRows.length > 0) {
+          hasLocalCopy = true;
+
+          // Read local pins
+          let pinnedMap: Record<string, boolean> = {};
+          try {
+            const storedPins = localStorage.getItem(`kylrix_resource_pins_${userId}`);
+            if (storedPins) {
+              const parsed = JSON.parse(storedPins);
+              if (Array.isArray(parsed)) {
+                parsed.forEach((id: string) => { pinnedMap[id] = true; });
+              }
+            }
+          } catch {}
+
+          const sorted = [...rawRows].sort((a: any, b: any) => {
+            const aPinned = Boolean(a.isPinned || pinnedMap[a.$id || a.id]);
+            const bPinned = Boolean(b.isPinned || pinnedMap[b.$id || b.id]);
+            if (aPinned && !bPinned) return -1;
+            if (!aPinned && bPinned) return 1;
+            const aTime = new Date(a.$updatedAt || a.updatedAt || a.$createdAt || 0).getTime();
+            const bTime = new Date(b.$updatedAt || b.updatedAt || b.$createdAt || 0).getTime();
+            return bTime - aTime;
+          });
+
+          const stamped = sorted.map((n: any) => ({
+            ...n,
+            $id: n.$id || n.id,
+            isPinned: Boolean(n.isPinned || pinnedMap[n.$id || n.id]),
+          }));
+
+          stamped.forEach((n: any) => upsertNote(n));
+          setNotes(stamped);
+          setLoading(false);
+        } else {
+          // If no local copy exists, clear loading quickly so it never says loading forever
+          setLoading(false);
         }
-      } catch {}
+
+        if (cachedTags?.rows && Array.isArray(cachedTags.rows) && cachedTags.rows.length > 0) {
+          setEcosystemTagsList(cachedTags.rows);
+        } else if (Array.isArray(cachedTags) && cachedTags.length > 0) {
+          setEcosystemTagsList(cachedTags);
+        }
+      } catch {
+        setLoading(false);
+      }
 
       void fetchNotesBarebones(hasLocalCopy);
     })();
