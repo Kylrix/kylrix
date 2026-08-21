@@ -89,7 +89,6 @@ class ObjectBlockWidget extends WidgetType {
     const body = document.createElement('div');
     body.className = 'pt-0.5';
 
-    const kind = this.payload.childKind;
     const bucket = this.payload.bucketId || (kind === 'voice' ? APPWRITE_CONFIG.BUCKETS.VOICE : APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE);
 
     if (kind === 'voice' || (kind === 'file' && this.payload.metadata?.mimeType?.toString().startsWith('audio/'))) {
