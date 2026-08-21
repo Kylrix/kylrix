@@ -361,17 +361,6 @@ export const FormsService = {
         return submission;
     },
 
-    /**
-     * Delete a form
-     */
-    async deleteForm(formId: string) {
-        if (typeof window !== 'undefined') {
-            const { deleteForm } = await import('@/lib/actions/client-ops');
-            return await deleteForm(formId);
-        }
-        const { deleteFormSecure } = await import('@/lib/actions/secure-ops');
-        return await deleteFormSecure(formId);
-    },
 
     /**
      * Add a collaborator to a form
