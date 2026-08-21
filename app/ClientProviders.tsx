@@ -29,6 +29,7 @@ import { DrawerStateProvider } from '@/components/ui/DrawerStateContext';
 import { LocalContextProvider } from '@/lib/context-engine';
 import { SetupProvider } from '@/context/SetupContext';
 import { TrashPurgeProvider } from '@/context/TrashPurgeContext';
+import { PaymentReminderProvider } from '@/context/PaymentReminderContext';
 
 import { SpineProvider } from '@/context/SpineContext';
 import { NeuralProvider } from '@/context/NeuralContext';
@@ -97,6 +98,7 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   AIProvider,
   SetupProvider,
   TrashPurgeProvider,
+  PaymentReminderProvider,
 ];
 import { UniversalScrollRestoration } from '@/components/providers/UniversalScrollRestoration';
 

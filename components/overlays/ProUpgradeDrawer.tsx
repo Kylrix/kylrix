@@ -18,42 +18,66 @@ import {
   ChevronUp,
 } from 'lucide-react';
 
-const FEATURE_CONTEXT_HIGHLIGHTS: Record<string, { desc: string; fix: string }> = {
+const FEATURE_CONTEXT_HIGHLIGHTS: Record<string, { desc: string; fix: string; title?: string }> = {
   'Voice recording': {
-    desc: 'Voice notes and attachments are part of Pro capabilities.',
-    fix: 'Upgrade to Pro to capture, attach, and stream voice updates seamlessly.',
+    title: 'Voice Notes & Audio Attachments',
+    desc: 'Voice notes, transcription, and audio streaming are enabled on Pro.',
+    fix: 'Upgrade to capture, attach, and stream crisp voice updates seamlessly.',
   },
   'Discussions': {
+    title: 'Collaborative Discussions',
     desc: 'Real-time collaborative discussions require an active Pro workspace.',
     fix: 'Upgrade to Pro to participate and spin discussions on any object.',
   },
   'New Project': {
-    desc: 'You have hit the free workspace limit.',
-    fix: 'Upgrade to Pro for unlimited workspaces and projects.',
+    title: 'Unlimited Workspaces & Projects',
+    desc: 'You have reached the workspace limit.',
+    fix: 'Upgrade to Pro for unlimited workspaces and dedicated projects.',
   },
   'New Channel': {
-    desc: 'Shared group communication channels are part of Pro & Teams.',
+    title: 'Shared Group Channels',
+    desc: 'Shared group communication channels and hangouts are part of Pro & Teams.',
     fix: 'Upgrade to create unlimited shared and dedicated channels.',
   },
   'Collaborators': {
+    title: 'Workspace Collaboration',
     desc: 'Multi-member real-time collaboration requires a Pro subscription.',
     fix: 'Upgrade to Pro to invite unlimited collaborators across your workspace.',
   },
   'Project Collaboration': {
+    title: 'Project-Level Invitations',
     desc: 'Direct project-level invitations and shared scopes are enabled on paid tiers.',
     fix: 'Upgrade to Pro to co-author and share full project workspaces.',
   },
   'Pinned Notes': {
-    desc: 'Free tier limits the number of pinned items.',
-    fix: 'Upgrade to Pro to pin unlimited notes, goals, forms, and tools to the top.',
+    title: 'Unlimited Pinned Items',
+    desc: 'Keep all your essential objects front and center.',
+    fix: 'Upgrade to Pro to pin unlimited ideas, notes, goals, and forms to the top.',
   },
   'Article Mode': {
+    title: 'Long-Form Article Publishing',
     desc: 'Long-form article formatting and rich publishing require Pro.',
     fix: 'Upgrade to Pro for article publishing and extended note layouts.',
   },
   'Kylie Assist': {
+    title: 'Intelligent AI Sidekick & Agents',
     desc: 'Autonomous agent partners and custom AI compute require Pro.',
     fix: 'Upgrade to Pro to unlock Kylie and unmetered custom agent personas.',
+  },
+  'File upload': {
+    title: 'Cloud File & Media Storage',
+    desc: 'Direct file uploads, attachments, and cloud archives are enabled on Pro.',
+    fix: 'Upgrade to Pro to upload unlimited images, PDFs, archives, and files.',
+  },
+  'Form File Uploads': {
+    title: 'Form File Attachment Fields',
+    desc: 'Collecting file submissions on forms requires an active Pro plan.',
+    fix: 'Upgrade to Pro to let respondents attach documents and images directly to forms.',
+  },
+  'Sign in with Kylrix (OAuth 2.1 Provider)': {
+    title: 'OAuth 2.1 Provider & Developer Tools',
+    desc: 'Issuing developer PATs and acting as an OAuth 2.1 identity provider requires Pro.',
+    fix: 'Upgrade to Pro to build external apps and integrate with Kylrix ID.',
   },
 };
 
@@ -207,10 +231,10 @@ export function ProUpgradeDrawer() {
               </div>
               <div>
                 <h3 className="text-lg font-black font-clash text-white tracking-tight leading-tight m-0">
-                  Upgrade to Kylrix Pro
+                  {highlight?.title ? `Unlock ${highlight.title}` : 'Upgrade to Kylrix Pro'}
                 </h3>
                 <p className="text-[11px] text-white/40 font-mono m-0 mt-0.5">
-                  Supercharge your living agentic workspace
+                  {highlight ? 'Upgrade your plan to enable this capability' : 'Supercharge your living agentic workspace'}
                 </p>
               </div>
             </div>

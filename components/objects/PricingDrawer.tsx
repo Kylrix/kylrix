@@ -4,7 +4,6 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import {
   Sparkles,
   ShieldCheck,
-  ArrowRight,
   X,
   MessageSquare,
   Folder,
@@ -18,6 +17,8 @@ import {
   Layers,
   Bot,
   Users,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -25,6 +26,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { account } from '@/lib/appwrite/client';
 import { createBillingCheckoutSessionAction } from '@/lib/actions/billing/billing';
+import { recordPaymentIntentAction } from '@/lib/actions/billing/payment-intent';
 import { calculateTotalSubscriptionPrice, getBundledFreeMonths, getYearlyDiscountedPrice, getYearlyListPrice } from '@/lib/subscription/ppp';
 
 const CHECKOUT_CACHE_KEY = 'kylrix_pricing_checkout_v1';
@@ -46,6 +48,7 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
   const { isAuthenticated, user } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
   const [months, setMonths] = useState(1);
+  const [monthsInput, setMonthsInput] = useState('1');
   const [selectedTier, setSelectedTier] = useState<'PRO' | 'TEAMS'>(initialTier);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const resumeAttemptedRef = useRef(false);
@@ -58,6 +61,32 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
   const totalPrice = useMemo(() => {
     return calculateTotalSubscriptionPrice(selectedTier, months, 'CRYPTO');
   }, [months, selectedTier]);
+
+  const updateMonths = useCallback((newMonths: number) => {
+    const clamped = Math.max(1, Math.min(24, newMonths));
+    setMonths(clamped);
+    setMonthsInput(String(clamped));
+  }, []);
+
+  const handleMonthsInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setMonthsInput(val);
+    const parsed = parseInt(val, 10);
+    if (!isNaN(parsed) && parsed >= 1 && parsed <= 24) {
+      setMonths(parsed);
+    }
+  };
+
+  const handleMonthsInputBlur = () => {
+    const parsed = parseInt(monthsInput, 10);
+    if (isNaN(parsed) || parsed < 1) {
+      updateMonths(1);
+    } else if (parsed > 24) {
+      updateMonths(24);
+    } else {
+      updateMonths(parsed);
+    }
+  };
 
   const proceedToBlockBee = useCallback(async (planId: string, checkoutMonths: number, countryCode: string) => {
     setCheckoutLoading(true);
@@ -73,7 +102,20 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
 
       if (session?.url) {
         sessionStorage.removeItem(CHECKOUT_CACHE_KEY);
-        window.location.href = session.url;
+
+        // Record intent for smart reminder
+        await recordPaymentIntentAction({
+          tier: selectedTier,
+          months: checkoutMonths,
+          planId,
+          checkoutUrl: session.url,
+          jwt,
+        }).catch(() => {});
+
+        // Open BlockBee checkout in new tab on both desktop and mobile
+        window.open(session.url, '_blank', 'noopener,noreferrer');
+        toast.success('Checkout opened in new tab');
+        onClose?.();
         return;
       }
 
@@ -84,7 +126,7 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
     } finally {
       setCheckoutLoading(false);
     }
-  }, []);
+  }, [selectedTier, onClose]);
 
   useEffect(() => {
     if (!user || resumeAttemptedRef.current) return;
@@ -95,13 +137,13 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
     try {
       const intent = JSON.parse(raw) as PendingCheckout;
       resumeAttemptedRef.current = true;
-      if (intent.months) setMonths(intent.months);
+      if (intent.months) updateMonths(intent.months);
       if (intent.tier) setSelectedTier(intent.tier);
       void proceedToBlockBee(intent.planId, intent.months, intent.countryCode || 'US');
     } catch {
       sessionStorage.removeItem(CHECKOUT_CACHE_KEY);
     }
-  }, [user, proceedToBlockBee]);
+  }, [user, proceedToBlockBee, updateMonths]);
 
   const handleSubscribe = () => {
     const planId = months >= 12 ? `${selectedTier}_YEAR` : `${selectedTier}_MONTH`;
@@ -219,15 +261,42 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
           </div>
         </div>
 
-        {/* Duration Slider Well */}
-        <div className="bg-[#0A0908] border border-white/6 rounded-2xl p-4 space-y-3">
-          <div className="flex items-center justify-between">
+        {/* Duration Slider & Custom Number Stepper Well */}
+        <div className="bg-[#0A0908] border border-white/6 rounded-2xl p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3">
             <span className="text-[10px] text-white/55 font-bold uppercase tracking-wider">
-              Plan Duration
+              Plan Duration (Months)
             </span>
-            <span className="text-white font-black text-sm font-clash">
-              {months} {months === 1 ? 'Month' : 'Months'}
-            </span>
+
+            {/* Custom Input Stepper with UP/DOWN Controls */}
+            <div className="flex items-center gap-1.5 bg-[#161412] border border-white/8 rounded-xl p-1">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={monthsInput}
+                onChange={handleMonthsInputChange}
+                onBlur={handleMonthsInputBlur}
+                className="w-8 text-center bg-transparent font-mono font-black text-sm text-white focus:outline-none"
+              />
+              <div className="flex flex-col gap-0.5 border-l border-white/8 pl-1">
+                <button
+                  type="button"
+                  onClick={() => updateMonths(months + 1)}
+                  disabled={months >= 24}
+                  className="w-4 h-3 flex items-center justify-center text-white/40 hover:text-white disabled:opacity-20 transition-colors cursor-pointer"
+                >
+                  <ChevronUp size={12} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateMonths(months - 1)}
+                  disabled={months <= 1}
+                  className="w-4 h-3 flex items-center justify-center text-white/40 hover:text-white disabled:opacity-20 transition-colors cursor-pointer"
+                >
+                  <ChevronDown size={12} />
+                </button>
+              </div>
+            </div>
           </div>
 
           <input
@@ -235,7 +304,7 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
             min={1}
             max={24}
             value={months}
-            onChange={(e) => setMonths(Number(e.target.value))}
+            onChange={(e) => updateMonths(Number(e.target.value))}
             className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#6366F1] focus:outline-none"
           />
 
@@ -270,7 +339,7 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
             disabled={checkoutLoading}
             className="w-full py-3.5 bg-white hover:bg-white/90 disabled:opacity-50 text-black font-black text-sm rounded-xl transition-all cursor-pointer"
           >
-            {checkoutLoading ? 'Starting checkout…' : 'Continue to Checkout'}
+            {checkoutLoading ? 'Starting checkout…' : 'Continue to Checkout (Opens in new tab)'}
           </button>
         </div>
 
