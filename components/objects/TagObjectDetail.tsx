@@ -128,6 +128,15 @@ export function TagObjectDetail({ onClose, initialTagId = null, embedded: _embed
     });
   };
 
+  const handleEditTag = (tag: Tags) => {
+    openUnified('new-tag', {
+      tag,
+      onSuccess: () => {
+        void fetchTags();
+      },
+    });
+  };
+
   const handleDeleteTag = (tagId: string, tagName: string) => {
     openUnified('delete-confirm', {
       title: `Delete tag "${tagName}"?`,
@@ -257,6 +266,7 @@ export function TagObjectDetail({ onClose, initialTagId = null, embedded: _embed
                   e.preventDefault();
                   handleResolveResources(tag);
                 }}
+                onEdit={() => handleEditTag(tag)}
                 onDelete={() => handleDeleteTag(tag.$id, tag.name || 'Untitled Tag')}
               />
             ))}
