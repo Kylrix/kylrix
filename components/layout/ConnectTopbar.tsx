@@ -39,6 +39,8 @@ import {
   Lock,
   MessageCircle,
   GitFork,
+  Tag as TagIcon,
+  Trash2 as TrashIcon,
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
@@ -1097,7 +1099,7 @@ export default function ConnectTopbar({
                     { name: 'vault', label: 'Vault', color: '#10B981', href: '/vault', Icon: Lock },
                     { name: 'connect', label: 'Connect', color: '#F59E0B', href: '/connect', Icon: MessageCircle },
                     { name: 'tags', label: 'Tags', color: '#F87171', action: () => openUnified('tags'), Icon: TagIcon },
-                    { name: 'trash', label: 'Trash', color: '#EF4444', action: () => openUnified('trash'), Icon: CloseIcon },
+                    { name: 'trash', label: 'Trash', color: '#EF4444', action: () => openUnified('trash'), Icon: TrashIcon },
                   ].map((app) => {
                     const AppIcon = app.Icon;
                     return (
