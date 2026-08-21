@@ -603,7 +603,6 @@ ${lifetimeMemoryContext}
       if (historyArr.length >= 6) {
         try {
           nextContext = await compressSessionContext({
-            apiKey,
             oldContext: nextContext,
             history: historyArr.slice(-8)});
         } catch (compactErr) {
@@ -697,15 +696,10 @@ HARD RULES:
 5. Keep enough detail that a fresh session can continue without re-asking for specifics the user already gave.`;
 
 async function compressSessionContext(params: {
-  apiKey: string;
   oldContext: string;
   history: Array<{ role?: string; content?: string }>;
 }): Promise<string> {
-  const { GoogleGenerativeAI } = await import('@google/generative-ai');
-  const genAI = new GoogleGenerativeAI(params.apiKey);
-  const compactModel = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
-    systemInstruction: SESSION_COMPACTOR_SYSTEM});
+  const { generateLLMCompletion } = await import('@/lib/agentic/llm-provider');
 
   const transcript = (params.history || [])
     .map((m: any) => {
@@ -726,8 +720,11 @@ ${transcript || '(empty)'}
 
 OUTPUT: ultra-dense continuity brief only.`;
 
-  const compactRes = await compactModel.generateContent(prompt);
-  return compactRes.response.text().trim();
+  const compactRes = await generateLLMCompletion({
+    prompt,
+    systemInstruction: SESSION_COMPACTOR_SYSTEM,
+  });
+  return compactRes.trim();
 }
 
 export async function startNewAgentSession(jwt?: string) {
@@ -770,11 +767,9 @@ export async function startNewAgentSessionFromPromptAction(
     } catch {
       history = [];
     }
-    const apiKey = process.env.GOOGLE_API_KEY;
-    if (apiKey && ((source?.context || '').trim() || history.length > 0)) {
+    if ((source?.context || '').trim() || history.length > 0) {
       try {
         starterContext = await compressSessionContext({
-          apiKey,
           oldContext: source?.context || '',
           history: history.slice(-20)});
       } catch (err) {
