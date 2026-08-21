@@ -198,6 +198,7 @@ export default function UniversalFAB() {
               resourceId: id,
               ownerId: user?.$id || 'guest',
               rowIsPinned: false,
+              setOwnerRowPin: async () => {},
             }).catch(() => {});
           }
         }
