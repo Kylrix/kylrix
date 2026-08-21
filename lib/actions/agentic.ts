@@ -148,9 +148,15 @@ async function executeInstantRequestActionInner(
   conversationId?: string;
 }> {
   const user = await requireUser(jwt);
-  const apiKey = process.env.GOOGLE_API_KEY;
-  if (!apiKey) {
-    throw new Error('Gemini is not configured on this deployment.');
+  const hasAiProvider = Boolean(
+    process.env.OLLAMA_BASE_URL ||
+    process.env.OLLAMA_HOST ||
+    process.env.OPENAI_BASE_URL ||
+    process.env.LOCAL_AI_BASE_URL ||
+    process.env.GOOGLE_API_KEY
+  );
+  if (!hasAiProvider) {
+    throw new Error('AI is not configured. Please set OLLAMA_BASE_URL, OPENAI_BASE_URL, or GOOGLE_API_KEY.');
   }
 
   const { TelemetryService } = await import('@/lib/services/telemetry');
@@ -484,39 +490,36 @@ ${lifetimeMemoryContext}
     userResourceSummaries,
     sessionObjectsSnippet});
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: process.env.GEMINI_MODEL_NAME || 'gemini-2.0-flash',
-    systemInstruction: [
-      systemInstructionCore,
-      'JSON OUTPUT SCHEMA (STRICT):',
-      '{',
-      '  "response": "Visible reply to the user (markdown). Required.",',
-      '  "sessionContextUpdate": "Optional facts to append to session context.",',
-      '  "lifetimeMemoryUpdate": "Optional high-quality lifelong memory. Leave blank if none.",',
-      '  "toolCalls": [',
-      '     {',
-      '        "toolKey": "wallet_get_balance | wallet_send_tokens | search_users | create_note | update_note | get_note | create_goal | update_goal | list_goals | create_project | ui.navigate | navigate_workspace | search_ecosystem | objects.form.read | objects.form.submit | link_to_project | suggest_next_steps | toggle_privacy | delete_resource | ui.open_drawer | ui.preview.open",',
-      '        "specifier": "resource id, form id, target id, or \'.all\' when required; null otherwise",',
-      '        "subSpecifier": "optional field name",',
-      '        "args": { "token": "KYLRIX|SOL|ALL", "amount": "...", "recipientUsername": "...", "title": "...", "content": "...", "description": "...", "query": ".all", "target": "settings.passkeys", "route": "/settings", "tags": [], "isPublic": false, "isAgentic": true, "suggestions": [{ "label": "...", "prompt": "..." }], "objectType": "note", "objectId": "...", "type": "note", "payload": {} }',
-      '     }',
-      '  ]',
-      '}',
-      'WALLET EXAMPLE — user says "check my kylrix balance" or "fetch my balance":',
-      '{"response":"Retrieving your on-chain wallet balances and addresses.","toolCalls":[{"toolKey":"wallet_get_balance","args":{"token":"KYLRIX"}}]}',
-      'NAVIGATION EXAMPLE — user says "take me to passkeys in settings":',
-      '{"response":"Opening Passkeys in Settings now.","toolCalls":[{"toolKey":"ui.navigate","args":{"target":"settings.passkeys"}}]}',
-      'SEARCH EXAMPLE — user says "what is for today":',
-      '{"response":"Searching your goals and events for today.","toolCalls":[{"toolKey":"search_ecosystem","args":{"query":"what is for today"}}]}',
-    ].join('\n'),
-    generationConfig: {
-      responseMimeType: 'application/json'
-    }
-  });
+  const fullSystemInstruction = [
+    systemInstructionCore,
+    'JSON OUTPUT SCHEMA (STRICT):',
+    '{',
+    '  "response": "Visible reply to the user (markdown). Required.",',
+    '  "sessionContextUpdate": "Optional facts to append to session context.",',
+    '  "lifetimeMemoryUpdate": "Optional high-quality lifelong memory. Leave blank if none.",',
+    '  "toolCalls": [',
+    '     {',
+    '        "toolKey": "wallet_get_balance | wallet_send_tokens | search_users | create_note | update_note | get_note | create_goal | update_goal | list_goals | create_project | ui.navigate | navigate_workspace | search_ecosystem | objects.form.read | objects.form.submit | link_to_project | suggest_next_steps | toggle_privacy | delete_resource | ui.open_drawer | ui.preview.open",',
+    '        "specifier": "resource id, form id, target id, or \'.all\' when required; null otherwise",',
+    '        "subSpecifier": "optional field name",',
+    '        "args": { "token": "KYLRIX|SOL|ALL", "amount": "...", "recipientUsername": "...", "title": "...", "content": "...", "description": "...", "query": ".all", "target": "settings.passkeys", "route": "/settings", "tags": [], "isPublic": false, "isAgentic": true, "suggestions": [{ "label": "...", "prompt": "..." }], "objectType": "note", "objectId": "...", "type": "note", "payload": {} }',
+    '     }',
+    '  ]',
+    '}',
+    'WALLET EXAMPLE — user says "check my kylrix balance" or "fetch my balance":',
+    '{"response":"Retrieving your on-chain wallet balances and addresses.","toolCalls":[{"toolKey":"wallet_get_balance","args":{"token":"KYLRIX"}}]}',
+    'NAVIGATION EXAMPLE — user says "take me to passkeys in settings":',
+    '{"response":"Opening Passkeys in Settings now.","toolCalls":[{"toolKey":"ui.navigate","args":{"target":"settings.passkeys"}}]}',
+    'SEARCH EXAMPLE — user says "what is for today":',
+    '{"response":"Searching your goals and events for today.","toolCalls":[{"toolKey":"search_ecosystem","args":{"query":"what is for today"}}]}',
+  ].join('\n');
 
-  const response = await model.generateContent(redactedPrompt);
-  const responseTextRaw = response.response.text().trim();
+  const { generateLLMCompletion } = await import('@/lib/agentic/llm-provider');
+  const responseTextRaw = await generateLLMCompletion({
+    prompt: redactedPrompt,
+    systemInstruction: fullSystemInstruction,
+    responseMimeType: 'application/json',
+  });
 
   let visibleResponse = responseTextRaw;
   let sessionUpdate = "";

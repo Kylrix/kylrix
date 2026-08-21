@@ -40,6 +40,15 @@ DOMAIN=localhost
 NEXT_PUBLIC_DOMAIN=localhost
 NEXT_PUBLIC_APPWRITE_ENDPOINT=https://api.kylrix.space/v1
 NEXT_PUBLIC_APPWRITE_PROJECT_ID=67fe9627001d97e37ef3
+
+# Optional: Local Ollama AI Integration
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3:latest
+
+# Optional: Custom OpenAI-Compatible Local/Remote Endpoints
+OPENAI_BASE_URL=http://localhost:8000/v1
+OPENAI_API_KEY=your-key
+OPENAI_MODEL=mistral
 ```
 
 ### 3. Build and Start
@@ -52,6 +61,15 @@ docker compose up -d --build
 docker compose ps
 docker compose logs -f kylrix
 ```
+
+---
+
+## 🤖 Local AI & Ollama Configuration
+
+Kylrix natively connects to local LLMs with automatic fallbacks:
+- **Ollama**: Set `OLLAMA_BASE_URL=http://host.docker.internal:11434` (or `http://localhost:11434` if running natively) and `OLLAMA_MODEL=llama3:latest`.
+- **OpenAI-Compatible Local Endpoints (vLLM, LM Studio, LocalAI, text-generation-webui)**: Set `OPENAI_BASE_URL` and `OPENAI_MODEL`.
+- **Google Gemini**: Set `GOOGLE_API_KEY`.
 
 ---
 
