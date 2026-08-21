@@ -44,46 +44,50 @@ class ObjectBlockWidget extends WidgetType {
     container.className = 'kylrix-object-widget my-2.5 rounded-2xl bg-[#0A0908] border border-white/8 p-3 flex flex-col gap-2 select-none';
     container.contentEditable = 'false';
 
-    // Header bar
-    const header = document.createElement('div');
-    header.className = 'flex items-center justify-between gap-2 border-b border-white/4 pb-2';
+    const kind = this.payload.childKind;
 
-    const left = document.createElement('div');
-    left.className = 'flex items-center gap-2 min-w-0';
+    // For non-image blocks (voice, file, etc.), show a compact header
+    if (kind !== 'image') {
+      const header = document.createElement('div');
+      header.className = 'flex items-center justify-between gap-2 border-b border-white/4 pb-2';
 
-    const badge = document.createElement('span');
-    badge.className = 'px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold uppercase tracking-wider bg-white/6 text-white/70';
-    badge.textContent = this.payload.childKind || 'attached object';
-    left.appendChild(badge);
+      const left = document.createElement('div');
+      left.className = 'flex items-center gap-2 min-w-0';
 
-    if (this.payload.label) {
-      const label = document.createElement('span');
-      label.className = 'text-xs font-bold text-white/90 font-satoshi truncate';
-      label.textContent = this.payload.label;
-      left.appendChild(label);
+      const badge = document.createElement('span');
+      badge.className = 'px-2 py-0.5 rounded-lg text-[9px] font-mono font-bold uppercase tracking-wider bg-white/6 text-white/70';
+      badge.textContent = this.payload.childKind || 'attached object';
+      left.appendChild(badge);
+
+      if (this.payload.label) {
+        const label = document.createElement('span');
+        label.className = 'text-xs font-bold text-white/90 font-satoshi truncate';
+        label.textContent = this.payload.label;
+        left.appendChild(label);
+      }
+
+      header.appendChild(left);
+
+      if (!this.readOnly && this.onRemove) {
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'w-6 h-6 rounded-lg bg-white/4 hover:bg-rose-500/20 text-white/40 hover:text-rose-400 flex items-center justify-center transition-colors shrink-0 cursor-pointer';
+        removeBtn.title = 'Remove attached object';
+        removeBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+        removeBtn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.onRemove?.(this.payload, this.raw);
+        };
+        header.appendChild(removeBtn);
+      }
+
+      container.appendChild(header);
     }
-
-    header.appendChild(left);
-
-    if (!this.readOnly && this.onRemove) {
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = 'w-6 h-6 rounded-lg bg-white/4 hover:bg-rose-500/20 text-white/40 hover:text-rose-400 flex items-center justify-center transition-colors shrink-0 cursor-pointer';
-      removeBtn.title = 'Remove attached object';
-      removeBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
-      removeBtn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.onRemove?.(this.payload, this.raw);
-      };
-      header.appendChild(removeBtn);
-    }
-
-    container.appendChild(header);
 
     // Body content renderer
     const body = document.createElement('div');
-    body.className = 'pt-1';
+    body.className = 'pt-0.5';
 
     const kind = this.payload.childKind;
     const bucket = this.payload.bucketId || (kind === 'voice' ? APPWRITE_CONFIG.BUCKETS.VOICE : APPWRITE_CONFIG.BUCKETS.GENERAL_STORAGE);
@@ -99,18 +103,66 @@ class ObjectBlockWidget extends WidgetType {
       audioWrapper.appendChild(audio);
       body.appendChild(audioWrapper);
     } else if (kind === 'image') {
+      const imgWrapper = document.createElement('div');
+      imgWrapper.className = 'relative group w-full flex items-center justify-center';
+
+      const imgSrc = StorageService.getFileView(this.payload.childId, bucket).toString();
       const img = document.createElement('img');
-      img.src = StorageService.getFilePreview(this.payload.childId, bucket, 960, 540).toString();
+      img.src = imgSrc;
       img.alt = this.payload.label || 'Attached image';
-      img.className = 'w-full max-h-80 object-contain rounded-xl bg-black/40 border border-white/6';
-      body.appendChild(img);
+      img.className = 'w-full max-h-[75vh] object-contain rounded-2xl bg-black/30 border border-white/6 cursor-pointer hover:opacity-95 transition-opacity';
+      img.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.dispatchEvent(new CustomEvent('kylrix:open-unified-media', {
+          detail: {
+            src: imgSrc,
+            type: 'image',
+            title: this.payload.label || 'Image preview',
+            fileId: this.payload.childId,
+            bucketId: bucket,
+          }
+        }));
+      };
+      imgWrapper.appendChild(img);
+
+      if (!this.readOnly && this.onRemove) {
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'absolute top-3 right-3 w-7 h-7 rounded-xl bg-black/70 hover:bg-rose-500 text-white/80 hover:text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 cursor-pointer shadow-lg backdrop-blur-md';
+        removeBtn.title = 'Remove attached image';
+        removeBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+        removeBtn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.onRemove?.(this.payload, this.raw);
+        };
+        imgWrapper.appendChild(removeBtn);
+      }
+
+      body.appendChild(imgWrapper);
     } else {
+      const fileUrl = this.payload.href || StorageService.getFileView(this.payload.childId, bucket).toString();
       const link = document.createElement('a');
-      link.href = this.payload.href || StorageService.getFileView(this.payload.childId, bucket).toString();
+      link.href = fileUrl;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
-      link.className = 'inline-flex items-center gap-2 text-xs font-bold text-[#6366F1] hover:underline';
+      link.className = 'inline-flex items-center gap-2 text-xs font-bold text-[#6366F1] hover:underline cursor-pointer';
       link.textContent = `Open ${this.payload.label || 'attachment'} ↗`;
+      link.onclick = (e) => {
+        if (this.payload.childKind === 'pdf' || this.payload.metadata?.mimeType?.toString().includes('pdf')) {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('kylrix:open-unified-media', {
+            detail: {
+              src: fileUrl,
+              type: 'pdf',
+              title: this.payload.label || 'Document preview',
+              fileId: this.payload.childId,
+              bucketId: bucket,
+            }
+          }));
+        }
+      };
       body.appendChild(link);
     }
 

@@ -143,20 +143,30 @@ export function ChatMessageContent({
                     <Box>
                         <Box
                             sx={{
-                                width: 300,
-                                height: 300,
+                                maxWidth: '100%',
+                                maxHeight: '65vh',
                                 position: 'relative',
                                 borderRadius: 2,
                                 overflow: 'hidden',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                bgcolor: '#0A0908',
                             }}
-                            onClick={() => window.open(viewUrl, '_blank')}
+                            onClick={() => {
+                                window.dispatchEvent(new CustomEvent('kylrix:open-unified-media', {
+                                    detail: {
+                                        src: viewUrl,
+                                        type: 'image',
+                                        title: 'Chat image',
+                                        fileId,
+                                        bucketId,
+                                    }
+                                }));
+                            }}
                         >
-                            <Image
-                                src={previewUrl}
+                            <img
+                                src={viewUrl || previewUrl}
                                 alt="attachment"
-                                fill
-                                style={{ objectFit: 'cover' }}
+                                className="w-full max-h-[65vh] object-contain rounded-2xl cursor-pointer hover:opacity-95 transition-opacity"
                             />
                         </Box>
                         {msg.content && <Typography variant="body2" sx={{ mt: 1 }}>{msg.content}</Typography>}
@@ -168,7 +178,8 @@ export function ChatMessageContent({
                         <video
                             src={viewUrl}
                             controls
-                            style={{ maxWidth: '100%', borderRadius: 8 }}
+                            playsInline
+                            style={{ maxWidth: '100%', maxHeight: '65vh', borderRadius: 16 }}
                         />
                         {msg.content && <Typography variant="body2" sx={{ mt: 1 }}>{msg.content}</Typography>}
                     </Box>

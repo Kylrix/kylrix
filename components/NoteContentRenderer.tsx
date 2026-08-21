@@ -394,7 +394,28 @@ function AttachmentVisual({
         component="img"
         src={mediaSrc}
         alt={label || 'Attached image'}
-        sx={{ width: '100%', maxHeight: 480, objectFit: 'contain', display: 'block', bgcolor: '#0B0A09' }}
+        onClick={() => {
+          window.dispatchEvent(new CustomEvent('kylrix:open-unified-media', {
+            detail: {
+              src: mediaSrc,
+              type: 'image',
+              title: label || 'Image preview',
+              fileId,
+              bucketId,
+            }
+          }));
+        }}
+        sx={{
+          width: '100%',
+          maxHeight: '75vh',
+          objectFit: 'contain',
+          display: 'block',
+          bgcolor: '#0B0A09',
+          cursor: 'pointer',
+          borderRadius: '16px',
+          '&:hover': { opacity: 0.95 },
+          transition: 'opacity 0.2s ease',
+        }}
       />
     );
   }
@@ -404,7 +425,13 @@ function AttachmentVisual({
       return <Box sx={{ p: 3, color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem' }}>Loading video…</Box>;
     }
     return (
-      <Box component="video" src={mediaSrc} controls playsInline sx={{ width: '100%', maxHeight: 420, display: 'block', bgcolor: '#000' }} />
+      <Box
+        component="video"
+        src={mediaSrc}
+        controls
+        playsInline
+        sx={{ width: '100%', maxHeight: '75vh', display: 'block', bgcolor: '#000', borderRadius: '16px' }}
+      />
     );
   }
 

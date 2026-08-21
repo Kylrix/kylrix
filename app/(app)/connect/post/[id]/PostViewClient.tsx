@@ -520,17 +520,45 @@ export function PostViewClient({
             ) : null}
 
             {images.length > 0 ? (
-              <div className={`w-full max-w-full h-[200px] rounded-xl overflow-hidden border border-white/[0.06] bg-[#0A0908] grid ${images.length > 1 ? 'grid-cols-2 gap-0.5' : 'grid-cols-1'}`}>
-                {images.slice(0, 2).map(src => (
+              <div className={`w-full max-w-full rounded-xl overflow-hidden border border-white/[0.06] bg-[#0A0908] grid ${images.length > 1 ? 'grid-cols-2 gap-1' : 'grid-cols-1'}`}>
+                {images.map(src => (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img key={src} src={src} alt="" className="w-full h-full max-w-full object-cover" loading="lazy" />
+                  <img
+                    key={src}
+                    src={src}
+                    alt=""
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('kylrix:open-unified-media', {
+                        detail: {
+                          src,
+                          type: 'image',
+                          title: 'Moment photo',
+                        }
+                      }));
+                    }}
+                    className="w-full max-h-[65vh] object-contain cursor-pointer hover:opacity-95 transition-opacity"
+                    loading="lazy"
+                  />
                 ))}
               </div>
             ) : null}
 
             {moment?.mediaUrl || moment?.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={moment.mediaUrl || moment.imageUrl} alt="" className="w-full max-w-full h-[200px] rounded-xl border border-white/[0.06] object-cover bg-[#0A0908]" />
+              <img
+                src={moment.mediaUrl || moment.imageUrl}
+                alt=""
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('kylrix:open-unified-media', {
+                    detail: {
+                      src: moment.mediaUrl || moment.imageUrl,
+                      type: 'image',
+                      title: 'Moment photo',
+                    }
+                  }));
+                }}
+                className="w-full max-w-full max-h-[65vh] rounded-xl border border-white/[0.06] object-contain bg-[#0A0908] cursor-pointer hover:opacity-95 transition-opacity"
+              />
             ) : null}
 
             <div className="flex items-center gap-4 sm:gap-6 pt-3 border-t border-white/[0.06] min-w-0 flex-wrap">

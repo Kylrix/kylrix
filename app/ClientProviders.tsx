@@ -63,12 +63,16 @@ import { EventsProvider } from '@/context/EventsContext';
 import { ContextIntelligenceProvider } from '@/context/ContextIntelligenceContext';
 import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
 
+import { UniversalScrollRestoration } from '@/components/providers/UniversalScrollRestoration';
+import { UnifiedMediaProvider } from '@/context/UnifiedMediaContext';
+
 const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   SpineProvider,
   NeuralProvider,
   ContextIntelligenceProvider,
   SecurityProvider,
   ChatNotificationProvider,
+  UnifiedMediaProvider,
   UnifiedFileDrawerProvider,
   DrawerStateProvider,
   AppwriteProvider,
@@ -100,7 +104,6 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   TrashPurgeProvider,
   PaymentReminderProvider,
 ];
-import { UniversalScrollRestoration } from '@/components/providers/UniversalScrollRestoration';
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
