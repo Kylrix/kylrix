@@ -454,7 +454,6 @@ export async function deleteConversationFullyInternal(payload: {
     epochsDeleted: epochs.length,
     keyMappingsDeleted: keyMappings.length,
     joinRequestsDeleted: joinRequests.length,
-    callLinksDeleted: callLinks.length,
     projectObjectsDeleted: projectObjects.length};
 }
 
