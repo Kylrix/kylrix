@@ -396,7 +396,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       }
 
     case 'SET_USER':
-      if (state.userId && state.userId !== action.payload) {
+      if (state.userId && state.userId !== 'guest' && action.payload !== 'guest' && state.userId !== action.payload) {
         return { ...state, userId: action.payload, tasks: [], projects: [], selectedTaskId: null, selectedProjectId: null };
       }
       return { ...state, userId: action.payload };

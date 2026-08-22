@@ -46,7 +46,7 @@ export default function GoalsPage() {
             <button
               type="button"
               onClick={handleOpenCreate}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#A855F7] text-white hover:bg-[#9333ea] active:scale-95 transition-all shadow-[0_4px_14px_rgba(168,85,247,0.3)] select-none shrink-0"
+              className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#A855F7] text-white hover:bg-[#9333ea] active:scale-95 transition-all shadow-[0_4px_14px_rgba(168,85,247,0.3)] select-none shrink-0"
             >
               <Plus size={16} strokeWidth={2.5} />
               <span>New Goal</span>

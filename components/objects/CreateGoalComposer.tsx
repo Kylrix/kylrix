@@ -216,10 +216,16 @@ export function CreateGoalComposer({
         ) ||
         (isTitleManuallyEdited ? title : nextTitle) ||
         'Untitled Goal';
-      const due =
-        (nextDue ?? dueDate) && String(nextDue ?? dueDate).trim()
-          ? new Date(`${String(nextDue ?? dueDate).trim()}T12:00:00`)
-          : undefined;
+      const rawDue = (nextDue ?? dueDate) && String(nextDue ?? dueDate).trim();
+      let due: Date | undefined = undefined;
+      if (rawDue) {
+        const parsed = new Date(
+          rawDue.includes('T') || rawDue.includes(' ') || rawDue.includes(':')
+            ? rawDue
+            : `${rawDue}T12:00:00`
+        );
+        if (!Number.isNaN(parsed.getTime())) due = parsed;
+      }
 
       return {
         id,
@@ -335,18 +341,15 @@ export function CreateGoalComposer({
 
   const handleOpenDatePicker = useCallback(() => {
     const isDesktopWindow = typeof window !== 'undefined' && window.innerWidth >= 900;
-    const initialStart = dueDate ? new Date(`${dueDate}T12:00:00`) : new Date();
+    const initialStart = dueDate ? new Date(dueDate) : new Date();
     const initialEnd = new Date(initialStart.getTime() + 3600000);
     const activeId = ensureId();
 
     const applyDate = (start: Date) => {
-      const y = start.getFullYear();
-      const m = String(start.getMonth() + 1).padStart(2, '0');
-      const d = String(start.getDate()).padStart(2, '0');
-      const dateStr = `${y}-${m}-${d}`;
-      setDueDate(dateStr);
-      pushLive(buildLive(content, title, priority, dateStr));
-      return dateStr;
+      const iso = start.toISOString();
+      setDueDate(iso);
+      pushLive(buildLive(content, title, priority, iso));
+      return iso;
     };
 
     if (isDesktopWindow) {
@@ -563,11 +566,26 @@ export function CreateGoalComposer({
                 <Calendar className="w-4 h-4 text-[#A855F7] shrink-0 mr-2 pointer-events-none" />
                 <input
                   type="date"
-                  value={dueDate}
+                  value={dueDate ? (dueDate.includes('T') ? dueDate.split('T')[0] : dueDate) : ''}
                   onChange={(e) => {
                     const dateStr = e.target.value;
-                    setDueDate(dateStr);
-                    pushLive(buildLive(content, title, priority, dateStr));
+                    if (!dateStr) {
+                      setDueDate('');
+                      pushLive(buildLive(content, title, priority, ''));
+                      return;
+                    }
+                    let nextDate = new Date(`${dateStr}T12:00:00`);
+                    if (dueDate) {
+                      const prev = new Date(dueDate);
+                      if (!Number.isNaN(prev.getTime())) {
+                        const [y, m, d] = dateStr.split('-').map(Number);
+                        nextDate = new Date(prev);
+                        nextDate.setFullYear(y, m - 1, d);
+                      }
+                    }
+                    const iso = nextDate.toISOString();
+                    setDueDate(iso);
+                    pushLive(buildLive(content, title, priority, iso));
                   }}
                   className="w-full bg-transparent border-none text-white text-xs font-satoshi font-bold focus:outline-none focus:ring-0 cursor-pointer [color-scheme:dark]"
                 />
@@ -745,15 +763,12 @@ export function CreateGoalComposer({
       {showMobileDatePicker && (
         <EventDateTimePickerDrawer
           open={showMobileDatePicker}
-          startTime={dueDate ? new Date(`${dueDate}T12:00:00`) : new Date()}
-          endTime={dueDate ? new Date(`${dueDate}T13:00:00`) : new Date(new Date().getTime() + 3600000)}
+          startTime={dueDate ? new Date(dueDate) : new Date()}
+          endTime={dueDate ? new Date(new Date(dueDate).getTime() + 3600000) : new Date(Date.now() + 3600000)}
           onApply={(start) => {
-            const y = start.getFullYear();
-            const m = String(start.getMonth() + 1).padStart(2, '0');
-            const d = String(start.getDate()).padStart(2, '0');
-            const dateStr = `${y}-${m}-${d}`;
-            setDueDate(dateStr);
-            pushLive(buildLive(content, title, priority, dateStr));
+            const iso = start.toISOString();
+            setDueDate(iso);
+            pushLive(buildLive(content, title, priority, iso));
             setShowMobileDatePicker(false);
           }}
           onClose={() => setShowMobileDatePicker(false)}

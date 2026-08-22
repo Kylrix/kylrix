@@ -524,7 +524,16 @@ export async function createRowSecure(
       const isWorkspaceLinked = !!(rowData as any).projectId || (rowData as any).isWorkspace === true;
       const isAuthenticatedActor = actor && actor.$id && actor.$id !== 'guest';
 
-      if ((rowData as any).userId && (rowData as any).userId !== actor?.$id) {
+      const isGuestOrUnassigned =
+        !(rowData as any).userId ||
+        (rowData as any).userId === 'guest' ||
+        (rowData as any).userId === 'thread';
+
+      if (isGuestOrUnassigned && isAuthenticatedActor) {
+        (rowData as any).userId = actor.$id;
+        if ((rowData as any).ownerId) (rowData as any).ownerId = actor.$id;
+        if ((rowData as any).creatorId) (rowData as any).creatorId = actor.$id;
+      } else if ((rowData as any).userId && (rowData as any).userId !== actor?.$id) {
         if (isWorkspaceLinked && isAuthenticatedActor) {
           (rowData as any).userId = actor.$id;
           if ((rowData as any).ownerId) (rowData as any).ownerId = actor.$id;
@@ -535,7 +544,7 @@ export async function createRowSecure(
           throw new Error('Forbidden: Cannot create resource for another user');
         }
       }
-      if ((rowData as any).ownerId && (rowData as any).ownerId !== actor?.$id) {
+      if ((rowData as any).ownerId && (rowData as any).ownerId !== actor?.$id && (rowData as any).ownerId !== 'guest' && (rowData as any).ownerId !== 'thread') {
         if (isWorkspaceLinked && isAuthenticatedActor) {
           (rowData as any).ownerId = actor.$id;
         } else if (!isAuthenticatedActor) {
