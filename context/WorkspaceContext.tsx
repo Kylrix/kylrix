@@ -96,11 +96,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       lastUserIdRef.current = userId;
       setActiveWorkspaceIdState(userId);
       setWorkspaces([personalWorkspace]);
-      void refreshWorkspaces();
     } else {
       setActiveWorkspaceIdState((prev) => (prev === 'guest' && userId !== 'guest' ? userId : prev));
     }
-  }, [userId, personalWorkspace]);
+    void refreshWorkspaces();
+  }, [userId, personalWorkspace, refreshWorkspaces]);
 
   const refreshWorkspaces = useCallback(async () => {
     setLoadingWorkspaces(true);
@@ -124,7 +124,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     void (async () => {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const mapped = mapProjectRows(await LocalEngine.cacheGet(`f_projects_list_${userId}`));
+        const [userProjects, globalProjects] = await Promise.all([
+          LocalEngine.cacheGet(`f_projects_list_${userId}`),
+          LocalEngine.cacheGet('f_projects_list'),
+        ]);
+        const mapped = mapProjectRows(userProjects || globalProjects || []);
         if (!mapped.length) return;
         setWorkspaces((prev) => {
           const byId = new Map(prev.map((w) => [w.id, w]));
@@ -198,6 +202,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         await LocalEngine.cacheSet(ACTIVE_WORKSPACE_CACHE_KEY, trimmed);
       } catch {}
     })();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('kylrix:workspace-changed', {
+          detail: { previousId: lastSetIdRef.current, workspaceId: trimmed }
+        })
+      );
+    }
     if (pendingPrefSyncRef.current) clearTimeout(pendingPrefSyncRef.current);
     pendingPrefSyncRef.current = setTimeout(() => {
       if (user?.$id && typeof updatePreferences === 'function') {
@@ -205,6 +216,37 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
     }, 800);
   }, [ACTIVE_WORKSPACE_CACHE_KEY, user?.$id, updatePreferences]);
+
+  // High-performance background prewarming for active workspace objects
+  useEffect(() => {
+    if (!activeWorkspaceId || activeWorkspaceId === userId || activeWorkspaceId === 'guest') return;
+    const targetId = activeWorkspaceId;
+    let cancelled = false;
+
+    void (async () => {
+      const kinds = ['goal', 'note', 'event', 'form', 'password', 'totp', 'agent_session'];
+      for (const kind of kinds) {
+        if (cancelled) break;
+        try {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          const cacheKey = projectObjectsKindCacheKey(targetId, kind);
+          const cached = await LocalEngine.cacheGet(cacheKey);
+          if (!cached) {
+            const res = await ProjectsService.listProjectObjectsByKind(targetId, kind).catch(() => null);
+            if (res?.rows && !cancelled) {
+              await LocalEngine.cacheSet(cacheKey, res.rows).catch(() => {});
+            }
+          }
+        } catch {
+          /* optional background warm */
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspaceId, userId]);
 
   const activeWorkspace = useMemo<WorkspaceItem>(() => {
     const found = workspaces.find((w) => w.id === activeWorkspaceId);
@@ -294,6 +336,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             event: APPWRITE_CONFIG.TABLES.EVENTS,
             credential: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
             totp: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
+            agent_session: 'agentic_sessions',
+            agentic_session: 'agentic_sessions',
           };
           const tableId = tableByKind[entityKind];
           if (tableId) {
@@ -301,7 +345,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
               APPWRITE_CONFIG.DATABASE_ID,
               tableId,
               entityId,
-              { isWorkspace: true },
+              { isWorkspace: true, projectId: activeWorkspace.id },
             );
           }
         } catch (flagErr) {
@@ -328,6 +372,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           event: APPWRITE_CONFIG.TABLES.EVENTS,
           credential: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
           totp: APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
+          agent_session: 'agentic_sessions',
+          agentic_session: 'agentic_sessions',
         };
         const tableId = tableByKind[entityKind];
         if (tableId) {
@@ -335,7 +381,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             APPWRITE_CONFIG.DATABASE_ID,
             tableId,
             entityId,
-            { isWorkspace: !inPersonal },
+            { isWorkspace: !inPersonal, projectId: inPersonal ? null : activeWorkspace.id },
           );
         }
       } catch (err) {

@@ -65,6 +65,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useNotes } from '@/context/NotesContext';
 import { useTask } from '@/context/TaskContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useDataNexus } from '@/context/DataNexusContext';
@@ -255,7 +256,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const { notes: allNotes, pushLiveNote, registerComposeSession, unregisterComposeSession, migrateDraftNoteId, removeNote } = useNotes();
   const { setCachedData } = useDataNexus();
   const { addTask, updateTask, deleteTask, tasks } = useTask();
-  const { setActiveWorkspaceId } = useWorkspace();
+  const { activeWorkspace, attachEntityToActiveWorkspace, setActiveWorkspaceId } = useWorkspace();
   const { openOverlay } = useOverlay();
   const { openSidebar } = useDynamicSidebar();
   const { openProUpgrade } = useProUpgrade();
@@ -283,6 +284,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const [pendingToolAuth, setPendingToolAuth] = useState<{ toolKey: string; name: string; specifier?: string; args?: any; assistantId?: string } | null>(null);
   const [showSessionsDrawer, setShowSessionsDrawer] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
+  const { filteredItems: workspaceFilteredSessions } = useWorkspaceFilteredItems(sessions, 'agent_session');
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [showSessionActionsDrawer, setShowSessionActionsDrawer] = useState(false);
@@ -398,6 +400,9 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         setActiveSessionId(res.sessionId);
         if (user?.$id) {
           await AgenticSessionLocalStore.setActiveSessionId(user.$id, res.sessionId);
+        }
+        if (activeWorkspace && !activeWorkspace.isPersonal) {
+          void attachEntityToActiveWorkspace('agent_session', res.sessionId);
         }
       }
       setMessages([]);
@@ -1880,18 +1885,18 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
 
             {/* List */}
             <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
-              {loadingSessions && sessions.length === 0 ? (
+              {loadingSessions && workspaceFilteredSessions.length === 0 ? (
                 <div className="flex items-center justify-center py-12 gap-2.5">
                   <RefreshCw size={15} className="animate-spin text-[#9B9691]" />
                   <span className="text-[#9B9691] text-xs font-semibold">Loading past chats…</span>
                 </div>
-              ) : sessions.length === 0 ? (
+              ) : workspaceFilteredSessions.length === 0 ? (
                 <div className="text-center py-12 text-[#9B9691] text-xs font-medium flex flex-col items-center gap-2">
                   <History size={24} className="text-white/20" />
-                  <span>No past sessions yet. Click + above to start a fresh chat.</span>
+                  <span>No past sessions in this workspace. Click + above to start a fresh chat.</span>
                 </div>
               ) : (
-                sessions.map((sess) => {
+                workspaceFilteredSessions.map((sess) => {
                   const isObjectSession = Boolean((sess as any).targetType && (sess as any).targetId);
                   const isSelected = sess.id === activeSessionId;
                   const objectIcon = (() => {

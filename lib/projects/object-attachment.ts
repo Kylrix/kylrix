@@ -30,6 +30,7 @@ function normalizeProjectObjectKind(kind: ProjectObjectKind): string {
   const lower = String(kind || '').toLowerCase().trim();
   if (lower === 'task') return 'goal';
   if (lower === 'credential' || lower === 'secret') return 'password';
+  if (lower === 'agentic_session' || lower === 'agentic_sessions') return 'agent_session';
   return lower;
 }
 

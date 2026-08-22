@@ -62,10 +62,12 @@ export function useProjectObjects(
           if (cached && cached.length > 0 && mountedRef.current) {
             setRows(cached);
             setLoading(false);
-          } else if (!cached || cached.length === 0) {
+          } else {
+            if (mountedRef.current) setRows([]);
             setLoading(true);
           }
         } catch {
+          if (mountedRef.current) setRows([]);
           setLoading(true);
         }
       } else {

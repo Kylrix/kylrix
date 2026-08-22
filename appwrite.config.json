@@ -510,6 +510,13 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "isAgentic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -1382,6 +1389,13 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "isAgentic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -2225,6 +2239,13 @@
                     "size": 64,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isAgentic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -6834,6 +6855,22 @@
                     "size": 64,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isAgentic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "dek",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 2048,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -7808,6 +7845,22 @@
                     "default": 0,
                     "min": 0,
                     "max": 9223372036854775807
+                },
+                {
+                    "key": "isAgentic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "dek",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 2048,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -8457,6 +8510,22 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "isAgentic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "dek",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 2048,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -10452,6 +10521,22 @@
                 },
                 {
                     "key": "targetId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "isWorkspace",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "projectId",
                     "type": "varchar",
                     "required": false,
                     "array": false,
