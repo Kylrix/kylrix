@@ -1492,55 +1492,39 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
     const newStatus: TaskStatus = task.status === 'done' ? 'todo' : 'done';
     const completedAt = newStatus === 'done' ? new Date() : undefined;
-    const previousStatus = task.status;
-    const previousCompletedAt = task.completedAt;
 
     registerPendingStatus(id, newStatus, completedAt);
-    dispatch({
-      type: 'UPDATE_TASK',
-      payload: { id, updates: { status: newStatus, completedAt } },
-    });
+    const updatedTask: Task = {
+      ...task,
+      status: newStatus,
+      completedAt,
+      updatedAt: new Date(),
+    };
+    pushLiveGoal(updatedTask);
 
-    try {
-      await taskApi.update(id, { status: newStatus });
-
-      if (newStatus === 'done') {
-        const collectDescendants = (taskId: string): string[] => {
-          const directChildren = state.tasks.filter(task => task.parentTaskId === taskId).map(task => task.id);
-          const descendantIds: string[] = [];
-          directChildren.forEach((childId) => {
-            descendantIds.push(childId, ...collectDescendants(childId));
+    if (newStatus === 'done') {
+      const collectDescendants = (taskId: string): string[] => {
+        const directChildren = state.tasks.filter(t => t.parentTaskId === taskId).map(t => t.id);
+        const descendantIds: string[] = [];
+        directChildren.forEach((childId) => {
+          descendantIds.push(childId, ...collectDescendants(childId));
+        });
+        return descendantIds;
+      };
+      const descendantIds = collectDescendants(id);
+      for (const childId of descendantIds) {
+        const childTask = state.tasks.find(t => t.id === childId);
+        if (childTask && childTask.status !== 'done') {
+          pushLiveGoal({
+            ...childTask,
+            status: 'done',
+            completedAt: new Date(),
+            updatedAt: new Date(),
           });
-          return descendantIds;
-        };
-        const descendantIds = collectDescendants(id);
-        for (const childId of descendantIds) {
-          const childTask = state.tasks.find(t => t.id === childId);
-          if (childTask && childTask.status !== 'done') {
-            dispatch({
-              type: 'UPDATE_TASK',
-              payload: { id: childId, updates: { status: 'done', completedAt: new Date() } },
-            });
-            await taskApi.update(childId, { status: 'done' });
-          }
         }
       }
-
-      invalidateTasksNexus(state.userId || 'guest');
-    } catch (error: unknown) {
-      pendingStatusPatchesRef.current.delete(id);
-      dispatch({
-        type: 'UPDATE_TASK',
-        payload: {
-          id,
-          updates: {
-            status: previousStatus,
-            completedAt: previousCompletedAt},
-        },
-      });
-      console.error('Failed to complete task', error);
     }
-  }, [state.tasks, state.userId, invalidateTasksNexus, registerPendingStatus]);
+  }, [state.tasks, pushLiveGoal, registerPendingStatus]);
 
   const selectTask = useCallback((id: string | null) => {
     dispatch({ type: 'SELECT_TASK', payload: id });
@@ -1773,7 +1757,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   // Computed values
   const getFilteredTasks = useCallback(() => {
-    let sourceTasks = state.tasks;
+    let sourceTasks = state.tasks.filter((t: any) => !t.isTrash && !t.isDeleted && String(t.isTrash) !== 'true' && String(t.isDeleted) !== 'true');
     if (!activeWorkspace || activeWorkspace.isPersonal) {
       sourceTasks = sourceTasks.filter(isDefaultWorkspaceObject);
     } else {

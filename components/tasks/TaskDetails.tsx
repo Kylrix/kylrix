@@ -20,6 +20,7 @@ import {
   MessageSquare,
   Activity,
   RefreshCw,
+  Check,
   Copy,
   Clock
 } from 'lucide-react';
@@ -123,6 +124,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const {
     tasks,
     updateTask,
+    completeTask,
     pushLiveGoal,
     deleteTask,
     addSubtask,
@@ -584,6 +586,20 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                 <span className="truncate max-w-[90px]">{task.projectId}</span>
               </button>
             )}
+            <button
+              type="button"
+              onClick={async () => {
+                await completeTask(task.id);
+              }}
+              className={`p-2 rounded-xl transition-all cursor-pointer ${
+                task.status === 'done'
+                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30'
+                  : 'text-[#9B9691] hover:text-emerald-400 hover:bg-white/5'
+              }`}
+              title={task.status === 'done' ? 'Mark as Incomplete' : 'Mark as Done'}
+            >
+              <Check className="w-4 h-4" strokeWidth={task.status === 'done' ? 3 : 2} />
+            </button>
             <button
               type="button"
               onClick={() => setShowProjectLinker(true)}
