@@ -1,4 +1,4 @@
-import { ContextObject, ContextRanking, ContextKind, ContextualNiche } from './types';
+import { ContextObject, ContextRanking, ContextKind } from './types';
 import { localKnowledgeGraph } from './local-graph';
 import { patternMatcher } from './pattern-matcher';
 

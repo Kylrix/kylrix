@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, ArrowRight, CornerDownLeft } from 'lucide-react';
+import { Sparkles, ArrowRight } from 'lucide-react';
 import { PredictiveSuggestion } from './types';
 
 interface Props {

@@ -613,8 +613,8 @@ async function flushGoalPending(
         data: {
           ...payload,
           id: synced.$id || goalId,
-          userId: creatorId,
-          creatorId,
+          userId: payload.creatorId || activeUserId,
+          creatorId: payload.creatorId || activeUserId,
           updatedAt: new Date(synced.$updatedAt || Date.now())},
         timestamp: Date.now(),
       })

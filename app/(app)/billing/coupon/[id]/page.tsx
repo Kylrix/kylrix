@@ -9,7 +9,6 @@ import {
   Loader2,
   ArrowRight,
   Sparkles,
-  Gift,
   ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
