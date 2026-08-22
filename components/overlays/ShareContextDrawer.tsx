@@ -7,10 +7,8 @@ import {
   Share2, 
   QrCode, 
   Mail, 
-  MessageSquare, 
-  Send, 
   X,
-  ShieldCheck
+  Globe
 } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -42,6 +40,24 @@ interface ShareActionItem {
   execute: (url: string, title: string) => Promise<void> | void;
 }
 
+const WhatsAppIcon = ({ size = 20, className }: { size?: number; className?: string }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" className={className}>
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+  </svg>
+);
+
+const TelegramIcon = ({ size = 20, className }: { size?: number; className?: string }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" className={className}>
+    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.832.942z" />
+  </svg>
+);
+
+const XIcon = ({ size = 20, className }: { size?: number; className?: string }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" className={className}>
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+
 const SETTINGS_STORAGE_KEY = 'kylrix_share_preferences_v1';
 const PREFS_KEY = 'share_methods_order';
 
@@ -66,7 +82,7 @@ async function getFrequentShareMethods(userId?: string | null): Promise<string[]
     } catch {}
   }
 
-  return ['copy', 'x', 'whatsapp', 'telegram', 'native'];
+  return ['copy', 'whatsapp', 'telegram', 'x', 'native'];
 }
 
 async function recordShareMethodUsage(methodId: string, userId?: string | null): Promise<void> {
@@ -96,7 +112,7 @@ export function ShareContextDrawer() {
   const [copied, setCopied] = useState(false);
   const [resolvedUrl, setResolvedUrl] = useState<string>('');
   const [isResolving, setIsResolving] = useState(true);
-  const [methodOrder, setMethodOrder] = useState<string[]>(['copy', 'x', 'whatsapp', 'telegram', 'native']);
+  const [methodOrder, setMethodOrder] = useState<string[]>(['copy', 'whatsapp', 'telegram', 'x', 'native']);
   const [showQR, setShowQR] = useState(false);
 
   const data: ShareContextData = drawerData || {
@@ -105,8 +121,8 @@ export function ShareContextDrawer() {
     resourceTitle: 'Untitled',
   };
 
-  const { resourceType, resourceId, resourceTitle = 'Untitled', dek, projectId, isPublic = true, isGuest = true } = data;
-  const friendlyTitle = resourceTitle || resourceType;
+  const { resourceType, resourceId, resourceTitle = '', dek, projectId, isPublic = true, isGuest = true } = data;
+  const friendlyTitle = resourceTitle || `${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)}`;
 
   useEffect(() => {
     let active = true;
@@ -162,37 +178,19 @@ export function ShareContextDrawer() {
   const allActions: Record<string, ShareActionItem> = useMemo(() => ({
     copy: {
       id: 'copy',
-      label: copied ? 'Copied!' : 'Copy Link',
-      sublabel: 'Direct secure link',
+      label: copied ? 'Copied' : 'Copy Link',
+      sublabel: 'Direct link',
       icon: copied ? Check : Copy,
-      color: copied ? 'text-emerald-400' : 'text-white',
-      bg: copied ? 'bg-emerald-500/15' : 'bg-white/[0.06]',
-      border: copied ? 'border-emerald-500/30' : 'border-white/10',
+      color: copied ? 'text-[#10B981]' : 'text-white',
+      bg: copied ? 'bg-[#10B981]/15' : 'bg-white/[0.04]',
+      border: copied ? 'border-[#10B981]/40' : 'border-white/10',
       execute: handleCopyLink,
-    },
-    x: {
-      id: 'x',
-      label: 'Post on X',
-      sublabel: 'x.com / Twitter',
-      icon: (props) => (
-        <svg viewBox="0 0 24 24" width={props.size || 18} height={props.size || 18} fill="currentColor" className={props.className}>
-          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-        </svg>
-      ),
-      color: 'text-white',
-      bg: 'bg-black/60',
-      border: 'border-white/15',
-      execute: (url, title) => {
-        const text = encodeURIComponent(`Check out "${title}" on @Kylrix:\n\n${url}`);
-        window.open(`https://x.com/intent/tweet?text=${text}`, '_blank', 'noopener,noreferrer');
-        void recordShareMethodUsage('x', user?.$id);
-      },
     },
     whatsapp: {
       id: 'whatsapp',
       label: 'WhatsApp',
-      sublabel: 'Chat or Status',
-      icon: MessageSquare,
+      sublabel: 'Send chat',
+      icon: WhatsAppIcon,
       color: 'text-[#25D366]',
       bg: 'bg-[#25D366]/10',
       border: 'border-[#25D366]/25',
@@ -205,8 +203,8 @@ export function ShareContextDrawer() {
     telegram: {
       id: 'telegram',
       label: 'Telegram',
-      sublabel: 'Channel or Direct',
-      icon: Send,
+      sublabel: 'Send message',
+      icon: TelegramIcon,
       color: 'text-[#229ED9]',
       bg: 'bg-[#229ED9]/10',
       border: 'border-[#229ED9]/25',
@@ -217,10 +215,24 @@ export function ShareContextDrawer() {
         void recordShareMethodUsage('telegram', user?.$id);
       },
     },
+    x: {
+      id: 'x',
+      label: 'X (Twitter)',
+      sublabel: 'Post link',
+      icon: XIcon,
+      color: 'text-white',
+      bg: 'bg-white/[0.06]',
+      border: 'border-white/15',
+      execute: (url, title) => {
+        const text = encodeURIComponent(`Check out "${title}" on @Kylrix:\n\n${url}`);
+        window.open(`https://x.com/intent/tweet?text=${text}`, '_blank', 'noopener,noreferrer');
+        void recordShareMethodUsage('x', user?.$id);
+      },
+    },
     qr: {
       id: 'qr',
       label: 'QR Code',
-      sublabel: 'Scan & open on mobile',
+      sublabel: 'Scan & open',
       icon: QrCode,
       color: 'text-[#A855F7]',
       bg: 'bg-[#A855F7]/10',
@@ -233,14 +245,14 @@ export function ShareContextDrawer() {
     email: {
       id: 'email',
       label: 'Email',
-      sublabel: 'Send via Mail client',
+      sublabel: 'Send by email',
       icon: Mail,
       color: 'text-[#F59E0B]',
       bg: 'bg-[#F59E0B]/10',
       border: 'border-[#F59E0B]/25',
       execute: (url, title) => {
-        const subject = encodeURIComponent(`Shared Kylrix Resource: ${title}`);
-        const body = encodeURIComponent(`Here is the link to "${title}":\n\n${url}\n\nShared privately via Kylrix.`);
+        const subject = encodeURIComponent(`Shared with you: ${title}`);
+        const body = encodeURIComponent(`Here is the link to "${title}":\n\n${url}`);
         window.location.href = `mailto:?subject=${subject}&body=${body}`;
         void recordShareMethodUsage('email', user?.$id);
       },
@@ -248,7 +260,7 @@ export function ShareContextDrawer() {
     native: {
       id: 'native',
       label: 'More',
-      sublabel: 'System Share Sheet',
+      sublabel: 'System share',
       icon: Share2,
       color: 'text-[#6366F1]',
       bg: 'bg-[#6366F1]/10',
@@ -264,7 +276,7 @@ export function ShareContextDrawer() {
             });
           } catch (err: any) {
             if (err?.name !== 'AbortError') {
-              toast.error('Native sharing failed, link copied instead');
+              toast.error('System share failed, link copied instead');
               await handleCopyLink();
             }
           }
@@ -277,7 +289,7 @@ export function ShareContextDrawer() {
   }), [copied, resolvedUrl, user?.$id]);
 
   const orderedActions = useMemo(() => {
-    const defaultKeys = ['copy', 'x', 'whatsapp', 'telegram', 'qr', 'email', 'native'];
+    const defaultKeys = ['copy', 'whatsapp', 'telegram', 'x', 'qr', 'email', 'native'];
     const seen = new Set<string>();
     const result: ShareActionItem[] = [];
 
@@ -318,7 +330,7 @@ export function ShareContextDrawer() {
         <div className="w-10 h-1 rounded-full bg-white/20" />
       </div>
 
-      {/* Header */}
+      {/* Header with clear contextual title */}
       <div className="px-6 pb-4 pt-1 flex items-center justify-between border-b border-white/5">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
@@ -326,10 +338,10 @@ export function ShareContextDrawer() {
           </div>
           <div className="min-w-0">
             <h3 className="text-base font-extrabold font-clash text-white truncate m-0">
-              Share {resourceType.charAt(0).toUpperCase() + resourceType.slice(1)}
+              Share {friendlyTitle}
             </h3>
             <p className="text-[11px] text-white/40 font-mono truncate m-0 mt-0.5">
-              {friendlyTitle}
+              Public {resourceType} • anyone with link can view
             </p>
           </div>
         </div>
@@ -349,10 +361,10 @@ export function ShareContextDrawer() {
         <div className="flex items-center gap-2 p-1.5 pl-3.5 rounded-xl bg-[#0A0908] border border-white/10">
           <div className="flex-1 min-w-0">
             <span className="text-[10px] font-mono text-white/40 uppercase tracking-wider block">
-              Public Link
+              Share Link
             </span>
             <p className="text-xs font-mono text-white/80 truncate m-0 mt-0.5">
-              {isResolving ? 'Generating secure instant link...' : resolvedUrl || 'https://kylrix.space/...'}
+              {isResolving ? 'Creating link...' : resolvedUrl || 'https://www.kylrix.space/...'}
             </p>
           </div>
 
@@ -362,7 +374,7 @@ export function ShareContextDrawer() {
             disabled={isResolving || !resolvedUrl}
             className={`px-3.5 py-2 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
               copied
-                ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20'
+                ? 'bg-[#10B981] text-black shadow-lg shadow-[#10B981]/20'
                 : 'bg-white text-black hover:bg-white/90 shadow-md'
             }`}
           >
@@ -387,7 +399,7 @@ export function ShareContextDrawer() {
           Share Destinations
         </span>
 
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-2.5">
           {orderedActions.map((action) => {
             const Icon = action.icon;
             return (
@@ -396,12 +408,12 @@ export function ShareContextDrawer() {
                 type="button"
                 onClick={() => action.execute(resolvedUrl, friendlyTitle)}
                 disabled={isResolving && action.id !== 'copy'}
-                className="flex flex-col items-center gap-2 p-2.5 rounded-2xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition-all cursor-pointer group text-center"
+                className="flex flex-col items-center gap-2 p-2.5 rounded-xl bg-[#0A0908] hover:bg-white/[0.04] border border-white/5 hover:border-white/15 transition-all cursor-pointer group text-center"
               >
                 <div
-                  className={`w-12 h-12 rounded-2xl ${action.bg} ${action.border} border flex items-center justify-center ${action.color} group-hover:scale-105 transition-transform shadow-md`}
+                  className={`w-10 h-10 rounded-xl ${action.bg} ${action.border} border flex items-center justify-center ${action.color} group-hover:scale-105 transition-transform`}
                 >
-                  <Icon size={20} />
+                  <Icon size={18} />
                 </div>
                 <div className="min-w-0 w-full">
                   <span className="text-[11px] font-bold text-white/90 truncate block leading-tight">
@@ -442,11 +454,12 @@ export function ShareContextDrawer() {
         </div>
       )}
 
-      {/* Footer Security Badging */}
-      <div className="px-6 pt-4 mt-2 flex items-center justify-center gap-2 text-[10px] font-mono text-white/30 border-t border-white/5">
-        <ShieldCheck size={12} className="text-emerald-400/60" />
-        <span>End-to-End Synced • Unrestricted Public Access</span>
+      {/* Footer Status */}
+      <div className="px-6 pt-4 mt-2 flex items-center justify-center gap-2 text-[11px] text-white/40 border-t border-white/5 font-sans">
+        <Globe size={13} className="text-[#10B981]" />
+        <span>Anyone with this link can view this {resourceType}</span>
       </div>
     </div>
   );
 }
+
