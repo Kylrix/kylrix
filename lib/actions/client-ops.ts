@@ -83,6 +83,25 @@ export async function deleteNote(noteId: string) {
   return deleteNoteSecure(noteId, jwt);
 }
 
+// --- Goals CRUD ---
+export async function createGoal(data: any) {
+  const jwt = await getJwt();
+  const { createGoalSecure } = await import('./secure-ops');
+  return createGoalSecure(data, jwt);
+}
+
+export async function updateGoal(goalId: string, data: any) {
+  const jwt = await getJwt();
+  const { updateGoalSecure } = await import('./secure-ops');
+  return updateGoalSecure(goalId, data, jwt);
+}
+
+export async function deleteGoal(goalId: string) {
+  const jwt = await getJwt();
+  const { deleteGoalSecure } = await import('./secure-ops');
+  return deleteGoalSecure(goalId, jwt);
+}
+
 export async function listTags(userId?: string) {
   const jwt = await getJwt();
   return listTagsSecure(userId, jwt);

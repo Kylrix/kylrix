@@ -564,17 +564,11 @@ async function flushGoalPending(
   }
 
   const flushRevision = goalRevisionOf(payload) || queuedRevision;
-  const { tasks: taskApi, buildTaskPermissions } = await import('@/lib/kylrixflow');
+  const { createGoal, updateGoal } = await import('@/lib/actions/client-ops');
 
-  const creatorId = payload.creatorId || (payload as any).userId || activeUserId || 'guest';
-  const assignees = (payload.assigneeIds || []).filter(
-    (id) => !!id && id !== 'guest' && id !== 'thread' && id !== creatorId,
-  );
-  const permissions = buildTaskPermissions(creatorId, [creatorId, ...assignees], []);
-
-  let synced: Awaited<ReturnType<typeof taskApi.update>>;
+  let synced: any;
   try {
-    synced = await taskApi.update(goalId, dataPayload as any, permissions);
+    synced = await updateGoal(goalId, dataPayload);
   } catch (err: any) {
     const msg = String(err?.message || '').toLowerCase();
     const isNotFound =
@@ -587,13 +581,10 @@ async function flushGoalPending(
       msg.includes('insufficient permissions') ||
       msg.includes('unauthorized');
     if (isNotFound || isForbiddenOrMissing) {
-      synced = await taskApi.create(
-        {
-          ...(dataPayload as any),
-          $id: goalId,
-          userId: creatorId},
-        permissions,
-      );
+      synced = await createGoal({
+        ...(dataPayload as any),
+        $id: goalId,
+      });
 
       const targetProjectId = (payload as any)?.projectId;
       const isWs = (payload as any)?.isWorkspace;
@@ -610,15 +601,6 @@ async function flushGoalPending(
           console.warn('[SyncEngine] Failed to attach goal to project_objects on initial sync:', attachErr);
         }
       }
-      try {
-        const { taskCollaborators } = await import('@/lib/kylrixflow');
-        for (const assigneeId of assignees) {
-          if (!assigneeId || assigneeId === creatorId) continue;
-          await taskCollaborators
-            .create(goalId, assigneeId, 'read', creatorId, permissions)
-            .catch(() => null);
-        }
-      } catch {}
     } else {
       throw err;
     }

@@ -1653,3 +1653,127 @@ export async function approveProjectJoinRequestSecure(projectId: string, targetU
 
   return { success: true };
 }
+
+export async function createGoalSecure(data: any, jwt?: string): Promise<any> {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
+  const { pickGoalAutosavePayload } = await import('@/lib/goals/pick-goal-autosave-payload');
+
+  const tables = createSystemTablesDB();
+  const reservedRowId = [data?.$id, data?.id].find(
+    (id) => typeof id === 'string' && isValidAppwriteRowId(id),
+  ) as string | undefined;
+
+  if (reservedRowId) {
+    try {
+      const existing = (await tables.getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+        rowId: reservedRowId,
+      })) as { userId?: string | null; creatorId?: string | null };
+      const ownerId = String(existing?.creatorId || existing?.userId || '').trim();
+      if (ownerId && (ownerId === actor.$id || ownerId === 'guest')) {
+        return updateGoalSecure(reservedRowId, data, jwt);
+      }
+    } catch {
+      // Row not found — proceed with create using reserved ID.
+    }
+  }
+
+  const rawGoal: any = {
+    ...data,
+    userId: actor.$id,
+    creatorId: actor.$id,
+  };
+
+  const dataPayload = pickGoalAutosavePayload(rawGoal);
+  (dataPayload as any).userId = actor.$id;
+
+  const permissions = [Permission.read(Role.user(actor.$id))];
+  if (data?.isPublic) {
+    permissions.push(Permission.read(Role.any()));
+  }
+
+  const result = await tables.createRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+    rowId: reservedRowId || ID.unique(),
+    data: dataPayload as any,
+    permissions,
+  });
+
+  return JSON.parse(JSON.stringify(result));
+}
+
+export async function updateGoalSecure(goalId: string, data: any, jwt?: string): Promise<any> {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const { pickGoalAutosavePayload } = await import('@/lib/goals/pick-goal-autosave-payload');
+
+  const tables = createSystemTablesDB();
+  const existing = (await tables.getRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+    rowId: goalId,
+  })) as { userId?: string | null; creatorId?: string | null };
+
+  const ownerId = String(existing?.creatorId || existing?.userId || '').trim();
+  if (ownerId && ownerId !== actor.$id && ownerId !== 'guest' && ownerId !== 'thread') {
+    throw new Error('Forbidden: Insufficient permissions on goal');
+  }
+
+  const merged = {
+    ...existing,
+    ...data,
+    userId: ownerId && ownerId !== 'guest' ? ownerId : actor.$id,
+    creatorId: ownerId && ownerId !== 'guest' ? ownerId : actor.$id,
+  };
+
+  const dataPayload = pickGoalAutosavePayload(merged);
+  delete (dataPayload as any).$id;
+  delete (dataPayload as any).$createdAt;
+  delete (dataPayload as any).$updatedAt;
+  delete (dataPayload as any).$permissions;
+  delete (dataPayload as any).$databaseId;
+  delete (dataPayload as any).$tableId;
+
+  const updated = await tables.updateRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+    rowId: goalId,
+    data: dataPayload as any,
+  });
+
+  return JSON.parse(JSON.stringify(updated));
+}
+
+export async function deleteGoalSecure(goalId: string, jwt?: string): Promise<void> {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized: Session expired or invalid');
+  }
+
+  const tables = createSystemTablesDB();
+  try {
+    await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+      rowId: goalId,
+      data: { isTrash: true, isDeleted: true },
+    });
+  } catch (_err: any) {
+    await tables.deleteRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+      rowId: goalId,
+    }).catch(() => {});
+  }
+}
+

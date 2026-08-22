@@ -323,11 +323,10 @@ export const tasks = {
         return listRows<Task>(TABLES.TASKS, queries);
     },
     create: async (data: TableCreateData<Task> & { $id?: string }, permissions?: string[]) => {
-        // Unified create — server SDK, grants read to owner + collaborators; normal create (user-owned)
         try {
-            const { unifiedCreate } = await import('@/lib/services/unified-object-service');
-            const row = await unifiedCreate('task', data as Record<string, any>, { permissions });
-            if ((row as any)?.$id) return row as unknown as Task;
+            const { createGoal } = await import('@/lib/actions/client-ops');
+            const row = await createGoal(data);
+            if ((row as any)?.$id || (row as any)?.id) return row as unknown as Task;
         } catch {}
         const reservedId =
             typeof (data as any)?.$id === 'string' && (data as any).$id.trim()
@@ -340,16 +339,16 @@ export const tasks = {
     get: (id: string) => getRow<Task>(TABLES.TASKS, id),
     update: async (id: string, data: TableUpdateData<Task>, permissions?: string[]) => {
         try {
-            const { unifiedUpdate } = await import('@/lib/services/unified-object-service');
-            const row = await unifiedUpdate('task', id, data as Record<string, any>, { permissions });
-            if ((row as any)?.$id) return row as unknown as Task;
+            const { updateGoal } = await import('@/lib/actions/client-ops');
+            const row = await updateGoal(id, data);
+            if ((row as any)?.$id || (row as any)?.id) return row as unknown as Task;
         } catch {}
         return updateRow<Task>(TABLES.TASKS, id, data, permissions, FLOW_DATABASE_ID);
     },
     delete: async (id: string) => {
         try {
-            const { unifiedDelete } = await import('@/lib/services/unified-object-service');
-            await unifiedDelete('task', id, { recursive: true });
+            const { deleteGoal } = await import('@/lib/actions/client-ops');
+            await deleteGoal(id);
             return;
         } catch {}
         return deleteRow(TABLES.TASKS, id);

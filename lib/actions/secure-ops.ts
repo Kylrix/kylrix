@@ -65,7 +65,10 @@ import {
   removeEventManagerSecure,
   convertResponseToGoalSecure,
   initGoalDiscussionSecure,
-  approveProjectJoinRequestSecure} from './secure-ops/projects';
+  approveProjectJoinRequestSecure,
+  createGoalSecure,
+  updateGoalSecure,
+  deleteGoalSecure} from './secure-ops/projects';
 
 import {
   mintDailyLoginSecure,
@@ -218,6 +221,9 @@ export {
   createRowSecure,
   updateRowSecure,
   deleteRowSecure,
+  createGoalSecure,
+  updateGoalSecure,
+  deleteGoalSecure,
   batchTrashFormSubmissionsSecure,
   searchGlobalUsersSecure,
   getProfileByUsernameSecure,
