@@ -769,7 +769,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const { fetchOptimized, invalidate, getCachedData, getCachedDataAsync, setCachedData, refreshInBackground } = useDataNexus();
   const { user: authUser, isLoading: isAuthLoading } = useAuth();
   const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
-  const { activeWorkspace } = useWorkspace();
+  const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
   const customWorkspaceId = isCustomWorkspace ? activeWorkspace?.id : null;
   const { rows: goalProjectObjects } = useProjectObjects(customWorkspaceId, 'goal');
@@ -1267,13 +1267,14 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       try {
         const userId = state.userId || 'guest';
         const id = ID.unique();
+        const inCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
         const mappedTask: Task = {
           id,
           title: task.title,
           description: task.description || '',
           status: task.status,
           priority: task.priority,
-          projectId: task.projectId || 'inbox',
+          projectId: inCustomWorkspace ? activeWorkspace!.id : (task.projectId || 'inbox'),
           labels: task.labels || [],
           linkedNotes: task.linkedNotes || [],
           subtasks: [],
@@ -1294,9 +1295,13 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           isPublic: false,
           isGuest: false,
           isAgentic: task.isAgentic === true,
+          isWorkspace: inCustomWorkspace,
         };
 
         pushLiveGoal(mappedTask);
+        if (inCustomWorkspace && typeof attachEntityToActiveWorkspace === 'function') {
+          void attachEntityToActiveWorkspace('goal', id);
+        }
         autonomicSyncEngine.nudge();
         return mappedTask;
       } catch (error: unknown) {
@@ -1305,7 +1310,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         return null;
       }
     },
-    [state.userId, setCachedData, pushLiveGoal]
+    [state.userId, setCachedData, pushLiveGoal, activeWorkspace, attachEntityToActiveWorkspace]
   );
 
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
