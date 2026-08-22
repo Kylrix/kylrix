@@ -20,7 +20,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 
 # Frozen lockfile = deterministic installs
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --config.ignore-scripts=false
 
 # ── Stage 2 ── Build the Next.js application ───────────────────────────────
 FROM base AS builder

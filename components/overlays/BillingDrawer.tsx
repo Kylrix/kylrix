@@ -18,7 +18,6 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { AppwriteService } from '@/lib/appwrite';
 import { account } from '@/lib/appwrite/client';
 import { getMyCouponsAction } from '@/lib/actions/billing/coupons';
-import { listBillingTransactionsAction } from '@/lib/actions/billing/billing';
 
 interface BillingDrawerProps {
   isOpen: boolean;
@@ -59,30 +58,11 @@ export function BillingContent() {
     }
   }, [user?.$id]);
 
-  const loadTransactions = useCallback(async () => {
-    if (!user?.$id) return;
-    try {
-      setLoadingTransactions(true);
-      const jwtRes = await account.createJWT().then(r => r.jwt).catch(() => undefined);
-      const res = await listBillingTransactionsAction(jwtRes);
-      if (res.success && res.transactions) {
-        // Belt-and-suspenders: only show transactions belonging to current user,
-        // guards against missing DB index on billing_transactions.userId
-        setTransactions((res.transactions as any[]).filter(tx => tx.userId === user.$id));
-      }
-    } catch (err) {
-      console.warn('Failed to load transactions:', err);
-    } finally {
-      setLoadingTransactions(false);
-    }
-  }, [user?.$id]);
-
   useEffect(() => {
     if (user) {
       loadCoupons();
-      loadTransactions();
     }
-  }, [user, loadCoupons, loadTransactions]);
+  }, [user, loadCoupons]);
 
   const handleGiftCheckout = useCallback(async () => {
     const recipientQuery = giftUsername.trim();

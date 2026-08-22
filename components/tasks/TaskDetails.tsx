@@ -20,7 +20,8 @@ import {
   MessageSquare,
   Activity,
   RefreshCw,
-  Copy
+  Copy,
+  Clock
 } from 'lucide-react';
 import {
   initGoalDiscussion,

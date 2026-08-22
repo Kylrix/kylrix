@@ -429,11 +429,13 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
         <ZapDrawer
           isOpen
           onClose={onClose}
-          recipientPubkey={drawerData?.recipientPubkey}
-          recipientName={drawerData?.recipientName}
-          recipientAvatar={drawerData?.recipientAvatar}
-          recipientLud16={drawerData?.recipientLud16}
-          noteId={drawerData?.noteId}
+          targetId={drawerData?.targetId || drawerData?.noteId || ''}
+          source={drawerData?.source || 'ecosystem'}
+          targetKind={drawerData?.targetKind || 'moment'}
+          targetOwnerId={drawerData?.targetOwnerId}
+          targetPubkey={drawerData?.targetPubkey || drawerData?.recipientPubkey}
+          authorName={drawerData?.authorName || drawerData?.recipientName || 'Creator'}
+          onZapSuccess={drawerData?.onZapSuccess}
         />
       );
     default:
