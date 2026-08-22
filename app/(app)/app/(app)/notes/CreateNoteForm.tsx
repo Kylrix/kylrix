@@ -1255,14 +1255,28 @@ export default function CreateNoteForm({
             }}
             className="w-full flex-1 flex flex-col relative"
           >
-            <KylrixWYSIWYGEditor
+            <textarea
+              ref={contentRef}
+              rows={4}
               value={content}
-              onChange={(v) => handleContentChange(v)}
-              parentId={resolvedNoteId || liveDraftIdRef.current || undefined}
-              parentKind="note"
+              onPaste={(e) => {
+                isPastedRef.current = true;
+                if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
+                pasteTimerRef.current = setTimeout(() => {
+                  isPastedRef.current = false;
+                }, 2000);
+                const pastedText = e.clipboardData.getData('text');
+                if (pastedText) {
+                  setTimeout(() => {
+                    const updated = contentRef.current?.value || content;
+                    handleContentChange(updated);
+                  }, 10);
+                }
+              }}
+              onChange={(e) => handleContentChange(e.target.value)}
               placeholder="Write your idea..."
-              minHeight="180px"
-              className="w-full h-full"
+              autoFocus
+              className="w-full flex-1 min-h-[180px] resize-none bg-transparent text-white placeholder-white/25 border-0 focus:outline-none p-2 text-base leading-relaxed scrollbar-thin font-satoshi"
             />
 
             {/* Offline fast suggestion system matching goals or tags as user types */}

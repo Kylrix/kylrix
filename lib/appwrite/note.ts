@@ -287,6 +287,8 @@ export function pickNoteAutosavePayload(data: {
   isPublic?: boolean | null;
   isGuest?: boolean | null;
   isAgentic?: boolean | null;
+  isWorkspace?: boolean | null;
+  projectId?: string | null;
   dek?: string | null;
 }): Partial<Notes> {
   const content = data.content ?? '';
@@ -303,6 +305,12 @@ export function pickNoteAutosavePayload(data: {
   }
   if (typeof data.isGuest === 'boolean') {
     payload.isGuest = data.isGuest;
+  }
+  if (typeof data.isWorkspace === 'boolean') {
+    (payload as any).isWorkspace = data.isWorkspace;
+  }
+  if (typeof data.projectId === 'string' && data.projectId) {
+    (payload as any).projectId = data.projectId;
   }
   if (typeof data.isAgentic === 'boolean') {
     (payload as any).isAgentic = data.isAgentic;
