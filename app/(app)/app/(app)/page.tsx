@@ -262,8 +262,7 @@ export default function IdeasPage() {
           } else if (
             existing.title !== cn.title ||
             existing.content !== cn.content ||
-            existing.isPinned !== cn.isPinned ||
-            existing.isTrash !== cn.isTrash
+            existing.isPinned !== cn.isPinned
           ) {
             byId.set(cn.$id, { ...existing, ...cn });
             hasChanges = true;
