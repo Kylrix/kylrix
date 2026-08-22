@@ -540,31 +540,47 @@ export function CreateGoalComposer({
 
           {/* Target Due Date */}
           <div className="flex flex-col gap-1.5 border-t border-white/5 pt-3">
-            <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-white/40">
-              Target Due Date
-            </label>
-            <button
-              type="button"
-              onClick={handleOpenDatePicker}
-              className="w-full flex items-center justify-between rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-white text-xs font-satoshi hover:border-[#A855F7]/40 hover:bg-white/[0.03] transition-all cursor-pointer group"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Calendar className="w-4 h-4 text-[#A855F7] shrink-0" />
-                <span className="font-bold text-sm font-satoshi truncate">
-                  {dueDate
-                    ? new Date(`${dueDate}T12:00:00`).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })
-                    : 'Select target due date...'}
-                </span>
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-white/40">
+                Target Due Date
+              </label>
+              {dueDate ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDueDate('');
+                    pushLive(buildLive(content, title, priority, ''));
+                  }}
+                  className="text-[10px] font-mono font-bold uppercase tracking-wider text-red-400 hover:text-red-300 transition-colors"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 flex items-center rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-white hover:border-[#A855F7]/40 hover:bg-white/[0.03] transition-all">
+                <Calendar className="w-4 h-4 text-[#A855F7] shrink-0 mr-2 pointer-events-none" />
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => {
+                    const dateStr = e.target.value;
+                    setDueDate(dateStr);
+                    pushLive(buildLive(content, title, priority, dateStr));
+                  }}
+                  className="w-full bg-transparent border-none text-white text-xs font-satoshi font-bold focus:outline-none focus:ring-0 cursor-pointer [color-scheme:dark]"
+                />
               </div>
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#A855F7] bg-[#A855F7]/10 px-2 py-0.5 rounded-md border border-[#A855F7]/20 group-hover:bg-[#A855F7]/20 transition-all">
-                {dueDate ? 'Change' : 'Pick Date'}
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={handleOpenDatePicker}
+                className="px-3 py-2 text-[11px] font-mono font-bold uppercase tracking-wider text-[#A855F7] bg-[#A855F7]/10 hover:bg-[#A855F7]/20 border border-[#A855F7]/20 rounded-xl transition-all shrink-0 cursor-pointer"
+                title="Open calendar & time picker"
+              >
+                Pick Date
+              </button>
+            </div>
           </div>
 
           {/* Tags Section */}

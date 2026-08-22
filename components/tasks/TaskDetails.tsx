@@ -904,10 +904,21 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             </button>
           </div>
           <div>
-            <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider mb-1.5 block font-mono">Target Deadline</span>
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-[#A855F7] shrink-0" />
-              <div className="flex items-center gap-1">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider block font-mono">Target Deadline</span>
+              {task.dueDate ? (
+                <button
+                  type="button"
+                  onClick={() => updateTask(task.id, { dueDate: null })}
+                  className="text-[10px] font-mono font-bold uppercase tracking-wider text-red-400/80 hover:text-red-300 transition-colors"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-[#A855F7]/30 transition-all">
+                <Calendar className="w-3.5 h-3.5 text-[#A855F7] shrink-0" />
                 <input
                   type="date"
                   value={toLocalDateInputString(task.dueDate)}
@@ -921,21 +932,22 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                         const existingDate = new Date(task.dueDate);
                         d.setHours(existingDate.getHours(), existingDate.getMinutes(), 0, 0);
                       } else {
-                        d.setHours(0, 0, 0, 0);
+                        d.setHours(12, 0, 0, 0);
                       }
                       updateTask(task.id, { dueDate: d });
                     }
                   }}
-                  className="bg-transparent border-0 outline-none text-sm font-bold text-[#F5F2ED] focus:ring-0 p-0 w-[110px] cursor-pointer hover:underline"
+                  className="bg-transparent border-0 outline-none text-xs font-bold text-[#F5F2ED] focus:ring-0 p-0 cursor-pointer [color-scheme:dark]"
                 />
+              </div>
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-[#A855F7]/30 transition-all">
+                <Clock className="w-3.5 h-3.5 text-[#A855F7] shrink-0" />
                 <input
                   type="time"
                   disabled={!task.dueDate}
                   value={(() => {
                     if (!task.dueDate) return '';
                     const d = new Date(task.dueDate);
-                    const hasTime = d.getHours() !== 0 || d.getMinutes() !== 0 || d.getSeconds() !== 0;
-                    if (!hasTime) return '';
                     const hh = String(d.getHours()).padStart(2, '0');
                     const mm = String(d.getMinutes()).padStart(2, '0');
                     return `${hh}:${mm}`;
@@ -945,14 +957,14 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                     const val = e.target.value;
                     const d = new Date(task.dueDate);
                     if (!val) {
-                      d.setHours(0, 0, 0, 0);
+                      d.setHours(12, 0, 0, 0);
                     } else {
                       const [hours, minutes] = val.split(':').map(Number);
                       d.setHours(hours, minutes, 0, 0);
                     }
                     updateTask(task.id, { dueDate: d });
                   }}
-                  className="bg-transparent border-0 outline-none text-sm font-bold text-[#F5F2ED] focus:ring-0 p-0 w-[70px] cursor-pointer hover:underline disabled:opacity-30 disabled:hover:no-underline"
+                  className="bg-transparent border-0 outline-none text-xs font-bold text-[#F5F2ED] focus:ring-0 p-0 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed [color-scheme:dark]"
                 />
               </div>
             </div>

@@ -48,7 +48,15 @@ type Props = {
 function formatDue(due?: Date | null) {
   if (!due) return null;
   try {
-    return new Date(due).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const d = new Date(due);
+    if (isNaN(d.getTime())) return null;
+    const datePart = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const hasSpecificTime = d.getHours() !== 0 || d.getMinutes() !== 0;
+    if (hasSpecificTime && (d.getHours() !== 12 || d.getMinutes() !== 0)) {
+      const timePart = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+      return `${datePart} · ${timePart}`;
+    }
+    return datePart;
   } catch {
     return null;
   }
