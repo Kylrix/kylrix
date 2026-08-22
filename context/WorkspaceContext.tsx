@@ -513,17 +513,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
               { isWorkspace: true, projectId: activeWorkspace.id },
             );
           }
-          if (typeof window !== 'undefined') {
-            if (entityKind === 'note' || entityKind === 'idea') {
-              window.dispatchEvent(new CustomEvent('kylrix:live-note-saved', {
-                detail: { note: { $id: entityId, id: entityId, isWorkspace: true, projectId: activeWorkspace.id } }
-              }));
-            } else if (entityKind === 'goal' || entityKind === 'task') {
-              window.dispatchEvent(new CustomEvent('kylrix:live-task-saved', {
-                detail: { task: { id: entityId, isWorkspace: true, projectId: activeWorkspace.id } }
-              }));
-            }
-          }
         } catch (flagErr) {
           console.warn('[WorkspaceContext] isWorkspace flag update failed:', flagErr);
         }
@@ -559,17 +548,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             entityId,
             { isWorkspace: !inPersonal, projectId: inPersonal ? null : activeWorkspace.id },
           );
-        }
-        if (typeof window !== 'undefined') {
-          if (entityKind === 'note' || entityKind === 'idea') {
-            window.dispatchEvent(new CustomEvent('kylrix:live-note-saved', {
-              detail: { note: { $id: entityId, id: entityId, isWorkspace: !inPersonal, projectId: inPersonal ? null : activeWorkspace.id } }
-            }));
-          } else if (entityKind === 'goal' || entityKind === 'task') {
-            window.dispatchEvent(new CustomEvent('kylrix:live-task-saved', {
-              detail: { task: { id: entityId, isWorkspace: !inPersonal, projectId: inPersonal ? null : activeWorkspace.id } }
-            }));
-          }
         }
       } catch (err) {
         console.warn(`[WorkspaceContext] Failed to update isWorkspace flag for ${entityKind} ${entityId}:`, err);
