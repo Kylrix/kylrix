@@ -34,7 +34,7 @@ export default function IdeasPage() {
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const { upsertNote } = useNotes();
+  const { notes: contextNotes, upsertNote } = useNotes();
   const { openSidebar } = useDynamicSidebar();
 
   const { open: openUnified } = useUnifiedDrawer();
@@ -246,6 +246,68 @@ export default function IdeasPage() {
 
       void fetchNotesBarebones(hasLocalCopy);
     })();
+  }, []);
+
+  // Instantly reflect any created / updated notes from NotesContext (0ms live-copy)
+  useEffect(() => {
+    if (contextNotes && contextNotes.length > 0) {
+      setNotes((prev) => {
+        const byId = new Map(prev.map((n) => [n.$id, n]));
+        let hasChanges = false;
+        for (const cn of contextNotes) {
+          const existing = byId.get(cn.$id);
+          if (!existing) {
+            byId.set(cn.$id, cn);
+            hasChanges = true;
+          } else if (
+            existing.title !== cn.title ||
+            existing.content !== cn.content ||
+            existing.isPinned !== cn.isPinned ||
+            existing.isTrash !== cn.isTrash
+          ) {
+            byId.set(cn.$id, { ...existing, ...cn });
+            hasChanges = true;
+          }
+        }
+        if (!hasChanges && prev.length === byId.size) return prev;
+        return Array.from(byId.values()).sort((a: any, b: any) => {
+          const aPinned = Boolean(a.isPinned);
+          const bPinned = Boolean(b.isPinned);
+          if (aPinned && !bPinned) return -1;
+          if (!aPinned && bPinned) return 1;
+          const aTime = new Date(a.$updatedAt || a.updatedAt || a.$createdAt || 0).getTime();
+          const bTime = new Date(b.$updatedAt || b.updatedAt || b.$createdAt || 0).getTime();
+          return bTime - aTime;
+        });
+      });
+      setLoading(false);
+    }
+  }, [contextNotes]);
+
+  // Listen for instant live note creation and save events
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleLiveNote = (e: Event) => {
+      const detail = (e as CustomEvent)?.detail;
+      const note = detail?.note || detail?.syncedNote;
+      if (!note?.$id && !note?.id) return;
+      const id = note.$id || note.id;
+      const stamped = { ...note, $id: id };
+      setNotes((prev) => {
+        const existing = prev.find((n) => n.$id === id);
+        if (existing) {
+          return prev.map((n) => (n.$id === id ? { ...existing, ...stamped } : n));
+        }
+        return [stamped, ...prev];
+      });
+      setLoading(false);
+    };
+    window.addEventListener('kylrix:live-note-saved', handleLiveNote);
+    window.addEventListener('kylrix:sync-complete', handleLiveNote);
+    return () => {
+      window.removeEventListener('kylrix:live-note-saved', handleLiveNote);
+      window.removeEventListener('kylrix:sync-complete', handleLiveNote);
+    };
   }, []);
 
   // Listen for instant optimistic pin toggles across cards, sidebars, and drawers
