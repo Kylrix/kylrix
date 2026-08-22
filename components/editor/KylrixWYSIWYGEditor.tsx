@@ -191,6 +191,7 @@ export function KylrixWYSIWYGEditor({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
   const isInternalUpdateRef = useRef(false);
+  const lastEmittedValueRef = useRef(value);
 
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
@@ -308,10 +309,9 @@ export function KylrixWYSIWYGEditor({
         EditorView.editable.of(!readOnly),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
-            isInternalUpdateRef.current = true;
             const str = update.state.doc.toString();
+            lastEmittedValueRef.current = str;
             onChange(str);
-            isInternalUpdateRef.current = false;
           }
         }),
         EditorView.domEventHandlers({
@@ -340,11 +340,14 @@ export function KylrixWYSIWYGEditor({
     };
   }, []); // Run once on mount
 
-  // Sync external value changes to CodeMirror
+  // Sync external value changes to CodeMirror (e.g. initial load, resets, external insertions)
   useEffect(() => {
-    if (!viewRef.current || isInternalUpdateRef.current) return;
+    if (!viewRef.current) return;
+    if (value === lastEmittedValueRef.current) return;
+
     const currentDoc = viewRef.current.state.doc.toString();
     if (value !== currentDoc) {
+      lastEmittedValueRef.current = value;
       viewRef.current.dispatch({
         changes: { from: 0, to: currentDoc.length, insert: value },
       });
