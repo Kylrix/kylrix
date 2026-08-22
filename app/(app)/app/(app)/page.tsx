@@ -9,6 +9,7 @@ import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
+import { useWorkspace } from '@/context/WorkspaceContext';
 
 import Link from 'next/link';
 
@@ -36,6 +37,7 @@ export default function IdeasPage() {
   const [notes, setNotes] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { notes: contextNotes, upsertNote } = useNotes();
+  const { activeWorkspace } = useWorkspace();
   const { openSidebar } = useDynamicSidebar();
 
   const { open: openUnified } = useUnifiedDrawer();
