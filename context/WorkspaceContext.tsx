@@ -89,19 +89,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>(initialItems);
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
 
-  useEffect(() => {
-    if (lastUserIdRef.current !== userId) {
-      hydratedRef.current = false;
-      lastSetIdRef.current = userId;
-      lastUserIdRef.current = userId;
-      setActiveWorkspaceIdState(userId);
-      setWorkspaces([personalWorkspace]);
-    } else {
-      setActiveWorkspaceIdState((prev) => (prev === 'guest' && userId !== 'guest' ? userId : prev));
-    }
-    void refreshWorkspaces();
-  }, [userId, personalWorkspace, refreshWorkspaces]);
-
   const refreshWorkspaces = useCallback(async () => {
     setLoadingWorkspaces(true);
     try {
@@ -119,6 +106,19 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setLoadingWorkspaces(false);
     }
   }, [personalWorkspace, getCachedDataAsync, fetchOptimized, mapProjectRows, userId]);
+
+  useEffect(() => {
+    if (lastUserIdRef.current !== userId) {
+      hydratedRef.current = false;
+      lastSetIdRef.current = userId;
+      lastUserIdRef.current = userId;
+      setActiveWorkspaceIdState(userId);
+      setWorkspaces([personalWorkspace]);
+    } else {
+      setActiveWorkspaceIdState((prev) => (prev === 'guest' && userId !== 'guest' ? userId : prev));
+    }
+    void refreshWorkspaces();
+  }, [userId, personalWorkspace, refreshWorkspaces]);
 
   useEffect(() => {
     void (async () => {
