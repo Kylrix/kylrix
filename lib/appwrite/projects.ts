@@ -204,15 +204,26 @@ export const ProjectsService = {
           ? 'credential'
           : rawKind;
 
-    const poRes = await this.listProjectObjects(projectId).catch(() => null);
-    const allRows: any[] = Array.isArray(poRes?.rows) ? poRes.rows : [];
-    const rows = allRows.filter((r: any) => {
-      const k = String(r.entityKind || '').toLowerCase().trim();
-      if (normKind === 'note') return k === 'note' || k === 'idea' || k === 'notes' || k === 'ideas';
-      if (normKind === 'goal') return k === 'goal' || k === 'task' || k === 'goals' || k === 'tasks';
-      if (normKind === 'credential') return k === 'credential' || k === 'password' || k === 'secret' || k === 'credentials';
-      return k === normKind;
-    });
+    const { projectObjectsKindCacheKey } = await import('@/lib/projects/projects-cache');
+    const cacheKey = projectObjectsKindCacheKey(projectId, normKind);
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+
+    const res = await LocalEngine.query<any>(
+      cacheKey,
+      async () => {
+        const poRes = await this.listProjectObjects(projectId).catch(() => null);
+        const allRows: any[] = Array.isArray(poRes?.rows) ? poRes.rows : [];
+        return allRows.filter((r: any) => {
+          const k = String(r.entityKind || '').toLowerCase().trim();
+          if (normKind === 'note') return k === 'note' || k === 'idea' || k === 'notes' || k === 'ideas';
+          if (normKind === 'goal') return k === 'goal' || k === 'task' || k === 'goals' || k === 'tasks';
+          if (normKind === 'credential') return k === 'credential' || k === 'password' || k === 'secret' || k === 'credentials';
+          return k === normKind;
+        });
+      },
+      { realtimeChannel: `databases.${DATABASE_ID}.collections.${PROJECT_OBJECTS_COLLECTION_ID}.documents` }
+    );
+    const rows = Array.isArray(res) ? res : Array.isArray(res?.rows) ? res.rows : [];
     return { rows };
   },
 
