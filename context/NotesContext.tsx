@@ -981,6 +981,34 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
   const { filteredItems: workspaceScopedNotes } = useWorkspaceFilteredItems(notes, 'note');
 
+  // When activeWorkspace switches to a custom workspace, eagerly pull any workspace notes not yet in memory
+  useEffect(() => {
+    if (!activeWorkspace || activeWorkspace.isPersonal) return;
+    const wsId = activeWorkspace.id;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
+        if (tagged?.notes && Array.isArray(tagged.notes) && tagged.notes.length > 0 && !cancelled) {
+          setNotes((prev) => {
+            const byId = new Map(prev.map((n) => [n.$id || (n as any).id, n]));
+            tagged.notes.forEach((n: any) => {
+              const id = n.$id || n.id;
+              if (id) byId.set(id, { ...byId.get(id), ...n, projectId: wsId, isWorkspace: true });
+            });
+            return Array.from(byId.values());
+          });
+        }
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspace?.id]);
+
   const sortedNotes = useMemo(() => {
     return sortPinnedThenCreatedAt(workspaceScopedNotes, (row) =>
       isResourcePinned('note', row.$id, noteOwnerId(row), row.isPinned),

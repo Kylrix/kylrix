@@ -333,17 +333,36 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         try {
           const { LocalEngine } = await import('@/lib/services/LocalEngine');
           const cacheKey = projectObjectsKindCacheKey(targetId, kind);
-          const cached = await LocalEngine.cacheGet(cacheKey);
-          if (!cached) {
-            const res = await ProjectsService.listProjectObjectsByKind(targetId, kind).catch(() => null);
-            if (res?.rows && !cancelled) {
-              await LocalEngine.cacheSet(cacheKey, res.rows).catch(() => {});
-            }
+          const res = await ProjectsService.listProjectObjectsByKind(targetId, kind).catch(() => null);
+          const rows = Array.isArray(res) ? res : Array.isArray((res as any)?.rows) ? (res as any).rows : [];
+          if (rows.length > 0 && !cancelled) {
+            await LocalEngine.cacheSet(cacheKey, rows).catch(() => {});
           }
         } catch {
           /* optional background warm */
         }
       }
+
+      // Fetch and warm actual workspace entities (notes, goals, events, forms)
+      try {
+        const tagged = await ProjectsService.listTaggedResources(targetId).catch(() => null);
+        if (tagged && !cancelled) {
+          if (Array.isArray(tagged.notes) && tagged.notes.length > 0) {
+            for (const note of tagged.notes) {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('kylrix:live-note-saved', { detail: { note: { ...note, projectId: targetId, isWorkspace: true } } }));
+              }
+            }
+          }
+          if (Array.isArray(tagged.tasks) && tagged.tasks.length > 0) {
+            for (const task of tagged.tasks) {
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('kylrix:live-task-saved', { detail: { task: { ...task, projectId: targetId, isWorkspace: true } } }));
+              }
+            }
+          }
+        }
+      } catch {}
     })();
 
     return () => {

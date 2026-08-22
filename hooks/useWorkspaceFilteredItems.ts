@@ -46,29 +46,22 @@ export function useWorkspaceFilteredItems<T extends WorkspaceItemLike>(
       return list.filter(isDefaultWorkspaceObject);
     }
 
-    // While project_objects are still loading, keep stale objects hidden — show only
-    // objects that are explicitly linked to the new workspace via projectId/pending.
-    // This prevents "all workspace objects" flash when switching workspaces.
-    if (loadingWorkspaceObjects && workspaceProjectObjects.length === 0) {
-      return list.filter((item) => {
-        const pid = activeWorkspace.id;
-        const id = item.$id || item.id;
-        if (item.projectId === pid) return true;
-        if (id && isEntityPendingInActiveWorkspace(entityKind, id)) return true;
-        return false;
-      });
-    }
-
-    const registeredIds = new Set(
-      workspaceProjectObjects.map((po) => po.entityId).filter(Boolean)
-    );
     const pid = activeWorkspace.id;
+    const registeredIds = new Set(
+      workspaceProjectObjects.map((po) => po.entityId).filter(Boolean) as string[]
+    );
 
     return list.filter((item) => {
       const id = item.$id || item.id;
-      return (id && registeredIds.has(id)) || item.projectId === pid || (id && isEntityPendingInActiveWorkspace(entityKind, id));
+      if (!id && !item.projectId) return false;
+      if (id && registeredIds.has(id)) return true;
+      if (item.projectId === pid) return true;
+      if (item.isWorkspace === pid || (item.isWorkspace && item.projectId === pid)) return true;
+      if (Array.isArray(item.tags) && item.tags.some((t: string) => t === `workspace:${pid}` || t === `project:${pid}`)) return true;
+      if (id && isEntityPendingInActiveWorkspace(entityKind, id)) return true;
+      return false;
     });
-  }, [items, activeWorkspace, workspaceProjectObjects, loadingWorkspaceObjects, isEntityPendingInActiveWorkspace, entityKind]);
+  }, [items, activeWorkspace, workspaceProjectObjects, isEntityPendingInActiveWorkspace, entityKind]);
 
   return {
     filteredItems,
