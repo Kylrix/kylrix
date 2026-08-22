@@ -165,29 +165,51 @@ export const ProjectsService = {
   },
 
   async listProjectObjects(projectId: string) {
-    const result = await (databases as any).listRows(
-      DATABASE_ID,
-      PROJECT_OBJECTS_COLLECTION_ID,
-      [Query.equal('projectId', projectId)]
-    );
+    let raw: any = null;
+    try {
+      raw = await (databases as any).listRows(
+        DATABASE_ID,
+        PROJECT_OBJECTS_COLLECTION_ID,
+        [Query.equal('projectId', projectId)]
+      );
+    } catch {
+      try {
+        raw = await (databases as any).listDocuments(
+          DATABASE_ID,
+          PROJECT_OBJECTS_COLLECTION_ID,
+          [Query.equal('projectId', projectId)]
+        );
+      } catch (err) {
+        console.warn('[ProjectsService] listProjectObjects failed:', err);
+      }
+    }
+
+    const rows: any[] = Array.isArray(raw?.rows)
+      ? raw.rows
+      : Array.isArray(raw?.documents)
+        ? raw.documents
+        : Array.isArray(raw)
+          ? raw
+          : [];
+
     // Warm the local copy for offline / workspace-switch reads
-    if (typeof window !== 'undefined' && result?.rows?.length) {
+    if (typeof window !== 'undefined' && rows.length > 0) {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const { projectObjectsCacheKey, projectObjectsKindCacheKey } = await import('@/lib/projects/projects-cache');
-        void LocalEngine.cacheSet(projectObjectsCacheKey(projectId), result.rows);
+        void LocalEngine.cacheSet(projectObjectsCacheKey(projectId), rows);
         // Partition by kind so kind-specific reads hit cache immediately
         const byKind: Record<string, any[]> = {};
-        for (const row of result.rows) {
+        for (const row of rows) {
           const k = row.entityKind as string;
           if (k) { (byKind[k] = byKind[k] || []).push(row); }
         }
-        for (const [kind, rows] of Object.entries(byKind)) {
-          void LocalEngine.cacheSet(projectObjectsKindCacheKey(projectId, kind), rows);
+        for (const [kind, kindRows] of Object.entries(byKind)) {
+          void LocalEngine.cacheSet(projectObjectsKindCacheKey(projectId, kind), kindRows);
         }
       } catch {}
     }
-    return result;
+    return { rows };
   },
 
   /**
