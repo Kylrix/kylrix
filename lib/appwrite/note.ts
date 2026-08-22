@@ -286,6 +286,8 @@ export function pickNoteAutosavePayload(data: {
   tags?: string[] | null;
   isPublic?: boolean | null;
   isGuest?: boolean | null;
+  isAgentic?: boolean | null;
+  dek?: string | null;
 }): Partial<Notes> {
   const content = data.content ?? '';
   const trimmedTitle = clampNoteTitle(data.title);
@@ -301,6 +303,12 @@ export function pickNoteAutosavePayload(data: {
   }
   if (typeof data.isGuest === 'boolean') {
     payload.isGuest = data.isGuest;
+  }
+  if (typeof data.isAgentic === 'boolean') {
+    (payload as any).isAgentic = data.isAgentic;
+  }
+  if (typeof data.dek === 'string' && data.dek.trim()) {
+    (payload as any).dek = data.dek.trim().slice(0, 1000);
   }
 
   return payload;

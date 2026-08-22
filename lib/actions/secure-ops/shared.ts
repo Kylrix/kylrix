@@ -876,6 +876,8 @@ export function sanitizeEventData(data: any) {
     'source',
     'isWorkspace',
     'attendeeCount',
+    'isAgentic',
+    'dek',
   ];
   const sanitized: any = {};
   for (const key of allowedKeys) {

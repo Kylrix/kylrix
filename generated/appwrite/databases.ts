@@ -58,7 +58,6 @@ tableIdMap["passwordManagerDb"]["Follows"] = "follows";
 tableIdMap["passwordManagerDb"]["AppActivity"] = "app_activity";
 tableIdMap["passwordManagerDb"]["Interactions"] = "interactions";
 tableIdMap["passwordManagerDb"]["Moments"] = "moments";
-tableIdMap["passwordManagerDb"]["Calls"] = "calls";
 tableIdMap["passwordManagerDb"]["epochs"] = "epochs";
 tableIdMap["passwordManagerDb"]["Conversation Members"] = "conversationMembers";
 tableIdMap["passwordManagerDb"]["profiles"] = "profiles";
@@ -117,6 +116,9 @@ tableIdMap["passwordManagerDb"]["thread_reactions"] = "thread_reactions";
 tableIdMap["passwordManagerDb"]["agent_byok_keys"] = "agent_byok_keys";
 tableIdMap["passwordManagerDb"]["user_convenience_sessions"] = "user_convenience_sessions";
 tableIdMap["passwordManagerDb"]["Feed Sessions"] = "feed_sessions";
+tableIdMap["passwordManagerDb"]["Contexts"] = "contexts";
+tableIdMap["passwordManagerDb"]["Knowledge Graph"] = "knowledge_graph";
+tableIdMap["passwordManagerDb"]["Patterns"] = "patterns";
 
 const tablesWithRelationships = new Set<string>();
 

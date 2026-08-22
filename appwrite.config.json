@@ -4894,190 +4894,6 @@
             ]
         },
         {
-            "$id": "calls",
-            "$permissions": [
-                "read(\"users\")"
-            ],
-            "databaseId": "passwordManagerDb",
-            "name": "Calls",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "userId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "type",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "default": "video",
-                    "format": "enum",
-                    "elements": [
-                        "audio",
-                        "video"
-                    ]
-                },
-                {
-                    "key": "title",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 65535,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "startsAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "expiresAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "metadata",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 65535,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "receiverId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 255,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "conversationId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 255,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "isPublic",
-                    "type": "boolean",
-                    "required": false,
-                    "array": false,
-                    "default": null
-                },
-                {
-                    "key": "isGuest",
-                    "type": "boolean",
-                    "required": false,
-                    "array": false,
-                    "default": null
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_calls_user",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "userId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_starts",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "startsAt"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_user_crea",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "userId",
-                        "$createdAt"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_rece",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "receiverId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_conv",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "conversationId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_calls_public",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "userId",
-                        "isPublic"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_calls_guest",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "userId",
-                        "isGuest"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
             "$id": "epochs",
             "$permissions": [],
             "databaseId": "passwordManagerDb",
@@ -12909,6 +12725,489 @@
                     "orders": [
                         "ASC"
                     ]
+                }
+            ]
+        },
+        {
+            "$id": "contexts",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "Contexts",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "title",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "description",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "niche",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": "workspace",
+                    "encrypt": false
+                },
+                {
+                    "key": "scopeKey",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "workspaceId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "confidence",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 1,
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "weight",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 1,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "isAnonymized",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "clarifications",
+                    "type": "mediumtext",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "metadata",
+                    "type": "mediumtext",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_contexts_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_contexts_scope",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "scopeKey"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_contexts_workspace",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "workspaceId"
+                    ],
+                    "orders": []
+                }
+            ]
+        },
+        {
+            "$id": "knowledge_graph",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "Knowledge Graph",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "sourceId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "sourceKind",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "targetId",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "targetKind",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "contextId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "relation",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "distance",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 1,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "weight",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 1,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "confidence",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 1,
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "version",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 1,
+                    "min": 1,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "isAnonymized",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "metadata",
+                    "type": "mediumtext",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_kg_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_kg_source",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "sourceId"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_kg_target",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "targetId"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_kg_context",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "contextId"
+                    ],
+                    "orders": []
+                }
+            ]
+        },
+        {
+            "$id": "patterns",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "Patterns",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "patternKey",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "patternType",
+                    "type": "varchar",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "ngram",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "completion",
+                    "type": "text",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "niche",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "userId",
+                    "type": "varchar",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "frequency",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 1,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "confidence",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 0.8,
+                    "min": 0,
+                    "max": 1
+                },
+                {
+                    "key": "weight",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": 1,
+                    "min": 0,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "isAnonymized",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "metadata",
+                    "type": "mediumtext",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_patterns_key",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "patternKey"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_patterns_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_patterns_type",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "patternType"
+                    ],
+                    "orders": []
                 }
             ]
         }

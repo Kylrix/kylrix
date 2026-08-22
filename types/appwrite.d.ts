@@ -116,11 +116,6 @@ export enum MomentsType {
     VIDEO = "video"
 }
 
-export enum CallsType {
-    AUDIO = "audio",
-    VIDEO = "video"
-}
-
 export enum JoinRequestsStatus {
     PENDING = "pending",
     ACCEPTED = "accepted",
@@ -740,19 +735,8 @@ export type Moments = Models.Row & {
     searchTitle: string | null;
     isPublic: boolean | null;
     isGuest: boolean | null;
-}
-
-export type Calls = Models.Row & {
-    userId: string;
-    type: CallsType;
-    title: string | null;
-    startsAt: string | null;
-    expiresAt: string | null;
-    metadata: string | null;
-    receiverId: string | null;
-    conversationId: string | null;
-    isPublic: boolean | null;
-    isGuest: boolean | null;
+    nostrId: string | null;
+    attachments: string | null;
 }
 
 export type Epochs = Models.Row & {
@@ -1474,4 +1458,61 @@ export type UserConvenienceSessions = Models.Row & {
     userId: string;
     encryptedUserMek: string;
     expiresAt: string | null;
+}
+
+export type FeedSessions = Models.Row & {
+    userId: string;
+    interestWaves: string | null;
+    sessionHash: string | null;
+    lastActiveAt: string | null;
+}
+
+export type Contexts = Models.Row & {
+    title: string | null;
+    description: string | null;
+    niche: string;
+    scopeKey: string | null;
+    workspaceId: string | null;
+    userId: string;
+    confidence: number;
+    weight: number;
+    isAnonymized: boolean;
+    clarifications: string | null;
+    metadata: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
+export type KnowledgeGraph = Models.Row & {
+    sourceId: string;
+    sourceKind: string;
+    targetId: string;
+    targetKind: string;
+    contextId: string | null;
+    userId: string | null;
+    relation: string | null;
+    distance: number;
+    weight: number;
+    confidence: number;
+    version: number;
+    isAnonymized: boolean;
+    metadata: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
+export type Patterns = Models.Row & {
+    patternKey: string;
+    patternType: string;
+    ngram: string | null;
+    completion: string;
+    niche: string | null;
+    userId: string | null;
+    frequency: number;
+    confidence: number;
+    weight: number;
+    isAnonymized: boolean;
+    metadata: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
 }

@@ -73,7 +73,7 @@ export function pickGoalAutosavePayload(task: Task): Record<string, unknown> {
     isArchived: !!task.isArchived,
     isDeleted: false,
     isTrash: false,
-    dek: task.dek ? String(task.dek).slice(0, 2048) : null,
+    dek: task.dek ? String(task.dek).slice(0, 1000) : null,
     tags: sanitizedTags,
   };
 
