@@ -105,7 +105,7 @@ export default function TaskList() {
   const hasMoreGoals = visibleActiveTasks.length < activeTasks.length;
   useEffect(() => {
     setGoalPage(1);
-  }, [tasks.length, filter.search, filter.status, filter.labels]);
+  }, [filter.search, filter.status, filter.labels]);
   useEffect(() => {
     if (!goalSentinelNode || !hasMoreGoals) return;
     const obs = new IntersectionObserver(

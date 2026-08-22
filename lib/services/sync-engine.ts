@@ -176,9 +176,9 @@ let firstPendingTimestamp: number | null = null;
  * gated, Realtime replenishes). */
 const FLUSH_COALESCE_MS = 16;
 const FLUSH_DISCRETE_MS = 0;
-const HARD_CEILING_MS = 2000;
-const RETRY_BASE_MS = 2_000;
-const RETRY_MAX_MS = 60_000;
+const HARD_CEILING_MS = 500;
+const RETRY_BASE_MS = 1_000;
+const RETRY_MAX_MS = 30_000;
 
 // Pre-warmed JWT — avoids 100-300ms createJWT per flush (kept warm in background)
 let cachedJwt: string | null = null;

@@ -324,8 +324,8 @@ const initialState: TaskState = {
     showCompleted: true,
     showArchived: false},
   sort: {
-    field: 'dueDate',
-    direction: 'asc'},
+    field: 'createdAt',
+    direction: 'desc'},
   viewMode: 'list',
   isLoading: false,
   error: null,
@@ -405,7 +405,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       if (state.tasks.some((task) => task.id === action.payload.id)) {
         return state;
       }
-      return { ...state, tasks: [...state.tasks, action.payload] };
+      return { ...state, tasks: [action.payload, ...state.tasks] };
 
     case 'UPSERT_TASK':
       {
@@ -417,7 +417,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
             tasks: state.tasks.map((task) => (task.id === next.id ? { ...task, ...next, updatedAt: next.updatedAt || new Date() } : task)),
           };
         }
-        return { ...state, tasks: [...state.tasks, next] };
+        return { ...state, tasks: [next, ...state.tasks] };
       }
 
     case 'UPDATE_TASK':
