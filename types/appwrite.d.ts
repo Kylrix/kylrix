@@ -338,6 +338,7 @@ export type Credentials = Models.Row & {
     keepPermission: boolean | null;
     isTrash: boolean;
     isWorkspace: boolean;
+    isAgentic: boolean;
 }
 
 export type Identities = Models.Row & {
@@ -417,6 +418,7 @@ export type TotpSecrets = Models.Row & {
     keepPermission: boolean | null;
     isTrash: boolean;
     isWorkspace: boolean;
+    isAgentic: boolean;
 }
 
 export type Keychain = Models.Row & {
@@ -497,6 +499,7 @@ export type Notes = Models.Row & {
     isTrash: boolean;
     isWorkspace: boolean;
     primaryThreadId: string | null;
+    isAgentic: boolean;
 }
 
 export type Comments = Models.Row & {
@@ -909,6 +912,8 @@ export type Projects = Models.Row & {
     isPinned: boolean | null;
     isTrash: boolean;
     primaryThreadId: string | null;
+    isAgentic: boolean;
+    dek: string | null;
 }
 
 export type ProjectObjects = Models.Row & {
@@ -1001,6 +1006,8 @@ export type Events = Models.Row & {
     isTrash: boolean;
     isWorkspace: boolean;
     attendeeCount: number;
+    isAgentic: boolean;
+    dek: string | null;
 }
 
 export type Calendars = Models.Row & {
@@ -1059,6 +1066,8 @@ export type Forms = Models.Row & {
     keepPermission: boolean | null;
     isTrash: boolean;
     isWorkspace: boolean;
+    isAgentic: boolean;
+    dek: string | null;
 }
 
 export type FormSubmissions = Models.Row & {
@@ -1250,6 +1259,8 @@ export type AgenticSessions = Models.Row & {
     harness: string | null;
     targetType: string | null;
     targetId: string | null;
+    isWorkspace: boolean;
+    projectId: string | null;
 }
 
 export type Swept = Models.Row & {

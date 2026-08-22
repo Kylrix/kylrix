@@ -33,6 +33,7 @@ Kylrix distinguishes strictly between two workspace scopes:
   - `totp` (for 2FA seeds)
   - `event` (for Calendar events)
   - `form` (for Forms)
+  - `agent_session` (for Kylie AI conversation sessions)
   - `moment` (for Social moments)
   - `tag` & `collaborator`
 

@@ -131,6 +131,30 @@ export default function EventList() {
     [activeWorkspace, attachEntityToActiveWorkspace, replaceDraftEventId, userId],
   );
 
+  // Eagerly pull custom workspace events into local state when switching workspaces
+  useEffect(() => {
+    if (!activeWorkspace || activeWorkspace.isPersonal) return;
+    const wsId = activeWorkspace.id;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
+        if (tagged?.events && Array.isArray(tagged.events) && tagged.events.length > 0 && !cancelled) {
+          tagged.events.forEach((e: any) => {
+            const mapped = mapRemoteEvent({ ...e, projectId: wsId, isWorkspace: true });
+            pushLiveEvent(mapped);
+          });
+        }
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspace?.id, pushLiveEvent]);
+
   const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
   const customWorkspaceId = isCustomWorkspace ? activeWorkspace?.id : null;
   const { rows: workspaceProjectObjects } = useProjectObjects(customWorkspaceId, 'event');

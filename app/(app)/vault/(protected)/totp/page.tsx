@@ -22,6 +22,8 @@ import { SyncStatusDot } from '@/components/ui/SyncStatusDot';
 import type { TotpSecrets as TotpItem } from '@/types/appwrite';
 import { looksEncrypted } from '@/lib/masterpass-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 
 
 // Stable TOTPCard - defined outside parent to prevent remount on every currentTime tick (1s).
@@ -275,9 +277,10 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, needsMasterPassword, isVaultUnlocked } = useAppwriteVault();
+  const { activeWorkspace } = useWorkspace();
   const { setConfiguration, resetConfiguration } = useFAB();
   const [totpCodes, setTotpCodes] = useState<TotpItem[]>([]);
-  const scopedTotpCodes = totpCodes;
+  const { filteredItems: scopedTotpCodes } = useWorkspaceFilteredItems(totpCodes, 'totp');
   const [folders, _setFolders] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
@@ -289,6 +292,34 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   }>({ open: false, id: null });
   const [editingTotp, setEditingTotp] = useState<TotpItem | null>(null);
   const [selectedTotp, setSelectedTotp] = useState<TotpItem | null>(null);
+
+  // Eagerly pull custom workspace totp codes into local state when switching workspaces
+  useEffect(() => {
+    if (!activeWorkspace || activeWorkspace.isPersonal) return;
+    const wsId = activeWorkspace.id;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
+        if (tagged?.totps && Array.isArray(tagged.totps) && tagged.totps.length > 0 && !cancelled) {
+          setTotpCodes((prev) => {
+            const byId = new Map(prev.map((t) => [t.$id, t]));
+            tagged.totps.forEach((t: any) => {
+              const id = t.$id || t.id;
+              if (id) byId.set(id, { ...byId.get(id), ...t, $id: id, projectId: wsId, isWorkspace: true });
+            });
+            return Array.from(byId.values());
+          });
+        }
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspace?.id]);
 
   useEffect(() => {
     if (!isVaultUnlocked()) return;
@@ -534,7 +565,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
           </div>
         ) : (
           <div className="flex flex-col gap-3.5 max-w-3xl">
-            {totpCodes
+            {scopedTotpCodes
               .filter((totp) => {
                 const q = search.trim().toLowerCase();
                 if (!q) return true;

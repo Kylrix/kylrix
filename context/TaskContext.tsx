@@ -780,6 +780,31 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       goalProjectObjects.map((po) => po.entityId).filter(Boolean) as string[]
     );
   }, [goalProjectObjects]);
+
+  // Eagerly pull custom workspace tasks into local state when switching workspaces
+  useEffect(() => {
+    if (!activeWorkspace || activeWorkspace.isPersonal) return;
+    const wsId = activeWorkspace.id;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
+        if (tagged?.tasks && Array.isArray(tagged.tasks) && tagged.tasks.length > 0 && !cancelled) {
+          tagged.tasks.forEach((t: any) => {
+            const coerced = coerceCachedTask({ ...t, projectId: wsId, isWorkspace: true });
+            if (coerced) pushLiveGoal(coerced);
+          });
+        }
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspace?.id, pushLiveGoal]);
+
   const flowWarmOwnerRef = useRef<string | null>(null);
   const pendingStatusPatchesRef = useRef<Map<string, PendingStatusPatch>>(new Map());
 

@@ -285,6 +285,35 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const [showSessionsDrawer, setShowSessionsDrawer] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const { filteredItems: workspaceFilteredSessions } = useWorkspaceFilteredItems(sessions, 'agent_session');
+
+  // Eagerly pull custom workspace agent sessions into local state when switching workspaces
+  useEffect(() => {
+    if (!activeWorkspace || activeWorkspace.isPersonal) return;
+    const wsId = activeWorkspace.id;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
+        if (tagged?.sessions && Array.isArray(tagged.sessions) && tagged.sessions.length > 0 && !cancelled) {
+          setSessions((prev) => {
+            const byId = new Map(prev.map((s) => [s.$id || s.id, s]));
+            tagged.sessions.forEach((s: any) => {
+              const id = s.$id || s.id;
+              if (id) byId.set(id, { ...byId.get(id), ...s, id, $id: id, projectId: wsId, isWorkspace: true });
+            });
+            return Array.from(byId.values());
+          });
+        }
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspace?.id]);
+
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [showSessionActionsDrawer, setShowSessionActionsDrawer] = useState(false);

@@ -224,7 +224,15 @@ export const ProjectsService = {
         ? 'goal'
         : (rawKind === 'password' || rawKind === 'secret' || rawKind === 'credentials' || rawKind === 'credential')
           ? 'credential'
-          : rawKind;
+          : (rawKind === 'totp' || rawKind === 'totps')
+            ? 'totp'
+            : (rawKind === 'event' || rawKind === 'events')
+              ? 'event'
+              : (rawKind === 'form' || rawKind === 'forms')
+                ? 'form'
+                : (rawKind === 'agent_session' || rawKind === 'agentic_session' || rawKind === 'session' || rawKind === 'sessions')
+                  ? 'agent_session'
+                  : rawKind;
 
     const { projectObjectsKindCacheKey } = await import('@/lib/projects/projects-cache');
     const cacheKey = projectObjectsKindCacheKey(projectId, normKind);
@@ -240,6 +248,10 @@ export const ProjectsService = {
           if (normKind === 'note') return k === 'note' || k === 'idea' || k === 'notes' || k === 'ideas';
           if (normKind === 'goal') return k === 'goal' || k === 'task' || k === 'goals' || k === 'tasks';
           if (normKind === 'credential') return k === 'credential' || k === 'password' || k === 'secret' || k === 'credentials';
+          if (normKind === 'totp') return k === 'totp' || k === 'totps';
+          if (normKind === 'event') return k === 'event' || k === 'events';
+          if (normKind === 'form') return k === 'form' || k === 'forms';
+          if (normKind === 'agent_session') return k === 'agent_session' || k === 'agentic_session' || k === 'session' || k === 'sessions';
           return k === normKind;
         });
       },
@@ -320,11 +332,12 @@ export const ProjectsService = {
           else if (normalized === 'event' || normalized === 'events') normalized = 'event';
           else if (normalized === 'form' || normalized === 'forms') normalized = 'form';
           else if (normalized === 'moment' || normalized === 'moments') normalized = 'moment';
+          else if (normalized === 'agent_session' || normalized === 'agentic_session' || normalized === 'session' || normalized === 'sessions') normalized = 'agent_session';
           if (!resourceIdsByType[normalized]) resourceIdsByType[normalized] = new Set();
           resourceIdsByType[normalized].add(id);
         }
 
-        const [notes, tasks, credentials, totps, events, forms, moments] = await Promise.all([
+        const [notes, tasks, credentials, totps, events, forms, moments, sessions] = await Promise.all([
           resourceIdsByType['note']?.size 
             ? Promise.all(
                 Array.from(resourceIdsByType['note']).map(async (id) => {
@@ -362,21 +375,57 @@ export const ProjectsService = {
               ).then((res) => res.filter(Boolean))
             : Promise.resolve([]),
           resourceIdsByType['totp']?.size
-            ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.VAULT, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS, [Query.equal('$id', Array.from(resourceIdsByType['totp']))], 500).then((r: any) => r.rows || []).catch(() => [])
+            ? Promise.all(
+                Array.from(resourceIdsByType['totp']).map(async (id) => {
+                  try {
+                    const { getTotpSecret } = await import('./index');
+                    return await getTotpSecret(id);
+                  } catch {
+                    return (databases as any).getRow(APPWRITE_CONFIG.DATABASES.VAULT, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS, id).catch(() => null);
+                  }
+                })
+              ).then((res) => res.filter(Boolean))
             : Promise.resolve([]),
           resourceIdsByType['event']?.size
-            ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.EVENTS, [Query.equal('$id', Array.from(resourceIdsByType['event']))], 500).then((r: any) => r.rows || []).catch(() => [])
+            ? Promise.all(
+                Array.from(resourceIdsByType['event']).map(async (id) => {
+                  try {
+                    return await (databases as any).getRow(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.EVENTS, id);
+                  } catch {
+                    return null;
+                  }
+                })
+              ).then((res) => res.filter(Boolean))
             : Promise.resolve([]),
           resourceIdsByType['form']?.size
-            ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, [Query.equal('$id', Array.from(resourceIdsByType['form']))], 500).then((r: any) => r.rows || []).catch(() => [])
+            ? Promise.all(
+                Array.from(resourceIdsByType['form']).map(async (id) => {
+                  try {
+                    return await (databases as any).getRow(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, id);
+                  } catch {
+                    return null;
+                  }
+                })
+              ).then((res) => res.filter(Boolean))
             : Promise.resolve([]),
           resourceIdsByType['moment']?.size
             ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.CONNECT, APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS, [Query.equal('$id', Array.from(resourceIdsByType['moment']))], 500).then((r: any) => r.rows || []).catch(() => [])
             : Promise.resolve([]),
+          resourceIdsByType['agent_session']?.size
+            ? Promise.all(
+                Array.from(resourceIdsByType['agent_session']).map(async (id) => {
+                  try {
+                    return await (databases as any).getRow(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.SESSION_OBJECTS, id).catch(() => null);
+                  } catch {
+                    return null;
+                  }
+                })
+              ).then((res) => res.filter(Boolean))
+            : Promise.resolve([]),
         ]);
 
         if (!tagIds.length) {
-          return { notes, tasks, credentials, totps, events, forms, moments };
+          return { notes, tasks, credentials, totps, events, forms, moments, sessions };
         }
       } catch (err) {
         console.warn('[ProjectsService] listProjectObjects in listTaggedResources failed:', err);

@@ -29,6 +29,8 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useFAB } from '@/context/FABContext';
 import { LocalEngine } from '@/lib/services/LocalEngine';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 
 export default function FormsDashboard() {
     const { user } = useAuth();
@@ -37,7 +39,9 @@ export default function FormsDashboard() {
     const { openSidebar, closeSidebar } = useDynamicSidebar();
     const { openOverlay, closeOverlay } = useOverlay();
     const { setConfiguration, resetConfiguration } = useFAB();
+    const { activeWorkspace } = useWorkspace();
     const [forms, setForms] = useState<Forms[]>([]);
+    const { filteredItems: workspaceScopedForms } = useWorkspaceFilteredItems(forms, 'form');
     const [offlineDrafts, setOfflineDrafts] = useState<FormDraft[]>([]);
     const [loading, setLoading] = useState(true);
     const [tabValue, setTabValue] = useState(0);
@@ -156,6 +160,34 @@ export default function FormsDashboard() {
             if (unsubscribe) unsubscribe();
         };
     }, [fetchForms]);
+
+    // Eagerly pull custom workspace forms into local state when switching workspaces
+    useEffect(() => {
+        if (!activeWorkspace || activeWorkspace.isPersonal) return;
+        const wsId = activeWorkspace.id;
+        let cancelled = false;
+
+        void (async () => {
+            try {
+                const { ProjectsService } = await import('@/lib/appwrite/projects');
+                const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
+                if (tagged?.forms && Array.isArray(tagged.forms) && tagged.forms.length > 0 && !cancelled) {
+                    setForms((prev) => {
+                        const byId = new Map(prev.map((f) => [f.$id, f]));
+                        tagged.forms.forEach((f: any) => {
+                            const id = f.$id || f.id;
+                            if (id) byId.set(id, { ...byId.get(id), ...f, $id: id, projectId: wsId, isWorkspace: true });
+                        });
+                        return Array.from(byId.values());
+                    });
+                }
+            } catch {}
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeWorkspace?.id]);
 
     const handleEdit = (form: Forms) => {
         setSelectedForm(form);
@@ -345,7 +377,7 @@ export default function FormsDashboard() {
                     <div>
                         {tabValue === 0 && (
                             <>
-                                {forms.length === 0 ? (
+                                {workspaceScopedForms.length === 0 ? (
                                     <div className="py-24 text-center bg-[#161412] border border-dashed border-white/10 rounded-3xl">
                                         <FileText className="h-14 w-14 mx-auto text-white/20 mb-3" />
                                         <h3 className="text-lg font-clash font-bold text-white mb-4">No active forms</h3>
@@ -360,7 +392,7 @@ export default function FormsDashboard() {
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                        {forms.map((form) => (
+                                        {workspaceScopedForms.map((form) => (
                                             <FormCard
                                                 key={form.$id}
                                                 form={form}

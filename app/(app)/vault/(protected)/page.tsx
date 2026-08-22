@@ -20,6 +20,8 @@ import { ArrowLeft, Plus, Eye, EyeOff, ArrowUpDown, RefreshCw, Lock } from 'luci
 import { useFAB } from '@/context/FABContext';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { TOTPPageContent } from './totp/page';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false);
@@ -39,6 +41,7 @@ function useIsDesktop() {
 function DashboardPageContent() {
   const { user, isVaultUnlocked, isVaultBlurEnabled, setVaultBlurEnabled } = useAppwriteVault();
   const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
+  const { activeWorkspace } = useWorkspace();
   const { requestSudo } = useSudo();
   const router = useRouter();
   const { openOverlay, closeOverlay } = useOverlay();
@@ -307,6 +310,34 @@ function DashboardPageContent() {
     void hydrateVaultData();
   }, [hydrateVaultData]);
 
+  // Eagerly pull custom workspace credentials into local state when switching workspaces
+  useEffect(() => {
+    if (!activeWorkspace || activeWorkspace.isPersonal) return;
+    const wsId = activeWorkspace.id;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
+        if (tagged?.credentials && Array.isArray(tagged.credentials) && tagged.credentials.length > 0 && !cancelled) {
+          setAllCredentials((prev) => {
+            const byId = new Map(prev.map((c) => [c.$id, c]));
+            tagged.credentials.forEach((c: any) => {
+              const id = c.$id || c.id;
+              if (id) byId.set(id, { ...byId.get(id), ...c, $id: id, projectId: wsId, isWorkspace: true });
+            });
+            return Array.from(byId.values());
+          });
+        }
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspace?.id]);
+
   const sortedCredentials = useMemo(() => {
     return [...allCredentials].sort((a, b) => {
       const aPinned = isResourcePinned('credential', a.$id, a.userId, a.isPinned);
@@ -316,6 +347,8 @@ function DashboardPageContent() {
       return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
     });
   }, [allCredentials, isResourcePinned]);
+
+  const { filteredItems: workspaceScopedCredentials } = useWorkspaceFilteredItems(sortedCredentials, 'credential');
 
   const vaultGridClass =
     'grid gap-4 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]';
@@ -437,7 +470,7 @@ function DashboardPageContent() {
                           <CredentialItem key={`skeleton-${i}`} credential={{ $id: `skeleton-${i}`, name: 'Loading...', username: '', type: 'password' } as any} onCopy={() => {}} onEdit={() => {}} onDelete={() => {}} />
                         ))}
                       </div>
-                    ) : sortedCredentials.length === 0 ? (
+                    ) : workspaceScopedCredentials.length === 0 ? (
                       <div className="p-16 text-center rounded-[32px] bg-[#161412] border border-dashed border-[#1C1A18] flex flex-col items-center justify-center">
                         <Lock className="h-12 w-12 text-white/10 mb-4" />
                         <h2 className="text-xl font-black text-white mb-2 font-clash">
@@ -477,7 +510,7 @@ function DashboardPageContent() {
                     ) : (
                       <>
                       <div className={vaultGridClass}>
-                        {sortedCredentials.map((cred: Credentials) => (
+                        {workspaceScopedCredentials.map((cred: Credentials) => (
                           <CredentialItem
                             key={cred.$id}
                             credential={cred}
