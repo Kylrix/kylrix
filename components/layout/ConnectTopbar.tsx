@@ -2068,10 +2068,18 @@ export default function ConnectTopbar({
           return (
             <Box
               key={w.id}
-              component="button"
+              role="button"
+              tabIndex={0}
               onClick={() => {
                 setActiveWorkspaceId(w.id);
                 handleCloseAll();
+              }}
+              onKeyDown={(e: React.KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setActiveWorkspaceId(w.id);
+                  handleCloseAll();
+                }
               }}
               sx={{
                 width: '100%',
@@ -2158,10 +2166,18 @@ export default function ConnectTopbar({
               return (
                 <Box
                   key={w.id}
-                  component="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     setActiveWorkspaceId(w.id);
                     handleCloseAll();
+                  }}
+                  onKeyDown={(e: React.KeyboardEvent) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setActiveWorkspaceId(w.id);
+                      handleCloseAll();
+                    }
                   }}
                   sx={{
                     width: '100%',

@@ -266,16 +266,81 @@ export const ProjectsService = {
     return await removeObjectFromProjectSecure(objectId);
   },
 
-  async listTaggedResources(tagIds: string[], projectId?: string) {
+  async listTaggedResources(tagIdsOrProjectId: string[] | string, explicitProjectId?: string) {
+    let tagIds: string[] = [];
+    let projectId: string | undefined = explicitProjectId;
+
+    if (typeof tagIdsOrProjectId === 'string') {
+      projectId = tagIdsOrProjectId;
+      tagIds = [];
+    } else if (Array.isArray(tagIdsOrProjectId)) {
+      tagIds = tagIdsOrProjectId;
+    }
+
+    // If projectId is provided, fetch project_objects directly
+    if (projectId) {
+      try {
+        const poRes = await this.listProjectObjects(projectId).catch(() => null);
+        const poRows: any[] = Array.isArray(poRes?.rows) ? poRes.rows : [];
+        const resourceIdsByType: Record<string, Set<string>> = {};
+
+        for (const p of poRows) {
+          const type = p.entityKind;
+          const id = p.entityId;
+          if (!type || !id) continue;
+          let normalized = type;
+          if (type === 'productivity.task' || type === 'goal') normalized = 'task';
+          if (type === 'password' || type === 'secret') normalized = 'credential';
+          if (!resourceIdsByType[normalized]) resourceIdsByType[normalized] = new Set();
+          resourceIdsByType[normalized].add(id);
+        }
+
+        const { listNotes, listFlowTasks, listKeepCredentials } = await import('./index');
+
+        const [notes, tasks, credentials, totps, events, forms, moments] = await Promise.all([
+          resourceIdsByType['note']?.size 
+            ? listNotes([Query.equal('$id', Array.from(resourceIdsByType['note']))], 500).then(r => r.rows || []).catch(() => []) 
+            : Promise.resolve([]),
+          resourceIdsByType['task']?.size
+            ? listFlowTasks([Query.equal('$id', Array.from(resourceIdsByType['task'])), Query.limit(500)]).then(r => r.rows || []).catch(() => [])
+            : Promise.resolve([]),
+          resourceIdsByType['credential']?.size
+            ? listKeepCredentials([Query.equal('$id', Array.from(resourceIdsByType['credential'])), Query.limit(500)]).then(r => r.rows || []).catch(() => [])
+            : Promise.resolve([]),
+          resourceIdsByType['totp']?.size
+            ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.VAULT, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS, [Query.equal('$id', Array.from(resourceIdsByType['totp']))], 500).then((r: any) => r.rows || []).catch(() => [])
+            : Promise.resolve([]),
+          resourceIdsByType['event']?.size
+            ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.EVENTS, [Query.equal('$id', Array.from(resourceIdsByType['event']))], 500).then((r: any) => r.rows || []).catch(() => [])
+            : Promise.resolve([]),
+          resourceIdsByType['form']?.size
+            ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, [Query.equal('$id', Array.from(resourceIdsByType['form']))], 500).then((r: any) => r.rows || []).catch(() => [])
+            : Promise.resolve([]),
+          resourceIdsByType['moment']?.size
+            ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.CONNECT, APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS, [Query.equal('$id', Array.from(resourceIdsByType['moment']))], 500).then((r: any) => r.rows || []).catch(() => [])
+            : Promise.resolve([]),
+        ]);
+
+        if (!tagIds.length) {
+          return { notes, tasks, credentials, totps, events, forms, moments };
+        }
+      } catch (err) {
+        console.warn('[ProjectsService] listProjectObjects in listTaggedResources failed:', err);
+      }
+    }
+
     if (!tagIds || tagIds.length === 0) {
       return { notes: [], tasks: [], credentials: [], totps: [], events: [], forms: [], moments: [] };
     }
 
     if (typeof window !== 'undefined' && projectId) {
-      const { account } = await import('./client');
-      const { jwt } = await account.createJWT();
-      const { listProjectTaggedResourcesSecure } = await import('@/lib/actions/secure-ops');
-      return listProjectTaggedResourcesSecure(projectId, tagIds, jwt);
+      try {
+        const { account } = await import('./client');
+        const { jwt } = await account.createJWT();
+        const { listProjectTaggedResourcesSecure } = await import('@/lib/actions/secure-ops');
+        const res = await listProjectTaggedResourcesSecure(projectId, tagIds, jwt);
+        if (res) return res;
+      } catch {}
     }
 
     const databaseId = APPWRITE_CONFIG.DATABASES.NOTE;
@@ -284,19 +349,20 @@ export const ProjectsService = {
     try {
       // 0. Resolve tag names for fallback name-based sweeping
       const { listTags } = await import('./index');
-      const tagsRes = await listTags([Query.equal('$id', tagIds)]);
-      const tagNames = tagsRes.rows.map((t: any) => t.name).filter(Boolean);
+      const tagsRes = await listTags([Query.equal('$id', tagIds)]).catch(() => ({ rows: [] }));
+      const tagNames = (tagsRes?.rows || []).map((t: any) => t.name).filter(Boolean);
 
       // 1. Fetch ALL pivot records for these tags (by ID and by Name)
-      // We do this in parallel to be exhaustive
       const [pivotById, pivotByName] = await Promise.all([
-        databases.listRows(databaseId, pivotTable, [Query.equal('tagId', tagIds), Query.limit(5000)]),
+        databases.listRows(databaseId, pivotTable, [Query.equal('tagId', tagIds), Query.limit(5000)]).catch(() => ({ rows: [] })),
         tagNames.length 
-          ? databases.listRows(databaseId, pivotTable, [Query.equal('tag', tagNames), Query.limit(5000)])
+          ? databases.listRows(databaseId, pivotTable, [Query.equal('tag', tagNames), Query.limit(5000)]).catch(() => ({ rows: [] }))
           : Promise.resolve({ rows: [] })
       ]);
 
-      const allPivotRows = [...pivotById.rows, ...pivotByName.rows];
+      const rowsById = Array.isArray(pivotById?.rows) ? pivotById.rows : [];
+      const rowsByName = Array.isArray(pivotByName?.rows) ? pivotByName.rows : [];
+      const allPivotRows = [...rowsById, ...rowsByName];
 
       if (!allPivotRows.length) {
         return { notes: [], tasks: [], credentials: [], totps: [], events: [], forms: [], moments: [] };
@@ -308,7 +374,6 @@ export const ProjectsService = {
         const id = p.resourceId;
         if (!type || !id) return;
         
-        // Normalize types
         let normalized = type;
         if (type === 'productivity.task' || type === 'goal') normalized = 'task';
         if (type === 'password' || type === 'secret') normalized = 'credential';
@@ -320,43 +385,28 @@ export const ProjectsService = {
       // Fetch actual objects in parallel
       const { listNotes, listFlowTasks, listKeepCredentials } = await import('./index');
 
-      // Notes
-      const notesPromise = resourceIdsByType['note']?.size 
-        ? listNotes([Query.equal('$id', Array.from(resourceIdsByType['note']))], 500).then(r => r.rows).catch(() => []) 
-        : Promise.resolve([]);
-
-      // Tasks
-      const tasksPromise = resourceIdsByType['task']?.size
-        ? listFlowTasks([Query.equal('$id', Array.from(resourceIdsByType['task'])), Query.limit(500)]).then(r => r.rows).catch(() => [])
-        : Promise.resolve([]);
-
-      // Credentials
-      const credentialsPromise = resourceIdsByType['credential']?.size
-        ? listKeepCredentials([Query.equal('$id', Array.from(resourceIdsByType['credential'])), Query.limit(500)]).then(r => r.rows).catch(() => [])
-        : Promise.resolve([]);
-
-      // TOTPs
-      const totpsPromise = resourceIdsByType['totp']?.size
-        ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.VAULT, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS, [Query.equal('$id', Array.from(resourceIdsByType['totp']))], 500).then((r: any) => r.rows).catch(() => [])
-        : Promise.resolve([]);
-
-      // Events
-      const eventsPromise = resourceIdsByType['event']?.size
-        ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.EVENTS, [Query.equal('$id', Array.from(resourceIdsByType['event']))], 500).then((r: any) => r.rows).catch(() => [])
-        : Promise.resolve([]);
-
-      // Forms
-      const formsPromise = resourceIdsByType['form']?.size
-        ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, [Query.equal('$id', Array.from(resourceIdsByType['form']))], 500).then((r: any) => r.rows).catch(() => [])
-        : Promise.resolve([]);
-
-      // Moments
-      const momentsPromise = resourceIdsByType['moment']?.size
-        ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.CONNECT, APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS, [Query.equal('$id', Array.from(resourceIdsByType['moment']))], 500).then((r: any) => r.rows).catch(() => [])
-        : Promise.resolve([]);
-
       const [notes, tasks, credentials, totps, events, forms, moments] = await Promise.all([
-        notesPromise, tasksPromise, credentialsPromise, totpsPromise, eventsPromise, formsPromise, momentsPromise
+        resourceIdsByType['note']?.size 
+          ? listNotes([Query.equal('$id', Array.from(resourceIdsByType['note']))], 500).then(r => r.rows || []).catch(() => []) 
+          : Promise.resolve([]),
+        resourceIdsByType['task']?.size
+          ? listFlowTasks([Query.equal('$id', Array.from(resourceIdsByType['task'])), Query.limit(500)]).then(r => r.rows || []).catch(() => [])
+          : Promise.resolve([]),
+        resourceIdsByType['credential']?.size
+          ? listKeepCredentials([Query.equal('$id', Array.from(resourceIdsByType['credential'])), Query.limit(500)]).then(r => r.rows || []).catch(() => [])
+          : Promise.resolve([]),
+        resourceIdsByType['totp']?.size
+          ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.VAULT, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS, [Query.equal('$id', Array.from(resourceIdsByType['totp']))], 500).then((r: any) => r.rows || []).catch(() => [])
+          : Promise.resolve([]),
+        resourceIdsByType['event']?.size
+          ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.EVENTS, [Query.equal('$id', Array.from(resourceIdsByType['event']))], 500).then((r: any) => r.rows || []).catch(() => [])
+          : Promise.resolve([]),
+        resourceIdsByType['form']?.size
+          ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, [Query.equal('$id', Array.from(resourceIdsByType['form']))], 500).then((r: any) => r.rows || []).catch(() => [])
+          : Promise.resolve([]),
+        resourceIdsByType['moment']?.size
+          ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.CONNECT, APPWRITE_CONFIG.TABLES.CONNECT.MOMENTS, [Query.equal('$id', Array.from(resourceIdsByType['moment']))], 500).then((r: any) => r.rows || []).catch(() => [])
+          : Promise.resolve([]),
       ]);
 
       return { notes, tasks, credentials, totps, events, forms, moments };
