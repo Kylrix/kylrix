@@ -55,7 +55,10 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Build, ship and think in one living agentic workspace. — Kylrix',
     description: 'Your workflow becomes a living, scalable system that compounds daily leverage over time. Everything is an object, every action is just a tool call, and every result is more context.',
-    images: ['/opengraph-image']}};
+    images: ['/opengraph-image']},
+  other: {
+    'ory-verify': 'orynth-9809db1def8b427d8c82b09db6ae2bac',
+  }};
 
 export const viewport: Viewport = {
   themeColor: '#000000',

@@ -42,6 +42,7 @@ sqlite.json
 # security & data
 .data/
 *.txt
+!public/.well-known/**
 !LICENSES/
 !LICENSES/**
 *.py
