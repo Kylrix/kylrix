@@ -324,7 +324,7 @@ const initialState: TaskState = {
     showCompleted: true,
     showArchived: false},
   sort: {
-    field: 'createdAt',
+    field: 'updatedAt',
     direction: 'desc'},
   viewMode: 'list',
   isLoading: false,
@@ -1826,10 +1826,14 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
           break;
         case 'createdAt':
-          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          const aCreated = new Date((a as any).$createdAt || a.createdAt || (a as any).$updatedAt || a.updatedAt || 0).getTime();
+          const bCreated = new Date((b as any).$createdAt || b.createdAt || (b as any).$updatedAt || b.updatedAt || 0).getTime();
+          comparison = aCreated - bCreated;
           break;
         case 'updatedAt':
-          comparison = new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+          const aUpdated = new Date((a as any).$updatedAt || a.updatedAt || (a as any).$createdAt || a.createdAt || 0).getTime();
+          const bUpdated = new Date((b as any).$updatedAt || b.updatedAt || (b as any).$createdAt || b.createdAt || 0).getTime();
+          comparison = aUpdated - bUpdated;
           break;
         case 'title':
           comparison = a.title.localeCompare(b.title);
