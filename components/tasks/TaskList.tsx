@@ -8,6 +8,7 @@ import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useResourcePins } from '@/context/ResourcePinContext';
 import { toast } from 'react-hot-toast';
 
 import { EmptyStateAnomalyDetector } from '@/context/NeuralContext';
@@ -71,9 +72,14 @@ export default function TaskList() {
     return () => resetConfiguration();
   }, [setConfiguration, resetConfiguration, openCreateGoal, isDesktop]);
 
+  const { isPinned: isResourcePinned } = useResourcePins();
+
   const tasks = getFilteredTasks();
   const activeTasks = tasks.filter(t => t.status !== 'done');
   const completedTasks = tasks.filter(t => t.status === 'done');
+
+  const pinnedTasks = activeTasks.filter(t => isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned));
+  const unpinnedTasks = activeTasks.filter(t => !isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned));
 
   const rawTagOptions = getTagFilterOptions();
   const directTaskTags = Array.from(
@@ -101,8 +107,8 @@ export default function TaskList() {
   const [goalPage, setGoalPage] = useState(1);
   const [goalSentinelNode, setGoalSentinelNode] = useState<HTMLDivElement | null>(null);
   const goalSentinelRef = useCallback((node: HTMLDivElement | null) => setGoalSentinelNode(node), []);
-  const visibleActiveTasks = activeTasks.slice(0, goalPage * GOAL_PAGE_SIZE);
-  const hasMoreGoals = visibleActiveTasks.length < activeTasks.length;
+  const visibleUnpinnedTasks = unpinnedTasks.slice(0, goalPage * GOAL_PAGE_SIZE);
+  const hasMoreGoals = visibleUnpinnedTasks.length < unpinnedTasks.length;
   useEffect(() => {
     setGoalPage(1);
   }, [filter.search, filter.status, filter.labels]);
@@ -217,24 +223,39 @@ export default function TaskList() {
               </div>
             ) : (
               <>
+                {/* Pinned Goals Section */}
+                {pinnedTasks.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 px-1 mb-2">
+                      <span className="text-[10px] font-black text-amber-400 uppercase tracking-[0.2em] font-mono flex items-center gap-1.5">
+                        <span>Pinned ({pinnedTasks.length})</span>
+                      </span>
+                      <div className="flex-1 h-px bg-gradient-to-r from-amber-400/20 to-transparent" />
+                    </div>
+                    <div className="grid gap-4 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+                      {pinnedTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
+                    </div>
+                  </div>
+                )}
+
                 {/* Active Goals Section */}
-                {activeTasks.length > 0 && (
+                {unpinnedTasks.length > 0 && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-3 px-1 mb-2">
                       <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-[0.2em] font-mono">
-                        Active Goals ({activeTasks.length})
+                        {pinnedTasks.length > 0 ? `Other Goals (${unpinnedTasks.length})` : `Active Goals (${unpinnedTasks.length})`}
                       </span>
                       <div className="flex-1 h-px bg-gradient-to-r from-[#A855F7]/20 to-transparent" />
                     </div>
                     <div className="grid gap-4 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
-                      {visibleActiveTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
+                      {visibleUnpinnedTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
                     </div>
                     {hasMoreGoals && (
                       <div ref={goalSentinelRef} className="flex justify-center py-6">
                         <span className="text-xs font-bold tracking-widest uppercase text-white/25">Loading more…</span>
                       </div>
                     )}
-                    {!hasMoreGoals && visibleActiveTasks.length > 0 && activeTasks.length > GOAL_PAGE_SIZE && (
+                    {!hasMoreGoals && visibleUnpinnedTasks.length > 0 && unpinnedTasks.length > GOAL_PAGE_SIZE && (
                       <div className="flex justify-center py-4">
                         <span className="text-[10px] font-bold tracking-widest uppercase text-white/15">End of list</span>
                       </div>
