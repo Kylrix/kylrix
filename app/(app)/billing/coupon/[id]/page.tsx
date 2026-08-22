@@ -2,8 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography, alpha } from '@/lib/openbricks/primitives';
-import { CheckCircle2, Loader2, Ticket } from 'lucide-react';
+import {
+  Ticket,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  ArrowRight,
+  Sparkles,
+  Gift,
+  ShieldCheck,
+} from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { claimCouponAction } from '@/lib/actions/billing/billing';
 import { account } from '@/lib/appwrite/client';
@@ -22,52 +30,77 @@ type CouponClaimResponse = {
   error?: string;
 };
 
+function formatFriendlyError(error: any): string {
+  const msg = String(error?.message || error || '').toLowerCase();
+  if (msg.includes('not found')) {
+    return 'This pass code could not be found or does not exist.';
+  }
+  if (msg.includes('no longer valid') || msg.includes('expired') || msg.includes('depleted') || msg.includes('revoked')) {
+    return 'This pass has expired or is no longer active.';
+  }
+  if (msg.includes('limit reached')) {
+    return 'This pass has already reached its maximum redemptions.';
+  }
+  if (msg.includes('reserved') || msg.includes('another account')) {
+    return 'This pass is reserved for a specific account.';
+  }
+  if (msg.includes('authentication') || msg.includes('unauthorized')) {
+    return 'Please sign in to your Kylrix account to claim this pass.';
+  }
+  return 'This pass is currently unavailable. Please verify the link or try another code.';
+}
+
 export default function CouponLandingPage(props: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const params = use(props.params);
-  const { user, isLoading } = useAuth();
-  const couponId = useMemo(() => (params.id || '').trim(), [params.id]);
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const rawId = useMemo(() => (params.id || '').trim(), [params.id]);
+  const [couponId, setCouponId] = useState(rawId);
+
   const [state, setState] = useState<'loading' | 'ready' | 'claimed' | 'error'>('loading');
-  const [message, setMessage] = useState<string>('Resolving coupon...');
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [coupon, setCoupon] = useState<CouponClaimResponse | null>(null);
-  const claimStartedRef = useRef(false);
   const [isClaiming, setIsClaiming] = useState(false);
+  const checkedRef = useRef<string | null>(null);
+
+  const checkCoupon = async (targetId: string) => {
+    if (!targetId) {
+      setState('error');
+      setErrorMessage('No pass code specified.');
+      return;
+    }
+    setState('loading');
+    setErrorMessage('');
+    try {
+      const jwt = await account.createJWT().then((res: any) => res?.jwt || '').catch(() => '');
+      const data = (await claimCouponAction(targetId, jwt || undefined, true)) as CouponClaimResponse;
+
+      setCoupon(data);
+      if (data.alreadyClaimed) {
+        setState('claimed');
+      } else {
+        setState('ready');
+      }
+    } catch (error: any) {
+      setState('error');
+      setErrorMessage(formatFriendlyError(error));
+    }
+  };
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isAuthLoading) return;
     if (!user) {
       const url = new URL('/', window.location.origin);
       url.searchParams.set('source', window.location.href);
-      url.searchParams.set('return_to', `/billing/coupon/${encodeURIComponent(couponId)}`);
+      url.searchParams.set('return_to', `/billing/coupon/${encodeURIComponent(rawId)}`);
       router.push(url.toString());
       return;
     }
 
-    if (claimStartedRef.current) return;
-    claimStartedRef.current = true;
-
-    const checkCoupon = async () => {
-      try {
-        const jwt = await account.createJWT().then((res: any) => res?.jwt || '').catch(() => '');
-        // Verify target availability first without performing redemption logic
-        const data = (await claimCouponAction(couponId, jwt || undefined, true)) as CouponClaimResponse;
-        
-        setCoupon(data);
-        if (data.alreadyClaimed) {
-          setState('claimed');
-          setMessage(data.message || 'This coupon is already active on your account.');
-          return;
-        }
-        setState('ready');
-        setMessage(data.message || `You qualify for this discount!`);
-      } catch (error: any) {
-        setState('error');
-        setMessage(error?.message || 'Coupon check failed.');
-      }
-    };
-
-    void checkCoupon();
-  }, [couponId, isLoading, user, router]);
+    if (checkedRef.current === rawId) return;
+    checkedRef.current = rawId;
+    void checkCoupon(rawId);
+  }, [rawId, isAuthLoading, user, router]);
 
   const handleClaim = async () => {
     if (!couponId || isClaiming) return;
@@ -89,95 +122,154 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
       }
 
       setState('claimed');
-      setMessage(data.message || 'Coupon applied successfully.');
       const successUrl = new URL('/billing/success', window.location.origin);
       successUrl.searchParams.set('success', 'true');
       router.replace(successUrl.toString());
     } catch (error: any) {
       setState('error');
-      setMessage(error?.message || 'Coupon could not be claimed.');
+      setErrorMessage(formatFriendlyError(error));
     } finally {
       setIsClaiming(false);
     }
   };
 
+  const discountPercent = coupon?.discountPercent ?? 100;
+  const months = coupon?.months ?? 1;
+  const isFullFree = discountPercent === 100;
+
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: '#fff', display: 'flex', alignItems: 'center', py: 8 }}>
-      <Container maxWidth="sm">
-        <Paper
-          elevation={0}
-          sx={{
-            p: { xs: 3, sm: 4 },
-            borderRadius: 5,
-            bgcolor: '#161412',
-            border: '1px solid rgba(255,255,255,0.06)',
-            boxShadow: '0 28px 60px rgba(0,0,0,0.42)'}}
-        >
-          <Stack spacing={3} alignItems="center" textAlign="center">
-            <Box sx={{ p: 2, borderRadius: 4, bgcolor: alpha('#6366F1', 0.08), color: '#6366F1' }}>
-              <Ticket size={28} />
-            </Box>
+    <div className="min-h-screen bg-[#000000] text-[#F5F2ED] flex items-center justify-center p-4 selection:bg-[#6366F1]/30">
+      <div className="w-full max-w-md bg-[#161412] border border-white/5 rounded-[28px] p-6 sm:p-8 flex flex-col items-center text-center shadow-2xl relative overflow-hidden">
+        
+        {/* Loading State */}
+        {state === 'loading' && (
+          <div className="w-full flex flex-col items-center py-6 space-y-5 animate-fadeIn">
+            <div className="w-12 h-12 rounded-2xl bg-[#0A0908] border border-white/5 flex items-center justify-center text-[#6366F1]">
+              <Loader2 className="w-6 h-6 animate-spin text-[#6366F1]" />
+            </div>
 
-            <Typography variant="overline" sx={{ letterSpacing: '0.2em', fontWeight: 800, color: 'rgba(255,255,255,0.5)' }}>
-              Kylrix coupon
-            </Typography>
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-white/40">
+                Kylrix Access Pass
+              </span>
+              <h1 className="font-clash text-2xl font-bold text-white tracking-tight">
+                Checking Pass
+              </h1>
+              <p className="font-satoshi text-xs text-white/50 max-w-xs">
+                Verifying your code with your account…
+              </p>
+            </div>
 
-            <Typography component="h1" sx={{ fontFamily: 'var(--font-clash)', fontSize: '2.2rem', lineHeight: 1, fontWeight: 900 }}>
-              {state === 'loading' ? 'Resolving coupon...' : state === 'ready' ? 'Ready to Claim' : state === 'claimed' ? 'Coupon applied' : 'Coupon unavailable'}
-            </Typography>
+            <div className="w-full bg-[#0A0908] border border-white/5 rounded-2xl p-4 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
+                <Ticket className="w-4 h-4 text-white/40" />
+              </div>
+              <div className="text-left truncate flex-1 min-w-0">
+                <span className="text-[10px] font-mono text-white/30 uppercase block">Code ID</span>
+                <span className="text-xs font-mono font-bold text-white/70 truncate block">{couponId}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
-            <Typography sx={{ color: 'rgba(255,255,255,0.68)', lineHeight: 1.7 }}>
-              {message}
-            </Typography>
+        {/* Ready to Claim State */}
+        {state === 'ready' && (
+          <div className="w-full flex flex-col items-center space-y-6 animate-fadeIn">
+            <div className="w-14 h-14 rounded-2xl bg-[#0A0908] border border-white/5 flex items-center justify-center text-[#6366F1]">
+              <Sparkles className="w-7 h-7 text-[#6366F1]" />
+            </div>
 
-            {state === 'ready' && coupon && (
-              <Box sx={{ py: 1.5, px: 3, border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.02)', width: '100%' }}>
-                <Stack spacing={1} textAlign="left">
-                  <Typography variant="body2" sx={{ color: '#6366F1', fontWeight: 800 }}>Discount Value: {coupon.discountPercent}% Off</Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>Plan Duration: {coupon.months || 1} Month(s)</Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)' }}>Applicable Plan: {coupon.planId || 'PRO_MONTH'}</Typography>
-                </Stack>
-              </Box>
-            )}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-400">
+                Valid Pass
+              </span>
+              <h1 className="font-clash text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                {isFullFree ? 'Pro Access Pass' : `${discountPercent}% Discount`}
+              </h1>
+              <p className="font-satoshi text-xs text-white/60">
+                {isFullFree
+                  ? `Claim ${months} month${months > 1 ? 's' : ''} of Kylrix Pro subscription for free.`
+                  : `Apply a ${discountPercent}% discount to your Pro subscription.`}
+              </p>
+            </div>
 
-            {state === 'loading' && (
-              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ color: 'rgba(255,255,255,0.55)' }}>
-                <CircularProgress size={18} sx={{ color: '#6366F1' }} />
-                <Typography variant="body2">Validating against the accounts API...</Typography>
-              </Stack>
-            )}
+            {/* Pass Details Child Tile */}
+            <div className="w-full bg-[#0A0908] border border-white/5 rounded-2xl p-4 text-left space-y-3">
+              <div className="flex items-center justify-between py-1 border-b border-white/5">
+                <span className="text-xs text-white/40 font-satoshi">Discount</span>
+                <span className="text-xs font-mono font-bold text-emerald-400">
+                  {isFullFree ? '100% Free' : `${discountPercent}% Off`}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-white/5">
+                <span className="text-xs text-white/40 font-satoshi">Duration</span>
+                <span className="text-xs font-mono font-bold text-white">
+                  {months} Month{months > 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-1">
+                <span className="text-xs text-white/40 font-satoshi">Plan</span>
+                <span className="text-xs font-mono font-bold text-[#6366F1]">
+                  {coupon?.planId === 'PRO_YEAR' ? 'Kylrix Pro (Yearly)' : 'Kylrix Pro'}
+                </span>
+              </div>
+            </div>
 
-            {state === 'error' && (
-              <Alert severity="error" sx={{ width: '100%', bgcolor: alpha('#EF4444', 0.08), color: '#fff', border: '1px solid rgba(255,255,255,0.06)' }}>
-                {message}
-              </Alert>
-            )}
-
-            {state === 'ready' && (
-              <Button
-                variant="contained"
+            {/* Actions */}
+            <div className="w-full space-y-3 pt-2">
+              <button
+                type="button"
                 onClick={handleClaim}
                 disabled={isClaiming}
-                sx={{
-                  bgcolor: '#6366F1',
-                  color: '#fff',
-                  borderRadius: 999,
-                  px: 4,
-                  py: 1.5,
-                  textTransform: 'none',
-                  fontWeight: 900,
-                  fontSize: '0.95rem',
-                  '&:hover': { bgcolor: '#4F46E5' },
-                  '&:disabled': { opacity: 0.5 }}}
-                startIcon={isClaiming ? <Loader2 size={16} className="animate-spin" /> : <Ticket size={16} />}
+                className="w-full py-3.5 px-6 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-satoshi font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer shadow-lg"
               >
-                {isClaiming ? 'Claiming...' : 'Redeem Coupon'}
-              </Button>
-            )}
+                {isClaiming ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Applying Pass…</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>{isFullFree ? 'Redeem Pass' : 'Apply to Checkout'}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
 
-            {state === 'claimed' && (
-              <Button
-                variant="contained"
+              <button
+                type="button"
+                onClick={() => router.push('/settings')}
+                className="w-full py-2.5 px-4 rounded-xl text-white/40 hover:text-white text-xs font-satoshi transition-colors cursor-pointer"
+              >
+                Cancel and return to Settings
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Claimed / Active State */}
+        {state === 'claimed' && (
+          <div className="w-full flex flex-col items-center space-y-6 animate-fadeIn">
+            <div className="w-14 h-14 rounded-2xl bg-[#0A0908] border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <CheckCircle2 className="w-7 h-7 text-emerald-400" />
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-400">
+                Pass Active
+              </span>
+              <h1 className="font-clash text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                Subscription Active
+              </h1>
+              <p className="font-satoshi text-xs text-white/60 max-w-xs">
+                This pass is currently active on your account. All Pro features are unlocked.
+              </p>
+            </div>
+
+            <div className="w-full space-y-3 pt-2">
+              <button
+                type="button"
                 onClick={() => {
                   if (coupon?.requiresPayment && coupon.couponId) {
                     const checkoutUrl = new URL('/billing/checkout', window.location.origin);
@@ -189,24 +281,73 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
                     router.push('/settings');
                   }
                 }}
-                sx={{
-                  bgcolor: '#10B981',
-                  color: '#fff',
-                  borderRadius: 999,
-                  px: 4,
-                  py: 1.5,
-                  textTransform: 'none',
-                  fontWeight: 900,
-                  fontSize: '0.95rem',
-                  '&:hover': { bgcolor: '#059669' }}}
-                startIcon={<CheckCircle2 size={16} />}
+                className="w-full py-3.5 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-satoshi font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
               >
-                {coupon?.requiresPayment ? 'Proceed to Checkout' : 'Go to Settings'}
-              </Button>
-            )}
-          </Stack>
-        </Paper>
-      </Container>
-    </Box>
+                <span>{coupon?.requiresPayment ? 'Proceed to Checkout' : 'Go to Settings'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error / Unavailable State */}
+        {state === 'error' && (
+          <div className="w-full flex flex-col items-center space-y-6 animate-fadeIn">
+            <div className="w-14 h-14 rounded-2xl bg-[#0A0908] border border-white/5 flex items-center justify-center text-amber-400">
+              <AlertCircle className="w-7 h-7 text-amber-400" />
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-amber-400">
+                Pass Status
+              </span>
+              <h1 className="font-clash text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                Pass Unavailable
+              </h1>
+              <p className="font-satoshi text-xs text-white/60 max-w-xs leading-relaxed">
+                {errorMessage || 'This pass is no longer active, has reached its redemption limit, or belongs to another account.'}
+              </p>
+            </div>
+
+            {/* Input to try a different code */}
+            <div className="w-full bg-[#0A0908] border border-white/5 rounded-2xl p-4 space-y-3 text-left">
+              <label className="text-[10px] font-mono uppercase tracking-wider text-white/40 block">
+                Try Another Pass Code
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter code ID"
+                  value={couponId}
+                  onChange={(e) => setCouponId(e.target.value.trim())}
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-white placeholder:text-white/20 focus:outline-none focus:border-[#6366F1] transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => checkCoupon(couponId)}
+                  disabled={!couponId}
+                  className="px-4 py-2 bg-[#6366F1] hover:bg-[#5254E8] text-white font-satoshi font-bold text-xs rounded-xl disabled:opacity-40 transition-colors cursor-pointer"
+                >
+                  Verify
+                </button>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="w-full space-y-3 pt-2">
+              <button
+                type="button"
+                onClick={() => router.push('/settings')}
+                className="w-full py-3 px-6 rounded-xl bg-[#0A0908] border border-white/10 hover:border-white/20 text-white font-satoshi font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <span>Return to Settings</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
   );
 }
+
