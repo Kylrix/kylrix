@@ -302,17 +302,42 @@ export const ProjectsService = {
           resourceIdsByType[normalized].add(id);
         }
 
-        const { listNotes, listFlowTasks, listKeepCredentials } = await import('./index');
-
         const [notes, tasks, credentials, totps, events, forms, moments] = await Promise.all([
           resourceIdsByType['note']?.size 
-            ? listNotes([Query.equal('$id', Array.from(resourceIdsByType['note']))], 500).then(r => r.rows || []).catch(() => []) 
+            ? Promise.all(
+                Array.from(resourceIdsByType['note']).map(async (id) => {
+                  try {
+                    const { getNote } = await import('./note');
+                    return await getNote(id);
+                  } catch {
+                    return null;
+                  }
+                })
+              ).then((res) => res.filter(Boolean))
             : Promise.resolve([]),
           resourceIdsByType['task']?.size
-            ? listFlowTasks([Query.equal('$id', Array.from(resourceIdsByType['task'])), Query.limit(500)]).then(r => r.rows || []).catch(() => [])
+            ? Promise.all(
+                Array.from(resourceIdsByType['task']).map(async (id) => {
+                  try {
+                    const { getTask } = await import('./task');
+                    return await getTask(id);
+                  } catch {
+                    return null;
+                  }
+                })
+              ).then((res) => res.filter(Boolean))
             : Promise.resolve([]),
           resourceIdsByType['credential']?.size
-            ? listKeepCredentials([Query.equal('$id', Array.from(resourceIdsByType['credential'])), Query.limit(500)]).then(r => r.rows || []).catch(() => [])
+            ? Promise.all(
+                Array.from(resourceIdsByType['credential']).map(async (id) => {
+                  try {
+                    const { getKeepCredential } = await import('./index');
+                    return await getKeepCredential(id);
+                  } catch {
+                    return null;
+                  }
+                })
+              ).then((res) => res.filter(Boolean))
             : Promise.resolve([]),
           resourceIdsByType['totp']?.size
             ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.VAULT, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS, [Query.equal('$id', Array.from(resourceIdsByType['totp']))], 500).then((r: any) => r.rows || []).catch(() => [])

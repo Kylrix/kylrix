@@ -249,6 +249,34 @@ export default function IdeasPage() {
     })();
   }, []);
 
+  // Eagerly pull custom workspace notes into local notes state when switching workspaces
+  useEffect(() => {
+    if (!activeWorkspace || activeWorkspace.isPersonal) return;
+    const wsId = activeWorkspace.id;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const { ProjectsService } = await import('@/lib/appwrite/projects');
+        const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
+        if (tagged?.notes && Array.isArray(tagged.notes) && tagged.notes.length > 0 && !cancelled) {
+          setNotes((prev) => {
+            const byId = new Map(prev.map((n) => [n.$id, n]));
+            tagged.notes.forEach((n: any) => {
+              const id = n.$id || n.id;
+              if (id) byId.set(id, { ...byId.get(id), ...n, $id: id, projectId: wsId, isWorkspace: true });
+            });
+            return Array.from(byId.values());
+          });
+        }
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspace?.id]);
+
   // Instantly reflect any created / updated notes from NotesContext (0ms live-copy)
   useEffect(() => {
     if (contextNotes && contextNotes.length > 0) {
