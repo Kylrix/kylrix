@@ -326,7 +326,14 @@ export default function IdeasPage() {
 
   const [ecosystemTagsList, setEcosystemTagsList] = useState<{ name: string; color?: string }[]>([]);
 
-  const { filteredItems: workspaceScopedNotes } = useWorkspaceFilteredItems(notes, 'note');
+  const mergedSourceNotes = useMemo(() => {
+    const byId = new Map<string, any>();
+    (notes || []).forEach((n: any) => { if (n?.$id) byId.set(n.$id, n); });
+    (contextNotes || []).forEach((n: any) => { if (n?.$id) byId.set(n.$id, n); });
+    return Array.from(byId.values());
+  }, [notes, contextNotes]);
+
+  const { filteredItems: workspaceScopedNotes } = useWorkspaceFilteredItems(mergedSourceNotes, 'note');
   const activeNotes = workspaceScopedNotes.filter((n) => !n.isTrash);
   const pinnedNotes = activeNotes.filter((n) => n.isPinned);
   const unpinnedNotes = activeNotes.filter((n) => !n.isPinned);

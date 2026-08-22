@@ -75,23 +75,15 @@ export function useProjectObjects(
         setLoading(true);
       }
 
-      // 2. Unified LocalEngine query — single gateway with Realtime, no duplicate DataNexus tower
+      // 2. Fetch project_objects via ProjectsService (backed by LocalEngine + Realtime)
       try {
         const cacheKey = projectObjectsKindCacheKey(projectId, entityKind);
         if (force) nexusInvalidate(cacheKey);
-        const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const remote = await LocalEngine.query<any>(
-          cacheKey,
-          async () => {
-            const result = await ProjectsService.listProjectObjectsByKind(projectId, entityKind);
-            return result?.rows ?? [];
-          },
-          { ttl: PROJECT_OBJECTS_TTL, realtimeChannel: `databases.${(await import('@/lib/appwrite/config')).APPWRITE_CONFIG.DATABASES.CHAT}.collections.project_objects.documents` }
-        );
-        const remoteList: ProjectObjects[] = Array.isArray(remote)
-          ? remote
-          : Array.isArray(remote?.rows)
-            ? remote.rows
+        const result = await ProjectsService.listProjectObjectsByKind(projectId, entityKind);
+        const remoteList: ProjectObjects[] = Array.isArray(result?.rows)
+          ? result.rows
+          : Array.isArray(result)
+            ? result
             : [];
         if (mountedRef.current) {
           setRows((prev) => {
@@ -107,14 +99,7 @@ export function useProjectObjects(
               const key = r.entityId || r.$id || (r as any).id;
               if (key) byId.set(key, r);
             });
-            const merged = Array.from(byId.values());
-            // Persist merged set to LocalEngine
-            if (typeof window !== 'undefined' && merged.length > 0) {
-              import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
-                void LocalEngine.cacheSet(cacheKey, merged);
-              }).catch(() => {});
-            }
-            return merged;
+            return Array.from(byId.values());
           });
         }
       } catch (err) {

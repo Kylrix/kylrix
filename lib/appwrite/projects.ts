@@ -198,7 +198,7 @@ export const ProjectsService = {
     const { projectObjectsKindCacheKey } = await import('@/lib/projects/projects-cache');
     const cacheKey = projectObjectsKindCacheKey(projectId, entityKind);
     const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    return LocalEngine.query<{ rows: any[] }>(
+    const res = await LocalEngine.query<any>(
       cacheKey,
       async () => {
         const all: any[] = [];
@@ -219,10 +219,12 @@ export const ProjectsService = {
           cursor = rows[rows.length - 1].$id;
           if (all.length >= 500) break;
         }
-        return { rows: all } as any;
+        return all;
       },
       { realtimeChannel: `databases.${DATABASE_ID}.collections.${PROJECT_OBJECTS_COLLECTION_ID}.documents` }
     );
+    const rows = Array.isArray(res) ? res : Array.isArray(res?.rows) ? res.rows : [];
+    return { rows };
   },
 
 
