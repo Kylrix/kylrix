@@ -302,12 +302,12 @@ export function EventDateTimePickerDrawer(props: EventDateTimePickerProps) {
   if (!props.open || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[15000] flex flex-col justify-end pointer-events-auto">
+    <div className="fixed inset-0 z-[15000] flex flex-col justify-end md:flex-row md:justify-end pointer-events-auto">
       <div 
         className="absolute inset-0 bg-black/80 transition-opacity duration-200"
         onClick={props.onClose}
       />
-      <div className="relative w-full max-w-[540px] mx-auto bg-[#161412] border border-[#34322F] border-b-0 rounded-t-[28px] p-6 shadow-2xl z-[15001] flex flex-col gap-5 text-white overflow-hidden animate-in slide-in-from-bottom duration-250">
+      <div className="relative w-full max-w-[540px] md:max-w-[460px] md:w-[460px] md:h-full mx-auto md:mx-0 bg-[#161412] border border-[#34322F] border-b-0 md:border-b md:border-r-0 md:border-l rounded-t-[28px] md:rounded-none md:rounded-l-[28px] p-6 shadow-2xl z-[15001] flex flex-col gap-5 text-white overflow-y-auto overscroll-contain animate-in slide-in-from-bottom md:slide-in-from-right duration-250">
         <EventDateTimePickerSurface {...props} />
       </div>
     </div>,
