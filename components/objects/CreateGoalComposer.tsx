@@ -94,7 +94,7 @@ export function CreateGoalComposer({
       void refreshEcosystemTags();
     }
   }, [isTagSelectorOpen, refreshEcosystemTags]);
-  const [showMobileDatePicker, setShowMobileDatePicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [resolvedId, setResolvedId] = useState<string | undefined>(initialContent?.id);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [localExpanded, setLocalExpanded] = useState(false);
@@ -340,57 +340,8 @@ export function CreateGoalComposer({
   }, []);
 
   const handleOpenDatePicker = useCallback(() => {
-    const isDesktopWindow = typeof window !== 'undefined' && window.innerWidth >= 900;
-    const initialStart = dueDate ? new Date(dueDate) : new Date();
-    const initialEnd = new Date(initialStart.getTime() + 3600000);
-    const activeId = ensureId();
-
-    const applyDate = (start: Date) => {
-      const iso = start.toISOString();
-      setDueDate(iso);
-      pushLive(buildLive(content, title, priority, iso));
-      return iso;
-    };
-
-    if (isDesktopWindow) {
-      openSidebar(
-        <EventDateTimePickerSurface
-          inline
-          startTime={initialStart}
-          endTime={initialEnd}
-          onApply={(start) => {
-            const dateStr = applyDate(start);
-            openSidebar(
-              <CreateGoalComposer
-                onClose={onClose}
-                onGoalCreated={onGoalCreated}
-                isExpanded={controlledExpanded}
-                initialContent={{ id: activeId, title, content, priority, dueDate: dateStr }}
-              />,
-              'create-goal',
-              { hideHeader: true }
-            );
-          }}
-          onClose={() => {
-            openSidebar(
-              <CreateGoalComposer
-                onClose={onClose}
-                onGoalCreated={onGoalCreated}
-                isExpanded={controlledExpanded}
-                initialContent={{ id: activeId, title, content, priority, dueDate }}
-              />,
-              'create-goal',
-              { hideHeader: true }
-            );
-          }}
-        />,
-        'date-picker',
-        { hideHeader: true }
-      );
-    } else {
-      setShowMobileDatePicker(true);
-    }
-  }, [dueDate, content, title, priority, buildLive, pushLive, openSidebar, onClose, onGoalCreated, controlledExpanded, ensureId]);
+    setShowDatePicker(true);
+  }, []);
 
   useEffect(() => {
     onRegisterClose?.(handleClose);
@@ -760,18 +711,18 @@ export function CreateGoalComposer({
         </div>
       )}
 
-      {showMobileDatePicker && (
+      {showDatePicker && (
         <EventDateTimePickerDrawer
-          open={showMobileDatePicker}
+          open={showDatePicker}
           startTime={dueDate ? new Date(dueDate) : new Date()}
           endTime={dueDate ? new Date(new Date(dueDate).getTime() + 3600000) : new Date(Date.now() + 3600000)}
           onApply={(start) => {
             const iso = start.toISOString();
             setDueDate(iso);
             pushLive(buildLive(content, title, priority, iso));
-            setShowMobileDatePicker(false);
+            setShowDatePicker(false);
           }}
-          onClose={() => setShowMobileDatePicker(false)}
+          onClose={() => setShowDatePicker(false)}
         />
       )}
     </div>
