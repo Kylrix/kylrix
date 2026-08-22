@@ -111,9 +111,8 @@ export function useProjectObjects(
     [projectId, entityKind],
   );
 
-  // Reset and reload whenever projectId or entityKind changes
+  // Reload whenever projectId or entityKind changes
   useEffect(() => {
-    setRows([]);
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, entityKind]);

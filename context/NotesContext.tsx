@@ -550,11 +550,13 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           existing.content === normalized.content &&
           existing.isPublic === normalized.isPublic &&
           existing.isGuest === normalized.isGuest &&
+          existing.isWorkspace === (normalized as any).isWorkspace &&
+          existing.projectId === (normalized as any).projectId &&
           JSON.stringify(existing.tags) === JSON.stringify(normalized.tags)
         ) {
           return prev;
         }
-        const updated = dedupeNotesById(prev.map((item) => (item.$id === normalized.$id ? normalized : item)));
+        const updated = dedupeNotesById(prev.map((item) => (item.$id === normalized.$id ? { ...item, ...normalized } : item)));
         if (INITIAL_NOTES_CACHE_KEY) {
           setCachedData(INITIAL_NOTES_CACHE_KEY, {
             notes: updated,
