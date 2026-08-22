@@ -287,20 +287,31 @@ export default function IdeasPage() {
     <div className="flex-1 min-h-screen pointer-events-auto">
       <div className="w-full max-w-[1440px] mx-auto p-4 md:p-8">
         <div className="min-w-0 w-full flex flex-col gap-6">
-          {/* Top Nav Switcher (Goals-inspired structure) */}
-          <div className="flex items-center gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-2xl w-fit select-none">
-            <Link
-              href="/app"
-              className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.25)]"
+          {/* Top Nav Switcher */}
+          <div className="flex items-center justify-between gap-3 w-full">
+            <div className="flex items-center gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-2xl w-fit select-none">
+              <Link
+                href="/app"
+                className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.25)]"
+              >
+                Ideas
+              </Link>
+              <Link
+                href="/forms"
+                className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
+              >
+                Forms
+              </Link>
+            </div>
+
+            <button
+              type="button"
+              onClick={openCreateNote}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#EC4899] text-white hover:bg-[#db2777] active:scale-95 transition-all shadow-[0_4px_14px_rgba(236,72,153,0.3)] select-none shrink-0"
             >
-              Ideas
-            </Link>
-            <Link
-              href="/forms"
-              className="px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all text-white/50 hover:text-white hover:bg-white/5"
-            >
-              Forms
-            </Link>
+              <Plus size={16} strokeWidth={2.5} />
+              <span>New Idea</span>
+            </button>
           </div>
 
           {/* Tags Filter Row (positioned under top nav switcher like Goals) */}
@@ -353,7 +364,17 @@ export default function IdeasPage() {
       {loading ? (
         <div className="p-8 text-center text-white/40">Loading ideas...</div>
       ) : notes.length === 0 ? (
-        <div className="p-8 text-center text-white/40">No ideas found.</div>
+        <div className="p-12 text-center flex flex-col items-center justify-center gap-4 bg-white/[0.01] border border-white/5 rounded-3xl">
+          <p className="text-white/40 text-sm">No ideas found.</p>
+          <button
+            type="button"
+            onClick={openCreateNote}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold bg-[#EC4899] text-white hover:bg-[#db2777] transition-all shadow-[0_4px_12px_rgba(236,72,153,0.25)] select-none"
+          >
+            <Plus size={14} strokeWidth={2.5} />
+            <span>Create your first idea</span>
+          </button>
+        </div>
       ) : (
         <div className="space-y-8">
           {/* Pinned Section */}

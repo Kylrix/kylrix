@@ -51,28 +51,24 @@ const queryCache = new Map<string, { data: unknown; expires: number }>();
 
 async function listRows<T extends Models.Row>(tableId: string, queries: string[] = []): Promise<Models.RowList<T>> {
     const finalQueries = [...queries];
-    // Check if isTrash check is already present or if table is in trash-supported list
-    const trashSupported = [
-        TABLES.CALENDARS,
-        TABLES.TASKS,
-        TABLES.EVENTS,
-    ];
-    if (trashSupported.includes(tableId) && !queries.some(q => q.includes('isTrash'))) {
-        finalQueries.push(Query.notEqual('isTrash', true));
-    }
     const key = `list:${tableId}:${JSON.stringify(finalQueries)}`;
     return await fetchOptimized(key, async () => {
         try {
             const res = await tablesDB.listRows<T>(FLOW_DATABASE_ID, tableId, finalQueries);
-            return res;
+            const filteredRows = (res.rows || []).filter((r: any) => !r.isTrash && !r.isDeleted);
+            return { ...res, rows: filteredRows, total: filteredRows.length };
         } catch (_err) {
             // Fallback for object syntax or select column variances
             try {
-                return await tablesDB.listRows<T>({ databaseId: FLOW_DATABASE_ID, tableId, queries: finalQueries });
+                const res = await tablesDB.listRows<T>({ databaseId: FLOW_DATABASE_ID, tableId, queries: finalQueries });
+                const filteredRows = (res.rows || []).filter((r: any) => !r.isTrash && !r.isDeleted);
+                return { ...res, rows: filteredRows, total: filteredRows.length };
             } catch {
                 // If strict select query failed due to missing columns in table schema, fallback to base query
-                const fallbackQueries = finalQueries.filter(q => !q.includes('select('));
-                return await tablesDB.listRows<T>(FLOW_DATABASE_ID, tableId, fallbackQueries);
+                const fallbackQueries = finalQueries.filter(q => !q.includes('select(') && !q.includes('isTrash'));
+                const res = await tablesDB.listRows<T>(FLOW_DATABASE_ID, tableId, fallbackQueries);
+                const filteredRows = (res.rows || []).filter((r: any) => !r.isTrash && !r.isDeleted);
+                return { ...res, rows: filteredRows, total: filteredRows.length };
             }
         }
     }, FLOW_TTL);
