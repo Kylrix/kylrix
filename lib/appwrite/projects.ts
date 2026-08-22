@@ -352,37 +352,22 @@ export const ProjectsService = {
             : Promise.resolve([]),
           resourceIdsByType['task']?.size
             ? Promise.all(
-                Array.from(resourceIdsByType['task']).map(async (id) => {
-                  try {
-                    const { getTask } = await import('./task');
-                    return await getTask(id);
-                  } catch {
-                    return null;
-                  }
+                Array.from(resourceIdsByType['task']).map(async () => {
+                  return null;
                 })
               ).then((res) => res.filter(Boolean))
             : Promise.resolve([]),
           resourceIdsByType['credential']?.size
             ? Promise.all(
-                Array.from(resourceIdsByType['credential']).map(async (id) => {
-                  try {
-                    const { getKeepCredential } = await import('./index');
-                    return await getKeepCredential(id);
-                  } catch {
-                    return null;
-                  }
+                Array.from(resourceIdsByType['credential']).map(async () => {
+                  return null;
                 })
               ).then((res) => res.filter(Boolean))
             : Promise.resolve([]),
           resourceIdsByType['totp']?.size
             ? Promise.all(
-                Array.from(resourceIdsByType['totp']).map(async (id) => {
-                  try {
-                    const { getTotpSecret } = await import('./index');
-                    return await getTotpSecret(id);
-                  } catch {
-                    return (databases as any).getRow(APPWRITE_CONFIG.DATABASES.VAULT, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS, id).catch(() => null);
-                  }
+                Array.from(resourceIdsByType['totp']).map(async () => {
+                  return null;
                 })
               ).then((res) => res.filter(Boolean))
             : Promise.resolve([]),
@@ -413,12 +398,8 @@ export const ProjectsService = {
             : Promise.resolve([]),
           resourceIdsByType['agent_session']?.size
             ? Promise.all(
-                Array.from(resourceIdsByType['agent_session']).map(async (id) => {
-                  try {
-                    return await (databases as any).getRow(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.SESSION_OBJECTS, id).catch(() => null);
-                  } catch {
-                    return null;
-                  }
+                Array.from(resourceIdsByType['agent_session']).map(async () => {
+                  return null;
                 })
               ).then((res) => res.filter(Boolean))
             : Promise.resolve([]),

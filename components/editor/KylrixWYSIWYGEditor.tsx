@@ -190,7 +190,6 @@ export function KylrixWYSIWYGEditor({
 }: KylrixWYSIWYGEditorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const isInternalUpdateRef = useRef(false);
   const lastEmittedValueRef = useRef(value);
 
   const { user } = useAuth();

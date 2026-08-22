@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Tag, X, ChevronRight, Plus } from 'lucide-react';
 import { NoteObjectRow } from '@/components/ui/NoteObjectRow';
 import { useNotes } from '@/context/NotesContext';
@@ -8,7 +8,6 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { useWorkspace } from '@/context/WorkspaceContext';
 
 import Link from 'next/link';
@@ -356,7 +355,7 @@ export default function IdeasPage() {
 
   const [ecosystemTagsList, setEcosystemTagsList] = useState<{ name: string; color?: string }[]>([]);
 
-  const activeNotes = (contextNotes || []).filter((n) => !n.isTrash);
+  const activeNotes = (contextNotes || []).filter((n) => n);
   const pinnedNotes = activeNotes.filter((n) => n.isPinned);
   const unpinnedNotes = activeNotes.filter((n) => !n.isPinned);
 

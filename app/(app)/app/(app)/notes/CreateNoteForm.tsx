@@ -42,7 +42,6 @@ import { useSudo } from '@/context/SudoContext';
 import { useSection } from '@/context/SectionContext';
 import { useTask } from '@/context/TaskContext';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
-import { KylrixWYSIWYGEditor } from '@/components/editor/KylrixWYSIWYGEditor';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';

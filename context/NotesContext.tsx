@@ -33,7 +33,6 @@ import { registerLiveNoteGetter } from '@/lib/sync/pending-sync-bridge';
 import { loadNotesFromLocalCopy, warmNotesLocalCopy } from '@/lib/notes/load-local-notes';
 import { subscribeLocalSoftRefresh } from '@/lib/sync/local-soft-refresh';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 
 type LiveEditGuard = {
@@ -551,7 +550,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           existing.isPublic === normalized.isPublic &&
           existing.isGuest === normalized.isGuest &&
           existing.isWorkspace === (normalized as any).isWorkspace &&
-          existing.projectId === (normalized as any).projectId &&
+          (existing as any).projectId === (normalized as any).projectId &&
           JSON.stringify(existing.tags) === JSON.stringify(normalized.tags)
         ) {
           return prev;

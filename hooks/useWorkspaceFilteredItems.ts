@@ -56,7 +56,7 @@ export function useWorkspaceFilteredItems<T extends WorkspaceItemLike>(
       if (!id && !item.projectId) return false;
       if (id && registeredIds.has(id)) return true;
       if (item.projectId === pid) return true;
-      if (item.isWorkspace === pid || (item.isWorkspace && item.projectId === pid)) return true;
+      if ((item as any).isWorkspace === true && item.projectId === pid) return true;
       if (Array.isArray(item.tags) && item.tags.some((t: string) => t === `workspace:${pid}` || t === `project:${pid}`)) return true;
       if (id && isEntityPendingInActiveWorkspace(entityKind, id)) return true;
       return false;

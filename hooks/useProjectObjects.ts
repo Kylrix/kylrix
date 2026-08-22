@@ -16,7 +16,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
-import { projectObjectsKindCacheKey, PROJECT_OBJECTS_TTL } from '@/lib/projects/projects-cache';
+import { projectObjectsKindCacheKey } from '@/lib/projects/projects-cache';
 import type { ProjectObjects } from '@/types/appwrite';
 
 interface UseProjectObjectsResult {

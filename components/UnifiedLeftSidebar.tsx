@@ -343,7 +343,7 @@ export function UnifiedLeftSidebar() {
                         {!w.isPersonal && (
                           <Box
                             component="span"
-                            onClick={(e) => handleShareWorkspace(e, w)}
+                            onClick={(e: React.MouseEvent) => handleShareWorkspace(e, w)}
                             sx={{
                               display: 'flex',
                               alignItems: 'center',
@@ -425,7 +425,7 @@ export function UnifiedLeftSidebar() {
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
                             <Box
                               component="span"
-                              onClick={(e) => handleShareWorkspace(e, w)}
+                              onClick={(e: React.MouseEvent) => handleShareWorkspace(e, w)}
                               sx={{
                                 display: 'flex',
                                 alignItems: 'center',
