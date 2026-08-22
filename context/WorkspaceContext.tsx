@@ -145,8 +145,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const registerSharedWorkspace = useCallback(
     async (workspace: { id: string; title?: string; ownerId?: string; isPublic?: boolean }) => {
       if (!workspace.id || workspace.id === personalWorkspace.id) return;
+      if (workspace.ownerId && workspace.ownerId === userId) return;
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const userProjects = await LocalEngine.cacheGet<any[]>(`f_projects_list_${userId}`);
+        if (Array.isArray(userProjects) && userProjects.some((p) => p.$id === workspace.id || p.id === workspace.id)) {
+          return;
+        }
         const cacheKey = `visited_shared_workspaces_${userId}`;
         const existing = (await LocalEngine.cacheGet<WorkspaceItem[]>(cacheKey)) || [];
         const item: WorkspaceItem = {
@@ -162,6 +167,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         const updated = [item, ...filtered].slice(0, 30);
         await LocalEngine.cacheSet(cacheKey, updated);
         setWorkspaces((prev) => {
+          const existingItem = prev.find((w) => w.id === workspace.id);
+          if (existingItem && !existingItem.isShared) return prev;
+
           const byId = new Map(prev.map((w) => [w.id, w]));
           byId.set(item.id, item);
           return [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
@@ -370,19 +378,30 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
   }, [activeWorkspaceId, userId]);
 
-  // When switching to a shared workspace, verify it is still accessible and public in the background
+  // When switching to a workspace, verify ownership and public access in the background
   useEffect(() => {
     if (!activeWorkspaceId || activeWorkspaceId === userId || activeWorkspaceId === 'guest') return;
     const targetId = activeWorkspaceId;
-    const currentW = workspaces.find((w) => w.id === targetId);
-    if (!currentW || !currentW.isShared) return;
 
     let cancelled = false;
     void (async () => {
       try {
         const proj = await ProjectsService.getProject(targetId).catch(() => null);
-        if (cancelled) return;
-        if (!proj || (proj.isPublic === false && proj.ownerId !== userId)) {
+        if (cancelled || !proj) return;
+        if (proj.ownerId === userId) {
+          // It's actually owned by the current user! Move out of shared
+          setWorkspaces((prev) =>
+            prev.map((w) =>
+              w.id === targetId ? { ...w, title: proj.title || w.title, ownerId: userId, isShared: false, role: 'owner' } : w
+            )
+          );
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          const cacheKey = `visited_shared_workspaces_${userId}`;
+          const existing = (await LocalEngine.cacheGet<WorkspaceItem[]>(cacheKey)) || [];
+          await LocalEngine.cacheSet(cacheKey, existing.filter((w) => w.id !== targetId));
+          return;
+        }
+        if (proj.isPublic === false && proj.ownerId !== userId) {
           const { LocalEngine } = await import('@/lib/services/LocalEngine');
           const cacheKey = `visited_shared_workspaces_${userId}`;
           const existing = (await LocalEngine.cacheGet<WorkspaceItem[]>(cacheKey)) || [];
@@ -399,7 +418,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [activeWorkspaceId, userId, workspaces]);
+  }, [activeWorkspaceId, userId]);
 
   const activeWorkspace = useMemo<WorkspaceItem>(() => {
     const found = workspaces.find((w) => w.id === activeWorkspaceId);
@@ -410,8 +429,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         title: 'Workspace',
         ownerId: userId,
         isPersonal: false,
-        isShared: true,
-        role: 'viewer',
+        isShared: false,
+        role: 'owner',
       };
     }
     return personalWorkspace;
