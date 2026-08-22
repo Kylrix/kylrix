@@ -3,16 +3,16 @@
 import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { ProjectsService } from '@/lib/appwrite/projects';
 
 /**
  * Canonical workspace share link: /workspace/[id]
- * Sets the active workspace context to the visited id and redirects to /app.
- * The heavy project-detail surface under /workspaces is deprecated.
+ * Sets the active workspace context to the visited id, registers in local shared workspaces, and redirects to /app.
  */
 export default function WorkspaceSharePage() {
   const params = useParams();
   const router = useRouter();
-  const { setActiveWorkspaceId } = useWorkspace();
+  const { setActiveWorkspaceId, registerSharedWorkspace } = useWorkspace();
   const id = (params?.id as string) || '';
 
   useEffect(() => {
@@ -20,13 +20,39 @@ export default function WorkspaceSharePage() {
       router.replace('/app');
       return;
     }
-    try {
-      setActiveWorkspaceId(id);
-    } catch {
-      /* no-op */
-    }
-    router.replace('/app');
-  }, [id, setActiveWorkspaceId, router]);
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const proj = await ProjectsService.getProject(id).catch(() => null);
+        if (!cancelled && proj) {
+          await registerSharedWorkspace({
+            id: proj.$id || id,
+            title: proj.title || proj.name || 'Shared Workspace',
+            ownerId: proj.ownerId || proj.userId,
+            isPublic: proj.isPublic,
+          });
+        } else if (!cancelled) {
+          await registerSharedWorkspace({ id });
+        }
+      } catch {
+        if (!cancelled) {
+          await registerSharedWorkspace({ id });
+        }
+      }
+
+      if (!cancelled) {
+        try {
+          setActiveWorkspaceId(id);
+        } catch {}
+        router.replace('/app');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, setActiveWorkspaceId, registerSharedWorkspace, router]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#0A0908]">

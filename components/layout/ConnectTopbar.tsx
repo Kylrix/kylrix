@@ -101,7 +101,7 @@ export default function ConnectTopbar({
   const navPush = useCallback((href: string) => startNavTransition(() => router.push(href)), [router]);
   const pathname = usePathname();
   const { setIsCollapsed } = useSidebar();
-  const { activeWorkspace, workspaces, setActiveWorkspaceId, loadingWorkspaces } = useWorkspace();
+  const { activeWorkspace, workspaces, ownedWorkspaces, sharedWorkspaces, setActiveWorkspaceId, loadingWorkspaces } = useWorkspace();
   const { notes = [] } = useNotes();
   const { tasks = [], projects = [], selectTask } = useTask();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
@@ -2058,7 +2058,11 @@ export default function ConnectTopbar({
           </Typography>
         ) : null}
 
-        {workspaces.map((w) => {
+        {/* 1. Personal & Owned Workspaces */}
+        {[
+          ...workspaces.filter((w) => w.isPersonal),
+          ...ownedWorkspaces,
+        ].map((w) => {
           const isActive = activeWorkspace?.id === w.id;
           return (
             <Box
@@ -2130,6 +2134,85 @@ export default function ConnectTopbar({
             </Box>
           );
         })}
+
+        {/* 2. Shared Workspaces Section */}
+        {sharedWorkspaces.length > 0 && (
+          <>
+            <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', px: 1, pt: 1 }}>
+              Shared Workspaces
+            </Typography>
+            {sharedWorkspaces.map((w) => {
+              const isActive = activeWorkspace?.id === w.id;
+              return (
+                <Box
+                  key={w.id}
+                  component="button"
+                  onClick={() => {
+                    setActiveWorkspaceId(w.id);
+                    handleCloseAll();
+                  }}
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    px: 2,
+                    py: 1.25,
+                    borderRadius: '14px',
+                    bgcolor: isActive ? 'rgba(99, 102, 241, 0.16)' : 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid',
+                    borderColor: isActive ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.15)',
+                    color: 'white',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: isActive ? 'rgba(99, 102, 241, 0.22)' : 'rgba(255,255,255,0.04)',
+                    },
+                  }}
+                >
+                  <Box sx={{ minWidth: 0, flex: 1, pr: 1 }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff' }} noWrap>
+                      {w.title}
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.72rem', color: 'rgba(99, 102, 241, 0.8)' }}>
+                      {w.role ? `Shared (${w.role})` : 'Shared with you'}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                    <IconButton
+                      size="small"
+                      onClick={(e: MouseEvent) => {
+                        e.stopPropagation();
+                        handleCloseAll();
+                        openUnified('share-context', {
+                          resourceType: 'project',
+                          resourceId: w.id,
+                          resourceTitle: w.title,
+                          accentColor: '#6366F1',
+                        });
+                      }}
+                      sx={{
+                        color: 'rgba(255, 255, 255, 0.4)',
+                        p: 0.75,
+                        borderRadius: '8px',
+                        '&:hover': {
+                          color: '#6366F1',
+                          bgcolor: 'rgba(99, 102, 241, 0.15)',
+                        },
+                      }}
+                      title="Share workspace link"
+                    >
+                      <ShareIcon size={14} />
+                    </IconButton>
+                    {isActive ? (
+                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#6366F1', boxShadow: '0 0 8px #6366F1', flexShrink: 0 }} />
+                    ) : null}
+                  </Box>
+                </Box>
+              );
+            })}
+          </>
+        )}
       </Box>
     );
 

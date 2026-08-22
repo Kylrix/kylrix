@@ -14,13 +14,19 @@ export interface WorkspaceItem {
   title: string;
   ownerId: string;
   isPersonal: boolean;
+  isShared?: boolean;
+  isPublic?: boolean;
+  role?: string;
 }
 
 interface WorkspaceContextType {
   activeWorkspace: WorkspaceItem;
   workspaces: WorkspaceItem[];
+  ownedWorkspaces: WorkspaceItem[];
+  sharedWorkspaces: WorkspaceItem[];
   loadingWorkspaces: boolean;
   setActiveWorkspaceId: (id: string) => void;
+  registerSharedWorkspace: (workspace: { id: string; title?: string; ownerId?: string; isPublic?: boolean }) => Promise<void>;
   refreshWorkspaces: () => Promise<void>;
   createWorkspace: (title: string, summary?: string) => Promise<WorkspaceItem | null>;
   attachEntityToActiveWorkspace: (entityKind: string, entityId: string) => Promise<void>;
@@ -49,6 +55,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       title: personalWorkspaceTitle,
       ownerId: userId,
       isPersonal: true,
+      isShared: false,
+      role: 'owner',
     }),
     [userId, personalWorkspaceTitle]
   );
@@ -72,12 +80,21 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const mapProjectRows = useCallback(
     (rows: unknown): WorkspaceItem[] =>
       normalizeProjectsList(rows)
-        .map((p: any) => ({
-          id: String(p.$id || p.id || '').trim(),
-          title: p.title || p.name || 'Untitled Workspace',
-          ownerId: p.ownerId || p.userId || userId,
-          isPersonal: false as const,
-        }))
+        .map((p: any) => {
+          const id = String(p.$id || p.id || '').trim();
+          const ownerId = p.ownerId || p.userId || '';
+          const isOwned = ownerId === userId || (!ownerId && userId !== 'guest');
+          const isShared = !isOwned || p.isShared === true || (p.collabStatus && p.collabStatus !== 'owner');
+          return {
+            id,
+            title: p.title || p.name || 'Untitled Workspace',
+            ownerId: ownerId || userId,
+            isPersonal: false as const,
+            isShared,
+            isPublic: !!p.isPublic,
+            role: p.role || (isOwned ? 'owner' : 'viewer'),
+          };
+        })
         .filter((w) => w.id && w.id !== personalWorkspace.id),
     [personalWorkspace.id, userId],
   );
@@ -94,18 +111,66 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     try {
       const { clearSessionProjectsList } = await import('@/lib/projects/projects-cache');
       clearSessionProjectsList();
-      const rows = await warmProjectsList({
-        userId: userId || 'guest',
-        getCachedDataAsync,
-        fetchOptimized});
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      const [rows, localShared] = await Promise.all([
+        warmProjectsList({
+          userId: userId || 'guest',
+          getCachedDataAsync,
+          fetchOptimized,
+        }),
+        LocalEngine.cacheGet<WorkspaceItem[]>(`visited_shared_workspaces_${userId}`).catch(() => []),
+      ]);
 
-      setWorkspaces([personalWorkspace, ...mapProjectRows(rows)]);
+      const mapped = mapProjectRows(rows);
+      const mappedLocal = Array.isArray(localShared)
+        ? localShared.filter((s) => s.id && s.id !== personalWorkspace.id)
+        : [];
+
+      const byId = new Map<string, WorkspaceItem>();
+      byId.set(personalWorkspace.id, personalWorkspace);
+      for (const w of mapped) byId.set(w.id, w);
+      for (const w of mappedLocal) {
+        if (!byId.has(w.id)) byId.set(w.id, { ...w, isShared: true, isPersonal: false });
+      }
+
+      setWorkspaces([personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)]);
     } catch (err) {
       console.warn('[WorkspaceContext] Failed to load workspaces:', err);
     } finally {
       setLoadingWorkspaces(false);
     }
   }, [personalWorkspace, getCachedDataAsync, fetchOptimized, mapProjectRows, userId]);
+
+  const registerSharedWorkspace = useCallback(
+    async (workspace: { id: string; title?: string; ownerId?: string; isPublic?: boolean }) => {
+      if (!workspace.id || workspace.id === personalWorkspace.id) return;
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cacheKey = `visited_shared_workspaces_${userId}`;
+        const existing = (await LocalEngine.cacheGet<WorkspaceItem[]>(cacheKey)) || [];
+        const item: WorkspaceItem = {
+          id: workspace.id,
+          title: workspace.title || 'Shared Workspace',
+          ownerId: workspace.ownerId || '',
+          isPersonal: false,
+          isShared: true,
+          isPublic: workspace.isPublic !== undefined ? workspace.isPublic : true,
+          role: 'viewer',
+        };
+        const filtered = existing.filter((w) => w.id !== workspace.id);
+        const updated = [item, ...filtered].slice(0, 30);
+        await LocalEngine.cacheSet(cacheKey, updated);
+        setWorkspaces((prev) => {
+          const byId = new Map(prev.map((w) => [w.id, w]));
+          byId.set(item.id, item);
+          return [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+        });
+      } catch (err) {
+        console.warn('[WorkspaceContext] Failed to register visited shared workspace:', err);
+      }
+    },
+    [personalWorkspace, userId]
+  );
 
   useEffect(() => {
     if (lastUserIdRef.current !== userId) {
@@ -124,16 +189,23 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     void (async () => {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const [userProjects, globalProjects] = await Promise.all([
+        const [userProjects, globalProjects, localShared] = await Promise.all([
           LocalEngine.cacheGet(`f_projects_list_${userId}`),
           LocalEngine.cacheGet('f_projects_list'),
+          LocalEngine.cacheGet<WorkspaceItem[]>(`visited_shared_workspaces_${userId}`).catch(() => []),
         ]);
         const mapped = mapProjectRows(userProjects || globalProjects || []);
-        if (!mapped.length) return;
+        const mappedLocal = Array.isArray(localShared)
+          ? localShared.filter((s) => s.id && s.id !== personalWorkspace.id)
+          : [];
+        if (!mapped.length && !mappedLocal.length) return;
         setWorkspaces((prev) => {
           const byId = new Map(prev.map((w) => [w.id, w]));
           byId.set(personalWorkspace.id, personalWorkspace);
           for (const w of mapped) byId.set(w.id, w);
+          for (const w of mappedLocal) {
+            if (!byId.has(w.id)) byId.set(w.id, { ...w, isShared: true, isPersonal: false });
+          }
           return [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
         });
       } catch {
@@ -248,6 +320,37 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
   }, [activeWorkspaceId, userId]);
 
+  // When switching to a shared workspace, verify it is still accessible and public in the background
+  useEffect(() => {
+    if (!activeWorkspaceId || activeWorkspaceId === userId || activeWorkspaceId === 'guest') return;
+    const targetId = activeWorkspaceId;
+    const currentW = workspaces.find((w) => w.id === targetId);
+    if (!currentW || !currentW.isShared) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const proj = await ProjectsService.getProject(targetId).catch(() => null);
+        if (cancelled) return;
+        if (!proj || (proj.isPublic === false && proj.ownerId !== userId)) {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          const cacheKey = `visited_shared_workspaces_${userId}`;
+          const existing = (await LocalEngine.cacheGet<WorkspaceItem[]>(cacheKey)) || [];
+          await LocalEngine.cacheSet(cacheKey, existing.filter((w) => w.id !== targetId));
+          setWorkspaces((prev) => prev.filter((w) => w.id !== targetId));
+          setActiveWorkspaceIdState(userId);
+          const { toast } = await import('react-hot-toast');
+          toast.error('This shared workspace is no longer public or accessible.');
+        }
+      } catch {
+        /* no-op */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeWorkspaceId, userId, workspaces]);
+
   const activeWorkspace = useMemo<WorkspaceItem>(() => {
     const found = workspaces.find((w) => w.id === activeWorkspaceId);
     if (found) return found;
@@ -257,11 +360,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         title: 'Workspace',
         ownerId: userId,
         isPersonal: false,
+        isShared: true,
+        role: 'viewer',
       };
     }
     return personalWorkspace;
   }, [workspaces, activeWorkspaceId, personalWorkspace, userId]);
 
+  const ownedWorkspaces = useMemo(
+    () => workspaces.filter((w) => !w.isPersonal && (!w.isShared && (w.ownerId === userId || !w.ownerId))),
+    [workspaces, userId]
+  );
+
+  const sharedWorkspaces = useMemo(
+    () => workspaces.filter((w) => !w.isPersonal && (w.isShared || (w.ownerId && w.ownerId !== userId))),
+    [workspaces, userId]
+  );
 
   const createWorkspace = useCallback(
     async (title: string, summary?: string): Promise<WorkspaceItem | null> => {
@@ -275,6 +389,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           title: created.title || title,
           ownerId: userId,
           isPersonal: false,
+          isShared: false,
+          role: 'owner',
         };
         setWorkspaces((prev) => [
           personalWorkspace,
@@ -294,20 +410,19 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const attachEntityToActiveWorkspace = useCallback(
     async (entityKind: string, entityId: string) => {
-      if (activeWorkspace.isPersonal || activeWorkspace.id === userId) {
-        return; // Personal items stay in personal workspace naturally
+      if (!activeWorkspace || activeWorkspace.isPersonal) return;
+      // Track in-memory pending attachment
+      const key = `${activeWorkspace.id}:${entityKind}`;
+      if (!pendingProjectObjectsRef.current.has(key)) {
+        pendingProjectObjectsRef.current.set(key, new Set());
       }
-      // Optimistic pending + LocalEngine cache so filter includes instantly (fixes third-workspace disappearance)
-      const pendingKey = `${activeWorkspace.id}:${entityKind}`;
-      const pendingSet = pendingProjectObjectsRef.current.get(pendingKey) || new Set<string>();
-      pendingSet.add(entityId);
-      pendingProjectObjectsRef.current.set(pendingKey, pendingSet);
+      pendingProjectObjectsRef.current.get(key)!.add(entityId);
+      // Fast optimistic update in LocalEngine
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const cacheKey = projectObjectsKindCacheKey(activeWorkspace.id, entityKind);
         const existing = (await LocalEngine.cacheGet<ProjectObjects[]>(cacheKey)) || [];
-        const already = existing.some((r) => (r.entityId || (r as any).$id) === entityId);
-        if (!already) {
+        if (!existing.some((r) => r.entityId === entityId && r.entityKind === entityKind)) {
           const optimisticRow = {
             $id: `${activeWorkspace.id}:${entityKind}:${entityId}`,
             entityId,
@@ -355,7 +470,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         console.warn(`[WorkspaceContext] Auto-attach entity ${entityKind} ${entityId} failed:`, err);
       }
     },
-    [activeWorkspace, userId]
+    [activeWorkspace]
   );
 
   const setEntityPersonalWorkspaceState = useCallback(
@@ -388,15 +503,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         console.warn(`[WorkspaceContext] Failed to update isWorkspace flag for ${entityKind} ${entityId}:`, err);
       }
     },
-    []
+    [activeWorkspace.id]
   );
 
   const value = useMemo(
     () => ({
       activeWorkspace,
       workspaces,
+      ownedWorkspaces,
+      sharedWorkspaces,
       loadingWorkspaces,
       setActiveWorkspaceId,
+      registerSharedWorkspace,
       refreshWorkspaces,
       createWorkspace,
       attachEntityToActiveWorkspace,
@@ -406,8 +524,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     [
       activeWorkspace,
       workspaces,
+      ownedWorkspaces,
+      sharedWorkspaces,
       loadingWorkspaces,
       setActiveWorkspaceId,
+      registerSharedWorkspace,
       refreshWorkspaces,
       createWorkspace,
       attachEntityToActiveWorkspace,
@@ -424,13 +545,18 @@ const fallbackPersonalWorkspace: WorkspaceItem = {
   title: 'My Workspace',
   ownerId: 'guest',
   isPersonal: true,
+  isShared: false,
+  role: 'owner',
 };
 
 const fallbackWorkspaceContext: WorkspaceContextType = {
   activeWorkspace: fallbackPersonalWorkspace,
   workspaces: [fallbackPersonalWorkspace],
+  ownedWorkspaces: [],
+  sharedWorkspaces: [],
   loadingWorkspaces: false,
   setActiveWorkspaceId: () => {},
+  registerSharedWorkspace: async () => {},
   refreshWorkspaces: async () => {},
   createWorkspace: async () => null,
   attachEntityToActiveWorkspace: async () => {},
