@@ -39,6 +39,15 @@ export function UnifiedBottomDrawer() {
   );
 
   const isFullscreenMobile = ['pricing', 'tags', 'trash'].includes(activeContent as string);
+  const isCompactBottomDrawer = [
+    'share-context',
+    'share-note',
+    'delete-confirm',
+    'delete-note',
+    'security-confirm',
+    'project-join-request-confirm',
+    'access-control',
+  ].includes(activeContent as string);
 
   return (
     <Drawer
@@ -55,7 +64,7 @@ export function UnifiedBottomDrawer() {
           border: isFullscreenMobile ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
           borderBottom: 0,
           height: isFullscreenMobile ? '100dvh' : 'auto',
-          maxHeight: isFullscreenMobile ? '100dvh' : '90dvh',
+          maxHeight: isFullscreenMobile ? '100dvh' : isCompactBottomDrawer ? '60dvh' : '85dvh',
           maxWidth: isFullscreenMobile ? '100vw' : '640px',
           width: '100%',
           mx: 'auto',

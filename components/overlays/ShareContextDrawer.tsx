@@ -325,13 +325,8 @@ export function ShareContextDrawer() {
 
   return (
     <div className="w-full bg-[#161412] text-[#F5F2ED] flex flex-col font-sans select-none pb-6">
-      {/* Top Handle / Notch */}
-      <div className="flex justify-center pt-3 pb-2">
-        <div className="w-10 h-1 rounded-full bg-white/20" />
-      </div>
-
       {/* Header with clear contextual title */}
-      <div className="px-6 pb-4 pt-1 flex items-center justify-between border-b border-white/5">
+      <div className="px-6 pb-4 pt-3 flex items-center justify-between border-b border-white/5">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
             <Share2 size={16} />
