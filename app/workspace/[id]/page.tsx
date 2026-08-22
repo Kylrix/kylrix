@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
@@ -14,12 +14,15 @@ export default function WorkspaceSharePage() {
   const router = useRouter();
   const { setActiveWorkspaceId, registerSharedWorkspace } = useWorkspace();
   const id = (params?.id as string) || '';
+  const executedRef = useRef(false);
 
   useEffect(() => {
     if (!id) {
       router.replace('/app');
       return;
     }
+    if (executedRef.current) return;
+    executedRef.current = true;
     let cancelled = false;
 
     void (async () => {

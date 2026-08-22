@@ -205,7 +205,7 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: '/projects/:projectId/:path*',
+        source: '/projects/:projectId/:path+',
         destination: '/workspace/:projectId',
         permanent: true,
       },
@@ -215,7 +215,7 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: '/project/:projectId/:path*',
+        source: '/project/:projectId/:path+',
         destination: '/workspace/:projectId',
         permanent: true,
       },
@@ -230,7 +230,7 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: '/workspaces/:projectId/:path*',
+        source: '/workspaces/:projectId/:path+',
         destination: '/workspace/:projectId',
         permanent: true,
       },
@@ -240,7 +240,7 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: '/workspace/:projectId/:path*',
+        source: '/workspace/:projectId/:path+',
         destination: '/workspace/:projectId',
         permanent: true,
       },
