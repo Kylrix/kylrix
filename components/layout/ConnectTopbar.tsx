@@ -41,6 +41,7 @@ import {
   GitFork,
   Tag as TagIcon,
   Trash2 as TrashIcon,
+  Share2 as ShareIcon,
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
@@ -2086,7 +2087,7 @@ export default function ConnectTopbar({
                 },
               }}
             >
-              <Box sx={{ minWidth: 0 }}>
+              <Box sx={{ minWidth: 0, flex: 1, pr: 1 }}>
                 <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff' }} noWrap>
                   {w.title}
                 </Typography>
@@ -2094,9 +2095,38 @@ export default function ConnectTopbar({
                   {w.isPersonal ? 'Default workspace' : 'Workspace'}
                 </Typography>
               </Box>
-              {isActive ? (
-                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#6366F1', boxShadow: '0 0 8px #6366F1', flexShrink: 0 }} />
-              ) : null}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                {!w.isPersonal && (
+                  <IconButton
+                    size="small"
+                    onClick={(e: MouseEvent) => {
+                      e.stopPropagation();
+                      handleCloseAll();
+                      openUnified('share-context', {
+                        resourceType: 'project',
+                        resourceId: w.id,
+                        resourceTitle: w.title,
+                        accentColor: '#6366F1',
+                      });
+                    }}
+                    sx={{
+                      color: 'rgba(255, 255, 255, 0.4)',
+                      p: 0.75,
+                      borderRadius: '8px',
+                      '&:hover': {
+                        color: '#6366F1',
+                        bgcolor: 'rgba(99, 102, 241, 0.15)',
+                      },
+                    }}
+                    title="Share workspace"
+                  >
+                    <ShareIcon size={14} />
+                  </IconButton>
+                )}
+                {isActive ? (
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#6366F1', boxShadow: '0 0 8px #6366F1', flexShrink: 0 }} />
+                ) : null}
+              </Box>
             </Box>
           );
         })}

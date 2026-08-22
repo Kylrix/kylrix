@@ -10,6 +10,7 @@ import {
   GitFork as FlowIcon,
   Users as MomentsIcon,
   MessageCircleMore as HangoutIcon,
+  Share2 as ShareIcon,
 } from 'lucide-react';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -311,7 +312,40 @@ export function UnifiedLeftSidebar() {
                           {w.isPersonal ? 'Default workspace' : 'Workspace'}
                         </span>
                       </Box>
-                      {isActive && <CheckIcon size={14} color="#F59E0B" style={{ flexShrink: 0 }} />}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                        {!w.isPersonal && (
+                          <Box
+                            component="span"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setWorkspaceMenuOpen(false);
+                              openUnified('share-context', {
+                                resourceType: 'project',
+                                resourceId: w.id,
+                                resourceTitle: w.title,
+                                accentColor: '#F59E0B',
+                              });
+                            }}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              p: 0.5,
+                              borderRadius: '6px',
+                              color: 'rgba(255, 255, 255, 0.4)',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                color: '#F59E0B',
+                                bgcolor: 'rgba(245, 158, 11, 0.15)',
+                              },
+                            }}
+                            title="Share workspace"
+                          >
+                            <ShareIcon size={13} />
+                          </Box>
+                        )}
+                        {isActive && <CheckIcon size={14} color="#F59E0B" style={{ flexShrink: 0 }} />}
+                      </Box>
                     </Box>
                   );
                 })}
