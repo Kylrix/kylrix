@@ -11,7 +11,6 @@ import type { Priority, Task } from '@/types';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import {
-  EventDateTimePickerSurface,
   EventDateTimePickerDrawer,
 } from '@/components/events/drawers/EventDateTimePickerDrawer';
 
@@ -52,7 +51,7 @@ export function CreateGoalComposer({
   const { user } = useAuth();
   const { activeWorkspace, attachEntityToActiveWorkspace } = useWorkspace();
   const ownerId = user?.$id || userId || 'guest';
-  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { closeSidebar } = useDynamicSidebar();
   const { getCachedData, setCachedData } = useDataNexus();
   const draftKey = `kylrix_goal_compose_draft_${ownerId}`;
 
