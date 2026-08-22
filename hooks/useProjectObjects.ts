@@ -56,11 +56,12 @@ export function useProjectObjects(
       if (!force) {
         try {
           const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const cached = await LocalEngine.cacheGet<ProjectObjects[]>(
+          const cached = await LocalEngine.cacheGet<any>(
             projectObjectsKindCacheKey(projectId, entityKind),
           );
-          if (cached && cached.length > 0 && mountedRef.current) {
-            setRows(cached);
+          const cachedList = Array.isArray(cached) ? cached : Array.isArray(cached?.rows) ? cached.rows : [];
+          if (cachedList.length > 0 && mountedRef.current) {
+            setRows(cachedList);
             setLoading(false);
           } else {
             if (mountedRef.current) setRows([]);
@@ -79,7 +80,7 @@ export function useProjectObjects(
         const cacheKey = projectObjectsKindCacheKey(projectId, entityKind);
         if (force) nexusInvalidate(cacheKey);
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const remote = await LocalEngine.query<ProjectObjects[]>(
+        const remote = await LocalEngine.query<any>(
           cacheKey,
           async () => {
             const result = await ProjectsService.listProjectObjectsByKind(projectId, entityKind);
@@ -87,16 +88,22 @@ export function useProjectObjects(
           },
           { ttl: PROJECT_OBJECTS_TTL, realtimeChannel: `databases.${(await import('@/lib/appwrite/config')).APPWRITE_CONFIG.DATABASES.CHAT}.collections.project_objects.documents` }
         );
-        if (mountedRef.current && remote) {
+        const remoteList: ProjectObjects[] = Array.isArray(remote)
+          ? remote
+          : Array.isArray(remote?.rows)
+            ? remote.rows
+            : [];
+        if (mountedRef.current) {
           setRows((prev) => {
             const byId = new Map<string, ProjectObjects>();
+            const prevList = Array.isArray(prev) ? prev : [];
             // Load existing local rows first
-            prev.forEach((r) => {
+            prevList.forEach((r) => {
               const key = r.entityId || r.$id || (r as any).id;
               if (key) byId.set(key, r);
             });
             // Merge remote rows
-            remote.forEach((r: ProjectObjects) => {
+            remoteList.forEach((r: ProjectObjects) => {
               const key = r.entityId || r.$id || (r as any).id;
               if (key) byId.set(key, r);
             });
