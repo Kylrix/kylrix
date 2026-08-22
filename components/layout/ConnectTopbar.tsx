@@ -72,6 +72,7 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useSection } from '@/context/SectionContext';
+import { executeInstantShare } from '@/lib/share/instant-share';
 
 import {
   renderShortcutsList,
@@ -101,7 +102,7 @@ export default function ConnectTopbar({
   const navPush = useCallback((href: string) => startNavTransition(() => router.push(href)), [router]);
   const pathname = usePathname();
   const { setIsCollapsed } = useSidebar();
-  const { activeWorkspace, workspaces, ownedWorkspaces, sharedWorkspaces, setActiveWorkspaceId, loadingWorkspaces } = useWorkspace();
+  const { activeWorkspace, workspaces, ownedWorkspaces, sharedWorkspaces, setActiveWorkspaceId, markWorkspacePublic, loadingWorkspaces } = useWorkspace();
   const { notes = [] } = useNotes();
   const { tasks = [], projects = [], selectTask } = useTask();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
@@ -2106,23 +2107,34 @@ export default function ConnectTopbar({
                     onClick={(e: MouseEvent) => {
                       e.stopPropagation();
                       handleCloseAll();
+                      markWorkspacePublic(w.id);
+                      void executeInstantShare('project', w.id, {
+                        resourceTitle: w.title,
+                        isPublic: true,
+                        isGuest: true,
+                      });
                       openUnified('share-context', {
                         resourceType: 'project',
                         resourceId: w.id,
                         resourceTitle: w.title,
-                        accentColor: '#6366F1',
+                        isPublic: true,
+                        isGuest: true,
+                        accentColor: '#10B981',
                       });
                     }}
                     sx={{
-                      color: 'rgba(255, 255, 255, 0.4)',
+                      color: w.isPublic ? '#10B981' : 'rgba(255, 255, 255, 0.35)',
+                      bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
                       p: 0.75,
                       borderRadius: '8px',
+                      transition: 'all 0.2s ease',
                       '&:hover': {
-                        color: '#6366F1',
-                        bgcolor: 'rgba(99, 102, 241, 0.15)',
+                        color: w.isPublic ? '#10B981' : '#6366F1',
+                        bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.22)' : 'rgba(99, 102, 241, 0.15)',
+                        transform: 'scale(1.08)',
                       },
                     }}
-                    title="Share workspace"
+                    title={w.isPublic ? 'Public sharing enabled (click to manage)' : 'Share workspace'}
                   >
                     <ShareIcon size={14} />
                   </IconButton>
@@ -2184,20 +2196,31 @@ export default function ConnectTopbar({
                       onClick={(e: MouseEvent) => {
                         e.stopPropagation();
                         handleCloseAll();
+                        markWorkspacePublic(w.id);
+                        void executeInstantShare('project', w.id, {
+                          resourceTitle: w.title,
+                          isPublic: true,
+                          isGuest: true,
+                        });
                         openUnified('share-context', {
                           resourceType: 'project',
                           resourceId: w.id,
                           resourceTitle: w.title,
-                          accentColor: '#6366F1',
+                          isPublic: true,
+                          isGuest: true,
+                          accentColor: '#10B981',
                         });
                       }}
                       sx={{
-                        color: 'rgba(255, 255, 255, 0.4)',
+                        color: '#10B981',
+                        bgcolor: 'rgba(16, 185, 129, 0.12)',
                         p: 0.75,
                         borderRadius: '8px',
+                        transition: 'all 0.2s ease',
                         '&:hover': {
-                          color: '#6366F1',
-                          bgcolor: 'rgba(99, 102, 241, 0.15)',
+                          color: '#10B981',
+                          bgcolor: 'rgba(16, 185, 129, 0.22)',
+                          transform: 'scale(1.08)',
                         },
                       }}
                       title="Share workspace link"

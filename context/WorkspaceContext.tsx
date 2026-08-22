@@ -27,6 +27,7 @@ interface WorkspaceContextType {
   loadingWorkspaces: boolean;
   setActiveWorkspaceId: (id: string) => void;
   registerSharedWorkspace: (workspace: { id: string; title?: string; ownerId?: string; isPublic?: boolean }) => Promise<void>;
+  markWorkspacePublic: (workspaceId: string) => void;
   refreshWorkspaces: () => Promise<void>;
   createWorkspace: (title: string, summary?: string) => Promise<WorkspaceItem | null>;
   attachEntityToActiveWorkspace: (entityKind: string, entityId: string) => Promise<void>;
@@ -170,6 +171,36 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [personalWorkspace, userId]
+  );
+
+  const markWorkspacePublic = useCallback(
+    async (workspaceId: string) => {
+      setWorkspaces((prev) =>
+        prev.map((w) =>
+          w.id === workspaceId ? { ...w, isPublic: true, isGuest: true } : w
+        )
+      );
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const [userProjects, globalProjects] = await Promise.all([
+          LocalEngine.cacheGet<any[]>(`f_projects_list_${userId}`),
+          LocalEngine.cacheGet<any[]>('f_projects_list'),
+        ]);
+        if (Array.isArray(userProjects)) {
+          const updated = userProjects.map((p) =>
+            (p.$id === workspaceId || p.id === workspaceId) ? { ...p, isPublic: true, isGuest: true } : p
+          );
+          await LocalEngine.cacheSet(`f_projects_list_${userId}`, updated);
+        }
+        if (Array.isArray(globalProjects)) {
+          const updated = globalProjects.map((p) =>
+            (p.$id === workspaceId || p.id === workspaceId) ? { ...p, isPublic: true, isGuest: true } : p
+          );
+          await LocalEngine.cacheSet('f_projects_list', updated);
+        }
+      } catch {}
+    },
+    [userId]
   );
 
   useEffect(() => {
@@ -515,6 +546,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       loadingWorkspaces,
       setActiveWorkspaceId,
       registerSharedWorkspace,
+      markWorkspacePublic,
       refreshWorkspaces,
       createWorkspace,
       attachEntityToActiveWorkspace,
@@ -529,6 +561,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       loadingWorkspaces,
       setActiveWorkspaceId,
       registerSharedWorkspace,
+      markWorkspacePublic,
       refreshWorkspaces,
       createWorkspace,
       attachEntityToActiveWorkspace,
@@ -557,6 +590,7 @@ const fallbackWorkspaceContext: WorkspaceContextType = {
   loadingWorkspaces: false,
   setActiveWorkspaceId: () => {},
   registerSharedWorkspace: async () => {},
+  markWorkspacePublic: () => {},
   refreshWorkspaces: async () => {},
   createWorkspace: async () => null,
   attachEntityToActiveWorkspace: async () => {},

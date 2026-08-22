@@ -19,6 +19,7 @@ import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { useAuth } from '@/context/auth/AuthContext';
+import { executeInstantShare } from '@/lib/share/instant-share';
 
 type NavId = 'note' | 'goal' | 'vault' | 'connect' | 'moments' | 'hangout' | 'flow';
 
@@ -49,13 +50,35 @@ export function UnifiedLeftSidebar() {
   const { isOpen: _isOverlayOpen } = useOverlay();
   const { isCollapsed } = useSidebar();
   const { user: _user, updatePreferences } = useAuth();
-  const { activeWorkspace, workspaces, ownedWorkspaces, sharedWorkspaces, setActiveWorkspaceId } = useWorkspace();
+  const { activeWorkspace, workspaces, ownedWorkspaces, sharedWorkspaces, setActiveWorkspaceId, markWorkspacePublic } = useWorkspace();
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = React.useState(false);
   const workspaceSectionRef = React.useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (isCollapsed) setWorkspaceMenuOpen(false);
   }, [isCollapsed]);
+
+  const handleShareWorkspace = useCallback(
+    (e: React.MouseEvent, w: (typeof workspaces)[number]) => {
+      e.stopPropagation();
+      setWorkspaceMenuOpen(false);
+      markWorkspacePublic(w.id);
+      void executeInstantShare('project', w.id, {
+        resourceTitle: w.title,
+        isPublic: true,
+        isGuest: true,
+      });
+      openUnified('share-context', {
+        resourceType: 'project',
+        resourceId: w.id,
+        resourceTitle: w.title,
+        isPublic: true,
+        isGuest: true,
+        accentColor: '#10B981',
+      });
+    },
+    [markWorkspacePublic, openUnified]
+  );
 
   useEffect(() => {
     if (!workspaceMenuOpen) return;
@@ -320,30 +343,24 @@ export function UnifiedLeftSidebar() {
                         {!w.isPersonal && (
                           <Box
                             component="span"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setWorkspaceMenuOpen(false);
-                              openUnified('share-context', {
-                                resourceType: 'project',
-                                resourceId: w.id,
-                                resourceTitle: w.title,
-                                accentColor: '#F59E0B',
-                              });
-                            }}
+                            onClick={(e) => handleShareWorkspace(e, w)}
                             sx={{
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               p: 0.5,
                               borderRadius: '6px',
-                              color: 'rgba(255, 255, 255, 0.4)',
+                              color: w.isPublic ? '#10B981' : 'rgba(255, 255, 255, 0.35)',
+                              bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
                               cursor: 'pointer',
+                              transition: 'all 0.2s ease',
                               '&:hover': {
-                                color: '#F59E0B',
-                                bgcolor: 'rgba(245, 158, 11, 0.15)',
+                                color: w.isPublic ? '#10B981' : '#F59E0B',
+                                bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.15)',
+                                transform: 'scale(1.08)',
                               },
                             }}
-                            title="Share workspace"
+                            title={w.isPublic ? 'Public sharing enabled (click to manage)' : 'Share workspace'}
                           >
                             <ShareIcon size={13} />
                           </Box>
@@ -408,27 +425,21 @@ export function UnifiedLeftSidebar() {
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
                             <Box
                               component="span"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setWorkspaceMenuOpen(false);
-                                openUnified('share-context', {
-                                  resourceType: 'project',
-                                  resourceId: w.id,
-                                  resourceTitle: w.title,
-                                  accentColor: '#6366F1',
-                                });
-                              }}
+                              onClick={(e) => handleShareWorkspace(e, w)}
                               sx={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 p: 0.5,
                                 borderRadius: '6px',
-                                color: 'rgba(255, 255, 255, 0.4)',
+                                color: '#10B981',
+                                bgcolor: 'rgba(16, 185, 129, 0.12)',
                                 cursor: 'pointer',
+                                transition: 'all 0.2s ease',
                                 '&:hover': {
-                                  color: '#6366F1',
-                                  bgcolor: 'rgba(99, 102, 241, 0.15)',
+                                  color: '#10B981',
+                                  bgcolor: 'rgba(16, 185, 129, 0.22)',
+                                  transform: 'scale(1.08)',
                                 },
                               }}
                               title="Share workspace link"
