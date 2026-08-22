@@ -34,6 +34,7 @@ import { loadNotesFromLocalCopy, warmNotesLocalCopy } from '@/lib/notes/load-loc
 import { subscribeLocalSoftRefresh } from '@/lib/sync/local-soft-refresh';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
+import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 
 type LiveEditGuard = {
   title: string;
@@ -978,19 +979,13 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     await applyNotePin(noteId, false);
   }, [applyNotePin]);
 
+  const { filteredItems: workspaceScopedNotes } = useWorkspaceFilteredItems(notes, 'note');
+
   const sortedNotes = useMemo(() => {
-    let scoped = notes;
-    if (!activeWorkspace || activeWorkspace.isPersonal) {
-      // Personal workspace: exclude anything tagged for a named workspace
-      scoped = notes.filter(isDefaultWorkspaceObject);
-    }
-    // Real workspace: pass ALL notes through — the consuming page filters via
-    // project_objects join table (registeredIds). Filtering here by isWorkspace
-    // would show notes from ALL workspaces, not just the active one.
-    return sortPinnedThenCreatedAt(scoped, (row) =>
+    return sortPinnedThenCreatedAt(workspaceScopedNotes, (row) =>
       isResourcePinned('note', row.$id, noteOwnerId(row), row.isPinned),
     );
-  }, [notes, isResourcePinned, noteOwnerId, activeWorkspace]);
+  }, [workspaceScopedNotes, isResourcePinned, noteOwnerId]);
 
   /**
    * Memoize the context value so consumers (note list, sidebar, search, etc.) don't

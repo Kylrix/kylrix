@@ -8,6 +8,7 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 
 import Link from 'next/link';
 
@@ -325,7 +326,8 @@ export default function IdeasPage() {
 
   const [ecosystemTagsList, setEcosystemTagsList] = useState<{ name: string; color?: string }[]>([]);
 
-  const activeNotes = notes.filter((n) => !n.isTrash);
+  const { filteredItems: workspaceScopedNotes } = useWorkspaceFilteredItems(notes, 'note');
+  const activeNotes = workspaceScopedNotes.filter((n) => !n.isTrash);
   const pinnedNotes = activeNotes.filter((n) => n.isPinned);
   const unpinnedNotes = activeNotes.filter((n) => !n.isPinned);
 
