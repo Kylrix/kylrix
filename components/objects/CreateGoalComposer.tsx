@@ -16,6 +16,7 @@ import {
 
 import { useDataNexus } from '@/context/DataNexusContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { useContextualAutocomplete, ContextualAutocompleteOverlay } from '@/lib/contextual-engine';
 
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low'];
 
@@ -105,6 +106,21 @@ export function CreateGoalComposer({
   const isPastedRef = useRef(false);
   const pasteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const {
+    inlineSuffix,
+    suggestions: autoSuggestions,
+    handleKeyDown: handleAutoKeyDown,
+    recordContent,
+    acceptSuggestion,
+  } = useContextualAutocomplete(content, {
+    niche: 'productivity',
+    activeObjectId: resolvedId,
+    tags,
+    onAccept: (completedText) => {
+      handleContentChange(completedText);
+    },
+  });
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -446,8 +462,10 @@ export function CreateGoalComposer({
             }}
             onChange={(e) => handleContentChange(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey && !isExpanded && !isPastedRef.current) {
+              handleAutoKeyDown(e);
+              if (e.key === 'Enter' && !e.shiftKey && !isExpanded && !isPastedRef.current && !inlineSuffix) {
                 e.preventDefault();
+                recordContent(content);
                 handleClose();
               }
             }}
@@ -455,6 +473,11 @@ export function CreateGoalComposer({
             autoFocus
             style={{ minHeight: '76px', height: '76px' }}
             className="w-full resize-none bg-[#100F0E] text-white placeholder-white/25 border border-white/10 focus:border-[#A855F7]/40 rounded-2xl p-3.5 text-sm leading-relaxed focus:outline-none transition-all scrollbar-thin font-satoshi"
+          />
+          <ContextualAutocompleteOverlay
+            inlineSuffix={inlineSuffix}
+            suggestions={autoSuggestions}
+            onAccept={acceptSuggestion}
           />
         </div>
 

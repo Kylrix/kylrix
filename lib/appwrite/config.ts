@@ -39,6 +39,9 @@ export const APPWRITE_CONFIG = {
         AGENT_PAYMENT_INTENTS: 'agent_payment_intents',
         AGENT_BYOK_KEYS: 'agent_byok_keys',
         USER_CONVENIENCE_SESSIONS: 'user_convenience_sessions',
+        CONTEXTS: 'contexts',
+        KNOWLEDGE_GRAPH: 'knowledge_graph',
+        PATTERNS: 'patterns',
 
         NOTE: {
             USERS: '67ff05c900247b5673d3',

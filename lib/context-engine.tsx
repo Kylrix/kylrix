@@ -147,6 +147,21 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
 
     console.log('[LocalContextEngine] Buffered Event:', newEvent);
 
+    // Feed event into Contextual Engine
+    try {
+      const { patternMatcher, localKnowledgeGraph } = require('@/lib/contextual-engine');
+      patternMatcher.ingestText(`${eventInput.app} ${eventInput.action}`, {
+        niche: eventInput.niche as any,
+      });
+      if (eventInput.metadata?.objectId && eventInput.metadata?.targetId) {
+        localKnowledgeGraph.correlate(
+          { id: eventInput.metadata.objectId, kind: eventInput.metadata.objectKind || 'note' },
+          { id: eventInput.metadata.targetId, kind: eventInput.metadata.targetKind || 'goal' },
+          { explicitRelation: 'co_occurs' }
+        );
+      }
+    } catch {}
+
     // Heuristics & Confident Pattern Suggestion Engine
     setTimeout(() => {
       setEvents(currentEvents => {

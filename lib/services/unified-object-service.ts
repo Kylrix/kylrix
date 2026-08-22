@@ -38,6 +38,9 @@ const OBJECT_TABLES: Record<string, TableConfig> = {
   project:    { databaseId: APPWRITE_CONFIG.DATABASES.FLOW,      tableId: (APPWRITE_CONFIG.TABLES.FLOW as any).PROJECTS || (APPWRITE_CONFIG.TABLES as any).PROJECTS || 'projects', ownerField: 'userId' },
   workspace:  { databaseId: APPWRITE_CONFIG.DATABASES.FLOW,      tableId: (APPWRITE_CONFIG.TABLES.FLOW as any).PROJECTS || (APPWRITE_CONFIG.TABLES as any).PROJECTS || 'projects', ownerField: 'userId' },
   folder:     { databaseId: APPWRITE_CONFIG.DATABASES.VAULT,     tableId: APPWRITE_CONFIG.TABLES.VAULT.FOLDERS,    ownerField: 'userId' },
+  context:    { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: APPWRITE_CONFIG.TABLES.CONTEXTS, ownerField: 'userId' },
+  knowledge_graph: { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: APPWRITE_CONFIG.TABLES.KNOWLEDGE_GRAPH, ownerField: 'userId' },
+  pattern:    { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: APPWRITE_CONFIG.TABLES.PATTERNS, ownerField: 'userId' },
   // system-level (admin)
   token_registry: { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: 'token_registry', ownerField: 'userId', system: true },
 };

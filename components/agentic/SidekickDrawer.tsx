@@ -233,6 +233,21 @@ export function SidekickDrawer({
         const store = (await import('@/lib/agentic/session-local-store')).AgenticSessionLocalStore;
         await store.upsertSession({ id: sid, userId: user.$id, chatHistory: updated.map(m=> ({ id: m.id, role: m.role, content: m.content })) as any, targetType: target.type, targetId: target.id } as any);
       }
+
+      // Feed into Contextual Engine: learn patterns and ingest user clarifications
+      try {
+        const { patternMatcher, contextManager } = await import('@/lib/contextual-engine');
+        patternMatcher.ingestText(trimmed, { niche: 'intelligence' });
+        const isCorrection = /^(don't|dont|no\b|i meant|actually|correction|instead)/i.test(trimmed);
+        if (isCorrection) {
+          const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
+          contextManager.ingestUserClarification(target.id, {
+            originalQueryOrAction: lastAssistant?.content?.slice(0, 200) || '',
+            userClarificationText: trimmed,
+            affectedObjectId: target.id,
+          });
+        }
+      } catch {}
     } catch (e:any) {
       setError(e?.message || 'Chat failed');
     } finally { setSending(false); }
