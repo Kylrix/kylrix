@@ -204,43 +204,15 @@ export const ProjectsService = {
           ? 'credential'
           : rawKind;
 
-    const { projectObjectsKindCacheKey } = await import('@/lib/projects/projects-cache');
-    const cacheKey = projectObjectsKindCacheKey(projectId, normKind);
-    const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    const res = await LocalEngine.query<any>(
-      cacheKey,
-      async () => {
-        const all: any[] = [];
-        let cursor: string | null = null;
-        const kinds = normKind === 'note'
-          ? ['note', 'idea', 'notes', 'ideas']
-          : normKind === 'goal'
-            ? ['goal', 'task', 'goals', 'tasks']
-            : normKind === 'credential'
-              ? ['credential', 'password', 'secret', 'credentials']
-              : [entityKind];
-
-        while (true) {
-          const queries: string[] = [
-            Query.equal('projectId', projectId),
-            Query.equal('entityKind', kinds),
-            Query.limit(100),
-            Query.orderDesc('$createdAt'),
-          ];
-          if (cursor) queries.push(Query.cursorAfter(cursor));
-          const page: any = await (databases as any).listRows(DATABASE_ID, PROJECT_OBJECTS_COLLECTION_ID, queries).catch(() => null);
-          const rows: any[] = page?.rows || page?.documents || [];
-          if (rows.length === 0) break;
-          all.push(...rows);
-          if (rows.length < 100) break;
-          cursor = rows[rows.length - 1].$id;
-          if (all.length >= 500) break;
-        }
-        return all;
-      },
-      { realtimeChannel: `databases.${DATABASE_ID}.collections.${PROJECT_OBJECTS_COLLECTION_ID}.documents` }
-    );
-    const rows = Array.isArray(res) ? res : Array.isArray(res?.rows) ? res.rows : [];
+    const poRes = await this.listProjectObjects(projectId).catch(() => null);
+    const allRows: any[] = Array.isArray(poRes?.rows) ? poRes.rows : [];
+    const rows = allRows.filter((r: any) => {
+      const k = String(r.entityKind || '').toLowerCase().trim();
+      if (normKind === 'note') return k === 'note' || k === 'idea' || k === 'notes' || k === 'ideas';
+      if (normKind === 'goal') return k === 'goal' || k === 'task' || k === 'goals' || k === 'tasks';
+      if (normKind === 'credential') return k === 'credential' || k === 'password' || k === 'secret' || k === 'credentials';
+      return k === normKind;
+    });
     return { rows };
   },
 
