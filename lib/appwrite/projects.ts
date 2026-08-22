@@ -195,24 +195,41 @@ export const ProjectsService = {
    * UI never calls Appwrite directly; LocalEngine handles RxDB → Realtime → fetch
    */
   async listProjectObjectsByKind(projectId: string, entityKind: string) {
+    const rawKind = String(entityKind).toLowerCase().trim();
+    const normKind = (rawKind === 'idea' || rawKind === 'ideas' || rawKind === 'notes' || rawKind === 'note')
+      ? 'note'
+      : (rawKind === 'task' || rawKind === 'tasks' || rawKind === 'goals' || rawKind === 'goal')
+        ? 'goal'
+        : (rawKind === 'password' || rawKind === 'secret' || rawKind === 'credentials' || rawKind === 'credential')
+          ? 'credential'
+          : rawKind;
+
     const { projectObjectsKindCacheKey } = await import('@/lib/projects/projects-cache');
-    const cacheKey = projectObjectsKindCacheKey(projectId, entityKind);
+    const cacheKey = projectObjectsKindCacheKey(projectId, normKind);
     const { LocalEngine } = await import('@/lib/services/LocalEngine');
     const res = await LocalEngine.query<any>(
       cacheKey,
       async () => {
         const all: any[] = [];
         let cursor: string | null = null;
+        const kinds = normKind === 'note'
+          ? ['note', 'idea', 'notes', 'ideas']
+          : normKind === 'goal'
+            ? ['goal', 'task', 'goals', 'tasks']
+            : normKind === 'credential'
+              ? ['credential', 'password', 'secret', 'credentials']
+              : [entityKind];
+
         while (true) {
           const queries: string[] = [
             Query.equal('projectId', projectId),
-            Query.equal('entityKind', entityKind),
+            Query.equal('entityKind', kinds),
             Query.limit(100),
             Query.orderDesc('$createdAt'),
           ];
           if (cursor) queries.push(Query.cursorAfter(cursor));
-          const page: any = await (databases as any).listRows(DATABASE_ID, PROJECT_OBJECTS_COLLECTION_ID, queries);
-          const rows: any[] = page?.rows || [];
+          const page: any = await (databases as any).listRows(DATABASE_ID, PROJECT_OBJECTS_COLLECTION_ID, queries).catch(() => null);
+          const rows: any[] = page?.rows || page?.documents || [];
           if (rows.length === 0) break;
           all.push(...rows);
           if (rows.length < 100) break;
@@ -290,9 +307,14 @@ export const ProjectsService = {
           const type = p.entityKind;
           const id = p.entityId;
           if (!type || !id) continue;
-          let normalized = type;
-          if (type === 'productivity.task' || type === 'goal') normalized = 'task';
-          if (type === 'password' || type === 'secret') normalized = 'credential';
+          let normalized = String(type).toLowerCase().trim();
+          if (normalized === 'idea' || normalized === 'ideas' || normalized === 'note' || normalized === 'notes') normalized = 'note';
+          else if (normalized === 'productivity.task' || normalized === 'goal' || normalized === 'goals' || normalized === 'task' || normalized === 'tasks') normalized = 'task';
+          else if (normalized === 'password' || normalized === 'secret' || normalized === 'credential' || normalized === 'credentials') normalized = 'credential';
+          else if (normalized === 'totp' || normalized === 'totps') normalized = 'totp';
+          else if (normalized === 'event' || normalized === 'events') normalized = 'event';
+          else if (normalized === 'form' || normalized === 'forms') normalized = 'form';
+          else if (normalized === 'moment' || normalized === 'moments') normalized = 'moment';
           if (!resourceIdsByType[normalized]) resourceIdsByType[normalized] = new Set();
           resourceIdsByType[normalized].add(id);
         }

@@ -992,13 +992,12 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         const { ProjectsService } = await import('@/lib/appwrite/projects');
         const tagged = await ProjectsService.listTaggedResources(wsId).catch(() => null);
         if (tagged?.notes && Array.isArray(tagged.notes) && tagged.notes.length > 0 && !cancelled) {
-          setNotes((prev) => {
-            const byId = new Map(prev.map((n) => [n.$id || (n as any).id, n]));
-            tagged.notes.forEach((n: any) => {
-              const id = n.$id || n.id;
-              if (id) byId.set(id, { ...byId.get(id), ...n, projectId: wsId, isWorkspace: true });
-            });
-            return Array.from(byId.values());
+          tagged.notes.forEach((n: any) => {
+            const id = n.$id || n.id;
+            if (id) {
+              const stamped = { ...n, $id: id, projectId: wsId, isWorkspace: true };
+              upsertNote(stamped);
+            }
           });
         }
       } catch {}
