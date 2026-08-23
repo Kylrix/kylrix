@@ -8,7 +8,7 @@ import {
   Target as GoalsIcon,
   Lock as VaultIcon,
   GitFork as FlowIcon,
-  MessageCircle as ConnectIcon} from 'lucide-react';
+  Users as ConnectIcon} from 'lucide-react';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';

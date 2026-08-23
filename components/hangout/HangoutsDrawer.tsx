@@ -4,7 +4,7 @@ import React, { useEffect, useState, useTransition, useMemo, useCallback } from 
 import {
   Send,
   Lock,
-  MessageSquare,
+  MessageCircleMore,
   Check,
   Loader2,
   Plus,
@@ -272,7 +272,7 @@ export function HangoutsDrawer({
       <div className="flex items-center justify-between border-b border-white/[0.06] bg-[#0A0908] px-5 py-3.5 shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="p-2 rounded-xl bg-[#161412] border border-white/[0.08] text-[#A855F7] shrink-0">
-            <MessageSquare size={16} />
+            <MessageCircleMore size={16} />
           </div>
           <div className="min-w-0">
             <h2 className="text-sm font-black font-clash text-white truncate m-0">
@@ -355,7 +355,7 @@ export function HangoutsDrawer({
         {filteredTargets.length === 0 ? (
           <div className="py-14 text-center space-y-3">
             <div className="w-10 h-10 rounded-2xl bg-[#161412] border border-white/[0.06] mx-auto grid place-items-center text-white/30">
-              <MessageSquare size={20} />
+              <MessageCircleMore size={20} />
             </div>
             <p className="text-xs font-bold text-white/40 font-satoshi">
               {searchQuery ? 'No matching hangouts found' : 'No hangouts found'}
@@ -408,7 +408,7 @@ export function HangoutsDrawer({
                     />
                   ) : (
                     <div className="h-10 w-10 grid place-items-center text-[#A855F7]">
-                      <MessageSquare size={16} />
+                      <MessageCircleMore size={16} />
                     </div>
                   )}
                   {target.isWorkspace && (

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useMemo } from 'react';
-import { MessageSquare, Sparkles } from 'lucide-react';
+import { MessageCircleMore, Sparkles } from 'lucide-react';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { HangoutsDrawer } from '@/components/hangout/HangoutsDrawer';
@@ -67,7 +67,7 @@ export function HangoutTabTrigger({
         className={`relative inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-[#161412] border border-white/[0.08] text-white/70 hover:text-white hover:bg-[#1C1A18] hover:border-white/15 active:scale-95 transition-all select-none cursor-pointer ${className}`}
         title={isRealWorkspace ? 'Workspace Discussion & Hangouts' : 'Hangouts & Discussions'}
       >
-        <MessageSquare size={15} className="text-[#A855F7]" />
+        <MessageCircleMore size={16} className="text-[#A855F7]" />
         <span>{isRealWorkspace ? 'Discussion' : 'Hangouts'}</span>
         {hasUnread && (
           <span className="h-2 w-2 rounded-full bg-[#EC4899] animate-pulse" />
@@ -84,7 +84,7 @@ export function HangoutTabTrigger({
       title={isRealWorkspace ? 'Workspace Discussion & Hangouts' : 'Hangouts & Discussions'}
       aria-label="Hangouts"
     >
-      <MessageSquare size={16} className="text-white/80 group-hover:text-white" />
+      <MessageCircleMore size={16} className="text-white/80 group-hover:text-white" />
       {isRealWorkspace && (
         <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-[#A855F7] text-[8px] font-black text-white">
           •
