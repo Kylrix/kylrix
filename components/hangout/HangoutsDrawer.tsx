@@ -32,6 +32,10 @@ import toast from 'react-hot-toast';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { ChatCreateDrawer } from '@/components/objects/ChatCreateDrawer';
+import {
+  shouldRunEmptyEscapeHatch,
+  markEmptyEscapeHatchRan,
+} from '@/lib/sync/local-copy-sync';
 
 export type ShareObject = {
   id: string;
