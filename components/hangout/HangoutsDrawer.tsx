@@ -44,19 +44,19 @@ export type ShareObject = {
 
 export interface HangoutsDrawerProps {
   mode?: 'browse' | 'share';
-  object?: ShareObject;
   workspaceId?: string;
   workspaceTitle?: string;
   initialConversationId?: string;
+  object?: ShareObject;
   onClose?: () => void;
 }
 
 export function HangoutsDrawer({
   mode = 'browse',
-  object,
   workspaceId: propWorkspaceId,
   workspaceTitle: propWorkspaceTitle,
   initialConversationId,
+  object,
   onClose,
 }: HangoutsDrawerProps) {
   const { user } = useAuth();
@@ -65,6 +65,7 @@ export function HangoutsDrawer({
 
   const [secureChats, setSecureChats] = useState<any[]>(() => peekChatsListMemory());
   const [threads, setThreads] = useState<any[]>(() => peekThreadsListMemory());
+  const [initialLoading, setInitialLoading] = useState<boolean>(() => !peekChatsListMemory().length && !peekThreadsListMemory().length);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,23 +82,46 @@ export function HangoutsDrawer({
   const currentWorkspaceId = propWorkspaceId || (!activeWorkspace?.isPersonal ? activeWorkspace?.id : undefined);
   const currentWorkspaceTitle = propWorkspaceTitle || (!activeWorkspace?.isPersonal ? (activeWorkspace?.title || (activeWorkspace as any)?.name) : undefined);
 
-  // Eagerly hydrate chats and threads
+  // Eagerly hydrate chats and threads from local copy + rate-limited remote escape hatch
   const refreshChats = useCallback(async () => {
     try {
-      const cachedChats = await readChatsListLocal();
-      if (cachedChats.length) startTransition(() => setSecureChats(cachedChats));
-      const cachedThreads = await readThreadsListLocal();
-      if (cachedThreads.length) startTransition(() => setThreads(cachedThreads));
+      // 1. Eagerly read local copy from IndexedDB / RxDB
+      const [cachedChats, cachedThreads] = await Promise.all([
+        readChatsListLocal(),
+        readThreadsListLocal(),
+      ]);
 
-      if (user?.$id) {
-        const res = await ChatService.getConversations(user.$id);
-        const rows = Array.isArray(res) ? res : res?.rows || [];
-        if (rows.length) {
-          startTransition(() => setSecureChats(rows));
-          void writeChatsListLocal(rows);
+      let hasAnyLocal = false;
+      if (cachedChats?.length) {
+        startTransition(() => setSecureChats(cachedChats));
+        hasAnyLocal = true;
+      }
+      if (cachedThreads?.length) {
+        startTransition(() => setThreads(cachedThreads));
+        hasAnyLocal = true;
+      }
+
+      // 2. If local copy is empty or escape hatch allows, trigger remote fetch to replenish local copy
+      const shouldEscape = shouldRunEmptyEscapeHatch('chats', user?.$id);
+
+      if (user?.$id && (!hasAnyLocal || shouldEscape)) {
+        try {
+          const res = await ChatService.getConversations(user.$id, { forceRefresh: !hasAnyLocal });
+          const rows = Array.isArray(res) ? res : res?.rows || [];
+          if (rows.length) {
+            startTransition(() => setSecureChats(rows));
+            void writeChatsListLocal(rows);
+          }
+          markEmptyEscapeHatchRan('chats', user.$id);
+        } catch (fetchErr) {
+          console.warn('[HangoutsDrawer] Escape hatch fetch error:', fetchErr);
         }
       }
-    } catch {}
+    } catch (err) {
+      console.warn('[HangoutsDrawer] Local read error:', err);
+    } finally {
+      setInitialLoading(false);
+    }
   }, [user?.$id]);
 
   useEffect(() => {
@@ -352,7 +376,22 @@ export function HangoutsDrawer({
 
       {/* Chats List */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5 min-h-0 scrollbar-thin">
-        {filteredTargets.length === 0 ? (
+        {initialLoading && filteredTargets.length === 0 ? (
+          <div className="space-y-2 py-2">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="w-full flex items-center gap-3 rounded-2xl border border-white/[0.04] bg-[#161412]/50 p-2.5 animate-pulse"
+              >
+                <div className="h-10 w-10 shrink-0 rounded-2xl bg-white/[0.05]" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="h-3.5 w-1/3 rounded bg-white/[0.08]" />
+                  <div className="h-2.5 w-2/3 rounded bg-white/[0.04]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredTargets.length === 0 ? (
           <div className="py-14 text-center space-y-3">
             <div className="w-10 h-10 rounded-2xl bg-[#161412] border border-white/[0.06] mx-auto grid place-items-center text-white/30">
               <MessageCircleMore size={20} />

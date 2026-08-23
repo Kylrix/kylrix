@@ -132,3 +132,55 @@ export function shouldSoftPull(params: {
   const threshold = isVisible || params.activityIntensity > 0 ? SYNC_PULL_ACTIVE_MS : SYNC_PULL_IDLE_MS;
   return elapsed >= threshold;
 }
+
+/**
+ * Rate-limited once-a-day-per-session remote escape hatch.
+ * When local copy returns empty for a specific data type, allows an initial remote fetch to populate local copy.
+ * Stored in sessionStorage so that logouts or new browser sessions reset the barrier cleanly without indefinite lockouts.
+ */
+
+const ESCAPE_PREFIX = 'kylrix_empty_escape_';
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+export function shouldRunEmptyEscapeHatch(dataType: string, userId?: string | null): boolean {
+  if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return false;
+  const uid = userId || 'anon';
+  const key = `${ESCAPE_PREFIX}${dataType}_${uid}`;
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return true;
+    const ts = parseInt(raw, 10);
+    if (isNaN(ts)) return true;
+    return Date.now() - ts >= ONE_DAY_MS;
+  } catch {
+    return true;
+  }
+}
+
+export function markEmptyEscapeHatchRan(dataType: string, userId?: string | null): void {
+  if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return;
+  const uid = userId || 'anon';
+  const key = `${ESCAPE_PREFIX}${dataType}_${uid}`;
+  try {
+    sessionStorage.setItem(key, String(Date.now()));
+  } catch {}
+}
+
+export function resetEmptyEscapeHatch(dataType?: string, userId?: string | null): void {
+  if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return;
+  try {
+    if (dataType) {
+      const uid = userId || 'anon';
+      sessionStorage.removeItem(`${ESCAPE_PREFIX}${dataType}_${uid}`);
+    } else {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const k = sessionStorage.key(i);
+        if (k && k.startsWith(ESCAPE_PREFIX)) keysToRemove.push(k);
+      }
+      for (const k of keysToRemove) {
+        sessionStorage.removeItem(k);
+      }
+    }
+  } catch {}
+}
