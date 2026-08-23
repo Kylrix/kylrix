@@ -1032,6 +1032,10 @@ export async function createConversationTransactionalInternal(payload: {
   isEncrypted: boolean;
   encryptionVersion: string;
   lockboxRows?: Array<{ resourceType: string; resourceId?: string; grantee: string; wrappedKey: string; metadata?: string }>;
+  isWorkspace?: boolean;
+  contextType?: string;
+  contextId?: string;
+  isPublic?: boolean;
 }) {
   let verifiedActorId = payload.actorId;
   if (!verifiedActorId) {
@@ -1059,8 +1063,18 @@ export async function createConversationTransactionalInternal(payload: {
     encryptionVersion: payload.encryptionVersion,
     createdAt: now,
     updatedAt: now,
+    isWorkspace: !!payload.isWorkspace,
+    contextType: payload.contextType || null,
+    contextId: payload.contextId || null,
+    isPublic: !!payload.isPublic,
   };
-  const convPerms = [Permission.read(Role.user(verifiedActorId!)), ...uniqueParticipants.filter((id) => id !== verifiedActorId).map((id) => Permission.read(Role.user(id)))];
+  const convPerms = [
+    Permission.read(Role.user(verifiedActorId!)),
+    ...uniqueParticipants.filter((id) => id !== verifiedActorId).map((id) => Permission.read(Role.user(id))),
+  ];
+  if (payload.isPublic) {
+    convPerms.push(Permission.read(Role.any()));
+  }
   // Normalize lockbox rows to target convId
   const lockbox = (payload.lockboxRows || []).map((r) => ({ ...r, resourceId: convId, resourceType: r.resourceType || 'chat' }));
 

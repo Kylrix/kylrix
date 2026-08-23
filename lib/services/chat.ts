@@ -1070,6 +1070,61 @@ export const ChatService = {
         }
     },
 
+    async getOrCreateWorkspaceConversation(workspaceId: string, workspaceTitle?: string, creatorId?: string) {
+        if (!workspaceId) throw new Error('Workspace ID required');
+        const user = creatorId ? { $id: creatorId } : await getCurrentUser();
+        if (!user?.$id) throw new Error('User required');
+
+        // 1. Search for existing conversation with contextType: 'workspace' and contextId: workspaceId
+        try {
+            const existing = await tablesDB.listRows(DB_ID, CONV_TABLE, [
+                Query.equal('contextType', 'workspace'),
+                Query.equal('contextId', workspaceId),
+                Query.limit(1),
+            ]);
+            if (existing.rows && existing.rows.length > 0) {
+                return existing.rows[0];
+            }
+        } catch {
+            // Non-fatal, try fallback
+        }
+
+        // 2. Also probe with isWorkspace: true and contextId
+        try {
+            const existing2 = await tablesDB.listRows(DB_ID, CONV_TABLE, [
+                Query.equal('isWorkspace', true),
+                Query.equal('contextId', workspaceId),
+                Query.limit(1),
+            ]);
+            if (existing2.rows && existing2.rows.length > 0) {
+                return existing2.rows[0];
+            }
+        } catch {}
+
+        // 3. Create a new workspace discussion conversation
+        const { createConversationTransactionalAction } = await import('@/lib/actions/chat');
+        const tokenRes = await account.createJWT().catch(() => null);
+        const jwt = tokenRes?.jwt || undefined;
+
+        const convName = `${workspaceTitle || 'Workspace'} Discussion`;
+        const newConv = await createConversationTransactionalAction({
+            participants: [user.$id],
+            type: 'group',
+            name: convName,
+            isEncrypted: false,
+            encryptionVersion: '1.0',
+            jwt,
+            isWorkspace: true,
+            contextType: 'workspace',
+            contextId: workspaceId,
+            isPublic: true,
+        });
+
+        // Remember roster locally
+        rememberConversationRoster([newConv]);
+        return newConv;
+    },
+
     async createConversation(participants: string[], type: 'direct' | 'group' = 'direct', name?: string, opts?: { encrypted?: boolean }) {
         const creatorId = participants[0];
         const isSelf = type === 'direct' && participants.length === 1 && participants[0] === participants[participants.length - 1];

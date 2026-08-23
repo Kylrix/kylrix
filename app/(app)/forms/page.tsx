@@ -31,6 +31,7 @@ import { useFAB } from '@/context/FABContext';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
+import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 
 export default function FormsDashboard() {
     const { user } = useAuth();
@@ -311,6 +312,7 @@ export default function FormsDashboard() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
+                        <HangoutTabTrigger />
                         <button 
                             type="button"
                             onClick={handleCreate}

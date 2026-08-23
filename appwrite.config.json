@@ -4248,6 +4248,13 @@
                     "size": 65535,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isWorkspace",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -4283,6 +4290,24 @@
                     "orders": [
                         "ASC"
                     ]
+                },
+                {
+                    "key": "idx_isWorkspace",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "isWorkspace"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_contextId",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "contextId"
+                    ],
+                    "orders": []
                 }
             ]
         },

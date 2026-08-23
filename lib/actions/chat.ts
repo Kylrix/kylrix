@@ -299,6 +299,10 @@ export async function createConversationTransactionalAction(payload: {
   encryptionVersion?: string;
   lockboxRows?: Array<{ resourceType: string; grantee: string; wrappedKey: string; metadata?: string }>;
   jwt?: string;
+  isWorkspace?: boolean;
+  contextType?: string;
+  contextId?: string;
+  isPublic?: boolean;
 }) {
   const { getActor } = await import('./secure-ops');
   const actor = await getActor(payload.jwt);
@@ -312,5 +316,9 @@ export async function createConversationTransactionalAction(payload: {
     isEncrypted: !!payload.isEncrypted,
     encryptionVersion: payload.encryptionVersion || (payload.isEncrypted ? 'T4' : '1.0'),
     lockboxRows: payload.lockboxRows,
+    isWorkspace: payload.isWorkspace,
+    contextType: payload.contextType,
+    contextId: payload.contextId,
+    isPublic: payload.isPublic,
   });
 }

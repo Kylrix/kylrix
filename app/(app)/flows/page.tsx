@@ -40,6 +40,7 @@ import {
   FlowInstallConfirmDrawer,
   isFlowConfirmPromptEnabled,
 } from '@/components/flows/FlowInstallConfirmDrawer';
+import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 
 
 
@@ -450,32 +451,38 @@ export default function FlowsPage() {
           </button>
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#161412] border border-white/[0.06] w-fit">
-          {(
-            [
-              { id: 'discover', label: 'Discover', count: discoverList.length },
-              { id: 'installed', label: 'Installed', count: installedList.length },
-            ] as const
-          ).map((f) => {
-            const active = tab === f.id;
-            return (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setTab(f.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-colors cursor-pointer ${
-                  active
-                    ? 'bg-[#A855F7] text-white'
-                    : 'text-white/45 hover:text-white hover:bg-white/[0.04]'
-                }`}
-              >
-                {f.label}
-                <span className={`ml-1.5 ${active ? 'text-white/70' : 'text-white/25'}`}>
-                  {f.count}
-                </span>
-              </button>
-            );
-          })}
+        <div className="flex items-center justify-between gap-4 w-full">
+          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[#161412] border border-white/[0.06] w-fit">
+            {(
+              [
+                { id: 'discover', label: 'Discover', count: discoverList.length },
+                { id: 'installed', label: 'Installed', count: installedList.length },
+              ] as const
+            ).map((f) => {
+              const active = tab === f.id;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setTab(f.id)}
+                  className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-colors cursor-pointer ${
+                    active
+                      ? 'bg-[#A855F7] text-white'
+                      : 'text-white/45 hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  {f.label}
+                  <span className={`ml-1.5 ${active ? 'text-white/70' : 'text-white/25'}`}>
+                    {f.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <HangoutTabTrigger />
+          </div>
         </div>
 
         {drafts.length > 0 && (

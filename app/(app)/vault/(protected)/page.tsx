@@ -22,6 +22,7 @@ import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { TOTPPageContent } from './totp/page';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
+import { HangoutTabTrigger } from '@/components/hangout/HangoutTabTrigger';
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false);
@@ -415,6 +416,10 @@ function DashboardPageContent() {
                 >
                   TOTP
                 </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <HangoutTabTrigger />
               </div>
             </div>
 
