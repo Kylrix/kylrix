@@ -135,7 +135,7 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
 
     if (!forceRefresh) {
       const cached = getCachedData<Notes>(CACHE_KEY);
-      if (cached) {
+      if (cached && (cached as any).isTrash !== true && (cached as any).isDeleted !== true) {
         // Resolve role from cache quickly
         try {
           const decrypted = await decryptNoteIfNeeded(cached, decryptionKey);
@@ -152,7 +152,7 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
       const { getSharedNoteData } = await import('@/lib/actions/client-ops');
       const raw = await getSharedNoteData(noteId);
 
-      if (!raw) {
+      if (!raw || (raw as any).isTrash === true || (raw as any).isDeleted === true) {
         setAccess({ role: 'none', reason: 'not-found' });
         return;
       }
@@ -225,19 +225,26 @@ export default function IdeaPageClient({ noteId, decryptionKey }: IdeaPageClient
     if (!noteId) return;
     if (access.role === 'loading' || access.role === 'none') return;
 
-    const channel = `databases.${APPWRITE_DATABASE_ID}.tables.${APPWRITE_CONFIG.DATABASES.NOTE}.notes.rows.${noteId}`;
-    const sub = realtime.subscribe(channel, (response: any) => {
+    const channels = [
+      `databases.${APPWRITE_DATABASE_ID}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents.${noteId}`,
+      `databases.${APPWRITE_DATABASE_ID}.tables.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.rows.${noteId}`
+    ];
+    const sub = realtime.subscribe(channels, (response: any) => {
       const isUpdate = response.events.some((e: string) => e.endsWith('.update'));
       const isDelete = response.events.some((e: string) => e.endsWith('.delete'));
+      const payload = response.payload as Notes;
 
-      if (isDelete) {
+      if (isDelete || (payload as any)?.isTrash === true || (payload as any)?.isDeleted === true) {
         setAccess({ role: 'none', reason: 'not-found' });
         invalidate(CACHE_KEY);
+        try {
+          const { LocalEngine } = require('@/lib/services/LocalEngine');
+          void LocalEngine.cacheDelete(CACHE_KEY);
+        } catch {}
         return;
       }
 
       if (isUpdate) {
-        const payload = response.payload as Notes;
         void (async () => {
           try {
             const decrypted = await decryptNoteIfNeeded(payload, decryptionKey);

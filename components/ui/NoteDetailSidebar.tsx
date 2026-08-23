@@ -164,16 +164,29 @@ export function NoteDetailSidebar({
   // Realtime: detail view subscribes via LocalEngine — creator edits pull instantly while user looks at it
   useEffect(() => {
     if (!note?.$id || readOnly) return;
+    if ((note as any).isTrash === true || (note as any).isDeleted === true) {
+      onDelete?.(note.$id);
+      onClose();
+      return;
+    }
     let unsub: (() => void) | null = null;
     void (async () => {
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
       const channel = `databases.${APPWRITE_CONFIG.DATABASE_ID}.collections.${APPWRITE_CONFIG.TABLES.NOTES}.documents.${note.$id}`;
-      unsub = await LocalEngine.subscribeRealtime(channel, (payload: any) => {
-        if (payload?.$id === note.$id) onUpdate(payload as Notes);
+      const tableChannel = `databases.${APPWRITE_CONFIG.DATABASE_ID}.tables.${APPWRITE_CONFIG.TABLES.NOTES}.rows.${note.$id}`;
+      unsub = await LocalEngine.subscribeRealtime([channel, tableChannel], (payload: any) => {
+        if (payload?.$id === note.$id) {
+          if (payload.isTrash === true || payload.isDeleted === true) {
+            onDelete?.(payload.$id);
+            onClose();
+            return;
+          }
+          onUpdate(payload as Notes);
+        }
       });
     })();
     return () => { try { unsub?.(); } catch {} };
-  }, [note?.$id, readOnly, onUpdate]);
+  }, [note?.$id, readOnly, onUpdate, onDelete, onClose]);
 
   // Restore scroll once per note id — not on every liveNote update to avoid jitter
   const hasRestoredScrollRef = useRef<string | null>(null);
@@ -504,7 +517,8 @@ export function NoteDetailSidebar({
     if (!liveNote.$id) return;
 
     const channel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents.${liveNote.$id}`;
-    const unsubscribe = realtime.subscribe(channel, (response) => {
+    const tableChannel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.tables.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.rows.${liveNote.$id}`;
+    const unsubscribe = realtime.subscribe([channel, tableChannel], (response) => {
       const payload = response.payload as Notes;
       if (!payload?.$id) return;
 
@@ -512,7 +526,9 @@ export function NoteDetailSidebar({
       const isUpdate = response.events.some((event) => event.includes('.update'));
       const isDelete = response.events.some((event) => event.includes('.delete'));
 
-      if (isDelete) {
+      if (isDelete || (payload as any).isTrash === true || (payload as any).isDeleted === true) {
+        onDelete?.(payload.$id);
+        onClose();
         return;
       }
 
@@ -532,7 +548,7 @@ export function NoteDetailSidebar({
         (unsubscribe as any).unsubscribe();
       }
     };
-  }, [liveNote.$id, pushLiveNote, onUpdate]);
+  }, [liveNote.$id, pushLiveNote, onUpdate, onDelete, onClose]);
 
   useEffect(() => {
     let active = true;

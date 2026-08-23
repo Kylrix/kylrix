@@ -18,9 +18,10 @@ export function subscribeToTable<T extends Models.Row>(
     tableId: string,
     callback: (event: { type: 'create' | 'update' | 'delete', payload: T }) => void
 ) {
-    const channel = `databases.${FLOW_DATABASE_ID}.tables.${tableId}.rows`;
+    const tableChannel = `databases.${FLOW_DATABASE_ID}.tables.${tableId}.rows`;
+    const docChannel = `databases.${FLOW_DATABASE_ID}.collections.${tableId}.documents`;
 
-    return realtime.subscribe(channel, (response) => {
+    return realtime.subscribe([tableChannel, docChannel], (response) => {
         const payload = response.payload as T;
         let type: 'create' | 'update' | 'delete' | null = null;
 

@@ -30,6 +30,10 @@ async function hydrateSharedNoteRow(noteId: string) {
     tableId: NOTES_TABLE_ID,
     rowId: noteId}) as any;
 
+  if (!doc || doc.isTrash === true || doc.isDeleted === true) {
+    return null;
+  }
+
   try {
     const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
     const pivot = await tables.listRows({
@@ -50,6 +54,17 @@ async function hydrateSharedNoteRow(noteId: string) {
 }
 
 async function canReadSharedNoteSecure(noteId: string, actorId?: string | null) {
+  const tables = createSystemTablesDB();
+  try {
+    const doc = await tables.getRow({
+      databaseId: NOTE_DB_ID,
+      tableId: NOTES_TABLE_ID,
+      rowId: noteId,
+    }) as any;
+    if (!doc || doc.isTrash === true || doc.isDeleted === true) return false;
+  } catch {
+    return false;
+  }
   if (actorId) {
     const allowed = await verifyNotePermission(noteId, actorId, 'viewer');
     if (allowed) return true;

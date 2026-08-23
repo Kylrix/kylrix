@@ -760,10 +760,13 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated || !user?.$id) return;
 
-    // Listen to the entire collection to catch all relevant changes
-    const channel = `databases.${APPWRITE_DATABASE_ID}.tables.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.rows`;
+    // Listen to the entire collection and table to catch all relevant changes
+    const channels = [
+      `databases.${APPWRITE_DATABASE_ID}.tables.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.rows`,
+      `databases.${APPWRITE_DATABASE_ID}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents`
+    ];
     
-    const sub = realtime.subscribe(channel, (response) => {
+    const sub = realtime.subscribe(channels, (response) => {
       const payload = normalizeVisibility(response.payload as Notes);
       
       const isOwner = payload.userId === user.$id || (payload as any).owner_id === user.$id;
@@ -774,12 +777,16 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       const isDelete = response.events.some(e => e.endsWith('.delete'));
 
       if (isCreate) {
-        if ((payload as any).isTrash === true) {
+        if ((payload as any).isTrash === true || (payload as any).isDeleted === true) {
           setNotes(prev => prev.filter(n => n.$id !== payload.$id));
           setTotalNotes(prev => Math.max(0, prev - 1));
           setPinnedIds(prev => prev.filter(id => id !== payload.$id));
           invalidate(`note_${payload.$id}`);
           scheduleInvalidateInitialNotesPage();
+          try {
+            const { invalidateNoteRowClientCache } = require('@/lib/appwrite/note');
+            invalidateNoteRowClientCache(payload.$id);
+          } catch {}
           return;
         }
         if (activeComposeNoteIdsRef.current.has(payload.$id) || notesRef.current.some(n => n.$id === payload.$id)) {
@@ -830,12 +837,16 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
         void opportunisticallyDecryptNote(payload);
       } else if (isUpdate) {
-        if ((payload as any).isTrash === true) {
+        if ((payload as any).isTrash === true || (payload as any).isDeleted === true) {
           setNotes(prev => prev.filter(n => n.$id !== payload.$id));
           setTotalNotes(prev => Math.max(0, prev - 1));
           setPinnedIds(prev => prev.filter(id => id !== payload.$id));
           invalidate(`note_${payload.$id}`);
           scheduleInvalidateInitialNotesPage();
+          try {
+            const { invalidateNoteRowClientCache } = require('@/lib/appwrite/note');
+            invalidateNoteRowClientCache(payload.$id);
+          } catch {}
           return;
         }
         if (activeComposeNoteIdsRef.current.has(payload.$id) && !liveEditGuardsRef.current.has(payload.$id)) {
@@ -858,6 +869,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         setPinnedIds(prev => prev.filter(id => id !== payload.$id));
         invalidate(`note_${payload.$id}`);
         if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
+        try {
+          const { invalidateNoteRowClientCache } = require('@/lib/appwrite/note');
+          invalidateNoteRowClientCache(payload.$id);
+        } catch {}
       }
     });
     

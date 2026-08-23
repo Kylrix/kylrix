@@ -94,6 +94,9 @@ export async function unifiedGet<T extends Models.Row = Models.Row>(kind: Object
   try {
     const { databases } = await import('@/lib/appwrite/client');
     const doc = await databases.getRow(databaseId, tableId, id);
+    if (!doc || (doc as any).isTrash === true || (doc as any).isDeleted === true) {
+      return null;
+    }
     return doc as unknown as T;
   } catch {
     return null;
