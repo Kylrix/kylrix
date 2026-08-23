@@ -1777,3 +1777,94 @@ export async function deleteGoalSecure(goalId: string, jwt?: string): Promise<vo
   }
 }
 
+export async function resolveWorkspaceShareAccessSecure(workspaceId: string, jwt?: string) {
+  const actor = await getActor(jwt).catch(() => null);
+  const tables = createSystemTablesDB();
+  const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
+  const tableId = 'projects';
+
+  const row = await tables.getRow({
+    databaseId: dbId,
+    tableId,
+    rowId: workspaceId,
+  }).catch(() => null);
+
+  if (!row) {
+    return {
+      success: false,
+      reason: 'not_found' as const,
+      message: 'Workspace does not exist or has been deleted.',
+    };
+  }
+
+  const ownerId = row.ownerId || row.userId || 'unknown';
+  const title = row.title || row.name || 'Shared Workspace';
+  const isPublic = row.isPublic === true || row.isGuest === true;
+
+  // 1. Lazy check: If workspace is public, return access immediately!
+  if (isPublic) {
+    return {
+      success: true,
+      workspace: {
+        id: row.$id,
+        title,
+        ownerId,
+        isPublic: true,
+        isOwner: actor?.$id ? actor.$id === ownerId : false,
+      },
+    };
+  }
+
+  // 2. If private, check if current actor is the owner
+  if (actor?.$id && actor.$id === ownerId) {
+    return {
+      success: true,
+      workspace: {
+        id: row.$id,
+        title,
+        ownerId,
+        isPublic: false,
+        isOwner: true,
+      },
+    };
+  }
+
+  // 3. If private and actor is logged in, check if actor is a collaborator
+  if (actor?.$id) {
+    const hasAccess = await verifyProjectPermission(workspaceId, actor.$id, 'viewer').catch(() => false);
+    if (hasAccess) {
+      return {
+        success: true,
+        workspace: {
+          id: row.$id,
+          title,
+          ownerId,
+          isPublic: false,
+          isCollaborator: true,
+        },
+      };
+    }
+  }
+
+  // 4. Inaccessible (private and not a collaborator / unauthenticated):
+  let ownerName = 'the workspace owner';
+  if (row.ownerName) {
+    ownerName = row.ownerName;
+  } else if (ownerId && ownerId !== 'unknown') {
+    try {
+      const { UsersService } = await import('@/lib/services/users');
+      const profile = await UsersService.getProfileById(ownerId).catch(() => null);
+      if (profile?.displayName || profile?.username) {
+        ownerName = profile.displayName || `@${profile.username}`;
+      }
+    } catch {}
+  }
+
+  return {
+    success: false,
+    reason: 'forbidden' as const,
+    ownerName,
+    message: `No access to workspace. Ask ${ownerName} to make public or add you to collaborators.`,
+  };
+}
+

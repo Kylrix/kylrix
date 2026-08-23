@@ -168,7 +168,10 @@ export function ShareContextDrawer() {
         setCopied(true);
         toast.success('Link copied to clipboard');
         await recordShareMethodUsage('copy', user?.$id);
-        setTimeout(() => setCopied(false), 2500);
+        setTimeout(() => {
+          setCopied(false);
+          close();
+        }, 400);
       }
     } catch {
       toast.error('Failed to copy link');
@@ -198,6 +201,7 @@ export function ShareContextDrawer() {
         const text = encodeURIComponent(`${title}: ${url}`);
         window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank', 'noopener,noreferrer');
         void recordShareMethodUsage('whatsapp', user?.$id);
+        setTimeout(() => close(), 300);
       },
     },
     telegram: {
@@ -213,6 +217,7 @@ export function ShareContextDrawer() {
         const encodedUrl = encodeURIComponent(url);
         window.open(`https://t.me/share/url?url=${encodedUrl}&text=${text}`, '_blank', 'noopener,noreferrer');
         void recordShareMethodUsage('telegram', user?.$id);
+        setTimeout(() => close(), 300);
       },
     },
     x: {
@@ -227,6 +232,7 @@ export function ShareContextDrawer() {
         const text = encodeURIComponent(`Check out "${title}" on @Kylrix:\n\n${url}`);
         window.open(`https://x.com/intent/tweet?text=${text}`, '_blank', 'noopener,noreferrer');
         void recordShareMethodUsage('x', user?.$id);
+        setTimeout(() => close(), 300);
       },
     },
     qr: {
@@ -255,6 +261,7 @@ export function ShareContextDrawer() {
         const body = encodeURIComponent(`Here is the link to "${title}":\n\n${url}`);
         window.location.href = `mailto:?subject=${subject}&body=${body}`;
         void recordShareMethodUsage('email', user?.$id);
+        setTimeout(() => close(), 300);
       },
     },
     native: {
@@ -274,6 +281,7 @@ export function ShareContextDrawer() {
               text: `Check out "${title}" on Kylrix`,
               url,
             });
+            setTimeout(() => close(), 300);
           } catch (err: any) {
             if (err?.name !== 'AbortError') {
               toast.error('System share failed, link copied instead');
@@ -286,7 +294,7 @@ export function ShareContextDrawer() {
         }
       },
     },
-  }), [copied, resolvedUrl, user?.$id]);
+  }), [copied, resolvedUrl, user?.$id, close]);
 
   const orderedActions = useMemo(() => {
     const defaultKeys = ['copy', 'whatsapp', 'telegram', 'x', 'qr', 'email', 'native'];

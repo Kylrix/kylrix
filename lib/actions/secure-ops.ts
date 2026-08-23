@@ -68,7 +68,9 @@ import {
   approveProjectJoinRequestSecure,
   createGoalSecure,
   updateGoalSecure,
-  deleteGoalSecure} from './secure-ops/projects';
+  deleteGoalSecure,
+  resolveWorkspaceShareAccessSecure,
+} from './secure-ops/projects';
 
 import {
   mintDailyLoginSecure,
@@ -224,6 +226,7 @@ export {
   createGoalSecure,
   updateGoalSecure,
   deleteGoalSecure,
+  resolveWorkspaceShareAccessSecure,
   batchTrashFormSubmissionsSecure,
   searchGlobalUsersSecure,
   getProfileByUsernameSecure,

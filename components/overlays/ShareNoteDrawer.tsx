@@ -223,12 +223,18 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
       if (res.copied) {
         setCopiedLink(true);
         toast.success('Secure invite link copied!');
-        setTimeout(() => setCopiedLink(false), 2000);
+        setTimeout(() => {
+          setCopiedLink(false);
+          onClose();
+        }, 400);
       } else if (res.url) {
         await navigator.clipboard.writeText(res.url).catch(() => {});
         setCopiedLink(true);
         toast.success('Invite link ready & copied!');
-        setTimeout(() => setCopiedLink(false), 2000);
+        setTimeout(() => {
+          setCopiedLink(false);
+          onClose();
+        }, 400);
       }
     } catch (err: any) {
       toast.error('Failed to copy link: ' + err.message);
