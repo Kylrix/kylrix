@@ -100,6 +100,7 @@ export interface NoteDetailSidebarProps {
   note: Notes;
   onUpdate: (updatedNote: Notes) => void;
   onDelete: (noteId: string) => void;
+  onClose?: () => void;
   onBack?: () => void;
   layout?: 'page' | 'drawer';
   showExpandButton?: boolean;
@@ -115,6 +116,7 @@ export function NoteDetailSidebar({
   note,
   onUpdate,
   onDelete,
+  onClose,
   onBack,
   layout = 'drawer',
   showExpandButton = true,
@@ -166,7 +168,7 @@ export function NoteDetailSidebar({
     if (!note?.$id || readOnly) return;
     if ((note as any).isTrash === true || (note as any).isDeleted === true) {
       onDelete?.(note.$id);
-      onClose();
+      onClose?.();
       return;
     }
     let unsub: (() => void) | null = null;
@@ -174,11 +176,11 @@ export function NoteDetailSidebar({
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
       const channel = `databases.${APPWRITE_CONFIG.DATABASE_ID}.collections.${APPWRITE_CONFIG.TABLES.NOTES}.documents.${note.$id}`;
       const tableChannel = `databases.${APPWRITE_CONFIG.DATABASE_ID}.tables.${APPWRITE_CONFIG.TABLES.NOTES}.rows.${note.$id}`;
-      unsub = await LocalEngine.subscribeRealtime([channel, tableChannel], (payload: any) => {
+      unsub = await LocalEngine.subscribeRealtime(channel, (payload: any) => {
         if (payload?.$id === note.$id) {
           if (payload.isTrash === true || payload.isDeleted === true) {
             onDelete?.(payload.$id);
-            onClose();
+            onClose?.();
             return;
           }
           onUpdate(payload as Notes);
@@ -528,7 +530,7 @@ export function NoteDetailSidebar({
 
       if (isDelete || (payload as any).isTrash === true || (payload as any).isDeleted === true) {
         onDelete?.(payload.$id);
-        onClose();
+        onClose?.();
         return;
       }
 
