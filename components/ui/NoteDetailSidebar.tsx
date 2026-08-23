@@ -175,7 +175,6 @@ export function NoteDetailSidebar({
     void (async () => {
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
       const channel = `databases.${APPWRITE_CONFIG.DATABASE_ID}.collections.${APPWRITE_CONFIG.TABLES.NOTES}.documents.${note.$id}`;
-      const tableChannel = `databases.${APPWRITE_CONFIG.DATABASE_ID}.tables.${APPWRITE_CONFIG.TABLES.NOTES}.rows.${note.$id}`;
       unsub = await LocalEngine.subscribeRealtime(channel, (payload: any) => {
         if (payload?.$id === note.$id) {
           if (payload.isTrash === true || payload.isDeleted === true) {

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
-import { MessageCircleMore, Sparkles } from 'lucide-react';
+import React, { useCallback } from 'react';
+import { MessageCircleMore } from 'lucide-react';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { HangoutsDrawer } from '@/components/hangout/HangoutsDrawer';

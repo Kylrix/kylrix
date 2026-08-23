@@ -9,11 +9,9 @@ import {
   Loader2,
   Plus,
   Search,
-  Users,
   ChevronLeft,
   X,
   Sparkles,
-  RefreshCw,
 } from 'lucide-react';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -79,7 +77,6 @@ export function HangoutsDrawer({
   // Active chat window inside drawer
   const [activeConvId, setActiveConvId] = useState<string | null>(initialConversationId || null);
   const [loadingWorkspaceChat, setLoadingWorkspaceChat] = useState(false);
-  const [wasDirectWorkspaceOpen, setWasDirectWorkspaceOpen] = useState(false);
 
   const isUnlocked = ecosystemSecurity.status.isUnlocked;
 
@@ -147,7 +144,6 @@ export function HangoutsDrawer({
           if (!cancelled && conv?.$id) {
             startTransition(() => {
               setActiveConvId(conv.$id);
-              setWasDirectWorkspaceOpen(true);
             });
           }
         } catch (err: any) {
@@ -276,7 +272,6 @@ export function HangoutsDrawer({
             // When navigating back from chat window:
             // return to the hangouts drawer list so they can explore other chats!
             setActiveConvId(null);
-            setWasDirectWorkspaceOpen(false);
           }}
         />
       </div>
