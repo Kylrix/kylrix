@@ -67,6 +67,7 @@ export function mergeServerPageWithLocalCopy<T extends SyncableRow>(params: {
   for (const serverRow of serverBatch) {
     if (!serverRow?.$id) continue;
     if (deletedIds?.has(serverRow.$id)) continue;
+    if ((serverRow as any).isTrash === true || (serverRow as any).isDeleted === true || String((serverRow as any).isTrash) === 'true' || String((serverRow as any).isDeleted) === 'true') continue;
 
     const local = localById.get(serverRow.$id);
     const guard = guards?.get(serverRow.$id);
@@ -87,6 +88,7 @@ export function mergeServerPageWithLocalCopy<T extends SyncableRow>(params: {
   for (const local of localNotes) {
     if (!local?.$id) continue;
     if (deletedIds?.has(local.$id)) continue;
+    if ((local as any).isTrash === true || (local as any).isDeleted === true || String((local as any).isTrash) === 'true' || String((local as any).isDeleted) === 'true') continue;
     if (mergedById.has(local.$id)) continue;
     // Preserve local presence: drafts, pending sync, or simply not on this remote page yet.
     mergedById.set(local.$id, normalize(local));

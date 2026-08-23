@@ -97,6 +97,7 @@ export default function IdeasPage() {
       });
 
       const rows = Array.isArray(res?.rows) ? res.rows : Array.isArray(res?.documents) ? res.documents : [];
+      const validRows = rows.filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true && String(n.isTrash) !== 'true' && String(n.isDeleted) !== 'true');
 
       // Read local pins state directly from ResourcePinContext storage key
       let pinnedMap: Record<string, boolean> = {};
@@ -111,7 +112,7 @@ export default function IdeasPage() {
       } catch {}
 
       // Pure client-side sort: Pinned first, then newest updatedAt
-      const sorted = [...rows].sort((a: any, b: any) => {
+      const sorted = [...validRows].sort((a: any, b: any) => {
         const aPinned = Boolean(a.isPinned || pinnedMap[a.$id]);
         const bPinned = Boolean(b.isPinned || pinnedMap[b.$id]);
         if (aPinned && !bPinned) return -1;
@@ -198,7 +199,11 @@ export default function IdeasPage() {
           (Array.isArray(cachedInitial) ? cachedInitial : cachedInitial?.notes || cachedInitial?.rows) ||
           [];
 
-        if (Array.isArray(rawRows) && rawRows.length > 0) {
+        const validRawRows = Array.isArray(rawRows)
+          ? rawRows.filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true && String(n.isTrash) !== 'true' && String(n.isDeleted) !== 'true')
+          : [];
+
+        if (validRawRows.length > 0) {
           hasLocalCopy = true;
 
           // Read local pins
@@ -213,7 +218,7 @@ export default function IdeasPage() {
             }
           } catch {}
 
-          const sorted = [...rawRows].sort((a: any, b: any) => {
+          const sorted = [...validRawRows].sort((a: any, b: any) => {
             const aPinned = Boolean(a.isPinned || pinnedMap[a.$id || a.id]);
             const bPinned = Boolean(b.isPinned || pinnedMap[b.$id || b.id]);
             if (aPinned && !bPinned) return -1;

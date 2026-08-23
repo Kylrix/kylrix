@@ -756,7 +756,8 @@ export async function listNotes(queries: any[] = [], limit: number = 100, option
     ];
 
     const res = await databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, finalQueries);
-    const notes = (res.rows as any[]).map((doc: any) => hydrateVirtualAttributes(doc)) as unknown as Notes[];
+    let notes = (res.rows as any[]).map((doc: any) => hydrateVirtualAttributes(doc)) as unknown as Notes[];
+    notes = notes.filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true && String(n.isTrash) !== 'true' && String(n.isDeleted) !== 'true');
 
     // Hydrate tags from pivot table in batch (best-effort)
     try {
@@ -1694,7 +1695,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
 
   let filteredNotes = notes;
   if (!hasIsTrashFilter) {
-    filteredNotes = filteredNotes.filter((n) => (n as any).isTrash !== true);
+    filteredNotes = filteredNotes.filter((n: any) => n && n.isTrash !== true && n.isDeleted !== true && String(n.isTrash) !== 'true' && String(n.isDeleted) !== 'true');
   }
   if (!includeStories) {
     filteredNotes = filteredNotes.filter((n: any) => !(n as any).isStory);

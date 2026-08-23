@@ -26,6 +26,9 @@ function asNotesArray(value: unknown): Notes[] {
 
 function normalizeNoteRow(row: any): Notes | null {
   if (!row || typeof row !== 'object') return null;
+  if (row.isTrash === true || row.isDeleted === true || String(row.isTrash) === 'true' || String(row.isDeleted) === 'true') {
+    return null;
+  }
   const id = String(row.$id || row.id || '').trim();
   if (!id) return null;
   return {
