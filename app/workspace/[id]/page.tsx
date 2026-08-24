@@ -24,16 +24,15 @@ export default function WorkspaceSharePage() {
     message: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
-  const executedRef = useRef(false);
+  const inFlightRef = useRef(false);
 
   useEffect(() => {
     if (!id) {
       router.replace('/app');
       return;
     }
-    if (executedRef.current) return;
-    executedRef.current = true;
-    let cancelled = false;
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
 
     void (async () => {
       try {
@@ -41,24 +40,34 @@ export default function WorkspaceSharePage() {
         try {
           const res = await Promise.race([
             account.createJWT(),
-            new Promise<null>((r) => setTimeout(() => r(null), 1500)),
+            new Promise<null>((r) => setTimeout(() => r(null), 1000)),
           ]);
           jwt = res?.jwt;
         } catch {}
 
         const access = await resolveWorkspaceShareAccessSecure(id, jwt);
 
-        if (cancelled) return;
-
         if (access.success && access.workspace) {
-          await registerSharedWorkspace({
-            id: access.workspace.id,
-            title: access.workspace.title,
-            ownerId: access.workspace.ownerId,
-            isPublic: access.workspace.isPublic,
-          });
-          setActiveWorkspaceId(access.workspace.id);
+          try {
+            await registerSharedWorkspace({
+              id: access.workspace.id,
+              title: access.workspace.title,
+              ownerId: access.workspace.ownerId,
+              isPublic: access.workspace.isPublic,
+            });
+          } catch {}
+
+          try {
+            setActiveWorkspaceId(access.workspace.id);
+          } catch {}
+
           router.replace('/app');
+          // Guaranteed fallback redirect if router transition delays
+          setTimeout(() => {
+            if (typeof window !== 'undefined' && window.location.pathname.startsWith('/workspace/')) {
+              window.location.replace('/app');
+            }
+          }, 500);
           return;
         }
 
@@ -70,8 +79,8 @@ export default function WorkspaceSharePage() {
             'No access to workspace. Ask the owner to make it public or add you to collaborators.',
         });
         setLoading(false);
-      } catch {
-        if (cancelled) return;
+      } catch (err) {
+        console.error('[WorkspaceSharePage] Error resolving access:', err);
         setDeniedInfo({
           ownerName: 'the workspace owner',
           message:
@@ -80,14 +89,15 @@ export default function WorkspaceSharePage() {
         setLoading(false);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
   }, [id, setActiveWorkspaceId, registerSharedWorkspace, router]);
 
   const handleReturnToApp = () => {
     router.replace('/app');
+    setTimeout(() => {
+      if (typeof window !== 'undefined' && window.location.pathname.startsWith('/workspace/')) {
+        window.location.replace('/app');
+      }
+    }, 300);
   };
 
   if (loading) {
