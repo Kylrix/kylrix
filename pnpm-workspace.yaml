@@ -1,6 +1,0 @@
-allowBuilds:
-  '@firebase/util': true
-  bufferutil: true
-  protobufjs: true
-  sharp: true
-  unrs-resolver: true
