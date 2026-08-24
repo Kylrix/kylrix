@@ -1,0 +1,13 @@
+onlyBuiltDependencies:
+  - '@firebase/util'
+  - bufferutil
+  - protobufjs
+  - sharp
+  - unrs-resolver
+
+allowBuilds:
+  '@firebase/util': true
+  bufferutil: true
+  protobufjs: true
+  sharp: true
+  unrs-resolver: true
