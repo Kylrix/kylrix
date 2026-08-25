@@ -73,24 +73,22 @@ export async function notifySubscriptionActivated(input: {
     ctaUrl: input.ctaUrl || KYLRIX_AUTH_URI});
 }
 
-export async function notifyGiftCouponIssued(input: {
+export async function notifyGiftSubscriptionActivated(input: {
   recipientUserId: string;
   giverName: string;
   plan: string;
   months: number;
   expiresAt?: string | null;
-  couponStatus?: string;
   giftMessage?: string | null;
-  claimUrl?: string;
 }) {
-  return await sendTemplatedEmail(input.recipientUserId, 'gift-coupon', {
-    giverName: input.giverName,
+  return await sendTemplatedEmail(input.recipientUserId, 'subscription-update', {
     planLabel: formatPlanLabel(input.plan),
     durationLabel: formatDurationLabel(input.months),
-    expiresAt: formatDateLabel(input.expiresAt),
-    couponStatus: input.couponStatus || 'active',
-    giftMessage: input.giftMessage || 'A gift subscription has been reserved for your account.',
-    claimUrl: input.claimUrl || KYLRIX_AUTH_URI});
+    currentPeriodEnd: formatDateLabel(input.expiresAt),
+    sourceLabel: `Gift from ${input.giverName}`,
+    bodyCopy:
+      input.giftMessage ||
+      `${input.giverName} just gifted you ${formatDurationLabel(input.months)} of Kylrix Pro! Your Pro privileges are active on your account immediately.`,
+    ctaUrl: KYLRIX_AUTH_URI,
+  });
 }
-
-;

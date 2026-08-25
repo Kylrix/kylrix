@@ -314,16 +314,19 @@ export async function POST(req: Request) {
   try {
     const { databases, users } = createSystemClient();
 
+    const targetUserId = meta.giftRecipientId || meta.payerUserId;
+    const isGift = Boolean(meta.giftRecipientId && meta.giftRecipientId !== meta.payerUserId);
+
     const { currentPeriodStart, currentPeriodEnd, creditMs } = await calculateStackedSubscriptionCredit(
       databases,
-      meta.payerUserId,
+      targetUserId,
       meta.planId,
       meta.months,
       effectiveRatio);
     const oneHourMs = 60 * 60 * 1000;
 
     if (creditMs < oneHourMs) {
-      console.warn(`[BlockBee IPN] Payment too small after ratio for ${meta.payerUserId}`);
+      console.warn(`[BlockBee IPN] Payment too small after ratio for ${meta.payerUserId} -> ${targetUserId}`);
       await releaseBlockBeeIpnLock(paymentId);
       return new Response('*ok*', { status: 200 });
     }
@@ -331,65 +334,8 @@ export async function POST(req: Request) {
     const payer = await users.get(meta.payerUserId).catch(() => null);
     const payerName = payer?.name || meta.payerUserId;
 
-    if (meta.giftRecipientId) {
-      const giftCoupon = await createGiftCouponRow({
-        databases,
-        payerUserId: meta.payerUserId,
-        payerName,
-        recipientUserId: meta.giftRecipientId,
-        recipientName: meta.giftRecipientName || undefined,
-        planId: meta.planId,
-        months: meta.months,
-        currentPeriodEnd: currentPeriodEnd.toISOString(),
-        giftMessage: meta.giftMessage || null,
-        countryCode: meta.countryCode});
-
-      await notifyGiftCouponIssued({
-        recipientUserId: meta.giftRecipientId,
-        giverName: payerName,
-        plan: meta.planId,
-        months: meta.months,
-        expiresAt: currentPeriodEnd.toISOString(),
-        couponStatus: 'active',
-        giftMessage:
-          meta.giftMessage ||
-          `A ${meta.months}-month ${meta.planId === 'PRO_YEAR' ? 'yearly' : 'monthly'} Kylrix Pro gift is waiting for you.`,
-        claimUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space'}/billing/coupon/${giftCoupon.$id}`}).catch((error: any) => {
-        console.warn('[BlockBee IPN] Gift email send deferred:', error);
-      });
-
-      await recordCompletedTransactionLedger({
-        databases,
-        paymentId,
-        userId: meta.payerUserId,
-        planId: meta.planId,
-        months: meta.months,
-        amountUsd: valuePaidUsd,
-        couponId: meta.couponId,
-        metadata: {
-          giftRecipientId: meta.giftRecipientId,
-          giftCouponId: giftCoupon.$id}});
-
-      await completeBlockBeeIpnLock(paymentId, meta.payerUserId, {
-        kind: 'gift_coupon',
-        couponId: giftCoupon.$id});
-      await markBlockBeePendingCheckoutConsumed(paymentId);
-
-      await logBillingWebhookCall({
-        paymentId,
-        provider: 'blockbee',
-        payload: rawBody,
-        headers: { signature: sig || '' },
-        status: 'success',
-        metadata: {
-          giftRecipientId: meta.giftRecipientId,
-          giftCouponId: giftCoupon.$id}});
-
-      return new Response('*ok*', { status: 200 });
-    }
-
     const subData = {
-      userId: meta.payerUserId,
+      userId: targetUserId,
       plan: 'pro',
       status: 'active',
       currentPeriodStart: currentPeriodStart.toISOString(),
@@ -398,8 +344,12 @@ export async function POST(req: Request) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()};
 
-    const subscription = await databases.createRow(DATABASE_ID, SUB_COLLECTION_ID, ID.unique(), subData, [
-      Permission.read(Role.user(meta.payerUserId))]);
+    const permissions = [Permission.read(Role.user(targetUserId))];
+    if (isGift) {
+      permissions.push(Permission.read(Role.user(meta.payerUserId)));
+    }
+
+    const subscription = await databases.createRow(DATABASE_ID, SUB_COLLECTION_ID, ID.unique(), subData, permissions);
 
     if (meta.couponId) {
       try {
@@ -409,12 +359,12 @@ export async function POST(req: Request) {
           const couponDetails = parseMetadata(couponMetadata.coupon);
           await databases.updateRow(CHAT_DATABASE_ID, ACCOUNT_EVENTS_TABLE_ID, meta.couponId, {
             status: 'applied',
-            relatedUserId: meta.payerUserId,
+            relatedUserId: targetUserId,
             metadata: JSON.stringify({
               ...couponMetadata,
               coupon: {
                 ...couponDetails,
-                claimedBy: meta.payerUserId,
+                claimedBy: targetUserId,
                 appliedAt: new Date().toISOString(),
                 claimState: 'applied',
                 subscriptionId: subscription.$id}})});
@@ -426,18 +376,20 @@ export async function POST(req: Request) {
 
     const planTier = String(meta.planId || 'PRO').toUpperCase().startsWith('TEAMS') ? 'TEAMS' : 'PRO';
 
+    // 1. Update user preferences for active Pro status
     try {
-      const prefs = (await users.getPrefs(meta.payerUserId)) as Record<string, unknown>;
+      const prefs = (await users.getPrefs(targetUserId)) as Record<string, unknown>;
       await users.updatePrefs(
-        meta.payerUserId,
+        targetUserId,
         applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), planTier));
     } catch (err) {
       console.error('[BlockBee IPN] Failed to update user prefs:', err);
     }
 
+    // 2. Sync tier to profile
     try {
       const profileRes = await databases.listRows(CHAT_DATABASE_ID, PROFILES_COLLECTION_ID, [
-        Query.equal('userId', meta.payerUserId)]);
+        Query.equal('userId', targetUserId)]);
 
       if (profileRes.total > 0) {
         await databases.updateRow(CHAT_DATABASE_ID, PROFILES_COLLECTION_ID, profileRes.rows[0].$id, {
@@ -447,16 +399,7 @@ export async function POST(req: Request) {
       console.error('[BlockBee IPN] Failed to sync to profiles:', err);
     }
 
-    await notifySubscriptionActivated({
-      userId: meta.payerUserId,
-      plan: meta.planId,
-      months: meta.months,
-      currentPeriodEnd: currentPeriodEnd.toISOString(),
-      sourceLabel: 'Crypto payment',
-      bodyCopy: `Your ${meta.months}-month access is live across Kylrix.`}).catch((error: any) => {
-      console.warn('[BlockBee IPN] Subscription email send deferred:', error);
-    });
-
+    // 3. Record transaction ledger
     await recordCompletedTransactionLedger({
       databases,
       paymentId,
@@ -466,12 +409,48 @@ export async function POST(req: Request) {
       amountUsd: valuePaidUsd,
       couponId: meta.couponId,
       metadata: {
+        isGift,
+        giftRecipientId: meta.giftRecipientId || null,
+        giftRecipientName: meta.giftRecipientName || null,
+        giftMessage: meta.giftMessage || null,
         subscriptionId: subscription.$id}});
+
+    // 4. Send Notifications
+    if (isGift && meta.giftRecipientId) {
+      await notifyGiftSubscriptionActivated({
+        recipientUserId: meta.giftRecipientId,
+        giverName: payerName,
+        plan: meta.planId,
+        months: meta.months,
+        expiresAt: currentPeriodEnd.toISOString(),
+        giftMessage: meta.giftMessage || null,
+      }).catch((err: any) => {
+        console.warn('[BlockBee IPN] Gift notification deferred:', err);
+      });
+
+      await notifySubscriptionActivated({
+        userId: meta.payerUserId,
+        plan: meta.planId,
+        months: meta.months,
+        currentPeriodEnd: currentPeriodEnd.toISOString(),
+        sourceLabel: 'Gift payment',
+        bodyCopy: `Your gift subscription for ${meta.giftRecipientName || meta.giftRecipientId} has been successfully processed and is now active on their account.`,
+      }).catch(() => {});
+    } else {
+      await notifySubscriptionActivated({
+        userId: meta.payerUserId,
+        plan: meta.planId,
+        months: meta.months,
+        currentPeriodEnd: currentPeriodEnd.toISOString(),
+        sourceLabel: 'Crypto payment',
+        bodyCopy: `Your subscription is confirmed and access is active through ${currentPeriodEnd.toLocaleDateString()}.`});
+    }
 
     await completeBlockBeeIpnLock(paymentId, meta.payerUserId, {
       kind: 'subscription',
-      subscriptionId: subscription.$id,
-      ratio: ratio.toFixed(4)});
+      isGift,
+      targetUserId,
+      subscriptionId: subscription.$id});
     await markBlockBeePendingCheckoutConsumed(paymentId);
 
     await logBillingWebhookCall({
@@ -481,8 +460,10 @@ export async function POST(req: Request) {
       headers: { signature: sig || '' },
       status: 'success',
       metadata: {
-        userId: meta.payerUserId,
-        planId: meta.planId}});
+        isGift,
+        targetUserId,
+        giftRecipientId: meta.giftRecipientId || null,
+        subscriptionId: subscription.$id}});
 
     return new Response('*ok*', { status: 200 });
   } catch (error: any) {

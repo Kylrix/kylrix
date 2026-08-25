@@ -42,9 +42,19 @@ interface PricingDrawerProps {
   onClose?: () => void;
   initialTier?: 'PRO' | 'TEAMS';
   featureHighlight?: string | null;
+  giftRecipientId?: string | null;
+  giftRecipientName?: string | null;
+  isGift?: boolean;
 }
 
-export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }: PricingDrawerProps) {
+export function PricingDrawer({
+  onClose,
+  initialTier = 'PRO',
+  featureHighlight,
+  giftRecipientId,
+  giftRecipientName,
+  isGift = false,
+}: PricingDrawerProps) {
   const { isAuthenticated, user } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
   const [months, setMonths] = useState(1);
@@ -52,6 +62,8 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
   const [selectedTier, setSelectedTier] = useState<'PRO' | 'TEAMS'>(initialTier);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const resumeAttemptedRef = useRef(false);
+
+  const isGiftMode = Boolean(isGift || giftRecipientId);
 
   const yearlyListPrice = useMemo(() => getYearlyListPrice(selectedTier), [selectedTier]);
   const yearlyDiscountedPrice = useMemo(() => getYearlyDiscountedPrice(selectedTier), [selectedTier]);
@@ -97,6 +109,8 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
         method: 'CRYPTO',
         countryCode,
         months: checkoutMonths,
+        giftRecipientId: giftRecipientId || undefined,
+        giftRecipientName: giftRecipientName || undefined,
         jwt,
       });
 
@@ -124,7 +138,7 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
     } finally {
       setCheckoutLoading(false);
     }
-  }, [selectedTier, onClose]);
+  }, [selectedTier, giftRecipientId, giftRecipientName]);
 
   useEffect(() => {
     if (!user || resumeAttemptedRef.current) return;
@@ -198,10 +212,14 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
       <div className="p-5 border-b border-white/6 flex items-center justify-between gap-3 shrink-0 bg-[#161412]">
         <div className="min-w-0">
           <h2 className="text-white font-black text-xl font-clash tracking-tight truncate">
-            Kylrix {selectedTier === 'PRO' ? 'Pro' : 'Teams'}
+            {isGiftMode
+              ? `Gift Kylrix ${selectedTier === 'PRO' ? 'Pro' : 'Teams'}`
+              : `Kylrix ${selectedTier === 'PRO' ? 'Pro' : 'Teams'}`}
           </h2>
           <p className="text-white/50 text-xs font-satoshi truncate">
-            Full private suite. All core features unlimited.
+            {isGiftMode
+              ? `Gifting full suite access to @${giftRecipientName || giftRecipientId}`
+              : 'Full private suite. All core features unlimited.'}
           </p>
         </div>
         {onClose && (
@@ -337,7 +355,11 @@ export function PricingDrawer({ onClose, initialTier = 'PRO', featureHighlight }
             disabled={checkoutLoading}
             className="w-full py-3.5 bg-white hover:bg-white/90 disabled:opacity-50 text-black font-black text-sm rounded-xl transition-all cursor-pointer"
           >
-            {checkoutLoading ? 'Starting checkout…' : 'Continue to Checkout'}
+            {checkoutLoading
+              ? 'Starting checkout…'
+              : isGiftMode
+                ? `Gift ${selectedTier === 'PRO' ? 'Pro' : 'Teams'} · $${totalPrice.toFixed(2)}`
+                : 'Continue to Checkout'}
           </button>
         </div>
 

@@ -157,7 +157,7 @@ function CheckoutContent() {
                   <Clock size={20} className="text-[#6366F1] flex-shrink-0 mt-0.5" />
                   <p className="text-[13px] text-white/50 leading-relaxed">
                     {giftRecipientId
-                      ? 'This checkout will create a gift coupon for the recipient. Their account will claim it automatically on login.'
+                      ? 'This payment will activate Pro privileges directly on the recipient account upon confirmation.'
                       : 'Kylrix uses a flexible model. Any amount you send is converted into Pro time. If you send less than the suggested value, your subscription duration will be automatically adjusted to match your payment.'}
                   </p>
                 </div>

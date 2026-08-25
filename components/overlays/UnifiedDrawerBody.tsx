@@ -407,6 +407,9 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           onClose={onClose}
           initialTier={drawerData?.tier || 'PRO'}
           featureHighlight={drawerData?.featureHighlight}
+          giftRecipientId={drawerData?.giftRecipientId}
+          giftRecipientName={drawerData?.giftRecipientName}
+          isGift={drawerData?.isGift}
         />
       );
     case 'tags':

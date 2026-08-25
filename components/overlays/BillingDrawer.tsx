@@ -36,7 +36,6 @@ export function BillingContent() {
 
   // Gift states
   const [giftUsername, setGiftUsername] = useState('');
-  const [giftMonths, setGiftMonths] = useState('1');
   const [giftLoading, setGiftLoading] = useState(false);
   const [giftError, setGiftError] = useState<string | null>(null);
 
@@ -67,7 +66,7 @@ export function BillingContent() {
   const handleGiftCheckout = useCallback(async () => {
     const recipientQuery = giftUsername.trim();
     if (!recipientQuery) {
-      setGiftError('Enter a recipient username.');
+      setGiftError('Enter a recipient username or user ID.');
       return;
     }
     setGiftLoading(true);
@@ -83,18 +82,19 @@ export function BillingContent() {
         recipientLabel = directLookup?.profile?.displayName || directLookup?.profile?.username || recipientLabel;
       }
       if (!recipientUserId) throw new Error('No matching account found for that username or user ID.');
-      const normalizedMonths = Math.max(1, Number.parseInt(giftMonths || '1', 10) || 1);
-      const checkoutUrl = new URL(`${window.location.origin}/billing/checkout`);
-      checkoutUrl.searchParams.set('giftRecipientId', recipientUserId);
-      checkoutUrl.searchParams.set('giftRecipientName', recipientLabel || recipientUserId);
-      checkoutUrl.searchParams.set('months', String(normalizedMonths));
-      router.push(checkoutUrl.toString());
+
+      openUnified('pricing', {
+        isGift: true,
+        giftRecipientId: recipientUserId,
+        giftRecipientName: recipientLabel || recipientUserId,
+        tier: 'PRO',
+      });
     } catch (error) {
-      setGiftError((error as Error)?.message || 'Failed to start gift checkout.');
+      setGiftError((error as Error)?.message || 'Failed to find recipient.');
     } finally {
       setGiftLoading(false);
     }
-  }, [giftMonths, giftUsername, router]);
+  }, [giftUsername, openUnified]);
 
   const isPro = currentTier === 'PRO' || currentTier === 'LIFETIME' || currentTier === 'ORG';
   const isTeams = currentTier === 'TEAMS';
@@ -230,43 +230,37 @@ export function BillingContent() {
             <div className="flex items-center gap-3">
               <Gift size={16} className="text-[#EC4899]" />
               <div>
-                <h4 className="font-extrabold text-sm text-white">Gift Pro Subscription</h4>
-                <p className="text-[10px] text-white/40">Send Pro access to a teammate</p>
+                <h4 className="font-extrabold text-sm text-white">Gift Pro Access</h4>
+                <p className="text-[10px] text-white/40">Activate Pro privileges directly on another account</p>
               </div>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="text-[10px] text-white/40 font-black uppercase tracking-wider block mb-1">Recipient Username or ID</label>
+                <label className="text-[10px] text-white/40 font-black uppercase tracking-wider block mb-1">Recipient Username or User ID</label>
                 <input
                   type="text"
-                  placeholder="e.g. janesmith"
+                  placeholder="e.g. janesmith or 65f3..."
                   value={giftUsername}
                   onChange={e => setGiftUsername(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#6366F1] transition-all"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleGiftCheckout();
+                    }
+                  }}
+                  className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#6366F1] transition-all font-mono"
                 />
-              </div>
-              <div>
-                <label className="text-[10px] text-white/40 font-black uppercase tracking-wider block mb-1">Gift Duration</label>
-                <select
-                  value={giftMonths}
-                  onChange={e => setGiftMonths(e.target.value)}
-                  className="w-full bg-[#1C1A18] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#6366F1] transition-all"
-                >
-                  <option value="1">1 Month — $10</option>
-                  <option value="3">3 Months — $30</option>
-                  <option value="6">6 Months — $60</option>
-                  <option value="12">12 Months — $96 (Yearly)</option>
-                </select>
               </div>
               {giftError && <p className="text-xs text-red-500 font-bold font-mono">{giftError}</p>}
               <button
                 type="button"
                 onClick={handleGiftCheckout}
-                disabled={giftLoading}
-                className="w-full py-3 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs transition-all disabled:opacity-40 cursor-pointer"
+                disabled={giftLoading || !giftUsername.trim()}
+                className="w-full py-3 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs transition-all disabled:opacity-40 cursor-pointer flex items-center justify-center gap-2"
               >
-                {giftLoading ? 'Preparing Checkout…' : 'Gift Pro Subscription'}
+                <span>{giftLoading ? 'Finding Recipient…' : 'Gift Pro Access'}</span>
+                <ArrowRight size={13} />
               </button>
             </div>
           </div>
