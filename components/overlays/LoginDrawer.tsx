@@ -10,7 +10,7 @@ import { MfaChallengeDrawer } from '@/components/overlays/MfaChallengeDrawer';
 import { getCurrentLoginMethod, isMfaRequiredError } from '@/lib/mfa';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
-import { account } from '@/lib/appwrite/client';
+import { account, invalidateCurrentUserCache } from '@/lib/appwrite/client';
 import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction, checkEmailAuthStatusAction } from '@/lib/actions/auth-actions';
 import { performNativePasskeyAuthentication } from '@/lib/webauthn-utils';
 
@@ -103,6 +103,7 @@ export function LoginDrawer() {
     setLastUsedMethod('password');
 
     try {
+      invalidateCurrentUserCache();
       const session: any = await account.createEmailPasswordSession(email, password);
 
       try {
@@ -149,6 +150,7 @@ export function LoginDrawer() {
       }
 
       // Complete Appwrite session creation using the minted token
+      invalidateCurrentUserCache();
       await account.createSession({ userId: verifyRes.userId, secret: verifyRes.token });
       
       localStorage.setItem('kylrix_last_auth_method', 'passkey');

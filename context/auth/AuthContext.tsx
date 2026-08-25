@@ -156,11 +156,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           const seq = ++sessionVerifySeq.current;
           void getCurrentUser(true).then((verified) => {
             if (seq !== sessionVerifySeq.current) return;
-            if (!verified) return;
-            // Only adopt background verified user if it belongs to current active user partition
-            const currentActiveId = (typeof window !== 'undefined' ? localStorage.getItem('kylrix:activePartition') : null)?.replace('_acc_', '');
-            if (currentActiveId && verified.$id !== currentActiveId) {
-              console.warn('[AuthContext] Background verify returned session for non-active partition user, ignoring override.');
+            if (!verified) {
+              setUser(null);
+              clearKylrixPulse();
               return;
             }
             setUser(verified as any);
@@ -319,6 +317,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return result.userId;
   }, []);
   const verifyEmailOTP = useCallback(async (_email: string, userId: string, secret: string): Promise<void> => {
+    invalidateCurrentUserCache();
     const _session: any = await account.createSession({ userId, secret });
     try {
       await assertAuthenticatedAccount();

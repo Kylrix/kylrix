@@ -268,22 +268,11 @@ function readCurrentUserSnapshot() {
         const pid = localStorage.getItem('kylrix:activePartition') || 'acc_default';
         const cacheKey = `${CURRENT_USER_CACHE_KEY}_${pid}`;
         const raw = localStorage.getItem(cacheKey);
-        if (!raw) {
-            // Local-first: check partition-scoped last user
-            const lastUser = readLastLoggedInUser();
-            if (lastUser) {
-                return { user: lastUser, expiresAt: Date.now() + CURRENT_USER_CACHE_TTL };
-            }
-            return null;
-        }
+        if (!raw) return null;
         const parsed = JSON.parse(raw) as { user: any; expiresAt: number; lastForcedAt?: number };
         if (!parsed?.user) return null;
         if (parsed.expiresAt <= Date.now()) {
-            const lastUser = readLastLoggedInUser();
-            if (lastUser) {
-                return { user: lastUser, expiresAt: Date.now() + CURRENT_USER_CACHE_TTL };
-            }
-            return parsed;
+            return null;
         }
         return parsed;
     } catch {
@@ -294,14 +283,22 @@ function readCurrentUserSnapshot() {
 function writeCurrentUserSnapshot(user: any | null, lastForcedAt?: number) {
     if (!canUseStorage()) return;
     try {
-        const pid = localStorage.getItem('kylrix:activePartition') || 'acc_default';
-        const cacheKey = `${CURRENT_USER_CACHE_KEY}_${pid}`;
-        const lastUserKey = `kylrix_last_logged_in_user_${pid}`;
         if (!user) {
-            localStorage.removeItem(cacheKey);
-            localStorage.removeItem(lastUserKey);
+            const keysToRemove: string[] = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && (k.startsWith(CURRENT_USER_CACHE_KEY) || k.startsWith('kylrix_last_logged_in_user'))) {
+                    keysToRemove.push(k);
+                }
+            }
+            keysToRemove.forEach((k) => localStorage.removeItem(k));
+            localStorage.removeItem('kylrix:activePartition');
             return;
         }
+        const pid = `acc_${user.$id}`;
+        localStorage.setItem('kylrix:activePartition', pid);
+        const cacheKey = `${CURRENT_USER_CACHE_KEY}_${pid}`;
+        const lastUserKey = `kylrix_last_logged_in_user_${pid}`;
         localStorage.setItem(cacheKey, JSON.stringify({
             user,
             expiresAt: Date.now() + CURRENT_USER_CACHE_TTL,
@@ -516,46 +513,37 @@ export function clearKylrixPulse() {
 }
 
 export async function getCurrentUser(force = false): Promise<any | null> {
-    hydrateCurrentUserCache();
-
-    const now = Date.now();
-
-    // If we have a valid cache and NOT forcing, return it
-    if (!force && currentUserCache && currentUserCache.expiresAt > now) {
-        return currentUserCache.user;
+    if (!force) {
+        hydrateCurrentUserCache();
+        const now = Date.now();
+        if (currentUserCache && currentUserCache.expiresAt > now) {
+            return currentUserCache.user;
+        }
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            const snap = readCurrentUserSnapshot();
+            if (snap?.user) return snap.user;
+        }
+        if (!hasAuthSessionHint()) {
+            const snap = readCurrentUserSnapshot();
+            if (snap?.user) return snap.user;
+            return null;
+        }
     }
 
-    // If offline or network timeout, fall back to snapshot immediately
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        const snap = readCurrentUserSnapshot();
-        if (snap?.user) return snap.user;
-    }
-
-    // If forcing, check if we just did a forced refresh very recently (dedupe)
-    if (force && currentUserCache?.lastForcedAt && (now - currentUserCache.lastForcedAt < CURRENT_USER_FORCE_TTL)) {
-        return currentUserCache.user;
-    }
-
-    // If already in flight, wait for it (deduplication)
     if (currentUserInFlight) {
         return currentUserInFlight;
     }
 
-    if (!force && !hasAuthSessionHint()) {
-        const snap = readCurrentUserSnapshot();
-        if (snap?.user) return snap.user;
-        return null;
-    }
-
     currentUserInFlight = withNetworkTimeout(account.get())
         .then((user) => {
-            const forcedAt = force ? Date.now() : (currentUserCache?.lastForcedAt);
+            const forcedAt = Date.now();
             currentUserCache = { 
                 user, 
                 expiresAt: Date.now() + CURRENT_USER_CACHE_TTL,
                 lastForcedAt: forcedAt
             };
             writeCurrentUserSnapshot(user, forcedAt);
+            setKylrixPulse(user);
             emitCurrentUserChange(user);
             return user;
         })
@@ -563,12 +551,13 @@ export async function getCurrentUser(force = false): Promise<any | null> {
             const isUnauthorized =
                 error?.code === 401 ||
                 error?.code === 'user_unauthorized' ||
-                error?.code === 'user_session_not_found';
+                error?.code === 'user_session_not_found' ||
+                String(error?.message || '').toLowerCase().includes('unauthorized') ||
+                String(error?.message || '').toLowerCase().includes('missing scope') ||
+                String(error?.message || '').toLowerCase().includes('not found');
 
             if (isUnauthorized) {
-                currentUserCache = null;
-                writeCurrentUserSnapshot(null);
-                emitCurrentUserChange(null);
+                invalidateCurrentUserCache();
                 return null;
             }
 
@@ -591,7 +580,9 @@ export async function getCurrentUser(force = false): Promise<any | null> {
 
 export function invalidateCurrentUserCache() {
     currentUserCache = null;
+    currentUserInFlight = null;
     writeCurrentUserSnapshot(null);
+    clearKylrixPulse();
     emitCurrentUserChange(null);
 }
 
