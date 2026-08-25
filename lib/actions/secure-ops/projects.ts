@@ -1935,37 +1935,21 @@ export async function getSharedWorkspaceEntitiesSecure(
 
     const rowsById = new Map<string, any>();
 
-    // Helper to query table by direct projectId and by matching entityIds from project_objects
-    const queryAndCollect = async (tableId: string, extraFilters: any[] = []) => {
-      const promises: Promise<any>[] = [];
-
-      // Query by direct projectId
-      promises.push(
-        tables.listRows({
-          databaseId: dbId,
-          tableId,
-          queries: [Query.equal('projectId', workspaceId), Query.limit(200), ...extraFilters] as any,
-        }).catch(() => ({ rows: [] }))
-      );
-
-      // Query by matching entityIds in batches of 100
+    // Helper to fetch individual rows by matching entityId (from project_objects) and by tags
+    const queryAndCollect = async (tableId: string, hasTags = false) => {
+      // 1. Fetch all matching entity IDs directly via getRow
       if (matchingEntityIds.length > 0) {
-        for (let i = 0; i < matchingEntityIds.length; i += 100) {
-          const batch = matchingEntityIds.slice(i, i + 100);
-          promises.push(
-            tables.listRows({
+        const rowFetches = matchingEntityIds.map((rowId) =>
+          tables
+            .getRow({
               databaseId: dbId,
               tableId,
-              queries: [Query.equal('$id', batch), Query.limit(100), ...extraFilters] as any,
-            }).catch(() => ({ rows: [] }))
-          );
-        }
-      }
-
-      const results = await Promise.all(promises);
-      results.forEach((res) => {
-        const rows = Array.isArray(res?.rows) ? res.rows : Array.isArray(res) ? res : [];
-        rows.forEach((r: any) => {
+              rowId,
+            })
+            .catch(() => null)
+        );
+        const fetchedRows = await Promise.all(rowFetches);
+        fetchedRows.forEach((r: any) => {
           if (r && (r.$id || r.id)) {
             const rowId = r.$id || r.id;
             rowsById.set(rowId, {
@@ -1977,30 +1961,70 @@ export async function getSharedWorkspaceEntitiesSecure(
             });
           }
         });
-      });
+      }
+
+      // 2. For tables supporting tags (notes, tasks), also query tags
+      if (hasTags) {
+        try {
+          const [wsTagsRes, projTagsRes] = await Promise.all([
+            tables
+              .listRows({
+                databaseId: dbId,
+                tableId,
+                queries: [Query.contains('tags', `workspace:${workspaceId}`), Query.limit(200)] as any,
+              })
+              .catch(() => ({ rows: [] })),
+            tables
+              .listRows({
+                databaseId: dbId,
+                tableId,
+                queries: [Query.contains('tags', `project:${workspaceId}`), Query.limit(200)] as any,
+              })
+              .catch(() => ({ rows: [] })),
+          ]);
+
+          const tagRows = [
+            ...(Array.isArray(wsTagsRes?.rows) ? wsTagsRes.rows : []),
+            ...(Array.isArray(projTagsRes?.rows) ? projTagsRes.rows : []),
+          ];
+
+          tagRows.forEach((r: any) => {
+            if (r && (r.$id || r.id)) {
+              const rowId = r.$id || r.id;
+              rowsById.set(rowId, {
+                ...r,
+                id: rowId,
+                $id: rowId,
+                projectId: workspaceId,
+                isWorkspace: true,
+              });
+            }
+          });
+        } catch {}
+      }
     };
 
     switch (normKind) {
       case 'note':
-        await queryAndCollect(APPWRITE_CONFIG.TABLES.NOTE.NOTES);
+        await queryAndCollect(APPWRITE_CONFIG.TABLES.NOTE.NOTES, true);
         break;
       case 'goal':
-        await queryAndCollect(APPWRITE_CONFIG.TABLES.FLOW.TASKS);
+        await queryAndCollect(APPWRITE_CONFIG.TABLES.FLOW.TASKS, true);
         break;
       case 'event':
-        await queryAndCollect(APPWRITE_CONFIG.TABLES.FLOW.EVENTS);
+        await queryAndCollect(APPWRITE_CONFIG.TABLES.FLOW.EVENTS, false);
         break;
       case 'form':
-        await queryAndCollect(APPWRITE_CONFIG.TABLES.FLOW.FORMS);
+        await queryAndCollect(APPWRITE_CONFIG.TABLES.FLOW.FORMS, false);
         break;
       case 'credential':
-        await queryAndCollect(APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS);
+        await queryAndCollect(APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS, false);
         break;
       case 'totp':
-        await queryAndCollect(APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS);
+        await queryAndCollect(APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS, false);
         break;
       case 'agent_session':
-        await queryAndCollect('agentic_sessions');
+        await queryAndCollect('agentic_sessions', false);
         break;
       default:
         break;

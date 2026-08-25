@@ -386,31 +386,34 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     void (async () => {
       try {
-        const proj = await ProjectsService.getProject(targetId).catch(() => null);
-        if (cancelled || !proj) return;
-        if (proj.ownerId === userId) {
-          // It's actually owned by the current user! Move out of shared
-          setWorkspaces((prev) =>
-            prev.map((w) =>
-              w.id === targetId ? { ...w, title: proj.title || w.title, ownerId: userId, isShared: false, role: 'owner' } : w
-            )
-          );
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const cacheKey = `visited_shared_workspaces_${userId}`;
-          const existing = (await LocalEngine.cacheGet<WorkspaceItem[]>(cacheKey)) || [];
-          await LocalEngine.cacheSet(cacheKey, existing.filter((w) => w.id !== targetId));
-          return;
-        }
-        if (proj.isPublic === false && proj.ownerId !== userId) {
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const cacheKey = `visited_shared_workspaces_${userId}`;
-          const existing = (await LocalEngine.cacheGet<WorkspaceItem[]>(cacheKey)) || [];
-          await LocalEngine.cacheSet(cacheKey, existing.filter((w) => w.id !== targetId));
-          setWorkspaces((prev) => prev.filter((w) => w.id !== targetId));
-          setActiveWorkspaceIdState(userId);
-          const { toast } = await import('react-hot-toast');
-          toast.error('This shared workspace is no longer public or accessible.');
-        }
+        const { resolveWorkspaceShareAccessSecure } = await import('@/lib/actions/secure-ops/projects');
+        const { account } = await import('@/lib/appwrite/client');
+        let jwt: string | undefined = undefined;
+        try {
+          const res = await Promise.race([
+            account.createJWT(),
+            new Promise<null>((r) => setTimeout(() => r(null), 800)),
+          ]);
+          jwt = res?.jwt;
+        } catch {}
+        const access = await resolveWorkspaceShareAccessSecure(targetId, jwt);
+        if (cancelled || !access.success || !access.workspace) return;
+
+        const isOwner = access.workspace.ownerId === userId && userId !== 'guest';
+        setWorkspaces((prev) => {
+          const item: WorkspaceItem = {
+            id: targetId,
+            title: access.workspace!.title || 'Shared Workspace',
+            ownerId: access.workspace!.ownerId || '',
+            isPersonal: false,
+            isShared: !isOwner,
+            isPublic: !!access.workspace!.isPublic,
+            role: isOwner ? 'owner' : 'viewer',
+          };
+          const byId = new Map(prev.map((w) => [w.id, w]));
+          byId.set(item.id, item);
+          return [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
+        });
       } catch {
         /* no-op */
       }
@@ -418,7 +421,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [activeWorkspaceId, userId]);
+  }, [activeWorkspaceId, userId, personalWorkspace]);
 
   const activeWorkspace = useMemo<WorkspaceItem>(() => {
     const found = workspaces.find((w) => w.id === activeWorkspaceId);
@@ -426,11 +429,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (activeWorkspaceId && activeWorkspaceId !== userId && activeWorkspaceId !== 'guest') {
       return {
         id: activeWorkspaceId,
-        title: 'Workspace',
-        ownerId: userId,
+        title: 'Shared Workspace',
+        ownerId: '',
         isPersonal: false,
-        isShared: false,
-        role: 'owner',
+        isShared: true,
+        isPublic: true,
+        role: 'viewer',
       };
     }
     return personalWorkspace;

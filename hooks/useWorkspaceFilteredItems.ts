@@ -7,6 +7,8 @@ import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-
 import { getSharedWorkspaceEntitiesSecure } from '@/lib/actions/secure-ops/projects';
 import { account } from '@/lib/appwrite/client';
 
+import { useAuth } from '@/context/auth/AuthContext';
+
 export interface WorkspaceItemLike {
   $id?: string | null;
   id?: string | null;
@@ -122,8 +124,16 @@ export function useWorkspaceFilteredItems<T extends WorkspaceItemLike>(
   entityKind: 'note' | 'goal' | 'event' | 'form' | 'credential' | 'totp' | 'agent_session' | string,
 ): { filteredItems: T[]; isCustomWorkspace: boolean; loadingWorkspaceObjects: boolean } {
   const { activeWorkspace, isEntityPendingInActiveWorkspace } = useWorkspace();
+  const { user } = useAuth();
+  const userId = user?.$id || 'guest';
+
   const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
-  const isSharedWorkspace = Boolean(isCustomWorkspace && activeWorkspace?.isShared);
+  const isSharedWorkspace = Boolean(
+    isCustomWorkspace &&
+      (activeWorkspace?.isShared ||
+        activeWorkspace?.role !== 'owner' ||
+        (activeWorkspace?.ownerId && activeWorkspace.ownerId !== userId))
+  );
   const customWorkspaceId = isCustomWorkspace ? activeWorkspace?.id : null;
 
   const { rows: workspaceProjectObjects, loading: loadingWorkspaceObjects } = useProjectObjects(
@@ -134,7 +144,7 @@ export function useWorkspaceFilteredItems<T extends WorkspaceItemLike>(
   const { rows: sharedWorkspaceRows, loading: loadingSharedRows } = useSharedWorkspaceEntities<T>(
     customWorkspaceId,
     entityKind,
-    isSharedWorkspace,
+    isCustomWorkspace,
   );
 
   const filteredItems = useMemo(() => {
@@ -160,7 +170,7 @@ export function useWorkspaceFilteredItems<T extends WorkspaceItemLike>(
       return false;
     });
 
-    if (isSharedWorkspace) {
+    if (isSharedWorkspace || sharedWorkspaceRows.length > 0) {
       const byId = new Map<string, T>();
       // Add shared workspace rows from Server SDK
       sharedWorkspaceRows.forEach((r) => {

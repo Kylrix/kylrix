@@ -1798,17 +1798,19 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         (t) => registeredIds.has(t.id) || t.projectId === pid
       );
     }
-    if (state.userId && state.userId !== 'guest') {
-      const activeId = state.userId;
-      sourceTasks = sourceTasks.filter((t) =>
-        !t.userId || t.userId === 'guest' || t.userId === activeId ||
-        !t.creatorId || t.creatorId === 'guest' || t.creatorId === activeId ||
-        (Boolean(activeId) && Array.isArray(t.assigneeIds) && t.assigneeIds.includes(activeId!))
-      );
-    } else {
-      sourceTasks = sourceTasks.filter((t) =>
-        !t.userId || t.userId === 'guest' || !t.creatorId || t.creatorId === 'guest'
-      );
+    if (!activeWorkspace || activeWorkspace.isPersonal) {
+      if (state.userId && state.userId !== 'guest') {
+        const activeId = state.userId;
+        sourceTasks = sourceTasks.filter((t) =>
+          !t.userId || t.userId === 'guest' || t.userId === activeId ||
+          !t.creatorId || t.creatorId === 'guest' || t.creatorId === activeId ||
+          (Boolean(activeId) && Array.isArray(t.assigneeIds) && t.assigneeIds.includes(activeId!))
+        );
+      } else {
+        sourceTasks = sourceTasks.filter((t) =>
+          !t.userId || t.userId === 'guest' || !t.creatorId || t.creatorId === 'guest'
+        );
+      }
     }
     let filtered = buildTaskHierarchy(sourceTasks);
 
