@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useProjectObjects } from '@/hooks/useProjectObjects';
 import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
-import { getSharedWorkspaceEntitiesSecure } from '@/lib/actions/secure-ops/projects';
+import { getSharedWorkspaceEntitiesSecure } from '@/lib/actions/secure-ops';
 import { account } from '@/lib/appwrite/client';
 
 import { useAuth } from '@/context/auth/AuthContext';

@@ -386,7 +386,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     void (async () => {
       try {
-        const { resolveWorkspaceShareAccessSecure } = await import('@/lib/actions/secure-ops/projects');
+        const { resolveWorkspaceShareAccessSecure } = await import('@/lib/actions/secure-ops');
         const { account } = await import('@/lib/appwrite/client');
         let jwt: string | undefined = undefined;
         try {
