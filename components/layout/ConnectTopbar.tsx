@@ -2111,21 +2111,6 @@ export default function ConnectTopbar({
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
                 {!w.isPersonal && (
-                  <IconButton
-                    size="small"
-                    onClick={(e: MouseEvent) => {
-                      e.stopPropagation();
-                      handleCloseAll();
-                      markWorkspacePublic(w.id);
-                      void executeInstantShare('project', w.id, {
-                        resourceTitle: w.title,
-                        isPublic: true,
-                        isGuest: true,
-                      });
-                      openUnified('share-context', {
-                        resourceType: 'project',
-                        resourceId: w.id,
-                        resourceTitle: w.title,
                   <>
                     <IconButton
                       size="small"
