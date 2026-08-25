@@ -228,6 +228,7 @@ export {
   updateGoalSecure,
   deleteGoalSecure,
   resolveWorkspaceShareAccessSecure,
+  getSharedWorkspaceEntitiesSecure,
   batchTrashFormSubmissionsSecure,
   searchGlobalUsersSecure,
   getProfileByUsernameSecure,
