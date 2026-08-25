@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Lock, ArrowRight, ShieldAlert } from 'lucide-react';
+import { Lock, ArrowRight } from 'lucide-react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAuth } from '@/context/auth/AuthContext';
 
@@ -44,7 +44,7 @@ export function WorkspaceReadOnlyNotice({
           Cannot Create {objectName.charAt(0).toUpperCase() + objectName.slice(1)}
         </h3>
         <p className="text-xs text-white/60 font-semibold font-satoshi leading-relaxed">
-          You have view-only permissions in <span className="text-white font-bold">"{workspaceTitle}"</span>.
+          You have view-only permissions in <span className="text-white font-bold">&quot;{workspaceTitle}&quot;</span>.
           Please ask {ownerName} for edit access, or switch to your personal workspace to create.
         </p>
       </div>
