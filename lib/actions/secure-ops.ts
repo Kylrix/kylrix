@@ -70,6 +70,7 @@ import {
   updateGoalSecure,
   deleteGoalSecure,
   resolveWorkspaceShareAccessSecure,
+  getSharedWorkspaceEntitiesSecure,
 } from './secure-ops/projects';
 
 import {

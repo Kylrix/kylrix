@@ -28,6 +28,8 @@ const CreateChatComposer = dynamic(
 
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { WorkspaceReadOnlyNotice } from '@/components/projects/WorkspaceReadOnlyNotice';
 
 type HeightMode = 'partial' | 'full';
 
@@ -77,6 +79,16 @@ export function ObjectCreateDrawer({
   chatLegacyThread = false,
 }: Props) {
   const { setIsDrawerOpen } = useDrawerState();
+  const { activeWorkspace } = useWorkspace();
+  const isWorkspaceReadOnly = Boolean(
+    activeWorkspace &&
+      !activeWorkspace.isPersonal &&
+      activeWorkspace.isShared &&
+      activeWorkspace.role !== 'owner' &&
+      activeWorkspace.role !== 'editor' &&
+      activeWorkspace.role !== 'admin'
+  );
+
   const [mounted, setMounted] = useState(false);
   const formOnlyFull = kind === 'form';
   const [heightMode, setHeightMode] = useState<HeightMode>(
@@ -146,6 +158,7 @@ export function ObjectCreateDrawer({
     chatInitialMode,
     chatLegacyThread,
     toggleExpand,
+    isWorkspaceReadOnly,
   });
 
   useEffect(() => {
@@ -160,6 +173,7 @@ export function ObjectCreateDrawer({
       chatInitialMode,
       chatLegacyThread,
       toggleExpand,
+      isWorkspaceReadOnly,
     };
   });
 
@@ -180,63 +194,76 @@ export function ObjectCreateDrawer({
       chatInitialMode: chatMode,
       chatLegacyThread: chatThread,
       toggleExpand: toggleExp,
+      isWorkspaceReadOnly: isReadOnly,
     } = propsRef.current;
 
     const body = (
       <div className="h-full min-h-0 flex flex-col bg-[#161412] overflow-hidden">
-        {kind === 'note' ? (
-          <CreateNoteForm
-            initialContent={initContent}
-            onNoteCreated={(note) => {
-              onNoteC?.(note);
-            }}
-            onRegisterClose={(close) => {
-              composerCloseRef.current = close;
-            }}
-            isExpanded={true}
-            onToggleExpand={toggleExp}
-            onClose={onC}
-          />
-        ) : null}
+        {isReadOnly && kind !== 'chat' ? (
+          <div className="flex-1 flex items-center justify-center p-4">
+            <WorkspaceReadOnlyNotice
+              objectName={kind === 'note' ? 'idea' : kind === 'goal' ? 'goal' : kind}
+              onClose={onC}
+              onSwitchedToPersonal={onC}
+            />
+          </div>
+        ) : (
+          <>
+            {kind === 'note' ? (
+              <CreateNoteForm
+                initialContent={initContent}
+                onNoteCreated={(note) => {
+                  onNoteC?.(note);
+                }}
+                onRegisterClose={(close) => {
+                  composerCloseRef.current = close;
+                }}
+                isExpanded={true}
+                onToggleExpand={toggleExp}
+                onClose={onC}
+              />
+            ) : null}
 
-        {kind === 'goal' ? (
-          <CreateGoalComposer
-            onGoalCreated={onGoalC}
-            onRegisterClose={(close) => {
-              composerCloseRef.current = close;
-            }}
-            isExpanded={true}
-            onToggleExpand={toggleExp}
-            onClose={onC}
-          />
-        ) : null}
+            {kind === 'goal' ? (
+              <CreateGoalComposer
+                onGoalCreated={onGoalC}
+                onRegisterClose={(close) => {
+                  composerCloseRef.current = close;
+                }}
+                isExpanded={true}
+                onToggleExpand={toggleExp}
+                onClose={onC}
+              />
+            ) : null}
 
-        {kind === 'event' ? (
-          <CreateEventComposer
-            onEventCreated={onEventC}
-            onLiveEvent={onLiveE}
-            onCommitEvent={onCommitE}
-            onRegisterClose={(close) => {
-              composerCloseRef.current = close;
-            }}
-            isExpanded={true}
-            onToggleExpand={toggleExp}
-            onClose={onC}
-          />
-        ) : null}
+            {kind === 'event' ? (
+              <CreateEventComposer
+                onEventCreated={onEventC}
+                onLiveEvent={onLiveE}
+                onCommitEvent={onCommitE}
+                onRegisterClose={(close) => {
+                  composerCloseRef.current = close;
+                }}
+                isExpanded={true}
+                onToggleExpand={toggleExp}
+                onClose={onC}
+              />
+            ) : null}
 
-        {kind === 'chat' ? (
-          <CreateChatComposer
-            onClose={onC}
-            onRegisterClose={(close) => {
-              composerCloseRef.current = close;
-            }}
-            isExpanded={true}
-            onToggleExpand={toggleExp}
-            initialMode={chatMode}
-            legacyThread={chatThread}
-          />
-        ) : null}
+            {kind === 'chat' ? (
+              <CreateChatComposer
+                onClose={onC}
+                onRegisterClose={(close) => {
+                  composerCloseRef.current = close;
+                }}
+                isExpanded={true}
+                onToggleExpand={toggleExp}
+                initialMode={chatMode}
+                legacyThread={chatThread}
+              />
+            ) : null}
+          </>
+        )}
       </div>
     );
 
@@ -272,65 +299,77 @@ export function ObjectCreateDrawer({
         style={{ height: maxHeight, maxHeight }}
       >
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col overscroll-contain">
-          {kind === 'note' ? (
-            <CreateNoteForm
-              initialContent={initialContent}
-              onNoteCreated={(note) => {
-                onNoteCreated?.(note);
-              }}
-              onRegisterClose={(close) => {
-                composerCloseRef.current = close;
-              }}
-              isExpanded={isExpanded || isDesktop}
-              onToggleExpand={toggleExpand}
-              onClose={onClose}
-            />
-          ) : null}
-
-          {kind === 'goal' ? (
-            <CreateGoalComposer
-              onGoalCreated={onGoalCreated}
-              onRegisterClose={(close) => {
-                composerCloseRef.current = close;
-              }}
-              isExpanded={isExpanded || isDesktop}
-              onToggleExpand={toggleExpand}
-              onClose={onClose}
-            />
-          ) : null}
-
-          {kind === 'event' ? (
-            <CreateEventComposer
-              onEventCreated={onEventCreated}
-              onLiveEvent={onLiveEvent}
-              onCommitEvent={onCommitEvent}
-              onRegisterClose={(close) => {
-                composerCloseRef.current = close;
-              }}
-              isExpanded={isExpanded || isDesktop}
-              onToggleExpand={toggleExpand}
-              onClose={onClose}
-            />
-          ) : null}
-
-          {kind === 'chat' ? (
-            <CreateChatComposer
-              onClose={onClose}
-              onRegisterClose={(close) => {
-                composerCloseRef.current = close;
-              }}
-              isExpanded={isExpanded || isDesktop}
-              onToggleExpand={toggleExpand}
-              initialMode={chatInitialMode}
-              legacyThread={chatLegacyThread}
-            />
-          ) : null}
-
-          {kind === 'form' ? (
-            <div className="p-4 text-sm text-white/50 font-satoshi">
-              Forms use the full-height builder. Open create form from Forms.
+          {isWorkspaceReadOnly && kind !== 'chat' ? (
+            <div className="flex-1 flex items-center justify-center p-4">
+              <WorkspaceReadOnlyNotice
+                objectName={kind === 'note' ? 'idea' : kind === 'goal' ? 'goal' : kind}
+                onClose={onClose}
+                onSwitchedToPersonal={onClose}
+              />
             </div>
-          ) : null}
+          ) : (
+            <>
+              {kind === 'note' ? (
+                <CreateNoteForm
+                  initialContent={initialContent}
+                  onNoteCreated={(note) => {
+                    onNoteCreated?.(note);
+                  }}
+                  onRegisterClose={(close) => {
+                    composerCloseRef.current = close;
+                  }}
+                  isExpanded={isExpanded || isDesktop}
+                  onToggleExpand={toggleExpand}
+                  onClose={onClose}
+                />
+              ) : null}
+
+              {kind === 'goal' ? (
+                <CreateGoalComposer
+                  onGoalCreated={onGoalCreated}
+                  onRegisterClose={(close) => {
+                    composerCloseRef.current = close;
+                  }}
+                  isExpanded={isExpanded || isDesktop}
+                  onToggleExpand={toggleExpand}
+                  onClose={onClose}
+                />
+              ) : null}
+
+              {kind === 'event' ? (
+                <CreateEventComposer
+                  onEventCreated={onEventCreated}
+                  onLiveEvent={onLiveEvent}
+                  onCommitEvent={onCommitEvent}
+                  onRegisterClose={(close) => {
+                    composerCloseRef.current = close;
+                  }}
+                  isExpanded={isExpanded || isDesktop}
+                  onToggleExpand={toggleExpand}
+                  onClose={onClose}
+                />
+              ) : null}
+
+              {kind === 'chat' ? (
+                <CreateChatComposer
+                  onClose={onClose}
+                  onRegisterClose={(close) => {
+                    composerCloseRef.current = close;
+                  }}
+                  isExpanded={isExpanded || isDesktop}
+                  onToggleExpand={toggleExpand}
+                  initialMode={chatInitialMode}
+                  legacyThread={chatLegacyThread}
+                />
+              ) : null}
+
+              {kind === 'form' ? (
+                <div className="p-4 text-sm text-white/50 font-satoshi">
+                  Forms use the full-height builder. Open create form from Forms.
+                </div>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
     </div>

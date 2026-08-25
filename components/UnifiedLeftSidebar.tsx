@@ -11,6 +11,7 @@ import {
   Users as MomentsIcon,
   MessageCircleMore as HangoutIcon,
   Share2 as ShareIcon,
+  MoreVertical as MoreIcon,
 } from 'lucide-react';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -341,29 +342,56 @@ export function UnifiedLeftSidebar() {
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
                         {!w.isPersonal && (
-                          <Box
-                            component="span"
-                            onClick={(e: React.MouseEvent) => handleShareWorkspace(e, w)}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              p: 0.5,
-                              borderRadius: '6px',
-                              color: w.isPublic ? '#10B981' : 'rgba(255, 255, 255, 0.35)',
-                              bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                color: w.isPublic ? '#10B981' : '#F59E0B',
-                                bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.15)',
-                                transform: 'scale(1.08)',
-                              },
-                            }}
-                            title={w.isPublic ? 'Public sharing enabled (click to manage)' : 'Share workspace'}
-                          >
-                            <ShareIcon size={13} />
-                          </Box>
+                          <>
+                            <Box
+                              component="span"
+                              onClick={(e: React.MouseEvent) => handleShareWorkspace(e, w)}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                p: 0.5,
+                                borderRadius: '6px',
+                                color: w.isPublic ? '#10B981' : 'rgba(255, 255, 255, 0.35)',
+                                bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                  color: w.isPublic ? '#10B981' : '#F59E0B',
+                                  bgcolor: w.isPublic ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.15)',
+                                  transform: 'scale(1.08)',
+                                },
+                              }}
+                              title={w.isPublic ? 'Public sharing enabled (click to manage)' : 'Share workspace'}
+                            >
+                              <ShareIcon size={13} />
+                            </Box>
+                            <Box
+                              component="span"
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                openUnified('project-settings', { project: w });
+                              }}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                p: 0.5,
+                                borderRadius: '6px',
+                                color: 'rgba(255, 255, 255, 0.35)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                  color: '#FFFFFF',
+                                  bgcolor: 'rgba(255, 255, 255, 0.1)',
+                                  transform: 'scale(1.08)',
+                                },
+                              }}
+                              title="Workspace settings"
+                            >
+                              <MoreIcon size={13} />
+                            </Box>
+                          </>
                         )}
                         {isActive && <CheckIcon size={14} color="#F59E0B" style={{ flexShrink: 0 }} />}
                       </Box>
@@ -445,6 +473,28 @@ export function UnifiedLeftSidebar() {
                               title="Share workspace link"
                             >
                               <ShareIcon size={13} />
+                            </Box>
+                            <Box
+                              component="span"
+                              onClick={(e: React.MouseEvent) => handleShareWorkspace(e, w)}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                p: 0.5,
+                                borderRadius: '6px',
+                                color: 'rgba(255, 255, 255, 0.35)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                  color: '#FFFFFF',
+                                  bgcolor: 'rgba(255, 255, 255, 0.1)',
+                                  transform: 'scale(1.08)',
+                                },
+                              }}
+                              title="More options"
+                            >
+                              <MoreIcon size={13} />
                             </Box>
                             {isActive && <CheckIcon size={14} color="#6366F1" style={{ flexShrink: 0 }} />}
                           </Box>

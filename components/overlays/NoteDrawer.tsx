@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useCallback, useEffect } from 'react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { WorkspaceReadOnlyNotice } from '@/components/projects/WorkspaceReadOnlyNotice';
 import CreateNoteForm from '@/app/(app)/app/(app)/notes/CreateNoteForm';
 
 /**
@@ -16,6 +17,16 @@ export function NoteDrawer() {
   const { activeContent, close, drawerData } = useUnifiedDrawer();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
+  const { activeWorkspace } = useWorkspace();
+
+  const isWorkspaceReadOnly = Boolean(
+    activeWorkspace &&
+      !activeWorkspace.isPersonal &&
+      activeWorkspace.isShared &&
+      activeWorkspace.role !== 'owner' &&
+      activeWorkspace.role !== 'editor' &&
+      activeWorkspace.role !== 'admin'
+  );
 
   const isOpen = activeContent === 'note';
 
@@ -33,7 +44,15 @@ export function NoteDrawer() {
 
     const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
 
-    const composer = (
+    const composer = isWorkspaceReadOnly ? (
+      <div className="h-full min-h-0 flex flex-col justify-center bg-[#161412] p-4">
+        <WorkspaceReadOnlyNotice
+          objectName="idea"
+          onClose={handleClose}
+          onSwitchedToPersonal={handleClose}
+        />
+      </div>
+    ) : (
       <CreateNoteForm
         initialContent={{ isPublic, isGuest }}
         onNoteCreated={drawerData?.onCreated}
@@ -48,7 +67,7 @@ export function NoteDrawer() {
       openOverlay(composer);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, isWorkspaceReadOnly]);
 
   return null;
 }

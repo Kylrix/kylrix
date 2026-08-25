@@ -6,6 +6,8 @@ import { KNOWN_ACTION_IDS, parseFlowJson, buildFlowJsonTemplate, suggestActionId
 import toast from 'react-hot-toast';
 import { saveWorkflowAction } from '@/lib/actions/workflows';
 import { generateFlowFromPromptAction } from '@/lib/actions/flow-creator';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { WorkspaceReadOnlyNotice } from '@/components/projects/WorkspaceReadOnlyNotice';
 
 const NICHES = ['workspace','productivity','security','connect','intelligence','billing','system'] as const;
 
@@ -17,6 +19,16 @@ type Props = {
 };
 
 export function CreateFlowDrawer({ onClose, onCreated, draftId: draftIdProp, initialDraft }: Props) {
+  const { activeWorkspace } = useWorkspace();
+  const isWorkspaceReadOnly = Boolean(
+    activeWorkspace &&
+      !activeWorkspace.isPersonal &&
+      activeWorkspace.isShared &&
+      activeWorkspace.role !== 'owner' &&
+      activeWorkspace.role !== 'editor' &&
+      activeWorkspace.role !== 'admin'
+  );
+
   const [draftId] = useState(() => draftIdProp || `draft-${Date.now()}-${Math.random().toString(36).slice(2,6)}`);
   const [title, setTitle] = useState(initialDraft?.title || '');
   const [description, setDescription] = useState(initialDraft?.description || '');
@@ -172,6 +184,18 @@ export function CreateFlowDrawer({ onClose, onCreated, draftId: draftIdProp, ini
       toast.error(e?.message || 'Failed to create flow');
     } finally { setBusy(false); }
   };
+
+  if (isWorkspaceReadOnly) {
+    return (
+      <div className="relative flex h-full min-h-0 w-full flex-col justify-center bg-[#161412] text-white font-satoshi p-6">
+        <WorkspaceReadOnlyNotice
+          objectName="flow"
+          onClose={onClose}
+          onSwitchedToPersonal={onClose}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex h-full min-h-0 w-full flex-col bg-[#161412] text-white font-satoshi">

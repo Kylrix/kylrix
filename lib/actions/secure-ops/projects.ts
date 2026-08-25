@@ -1868,3 +1868,156 @@ export async function resolveWorkspaceShareAccessSecure(workspaceId: string, jwt
   };
 }
 
+/**
+ * Resolves all entities belonging to a shared workspace across the 7 supported entity kinds:
+ * 1. note (ideas/notes)
+ * 2. goal (tasks/goals)
+ * 3. form (forms)
+ * 4. event (events)
+ * 5. credential (vault secrets/passwords)
+ * 6. totp (vault 2FA secrets)
+ * 7. agent_session (Kylie / Sidekick agentic sessions)
+ * 
+ * Uses privileged Server SDK after verifying workspace accessibility (public/collaborator).
+ */
+export async function getSharedWorkspaceEntitiesSecure(
+  workspaceId: string,
+  entityKind: string,
+  jwt?: string,
+): Promise<{ success: boolean; rows: any[]; message?: string; error?: string }> {
+  try {
+    if (!workspaceId) {
+      return { success: false, rows: [], message: 'Workspace ID required' };
+    }
+
+    const access = await resolveWorkspaceShareAccessSecure(workspaceId, jwt);
+    if (!access.success) {
+      return { success: false, rows: [], message: access.message || 'No access to workspace' };
+    }
+
+    const tables = createSystemTablesDB();
+    const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
+
+    let normKind = entityKind.toLowerCase().trim();
+    if (normKind === 'ideas' || normKind === 'notes' || normKind === 'idea') normKind = 'note';
+    if (normKind === 'goals' || normKind === 'tasks' || normKind === 'task') normKind = 'goal';
+    if (normKind === 'forms') normKind = 'form';
+    if (normKind === 'events') normKind = 'event';
+    if (normKind === 'credentials' || normKind === 'secrets' || normKind === 'secret' || normKind === 'password') normKind = 'credential';
+    if (normKind === 'totps') normKind = 'totp';
+    if (normKind === 'agent_sessions' || normKind === 'agentic_session' || normKind === 'agentic_sessions' || normKind === 'session' || normKind === 'sessions') normKind = 'agent_session';
+
+    // 1. Query project_objects join table for this workspace
+    const poRes = await tables.listRows({
+      databaseId: dbId,
+      tableId: 'project_objects',
+      queries: [
+        Query.equal('projectId', workspaceId),
+        Query.limit(500),
+      ] as any,
+    }).catch(() => ({ rows: [] as any[] }));
+
+    const matchingEntityIds: string[] = [];
+    (poRes.rows || []).forEach((po: any) => {
+      let k = (po.entityKind || '').toLowerCase();
+      if (k === 'ideas' || k === 'notes' || k === 'idea') k = 'note';
+      if (k === 'goals' || k === 'tasks' || k === 'task') k = 'goal';
+      if (k === 'forms') k = 'form';
+      if (k === 'events') k = 'event';
+      if (k === 'credentials' || k === 'secrets' || k === 'secret' || k === 'password') k = 'credential';
+      if (k === 'totps') k = 'totp';
+      if (k === 'agent_sessions' || k === 'agentic_session' || k === 'agentic_sessions' || k === 'session' || k === 'sessions') k = 'agent_session';
+
+      if (k === normKind && po.entityId) {
+        matchingEntityIds.push(String(po.entityId));
+      }
+    });
+
+    const rowsById = new Map<string, any>();
+
+    // Helper to query table by direct projectId and by matching entityIds from project_objects
+    const queryAndCollect = async (tableId: string, extraFilters: any[] = []) => {
+      const promises: Promise<any>[] = [];
+
+      // Query by direct projectId
+      promises.push(
+        tables.listRows({
+          databaseId: dbId,
+          tableId,
+          queries: [Query.equal('projectId', workspaceId), Query.limit(200), ...extraFilters] as any,
+        }).catch(() => ({ rows: [] }))
+      );
+
+      // Query by matching entityIds in batches of 100
+      if (matchingEntityIds.length > 0) {
+        for (let i = 0; i < matchingEntityIds.length; i += 100) {
+          const batch = matchingEntityIds.slice(i, i + 100);
+          promises.push(
+            tables.listRows({
+              databaseId: dbId,
+              tableId,
+              queries: [Query.equal('$id', batch), Query.limit(100), ...extraFilters] as any,
+            }).catch(() => ({ rows: [] }))
+          );
+        }
+      }
+
+      const results = await Promise.all(promises);
+      results.forEach((res) => {
+        const rows = Array.isArray(res?.rows) ? res.rows : Array.isArray(res) ? res : [];
+        rows.forEach((r: any) => {
+          if (r && (r.$id || r.id)) {
+            const rowId = r.$id || r.id;
+            rowsById.set(rowId, {
+              ...r,
+              id: rowId,
+              $id: rowId,
+              projectId: workspaceId,
+              isWorkspace: true,
+            });
+          }
+        });
+      });
+    };
+
+    switch (normKind) {
+      case 'note':
+        await queryAndCollect(APPWRITE_CONFIG.TABLES.NOTE.NOTES);
+        break;
+      case 'goal':
+        await queryAndCollect(APPWRITE_CONFIG.TABLES.FLOW.TASKS);
+        break;
+      case 'event':
+        await queryAndCollect(APPWRITE_CONFIG.TABLES.FLOW.EVENTS);
+        break;
+      case 'form':
+        await queryAndCollect(APPWRITE_CONFIG.TABLES.FLOW.FORMS);
+        break;
+      case 'credential':
+        await queryAndCollect(APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS);
+        break;
+      case 'totp':
+        await queryAndCollect(APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS);
+        break;
+      case 'agent_session':
+        await queryAndCollect('agentic_sessions');
+        break;
+      default:
+        break;
+    }
+
+    const finalRows = Array.from(rowsById.values()).filter((r) => r.isTrash !== true && r.trash !== true);
+    return {
+      success: true,
+      rows: JSON.parse(JSON.stringify(finalRows)),
+    };
+  } catch (err: any) {
+    console.error('[getSharedWorkspaceEntitiesSecure] Error:', err);
+    return {
+      success: false,
+      rows: [],
+      error: err?.message || 'Failed to fetch shared workspace entities',
+    };
+  }
+}
+

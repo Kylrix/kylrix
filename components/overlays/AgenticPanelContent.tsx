@@ -286,6 +286,15 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const [sessions, setSessions] = useState<any[]>([]);
   const { filteredItems: workspaceFilteredSessions } = useWorkspaceFilteredItems(sessions, 'agent_session');
 
+  const isWorkspaceReadOnly = Boolean(
+    activeWorkspace &&
+      !activeWorkspace.isPersonal &&
+      activeWorkspace.isShared &&
+      activeWorkspace.role !== 'owner' &&
+      activeWorkspace.role !== 'editor' &&
+      activeWorkspace.role !== 'admin'
+  );
+
   // Eagerly pull custom workspace agent sessions into local state when switching workspaces
   useEffect(() => {
     if (!activeWorkspace || activeWorkspace.isPersonal) return;
@@ -397,6 +406,10 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   };
 
   const handleStartNewSession = async () => {
+    if (isWorkspaceReadOnly) {
+      toast.error('Cannot start sessions in a view-only shared workspace. Switch to your personal workspace to create.');
+      return;
+    }
     try {
       if (user?.$id) {
         // 1. Scan LocalEngine and prune redundant empty sessions
@@ -1130,9 +1143,13 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const handleSubmit = useCallback(
     (e?: FormEvent) => {
       e?.preventDefault();
+      if (isWorkspaceReadOnly) {
+        toast.error('Cannot send messages in view-only shared workspace.');
+        return;
+      }
       void runPrompt(chatInput);
     },
-    [chatInput, runPrompt]);
+    [chatInput, runPrompt, isWorkspaceReadOnly]);
 
   const handleWorkflow = useCallback(
     async (action: QuickWorkflowAction) => {
@@ -1780,7 +1797,15 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
           </div>
         ) : null}
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+        {isWorkspaceReadOnly ? (
+          <div className="flex items-center gap-2.5 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs font-semibold">
+            <Lock size={16} className="shrink-0 text-amber-400" />
+            <span className="leading-relaxed">
+              Viewing agentic session in shared workspace (read-only). Switch to your personal workspace or request edit access to chat.
+            </span>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-2">
           {composerHints.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {composerHints.map((hint) => (
@@ -1861,6 +1886,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
             </div>
           </div>
         </form>
+        )}
       </div>
 
       {composerMenuOpen && (
