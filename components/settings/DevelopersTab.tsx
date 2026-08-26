@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import {
   KYLRIX_API_SKILL_INSTALL,
   KYLRIX_OAUTH2_SKILL_INSTALL,
+  KYLRIX_AGENTS_SKILL_INSTALL,
 } from '@/lib/api/public';
 import { listPats, revokePat } from '@/lib/actions/client-ops';
 import { account } from '@/lib/appwrite/client';
@@ -200,6 +201,12 @@ export function DevelopersTab() {
           install={KYLRIX_OAUTH2_SKILL_INSTALL}
           docsHref="/docs/oauth2"
           docsLabel="OAuth docs"
+        />
+        <SkillRow
+          title="Autonomous Agents & Agent Keys"
+          install={KYLRIX_AGENTS_SKILL_INSTALL}
+          docsHref="/docs/agents"
+          docsLabel="Agent docs"
         />
       </Section>
 

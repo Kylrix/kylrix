@@ -32,8 +32,9 @@ Supported: **17.4.0+** (tables-db). Current ecosystem often **21.x+**.
 - **ALWAYS use `appwrite tablesdb`** (never legacy `appwrite databases` or `documents`). All table/row operations MUST use `appwrite tablesdb <command>` with `--database-id` and `--table-id`.
 - Assume the user is already authenticated. On "Session not found" / auth errors: **stop** and ask them to run `appwrite login`. Do not improvise with keys in ways that rewrite prefs.
 
-### CLI admin capability (STRICT)
+### CLI admin capability & Script Guardrails (STRICT)
 
+- **NEVER use ad-hoc scripts to interact with Appwrite backend directly**: Never write or run standalone Node/TS scripts (`node -e`, `npx tsx`, etc.) passing raw Appwrite admin API keys to mutate backend state or test user flows. The Appwrite CLI tool is the sole interface for schema operations, and the **Kylrix HTTP API (`/api/v1`)** using PATs/OAuth is the sole interface for client data and agent workflows.
 - The Appwrite CLI runs with full admin access to every account and the backend itself; row-level security has nothing to do with server SDK/Actions and never limits the CLI. Do not use RLS as an excuse for missing rows — missing data means truly missing, not permission-hidden, when queried via CLI.
 - **NEVER** mention user PAT in CLI ops — PAT is a completely unrelated product surface that clashes with CLI ops; keep scopes separate.
 

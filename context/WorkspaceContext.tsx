@@ -16,6 +16,8 @@ export interface WorkspaceItem {
   isPersonal: boolean;
   isShared?: boolean;
   isPublic?: boolean;
+  isAgentic?: boolean;
+  agentId?: string | null;
   role?: string;
 }
 
@@ -24,6 +26,7 @@ interface WorkspaceContextType {
   workspaces: WorkspaceItem[];
   ownedWorkspaces: WorkspaceItem[];
   sharedWorkspaces: WorkspaceItem[];
+  agentWorkspaces: WorkspaceItem[];
   loadingWorkspaces: boolean;
   setActiveWorkspaceId: (id: string) => void;
   registerSharedWorkspace: (workspace: { id: string; title?: string; ownerId?: string; isPublic?: boolean }) => Promise<void>;
@@ -84,6 +87,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         .map((p: any) => {
           const id = String(p.$id || p.id || '').trim();
           const ownerId = p.ownerId || p.userId || '';
+          const isAgentic = p.isAgentic === true || String(p.isAgentic) === 'true';
           const isOwned = ownerId === userId || (!ownerId && userId !== 'guest');
           const isShared = !isOwned || p.isShared === true || (p.collabStatus && p.collabStatus !== 'owner');
           return {
@@ -91,7 +95,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             title: p.title || p.name || 'Untitled Workspace',
             ownerId: ownerId || userId,
             isPersonal: false as const,
-            isShared,
+            isShared: isShared && !isAgentic,
+            isAgentic,
+            agentId: p.agentId || null,
             isPublic: !!p.isPublic,
             role: p.role || (isOwned ? 'owner' : 'viewer'),
           };
@@ -575,16 +581,27 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.warn(`[WorkspaceContext] Failed to update isWorkspace flag for ${entityKind} ${entityId}:`, err);
       }
+      if (!userId || userId === 'guest') return;
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const key = `personal_ws_${entityKind}_${userId}`;
+        const existing = (await LocalEngine.cacheGet<string[]>(key)) || [];
+        const set = new Set(existing);
+        if (inPersonal) set.add(entityId);
+        else set.delete(entityId);
+        await LocalEngine.cacheSet(key, Array.from(set));
+      } catch {}
     },
-    [activeWorkspace.id]
+    [userId, activeWorkspace]
   );
 
-  const value = useMemo(
+  const value = useMemo<WorkspaceContextType>(
     () => ({
       activeWorkspace,
       workspaces,
       ownedWorkspaces,
       sharedWorkspaces,
+      agentWorkspaces,
       loadingWorkspaces,
       setActiveWorkspaceId,
       registerSharedWorkspace,
@@ -600,6 +617,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       workspaces,
       ownedWorkspaces,
       sharedWorkspaces,
+      agentWorkspaces,
       loadingWorkspaces,
       setActiveWorkspaceId,
       registerSharedWorkspace,
@@ -629,6 +647,7 @@ const fallbackWorkspaceContext: WorkspaceContextType = {
   workspaces: [fallbackPersonalWorkspace],
   ownedWorkspaces: [],
   sharedWorkspaces: [],
+  agentWorkspaces: [],
   loadingWorkspaces: false,
   setActiveWorkspaceId: () => {},
   registerSharedWorkspace: async () => {},

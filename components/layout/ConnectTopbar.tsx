@@ -43,6 +43,7 @@ import {
   Trash2 as TrashIcon,
   Share2 as ShareIcon,
   MoreVertical as MoreIcon,
+  ChevronDown,
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
@@ -103,7 +104,8 @@ export default function ConnectTopbar({
   const navPush = useCallback((href: string) => startNavTransition(() => router.push(href)), [router]);
   const pathname = usePathname();
   const { setIsCollapsed } = useSidebar();
-  const { activeWorkspace, workspaces, ownedWorkspaces, sharedWorkspaces, setActiveWorkspaceId, markWorkspacePublic, loadingWorkspaces } = useWorkspace();
+  const { activeWorkspace, workspaces, ownedWorkspaces, sharedWorkspaces, agentWorkspaces, setActiveWorkspaceId, markWorkspacePublic, loadingWorkspaces } = useWorkspace();
+  const [agentWorkspacesExpanded, setAgentWorkspacesExpanded] = useState(false);
   const { notes = [] } = useNotes();
   const { tasks = [], projects = [], selectTask } = useTask();
   const { openSidebar, closeSidebar } = useDynamicSidebar();
@@ -2299,6 +2301,97 @@ export default function ConnectTopbar({
                     </IconButton>
                     {isActive ? (
                       <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#6366F1', boxShadow: '0 0 8px #6366F1', flexShrink: 0 }} />
+                    ) : null}
+                  </Box>
+                </Box>
+              );
+            })}
+          </>
+        )}
+
+        {/* 3. Agent Workspaces Section (Contracted by default) */}
+        {agentWorkspaces.length > 0 && (
+          <>
+            <Box
+              role="button"
+              tabIndex={0}
+              onClick={() => setAgentWorkspacesExpanded((prev) => !prev)}
+              onKeyDown={(e: React.KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setAgentWorkspacesExpanded((prev) => !prev);
+                }
+              }}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                px: 1,
+                pt: 1.5,
+                pb: 0.5,
+                cursor: 'pointer',
+                userSelect: 'none',
+                '&:hover p': { color: 'rgba(255,255,255,0.7)' },
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <Bot size={12} color="#818CF8" />
+                <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Agent Workspaces ({agentWorkspaces.length})
+                </Typography>
+              </Box>
+              <Box sx={{ color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center' }}>
+                {agentWorkspacesExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </Box>
+            </Box>
+            {agentWorkspacesExpanded && agentWorkspaces.map((w) => {
+              const isActive = activeWorkspace?.id === w.id;
+              return (
+                <Box
+                  key={w.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setActiveWorkspaceId(w.id);
+                    handleCloseAll();
+                  }}
+                  onKeyDown={(e: React.KeyboardEvent) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setActiveWorkspaceId(w.id);
+                      handleCloseAll();
+                    }
+                  }}
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    px: 2,
+                    py: 1.25,
+                    borderRadius: '14px',
+                    bgcolor: isActive ? 'rgba(99, 102, 241, 0.16)' : 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid',
+                    borderColor: isActive ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.15)',
+                    color: 'white',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: isActive ? 'rgba(99, 102, 241, 0.22)' : 'rgba(255,255,255,0.04)',
+                    },
+                  }}
+                >
+                  <Box sx={{ minWidth: 0, flex: 1, pr: 1 }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#818CF8' : '#fff' }} noWrap>
+                      {w.title}
+                    </Typography>
+                    <Typography sx={{ fontSize: '0.72rem', color: 'rgba(129, 140, 248, 0.8)' }}>
+                      Agent Workspace
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                    {isActive ? (
+                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#818CF8', boxShadow: '0 0 8px #818CF8', flexShrink: 0 }} />
                     ) : null}
                   </Box>
                 </Box>

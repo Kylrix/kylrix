@@ -37,7 +37,7 @@ const NAV_COLORS: Record<NavId, string> = {
 
 
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { ChevronDown as WorkspaceChevronIcon, Plus as PlusIcon, Check as CheckIcon } from 'lucide-react';
+import { ChevronDown as WorkspaceChevronIcon, Plus as PlusIcon, Check as CheckIcon, Bot as BotIcon, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { isFlowPath } from '@/lib/routing/app-paths';
 
 export function UnifiedLeftSidebar() {
@@ -51,8 +51,9 @@ export function UnifiedLeftSidebar() {
   const { isOpen: _isOverlayOpen } = useOverlay();
   const { isCollapsed } = useSidebar();
   const { user: _user, updatePreferences } = useAuth();
-  const { activeWorkspace, workspaces, ownedWorkspaces, sharedWorkspaces, setActiveWorkspaceId, markWorkspacePublic } = useWorkspace();
+  const { activeWorkspace, workspaces, ownedWorkspaces, sharedWorkspaces, agentWorkspaces, setActiveWorkspaceId, markWorkspacePublic } = useWorkspace();
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = React.useState(false);
+  const [agentWorkspacesExpanded, setAgentWorkspacesExpanded] = React.useState(false);
   const workspaceSectionRef = React.useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -497,6 +498,90 @@ export function UnifiedLeftSidebar() {
                               <MoreIcon size={13} />
                             </Box>
                             {isActive && <CheckIcon size={14} color="#6366F1" style={{ flexShrink: 0 }} />}
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                  </>
+                )}
+
+                {/* 3. Agent Workspaces Section (Contracted by default) */}
+                {agentWorkspaces.length > 0 && (
+                  <>
+                    <Box
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        setAgentWorkspacesExpanded((prev) => !prev);
+                      }}
+                      sx={{
+                        px: 1,
+                        pt: 1,
+                        pb: 0.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        '&:hover span': { color: 'rgba(255,255,255,0.7)' },
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <BotIcon size={12} color="#818CF8" />
+                        <span style={{ fontSize: '0.62rem', fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Agent Workspaces ({agentWorkspaces.length})
+                        </span>
+                      </Box>
+                      <Box sx={{ color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center' }}>
+                        {agentWorkspacesExpanded ? <WorkspaceChevronIcon size={12} /> : <ChevronRightIcon size={12} />}
+                      </Box>
+                    </Box>
+                    {agentWorkspacesExpanded && agentWorkspaces.map((w) => {
+                      const isActive = w.id === activeWorkspace?.id;
+                      return (
+                        <Box
+                          key={w.id}
+                          onClick={() => {
+                            setActiveWorkspaceId(w.id);
+                            setWorkspaceMenuOpen(false);
+                          }}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 1,
+                            px: 1.5,
+                            py: 1,
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            minWidth: 0,
+                            bgcolor: isActive ? 'rgba(99, 102, 241, 0.14)' : 'transparent',
+                            color: isActive ? '#818CF8' : '#FFFFFF',
+                            '&:hover': {
+                              bgcolor: isActive ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.06)',
+                              color: isActive ? '#818CF8' : '#fff',
+                            },
+                          }}
+                        >
+                          <Box sx={{ minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                            <span
+                              style={{
+                                display: 'block',
+                                fontSize: '0.78rem',
+                                fontWeight: isActive ? 800 : 600,
+                                fontFamily: 'var(--font-satoshi)',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                            >
+                              {w.title}
+                            </span>
+                            <span style={{ display: 'block', fontSize: '0.65rem', color: isActive ? 'rgba(129, 140, 248, 0.8)' : 'rgba(255, 255, 255, 0.4)', fontFamily: 'var(--font-satoshi)' }}>
+                              Agent Workspace
+                            </span>
+                          </Box>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                            {isActive && <CheckIcon size={14} color="#818CF8" style={{ flexShrink: 0 }} />}
                           </Box>
                         </Box>
                       );

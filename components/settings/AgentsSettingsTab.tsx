@@ -11,13 +11,18 @@ import {
   ChevronRight, 
   Lock, 
   Trash2,
-  Check 
+  Check,
+  Copy,
+  BookOpen,
+  Terminal,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'react-hot-toast';
 import { BYOKManager } from '@/lib/ai/byok';
 import { AgenticService, type AgentRecord } from '@/lib/services/agentic';
 import { SYSTEM_AGENTS } from '@/lib/agentic/system-agents';
+import { KYLRIX_AGENTS_SKILL_INSTALL } from '@/lib/api/public';
 import { AgenticSettingsDrawer, type AgentDrawerMode } from './AgenticSettingsDrawer';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -273,7 +278,65 @@ export function AgentsSettingsTab() {
           </p>
         </div>
       </div>
-      {/* ── Section 1: Default Agent Partner ─────────────────────── */}
+
+      {/* ── Section 1: Autonomous Agent Skill & Provisioning ──────── */}
+      <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl space-y-4">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-[#6366F1]/12 border border-[#6366F1]/25 text-[#6366F1] flex items-center justify-center shrink-0">
+              <Terminal size={22} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-white font-black text-base font-clash m-0">Autonomous Agent Skill</h3>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#6366F1]/10 text-[#818CF8] font-bold">
+                  CLI & Subagents
+                </span>
+              </div>
+              <p className="text-white/40 text-xs font-semibold m-0 mt-0.5">
+                Install the Kylrix agent skill to provision autonomous agents that operate strictly within dedicated workspaces.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href="/docs/agents"
+            className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider text-[#A5B4FC] hover:text-white shrink-0"
+          >
+            <BookOpen size={13} />
+            <span>Agent Docs →</span>
+          </Link>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2.5">
+          <p className="text-xs font-bold text-white/70">Skill Install Command</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 min-w-0 text-[11px] font-mono text-white/70 bg-[#161412] border border-white/[0.06] rounded-xl px-3 py-2.5 break-all select-all">
+              {KYLRIX_AGENTS_SKILL_INSTALL}
+            </code>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(KYLRIX_AGENTS_SKILL_INSTALL);
+                  toast.success('Install command copied');
+                } catch {
+                  toast.success(KYLRIX_AGENTS_SKILL_INSTALL);
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] hover:bg-[#5254E8] text-white cursor-pointer shrink-0 transition-colors"
+            >
+              <Copy size={13} />
+              <span>Copy</span>
+            </button>
+          </div>
+          <p className="text-[11px] text-white/40 leading-relaxed m-0 font-sans">
+            Agents provision their own cryptographic identity, authenticate with zero-trust isolation from human notes, and work entirely in agentic workspaces.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Section 2: Default Agent Partner ─────────────────────── */}
       <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3.5">

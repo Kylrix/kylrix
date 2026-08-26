@@ -2,6 +2,7 @@ import Link from 'next/link';
 import {
   KYLRIX_API_SKILL_INSTALL,
   KYLRIX_OAUTH2_SKILL_INSTALL,
+  KYLRIX_AGENTS_SKILL_INSTALL,
 } from '@/lib/api/public';
 
 export default function DocsHomePage() {
@@ -14,7 +15,7 @@ export default function DocsHomePage() {
           </p>
           <h1 className="font-clash text-3xl font-semibold tracking-tight">Kylrix docs</h1>
           <p className="mt-2 text-sm text-white/50 max-w-xl">
-            HTTP API tokens and Sign in with Kylrix for third-party apps.
+            HTTP API tokens, Sign in with Kylrix, and Autonomous Agents for developers.
           </p>
         </div>
 
@@ -33,6 +34,12 @@ export default function DocsHomePage() {
               <p className="text-xs font-bold text-white/70 mb-1.5">Sign in with Kylrix</p>
               <pre className="text-[11px] font-mono text-white/70 whitespace-pre-wrap break-all bg-[#0A0908] rounded-xl p-3 border border-white/[0.05]">
                 {KYLRIX_OAUTH2_SKILL_INSTALL}
+              </pre>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white/70 mb-1.5">Autonomous Agents</p>
+              <pre className="text-[11px] font-mono text-white/70 whitespace-pre-wrap break-all bg-[#0A0908] rounded-xl p-3 border border-white/[0.05]">
+                {KYLRIX_AGENTS_SKILL_INSTALL}
               </pre>
             </div>
           </div>

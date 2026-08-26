@@ -440,6 +440,65 @@ export const ApiResources = {
     return PatService.revoke({ patId, userId: actor.userId });
   },
 
+  async createAgentKey(actor: ApiActor, body: Record<string, unknown>) {
+    if (!actor.scopes.includes('pats:write') && !actor.scopes.includes('agents:write') && !actor.scopes.includes('agents:provision')) {
+      requireScope(actor, 'pats:write');
+    }
+    const name = String(body.name || 'Central Agent Key').trim().slice(0, 128);
+    const scopes = Array.isArray(body.scopes) && body.scopes.length > 0
+      ? body.scopes
+      : ['agents:provision', 'agents:read', 'agents:write', 'workspaces:read', 'workspaces:write'];
+    
+    return PatService.create({
+      userId: actor.userId,
+      name,
+      scopes,
+      expiresAt: body.expiresAt != null ? String(body.expiresAt) : null,
+    });
+  },
+
+  async provisionAgent(actor: ApiActor, body: Record<string, unknown>) {
+    if (!actor.scopes.includes('agents:provision') && !actor.scopes.includes('agents:write') && !actor.scopes.includes('pats:write')) {
+      requireScope(actor, 'agents:provision');
+    }
+    const name = String(body.name || 'Autonomous Agent').trim().slice(0, 128);
+    const agentType = String(body.agentType || 'autonomous').trim().slice(0, 64);
+    const agentId = ID.unique();
+    const now = new Date().toISOString();
+    const tables = createSystemTablesDB();
+
+    // Create an initial dedicated agentic workspace for this agent
+    const workspaceTitle = String(body.initialWorkspaceTitle || `${name}'s Workspace`).trim().slice(0, 255);
+    const wsRow = await tables.createRow({
+      databaseId: FLOW_DB,
+      tableId: 'projects',
+      rowId: ID.unique(),
+      data: {
+        title: workspaceTitle,
+        summary: `Autonomous workspace for agent ${name}`,
+        ownerId: actor.userId,
+        visibility: 'private',
+        status: 'active',
+        isAgentic: true,
+        isPublic: false,
+        isGuest: false,
+        createdAt: now,
+        updatedAt: now,
+      },
+      permissions: [Permission.read(Role.user(actor.userId))],
+    }).catch(() => null);
+
+    return {
+      agentId,
+      name,
+      agentType,
+      workspaceId: wsRow ? (wsRow as any).$id : null,
+      workspaceTitle,
+      ownerId: actor.userId,
+      createdAt: now,
+    };
+  },
+
   async listWorkspaces(actor: ApiActor, limit = 25) {
     requireScope(actor, 'workspaces:read');
     const tables = createSystemTablesDB();
@@ -457,6 +516,7 @@ export const ApiResources = {
       title: r.title || r.name || 'Untitled',
       summary: r.summary || r.description || null,
       visibility: r.visibility || null,
+      isAgentic: Boolean(r.isAgentic),
       updatedAt: r.$updatedAt || r.updatedAt || null,
       createdAt: r.$createdAt || r.createdAt || null,
     }));
@@ -474,6 +534,7 @@ export const ApiResources = {
       title: row.title || row.name || 'Untitled',
       summary: row.summary || row.description || null,
       visibility: row.visibility || null,
+      isAgentic: Boolean(row.isAgentic),
       updatedAt: row.$updatedAt || row.updatedAt || null,
       createdAt: row.$createdAt || row.createdAt || null,
     };
@@ -771,6 +832,7 @@ export const ApiResources = {
         status: 'active',
         isPublic: visibility === 'public',
         isGuest: visibility === 'public',
+        isAgentic: Boolean(body.isAgentic),
         createdAt: now,
         updatedAt: now,
       },
@@ -783,6 +845,7 @@ export const ApiResources = {
       title: (row as any).title,
       summary: (row as any).summary || null,
       visibility: (row as any).visibility || null,
+      isAgentic: Boolean((row as any).isAgentic),
     };
   },
 

@@ -182,6 +182,12 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
   }
 
   // Agents
+  if (a === 'agents' && b === 'keys' && !c && method === 'POST') {
+    return jsonOk(await ApiResources.createAgentKey(actor, await readBody(req)));
+  }
+  if (a === 'agents' && b === 'provision' && !c && method === 'POST') {
+    return jsonOk(await ApiResources.provisionAgent(actor, await readBody(req)));
+  }
   if (a === 'agents' && (!b || b === 'sessions') && !c && method === 'GET') {
     const harness = req.nextUrl.searchParams.get('harness');
     return jsonOk(

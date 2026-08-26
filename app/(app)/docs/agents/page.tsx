@@ -27,13 +27,28 @@ export default function DocsAgentsPage() {
           </p>
         </div>
 
-        {/* Overview */}
+        {/* Agent Skill */}
         <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-3">
           <h2 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">
-            Agent Provisioning Architecture
+            Agent skill
+          </h2>
+          <CodeBlock>npx skills add kylrix/kylrix/agents</CodeBlock>
+          <p className="text-xs text-white/40">
+            For HTTP API tokens and CRUD, use the{' '}
+            <Link href="/docs/api" className="text-[#A5B4FC] hover:text-white">
+              API skill
+            </Link>{' '}
+            instead.
+          </p>
+        </section>
+
+        {/* Overview & Workspaces-Only Invariant */}
+        <section className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 space-y-3">
+          <h2 className="text-[11px] font-extrabold uppercase tracking-wider text-white/55">
+            Workspaces-Only Architecture & Data Isolation
           </h2>
           <p className="text-sm text-white/70 leading-relaxed">
-            Autonomous agents do not use human emails, passwords, or master passwords. Instead, they authenticate using <strong>Agent Provisioning Keys</strong> (scoped PATs with the <code className="text-[#A5B4FC]">agents:provision</code> scope).
+            Autonomous agents <strong>do not have personal (virtual) workspaces</strong>. Every agent operates strictly within concrete workspace environments (<code className="text-white">isAgentic: true</code>). When an agent assumes work, it checks available workspaces and creates dedicated workspace contexts for itself.
           </p>
           <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-200">
             <strong>Zero-Trust Human Data Isolation:</strong> Agent Provisioning Keys grant <em>zero access</em> to the owner&apos;s personal notes, passwords, or vault secrets. They only permit the agent to instantiate its own identity, mint autonomous session credentials, and read/write its own agentic resources (<code className="text-white">isAgentic: true</code>).
