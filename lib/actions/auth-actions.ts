@@ -117,9 +117,10 @@ export async function getPasskeyLoginOptionsAction(email?: string, hostname?: st
     // Generate stateless challenge token using our APPWRITE_API secret
     const exp = Date.now() + 300000; // 5 minutes
     const payload = JSON.stringify({ c: options.challenge, e: exp });
+    const payloadB64 = Buffer.from(payload).toString('base64url');
     const secret = getAppwriteSecret();
-    const sig = createHmac('sha256', secret).update(payload).digest('base64url');
-    const challengeToken = Buffer.from(payload).toString('base64url') + '.' + sig;
+    const sig = createHmac('sha256', secret).update(payloadB64).digest('base64url');
+    const challengeToken = `${payloadB64}.${sig}`;
 
     // Serialize options to JSON-friendly format for RSC/Actions transport
     return { 
@@ -151,7 +152,6 @@ export async function verifyPasskeyLoginAction(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_KEYCHAIN_ID,
       [
-        Query.equal('type', 'passkey'),
         Query.equal('credentialId', authResp.id),
         Query.limit(1),
       ]
@@ -163,7 +163,7 @@ export async function verifyPasskeyLoginAction(
 
     const row = res.rows[0];
 
-    if (!row.authPasskey) {
+    if (row.authPasskey === false) {
       return { success: false, error: 'This passkey is not authorized for login' };
     }
 
