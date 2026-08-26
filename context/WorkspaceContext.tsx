@@ -446,13 +446,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return personalWorkspace;
   }, [workspaces, activeWorkspaceId, personalWorkspace, userId]);
 
+  const agentWorkspaces = useMemo(
+    () => workspaces.filter((w) => !w.isPersonal && w.isAgentic === true),
+    [workspaces]
+  );
+
   const ownedWorkspaces = useMemo(
-    () => workspaces.filter((w) => !w.isPersonal && (!w.isShared && (w.ownerId === userId || !w.ownerId))),
+    () => workspaces.filter((w) => !w.isPersonal && !w.isAgentic && (!w.isShared && (w.ownerId === userId || !w.ownerId))),
     [workspaces, userId]
   );
 
   const sharedWorkspaces = useMemo(
-    () => workspaces.filter((w) => !w.isPersonal && (w.isShared || (w.ownerId && w.ownerId !== userId))),
+    () => workspaces.filter((w) => !w.isPersonal && !w.isAgentic && (w.isShared || (w.ownerId && w.ownerId !== userId))),
     [workspaces, userId]
   );
 

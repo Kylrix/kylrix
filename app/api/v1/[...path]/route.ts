@@ -104,6 +104,10 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
   if ((a === 'workspaces' || a === 'projects') && b && (c === 'objects' || c === 'attach') && !d && method === 'POST') {
     return jsonOk(await ApiResources.attachObjectToWorkspace(actor, b, await readBody(req)));
   }
+  if ((a === 'workspaces' || a === 'projects') && b && (c === 'collaborators' || c === 'members') && !d) {
+    if (method === 'GET') return jsonOk(await ApiResources.listWorkspaceCollaborators(actor, b));
+    if (method === 'POST') return jsonOk(await ApiResources.addWorkspaceCollaborator(actor, b, await readBody(req)));
+  }
 
   // Events
   if (a === 'events' && !b) {

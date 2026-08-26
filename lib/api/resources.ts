@@ -288,7 +288,6 @@ export const ApiResources = {
     requireScope(actor, 'goals:write');
     const title = String(body?.title || '').trim();
     if (!title) badRequest('title required');
-    const now = new Date().toISOString();
     const tables = createSystemTablesDB();
     const row = await tables.createRow({
       databaseId: FLOW_DB,
@@ -296,13 +295,11 @@ export const ApiResources = {
       rowId: ID.unique(),
       data: {
         title: title.slice(0, 255),
-        description: body?.description != null ? String(body.description) : '',
+        description: body?.description != null ? String(body.description) : (body?.summary != null ? String(body.summary) : ''),
         status: String(body?.status || 'todo'),
         userId: actor.userId,
         isPublic: false,
         isGuest: false,
-        createdAt: now,
-        updatedAt: now,
       },
       permissions: [
         Permission.read(Role.user(actor.userId)),
@@ -498,10 +495,9 @@ export const ApiResources = {
     if (!actor.scopes.includes('pats:write') && !actor.scopes.includes('agents:write') && !actor.scopes.includes('agents:provision')) {
       requireScope(actor, 'pats:write');
     }
-    const name = String(body.name || 'Central Agent Key').trim().slice(0, 128);
-    const scopes = Array.isArray(body.scopes) && body.scopes.length > 0
-      ? body.scopes
-      : ['agents:provision', 'agents:read', 'agents:write', 'workspaces:read', 'workspaces:write'];
+    const name = String(body.name || 'Agent Provisioning Key').trim().slice(0, 128);
+    // Root Agent Provisioning Keys have the sole purpose of provisioning agents & minting agentic PATs
+    const scopes: PatScope[] = ['agents:provision'];
     
     return PatService.create({
       userId: actor.userId,
@@ -521,7 +517,7 @@ export const ApiResources = {
     const now = new Date().toISOString();
     const tables = createSystemTablesDB();
 
-    // Create an initial dedicated agentic workspace for this agent
+    // 1. Create an initial dedicated agentic workspace for this agent
     const workspaceTitle = String(body.initialWorkspaceTitle || `${name}'s Workspace`).trim().slice(0, 255);
     const wsRow = await tables.createRow({
       databaseId: FLOW_DB,
@@ -542,10 +538,33 @@ export const ApiResources = {
       permissions: [Permission.read(Role.user(actor.userId))],
     }).catch(() => null);
 
+    // 2. Mint dedicated Agentic PAT for this agent with full operational permissions
+    const agentScopes = Array.isArray(body.scopes) && body.scopes.length > 0
+      ? body.scopes
+      : [
+          'workspaces:read',
+          'workspaces:write',
+          'notes:read',
+          'notes:write',
+          'goals:read',
+          'goals:write',
+          'chats:read',
+          'chats:write',
+          'agents:read',
+          'agents:write',
+        ];
+
+    const agentPatResult = await PatService.create({
+      userId: actor.userId,
+      name: `${name} (Agentic PAT)`,
+      scopes: agentScopes,
+    });
+
     return {
       agentId,
       name,
       agentType,
+      agentToken: agentPatResult.token,
       workspaceId: wsRow ? (wsRow as any).$id : null,
       workspaceTitle,
       ownerId: actor.userId,
@@ -556,7 +575,9 @@ export const ApiResources = {
   async listWorkspaces(actor: ApiActor, limit = 25) {
     requireScope(actor, 'workspaces:read');
     const tables = createSystemTablesDB();
-    const res = await tables.listRows({
+    
+    // 1. Owned workspaces
+    const ownedRes = await tables.listRows({
       databaseId: FLOW_DB,
       tableId: 'projects',
       queries: [
@@ -565,15 +586,53 @@ export const ApiResources = {
         Query.limit(Math.min(100, Math.max(1, limit))),
       ],
     });
-    return res.rows.map((r: any) => ({
+
+    const ownedList = ownedRes.rows.map((r: any) => ({
       id: r.$id,
       title: r.title || r.name || 'Untitled',
       summary: r.summary || r.description || null,
       visibility: r.visibility || null,
       isAgentic: Boolean(r.isAgentic),
+      isShared: false,
+      role: 'owner',
       updatedAt: r.$updatedAt || r.updatedAt || null,
       createdAt: r.$createdAt || r.createdAt || null,
     }));
+
+    // 2. Workspaces where user/agent is a collaborator
+    const collabRes = await tables.listRows({
+      databaseId: FLOW_DB,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators',
+      queries: [
+        Query.equal('userId', actor.userId),
+        Query.equal('resourceType', 'project'),
+        Query.equal('status', 'accepted'),
+        Query.limit(Math.min(100, Math.max(1, limit))),
+      ],
+    }).catch(() => ({ rows: [] as any[] }));
+
+    const sharedList: any[] = [];
+    for (const c of collabRes.rows) {
+      if (ownedList.some((w) => w.id === c.resourceId)) continue;
+      const ws = (await tables
+        .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: c.resourceId })
+        .catch(() => null)) as any;
+      if (ws) {
+        sharedList.push({
+          id: ws.$id,
+          title: ws.title || ws.name || 'Untitled',
+          summary: ws.summary || ws.description || null,
+          visibility: ws.visibility || null,
+          isAgentic: Boolean(ws.isAgentic),
+          isShared: true,
+          role: c.permission || 'writer',
+          updatedAt: ws.$updatedAt || ws.updatedAt || null,
+          createdAt: ws.$createdAt || ws.createdAt || null,
+        });
+      }
+    }
+
+    return [...ownedList, ...sharedList];
   },
 
   async getWorkspace(actor: ApiActor, id: string) {
@@ -582,16 +641,135 @@ export const ApiResources = {
     const row = (await tables
       .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: id })
       .catch(() => null)) as any;
-    if (!row || row.ownerId !== actor.userId) notFound('Workspace not found');
+    if (!row) notFound('Workspace not found');
+
+    let isCollab = false;
+    let role = 'owner';
+    if (row.ownerId !== actor.userId) {
+      const collabRes = await tables.listRows({
+        databaseId: FLOW_DB,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators',
+        queries: [
+          Query.equal('resourceId', id),
+          Query.equal('userId', actor.userId),
+          Query.equal('status', 'accepted'),
+        ],
+      }).catch(() => ({ rows: [] as any[] }));
+      if (collabRes.rows.length === 0 && !row.isPublic) {
+        notFound('Workspace not found');
+      }
+      isCollab = true;
+      role = collabRes.rows[0]?.permission || 'viewer';
+    }
+
     return {
       id: row.$id,
       title: row.title || row.name || 'Untitled',
       summary: row.summary || row.description || null,
       visibility: row.visibility || null,
       isAgentic: Boolean(row.isAgentic),
+      isShared: isCollab,
+      role,
       updatedAt: row.$updatedAt || row.updatedAt || null,
       createdAt: row.$createdAt || row.createdAt || null,
     };
+  },
+
+  async addWorkspaceCollaborator(actor: ApiActor, workspaceId: string, body: Record<string, unknown>) {
+    requireScope(actor, 'workspaces:write');
+    await this.getWorkspace(actor, workspaceId);
+    const targetUserId = String(body.userId || body.agentId || '').trim();
+    if (!targetUserId) badRequest('userId or agentId required');
+    const permission = String(body.permission || 'write').toLowerCase();
+    if (!['read', 'write', 'admin'].includes(permission)) {
+      badRequest('permission must be read, write, or admin');
+    }
+
+    const tables = createSystemTablesDB();
+    const FLOW_DATABASE_ID = FLOW_DB;
+    const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+    const now = new Date().toISOString();
+
+    // Check existing
+    const existing = await tables.listRows({
+      databaseId: FLOW_DATABASE_ID,
+      tableId: COLLABORATORS_TABLE,
+      queries: [
+        Query.equal('resourceId', workspaceId),
+        Query.equal('resourceType', 'project'),
+        Query.equal('userId', targetUserId),
+      ],
+    }).catch(() => ({ rows: [] as any[] }));
+
+    if (existing.rows.length > 0) {
+      const updated = await tables.updateRow({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: COLLABORATORS_TABLE,
+        rowId: existing.rows[0].$id,
+        data: {
+          permission,
+          status: 'accepted',
+          updatedAt: now,
+        },
+      });
+      return {
+        id: (updated as any).$id,
+        workspaceId,
+        userId: targetUserId,
+        permission,
+        status: 'accepted',
+      };
+    }
+
+    const created = await tables.createRow({
+      databaseId: FLOW_DATABASE_ID,
+      tableId: COLLABORATORS_TABLE,
+      rowId: ID.unique(),
+      data: {
+        resourceId: workspaceId,
+        resourceType: 'project',
+        userId: targetUserId,
+        permission,
+        inviterId: actor.userId,
+        status: 'accepted',
+        invitedAt: now,
+      },
+      permissions: [
+        Permission.read(Role.user(actor.userId)),
+        Permission.read(Role.user(targetUserId)),
+      ],
+    });
+
+    return {
+      id: (created as any).$id,
+      workspaceId,
+      userId: targetUserId,
+      permission,
+      status: 'accepted',
+    };
+  },
+
+  async listWorkspaceCollaborators(actor: ApiActor, workspaceId: string) {
+    requireScope(actor, 'workspaces:read');
+    await this.getWorkspace(actor, workspaceId);
+    const tables = createSystemTablesDB();
+    const res = await tables.listRows({
+      databaseId: FLOW_DB,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators',
+      queries: [
+        Query.equal('resourceId', workspaceId),
+        Query.equal('resourceType', 'project'),
+      ],
+    }).catch(() => ({ rows: [] as any[] }));
+
+    return res.rows.map((r: any) => ({
+      id: r.$id,
+      userId: r.userId,
+      permission: r.permission,
+      status: r.status,
+      inviterId: r.inviterId || null,
+      invitedAt: r.invitedAt || null,
+    }));
   },
 
   async listEvents(actor: ApiActor, limit = 25) {
