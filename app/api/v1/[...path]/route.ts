@@ -42,7 +42,10 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
 
   // Notes
   if (a === 'notes' && !b) {
-    if (method === 'GET') return jsonOk(await ApiResources.listNotes(actor, limit()));
+    if (method === 'GET') {
+      const workspaceId = req.nextUrl.searchParams.get('workspaceId') || req.nextUrl.searchParams.get('projectId');
+      return jsonOk(await ApiResources.listNotes(actor, limit(), { workspaceId: workspaceId || null }));
+    }
     if (method === 'POST') return jsonOk(await ApiResources.createNote(actor, await readBody(req)));
   }
   if (a === 'notes' && b && !c) {

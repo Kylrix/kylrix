@@ -94,8 +94,9 @@ export const PatService = {
     if (!name) throw new Error('Name is required');
 
     const rowId = ID.unique();
+    const tokenPrefix = randomBytes(6).toString('base64url').slice(0, 8);
     const secret = makeSecret();
-    const token = formatPatToken(rowId, secret);
+    const token = formatPatToken(tokenPrefix, secret);
     const tokenHash = hashToken(token);
     const now = new Date().toISOString();
     const tables = createSystemTablesDB();
@@ -109,7 +110,7 @@ export const PatService = {
       data: {
         userId: params.userId,
         name,
-        tokenPrefix: rowId,
+        tokenPrefix,
         tokenHash,
         scopes: JSON.stringify(scopes),
         status: 'active',

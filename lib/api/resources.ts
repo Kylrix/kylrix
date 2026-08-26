@@ -103,10 +103,37 @@ export const ApiResources = {
     };
   },
 
-  async listNotes(actor: ApiActor, limit = 25) {
+  async listNotes(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {
     requireScope(actor, 'notes:read');
     const tables = createSystemTablesDB();
     const { isExcludedNote, ideaListExclusionQueries } = await import('@/lib/appwrite/note');
+
+    if (opts?.workspaceId) {
+      const links = await tables.listRows({
+        databaseId: FLOW_DB,
+        tableId: 'objects',
+        queries: [
+          Query.equal('parentId', opts.workspaceId),
+          Query.equal('childKind', 'note'),
+          Query.limit(Math.min(100, Math.max(1, limit))),
+        ],
+      }).catch(() => ({ rows: [] as any[] }));
+
+      const noteIds = links.rows.map((r: any) => r.childId).filter(Boolean);
+      if (noteIds.length === 0) return [];
+
+      const rows: any[] = [];
+      for (const nid of noteIds) {
+        const row = (await tables
+          .getRow({ databaseId: DB, tableId: NOTES, rowId: nid })
+          .catch(() => null)) as any;
+        if (row && (row.userId === actor.userId || row.isPublic) && !isExcludedNote(row)) {
+          rows.push(shapeNote(row));
+        }
+      }
+      return rows;
+    }
+
     const res = await tables.listRows({
       databaseId: DB,
       tableId: NOTES,
@@ -171,6 +198,33 @@ export const ApiResources = {
         rowId: (note as any).$id,
         data: { userId: actor.userId, creatorId: actor.userId, updatedAt: now },
       });
+    }
+
+    if (body?.workspaceId || body?.projectId) {
+      const wsId = String(body.workspaceId || body.projectId);
+      try {
+        await tables.createRow({
+          databaseId: FLOW_DB,
+          tableId: 'objects',
+          rowId: ID.unique(),
+          data: {
+            parentId: wsId,
+            parentKind: 'workspace',
+            childId: (note as any).$id,
+            childKind: 'note',
+            userId: actor.userId,
+            metadata: JSON.stringify({ title }),
+            createdAt: now,
+            updatedAt: now,
+            isPublic,
+            isGuest: isPublic,
+            isGeneral: false,
+          },
+          permissions: [Permission.read(Role.user(actor.userId))],
+        });
+      } catch {
+        /* non-fatal */
+      }
     }
 
     return shapeNote(note);
