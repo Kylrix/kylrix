@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return null;
   });
   
-  const [isLoading, setIsLoading] = useState(() => hasAuthSessionHint());
+  const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [idmWindowOpen, setIDMWindowOpen] = useState(false);
   const idmWindowRef = useRef<Window | null>(null);
@@ -115,22 +115,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   attemptSilentAuthRef.current = attemptSilentAuth;
 
-  const lastPathnameRef = useRef<string | null>(null);
-  const lastBackgroundVerifyAtRef = useRef(0);
-  const BACKGROUND_VERIFY_COOLDOWN_MS = 60_000;
-
   const refreshUser = useCallback(async (forceRefresh = false): Promise<User | null> => {
     try {
       const isOAuthSuccess = typeof window !== 'undefined' && window.location.search.includes('auth=success');
-      if (!forceRefresh && !hasAuthSessionHint() && !isOAuthSuccess) {
-        setUser(null);
-        setIsLoading(false);
-        return null;
-      }
 
-      // 1. Get from cache first (very fast)
+      // 1. Get from cache or query Appwrite
       const session = await getCurrentUser(forceRefresh || isOAuthSuccess);
-      if (session) {
+      if (session && session.$id) {
         setUser(session as any);
         setKylrixPulse(session);
 
@@ -140,46 +131,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           window.history.replaceState({}, '', url.toString());
         }
 
-        // Background revalidation — throttled; never on every tab switch.
-        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-        const pathChanged = currentPath !== lastPathnameRef.current;
-        if (pathChanged) {
-          lastPathnameRef.current = currentPath;
-        }
-
-        const verifyDue =
-          forceRefresh ||
-          (pathChanged && Date.now() - lastBackgroundVerifyAtRef.current > BACKGROUND_VERIFY_COOLDOWN_MS);
-
-        if (verifyDue) {
-          lastBackgroundVerifyAtRef.current = Date.now();
-          const seq = ++sessionVerifySeq.current;
-          void getCurrentUser(true).then((verified) => {
-            if (seq !== sessionVerifySeq.current) return;
-            if (!verified) {
-              setUser(null);
-              clearKylrixPulse();
-              return;
-            }
-            setUser(verified as any);
-            setKylrixPulse(verified);
-          });
-        }
-
         return session as any;
-      }
-
-      const wasSilentlyAuthed = hasAuthSessionHint()
-        ? await attemptSilentAuthRef.current?.()
-        : false;
-
-      if (wasSilentlyAuthed) {
-        const retrySession = await getCurrentUser(true);
-        if (retrySession) {
-          setUser(retrySession as any);
-          setKylrixPulse(retrySession);
-          return retrySession as any;
-        }
       }
 
       setUser(null);

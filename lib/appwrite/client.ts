@@ -479,21 +479,29 @@ export function getKylrixPulse(): { $id: string; name: string; profilePicId?: st
     return null;
 }
 
+function getCookieDomain(): string {
+    if (typeof window === 'undefined') return '';
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname.startsWith('127.') || hostname.includes('192.168.')) {
+        return '';
+    }
+    const configuredDomain = APPWRITE_CONFIG.SYSTEM.DOMAIN || 'kylrix.space';
+    if (hostname === configuredDomain || hostname.endsWith(`.${configuredDomain}`)) {
+        return `domain=.${configuredDomain}; `;
+    }
+    return '';
+}
+
 export function setKylrixPulse(user: any, avatarBase64?: string | null) {
     if (typeof window === 'undefined') return;
     try {
         const pulse = {
             $id: user.$id,
             name: user.name || user.username || 'User',
-            profilePicId: user.prefs?.profilePicId || user.profilePicId || null};
+            profilePicId: user.prefs?.profilePicId || user.profilePicId || null
+        };
         
-        // On localhost, set cookie without domain (path-only). On production, use .domain format
-        const hostname = window.location.hostname;
-        const domain = hostname === 'localhost' || hostname.startsWith('127.') 
-            ? '' 
-            : `.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
-        const domainStr = domain ? `domain=${domain}; ` : '';
-        
+        const domainStr = getCookieDomain();
         document.cookie = `${PULSE_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(pulse))}; path=/; ${domainStr}max-age=31536000; SameSite=Lax`;
         if (avatarBase64) localStorage.setItem(AVATAR_CACHE_PREFIX + user.$id, avatarBase64);
         (window as any).__KYLRIX_PULSE__ = { ...pulse, avatarBase64: avatarBase64 || localStorage.getItem(AVATAR_CACHE_PREFIX + user.$id) };
@@ -502,12 +510,11 @@ export function setKylrixPulse(user: any, avatarBase64?: string | null) {
 
 export function clearKylrixPulse() {
     if (typeof window === 'undefined') return;
-    const hostname = window.location.hostname;
-    const domain = hostname === 'localhost' || hostname.startsWith('127.') 
-        ? '' 
-        : `.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
-    const domainStr = domain ? `domain=${domain}; ` : '';
-    document.cookie = `${PULSE_COOKIE_NAME}=; path=/; ${domainStr}expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    const domainStr = getCookieDomain();
+    if (domainStr) {
+        document.cookie = `${PULSE_COOKIE_NAME}=; path=/; ${domainStr}expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    }
+    document.cookie = `${PULSE_COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     delete (window as any).__KYLRIX_PULSE__;
     document.documentElement.removeAttribute('data-kylrix-pulse');
 }
@@ -522,11 +529,6 @@ export async function getCurrentUser(force = false): Promise<any | null> {
         if (typeof navigator !== 'undefined' && !navigator.onLine) {
             const snap = readCurrentUserSnapshot();
             if (snap?.user) return snap.user;
-        }
-        if (!hasAuthSessionHint()) {
-            const snap = readCurrentUserSnapshot();
-            if (snap?.user) return snap.user;
-            return null;
         }
     }
 
