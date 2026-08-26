@@ -1027,7 +1027,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const sortedNotes = useMemo(() => {
     return sortPinnedThenCreatedAt(workspaceScopedNotes, (row) =>
       isResourcePinned('note', row.$id, noteOwnerId(row), row.isPinned),
-    );
+    ).map((row) => {
+      const pinned = isResourcePinned('note', row.$id, noteOwnerId(row), row.isPinned);
+      return row.isPinned === pinned ? row : { ...row, isPinned: pinned };
+    });
   }, [workspaceScopedNotes, isResourcePinned, noteOwnerId]);
 
   /**

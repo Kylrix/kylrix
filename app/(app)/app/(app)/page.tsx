@@ -36,7 +36,7 @@ export default function IdeasPage() {
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const { notes: contextNotes, upsertNote } = useNotes();
+  const { notes: contextNotes, upsertNote, isPinned: isNotePinned } = useNotes();
   const { activeWorkspace } = useWorkspace();
   const { openSidebar } = useDynamicSidebar();
 
@@ -362,8 +362,8 @@ export default function IdeasPage() {
   const [ecosystemTagsList, setEcosystemTagsList] = useState<{ name: string; color?: string }[]>([]);
 
   const activeNotes = (contextNotes || []).filter((n) => n);
-  const pinnedNotes = activeNotes.filter((n) => n.isPinned);
-  const unpinnedNotes = activeNotes.filter((n) => !n.isPinned);
+  const pinnedNotes = activeNotes.filter((n) => Boolean(n.isPinned || isNotePinned?.(n.$id)));
+  const unpinnedNotes = activeNotes.filter((n) => !Boolean(n.isPinned || isNotePinned?.(n.$id)));
 
   const tags = React.useMemo(() => {
     const fromNotes = notes.flatMap((n: any) => n.tags || []).filter(Boolean);
