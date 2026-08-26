@@ -115,6 +115,7 @@ export const APPWRITE_CONFIG = {
         CONNECT: {
             USERS: 'users',
             PROFILES: 'profiles',
+            REFERRALS: 'referrals',
             CONVERSATIONS: 'conversations',
             CONVERSATION_MEMBERS: 'conversationMembers',
             MESSAGES: 'messages',

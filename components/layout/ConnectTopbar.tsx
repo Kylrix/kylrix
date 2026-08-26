@@ -474,6 +474,34 @@ export default function ConnectTopbar({
     return [...currentAppSuggestions, ...historicalSuggestions].slice(0, 3);
   }, [activeApp, localEvents]);
 
+  const [identityTab, setIdentityTab] = useState<'username' | 'userid'>('username');
+  const [isGeneratingUsername, setIsGeneratingUsername] = useState(false);
+
+  useEffect(() => {
+    if (profileUsername) {
+      setIdentityTab('username');
+    } else {
+      setIdentityTab('userid');
+    }
+  }, [profileUsername]);
+
+  const handleGenerateUsername = useCallback(async () => {
+    if (isGeneratingUsername) return;
+    setIsGeneratingUsername(true);
+    try {
+      const { generateUsernameOnTheFlyAction } = await import('@/lib/actions/referrals');
+      const res = await generateUsernameOnTheFlyAction(profileName);
+      if (res.ok && res.username) {
+        if (updatePreferences) {
+          await updatePreferences({ username: res.username }).catch(() => null);
+        }
+        setIdentityTab('username');
+      }
+    } catch {} finally {
+      setIsGeneratingUsername(false);
+    }
+  }, [isGeneratingUsername, profileName, updatePreferences]);
+
   const handleCopyUserId = useCallback(async () => {
     if (!profileSeed.userId || typeof navigator === 'undefined' || !navigator.clipboard) return;
     await navigator.clipboard.writeText(profileSeed.userId);
@@ -487,6 +515,16 @@ export default function ConnectTopbar({
     setCopyState('copied-username');
     window.setTimeout(() => setCopyState('idle'), 1600);
   }, [profileSeed.username]);
+
+  const handleCopyReferralLink = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) return;
+    const base = window.location.origin;
+    const identifier = profileUsername ? String(profileUsername).replace(/^@+/, '') : (profileSeed.userId || '');
+    const refLink = `${base}/?ref=u_${identifier}`;
+    await navigator.clipboard.writeText(refLink);
+    setCopyState('copied-referral');
+    window.setTimeout(() => setCopyState('idle'), 1600);
+  }, [profileUsername, profileSeed.userId]);
 
   const handleOpenFullProfile = useCallback(() => {
     if (!profileSeed.username) return;
@@ -1813,11 +1851,12 @@ export default function ConnectTopbar({
                   ✕
                 </IconButton>
                </Box>
-              <Box sx={{ display: 'grid', gap: 1.25, maxHeight: isDesktop ? 'none' : '58vh', overflowY: isDesktop ? 'visible' : 'auto', pr: 0.5, pb: 0.5 }}>
-                <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'center', p: 0.75 }}>
+              <Box sx={{ display: 'grid', gap: 1.5, maxHeight: isDesktop ? 'none' : '65vh', overflowY: isDesktop ? 'visible' : 'auto', pr: 0.5, pb: 0.5 }}>
+                {/* Profile Avatar & Header */}
+                <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', p: 0.5 }}>
                   <IdentityAvatar
                     userId={user?.$id}
-                    size={88}
+                    size={64}
                     pro={isPro}
                     fallback={profileName.slice(0, 1).toUpperCase()}
                     sx={{
@@ -1825,28 +1864,32 @@ export default function ConnectTopbar({
                        flexShrink: 0
                     }}
                   />
-                  <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                  <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                     <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
-                      <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '1.05rem', lineHeight: 1.15, minWidth: 0, flex: 1 }} noWrap>
-                        {profileUsername ? `@${String(profileUsername).replace(/^@+/, '')}` : profileName}
+                      <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '1rem', lineHeight: 1.2, minWidth: 0, flex: 1 }} noWrap>
+                        {profileName}
                       </Typography>
-                      <IconButton
-                        onClick={handleOpenFullProfile}
-                        disabled={!profileSeed.username}
-                        size="small"
-                        sx={{
-                          flexShrink: 0,
-                          width: 28,
-                          height: 28,
-                          color: 'rgba(255, 255, 255, 0.5)',
-                          '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' },
-                          '&.ob-disabled': { color: 'rgba(255, 255, 255, 0.25)' }
-                        }}
-                      >
-                        <UserIcon size={16} />
-                      </IconButton>
+                      {profileSeed.username && (
+                        <IconButton
+                          onClick={handleOpenFullProfile}
+                          size="small"
+                          title="View public profile"
+                          sx={{
+                            flexShrink: 0,
+                            width: 28,
+                            height: 28,
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' },
+                          }}
+                        >
+                          <UserIcon size={14} />
+                        </IconButton>
+                      )}
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
+                      <span className="text-[10px] font-black text-[#EC4899] uppercase tracking-wider">
+                        {currentTier} PLAN
+                      </span>
                       {!isPro && (
                         <Button
                           onClick={() => {
@@ -1854,13 +1897,13 @@ export default function ConnectTopbar({
                             openProUpgrade();
                           }}
                           sx={{
-                            borderRadius: '10px',
+                            borderRadius: '8px',
                             bgcolor: '#6366F1',
                             color: 'white',
                             fontWeight: 900,
-                            fontSize: '0.68rem',
-                            py: 0.5,
-                            px: 1.5,
+                            fontSize: '0.64rem',
+                            py: 0.25,
+                            px: 1.2,
                             textTransform: 'uppercase',
                             flexShrink: 0,
                             '&:hover': { bgcolor: '#5254E8' }
@@ -1869,45 +1912,116 @@ export default function ConnectTopbar({
                           Upgrade
                         </Button>
                       )}
-                      {profileUsername && (
-                        <IconButton
-                          onClick={handleCopyUsername}
-                          size="small"
-                          title={copyState === 'copied-username' ? 'Copied!' : 'Copy username'}
-                          sx={{
-                            flexShrink: 0,
-                            width: 26,
-                            height: 26,
-                            color: copyState === 'copied-username' ? '#10B981' : 'rgba(255, 255, 255, 0.35)',
-                            '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' }
-                          }}
-                        >
-                          <CopyIcon size={12} />
-                        </IconButton>
-                      )}
                     </Box>
                   </Box>
                 </Box>
 
-                <div className="rounded-[20px] border border-white/[0.04] bg-white/[0.01] p-4">
-                  <span className="block text-white/45 text-[11px] font-extrabold uppercase tracking-wider mb-2 leading-none font-satoshi">
-                    userid
-                  </span>
-                  
-                  {/* UserId section with copy button */}
-                  <div className="flex gap-2 items-center">
-                    <span className="text-white/85 font-mono text-xs font-semibold min-w-0 flex-1 break-all select-all leading-normal">
-                      {shortenUserId(profileSeed.userId) || 'No ID'}
+                {/* Identity Tabs: Username / User ID */}
+                <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.02] p-3.5 flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between gap-1 bg-black/30 p-1 rounded-xl border border-white/[0.04]">
+                    <button
+                      type="button"
+                      onClick={() => setIdentityTab('username')}
+                      className={`flex-1 py-1 px-2.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                        identityTab === 'username'
+                          ? 'bg-[#6366F1] text-white shadow-sm'
+                          : 'text-white/40 hover:text-white/70'
+                      }`}
+                    >
+                      Username
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIdentityTab('userid')}
+                      className={`flex-1 py-1 px-2.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                        identityTab === 'userid'
+                          ? 'bg-[#6366F1] text-white shadow-sm'
+                          : 'text-white/40 hover:text-white/70'
+                      }`}
+                    >
+                      User ID
+                    </button>
+                  </div>
+
+                  {/* Tab Content */}
+                  {identityTab === 'username' ? (
+                    <div className="flex items-center justify-between gap-2 px-1">
+                      {profileUsername ? (
+                        <>
+                          <span className="text-white/90 font-mono text-xs font-bold truncate flex-1 select-all">
+                            @{String(profileUsername).replace(/^@+/, '')}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleCopyUsername}
+                            title={copyState === 'copied-username' ? 'Copied!' : 'Copy username'}
+                            className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                              copyState === 'copied-username' ? 'text-[#10B981] bg-[#10B981]/15' : 'text-white/40 hover:text-white hover:bg-white/10'
+                            }`}
+                          >
+                            <CopyIcon size={13} />
+                          </button>
+                        </>
+                      ) : (
+                        <div className="flex items-center justify-between gap-2 w-full">
+                          <span className="text-white/40 text-xs italic">No username set</span>
+                          <button
+                            type="button"
+                            onClick={handleGenerateUsername}
+                            disabled={isGeneratingUsername}
+                            className="px-2.5 py-1 rounded-lg bg-[#6366F1]/20 hover:bg-[#6366F1]/30 text-[#818cf8] text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          >
+                            <Sparkles size={12} />
+                            <span>{isGeneratingUsername ? 'Generating...' : 'Generate on the fly'}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-2 px-1">
+                      <span className="text-white/90 font-mono text-xs font-semibold truncate flex-1 select-all">
+                        {shortenUserId(profileSeed.userId) || 'No ID'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleCopyUserId}
+                        title={copyState === 'copied-userid' ? 'Copied!' : 'Copy user ID'}
+                        className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                          copyState === 'copied-userid' ? 'text-[#10B981] bg-[#10B981]/15' : 'text-white/40 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        <CopyIcon size={13} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Referral Link Quick Copy Card */}
+                <div className="rounded-[20px] border border-white/[0.06] bg-[#1a1715] p-3.5 flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-white/45 text-[10px] font-black uppercase tracking-wider font-mono">
+                      Referral Invite
+                    </span>
+                    <span className="text-[9px] font-extrabold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full font-mono">
+                      +1.5 $KYL / user
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-black/40 px-2.5 py-1.5 rounded-xl border border-white/[0.04]">
+                    <span className="text-white/80 font-mono text-[11px] truncate flex-1 select-all">
+                      {typeof window !== 'undefined' ? `${window.location.host}/?ref=u_${profileUsername ? String(profileUsername).replace(/^@+/, '') : shortenUserId(profileSeed.userId)}` : '/?ref=...'}
                     </span>
                     <button
                       type="button"
-                      onClick={handleCopyUserId}
-                      title={copyState === 'copied-userid' ? 'Copied!' : 'Copy user ID'}
-                      className={`flex-shrink-0 w-6.5 h-6.5 rounded-lg flex items-center justify-center transition-all duration-200 cursor-pointer ${
-                        copyState === 'copied-userid' ? 'text-[#10B981] bg-[#10B981]/10' : 'text-white/35 hover:text-white hover:bg-white/5'
+                      onClick={handleCopyReferralLink}
+                      title={copyState === 'copied-referral' ? 'Copied!' : 'Copy referral link'}
+                      className={`flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
+                        copyState === 'copied-referral'
+                          ? 'bg-[#10B981] text-white shadow-sm'
+                          : 'bg-[#6366F1] hover:bg-[#5254E8] text-white'
                       }`}
                     >
-                      <CopyIcon size={12} />
+                      <CopyIcon size={11} />
+                      <span>{copyState === 'copied-referral' ? 'Copied' : 'Copy'}</span>
                     </button>
                   </div>
                 </div>

@@ -25,6 +25,9 @@ import {
     Code2 as DevelopersIcon,
     FolderKanban as WorkspaceIcon,
     CreditCard as BillingIcon,
+    Users,
+    Copy,
+    Check,
 } from 'lucide-react';
 import { WorkspaceTab } from '@/components/settings/WorkspaceTab';
 import { AgentsSettingsTab } from '@/components/settings/AgentsSettingsTab';
@@ -362,6 +365,36 @@ function SettingsPageInner() {
           toast.error(e.message || 'Minting failed');
         } finally {
           setMinting(false);
+        }
+    };
+
+    const [referralStats, setReferralStats] = useState<{
+        totalReferred: number;
+        totalTokensEarned: string;
+        referralLink: string;
+    } | null>(null);
+    const [copiedReferral, setCopiedReferral] = useState(false);
+
+    useEffect(() => {
+        if (user?.$id) {
+            const username = getEffectiveUsername(user);
+            import('@/lib/actions/referrals')
+                .then(m => m.getReferralStatsAction(username))
+                .then(stats => setReferralStats(stats))
+                .catch(() => null);
+        }
+    }, [user]);
+
+    const handleCopyReferral = async () => {
+        if (!user?.$id) return;
+        const link = referralStats?.referralLink || `${window.location.origin}/?ref=u_${getEffectiveUsername(user) || user?.$id}`;
+        try {
+            await navigator.clipboard.writeText(link);
+            setCopiedReferral(true);
+            toast.success('Referral link copied!');
+            setTimeout(() => setCopiedReferral(false), 2000);
+        } catch {
+            toast.error('Failed to copy link');
         }
     };
 
@@ -708,6 +741,52 @@ function SettingsPageInner() {
                     <div className={`grid gap-8 items-start ${isRightRailPushing ? 'grid-cols-1 xl:grid-cols-[1.1fr_1fr]' : 'grid-cols-1 md:grid-cols-[1.1fr_1fr]'}`}>
                         {/* Left Column: Discoverability, Integrations & Feedback */}
                         <div className="flex flex-col gap-8">
+                            {/* Referral Program */}
+                            <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-4">
+                                <div className="flex items-center justify-between gap-4 flex-wrap">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center flex-shrink-0">
+                                            <Users size={20} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-white font-black text-base font-mono">Referral & Growth</h4>
+                                            <p className="text-white/40 text-xs font-semibold">
+                                                Earn 1.5 $KYL for each user who joins with your link, plus 0.5 $KYL for 30-day activity.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-[10px] font-black text-white/30 uppercase tracking-widest font-mono">Referred</span>
+                                            <span className="text-white font-black text-sm font-mono">{referralStats?.totalReferred ?? 0} users</span>
+                                        </div>
+                                        <div className="h-7 w-[1px] bg-white/10" />
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-[10px] font-black text-white/30 uppercase tracking-widest font-mono">Earned</span>
+                                            <span className="text-[#10B981] font-black text-sm font-mono">+{referralStats?.totalTokensEarned ?? '0.0'} $KYL</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Shareable Link Box */}
+                                <div className="flex items-center gap-2 bg-black/40 p-2 rounded-xl border border-white/5">
+                                    <input 
+                                        type="text"
+                                        readOnly
+                                        value={referralStats?.referralLink || (typeof window !== 'undefined' ? `${window.location.origin}/?ref=u_${getEffectiveUsername(user) || user?.$id || ''}` : '')}
+                                        className="flex-1 bg-transparent px-2 text-xs font-mono text-white/90 border-none outline-none truncate"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleCopyReferral}
+                                        className="h-9 px-4 rounded-lg bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center gap-1.5 transition-all select-none flex-shrink-0 cursor-pointer"
+                                    >
+                                        {copiedReferral ? <Check size={14} className="text-[#10B981]" /> : <Copy size={14} />}
+                                        <span>{copiedReferral ? 'Copied' : 'Copy Link'}</span>
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* Daily Token Mint */}
                             <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-3">
                                 <h4 className="text-white font-black text-base font-mono">Daily Token Mint</h4>

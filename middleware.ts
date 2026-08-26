@@ -44,8 +44,57 @@ function readResumePathFromCookie(request: NextRequest): string | null {
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // Redirect to app if logged in. Guests go to /send.
+  // ── Universal Attribution & Referral Processing (?ref=...) ──
+  const ref = searchParams.get('ref');
+  let attributionCookieValue: string | null = null;
+
+  if (ref) {
+    const src = searchParams.get('src') || (ref.startsWith('agt_') ? 'agent' : (ref.startsWith('org_') ? 'org' : (ref.startsWith('cmp_') ? 'campaign' : 'user')));
+    const origin = searchParams.get('origin') || 'direct';
+    const attributionData = JSON.stringify({
+      ref,
+      src,
+      origin,
+      timestamp: Date.now(),
+    });
+    attributionCookieValue = Buffer.from(attributionData).toString('base64');
+  }
+
+  // Handle Root URL ('/')
   if (pathname === '/' || pathname === '') {
+    if (ref) {
+      // If referral link clicked:
+      if (hasAuthSessionHint(request)) {
+        // Logged-in user: redirect to app to auto-claim referral
+        const response = NextResponse.redirect(new URL('/app', request.url));
+        if (attributionCookieValue) {
+          response.cookies.set({
+            name: 'attribution_payload',
+            value: attributionCookieValue,
+            maxAge: 60 * 60 * 24 * 30, // 30 days
+            path: '/',
+            sameSite: 'lax',
+          });
+        }
+        return response;
+      } else {
+        // Guest user: stay on landing page and pop open auth drawer
+        const landingWithAuth = new URL('/', request.url);
+        landingWithAuth.searchParams.set('auth', 'open');
+        const response = NextResponse.redirect(landingWithAuth);
+        if (attributionCookieValue) {
+          response.cookies.set({
+            name: 'attribution_payload',
+            value: attributionCookieValue,
+            maxAge: 60 * 60 * 24 * 30, // 30 days
+            path: '/',
+            sameSite: 'lax',
+          });
+        }
+        return response;
+      }
+    }
+
     if (searchParams.has('stay')) {
       // Guest/user traffic stays on the landing page if ?stay or ?stay=true is present
     } else {
@@ -56,10 +105,30 @@ export function middleware(request: NextRequest) {
           : DEFAULT_AUTHENTICATED_ROUTE;
         return NextResponse.redirect(new URL(target, request.url));
       } else {
-        // Guests redirect to /send instantly
+        // Guests redirect to /app instantly
         return NextResponse.redirect(new URL('/app', request.url));
       }
     }
+  }
+
+  // Handle deep link ?ref= query parameter stripping (URL hygiene)
+  if (ref && pathname !== '/') {
+    const cleanUrl = new URL(request.url);
+    cleanUrl.searchParams.delete('ref');
+    cleanUrl.searchParams.delete('src');
+    cleanUrl.searchParams.delete('origin');
+
+    const response = NextResponse.redirect(cleanUrl);
+    if (attributionCookieValue) {
+      response.cookies.set({
+        name: 'attribution_payload',
+        value: attributionCookieValue,
+        maxAge: 60 * 60 * 24 * 30,
+        path: '/',
+        sameSite: 'lax',
+      });
+    }
+    return response;
   }
 
   // Skip static assets, API routes, and Next.js internals entirely — zero overhead

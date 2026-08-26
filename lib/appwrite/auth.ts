@@ -29,8 +29,9 @@ function parsePreferences(raw: unknown): Record<string, any> {
 }
 
 function buildReferralLink(username: string): string {
-  const path = `/#refer=${encodeURIComponent(username)}`;
-  return typeof window !== 'undefined' ? new URL(path, window.location.origin).toString() : path;
+  const clean = String(username || '').replace(/^@+/, '').trim();
+  const path = `/?ref=u_${encodeURIComponent(clean)}`;
+  return typeof window !== 'undefined' ? new URL(path, window.location.origin).toString() : `https://www.kylrix.space${path}`;
 }
 
 export class AppwriteService {

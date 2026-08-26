@@ -171,6 +171,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       };
       void initProfile();
+
+      // 5. Silent Attribution & Referral Claiming
+      const claimAttribution = async () => {
+        try {
+          const match = document.cookie.match(/(?:^|;\s*)attribution_payload=([^;]+)/);
+          if (match && match[1]) {
+            const raw = atob(decodeURIComponent(match[1]));
+            const payload = JSON.parse(raw);
+            if (payload && payload.ref) {
+              const { claimReferralAction } = await import('@/lib/actions/referrals');
+              await claimReferralAction(payload);
+              document.cookie = 'attribution_payload=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;';
+            }
+          }
+        } catch (claimErr) {
+          console.warn('[AuthContext] Background referral claim:', claimErr);
+        }
+      };
+      void claimAttribution();
     }
   }, [user?.$id, user?.isPulse, user]);
 
