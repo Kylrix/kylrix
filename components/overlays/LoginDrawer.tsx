@@ -103,6 +103,7 @@ export function LoginDrawer() {
     setLastUsedMethod('password');
 
     try {
+      await account.deleteSession('current').catch(() => {});
       invalidateCurrentUserCache();
       const session: any = await account.createEmailPasswordSession(email, password);
 
@@ -150,6 +151,7 @@ export function LoginDrawer() {
       }
 
       // Complete Appwrite session creation using the minted token
+      await account.deleteSession('current').catch(() => {});
       invalidateCurrentUserCache();
       await account.createSession({ userId: verifyRes.userId, secret: verifyRes.token });
       

@@ -269,8 +269,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return result.userId;
   }, []);
   const verifyEmailOTP = useCallback(async (_email: string, userId: string, secret: string): Promise<void> => {
+    await account.deleteSession('current').catch(() => {});
     invalidateCurrentUserCache();
-    const _session: any = await account.createSession({ userId, secret });
+    let _session: any;
+    try {
+      _session = await account.createSession({ userId, secret });
+    } catch (err: any) {
+      if (err?.code === 401 || err?.message?.includes('already active')) {
+        await account.deleteSession('current').catch(() => {});
+        _session = await account.createSession({ userId, secret });
+      } else {
+        throw err;
+      }
+    }
     try {
       await assertAuthenticatedAccount();
       await refreshUser(true);
