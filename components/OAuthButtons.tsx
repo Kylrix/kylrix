@@ -47,38 +47,14 @@ export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) 
     setError(null);
     localStorage.setItem('kylrix_last_auth_method', provider);
 
-    // 1. Pre-flight connectivity check
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      setError('Please check your internet connection and try again.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
-      await fetch(`${window.location.origin}/favicon.ico`, {
-        method: 'HEAD',
-        signal: controller.signal,
-        cache: 'no-store'
-      });
-      clearTimeout(timeoutId);
-    } catch (_e) {
-      setError('Unable to connect to Kylrix services. Please check your internet connection.');
-      setLoading(false);
-      return;
-    }
-
-    // 2. Stateless session cleanup to prevent session mixing
-    clearStatelessSessions();
-
     try {
       const success = `${window.location.origin}/?auth=success`;
       const failure = `${window.location.origin}/?error=oauth_failed`;
       await account.createOAuth2Session(
         provider,
         success,
-        failure);
+        failure
+      );
     } catch (_err: unknown) {
       const err = _err as any;
       setError(err.message || 'OAuth login failed');
