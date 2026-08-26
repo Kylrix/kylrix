@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getCurrentUser, account, getKylrixPulse, setKylrixPulse, clearKylrixPulse, invalidateCurrentUserCache, onCurrentUserChanged, hasAuthSessionHint, getCurrentUserSnapshot } from '@/lib/appwrite/client';
+import { getCurrentUser, account, getKylrixPulse, setKylrixPulse, clearKylrixPulse, invalidateCurrentUserCache, onCurrentUserChanged, getCurrentUserSnapshot } from '@/lib/appwrite/client';
 import { getEcosystemUrl } from '@/lib/ecosystem';
 import { assertAuthenticatedAccount, completeMfaChallenge, isMfaRequiredError } from '@/lib/mfa';
 

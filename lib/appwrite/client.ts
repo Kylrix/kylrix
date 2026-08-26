@@ -218,7 +218,6 @@ let currentUserCache: { user: any | null; expiresAt: number; lastForcedAt?: numb
 let currentUserInFlight: Promise<any | null> | null = null;
 const currentUserListeners = new Set<(user: any | null) => void>();
 const CURRENT_USER_CACHE_TTL = 30000; // 30 seconds for passive reads
-const CURRENT_USER_FORCE_TTL = 2000;  // 2 seconds to dedupe identical forced refreshes
 const CURRENT_USER_NETWORK_TIMEOUT_MS = 4000;
 const CURRENT_USER_CACHE_KEY = 'kylrix_flow_current_user_v2';
 
@@ -248,18 +247,6 @@ export function hasAuthSessionHint(): boolean {
 
 function canUseStorage() {
     return typeof window !== 'undefined';
-}
-
-function readLastLoggedInUser(): any | null {
-    if (!canUseStorage()) return null;
-    try {
-        const pid = localStorage.getItem('kylrix:activePartition') || 'acc_default';
-        const lastUserRaw = localStorage.getItem(`kylrix_last_logged_in_user_${pid}`);
-        if (!lastUserRaw) return null;
-        return JSON.parse(lastUserRaw);
-    } catch {
-        return null;
-    }
 }
 
 function readCurrentUserSnapshot() {

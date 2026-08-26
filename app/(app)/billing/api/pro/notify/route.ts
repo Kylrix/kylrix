@@ -2,8 +2,8 @@ import { createSystemClient } from '@/lib/appwrite-admin';
 import { ID, Query, Permission, Role } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { calculateSubscriptionPrice } from '@/lib/subscription/ppp';
-import { notifyGiftCouponIssued, notifySubscriptionActivated } from '@/lib/billing/subscription-notifications';
 import { calculateStackedSubscriptionCredit } from '@/lib/billing/subscription-stack';
+import { notifySubscriptionActivated, notifyGiftSubscriptionActivated } from '@/lib/billing/subscription-notifications';
 import { applyProSubscriptionWindowToPrefs } from '@/lib/services/internal/subscription-prefs-merge';
 import {
   shouldVerifyBlockBeeWebhookSignature,
@@ -21,7 +21,6 @@ const SUB_COLLECTION_ID = APPWRITE_CONFIG.TABLES.NOTE.SUBSCRIPTIONS;
 const CHAT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const PROFILES_COLLECTION_ID = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
 const ACCOUNT_EVENTS_TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS;
-const ACCOUNT_EVENTS_COLLECTION_ID = APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS;
 
 function parseMetadata(value: unknown): Record<string, any> {
   if (!value) return {};
@@ -32,51 +31,6 @@ function parseMetadata(value: unknown): Record<string, any> {
   } catch {
     return {};
   }
-}
-
-async function createGiftCouponRow(params: {
-  databases: ReturnType<typeof createSystemClient>['databases'];
-  payerUserId: string;
-  payerName: string;
-  recipientUserId: string;
-  recipientName?: string;
-  planId: string;
-  months: number;
-  currentPeriodEnd: string;
-  giftMessage?: string | null;
-  countryCode: string;
-}) {
-  const { databases } = params;
-  const expiresAt = params.currentPeriodEnd;
-  const payload = {
-    userId: params.recipientUserId,
-    type: 'coupon',
-    actorId: params.payerUserId,
-    relatedUserId: params.recipientUserId,
-    status: 'active',
-    discountPercent: 100,
-    expiresAt,
-    delta: null,
-    metadata: JSON.stringify({
-      source: 'billing.gift.checkout',
-      gift: {
-        kind: 'subscription-gift',
-        planId: params.planId,
-        months: params.months,
-        payerUserId: params.payerUserId,
-        payerName: params.payerName,
-        recipientUserId: params.recipientUserId,
-        recipientName: params.recipientName || null,
-        giftMessage: params.giftMessage || null,
-        countryCode: params.countryCode,
-        expiresAt}})};
-
-  return await databases.createRow(
-    CHAT_DATABASE_ID,
-    ACCOUNT_EVENTS_COLLECTION_ID,
-    ID.unique(),
-    payload,
-    [Permission.read(Role.user(params.recipientUserId)), Permission.read(Role.user(params.payerUserId))]);
 }
 
 async function recordCompletedTransactionLedger(params: {
