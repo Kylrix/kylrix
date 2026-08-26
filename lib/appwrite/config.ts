@@ -175,7 +175,8 @@ export const APPWRITE_CONFIG = {
         FLOW_AGENT_ORCHESTRATOR: 'flow-agent-orchestrator',
         ECOSYSTEM_CONTEXT_AGGREGATOR: 'ecosystem-context-aggregator',
         AGENT_ACTION_GUARDRAIL: 'agent-action-guardrail',
-        DISCORD_BOT: 'discord-bot'
+        DISCORD_BOT: 'discord-bot',
+        MCP_SERVER: '6a8f212e003d1f3518db'
     },
     SYSTEM: {
         DOMAIN: 'kylrix.space',

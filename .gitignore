@@ -44,8 +44,9 @@ sqlite.json
 *.txt
 !public/.well-known/**
 !LICENSES/
-!LICENSES/**
 *.py
+!functions/**/*.py
+!functions/**/requirements.txt
 keychain_debug.txt
 all_keychains.txt
 
