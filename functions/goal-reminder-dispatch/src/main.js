@@ -37,8 +37,8 @@ export default async ({ req, res, log, error }) => {
 
   try {
     // 1. Fetch goal document from database
-    const DB_ID = process.env.FLOW_DATABASE_ID || 'whisperrflow';
-    const TABLE_ID = process.env.TASKS_TABLE_ID || 'productivity_tasks';
+    const DB_ID = process.env.DATABASE_ID || 'passwordManagerDb';
+    const TABLE_ID = process.env.TASKS_TABLE_ID || 'tasks';
 
     const task = await databases.getDocument(DB_ID, TABLE_ID, taskId).catch(() => null);
     if (!task) {

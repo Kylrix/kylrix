@@ -65,7 +65,7 @@ export default async ({ req, res, log, error }) => {
         }
 
         // Rule 4: Recursive/Mass Mutation Gating
-        if (action === 'createRow' && databaseId === 'whisperrflow' && tableId === 'tasks') {
+        if (action === 'createRow' && databaseId === 'passwordManagerDb' && tableId === 'tasks') {
             const taskData = data || {};
             if (taskData.priority === 'high' && String(taskData.title).toLowerCase().includes('emergency')) {
                 log(`Flagged: Agent created high-priority emergency task`);

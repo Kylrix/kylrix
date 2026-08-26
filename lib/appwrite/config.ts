@@ -160,7 +160,6 @@ export const APPWRITE_CONFIG = {
     },
     FUNCTIONS: {
         PERMISSION_UPDATER: '69c0ff79001b60e664d2',
-        CLAIM_thread_NOTES: 'claim-thread-notes',
         SEARCH_USERS: '69a582720012957d2027',
         SYNC_USER_PROFILE: '69a583ac002b674685b0',
         NOTIFY_ON_SHARE: '69a58c1c001c39695bf6',
@@ -175,6 +174,7 @@ export const APPWRITE_CONFIG = {
         FLOW_AGENT_ORCHESTRATOR: 'flow-agent-orchestrator',
         ECOSYSTEM_CONTEXT_AGGREGATOR: 'ecosystem-context-aggregator',
         AGENT_ACTION_GUARDRAIL: 'agent-action-guardrail',
+        GOAL_REMINDER_DISPATCH: 'goal-reminder-dispatch',
         DISCORD_BOT: 'discord-bot',
         MCP_SERVER: '6a8f212e003d1f3518db'
     },

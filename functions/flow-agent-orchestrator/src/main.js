@@ -1,6 +1,6 @@
 import { Client, Databases, Functions, ExecutionMethod, Permission, Role } from 'node-appwrite';
 
-const FLOW_DB = 'whisperrflow';
+const FLOW_DB = 'passwordManagerDb';
 const TASKS_TABLE = 'tasks';
 
 export default async ({ req, res, log, error }) => {

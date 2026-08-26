@@ -1,8 +1,8 @@
 import { Client, Databases, Query } from 'node-appwrite';
 
-const NOTE_DB = '67ff05a9000296822396';
+const NOTE_DB = 'passwordManagerDb';
 const NOTES_TABLE = '67ff05f3002502ef239e';
-const FLOW_DB = 'whisperrflow';
+const FLOW_DB = 'passwordManagerDb';
 const TASKS_TABLE = 'tasks';
 
 export default async ({ req, res, log, error }) => {

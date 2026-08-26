@@ -21,14 +21,10 @@ export default async ({ req, res, log, error }) => {
         return res.json({ success: false });
     }
 
-    // Single-database: passwordManagerDb + fallbacks — sweep infinite data (paginated, no retention)
+    // Single-database: passwordManagerDb — sweep infinite data (paginated, no retention)
     const mainDb = process.env.DATABASE_ID || process.env.DATABASE_ID_PASSWORD_MANAGER || 'passwordManagerDb';
     const dbs = [
-        { id: mainDb, collections: ['keychain','totpSecrets','identities','keyMapping','profiles','notes','tasks','projects','events','forms','comments','reactions','conversations','conversationMembers','messages','messageReactions','epochs','call_links','app_activity','activityLog','securityLogs'] },
-        { id: process.env.DATABASE_ID_CHAT || 'chat', collections: ['users','contacts','app_activity','call_links','conversations','conversationMembers','messages','messageReactions'] },
-        { id: process.env.DATABASE_ID_NOTE || '67ff05a9000296822396', collections: ['67ff05c900247b5673d3','activityLog'] },
-        { id: process.env.DATABASE_ID_VAULT || 'passwordManagerDb', collections: ['keychain','identities'] },
-        { id: process.env.DATABASE_ID_FLOW || 'whisperrflow', collections: ['tasks','eventGuests'] }
+        { id: mainDb, collections: ['keychain','totpSecrets','identities','keyMapping','profiles','notes','tasks','projects','events','forms','comments','reactions','conversations','conversationMembers','messages','messageReactions','epochs','call_links','app_activity','activityLog','securityLogs','eventGuests'] }
     ];
 
     try {

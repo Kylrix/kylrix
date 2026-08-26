@@ -24,11 +24,11 @@ const FOLDERS_TABLE = 'folders';
 const TOTP_TABLE = 'totpSecrets';
 const SECURITY_LOGS_TABLE = 'securityLogs';
 
-const NOTE_DB = '67ff05a9000296822396';
+const NOTE_DB = 'passwordManagerDb';
 const NOTES_TABLE = '67ff05f3002502ef239e';
 const TAGS_TABLE = '67ff06280034908cf08a';
 
-const FLOW_DB = 'whisperrflow';
+const FLOW_DB = 'passwordManagerDb';
 const FORMS_TABLE = 'forms';
 const TASKS_TABLE = 'tasks';
 const EVENTS_TABLE = 'events';
