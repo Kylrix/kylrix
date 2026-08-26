@@ -687,6 +687,7 @@ export type Conversations = Models.Row & {
     contextType: string | null;
     contextId: string | null;
     inviteMeta: string | null;
+    isWorkspace: boolean;
 }
 
 export type Contacts = Models.Row & {

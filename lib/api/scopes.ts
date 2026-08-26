@@ -30,10 +30,11 @@ export const PAT_SCOPES = [
   // Connect / chat
   'chats:read',
   'chats:write',
-  // Agentic sessions (+ harness mirrors)
+  // Agentic sessions (+ harness mirrors & provisioning)
   'agents:read',
   'agents:write',
   'agents:harness',
+  'agents:provision',
   'moments:read',
   'moments:write',
   'tags:read',
@@ -72,6 +73,7 @@ export const PAT_SCOPE_META: Record<
   'agents:read': { label: 'Read agent sessions' },
   'agents:write': { label: 'Write agent sessions' },
   'agents:harness': { label: 'Mirror CLI harness sessions', danger: true },
+  'agents:provision': { label: 'Provision autonomous agents (zero user data access)' },
   'moments:read': { label: 'Read moments' },
   'moments:write': { label: 'Write moments' },
   'tags:read': { label: 'Read tags' },

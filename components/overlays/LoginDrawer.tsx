@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { X, Mail, ArrowLeft, Fingerprint } from 'lucide-react';
+import { X, Mail, ArrowLeft, Fingerprint, Bot, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import OAuthButtons from '@/components/OAuthButtons';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -14,7 +14,7 @@ import { account, invalidateCurrentUserCache } from '@/lib/appwrite/client';
 import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction, checkEmailAuthStatusAction } from '@/lib/actions/auth-actions';
 import { performNativePasskeyAuthentication } from '@/lib/webauthn-utils';
 
-type LoginStep = 'initial' | 'email' | 'otp';
+type LoginStep = 'initial' | 'email' | 'otp' | 'agent';
 
 // Simple custom media query hook to replace MUI useMediaQuery
 function useIsDesktop() {
@@ -261,7 +261,7 @@ export function LoginDrawer() {
   }, [otp, step, executeVerifyOTP]);
 
   const handleBack = () => {
-    if (step === 'email') setStep('initial');
+    if (step === 'email' || step === 'agent') setStep('initial');
     else if (step === 'otp') {
         setStep('email');
         setOtp('');
@@ -341,6 +341,21 @@ export function LoginDrawer() {
                   Last Used
                 </span>
               )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStep('agent')}
+              disabled={checkingSession}
+              className="w-full flex items-center justify-between px-5 rounded-2xl border transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed h-[52px] border-[#34322F] bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/20"
+            >
+              <div className="flex items-center gap-3 font-extrabold text-sm text-white font-satoshi">
+                <Bot className="w-4.5 h-4.5 text-[#6366F1] flex-shrink-0" />
+                <span>Continue as Agent</span>
+              </div>
+              <span className="text-[10px] font-bold text-[#A5B4FC] font-mono">
+                docs/agents →
+              </span>
             </button>
           </div>
         );
@@ -444,6 +459,42 @@ export function LoginDrawer() {
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#6366F1]" />
               </div>
             )}
+          </div>
+        );
+
+      case 'agent':
+        return (
+          <div className="space-y-5 animate-fadeIn">
+            <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 space-y-2">
+              <div className="flex items-center gap-2">
+                <Bot className="w-4 h-4 text-[#A5B4FC]" />
+                <span className="text-xs font-bold text-[#A5B4FC] uppercase tracking-wider">
+                  Agent Authentication
+                </span>
+              </div>
+              <p className="text-xs text-white/70 leading-relaxed font-satoshi">
+                Autonomous agents authenticate using <strong>Agent Provisioning Keys</strong>. These specialized tokens grant zero access to human user data while letting the agent create its own identity, manage encryption keys, and publish Nostr events.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <Link
+                href="/docs/agents"
+                onClick={handleClose}
+                className="w-full h-[52px] rounded-xl bg-white hover:bg-white/90 text-black font-black text-sm transition-all flex items-center justify-center gap-2"
+              >
+                <span>Read Agent Documentation</span>
+                <ExternalLink className="w-4 h-4" />
+              </Link>
+
+              <Link
+                href="/settings?tab=developers"
+                onClick={handleClose}
+                className="w-full h-[50px] rounded-xl border border-white/10 hover:border-white/20 bg-white/[0.03] text-white/80 hover:text-white font-bold text-xs transition-all flex items-center justify-center gap-2"
+              >
+                <span>Manage Agent Keys in Settings</span>
+              </Link>
+            </div>
           </div>
         );
       

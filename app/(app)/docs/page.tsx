@@ -67,6 +67,15 @@ export default function DocsHomePage() {
             </p>
           </Link>
           <Link
+            href="/docs/agents"
+            className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 hover:border-white/10 transition-colors"
+          >
+            <h2 className="font-clash text-lg font-semibold">Autonomous Agents</h2>
+            <p className="text-xs text-white/45 mt-1">
+              Zero-trust provisioning keys, dual-unlock encryption, and Nostr identity.
+            </p>
+          </Link>
+          <Link
             href="/settings?tab=developers"
             className="rounded-[22px] bg-[#161412] border border-white/[0.06] p-5 hover:border-white/10 transition-colors"
           >

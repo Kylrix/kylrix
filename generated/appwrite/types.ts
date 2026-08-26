@@ -1047,6 +1047,7 @@ export type ConversationsCreate = {
     "contextType"?: string | null;
     "contextId"?: string | null;
     "inviteMeta"?: string | null;
+    "isWorkspace"?: boolean;
 }
 
 export type Conversations = Models.Row & {
@@ -1083,6 +1084,7 @@ export type Conversations = Models.Row & {
     "contextType"?: string | null;
     "contextId"?: string | null;
     "inviteMeta"?: string | null;
+    "isWorkspace"?: boolean;
 }
 
 export type ContactsCreate = {
@@ -3661,6 +3663,7 @@ export type DatabaseTableMap = {
         "contextType"?: string | null;
         "contextId"?: string | null;
         "inviteMeta"?: string | null;
+        "isWorkspace"?: boolean;
       }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Conversations>;
       get: (id: string) => Promise<Conversations>;
       update: (id: string, data: Partial<{
@@ -3697,6 +3700,7 @@ export type DatabaseTableMap = {
         "contextType"?: string | null;
         "contextId"?: string | null;
         "inviteMeta"?: string | null;
+        "isWorkspace"?: boolean;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Conversations>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Conversations>>(field: K, value: QueryableFieldValue<Conversations, K>) => string; notEqual: <K extends QueryableKeys<Conversations>>(field: K, value: QueryableFieldValue<Conversations, K>) => string; lessThan: <K extends QueryableKeys<Conversations>>(field: K, value: QueryableFieldValue<Conversations, K>) => string; lessThanEqual: <K extends QueryableKeys<Conversations>>(field: K, value: QueryableFieldValue<Conversations, K>) => string; greaterThan: <K extends QueryableKeys<Conversations>>(field: K, value: QueryableFieldValue<Conversations, K>) => string; greaterThanEqual: <K extends QueryableKeys<Conversations>>(field: K, value: QueryableFieldValue<Conversations, K>) => string; contains: <K extends QueryableKeys<Conversations>>(field: K, value: QueryableFieldValue<Conversations, K>) => string; search: <K extends QueryableKeys<Conversations>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Conversations>>(field: K) => string; isNotNull: <K extends QueryableKeys<Conversations>>(field: K) => string; startsWith: <K extends QueryableKeys<Conversations>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Conversations>>(field: K, value: string) => string; between: <K extends QueryableKeys<Conversations>>(field: K, start: QueryableFieldValue<Conversations, K>, end: QueryableFieldValue<Conversations, K>) => string; select: <K extends keyof Conversations>(fields: K[]) => string; orderAsc: <K extends keyof Conversations>(field: K) => string; orderDesc: <K extends keyof Conversations>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Conversations[] }>;
