@@ -1,0 +1,14 @@
+{
+  "name": "@kylrix/discord-bot",
+  "version": "1.0.0",
+  "description": "Discord Bot interaction handler and workspace notification dispatcher for Kylrix",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "node-appwrite": "^14.1.0",
+    "tweetnacl": "^1.0.3"
+  }
+}

@@ -48,11 +48,12 @@ Supported: **17.4.0+** (tables-db). Current ecosystem often **21.x+**.
 - **NEVER** hand-edit `generated/` — only `appwrite generate --language typescript` after a successful pull.
 - `generated/` is the runtime type SoT; `appwrite.config.json` is sync output only.
 
-### Pull / push
+### Pull / push & Function Deployment (STRICT)
 
 - **NEVER** `appwrite push tables` (destroys/overwrites live schema & data risk).
 - **NEVER** `appwrite pull all`.
-- **NEVER** `appwrite pull functions` / `appwrite functions pull` (overwrites local function code).
+- **NEVER `appwrite pull functions` / `appwrite functions pull`**: Pulling functions is strictly forbidden because it overwrites and destroys local function source code.
+- **Specific Function Push/Deployment IS Permitted**: Pushing/deploying a specific function (e.g. `appwrite functions create-deployment --function-id <id>` or `appwrite push function`) is permitted and expected when deploying new or updated function code.
 - **Allowed sync path for schema:**
   1. Incremental live CLI: `create-table` / `create-*-column` / `create-index` on the remote.
   2. `appwrite pull tables` → refresh local `appwrite.config.json`.
