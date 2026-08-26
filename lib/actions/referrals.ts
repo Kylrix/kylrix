@@ -1,10 +1,11 @@
 'use server';
 
 import { ReferralService, type AttributionPayload, type ReferralStats } from '@/lib/services/referral';
-import { getAuthenticatedUserId } from '@/lib/server-auth';
+import { getActor } from '@/lib/actions/secure-ops/shared';
 
-export async function getReferralStatsAction(username?: string | null): Promise<ReferralStats> {
-  const userId = await getAuthenticatedUserId();
+export async function getReferralStatsAction(username?: string | null, jwt?: string): Promise<ReferralStats> {
+  const actor = await getActor(jwt);
+  const userId = actor?.$id;
   if (!userId) {
     return {
       totalReferred: 0,
@@ -16,26 +17,28 @@ export async function getReferralStatsAction(username?: string | null): Promise<
   return ReferralService.getReferralStats(userId, username);
 }
 
-export async function claimReferralAction(payload: AttributionPayload): Promise<{
+export async function claimReferralAction(payload: AttributionPayload, jwt?: string): Promise<{
   ok: boolean;
   alreadyReferred?: boolean;
   rewarded?: boolean;
   referrerId?: string;
   error?: string;
 }> {
-  const userId = await getAuthenticatedUserId();
+  const actor = await getActor(jwt);
+  const userId = actor?.$id;
   if (!userId) {
     return { ok: false, error: 'Unauthorized' };
   }
   return ReferralService.claimReferral(userId, payload);
 }
 
-export async function generateUsernameOnTheFlyAction(name?: string | null): Promise<{
+export async function generateUsernameOnTheFlyAction(name?: string | null, jwt?: string): Promise<{
   ok: boolean;
   username?: string;
   error?: string;
 }> {
-  const userId = await getAuthenticatedUserId();
+  const actor = await getActor(jwt);
+  const userId = actor?.$id;
   if (!userId) {
     return { ok: false, error: 'Unauthorized' };
   }

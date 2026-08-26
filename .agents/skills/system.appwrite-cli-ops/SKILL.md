@@ -91,11 +91,21 @@ Supported: **17.4.0+** (tables-db). Current ecosystem often **21.x+**.
 
 ## Column types — deprecated vs prefer
 
+> [!CAUTION]
+> ### 🛑 STRICT BAN ON DEPRECATED `string` PRIMITIVES AND LEGACY ATTRIBUTE COMMANDS
+> - **NEVER** use `create-string-column` or `create-string-attribute` for any new table or column creation. Generic `string` is **DEPRECATED** in modern TablesDB.
+> - **NEVER** invoke `appwrite databases create-*-attribute`. All schema modifications MUST use `appwrite tablesdb create-*-column`.
+> - Always use explicit modern primitives:
+>   - **`varchar`** (`create-varchar-column`) for short, searchable/indexable strings (IDs, codes, handles, slugs).
+>   - **`text`** / **`mediumtext`** (`create-text-column` / `create-mediumtext-column`) for unstructured text, JSON blobs, notes, and descriptions.
+>   - **`boolean`**, **`integer`**, **`bigint`**, **`datetime`**, **`enum`** for typed data.
+> - Violating this causes schema regressions, inconsistent index capabilities, and breaks modern Appwrite SDK generator parity.
+
 ### Deprecated (do not create)
 
 | Type | Status |
 |------|--------|
-| **`string`** (`create-string-column`) | **Deprecated.** Legacy only. Existing columns keep working — **do not migrate in place** (see destructive rules). For **new** columns, never use `string`. |
+| **`string`** (`create-string-column` / `create-string-attribute`) | **STRICTLY DEPRECATED.** Legacy only. Existing columns keep working — **do not migrate in place** (see destructive rules). For **all new** columns, never use `string`. |
 
 No other column types are marked deprecated in current Appwrite Tables docs. Prefer the explicit text family below.
 
