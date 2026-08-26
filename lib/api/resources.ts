@@ -3,7 +3,7 @@ import { createSystemTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import type { ApiActor } from '@/lib/api/guard';
 import { requireScope } from '@/lib/api/guard';
-import { listScopeCatalog } from '@/lib/api/scopes';
+import { listScopeCatalog, type PatScope } from '@/lib/api/scopes';
 import { PatService } from '@/lib/services/pats';
 import { clampNoteTitle } from '@/constants/noteTitle';
 import {

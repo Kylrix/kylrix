@@ -185,10 +185,12 @@ export const ReferralService = {
       try {
         await InternalKylrixTokenService.mintForActivity({
           userId: referrerId,
+          idempotencyKey: `mint:referral_signup:${referrerId}:${newUserId}`,
+          activityType: 'referral_signup',
+          uniqueActors: 2,
+          trustScore: 85,
           sourceType: 'referral_signup',
           sourceId: newUserId,
-          idempotencyKey: `mint:referral_signup:${referrerId}:${newUserId}`,
-          rawAmount: '1.5',
         });
 
         // Update tokensRewarded flag

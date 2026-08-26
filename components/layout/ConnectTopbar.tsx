@@ -140,7 +140,7 @@ export default function ConnectTopbar({
   useEffect(() => {
     setIsMounted(true);
   }, []);
-  const [copyState, setCopyState] = useState<'idle' | 'copied-userid' | 'copied-username'>('idle');
+  const [copyState, setCopyState] = useState<'idle' | 'copied-userid' | 'copied-username' | 'copied-referral'>('idle');
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifHint, setNotifHint] = useState<{ id: string; title: string; description: string; accent: string } | null>(null);

@@ -1,4 +1,4 @@
-import { Client, Account, Databases, Messaging, Storage, Users, TablesDB, Teams } from 'node-appwrite';
+import { Client, Account, Databases, Messaging, Storage, Users, TablesDB, Teams, Functions } from 'node-appwrite';
 import { PROJECT_ID, ENDPOINT } from '../generated/appwrite/constants';
 import {
   experimental_taintUniqueValue,
@@ -265,4 +265,9 @@ export function createAdminTablesDB(actorEmail: string) {
   }
 
   return adminTablesDB;
+}
+
+export function createSystemFunctions() {
+  const { client } = createSystemClient();
+  return new Functions(client);
 }
