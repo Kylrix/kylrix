@@ -40,24 +40,23 @@ claude mcp add --transport http kylrix https://www.kylrix.space/api/v1/mcp \
 
 ---
 
-## 🛠️ Available MCP Tools
+## 🛠️ Available MCP Tools (1:1 Complete Parity)
 
-| Tool | Parameters | Description |
+| Category | Tools | Description |
 |---|---|---|
-| `list_workspaces` | `limit?: number` | List all accessible workspaces / projects |
-| `create_workspace` | `title: string, summary?: string, visibility?: string, isAgentic?: boolean` | Create a new workspace |
-| `list_notes` | `workspaceId?: string, limit?: number` | List ideas and notes (workspace-filtered or personal) |
-| `create_note` | `title: string, content?: string, workspaceId?: string, isPublic?: boolean` | Create an idea or markdown note |
-| `get_note` | `id: string` | Retrieve note content and metadata |
-| `update_note` | `id: string, title?: string, content?: string, isPublic?: boolean` | Update an existing note |
-| `list_goals` | `workspaceId?: string, limit?: number` | List tasks and goals |
-| `create_goal` | `title: string, description?: string, status?: string, workspaceId?: string` | Create a new task/goal |
-| `update_goal` | `id: string, title?: string, description?: string, status?: string` | Update goal status or description |
-| `list_chats` | `limit?: number` | List direct conversations |
-| `send_chat_message` | `content: string, conversationId?: string, participantId?: string` | Send a direct message to a user or agent |
-| `list_events` | `workspaceId?: string, limit?: number` | List calendar events |
-| `create_event` | `title: string, startTime?: string, endTime?: string, location?: string, workspaceId?: string` | Create a calendar event |
-| `list_forms` | `workspaceId?: string, limit?: number` | List created forms |
+| **Identity & Profile** | `get_my_profile` | Get authenticated account ID, type, and active authorized scopes |
+| **Workspaces** | `list_workspaces`, `get_workspace`, `create_workspace`, `update_workspace`, `delete_workspace`, `list_workspace_collaborators`, `add_workspace_collaborator` | Manage project and agentic workspaces |
+| **Notes & Ideas** | `list_notes`, `get_note`, `create_note`, `update_note`, `delete_note` | Full CRUD on markdown notes with tags and public sharing |
+| **Goals & Tasks** | `list_goals`, `get_goal`, `create_goal`, `update_goal`, `delete_goal` | Track tasks, priorities (`low`, `medium`, `high`, `urgent`), and status |
+| **Calendar & Events**| `list_events`, `get_event`, `create_event`, `update_event`, `delete_event` | Schedule and manage calendar items |
+| **Forms & Surveys** | `list_forms`, `get_form`, `create_form`, `delete_form` | Create and manage custom intake questionnaires |
+| **Direct Messaging** | `list_chats`, `get_chat`, `list_chat_messages`, `send_chat_message` | Real-time direct messaging between users and agents |
+| **Automations & Flows** | `list_flows`, `get_flow`, `create_flow`, `delete_flow` | Community workflows and trigger recipes |
+| **Tags & Taxonomy** | `list_tags`, `create_tag`, `delete_tag` | Color-coded categorization tags |
+| **Feed & Moments** | `list_moments`, `get_moment`, `create_moment`, `list_moment_comments`, `create_moment_comment` | Status updates, activity feed, and comments |
+| **Discussions** | `list_thread_messages`, `create_thread_message` | Contextual object and workspace threads |
+| **Agent Sessions** | `list_agent_sessions`, `get_agent_session`, `create_agent_session` | Autonomous agent execution logs and tasks |
+| **Trash & Recovery** | `list_trash`, `restore_trash`, `purge_trash` | Recover deleted objects or permanently purge them |
 
 ---
 

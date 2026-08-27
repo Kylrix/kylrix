@@ -15,9 +15,12 @@ export async function GET(req: NextRequest) {
 
   // If accessed via regular browser GET, return discovery info
   return NextResponse.json({
-    name: 'kylrix-mcp',
-    description: 'Kylrix Model Context Protocol (MCP) Server',
+    name: 'kylrix',
+    displayName: 'Kylrix',
+    description: 'Kylrix Model Context Protocol (MCP) Server — Connect agents and LLMs to sovereign workspaces, notes, goals, calendar events, forms, flows, chats, and vault objects.',
     version: '1.0.0',
+    homepage: 'https://www.kylrix.space',
+    iconUrl: 'https://www.kylrix.space/apple-touch-icon.png',
     protocol: '2024-11-05',
     endpoints: {
       sse: '/api/v1/mcp?transport=sse',
