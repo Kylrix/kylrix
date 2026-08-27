@@ -53,6 +53,14 @@ export function AgentActionDrawer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // Tokens state
+  const [agentTokens, setAgentTokens] = useState<any[]>([]);
+  const [loadingTokens, setLoadingTokens] = useState(false);
+  const [isCreatingToken, setIsCreatingToken] = useState(false);
+  const [newTokenName, setNewTokenName] = useState('');
+  const [mintingToken, setMintingToken] = useState(false);
+  const [newlyMintedToken, setNewlyMintedToken] = useState<string | null>(null);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -72,6 +80,22 @@ export function AgentActionDrawer({
   const agentUserId = agentId.startsWith('agent_') ? agentId : `agent_${agentId}`;
   const username = profile?.username || `ag_${agentName.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
 
+  const loadTokens = React.useCallback(async () => {
+    if (!agentId) return;
+    setLoadingTokens(true);
+    try {
+      const { listPats } = await import('@/lib/actions/client-ops');
+      const res = await listPats({ agentId });
+      if (res?.success && Array.isArray(res.data)) {
+        setAgentTokens(res.data);
+      }
+    } catch {
+      setAgentTokens([]);
+    } finally {
+      setLoadingTokens(false);
+    }
+  }, [agentId]);
+
   useEffect(() => {
     if (!open || !agentId) return;
     let active = true;
@@ -82,10 +106,53 @@ export function AgentActionDrawer({
       })
       .catch(() => {});
 
+    void loadTokens();
+
     return () => {
       active = false;
     };
-  }, [open, agentId]);
+  }, [open, agentId, loadTokens]);
+
+  const handleMintToken = async () => {
+    if (!newTokenName.trim() || !agentId) return;
+    setMintingToken(true);
+    try {
+      const { createPat } = await import('@/lib/actions/client-ops');
+      const res = await createPat({
+        name: newTokenName.trim(),
+        category: 'agentic_pat',
+        agentId,
+        scopes: ['notes:read', 'notes:write', 'vault:read', 'vault:write', 'goals:read', 'goals:write', 'workspaces:read', 'workspaces:write'],
+        expiresInDays: 365,
+      });
+
+      if (res?.success && res.token) {
+        setNewlyMintedToken(res.token);
+        setNewTokenName('');
+        setIsCreatingToken(false);
+        toast.success('Agentic PAT minted');
+        void loadTokens();
+      } else {
+        toast.error((res as any)?.error || 'Could not create token');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to mint token');
+    } finally {
+      setMintingToken(false);
+    }
+  };
+
+  const handleRevokeToken = async (patId: string) => {
+    if (!confirm('Revoke this agent token?')) return;
+    try {
+      const { revokePat } = await import('@/lib/actions/client-ops');
+      await revokePat(patId);
+      toast.success('Token revoked');
+      setAgentTokens((prev) => prev.filter((t: any) => (t.$id || t.id) !== patId));
+    } catch {
+      toast.error('Failed to revoke token');
+    }
+  };
 
   const copyToClipboard = (text: string, label: string, keyId: string) => {
     if (!text) return;
@@ -261,6 +328,114 @@ export function AgentActionDrawer({
                 </button>
               )}
             </div>
+          </div>
+
+          {/* ── Active Tokens & Provisioning Keys ── */}
+          <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Key size={14} className="text-[#6366F1]" />
+                <span className="text-[10px] font-mono uppercase tracking-wider text-white/50 font-bold">
+                  Runtime Tokens & API Keys
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreatingToken((prev) => !prev)}
+                className="text-[11px] font-mono font-bold text-[#6366F1] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <Plus size={12} /> Mint Token
+              </button>
+            </div>
+
+            {/* Token Minting Input */}
+            {isCreatingToken && (
+              <div className="p-3 rounded-xl bg-[#161412] border border-[#6366F1]/30 space-y-2">
+                <span className="text-[10px] font-mono uppercase text-white/40 font-bold block">
+                  Mint New Agentic PAT
+                </span>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Token label (e.g. CI Runner, Superteam)"
+                    value={newTokenName}
+                    onChange={(e) => setNewTokenName(e.target.value)}
+                    className="flex-1 h-9 px-3 rounded-lg bg-[#0A0908] border border-white/10 text-xs text-white focus:outline-none focus:border-[#6366F1]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleMintToken}
+                    disabled={mintingToken || !newTokenName.trim()}
+                    className="h-9 px-3 rounded-lg bg-[#6366F1] hover:bg-[#5254E8] text-white font-bold text-xs flex items-center gap-1 transition-all disabled:opacity-40 cursor-pointer"
+                  >
+                    {mintingToken ? 'Minting…' : 'Mint'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Freshly Minted Token Banner */}
+            {newlyMintedToken && (
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1.5 animate-fadeIn">
+                <div className="flex items-center justify-between text-[11px] text-emerald-400 font-mono font-bold">
+                  <span>Token Created (Copy Now — Won&apos;t be shown again)</span>
+                </div>
+                <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#0A0908] border border-emerald-500/20">
+                  <span className="text-xs font-mono text-white truncate flex-1 select-all">
+                    {newlyMintedToken}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(newlyMintedToken, 'Token', 'minted')}
+                    className="p-1 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 transition-colors cursor-pointer shrink-0"
+                  >
+                    {copiedKey === 'minted' ? <Check size={12} /> : <Copy size={12} />}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Active PATs List */}
+            {loadingTokens ? (
+              <div className="text-center py-3 text-xs text-white/40 font-mono">
+                Loading tokens…
+              </div>
+            ) : agentTokens.length === 0 ? (
+              <div className="p-3 rounded-xl bg-[#161412] border border-white/[0.04] text-center">
+                <p className="text-xs text-white/40 font-mono m-0">No active PAT tokens minted for this agent.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {agentTokens.map((tok: any) => (
+                  <div
+                    key={tok.$id || tok.id}
+                    className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.04] flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-white truncate block">
+                          {tok.name || 'Agent PAT'}
+                        </span>
+                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-white/5 text-white/50 font-bold">
+                          {tok.category || 'agentic_pat'}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-white/40 block truncate mt-0.5">
+                        {tok.tokenPrefix || 'kyl_apat_'}••••••••
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRevokeToken(tok.$id || tok.id)}
+                      className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-white/5 transition-colors cursor-pointer shrink-0"
+                      title="Revoke Token"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Action Tiles Grid */}

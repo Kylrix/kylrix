@@ -477,165 +477,103 @@ export function AgentsSettingsTab() {
         </div>
       </div>
 
-      {/* ── Section 4: Agent Provisioning Keys & CLI Integration ── */}
-      <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl space-y-4">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-[#6366F1]/12 border border-[#6366F1]/25 text-[#6366F1] flex items-center justify-center shrink-0">
-              <Terminal size={22} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-white font-black text-base font-clash m-0">Agent Provisioning & CLI Skill</h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#6366F1]/10 text-[#818CF8] font-bold">
-                  Zero-Trust
-                </span>
-              </div>
-              <p className="text-white/40 text-xs font-semibold m-0 mt-0.5">
-                Manage root keys (<code className="text-[#818CF8] font-mono">kyl_apk_…</code>) for automated external agents and CLI subagents.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => openAgentDrawer({ type: 'manage_provisioning_keys' })}
-              className="h-9 px-3.5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <Key size={13} />
-              <span>Manage Keys</span>
-            </button>
-
-            <Link
-              href="/docs/agents"
-              className="h-9 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white/70 hover:text-white text-xs font-bold flex items-center gap-1 transition-all"
-            >
-              <BookOpen size={13} />
-              <span>Docs</span>
-            </Link>
+      {/* ── Section 4: Condensed Security, CLI & Compute Control Tiles ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-white font-black text-lg tracking-tight leading-tight flex items-center gap-2 font-mono m-0">
+              <Terminal size={18} className="text-[#818CF8]" />
+              <span>Integrations & Compute</span>
+            </h3>
+            <p className="text-white/40 text-xs font-semibold mt-0.5 m-0">
+              Provisioning keys, terminal skill contracts, and LLM compute settings.
+            </p>
           </div>
         </div>
 
-        {/* Quick Skill Install Box */}
-        <div className="p-3.5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center gap-2">
-          <code className="flex-1 min-w-0 text-[11px] font-mono text-white/70 bg-[#161412] border border-white/[0.06] rounded-xl px-3 py-2 truncate select-all">
-            {KYLRIX_AGENTS_SKILL_INSTALL}
-          </code>
-          <button
-            type="button"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(KYLRIX_AGENTS_SKILL_INSTALL);
-                toast.success('Install command copied');
-              } catch {
-                toast.success(KYLRIX_AGENTS_SKILL_INSTALL);
-              }
-            }}
-            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-extrabold bg-white/[0.06] hover:bg-white/[0.12] text-white cursor-pointer shrink-0 transition-colors"
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          {/* Tile 1: Provisioning Keys */}
+          <div
+            onClick={() => openAgentDrawer({ type: 'manage_provisioning_keys' })}
+            className="p-4 bg-[#161412] border border-white/5 hover:border-white/15 hover:bg-[#1C1A18] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
           >
-            <Copy size={12} />
-            <span>Copy</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ── Section 5: Live AI Compute Allocation & BYOK ── */}
-      <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl space-y-4">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-[#10B981]/12 border border-[#10B981]/25 text-[#10B981] flex items-center justify-center shrink-0">
-              <Zap size={22} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-white font-black text-base font-clash m-0">Compute Credits & BYOK</h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#10B981]/10 text-[#10B981] font-bold uppercase tracking-wider">
-                  {hasByok ? 'BYOK Unlimited' : `${computeState?.tier || 'Pro'} Active`}
-                </span>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 text-[#818CF8] flex items-center justify-center shrink-0">
+                <Key size={18} />
               </div>
-              <p className="text-white/40 text-xs font-semibold m-0 mt-0.5">
-                Dynamic token pool for in-app assistant responses, summaries, and meta-prompts.
-              </p>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-white font-bold text-xs font-clash m-0 truncate group-hover:text-[#818CF8] transition-colors">
+                  Provisioning Keys (APK)
+                </h4>
+                <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">Root keys for CLI subagents</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-[11px] font-mono text-[#818CF8] border-t border-white/[0.04] pt-2">
+              <span>Manage Keys</span>
+              <ChevronRight size={12} />
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {hasByok && !showByokInput && (
-              <button
-                type="button"
-                onClick={handleDeleteByok}
-                disabled={byokSaving}
-                className="h-9 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
-              >
-                <Trash2 size={13} />
-                <span>Remove BYOK</span>
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setShowByokInput((prev) => !prev)}
-              className="h-9 px-3.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white font-extrabold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <Key size={13} className="text-[#10B981]" />
-              <span>{showByokInput ? 'Cancel' : hasByok ? 'Change Gemini Key' : 'Configure BYOK Key'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* BYOK Input Drawer / Box */}
-        {showByokInput && (
-          <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-3">
-            <label className="text-xs font-bold text-white/60 uppercase tracking-wider font-mono block">
-              Google Gemini API Key
-            </label>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="password"
-                value={byokKeyInput}
-                onChange={(e) => setByokKeyInput(e.target.value)}
-                placeholder="AIzaSy..."
-                className="flex-1 h-10 rounded-xl bg-[#161412] border border-white/[0.06] px-3 text-xs font-mono text-white placeholder:text-white/30 focus:outline-none focus:border-[#10B981]/40"
-              />
-              <button
-                type="button"
-                onClick={handleSaveByok}
-                disabled={byokSaving || !byokKeyInput.trim()}
-                className="h-10 px-5 rounded-xl bg-[#10B981] hover:bg-[#059669] text-black font-bold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 cursor-pointer"
-              >
-                {byokSaving ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-                <span>Save Key</span>
-              </button>
+          {/* Tile 2: CLI Skill Integration */}
+          <div
+            onClick={() => openAgentDrawer({ type: 'manage_cli_skill' })}
+            className="p-4 bg-[#161412] border border-white/5 hover:border-white/15 hover:bg-[#1C1A18] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-white/5 text-white/70 flex items-center justify-center shrink-0">
+                <Terminal size={18} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-white font-bold text-xs font-clash m-0 truncate group-hover:text-white transition-colors">
+                  Agent Skill & CLI
+                </h4>
+                <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">npx skills add kylrix/agents</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-[11px] font-mono text-white/50 border-t border-white/[0.04] pt-2">
+              <span>View Terminal Setup</span>
+              <ChevronRight size={12} />
             </div>
           </div>
-        )}
 
-        {/* Progress Bar */}
-        <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2.5">
-          <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-white/60">
-              {hasByok ? 'Compute Mode: Dedicated Private API Key' : 'Daily Available Pool:'}
-            </span>
-            <span className="text-white font-bold">
-              {hasByok
-                ? '∞ (Unthrottled BYOK)'
-                : `${(computeState?.balance ?? 100000).toLocaleString()} / ${(computeState?.maxBalance ?? 100000).toLocaleString()} Tokens (${Math.round(computeState?.percent ?? 100)}%)`}
-            </span>
-          </div>
-
-          <div className="w-full h-2 rounded-full bg-white/[0.06] overflow-hidden">
-            <div
-              className={`h-full transition-all duration-500 rounded-full ${
-                hasByok
-                  ? 'w-full bg-[#10B981]'
-                  : (computeState?.percent ?? 100) > 30
-                  ? 'bg-[#10B981]'
-                  : (computeState?.percent ?? 100) > 10
-                  ? 'bg-amber-500'
-                  : 'bg-red-500'
-              }`}
-              style={{ width: hasByok ? '100%' : `${computeState?.percent ?? 100}%` }}
-            />
+          {/* Tile 3: Compute & BYOK */}
+          <div
+            onClick={() =>
+              openAgentDrawer({
+                type: 'manage_byok',
+                hasByok,
+                computeState,
+                onSaveByok: async (k) => {
+                  await BYOKManager.saveKey(user!.$id, 'gemini', k);
+                  setHasByok(true);
+                  toast.success('Gemini key saved');
+                },
+                onDeleteByok: async () => {
+                  await BYOKManager.deleteKey(user!.$id, 'gemini');
+                  setHasByok(false);
+                  toast.success('Gemini key removed');
+                },
+              })
+            }
+            className="p-4 bg-[#161412] border border-white/5 hover:border-white/15 hover:bg-[#1C1A18] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+                <Zap size={18} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h4 className="text-white font-bold text-xs font-clash m-0 truncate group-hover:text-emerald-400 transition-colors">
+                  Compute & BYOK
+                </h4>
+                <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">
+                  {hasByok ? 'BYOK Active (Unlimited)' : 'Shared Daily Pool'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-[11px] font-mono text-emerald-400 border-t border-white/[0.04] pt-2">
+              <span>Configure Gemini Key</span>
+              <ChevronRight size={12} />
+            </div>
           </div>
         </div>
       </div>
