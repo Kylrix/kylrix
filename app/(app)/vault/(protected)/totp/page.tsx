@@ -336,7 +336,13 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
 
         const cleanup = await LocalEngine.subscribeRealtime(totpChannel, (payload: any) => {
           if (!payload || !payload.$id || cancelled) return;
-          if (payload.userId && payload.userId !== activeUserId) return;
+          const isOwn = !payload.userId || payload.userId === activeUserId;
+          const isWorkspaceItem =
+            payload.isWorkspace === true ||
+            Boolean(payload.projectId) ||
+            (Array.isArray(payload.tags) && payload.tags.some((t: string) => t.startsWith('workspace:') || t.startsWith('project:')));
+
+          if (!isOwn && !isWorkspaceItem) return;
 
           const isDeleted = payload.isDeleted === true || payload.isTrash === true;
           if (isDeleted) {

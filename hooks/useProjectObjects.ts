@@ -117,6 +117,62 @@ export function useProjectObjects(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, entityKind]);
 
+  // Realtime subscription for project_objects
+  useEffect(() => {
+    if (!projectId) return;
+    let unsub: (() => void) | null = null;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+        const channel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.project_objects.rows`;
+
+        const cleanup = await LocalEngine.subscribeRealtime(channel, (payload: any) => {
+          if (!payload || !payload.$id || cancelled) return;
+          if (payload.projectId && payload.projectId !== projectId) return;
+
+          const pKind = String(payload.entityKind || '').toLowerCase().trim();
+          const eKind = String(entityKind || '').toLowerCase().trim();
+          const isMatch =
+            pKind === eKind ||
+            (eKind === 'note' && (pKind === 'notes' || pKind === 'idea' || pKind === 'ideas')) ||
+            (eKind === 'goal' && (pKind === 'goals' || pKind === 'task' || pKind === 'tasks')) ||
+            (eKind === 'credential' && (pKind === 'credentials' || pKind === 'secret' || pKind === 'password')) ||
+            (eKind === 'totp' && pKind === 'totps') ||
+            (eKind === 'event' && pKind === 'events') ||
+            (eKind === 'form' && pKind === 'forms');
+
+          if (!isMatch) return;
+
+          const isDeleted = payload.isDeleted === true || payload.isTrash === true;
+          if (isDeleted) {
+            setRows((prev) => prev.filter((r) => r.$id !== payload.$id && r.entityId !== payload.entityId));
+            return;
+          }
+
+          setRows((prev) => {
+            const idx = prev.findIndex((r) => r.$id === payload.$id || (r.entityId && r.entityId === payload.entityId));
+            if (idx >= 0) {
+              const updated = [...prev];
+              updated[idx] = { ...updated[idx], ...payload };
+              return updated;
+            }
+            return [payload, ...prev];
+          });
+        });
+        if (cancelled) cleanup();
+        else unsub = cleanup;
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+      if (unsub) unsub();
+    };
+  }, [projectId, entityKind]);
+
   const refetch = useCallback(() => load(true), [load]);
 
   const invalidate = useCallback(() => {

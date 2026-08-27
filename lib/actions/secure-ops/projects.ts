@@ -2029,10 +2029,10 @@ export async function getSharedWorkspaceEntitiesSecure(
         await queryAndCollect(APPWRITE_CONFIG.TABLES.FLOW.FORMS, false);
         break;
       case 'credential':
-        await queryAndCollect(APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS, false);
+        await queryAndCollect(APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS, true);
         break;
       case 'totp':
-        await queryAndCollect(APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS, false);
+        await queryAndCollect(APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS, true);
         break;
       case 'agent_session':
         await queryAndCollect('agentic_sessions', false);

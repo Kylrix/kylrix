@@ -2302,6 +2302,9 @@ export const ApiResources = {
     const now = new Date().toISOString();
     const itemType = String(body.itemType || body.type || 'login').slice(0, 50);
 
+    const userTags = Array.isArray(body.tags) ? body.tags.map(String) : [];
+    const tags = wsId ? Array.from(new Set([...userTags, `workspace:${wsId}`, `project:${wsId}`])) : userTags;
+
     const row = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
       tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
@@ -2325,19 +2328,26 @@ export const ApiResources = {
         isFavorite: body.isFavorite === true,
         isPinned: body.isPinned === true,
         isDeleted: false,
-        tags: Array.isArray(body.tags) ? body.tags.map(String) : [],
+        tags,
         createdAt: now,
         updatedAt: now,
       },
-      permissions: [
-        Permission.read(Role.user(actor.userId)),
-        Permission.update(Role.user(actor.userId)),
-        Permission.delete(Role.user(actor.userId)),
-      ],
+      permissions: wsId
+        ? [
+            Permission.read(Role.any()),
+            Permission.update(Role.user(actor.userId)),
+            Permission.delete(Role.user(actor.userId)),
+          ]
+        : [
+            Permission.read(Role.user(actor.userId)),
+            Permission.update(Role.user(actor.userId)),
+            Permission.delete(Role.user(actor.userId)),
+          ],
     });
 
     if (wsId) {
       await linkObjectToWorkspace(tables, wsId, 'credential', itemId, actor.userId, { title: name });
+      await linkObjectToWorkspace(tables, wsId, 'secret', itemId, actor.userId, { title: name });
     }
 
     return {
@@ -2349,7 +2359,7 @@ export const ApiResources = {
       folderId: (row as any).folderId,
       isFavorite: !!(row as any).isFavorite,
       isPinned: !!(row as any).isPinned,
-      tags: Array.isArray(body.tags) ? body.tags.map(String) : [],
+      tags,
       secret: rawSecret || null,
       password: rawSecret || null,
       notes: body.notes != null ? String(body.notes) : null,
@@ -2650,8 +2660,8 @@ export const ApiResources = {
       mekBytes
     );
 
-    const itemId = ID.unique();
-    const now = new Date().toISOString();
+    const userTags = Array.isArray(body.tags) ? body.tags.map(String) : [];
+    const tags = wsId ? Array.from(new Set([...userTags, `workspace:${wsId}`, `project:${wsId}`])) : userTags;
 
     const row = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
@@ -2670,15 +2680,21 @@ export const ApiResources = {
         folderId: body.folderId != null ? String(body.folderId) : null,
         isFavorite: body.isFavorite === true,
         isDeleted: false,
-        tags: Array.isArray(body.tags) ? body.tags.map(String) : [],
+        tags,
         createdAt: now,
         updatedAt: now,
       },
-      permissions: [
-        Permission.read(Role.user(actor.userId)),
-        Permission.update(Role.user(actor.userId)),
-        Permission.delete(Role.user(actor.userId)),
-      ],
+      permissions: wsId
+        ? [
+            Permission.read(Role.any()),
+            Permission.update(Role.user(actor.userId)),
+            Permission.delete(Role.user(actor.userId)),
+          ]
+        : [
+            Permission.read(Role.user(actor.userId)),
+            Permission.update(Role.user(actor.userId)),
+            Permission.delete(Role.user(actor.userId)),
+          ],
     });
 
     if (wsId) {
@@ -2695,7 +2711,7 @@ export const ApiResources = {
       period: (row as any).period,
       folderId: (row as any).folderId,
       isFavorite: !!(row as any).isFavorite,
-      tags: Array.isArray(body.tags) ? body.tags.map(String) : [],
+      tags,
       secretKey,
       createdAt: now,
       updatedAt: now,
