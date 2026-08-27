@@ -30,7 +30,13 @@ export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
     throw err;
   }
 
-  if (bearer.startsWith('kyl_pat_')) {
+  if (
+    bearer.startsWith('kyl_pat_') ||
+    bearer.startsWith('kyl_apat_') ||
+    bearer.startsWith('kyl_apk_') ||
+    bearer.startsWith('kyl_wpat_') ||
+    bearer.startsWith('pat_')
+  ) {
     const verified = await PatService.verifyBearer(bearer);
     if (!verified) {
       const err = new Error('Invalid or revoked personal access token');

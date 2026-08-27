@@ -645,7 +645,28 @@ export const ApiResources = {
     const now = new Date().toISOString();
     const tables = createSystemTablesDB();
 
-    // 1. Create an initial dedicated agentic workspace for this agent
+    // 1. Generate autonomous keys & sovereign MEK entropy
+    const rawEntropy = new Uint8Array(32);
+    const nodeCrypto = await import('crypto');
+    nodeCrypto.randomFillSync(rawEntropy);
+
+    const secp = await import('@noble/secp256k1');
+    const { bech32 } = await import('@scure/base');
+    const { keccak_256 } = await import('@noble/hashes/sha3.js');
+
+    const secpPub = secp.getPublicKey(rawEntropy, false).slice(1);
+    const evmHash = keccak_256(secpPub);
+    const walletAddress = '0x' + Array.from(evmHash.slice(-20)).map((b) => b.toString(16).padStart(2, '0')).join('').toLowerCase();
+
+    const nostrPubRaw = secp.getPublicKey(rawEntropy, true).slice(1);
+    const nostrPubkeyHex = Array.from(nostrPubRaw).map((b) => b.toString(16).padStart(2, '0')).join('');
+    const nostrWords = bech32.toWords(nostrPubRaw);
+    const nostrNpub = bech32.encode('npub', nostrWords);
+
+    const agentUserId = `agent_${agentId}`;
+    const cleanHandle = `ag_${name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '') || agentId.slice(0, 8)}`;
+
+    // 2. Create an initial dedicated agentic workspace for this agent
     const workspaceTitle = String(body.initialWorkspaceTitle || `${name}'s Workspace`).trim().slice(0, 255);
     const wsRow = await tables.createRow({
       databaseId: FLOW_DB,
@@ -666,7 +687,82 @@ export const ApiResources = {
       permissions: [Permission.read(Role.user(actor.userId))],
     }).catch(() => null);
 
-    // 2. Mint dedicated Agentic PAT for this agent with full operational permissions
+    const workspaceId = wsRow ? (wsRow as any).$id : null;
+
+    // 3. Insert agent record into agents table
+    await tables.createRow({
+      databaseId: FLOW_DB,
+      tableId: 'agents',
+      rowId: agentId,
+      data: {
+        ownerId: actor.userId,
+        publicKey: nostrNpub,
+        config: JSON.stringify({
+          name,
+          agentType,
+          agentUserId,
+          username: cleanHandle,
+          walletAddress,
+          nostrNpub,
+          workspaceId,
+          capabilities: body.capabilities || ['notes', 'goals', 'chats', 'nostr'],
+          createdAt: now,
+        }),
+        status: 'active',
+        isPublic: true,
+        isGuest: true,
+      },
+      permissions: [Permission.read(Role.any()), Permission.update(Role.user(actor.userId))],
+    }).catch((err) => console.warn('[ApiResources.provisionAgent] Failed to insert agents table:', err?.message || err));
+
+    // 4. Create sovereign agent profile in profiles table
+    await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
+      rowId: agentUserId,
+      data: {
+        userId: agentUserId,
+        username: cleanHandle,
+        displayName: `${name.trim()} (Smart Agent)`,
+        bio: String(body.bio || body.goal || `Autonomous ${agentType} smart partner`),
+        walletAddress,
+        publicKey: nostrNpub,
+        status: 'online',
+        preferences: JSON.stringify({
+          isAgentic: true,
+          ownerId: actor.userId,
+          agentId,
+          agentType,
+          role: String(body.role || name),
+          goal: String(body.goal || ''),
+          nostrNpub,
+          walletAddress,
+          updatedAt: now,
+        }),
+        isPublic: true,
+        isGuest: true,
+        isAvatar: true,
+        isContact: true,
+        isOnlineVisible: true,
+      },
+      permissions: [Permission.read(Role.any()), Permission.update(Role.user(actor.userId))],
+    }).catch(async () => {
+      // If row exists, update it
+      await tables.updateRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+        tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
+        rowId: agentUserId,
+        data: {
+          username: cleanHandle,
+          displayName: `${name.trim()} (Smart Agent)`,
+          walletAddress,
+          publicKey: nostrNpub,
+          status: 'online',
+        },
+      }).catch(() => null);
+    });
+
+    // 5. Mint dedicated Agentic PAT for this agent with full operational permissions
     const agentScopes = Array.isArray(body.scopes) && body.scopes.length > 0
       ? body.scopes
       : [
@@ -692,11 +788,16 @@ export const ApiResources = {
 
     return {
       agentId,
+      agentUserId,
+      username: cleanHandle,
       name,
       agentType,
       agentToken: agentPatResult.token,
-      workspaceId: wsRow ? (wsRow as any).$id : null,
+      workspaceId,
       workspaceTitle,
+      walletAddress,
+      nostrNpub,
+      publicKey: nostrNpub,
       ownerId: actor.userId,
       createdAt: now,
     };
