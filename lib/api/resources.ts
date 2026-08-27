@@ -13,6 +13,12 @@ import {
 } from '@/lib/appwrite/note';
 import { createNoteCreationService } from '@/lib/sdk';
 import { WorkflowDbService } from '@/lib/services/workflows';
+import {
+  generateRandomVaultSecret,
+  parseMekToBytes,
+  sealVaultSecret,
+  unsealVaultSecret,
+} from '@/lib/api/vault-crypto';
 
 const DB = APPWRITE_CONFIG.DATABASES.NOTE;
 const NOTES = APPWRITE_CONFIG.TABLES.NOTE?.NOTES || APPWRITE_CONFIG.TABLES.NOTES;
@@ -347,9 +353,18 @@ export const ApiResources = {
     requireScope(actor, 'notes:write');
     const tables = createSystemTablesDB();
     await assertOwnedNote(tables, actor, id);
-    await tables.deleteRow({ databaseId: DB, tableId: NOTES, rowId: id });
+    await tables.updateRow({
+      databaseId: DB,
+      tableId: NOTES,
+      rowId: id,
+      data: {
+        isTrash: true,
+        isDeleted: true,
+        updatedAt: new Date().toISOString(),
+      },
+    });
     await unlinkObjectFromWorkspace(tables, 'note', id);
-    return { id, deleted: true };
+    return { id, deleted: true, trashed: true };
   },
 
   async listGoals(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {
@@ -454,9 +469,19 @@ export const ApiResources = {
     requireScope(actor, 'goals:write');
     const tables = createSystemTablesDB();
     await assertOwnedGoal(tables, actor, id);
-    await tables.deleteRow({ databaseId: FLOW_DB, tableId: TASKS, rowId: id });
+    await tables.updateRow({
+      databaseId: FLOW_DB,
+      tableId: TASKS,
+      rowId: id,
+      data: {
+        isTrash: true,
+        isDeleted: true,
+        status: 'trash',
+        updatedAt: new Date().toISOString(),
+      },
+    });
     await unlinkObjectFromWorkspace(tables, 'goal', id);
-    return { id, deleted: true };
+    return { id, deleted: true, trashed: true };
   },
 
   async listFlows(actor: ApiActor, limit = 25) {
@@ -865,6 +890,10 @@ export const ApiResources = {
           'notes:write',
           'goals:read',
           'goals:write',
+          'vault:read',
+          'vault:write',
+          'trash:read',
+          'trash:write',
           'chats:read',
           'chats:write',
           'agents:read',
@@ -1743,8 +1772,17 @@ export const ApiResources = {
     requireScope(actor, 'events:write');
     await this.getEvent(actor, id);
     const tables = createSystemTablesDB();
-    await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'events', rowId: id });
-    return { id, deleted: true };
+    await tables.updateRow({
+      databaseId: FLOW_DB,
+      tableId: 'events',
+      rowId: id,
+      data: {
+        isDeleted: true,
+        isTrash: true,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+    return { id, deleted: true, trashed: true };
   },
 
   async getForm(actor: ApiActor, id: string) {
@@ -1812,8 +1850,17 @@ export const ApiResources = {
     requireScope(actor, 'forms:write');
     await this.getForm(actor, id);
     const tables = createSystemTablesDB();
-    await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'forms', rowId: id });
-    return { id, deleted: true };
+    await tables.updateRow({
+      databaseId: FLOW_DB,
+      tableId: 'forms',
+      rowId: id,
+      data: {
+        isDeleted: true,
+        isTrash: true,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+    return { id, deleted: true, trashed: true };
   },
 
   async installFlow(actor: ApiActor, body: Record<string, unknown>) {
@@ -1848,7 +1895,7 @@ export const ApiResources = {
     }));
   },
 
-  async listVaultItems(actor: ApiActor, limit = 25) {
+  async listVaultItems(actor: ApiActor, limit = 25, opts?: { mek?: string | null }) {
     requireScope(actor, 'vault:read');
     const tables = createSystemTablesDB();
     const res = await tables.listRows({
@@ -1861,18 +1908,492 @@ export const ApiResources = {
         Query.limit(Math.min(100, Math.max(1, limit))),
       ],
     });
-    // Metadata only — never return password / card secrets over PAT
-    return res.rows.map((r: any) => ({
+
+    const mekBytes = opts?.mek ? parseMekToBytes(opts.mek) : null;
+
+    return Promise.all(
+      res.rows.map(async (r: any) => {
+        let decryptedSecret: string | null = null;
+        let decryptedNotes: string | null = null;
+
+        if (mekBytes && r.password) {
+          try {
+            decryptedSecret = await unsealVaultSecret(r.password, r.dek || null, mekBytes);
+          } catch {}
+        }
+        if (mekBytes && r.notes) {
+          try {
+            decryptedNotes = await unsealVaultSecret(r.notes, r.dek || null, mekBytes);
+          } catch {}
+        }
+
+        return {
+          id: r.$id,
+          name: r.name || 'Untitled',
+          itemType: r.itemType || 'login',
+          url: r.url || null,
+          username: r.username || null,
+          folderId: r.folderId || null,
+          isFavorite: !!r.isFavorite,
+          isPinned: !!r.isPinned,
+          updatedAt: r.$updatedAt || r.updatedAt || null,
+          createdAt: r.$createdAt || r.createdAt || null,
+          hasSecret: !!(r.password || r.cardNumber),
+          ...(decryptedSecret !== null ? { secret: decryptedSecret, password: decryptedSecret } : {}),
+          ...(decryptedNotes !== null ? { notes: decryptedNotes } : {}),
+        };
+      }),
+    );
+  },
+
+  async getVaultItem(actor: ApiActor, id: string, opts?: { mek?: string | null }) {
+    requireScope(actor, 'vault:read');
+    const tables = createSystemTablesDB();
+    const r = (await tables
+      .getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
+        rowId: id,
+      })
+      .catch(() => null)) as any;
+
+    if (!r || r.userId !== actor.userId || r.isDeleted) notFound('Vault item not found');
+
+    const mekBytes = opts?.mek ? parseMekToBytes(opts.mek) : null;
+    let decryptedSecret: string | null = null;
+    let decryptedNotes: string | null = null;
+
+    if (mekBytes && r.password) {
+      try {
+        decryptedSecret = await unsealVaultSecret(r.password, r.dek || null, mekBytes);
+      } catch (e: any) {
+        console.warn('[ApiResources.getVaultItem] Decrypt failed:', e?.message || e);
+      }
+    }
+    if (mekBytes && r.notes) {
+      try {
+        decryptedNotes = await unsealVaultSecret(r.notes, r.dek || null, mekBytes);
+      } catch {}
+    }
+
+    return {
       id: r.$id,
       name: r.name || 'Untitled',
-      itemType: r.itemType || null,
+      itemType: r.itemType || 'login',
       url: r.url || null,
       username: r.username || null,
       folderId: r.folderId || null,
       isFavorite: !!r.isFavorite,
+      isPinned: !!r.isPinned,
       updatedAt: r.$updatedAt || r.updatedAt || null,
+      createdAt: r.$createdAt || r.createdAt || null,
       hasSecret: !!(r.password || r.cardNumber),
-    }));
+      ...(decryptedSecret !== null ? { secret: decryptedSecret, password: decryptedSecret } : {}),
+      ...(decryptedNotes !== null ? { notes: decryptedNotes } : {}),
+    };
+  },
+
+  async createVaultItem(actor: ApiActor, body: Record<string, unknown>, opts?: { mek?: string | null }) {
+    requireScope(actor, 'vault:write');
+    const name = String(body.name || body.title || '').trim();
+    if (!name) badRequest('name required');
+
+    const rawMek = opts?.mek || (body.mek as string);
+    if (!rawMek || typeof rawMek !== 'string' || !rawMek.trim()) {
+      const err = new Error('Vault creation requires MEK (pass X-Kylrix-MEK header or mek body property)');
+      (err as any).status = 400;
+      (err as any).code = 'mek_required';
+      throw err;
+    }
+    const mekBytes = parseMekToBytes(rawMek);
+
+    let rawSecret = body.secret != null ? String(body.secret) : (body.password != null ? String(body.password) : '');
+    let wasGenerated = false;
+
+    if (!rawSecret) {
+      const genOptions = (body.generateOptions && typeof body.generateOptions === 'object' ? body.generateOptions : {}) as any;
+      rawSecret = generateRandomVaultSecret(genOptions);
+      wasGenerated = true;
+    }
+
+    const { encrypted: encryptedPassword, wrappedDek } = await sealVaultSecret(rawSecret, mekBytes);
+
+    let encryptedNotes: string | null = null;
+    if (body.notes != null && String(body.notes).trim().length > 0) {
+      const sealedNotes = await sealVaultSecret(String(body.notes), mekBytes, wrappedDek);
+      encryptedNotes = sealedNotes.encrypted;
+    }
+
+    const tables = createSystemTablesDB();
+    const itemId = ID.unique();
+    const now = new Date().toISOString();
+    const itemType = String(body.itemType || body.type || 'login').slice(0, 50);
+
+    const row = await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+      tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
+      rowId: itemId,
+      data: {
+        userId: actor.userId,
+        name: name.slice(0, 100),
+        username: body.username != null ? String(body.username).slice(0, 255) : null,
+        password: encryptedPassword,
+        dek: wrappedDek,
+        url: body.url != null ? String(body.url).slice(0, 2048) : null,
+        notes: encryptedNotes,
+        itemType,
+        folderId: body.folderId != null ? String(body.folderId) : null,
+        isFavorite: body.isFavorite === true,
+        isPinned: body.isPinned === true,
+        isDeleted: false,
+        tags: Array.isArray(body.tags) ? body.tags.map(String) : [],
+        createdAt: now,
+        updatedAt: now,
+      },
+      permissions: [
+        Permission.read(Role.user(actor.userId)),
+        Permission.update(Role.user(actor.userId)),
+        Permission.delete(Role.user(actor.userId)),
+      ],
+    });
+
+    return {
+      id: (row as any).$id,
+      name: (row as any).name,
+      username: (row as any).username,
+      itemType: (row as any).itemType,
+      url: (row as any).url,
+      folderId: (row as any).folderId,
+      isFavorite: !!(row as any).isFavorite,
+      isPinned: !!(row as any).isPinned,
+      secret: rawSecret,
+      password: rawSecret,
+      notes: body.notes != null ? String(body.notes) : null,
+      generated: wasGenerated,
+      createdAt: now,
+      updatedAt: now,
+    };
+  },
+
+  async updateVaultItem(actor: ApiActor, id: string, body: Record<string, unknown>, opts?: { mek?: string | null }) {
+    requireScope(actor, 'vault:write');
+    const tables = createSystemTablesDB();
+    const existing = (await tables
+      .getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
+        rowId: id,
+      })
+      .catch(() => null)) as any;
+
+    if (!existing || existing.userId !== actor.userId) notFound('Vault item not found');
+
+    const patch: Record<string, unknown> = {
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (body.name !== undefined) patch.name = String(body.name).trim().slice(0, 100);
+    if (body.username !== undefined) patch.username = body.username == null ? null : String(body.username).slice(0, 255);
+    if (body.url !== undefined) patch.url = body.url == null ? null : String(body.url).slice(0, 2048);
+    if (body.itemType !== undefined) patch.itemType = String(body.itemType).slice(0, 50);
+    if (body.folderId !== undefined) patch.folderId = body.folderId == null ? null : String(body.folderId);
+    if (body.isFavorite !== undefined) patch.isFavorite = !!body.isFavorite;
+    if (body.isPinned !== undefined) patch.isPinned = !!body.isPinned;
+    if (body.tags !== undefined && Array.isArray(body.tags)) patch.tags = body.tags.map(String);
+
+    const rawMek = opts?.mek || (body.mek as string);
+    if (body.secret !== undefined || body.password !== undefined || body.notes !== undefined) {
+      if (!rawMek || typeof rawMek !== 'string' || !rawMek.trim()) {
+        badRequest('Updating encrypted secret/notes requires MEK header X-Kylrix-MEK or mek body property');
+      }
+      const mekBytes = parseMekToBytes(rawMek);
+
+      if (body.secret !== undefined || body.password !== undefined) {
+        const rawSecret = String(body.secret ?? body.password ?? '');
+        const { encrypted, wrappedDek } = await sealVaultSecret(rawSecret, mekBytes, existing.dek);
+        patch.password = encrypted;
+        patch.dek = wrappedDek;
+      }
+
+      if (body.notes !== undefined) {
+        if (body.notes == null || String(body.notes).trim() === '') {
+          patch.notes = null;
+        } else {
+          const { encrypted } = await sealVaultSecret(String(body.notes), mekBytes, (patch.dek as string) || existing.dek);
+          patch.notes = encrypted;
+        }
+      }
+    }
+
+    await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+      tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
+      rowId: id,
+      data: patch as any,
+    });
+
+    return this.getVaultItem(actor, id, opts);
+  },
+
+  async deleteVaultItem(actor: ApiActor, id: string) {
+    requireScope(actor, 'vault:write');
+    const tables = createSystemTablesDB();
+    const existing = (await tables
+      .getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
+        rowId: id,
+      })
+      .catch(() => null)) as any;
+
+    if (!existing || existing.userId !== actor.userId) notFound('Vault item not found');
+
+    await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+      tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
+      rowId: id,
+      data: {
+        isDeleted: true,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+
+    return { id, deleted: true, trashed: true };
+  },
+
+  async listTrash(actor: ApiActor, limit = 50, opts?: { kind?: string | null }) {
+    if (!actor.scopes.includes('trash:read') && !actor.scopes.includes('notes:read') && !actor.scopes.includes('vault:read')) {
+      requireScope(actor, 'trash:read');
+    }
+    const tables = createSystemTablesDB();
+    const targetKind = opts?.kind ? String(opts.kind).toLowerCase() : null;
+    const items: any[] = [];
+    const lim = Math.min(100, Math.max(1, limit));
+
+    // 1. Trashed Notes
+    if (!targetKind || targetKind === 'note' || targetKind === 'notes') {
+      const notesRes = await tables.listRows({
+        databaseId: DB,
+        tableId: NOTES,
+        queries: [
+          Query.equal('userId', actor.userId),
+          Query.equal('isDeleted', true),
+          Query.orderDesc('$updatedAt'),
+          Query.limit(lim),
+        ],
+      }).catch(() => ({ rows: [] as any[] }));
+      for (const r of notesRes.rows) {
+        items.push({
+          id: r.$id,
+          kind: 'note',
+          title: r.title || 'Untitled note',
+          summary: r.summary || (r.content ? String(r.content).slice(0, 140) : ''),
+          updatedAt: r.$updatedAt || r.updatedAt || null,
+          deletedAt: r.$updatedAt || r.updatedAt || null,
+        });
+      }
+    }
+
+    // 2. Trashed Goals / Tasks
+    if (!targetKind || targetKind === 'goal' || targetKind === 'goals' || targetKind === 'task' || targetKind === 'tasks') {
+      const tasksRes = await tables.listRows({
+        databaseId: FLOW_DB,
+        tableId: TASKS,
+        queries: [
+          Query.equal('userId', actor.userId),
+          Query.equal('isDeleted', true),
+          Query.orderDesc('$updatedAt'),
+          Query.limit(lim),
+        ],
+      }).catch(() => ({ rows: [] as any[] }));
+      for (const r of tasksRes.rows) {
+        items.push({
+          id: r.$id,
+          kind: 'goal',
+          title: r.title || 'Untitled goal',
+          status: r.status || 'trash',
+          updatedAt: r.$updatedAt || r.updatedAt || null,
+          deletedAt: r.$updatedAt || r.updatedAt || null,
+        });
+      }
+    }
+
+    // 3. Trashed Vault Credentials
+    if (!targetKind || targetKind === 'vault' || targetKind === 'secret' || targetKind === 'credential' || targetKind === 'credentials') {
+      const vaultRes = await tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
+        queries: [
+          Query.equal('userId', actor.userId),
+          Query.equal('isDeleted', true),
+          Query.orderDesc('$updatedAt'),
+          Query.limit(lim),
+        ],
+      }).catch(() => ({ rows: [] as any[] }));
+      for (const r of vaultRes.rows) {
+        items.push({
+          id: r.$id,
+          kind: 'vault',
+          title: r.name || 'Untitled secret',
+          itemType: r.itemType || 'login',
+          username: r.username || null,
+          url: r.url || null,
+          updatedAt: r.$updatedAt || r.updatedAt || null,
+          deletedAt: r.$updatedAt || r.updatedAt || null,
+        });
+      }
+    }
+
+    // 4. Trashed Events
+    if (!targetKind || targetKind === 'event' || targetKind === 'events') {
+      const eventRes = await tables.listRows({
+        databaseId: FLOW_DB,
+        tableId: 'events',
+        queries: [
+          Query.equal('userId', actor.userId),
+          Query.equal('isDeleted', true),
+          Query.orderDesc('$updatedAt'),
+          Query.limit(lim),
+        ],
+      }).catch(() => ({ rows: [] as any[] }));
+      for (const r of eventRes.rows) {
+        items.push({
+          id: r.$id,
+          kind: 'event',
+          title: r.title || r.name || 'Untitled event',
+          updatedAt: r.$updatedAt || r.updatedAt || null,
+          deletedAt: r.$updatedAt || r.updatedAt || null,
+        });
+      }
+    }
+
+    // 5. Trashed Forms
+    if (!targetKind || targetKind === 'form' || targetKind === 'forms') {
+      const formRes = await tables.listRows({
+        databaseId: FLOW_DB,
+        tableId: 'forms',
+        queries: [
+          Query.equal('userId', actor.userId),
+          Query.equal('isDeleted', true),
+          Query.orderDesc('$updatedAt'),
+          Query.limit(lim),
+        ],
+      }).catch(() => ({ rows: [] as any[] }));
+      for (const r of formRes.rows) {
+        items.push({
+          id: r.$id,
+          kind: 'form',
+          title: r.title || r.name || 'Untitled form',
+          updatedAt: r.$updatedAt || r.updatedAt || null,
+          deletedAt: r.$updatedAt || r.updatedAt || null,
+        });
+      }
+    }
+
+    items.sort((a, b) => new Date(b.deletedAt || 0).getTime() - new Date(a.deletedAt || 0).getTime());
+    return items.slice(0, lim);
+  },
+
+  async restoreTrash(actor: ApiActor, body: Record<string, unknown>) {
+    if (!actor.scopes.includes('trash:write') && !actor.scopes.includes('notes:write') && !actor.scopes.includes('vault:write')) {
+      requireScope(actor, 'trash:write');
+    }
+    const id = String(body.id || body.resourceId || '').trim();
+    if (!id) badRequest('id required');
+    const kind = String(body.kind || body.type || 'note').toLowerCase();
+    const tables = createSystemTablesDB();
+    const now = new Date().toISOString();
+
+    if (kind === 'vault' || kind === 'secret' || kind === 'credential') {
+      await tables.updateRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
+        rowId: id,
+        data: { isDeleted: false, updatedAt: now },
+      });
+      return { id, kind: 'vault', restored: true };
+    }
+
+    if (kind === 'note') {
+      await tables.updateRow({
+        databaseId: DB,
+        tableId: NOTES,
+        rowId: id,
+        data: { isDeleted: false, isTrash: false, updatedAt: now },
+      });
+      return { id, kind: 'note', restored: true };
+    }
+
+    if (kind === 'goal' || kind === 'task') {
+      await tables.updateRow({
+        databaseId: FLOW_DB,
+        tableId: TASKS,
+        rowId: id,
+        data: { isDeleted: false, isTrash: false, status: 'todo', updatedAt: now },
+      });
+      return { id, kind: 'goal', restored: true };
+    }
+
+    if (kind === 'event') {
+      await tables.updateRow({
+        databaseId: FLOW_DB,
+        tableId: 'events',
+        rowId: id,
+        data: { isDeleted: false, isTrash: false, updatedAt: now },
+      });
+      return { id, kind: 'event', restored: true };
+    }
+
+    if (kind === 'form') {
+      await tables.updateRow({
+        databaseId: FLOW_DB,
+        tableId: 'forms',
+        rowId: id,
+        data: { isDeleted: false, isTrash: false, updatedAt: now },
+      });
+      return { id, kind: 'form', restored: true };
+    }
+
+    badRequest(`Unknown trash kind: ${kind}`);
+  },
+
+  async purgeTrash(actor: ApiActor, body: Record<string, unknown>) {
+    requireScope(actor, 'trash:write');
+    const id = String(body.id || body.resourceId || '').trim();
+    if (!id) badRequest('id required');
+    const kind = String(body.kind || body.type || 'note').toLowerCase();
+    const tables = createSystemTablesDB();
+
+    if (kind === 'vault' || kind === 'secret' || kind === 'credential') {
+      await tables.deleteRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
+        rowId: id,
+      });
+      return { id, kind: 'vault', purged: true };
+    }
+
+    if (kind === 'note') {
+      await tables.deleteRow({ databaseId: DB, tableId: NOTES, rowId: id });
+      return { id, kind: 'note', purged: true };
+    }
+
+    if (kind === 'goal' || kind === 'task') {
+      await tables.deleteRow({ databaseId: FLOW_DB, tableId: TASKS, rowId: id });
+      return { id, kind: 'goal', purged: true };
+    }
+
+    if (kind === 'event') {
+      await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'events', rowId: id });
+      return { id, kind: 'event', purged: true };
+    }
+
+    if (kind === 'form') {
+      await tables.deleteRow({ databaseId: FLOW_DB, tableId: 'forms', rowId: id });
+      return { id, kind: 'form', purged: true };
+    }
+
+    badRequest(`Unknown trash kind: ${kind}`);
   },
 
   async listMoments(actor: ApiActor, limit = 25, opts?: { mine?: boolean }) {

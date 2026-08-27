@@ -39,6 +39,8 @@ export const PAT_SCOPES = [
   'moments:write',
   'tags:read',
   'tags:write',
+  'trash:read',
+  'trash:write',
 ] as const;
 
 export type PatScope = (typeof PAT_SCOPES)[number];
@@ -78,6 +80,8 @@ export const PAT_SCOPE_META: Record<
   'moments:write': { label: 'Write moments' },
   'tags:read': { label: 'Read tags' },
   'tags:write': { label: 'Write tags' },
+  'trash:read': { label: 'Read trashed items' },
+  'trash:write': { label: 'Restore or purge trashed items', danger: true },
 };
 
 export function normalizeScopes(input: unknown): PatScope[] {

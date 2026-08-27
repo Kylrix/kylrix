@@ -14,6 +14,7 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
   const method = req.method.toUpperCase();
   const [a, b, c, d] = parts;
   const limit = () => Number(req.nextUrl.searchParams.get('limit') || 25);
+  const mekHeader = req.headers.get('x-kylrix-mek') || req.headers.get('X-Kylrix-MEK') || req.nextUrl.searchParams.get('mek');
 
   if (method === 'GET' && a === 'me' && !b) {
     return jsonOk(await ApiResources.me(actor));
@@ -229,9 +230,54 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
     return jsonOk(await ApiResources.appendHarnessMirror(actor, c, await readBody(req)));
   }
 
-  // Vault metadata
-  if (a === 'vault' && (!b || b === 'items') && !c && method === 'GET') {
-    return jsonOk(await ApiResources.listVaultItems(actor, limit()));
+  // Vault
+  if (a === 'vault' && (!b || b === 'items') && !c) {
+    if (method === 'GET') {
+      return jsonOk(await ApiResources.listVaultItems(actor, limit(), { mek: mekHeader }));
+    }
+    if (method === 'POST') {
+      const body = await readBody(req);
+      return jsonOk(await ApiResources.createVaultItem(actor, body, { mek: mekHeader || (body.mek as string) }));
+    }
+  }
+  if (a === 'vault' && b && b !== 'items' && !c) {
+    if (method === 'GET') {
+      return jsonOk(await ApiResources.getVaultItem(actor, b, { mek: mekHeader }));
+    }
+    if (method === 'PATCH' || method === 'PUT') {
+      const body = await readBody(req);
+      return jsonOk(await ApiResources.updateVaultItem(actor, b, body, { mek: mekHeader || (body.mek as string) }));
+    }
+    if (method === 'DELETE') {
+      return jsonOk(await ApiResources.deleteVaultItem(actor, b));
+    }
+  }
+
+  // Trash / Recovery System
+  if (a === 'trash' && !b) {
+    if (method === 'GET') {
+      const kind = req.nextUrl.searchParams.get('kind') || undefined;
+      return jsonOk(await ApiResources.listTrash(actor, limit(), { kind }));
+    }
+    if (method === 'POST') {
+      const body = await readBody(req);
+      if (body.action === 'restore' || body.restore) {
+        return jsonOk(await ApiResources.restoreTrash(actor, body));
+      }
+      if (body.action === 'purge' || body.purge) {
+        return jsonOk(await ApiResources.purgeTrash(actor, body));
+      }
+      return jsonOk(await ApiResources.restoreTrash(actor, body));
+    }
+  }
+  if (a === 'trash' && b === 'restore' && !c && method === 'POST') {
+    return jsonOk(await ApiResources.restoreTrash(actor, await readBody(req)));
+  }
+  if (a === 'trash' && b === 'purge' && !c && method === 'POST') {
+    return jsonOk(await ApiResources.purgeTrash(actor, await readBody(req)));
+  }
+  if (a === 'trash' && b && c && !d && method === 'DELETE') {
+    return jsonOk(await ApiResources.purgeTrash(actor, { kind: b, id: c }));
   }
 
   // Feeds
