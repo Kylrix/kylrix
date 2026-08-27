@@ -32,6 +32,91 @@ function BareBonesMasterpassUnlock() {
   const [busy, setBusy] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+  const [detectedEngine, setDetectedEngine] = useState<{
+    algo: 'Argon2id' | 'PBKDF2' | 'None' | 'Checking';
+    saltBytes: number;
+    hasPasswordEntry: boolean;
+    hasPasskeyEntry: boolean;
+    totalEntries: number;
+    rawParams?: any;
+  }>({
+    algo: 'Checking',
+    saltBytes: 0,
+    hasPasswordEntry: false,
+    hasPasskeyEntry: false,
+    totalEntries: 0,
+  });
+
+  const detectLiveEngine = React.useCallback(async () => {
+    if (!user?.$id) return;
+    try {
+      const { SecurityEnclave } = await import('@/lib/security/enclave');
+      const { AppwriteService } = await import('@/lib/appwrite');
+
+      let entries = await SecurityEnclave.getKeychain(user.$id);
+      if (!entries.length && typeof navigator !== 'undefined' && navigator.onLine) {
+        entries = await AppwriteService.listKeychainEntries(user.$id).catch(() => []);
+      }
+
+      if (!entries.length) {
+        setDetectedEngine({
+          algo: 'None',
+          saltBytes: 0,
+          hasPasswordEntry: false,
+          hasPasskeyEntry: false,
+          totalEntries: 0,
+        });
+        return;
+      }
+
+      const pwdEntry = entries.find((e: any) => e.type === 'password');
+      const hasPasskey = entries.some((e: any) => e.type === 'passkey');
+
+      if (!pwdEntry) {
+        setDetectedEngine({
+          algo: 'None',
+          saltBytes: 0,
+          hasPasswordEntry: false,
+          hasPasskeyEntry: hasPasskey,
+          totalEntries: entries.length,
+        });
+        return;
+      }
+
+      const decodeB64Len = (b64: string) => {
+        try {
+          const norm = b64.replace(/-/g, '+').replace(/_/g, '/');
+          const pad = norm.padEnd(Math.ceil(norm.length / 4) * 4, '=');
+          return atob(pad).length;
+        } catch {
+          return 0;
+        }
+      };
+
+      const saltLen = pwdEntry.salt ? decodeB64Len(pwdEntry.salt) : 0;
+      const isArgon = Boolean(
+        pwdEntry.isArgon ||
+        saltLen === 32 ||
+        (typeof pwdEntry.params === 'string' && pwdEntry.params.includes('Argon2id')) ||
+        pwdEntry.params?.algo === 'Argon2id'
+      );
+
+      setDetectedEngine({
+        algo: isArgon ? 'Argon2id' : 'PBKDF2',
+        saltBytes: saltLen,
+        hasPasswordEntry: true,
+        hasPasskeyEntry: hasPasskey,
+        totalEntries: entries.length,
+        rawParams: pwdEntry.params,
+      });
+    } catch {
+      setDetectedEngine(prev => ({ ...prev, algo: 'None' }));
+    }
+  }, [user?.$id]);
+
+  React.useEffect(() => {
+    detectLiveEngine();
+  }, [detectLiveEngine]);
 
   const handleCopyLogs = () => {
     if (!logs.length) return;
@@ -176,6 +261,43 @@ function BareBonesMasterpassUnlock() {
         <p className="text-xs text-white/50 leading-relaxed font-satoshi">
           Bare-bones first-principles diagnostic: tests key derivation (Argon2id/PBKDF2) and MEK unwrap with real-time logs.
         </p>
+
+        {/* Live Detected Engine Status */}
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-[#0A0908] border border-white/5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-white/50 font-medium">Live Detected Engine:</span>
+            {detectedEngine.algo === 'Checking' ? (
+              <span className="text-[11px] font-mono text-white/40">Detecting…</span>
+            ) : detectedEngine.algo === 'Argon2id' ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-extrabold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                <ShieldCheck className="w-3 h-3" />
+                Argon2id (T5 Modern)
+              </span>
+            ) : detectedEngine.algo === 'PBKDF2' ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-extrabold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                <ShieldAlert className="w-3 h-3" />
+                PBKDF2 (Legacy T4)
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-white/5 text-white/40 border border-white/10">
+                No Password Credential
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-[11px] font-mono text-white/40">
+            <span>Salt: {detectedEngine.saltBytes}B</span>
+            <span>·</span>
+            <span>Entries: {detectedEngine.totalEntries}</span>
+            <button
+              type="button"
+              onClick={detectLiveEngine}
+              className="text-[10px] text-white/60 hover:text-white underline cursor-pointer"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
         <form onSubmit={handleTestUnlock} className="flex flex-col sm:flex-row gap-2">
           <input
             type="password"
