@@ -262,7 +262,7 @@ export function DevelopersTab() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-white truncate">{pat.name}</p>
                   <p className="text-[11px] text-white/40 font-mono truncate">
-                    kyl_pat_{pat.tokenPrefix}_… · {pat.status}
+                    {pat.category === 'agent_provisioning_key' ? 'kyl_apk_' : pat.category === 'agentic_pat' ? 'kyl_apat_' : pat.category === 'workspace_pat' ? 'kyl_wpat_' : 'kyl_pat_'}{pat.tokenPrefix}_… · {pat.status}
                     {pat.scopes?.length ? ` · ${pat.scopes.length} perms` : ''}
                   </p>
                 </div>

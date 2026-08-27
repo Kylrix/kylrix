@@ -7,6 +7,8 @@ import { normalizeScopes, type PatScope } from '@/lib/api/scopes';
 const DB = APPWRITE_CONFIG.DATABASES.FLOW;
 const TABLE = 'pats';
 
+export type PatCategory = 'user_pat' | 'agent_provisioning_key' | 'agentic_pat' | 'workspace_pat';
+
 export type PatRow = {
   $id: string;
   userId: string;
@@ -33,6 +35,8 @@ export type PatPublic = {
   lastUsedAt: string | null;
   isWorkspace: boolean;
   workspaceId: string | null;
+  category: PatCategory;
+  agentId: string | null;
   createdAt: string | null;
 };
 
@@ -44,24 +48,77 @@ function makeSecret() {
   return randomBytes(24).toString('base64url');
 }
 
-/** Full token shown once: kyl_pat_<appwriteUniqueId>_<secret> */
-export function formatPatToken(prefix: string, secret: string) {
+/** Full token format: kyl_<type>_<prefix>_<secret> */
+export function formatPatToken(
+  prefix: string, 
+  secret: string, 
+  category: PatCategory = 'user_pat'
+) {
+  if (category === 'agent_provisioning_key') {
+    return `kyl_apk_${prefix}_${secret}`;
+  }
+  if (category === 'agentic_pat') {
+    return `kyl_apat_${prefix}_${secret}`;
+  }
+  if (category === 'workspace_pat') {
+    return `kyl_wpat_${prefix}_${secret}`;
+  }
   return `kyl_pat_${prefix}_${secret}`;
 }
 
-export function parsePatToken(raw: string): { prefix: string; token: string } | null {
+export function parsePatToken(raw: string): { prefix: string; token: string; category: PatCategory } | null {
   const token = String(raw || '').trim();
-  if (!token.startsWith('kyl_pat_')) return null;
-  const rest = token.slice('kyl_pat_'.length);
+  let category: PatCategory = 'user_pat';
+  let rest = '';
+
+  if (token.startsWith('kyl_apk_')) {
+    category = 'agent_provisioning_key';
+    rest = token.slice('kyl_apk_'.length);
+  } else if (token.startsWith('kyl_apat_')) {
+    category = 'agentic_pat';
+    rest = token.slice('kyl_apat_'.length);
+  } else if (token.startsWith('kyl_wpat_')) {
+    category = 'workspace_pat';
+    rest = token.slice('kyl_wpat_'.length);
+  } else if (token.startsWith('kyl_pat_')) {
+    category = 'user_pat';
+    rest = token.slice('kyl_pat_'.length);
+  } else if (token.startsWith('pat_')) {
+    category = 'user_pat';
+    rest = token.slice('pat_'.length);
+  } else {
+    return null;
+  }
+
   const idx = rest.indexOf('_');
   if (idx < 4) return null;
   const prefix = rest.slice(0, idx);
   if (!prefix || rest.length <= idx + 8) return null;
-  return { prefix, token };
+  return { prefix, token, category };
+}
+
+function inferCategory(row: PatRow): { category: PatCategory; agentId: string | null } {
+  const isWs = row.isWorkspace === true || String(row.isWorkspace) === 'true';
+  if (isWs) return { category: 'workspace_pat', agentId: null };
+
+  const scopes = normalizeScopes(row.scopes);
+  const name = row.name || '';
+  
+  if (name.includes('(Agentic PAT)') || name.toLowerCase().startsWith('agent:') || name.toLowerCase().includes('agentic')) {
+    return { category: 'agentic_pat', agentId: row.workspaceId || null };
+  }
+  if (scopes.length === 1 && scopes.includes('agents:provision')) {
+    return { category: 'agent_provisioning_key', agentId: null };
+  }
+  if (name.toLowerCase().includes('provisioning key') || name.toLowerCase().includes('agent key')) {
+    return { category: 'agent_provisioning_key', agentId: null };
+  }
+  return { category: 'user_pat', agentId: null };
 }
 
 function toPublic(row: PatRow): PatPublic {
   const isWs = row.isWorkspace === true || String(row.isWorkspace) === 'true';
+  const { category, agentId } = inferCategory(row);
   return {
     id: row.$id,
     name: row.name,
@@ -72,6 +129,8 @@ function toPublic(row: PatRow): PatPublic {
     lastUsedAt: row.lastUsedAt || null,
     isWorkspace: isWs,
     workspaceId: row.workspaceId || null,
+    category,
+    agentId,
     createdAt: row.createdAt || row.$id ? (row as any).$createdAt || row.createdAt || null : null,
   };
 }
@@ -86,6 +145,8 @@ export const PatService = {
     expiresAt?: string | null;
     isWorkspace?: boolean;
     workspaceId?: string | null;
+    keyCategory?: PatCategory;
+    agentId?: string | null;
   }): Promise<{ pat: PatPublic; token: string }> {
     const scopes = normalizeScopes(params.scopes);
     if (scopes.length === 0) throw new Error('Select at least one permission');
@@ -93,10 +154,17 @@ export const PatService = {
     const name = String(params.name || '').trim().slice(0, 128);
     if (!name) throw new Error('Name is required');
 
+    let category: PatCategory = params.keyCategory || 'user_pat';
+    if (!params.keyCategory) {
+      if (params.isWorkspace) category = 'workspace_pat';
+      else if (params.agentId || name.includes('(Agentic PAT)')) category = 'agentic_pat';
+      else if (scopes.length === 1 && scopes.includes('agents:provision')) category = 'agent_provisioning_key';
+    }
+
     const rowId = ID.unique();
     const tokenPrefix = randomBytes(6).toString('base64url').slice(0, 8);
     const secret = makeSecret();
-    const token = formatPatToken(tokenPrefix, secret);
+    const token = formatPatToken(tokenPrefix, secret, category);
     const tokenHash = hashToken(token);
     const now = new Date().toISOString();
     const tables = createSystemTablesDB();
@@ -117,7 +185,7 @@ export const PatService = {
         expiresAt: params.expiresAt || null,
         lastUsedAt: null,
         isWorkspace: isWs ? 'true' : 'false',
-        workspaceId: params.workspaceId || null,
+        workspaceId: params.workspaceId || params.agentId || null,
         createdAt: now,
         updatedAt: now,
       },
@@ -156,7 +224,15 @@ export const PatService = {
     return { pat: toPublic(row as unknown as PatRow), token };
   },
 
-  async listForUser(userId: string, opts?: { isWorkspace?: boolean; workspaceId?: string }): Promise<PatPublic[]> {
+  async listForUser(
+    userId: string, 
+    opts?: { 
+      isWorkspace?: boolean; 
+      workspaceId?: string; 
+      category?: PatCategory;
+      agentId?: string;
+    }
+  ): Promise<PatPublic[]> {
     const tables = createSystemTablesDB();
     const queries = [
       Query.equal('userId', userId),
@@ -169,14 +245,13 @@ export const PatService = {
       queries,
     });
     const all = (res.rows as unknown as PatRow[]).map(toPublic);
-    if (opts?.isWorkspace !== undefined) {
-      return all.filter((p) => {
-        if (p.isWorkspace !== opts.isWorkspace) return false;
-        if (opts.workspaceId) return p.workspaceId === opts.workspaceId;
-        return true;
-      });
-    }
-    return all;
+    return all.filter((p) => {
+      if (opts?.isWorkspace !== undefined && p.isWorkspace !== opts.isWorkspace) return false;
+      if (opts?.workspaceId && p.workspaceId !== opts.workspaceId) return false;
+      if (opts?.category && p.category !== opts.category) return false;
+      if (opts?.agentId && p.agentId !== opts.agentId && p.workspaceId !== opts.agentId) return false;
+      return true;
+    });
   },
 
   async revoke(params: { patId: string; userId: string }) {

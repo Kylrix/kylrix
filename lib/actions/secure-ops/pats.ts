@@ -12,6 +12,8 @@ export async function createPatSecure(params: {
   expiresAt?: string | null;
   isWorkspace?: boolean;
   workspaceId?: string | null;
+  keyCategory?: import('@/lib/services/pats').PatCategory;
+  agentId?: string | null;
   jwt?: string;
 }) {
   const actor = await getActor(params.jwt);
@@ -23,15 +25,25 @@ export async function createPatSecure(params: {
     expiresAt: params.expiresAt,
     isWorkspace: params.isWorkspace,
     workspaceId: params.workspaceId,
+    keyCategory: params.keyCategory,
+    agentId: params.agentId,
   });
 }
 
-export async function listPatsSecure(opts?: { isWorkspace?: boolean; workspaceId?: string; jwt?: string }) {
+export async function listPatsSecure(opts?: { 
+  isWorkspace?: boolean; 
+  workspaceId?: string; 
+  category?: import('@/lib/services/pats').PatCategory;
+  agentId?: string;
+  jwt?: string; 
+}) {
   const actor = await getActor(opts?.jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
   const data = await PatService.listForUser(actor.$id, {
     isWorkspace: opts?.isWorkspace,
     workspaceId: opts?.workspaceId,
+    category: opts?.category,
+    agentId: opts?.agentId,
   });
   return { success: true, data };
 }

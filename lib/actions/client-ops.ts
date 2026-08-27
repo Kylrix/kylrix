@@ -538,13 +538,20 @@ export async function createPat(params: {
   expiresAt?: string | null;
   isWorkspace?: boolean;
   workspaceId?: string | null;
+  keyCategory?: import('@/lib/services/pats').PatCategory;
+  agentId?: string | null;
 }) {
   const jwt = await getJwt();
   const { createPatSecure } = await import('./secure-ops');
   return createPatSecure({ ...params, jwt });
 }
 
-export async function listPats(opts?: { isWorkspace?: boolean; workspaceId?: string }) {
+export async function listPats(opts?: { 
+  isWorkspace?: boolean; 
+  workspaceId?: string;
+  category?: import('@/lib/services/pats').PatCategory;
+  agentId?: string;
+}) {
   const jwt = await getJwt();
   const { listPatsSecure } = await import('./secure-ops');
   return listPatsSecure({ ...opts, jwt });

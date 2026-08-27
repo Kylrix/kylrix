@@ -503,6 +503,7 @@ export const ApiResources = {
       userId: actor.userId,
       name,
       scopes,
+      keyCategory: 'agent_provisioning_key',
       expiresAt: body.expiresAt != null ? String(body.expiresAt) : null,
     });
   },
@@ -558,6 +559,8 @@ export const ApiResources = {
       userId: actor.userId,
       name: `${name} (Agentic PAT)`,
       scopes: agentScopes,
+      keyCategory: 'agentic_pat',
+      agentId,
     });
 
     return {
