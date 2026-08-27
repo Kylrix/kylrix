@@ -421,6 +421,13 @@ export default function SudoModal({
             );
 
             if (success) {
+                setHasMasterpass(true);
+                SUDO_DETECT_CACHE.set(user.$id, {
+                    hasPass: true,
+                    pending: false,
+                    passkeyPresent: passkeyPresent || false,
+                    timestamp: Date.now()
+                });
                 // IF MIGRATING: Don't call handleSuccessWithSync yet.
                 if (isMigratingRef.current) {
                     return;

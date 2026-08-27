@@ -397,12 +397,57 @@ class MasterPassCrypto {
               ciphertext
             );
             usedFallbackPBKDF2 = true;
-          } catch (_fallbackErr) {
-            // Both failed: Genuine invalid password — error out safely without touching rows
-            return false;
+          } catch (_fallbackErr) {}
+        }
+      }
+
+      // JIT Recovery: If initial local decrypt failed or was missing, attempt immediate remote sync
+      if (!decryptedMek && typeof navigator !== 'undefined' && navigator.onLine !== false) {
+        try {
+          logDebug("[Vault] Local unwrap failed. Attempting JIT remote sync of keychain...");
+          const { SecurityEnclave } = await import('@/lib/security/enclave');
+          await SecurityEnclave.hydrateFromRemote(userId, { force: true });
+          const { AppwriteService } = await import('./appwrite');
+          const freshEntries = await AppwriteService.listKeychainEntries(userId).catch(() => []);
+          const passwordEntries = freshEntries.filter((r: any) => r.type === 'password');
+
+          for (const entry of passwordEntries) {
+            if (!entry.wrappedKey || !entry.salt) continue;
+            const entrySalt = this.decodeBase64(entry.salt);
+            const isArgonCheck = Boolean(
+              entry.isArgon ||
+              entrySalt.length === MasterPassCrypto.SALT_SIZE ||
+              (typeof entry.params === 'string' && entry.params.includes('Argon2id')) ||
+              entry.params?.algo === 'Argon2id'
+            );
+
+            const candidateKeyBytes = this.decodeBase64(entry.wrappedKey);
+            if (candidateKeyBytes.length <= MasterPassCrypto.IV_SIZE) continue;
+            const candidateIv = candidateKeyBytes.slice(0, MasterPassCrypto.IV_SIZE);
+            const candidateCiphertext = candidateKeyBytes.slice(MasterPassCrypto.IV_SIZE);
+
+            for (const tryArgon of (isArgonCheck ? [true, false] : [false, true])) {
+              try {
+                const freshAuthKey = await this.deriveKey(password, entrySalt, tryArgon);
+                const testMek = await crypto.subtle.decrypt(
+                  { name: 'AES-GCM', iv: candidateIv },
+                  freshAuthKey,
+                  candidateCiphertext
+                );
+                if (testMek) {
+                  decryptedMek = testMek;
+                  keychainEntry = entry;
+                  isArgon = tryArgon;
+                  usedFallbackPBKDF2 = !tryArgon && isArgonCheck;
+                  logDebug('[Vault] JIT recovery unwrap succeeded.');
+                  break;
+                }
+              } catch {}
+            }
+            if (decryptedMek) break;
           }
-        } else {
-          return false;
+        } catch (recoveryErr) {
+          logDebug('[Vault] Recovery sync failed:', recoveryErr);
         }
       }
 
@@ -416,6 +461,15 @@ class MasterPassCrypto {
         true,
         ["encrypt", "decrypt", "wrapKey", "unwrapKey"]
       );
+
+      // Cleanse stale boolean and update Enclave state
+      try {
+        const { SecurityEnclave } = await import('@/lib/security/enclave');
+        await SecurityEnclave.touchMeta(userId, {
+          hasMasterpass: true,
+          keychainCount: Math.max(1, (await SecurityEnclave.getKeychain(userId)).length),
+        });
+      } catch {}
 
       // --- SEAMLESS MIGRATION: Trigger ONLY after confirmed PBKDF2 unlock ---
       if (!isArgon || usedFallbackPBKDF2) {
