@@ -170,6 +170,12 @@ export function useWorkspaceFilteredItems<T extends WorkspaceItemLike>(
       return false;
     });
 
+    const sortDesc = (a: T, b: T) => {
+      const timeA = new Date((a as any).$updatedAt || (a as any).updatedAt || (a as any).$createdAt || (a as any).createdAt || 0).getTime();
+      const timeB = new Date((b as any).$updatedAt || (b as any).updatedAt || (b as any).$createdAt || (b as any).createdAt || 0).getTime();
+      return timeB - timeA;
+    };
+
     if (isSharedWorkspace || sharedWorkspaceRows.length > 0) {
       const byId = new Map<string, T>();
       // 1. Add shared workspace rows from Server SDK (unsealed by agent MEK)
@@ -182,10 +188,10 @@ export function useWorkspaceFilteredItems<T extends WorkspaceItemLike>(
         const id = (r as any).$id || (r as any).id;
         if (id && !byId.has(id)) byId.set(id, r);
       });
-      return Array.from(byId.values());
+      return Array.from(byId.values()).sort(sortDesc);
     }
 
-    return localMatching;
+    return localMatching.sort(sortDesc);
   }, [
     items,
     activeWorkspace,

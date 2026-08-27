@@ -396,7 +396,9 @@ function DashboardPageContent() {
       const bPinned = isResourcePinned('credential', b.$id, b.userId, b.isPinned);
       if (aPinned && !bPinned) return -1;
       if (!aPinned && bPinned) return 1;
-      return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
+      const timeA = new Date((a as any).$updatedAt || (a as any).updatedAt || (a as any).$createdAt || (a as any).createdAt || 0).getTime();
+      const timeB = new Date((b as any).$updatedAt || (b as any).updatedAt || (b as any).$createdAt || (b as any).createdAt || 0).getTime();
+      return timeB - timeA;
     });
   }, [allCredentials, isResourcePinned]);
 
