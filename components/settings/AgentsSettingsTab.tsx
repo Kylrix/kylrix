@@ -437,17 +437,17 @@ export function AgentsSettingsTab() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           {SYSTEM_AGENTS.map((agent) => {
             const isKylie = agent.id === 'kylie';
             return (
               <div
                 key={agent.id}
                 onClick={() => setSelectedAgentForAction(agent)}
-                className="p-3.5 bg-[#161412] border border-white/5 hover:border-white/15 hover:bg-[#1C1A18] rounded-[20px] shadow-lg flex flex-col justify-between gap-2.5 transition-all duration-200 cursor-pointer group"
+                className="p-4 bg-[#161412] border border-white/5 hover:border-white/15 hover:bg-[#1C1A18] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
               >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center text-sm shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center text-lg shrink-0">
                     {agent.avatar}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -456,20 +456,18 @@ export function AgentsSettingsTab() {
                         {agent.name}
                       </h4>
                       {isKylie && (
-                        <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-[#F59E0B]/15 text-[#F59E0B] font-bold">
+                        <span className="text-[8px] font-mono px-1.5 py-0.2 rounded bg-[#F59E0B]/15 text-[#F59E0B] font-bold">
                           Core
                         </span>
                       )}
                     </div>
-                    <p className="text-white/40 text-[11px] m-0 truncate">{agent.role}</p>
+                    <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">{agent.role}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] font-mono text-white/40 border-t border-white/[0.04] pt-2">
-                  <span className="flex items-center gap-1 text-[10px]">
-                    <Lock size={10} className="text-emerald-400" /> Live Prompt
-                  </span>
-                  <span className="text-[#F59E0B] font-bold group-hover:underline text-[10px]">Inspect →</span>
+                <div className="flex items-center justify-between text-[11px] font-mono text-[#F59E0B] border-t border-white/[0.04] pt-2">
+                  <span>Inspect & Prompt</span>
+                  <ChevronRight size={12} />
                 </div>
               </div>
             );

@@ -918,25 +918,54 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
                   {mode.hasByok ? 'BYOK Unlimited' : `${mode.computeState?.tier || 'Pro'} Tier`}
                 </span>
               </div>
-              <p className="text-xs text-white/50 m-0">
+              <p className="text-xs text-white/50 m-0 leading-relaxed">
                 {mode.hasByok
-                  ? 'Your private Google Gemini key is active. All agent prompts use your private quota directly without daily throttling.'
-                  : 'You are using the shared daily ecosystem compute pool. Add a private key for unlimited generation.'}
+                  ? 'Your private Google Gemini key is active. All agent prompts and summary passes use your private quota directly without daily ecosystem rate caps.'
+                  : 'You are using the shared daily ecosystem compute pool. Add a private Gemini API key for unthrottled generation.'}
               </p>
             </div>
 
+            {/* Token Allocation Bar */}
+            <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="text-white/60">
+                  {mode.hasByok ? 'Private API Key Mode:' : 'Daily Token Pool:'}
+                </span>
+                <span className="text-white font-bold">
+                  {mode.hasByok
+                    ? '∞ (Uncapped)'
+                    : `${(mode.computeState?.balance ?? 100000).toLocaleString()} / ${(mode.computeState?.maxBalance ?? 100000).toLocaleString()} Tokens`}
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 rounded-full ${
+                    mode.hasByok ? 'w-full bg-[#10B981]' : 'bg-[#10B981]'
+                  }`}
+                  style={{ width: mode.hasByok ? '100%' : `${mode.computeState?.percent ?? 100}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-white/40 font-mono m-0 pt-1">
+                Replenishes automatically every 24 hours.
+              </p>
+            </div>
+
+            {/* Private API Key Input Card */}
             <div className="p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-3">
               <label className="text-xs font-bold text-white font-mono uppercase tracking-wider block">
                 Google Gemini API Key
               </label>
+              <p className="text-xs text-white/40 m-0">
+                Key is sealed securely in your user preferences and never shared across tenants.
+              </p>
               <input
                 type="password"
                 value={byokInput}
                 onChange={(e) => setByokInput(e.target.value)}
-                placeholder={mode.hasByok ? '••••••••••••••••••••••••' : 'AIzaSy...'}
+                placeholder={mode.hasByok ? '•••••••••••••••••••••••• (Active)' : 'AIzaSy...'}
                 className="w-full h-11 rounded-xl bg-[#161412] border border-white/[0.08] px-3.5 text-xs font-mono text-white placeholder:text-white/30 focus:outline-none focus:border-[#10B981]"
               />
-              <div className="flex gap-2">
+              <div className="flex gap-2 pt-1">
                 {mode.hasByok && (
                   <button
                     type="button"
@@ -973,7 +1002,7 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
                   className="flex-1 h-10 rounded-xl bg-[#10B981] hover:bg-[#059669] text-black font-bold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 cursor-pointer shadow-lg shadow-[#10B981]/10"
                 >
                   {savingByok ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
-                  <span>Save Gemini Key</span>
+                  <span>{mode.hasByok ? 'Update Key' : 'Save Gemini Key'}</span>
                 </button>
               </div>
             </div>
@@ -988,7 +1017,7 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
                 Agent Skill CLI Installation
               </span>
               <p className="text-xs text-white/50 leading-relaxed m-0">
-                Install the official Kylrix autonomous agent skill into Cursor, Claude Code, Antigravity, or your custom CLI agent.
+                Install the official Kylrix autonomous agent skill into Cursor, Claude Code, Antigravity, or your custom CLI agent with one command:
               </p>
               <div className="p-3 rounded-xl bg-[#161412] border border-white/[0.06] flex items-center justify-between gap-2">
                 <code className="text-xs font-mono text-[#818CF8] truncate select-all">
@@ -1009,19 +1038,52 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
 
             <div className="p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-3">
               <span className="text-xs font-bold text-white font-mono uppercase tracking-wider block">
-                Environment Variables
+                Shell Environment Variables
               </span>
               <p className="text-xs text-white/50 leading-relaxed m-0">
-                Set your agent provisioning key in your local shell to allow headless agents to connect:
+                Set your agent provisioning key in your local shell to allow headless agents to authenticate:
               </p>
-              <div className="p-3 rounded-xl bg-[#161412] border border-white/[0.06] font-mono text-xs text-white/70 space-y-1">
-                <div>export KYLRIX_AGENT_KEY=kyl_apk_...</div>
-                <div>export KYLRIX_API_URL=http://localhost:3005/api/v1</div>
+              <div className="p-3 rounded-xl bg-[#161412] border border-white/[0.06] font-mono text-xs text-white/70 space-y-1.5 select-all">
+                <div className="text-emerald-400">export KYLRIX_AGENT_KEY=kyl_apk_...</div>
+                <div className="text-white/60">export KYLRIX_API_URL=http://localhost:3005/api/v1</div>
+              </div>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2.5">
+              <span className="text-xs font-bold text-white font-mono uppercase tracking-wider block">
+                Agent Capability Matrix
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono text-white/60">
+                <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.04]">
+                  ✓ Zero-Trust MEK Encryption
+                </div>
+                <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.04]">
+                  ✓ Nostr Sovereign Profiles
+                </div>
+                <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.04]">
+                  ✓ Agentic PAT Sub-tokens
+                </div>
+                <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.04]">
+                  ✓ Autonomous Workspace Scopes
+                </div>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Fixed Non-Scrolling Bottom Action Bars for BYOK and CLI Skill */}
+      {(mode.type === 'manage_byok' || mode.type === 'manage_cli_skill' || mode.type === 'preview_system' || mode.type === 'select_default') && (
+        <div className="shrink-0 border-t border-white/[0.06] bg-[#161412] px-5 py-3 md:py-3.5 z-10 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full h-10 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs transition-colors cursor-pointer"
+          >
+            Done
+          </button>
+        </div>
+      )}
 
       {/* Fixed Non-Scrolling Bottom Action Bars */}
       {(mode.type === 'create_custom' || mode.type === 'edit_custom') && (

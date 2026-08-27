@@ -142,10 +142,56 @@ Drawer top action bars must follow a strict 3-slot button order:
 
 ---
 
+## 11. Multi-Item Catalogs & Interactive Action Tiles (Canonical Standard)
+
+When rendering groups of multiple items (specialist agents, integrations, compute keys, or resource cards), use the **OpenBricks 4.0 Multi-Item Tile Standard**:
+
+```tsx
+<div
+  onClick={handleOpenDrawer}
+  className="p-4 bg-[#161412] border border-white/5 hover:border-white/15 hover:bg-[#1C1A18] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
+>
+  {/* Top: Icon + Title + Subtitle */}
+  <div className="flex items-center gap-3 min-w-0">
+    <div className="w-10 h-10 rounded-xl bg-[var(--accent)]/10 text-[var(--accent)] flex items-center justify-center text-lg shrink-0">
+      <Icon size={18} />
+    </div>
+    <div className="min-w-0 flex-1">
+      <div className="flex items-center gap-1.5">
+        <h4 className="text-white font-bold text-xs font-clash m-0 truncate group-hover:text-[var(--accent)] transition-colors">
+          {item.name}
+        </h4>
+        {item.isBadge && (
+          <span className="text-[8px] font-mono px-1.5 py-0.2 rounded bg-[var(--accent)]/15 text-[var(--accent)] font-bold">
+            {item.badge}
+          </span>
+        )}
+      </div>
+      <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">{item.description}</p>
+    </div>
+  </div>
+
+  {/* Bottom: Hairline Divider + Action CTA + Chevron */}
+  <div className="flex items-center justify-between text-[11px] font-mono text-[var(--accent)] border-t border-white/[0.04] pt-2">
+    <span>{actionLabel}</span>
+    <ChevronRight size={12} />
+  </div>
+</div>
+```
+
+### Key Architectural Mandates for Multi-Item Tiles:
+1. **Responsive Fluid Grids**: Layout cards in `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5` (or `sm:grid-cols-3` for 3-item utility rows).
+2. **Generous Corner Radii**: Always use `rounded-[22px]`.
+3. **Contained Surface Contrast**: Opaque ash base (`#161412`), hairline boundary (`border-white/5`), and subtle hover illumination (`hover:border-white/15 hover:bg-[#1C1A18]`).
+4. **Separated Action Footers**: A hairline top divider (`border-t border-white/[0.04] pt-2`) anchoring the action label and `ChevronRight` at the bottom of each tile for consistent visual balance.
+
+---
+
 ## Summary Checklist for OpenBricks 4.0 Upgrades
 
 | Feature | Old (SaaS-y / Clunky) | OpenBricks 4.0 (Tactile & Clean) |
 |---|---|---|
+| **Multi-Item Cards** | Inconsistent padding / random heights | Standardized `rounded-[22px]` tiles with hairline bottom CTAs |
 | **Access Picker** | Sub-drawer popup inside bottom drawer | Inline segmented toggle (`Public` / `Private`) |
 | **Drawer Height** | Dynamic / content-based varying height | Fixed 60% viewport height (`60dvh`) |
 | **Drag Handles** | Centered floating pill drag handles | Thin 1px outline edge (`rgba(255,255,255,0.08)`) |
