@@ -88,6 +88,114 @@ async function assertOwnedGoal(tables: ReturnType<typeof createSystemTablesDB>, 
   return row;
 }
 
+const CHAT_DB = APPWRITE_CONFIG.DATABASES.CHAT;
+const PROJECT_OBJECTS = 'project_objects';
+
+async function linkObjectToWorkspace(
+  tables: ReturnType<typeof createSystemTablesDB>,
+  projectId: string,
+  entityKind: 'note' | 'goal' | 'form' | 'event' | 'credential' | 'totp' | 'agent_session',
+  entityId: string,
+  userId: string,
+  metadata?: any
+) {
+  const now = new Date().toISOString();
+  try {
+    const existing = await tables.listRows({
+      databaseId: CHAT_DB,
+      tableId: PROJECT_OBJECTS,
+      queries: [
+        Query.equal('projectId', projectId),
+        Query.equal('entityKind', entityKind),
+        Query.equal('entityId', entityId),
+        Query.limit(1),
+      ],
+    }).catch(() => ({ rows: [] as any[] }));
+    if (existing.rows && existing.rows.length > 0) return existing.rows[0];
+
+    return await tables.createRow({
+      databaseId: CHAT_DB,
+      tableId: PROJECT_OBJECTS,
+      rowId: ID.unique(),
+      data: {
+        projectId,
+        entityKind,
+        entityId,
+        role: 'member',
+        metadata: metadata ? (typeof metadata === 'string' ? metadata : JSON.stringify(metadata)) : null,
+        createdAt: now,
+        updatedAt: now,
+      },
+      permissions: [Permission.read(Role.any()), Permission.update(Role.user(userId))],
+    });
+  } catch (err) {
+    console.warn(`[ApiResources] Failed to link ${entityKind} ${entityId} to workspace ${projectId}:`, err);
+    return null;
+  }
+}
+
+async function unlinkObjectFromWorkspace(
+  tables: ReturnType<typeof createSystemTablesDB>,
+  entityKind: string,
+  entityId: string
+) {
+  try {
+    const res = await tables.listRows({
+      databaseId: CHAT_DB,
+      tableId: PROJECT_OBJECTS,
+      queries: [
+        Query.equal('entityKind', entityKind),
+        Query.equal('entityId', entityId),
+        Query.limit(25),
+      ],
+    }).catch(() => ({ rows: [] as any[] }));
+    for (const r of res.rows || []) {
+      await tables.deleteRow({
+        databaseId: CHAT_DB,
+        tableId: PROJECT_OBJECTS,
+        rowId: (r as any).$id,
+      }).catch(() => null);
+    }
+  } catch (err) {
+    console.warn(`[ApiResources] Failed to unlink ${entityKind} ${entityId}:`, err);
+  }
+}
+
+async function getWorkspaceObjectIds(
+  tables: ReturnType<typeof createSystemTablesDB>,
+  projectId: string,
+  entityKind?: string
+): Promise<string[]> {
+  try {
+    const queries = [Query.equal('projectId', projectId), Query.limit(100)];
+    if (entityKind) queries.push(Query.equal('entityKind', entityKind));
+    const res = await tables.listRows({
+      databaseId: CHAT_DB,
+      tableId: PROJECT_OBJECTS,
+      queries,
+    }).catch(() => ({ rows: [] as any[] }));
+    return (res.rows || []).map((r: any) => r.entityId).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+async function getAllLinkedWorkspaceObjectIds(
+  tables: ReturnType<typeof createSystemTablesDB>,
+  entityKind: string
+): Promise<Set<string>> {
+  try {
+    const res = await tables.listRows({
+      databaseId: CHAT_DB,
+      tableId: PROJECT_OBJECTS,
+      queries: [Query.equal('entityKind', entityKind), Query.limit(500)],
+    }).catch(() => ({ rows: [] as any[] }));
+    return new Set((res.rows || []).map((r: any) => r.entityId).filter(Boolean));
+  } catch {
+    return new Set();
+  }
+}
+
 /**
  * HTTP API resource CRUD — TablesDB as the actor user via system client.
  * Tools stay internal; routes do not expose tool.execute.
@@ -109,31 +217,28 @@ export const ApiResources = {
     const { isExcludedNote, ideaListExclusionQueries } = await import('@/lib/appwrite/note');
 
     if (opts?.workspaceId) {
-      const links = await tables.listRows({
-        databaseId: FLOW_DB,
-        tableId: 'objects',
-        queries: [
-          Query.equal('parentId', opts.workspaceId),
-          Query.equal('childKind', 'note'),
-          Query.limit(Math.min(100, Math.max(1, limit))),
-        ],
-      }).catch(() => ({ rows: [] as any[] }));
+      const wsId = opts.workspaceId;
+      const noteIds = await getWorkspaceObjectIds(tables, wsId, 'note');
 
-      const noteIds = links.rows.map((r: any) => r.childId).filter(Boolean);
-      if (noteIds.length === 0) return [];
-
+      const seen = new Set<string>();
       const rows: any[] = [];
+
       for (const nid of noteIds) {
+        if (seen.has(nid)) continue;
+        seen.add(nid);
         const row = (await tables
           .getRow({ databaseId: DB, tableId: NOTES, rowId: nid })
           .catch(() => null)) as any;
-        if (row && (row.userId === actor.userId || row.isPublic) && !isExcludedNote(row)) {
+        if (row && (row.userId === actor.userId || row.isPublic || row.isGuest) && !isExcludedNote(row)) {
           rows.push(shapeNote(row));
         }
       }
-      return rows;
+
+      return rows.slice(0, Math.min(100, Math.max(1, limit)));
     }
 
+    // Personal workspace: strictly exclude items belonging to ANY real workspace
+    const linkedIds = await getAllLinkedWorkspaceObjectIds(tables, 'note');
     const res = await tables.listRows({
       databaseId: DB,
       tableId: NOTES,
@@ -144,7 +249,9 @@ export const ApiResources = {
         Query.limit(Math.min(100, Math.max(1, limit))),
       ],
     });
-    return res.rows.filter((r: any) => !isExcludedNote(r)).map(shapeNote);
+    return res.rows
+      .filter((r: any) => !isExcludedNote(r) && !linkedIds.has(r.$id))
+      .map(shapeNote);
   },
 
   async getNote(actor: ApiActor, id: string) {
@@ -159,6 +266,7 @@ export const ApiResources = {
     const title = clampNoteTitle(String(body?.title || '').trim() || 'Untitled', 'Untitled');
     const content = body?.content != null ? String(body.content) : '';
     const isPublic = !!body?.isPublic;
+    const wsId = body?.workspaceId || body?.projectId ? String(body.workspaceId || body.projectId) : null;
     const tables = createSystemTablesDB();
     const now = new Date().toISOString();
 
@@ -186,45 +294,26 @@ export const ApiResources = {
       title,
       content,
       format: 'markdown',
-      isPublic,
+      isPublic: isPublic || Boolean(wsId),
       tags: Array.isArray(body?.tags) ? (body.tags as string[]).map(String) : undefined,
     });
 
-    // Ensure ownership fields exist even if service omitted them
-    if (!(note as any)?.userId) {
-      await tables.updateRow({
-        databaseId: DB,
-        tableId: NOTES,
-        rowId: (note as any).$id,
-        data: { userId: actor.userId, creatorId: actor.userId, updatedAt: now },
-      });
-    }
+    // Ensure ownership exists
+    const noteId = (note as any).$id;
+    await tables.updateRow({
+      databaseId: DB,
+      tableId: NOTES,
+      rowId: noteId,
+      data: {
+        userId: actor.userId,
+        creatorId: actor.userId,
+        updatedAt: now,
+      },
+    }).catch(() => null);
 
-    if (body?.workspaceId || body?.projectId) {
-      const wsId = String(body.workspaceId || body.projectId);
-      try {
-        await tables.createRow({
-          databaseId: FLOW_DB,
-          tableId: 'objects',
-          rowId: ID.unique(),
-          data: {
-            parentId: wsId,
-            parentKind: 'workspace',
-            childId: (note as any).$id,
-            childKind: 'note',
-            userId: actor.userId,
-            metadata: JSON.stringify({ title }),
-            createdAt: now,
-            updatedAt: now,
-            isPublic,
-            isGuest: isPublic,
-            isGeneral: false,
-          },
-          permissions: [Permission.read(Role.user(actor.userId))],
-        });
-      } catch {
-        /* non-fatal */
-      }
+    // Link into project_objects join table
+    if (wsId) {
+      await linkObjectToWorkspace(tables, wsId, 'note', noteId, actor.userId, { title });
     }
 
     return shapeNote(note);
@@ -259,12 +348,37 @@ export const ApiResources = {
     const tables = createSystemTablesDB();
     await assertOwnedNote(tables, actor, id);
     await tables.deleteRow({ databaseId: DB, tableId: NOTES, rowId: id });
+    await unlinkObjectFromWorkspace(tables, 'note', id);
     return { id, deleted: true };
   },
 
-  async listGoals(actor: ApiActor, limit = 25) {
+  async listGoals(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {
     requireScope(actor, 'goals:read');
     const tables = createSystemTablesDB();
+
+    if (opts?.workspaceId) {
+      const wsId = opts.workspaceId;
+      const goalIds = await getWorkspaceObjectIds(tables, wsId, 'goal');
+
+      const seen = new Set<string>();
+      const rows: any[] = [];
+
+      for (const gid of goalIds) {
+        if (seen.has(gid)) continue;
+        seen.add(gid);
+        const row = (await tables
+          .getRow({ databaseId: FLOW_DB, tableId: TASKS, rowId: gid })
+          .catch(() => null)) as any;
+        if (row && (row.userId === actor.userId || row.isPublic || row.isGuest)) {
+          rows.push(shapeGoal(row));
+        }
+      }
+
+      return rows.slice(0, Math.min(100, Math.max(1, limit)));
+    }
+
+    // Personal workspace: strictly exclude items belonging to ANY real workspace
+    const linkedIds = await getAllLinkedWorkspaceObjectIds(tables, 'goal');
     const res = await tables.listRows({
       databaseId: FLOW_DB,
       tableId: TASKS,
@@ -274,7 +388,9 @@ export const ApiResources = {
         Query.limit(Math.min(100, Math.max(1, limit))),
       ],
     });
-    return res.rows.map(shapeGoal);
+    return res.rows
+      .filter((r: any) => !linkedIds.has(r.$id))
+      .map(shapeGoal);
   },
 
   async getGoal(actor: ApiActor, id: string) {
@@ -288,23 +404,33 @@ export const ApiResources = {
     requireScope(actor, 'goals:write');
     const title = String(body?.title || '').trim();
     if (!title) badRequest('title required');
+    const wsId = body?.workspaceId || body?.projectId ? String(body.workspaceId || body.projectId) : null;
     const tables = createSystemTablesDB();
+    const now = new Date().toISOString();
+    const goalId = ID.unique();
+
     const row = await tables.createRow({
       databaseId: FLOW_DB,
       tableId: TASKS,
-      rowId: ID.unique(),
+      rowId: goalId,
       data: {
         title: title.slice(0, 255),
         description: body?.description != null ? String(body.description) : (body?.summary != null ? String(body.summary) : ''),
         status: String(body?.status || 'todo'),
         userId: actor.userId,
-        isPublic: false,
-        isGuest: false,
+        isPublic: Boolean(wsId),
+        isGuest: Boolean(wsId),
       },
       permissions: [
-        Permission.read(Role.user(actor.userId)),
+        Permission.read(Role.any()),
+        Permission.update(Role.user(actor.userId)),
       ],
     });
+
+    if (wsId) {
+      await linkObjectToWorkspace(tables, wsId, 'goal', goalId, actor.userId, { title });
+    }
+
     return shapeGoal(row);
   },
 
@@ -330,6 +456,7 @@ export const ApiResources = {
     const tables = createSystemTablesDB();
     await assertOwnedGoal(tables, actor, id);
     await tables.deleteRow({ databaseId: FLOW_DB, tableId: TASKS, rowId: id });
+    await unlinkObjectFromWorkspace(tables, 'goal', id);
     return { id, deleted: true };
   },
 
@@ -775,9 +902,36 @@ export const ApiResources = {
     }));
   },
 
-  async listEvents(actor: ApiActor, limit = 25) {
+  async listEvents(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {
     requireScope(actor, 'events:read');
     const tables = createSystemTablesDB();
+
+    if (opts?.workspaceId) {
+      const wsId = opts.workspaceId;
+      const eventIds = await getWorkspaceObjectIds(tables, wsId, 'event');
+      const seen = new Set<string>();
+      const rows: any[] = [];
+
+      for (const eid of eventIds) {
+        if (seen.has(eid)) continue;
+        seen.add(eid);
+        const row = (await tables
+          .getRow({ databaseId: FLOW_DB, tableId: 'events', rowId: eid })
+          .catch(() => null)) as any;
+        if (row && (row.userId === actor.userId || row.isPublic || row.isGuest)) {
+          rows.push({
+            id: row.$id,
+            title: row.title || row.name || 'Untitled',
+            startsAt: row.startsAt || row.startAt || null,
+            endsAt: row.endsAt || row.endAt || null,
+            updatedAt: row.$updatedAt || null,
+          });
+        }
+      }
+      return rows.slice(0, Math.min(100, Math.max(1, limit)));
+    }
+
+    const linkedIds = await getAllLinkedWorkspaceObjectIds(tables, 'event');
     const res = await tables.listRows({
       databaseId: FLOW_DB,
       tableId: 'events',
@@ -787,18 +941,46 @@ export const ApiResources = {
         Query.limit(Math.min(100, Math.max(1, limit))),
       ],
     });
-    return res.rows.map((r: any) => ({
-      id: r.$id,
-      title: r.title || r.name || 'Untitled',
-      startsAt: r.startsAt || r.startAt || null,
-      endsAt: r.endsAt || r.endAt || null,
-      updatedAt: r.$updatedAt || null,
-    }));
+    return res.rows
+      .filter((r: any) => !r.isWorkspace && !r.projectId && !linkedIds.has(r.$id))
+      .map((r: any) => ({
+        id: r.$id,
+        title: r.title || r.name || 'Untitled',
+        startsAt: r.startsAt || r.startAt || null,
+        endsAt: r.endsAt || r.endAt || null,
+        updatedAt: r.$updatedAt || null,
+      }));
   },
 
-  async listForms(actor: ApiActor, limit = 25) {
+  async listForms(actor: ApiActor, limit = 25, opts?: { workspaceId?: string | null }) {
     requireScope(actor, 'forms:read');
     const tables = createSystemTablesDB();
+
+    if (opts?.workspaceId) {
+      const wsId = opts.workspaceId;
+      const formIds = await getWorkspaceObjectIds(tables, wsId, 'form');
+      const seen = new Set<string>();
+      const rows: any[] = [];
+
+      for (const fid of formIds) {
+        if (seen.has(fid)) continue;
+        seen.add(fid);
+        const row = (await tables
+          .getRow({ databaseId: FLOW_DB, tableId: 'forms', rowId: fid })
+          .catch(() => null)) as any;
+        if (row && (row.userId === actor.userId || row.isPublic || row.isGuest)) {
+          rows.push({
+            id: row.$id,
+            title: row.title || row.name || 'Untitled',
+            updatedAt: row.$updatedAt || null,
+            isPublic: !!row.isPublic,
+          });
+        }
+      }
+      return rows.slice(0, Math.min(100, Math.max(1, limit)));
+    }
+
+    const linkedIds = await getAllLinkedWorkspaceObjectIds(tables, 'form');
     const res = await tables.listRows({
       databaseId: FLOW_DB,
       tableId: 'forms',
@@ -808,17 +990,48 @@ export const ApiResources = {
         Query.limit(Math.min(100, Math.max(1, limit))),
       ],
     });
-    return res.rows.map((r: any) => ({
-      id: r.$id,
-      title: r.title || r.name || 'Untitled',
-      updatedAt: r.$updatedAt || null,
-      isPublic: !!r.isPublic,
-    }));
+    return res.rows
+      .filter((r: any) => !r.isWorkspace && !r.projectId && !linkedIds.has(r.$id))
+      .map((r: any) => ({
+        id: r.$id,
+        title: r.title || r.name || 'Untitled',
+        updatedAt: r.$updatedAt || null,
+        isPublic: !!r.isPublic,
+      }));
   },
 
-  async listAgentSessions(actor: ApiActor, limit = 25, opts?: { harness?: string | null }) {
+  async listAgentSessions(actor: ApiActor, limit = 25, opts?: { harness?: string | null; workspaceId?: string | null }) {
     requireScope(actor, 'agents:read');
     const tables = createSystemTablesDB();
+
+    if (opts?.workspaceId) {
+      const wsId = opts.workspaceId;
+      const sessionIds = await getWorkspaceObjectIds(tables, wsId, 'agent_session');
+      const seen = new Set<string>();
+      const rows: any[] = [];
+
+      for (const sid of sessionIds) {
+        if (seen.has(sid)) continue;
+        seen.add(sid);
+        const row = (await tables
+          .getRow({ databaseId: FLOW_DB, tableId: 'agentic_sessions', rowId: sid })
+          .catch(() => null)) as any;
+        if (row && (row.userId === actor.userId || row.isPublic || row.isGuest)) {
+          rows.push({
+            id: row.$id,
+            harness: row.harness || null,
+            isPublic: !!row.isPublic,
+            isPinned: !!row.isPinned,
+            seen: !!row.seen,
+            updatedAt: row.$updatedAt || null,
+            createdAt: row.$createdAt || null,
+          });
+        }
+      }
+      return rows.slice(0, Math.min(100, Math.max(1, limit)));
+    }
+
+    const linkedIds = await getAllLinkedWorkspaceObjectIds(tables, 'agent_session');
     const queries: string[] = [
       Query.equal('userId', actor.userId),
       Query.orderDesc('$updatedAt'),
@@ -833,15 +1046,17 @@ export const ApiResources = {
       tableId: 'agentic_sessions',
       queries,
     });
-    return res.rows.map((r: any) => ({
-      id: r.$id,
-      harness: r.harness || null,
-      isPublic: !!r.isPublic,
-      isPinned: !!r.isPinned,
-      seen: !!r.seen,
-      updatedAt: r.$updatedAt || null,
-      createdAt: r.$createdAt || null,
-    }));
+    return res.rows
+      .filter((r: any) => !r.isWorkspace && !r.projectId && !linkedIds.has(r.$id))
+      .map((r: any) => ({
+        id: r.$id,
+        harness: r.harness || null,
+        isPublic: !!r.isPublic,
+        isPinned: !!r.isPinned,
+        seen: !!r.seen,
+        updatedAt: r.$updatedAt || null,
+        createdAt: r.$createdAt || null,
+      }));
   },
 
   async createHarnessSession(actor: ApiActor, body: Record<string, unknown>) {
@@ -853,8 +1068,10 @@ export const ApiResources = {
       .replace(/[^a-z0-9_-]/g, '')
       .slice(0, 64);
     if (!harness) badRequest('harness required (e.g. claude-code, codex)');
+    const wsId = body?.workspaceId || body?.projectId ? String(body.workspaceId || body.projectId) : null;
     const tables = createSystemTablesDB();
     const now = new Date().toISOString();
+    const sessionId = ID.unique();
     const title = String(body.title || `[${harness}] mirror`).slice(0, 200);
     const seed = {
       role: 'system',
@@ -864,7 +1081,7 @@ export const ApiResources = {
     const row = await tables.createRow({
       databaseId: FLOW_DB,
       tableId: 'agentic_sessions',
-      rowId: ID.unique(),
+      rowId: sessionId,
       data: {
         userId: actor.userId,
         harness,
@@ -872,14 +1089,23 @@ export const ApiResources = {
         chatHistory: JSON.stringify([seed]),
         seen: false,
         isMemory: false,
-        isPublic: false,
-        isGuest: false,
+        isPublic: Boolean(wsId),
+        isGuest: Boolean(wsId),
         isPinned: false,
+        ...(wsId ? { isWorkspace: true, projectId: wsId } : {}),
+        createdAt: now,
+        updatedAt: now,
       },
       permissions: [
-        Permission.read(Role.user(actor.userId)),
+        Permission.read(Role.any()),
+        Permission.update(Role.user(actor.userId)),
       ],
     });
+
+    if (wsId) {
+      await linkObjectToWorkspace(tables, wsId, 'agent_session', sessionId, actor.userId, { title });
+    }
+
     return {
       id: (row as any).$id,
       harness,
@@ -927,6 +1153,83 @@ export const ApiResources = {
       },
     });
     return { id: sessionId, appended: true, count: history.length };
+  },
+
+  async createChat(actor: ApiActor, body: Record<string, unknown>) {
+    requireScope(actor, 'chats:write');
+    const participantId = String(body.participantId || body.recipientId || body.userId || '').trim();
+    if (!participantId) badRequest('participantId or recipientId required');
+    const tables = createSystemTablesDB();
+    const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
+    const convTable = APPWRITE_CONFIG.TABLES.CONNECT?.CONVERSATIONS || APPWRITE_CONFIG.TABLES.CHAT?.CONVERSATIONS || 'conversations';
+
+    // 1. Check existing direct conversation
+    const existing = await tables.listRows({
+      databaseId: chatDb,
+      tableId: convTable,
+      queries: [
+        Query.contains('participants', actor.userId),
+        Query.contains('participants', participantId),
+        Query.limit(5),
+      ],
+    }).catch(() => ({ rows: [] as any[] }));
+
+    let conv = (existing.rows || []).find((c: any) => {
+      const parts = Array.isArray(c.participants) ? c.participants : [];
+      return parts.length === 2 && parts.includes(actor.userId) && parts.includes(participantId);
+    });
+
+    const now = new Date().toISOString();
+
+    if (!conv) {
+      // 2. Check if recipient has published public key
+      const profiles = await tables.listRows({
+        databaseId: chatDb,
+        tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
+        queries: [
+          Query.equal('userId', participantId),
+          Query.limit(1),
+        ],
+      }).catch(() => ({ rows: [] as any[] }));
+      const recProfile = profiles.rows?.[0] as any;
+      const hasPublicKey = Boolean(recProfile?.publicKey);
+      const isEncrypted = body.isEncrypted !== undefined ? Boolean(body.isEncrypted) : hasPublicKey;
+
+      conv = await tables.createRow({
+        databaseId: chatDb,
+        tableId: convTable,
+        rowId: ID.unique(),
+        data: {
+          type: 'direct',
+          name: body.name ? String(body.name).slice(0, 100) : null,
+          participants: [actor.userId, participantId],
+          participantCount: 2,
+          isEncrypted,
+          lastMessageAt: now,
+          createdAt: now,
+          updatedAt: now,
+        },
+        permissions: [
+          Permission.read(Role.any()),
+          Permission.update(Role.user(actor.userId)),
+          Permission.update(Role.user(participantId)),
+        ],
+      });
+    }
+
+    // 3. Send initial message if provided
+    const initialText = String(body.initialMessage || body.message || body.content || '').trim();
+    if (initialText) {
+      await this.sendChatMessage(actor, (conv as any).$id, { content: initialText }).catch(() => null);
+    }
+
+    return {
+      id: (conv as any).$id,
+      type: (conv as any).type || 'direct',
+      participants: (conv as any).participants || [actor.userId, participantId],
+      isEncrypted: !!(conv as any).isEncrypted,
+      createdAt: (conv as any).createdAt || now,
+    };
   },
 
   async listChats(actor: ApiActor, limit = 25) {
@@ -1035,9 +1338,22 @@ export const ApiResources = {
         createdAt: now,
       },
       permissions: [
-        Permission.read(Role.user(actor.userId)),
+        Permission.read(Role.any()),
+        Permission.update(Role.user(actor.userId)),
       ],
     });
+
+    // Update conversation lastMessageAt
+    await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: APPWRITE_CONFIG.TABLES.CONNECT?.CONVERSATIONS || 'conversations',
+      rowId: conversationId,
+      data: {
+        lastMessageAt: now,
+        updatedAt: now,
+      },
+    }).catch(() => null);
+
     return {
       id: (row as any).$id,
       conversationId,

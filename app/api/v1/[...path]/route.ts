@@ -58,7 +58,10 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
 
   // Goals
   if (a === 'goals' && !b) {
-    if (method === 'GET') return jsonOk(await ApiResources.listGoals(actor, limit()));
+    if (method === 'GET') {
+      const workspaceId = req.nextUrl.searchParams.get('workspaceId') || req.nextUrl.searchParams.get('projectId');
+      return jsonOk(await ApiResources.listGoals(actor, limit(), { workspaceId: workspaceId || null }));
+    }
     if (method === 'POST') return jsonOk(await ApiResources.createGoal(actor, await readBody(req)));
   }
   if (a === 'goals' && b && !c) {
@@ -111,7 +114,10 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
 
   // Events
   if (a === 'events' && !b) {
-    if (method === 'GET') return jsonOk(await ApiResources.listEvents(actor, limit()));
+    if (method === 'GET') {
+      const workspaceId = req.nextUrl.searchParams.get('workspaceId') || req.nextUrl.searchParams.get('projectId');
+      return jsonOk(await ApiResources.listEvents(actor, limit(), { workspaceId: workspaceId || null }));
+    }
     if (method === 'POST') return jsonOk(await ApiResources.createEvent(actor, await readBody(req)));
   }
   if (a === 'events' && b && !c) {
@@ -124,7 +130,10 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
 
   // Forms
   if (a === 'forms' && !b) {
-    if (method === 'GET') return jsonOk(await ApiResources.listForms(actor, limit()));
+    if (method === 'GET') {
+      const workspaceId = req.nextUrl.searchParams.get('workspaceId') || req.nextUrl.searchParams.get('projectId');
+      return jsonOk(await ApiResources.listForms(actor, limit(), { workspaceId: workspaceId || null }));
+    }
     if (method === 'POST') return jsonOk(await ApiResources.createForm(actor, await readBody(req)));
   }
   if (a === 'forms' && b && !c) {
@@ -135,9 +144,10 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
     if (method === 'DELETE') return jsonOk(await ApiResources.deleteForm(actor, b));
   }
 
-  // Chats (E2EE metadata; plaintext send only when unencrypted)
-  if (a === 'chats' && !b && method === 'GET') {
-    return jsonOk(await ApiResources.listChats(actor, limit()));
+  // Chats (E2EE metadata; plaintext send only when unencrypted; start direct chat)
+  if (a === 'chats' && !b) {
+    if (method === 'GET') return jsonOk(await ApiResources.listChats(actor, limit()));
+    if (method === 'POST') return jsonOk(await ApiResources.createChat(actor, await readBody(req)));
   }
   if (a === 'chats' && b && !c && method === 'GET') {
     return jsonOk(await ApiResources.getChat(actor, b));
@@ -197,8 +207,12 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
   }
   if (a === 'agents' && (!b || b === 'sessions') && !c && method === 'GET') {
     const harness = req.nextUrl.searchParams.get('harness');
+    const workspaceId = req.nextUrl.searchParams.get('workspaceId') || req.nextUrl.searchParams.get('projectId');
     return jsonOk(
-      await ApiResources.listAgentSessions(actor, limit(), { harness: harness || null }),
+      await ApiResources.listAgentSessions(actor, limit(), {
+        harness: harness || null,
+        workspaceId: workspaceId || null,
+      }),
     );
   }
   if (a === 'agents' && b === 'sessions' && c && !d) {

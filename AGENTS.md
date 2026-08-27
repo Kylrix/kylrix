@@ -42,3 +42,10 @@
 - **No Agent Dev Servers**: Do not start dedicated dev servers (`pnpm dev`, `next dev`, etc.) as the agent. Port `3005` is user-pinned — never occupy it or spawn competing servers. If a running server is needed, ask the user to start it.
 - **No Build/Lint Unless Asked**: Do not run `pnpm build`, `pnpm lint`, `tsc`, or equivalent verification gates unless the user explicitly tells you to. Default to surgical code edits only.
 
+### 🥣 Dogfooding & Kylrix API Mandate (STRICT)
+- **Ecosystem Self-Hosting (Dogfooding)**: From henceforth, Kylrix itself is the platform and workspace environment used to organize, plan, track, and build this ecosystem. Agents must operate within a dedicated agentic workspace (`isAgentic: true`) to record task goals, ideas, and conversation sessions.
+- **Agent Local API Base URI**: When dogfooding via the Kylrix HTTP API (`/api/v1`), autonomous agents MUST target the local instance at `http://localhost:3005/api/v1` (NOT the public production URI `https://www.kylrix.space`).
+- **Kylrix HTTP API vs Appwrite (STRICT SEPARATION)**: Agents are special dogfooding users of the product. All agent task planning, object CRUD, notes, goals, and communication MUST go through the **Kylrix HTTP API (`/api/v1`)** using PATs/Agent tokens. NEVER confuse or replace Kylrix HTTP API calls with raw Appwrite admin APIs, internal SDKs, or CLI data mutations.
+- **Autonomous API Extension on Gaps**: As agents dogfood and discover missing endpoints (e.g. workspace linking, DMs/chats, goal tracking), agents are empowered and expected to build, fix, and flesh out the corresponding `/api/v1` routes and methods to achieve full ecosystem parity.
+
+
