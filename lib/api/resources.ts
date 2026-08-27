@@ -284,9 +284,9 @@ async function getAllLinkedWorkspaceObjectIds(
   }
 }
 
-async function resolveWorkspaceMekBytes(
+export async function resolveWorkspaceMekBytes(
   tables: any,
-  actor: ApiActor,
+  actor: Partial<ApiActor>,
   opts?: { workspaceId?: string | null; agentId?: string | null; mek?: string | null }
 ): Promise<Uint8Array | null> {
   if (opts?.mek) {
@@ -2302,8 +2302,7 @@ export const ApiResources = {
     const now = new Date().toISOString();
     const itemType = String(body.itemType || body.type || 'login').slice(0, 50);
 
-    const userTags = Array.isArray(body.tags) ? body.tags.map(String) : [];
-    const tags = wsId ? Array.from(new Set([...userTags, `workspace:${wsId}`, `project:${wsId}`])) : userTags;
+    const tags = Array.isArray(body.tags) ? body.tags.map(String) : [];
 
     const row = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
@@ -2660,8 +2659,7 @@ export const ApiResources = {
       mekBytes
     );
 
-    const userTags = Array.isArray(body.tags) ? body.tags.map(String) : [];
-    const tags = wsId ? Array.from(new Set([...userTags, `workspace:${wsId}`, `project:${wsId}`])) : userTags;
+    const tags = Array.isArray(body.tags) ? body.tags.map(String) : [];
 
     const row = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.VAULT,

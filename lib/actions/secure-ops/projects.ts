@@ -2041,6 +2041,54 @@ export async function getSharedWorkspaceEntitiesSecure(
         break;
     }
 
+    // If workspace is agentic, unseal credentials and TOTP secrets using workspace agent MEK
+    const isAgentic = (access as any).project?.isAgentic === true || (access as any).project?.agentId;
+    if (isAgentic && (normKind === 'credential' || normKind === 'totp')) {
+      try {
+        const { resolveWorkspaceMekBytes } = await import('@/lib/api/resources');
+        const { unsealRowFields, VAULT_ENCRYPTED_FIELDS } = await import('@/lib/api/vault-crypto');
+        const mekBytes = await resolveWorkspaceMekBytes(tables, { userId: (access as any).user?.$id || '' }, {
+          workspaceId,
+          agentId: (access as any).project?.agentId,
+        });
+
+        if (mekBytes) {
+          if (normKind === 'credential') {
+            for (const [id, row] of rowsById.entries()) {
+              try {
+                const unsealed = await unsealRowFields(row, VAULT_ENCRYPTED_FIELDS.credentials, mekBytes);
+                rowsById.set(id, {
+                  ...row,
+                  ...unsealed,
+                  name: unsealed.name || row.name,
+                  username: unsealed.username !== undefined ? unsealed.username : row.username,
+                  password: unsealed.password !== undefined ? unsealed.password : row.password,
+                  url: unsealed.url !== undefined ? unsealed.url : row.url,
+                  notes: unsealed.notes !== undefined ? unsealed.notes : row.notes,
+                });
+              } catch {}
+            }
+          } else if (normKind === 'totp') {
+            for (const [id, row] of rowsById.entries()) {
+              try {
+                const unsealed = await unsealRowFields(row, VAULT_ENCRYPTED_FIELDS.totpSecrets, mekBytes);
+                rowsById.set(id, {
+                  ...row,
+                  ...unsealed,
+                  issuer: unsealed.issuer || row.issuer,
+                  accountName: unsealed.accountName !== undefined ? unsealed.accountName : row.accountName,
+                  secretKey: unsealed.secretKey !== undefined ? unsealed.secretKey : row.secretKey,
+                  url: unsealed.url !== undefined ? unsealed.url : row.url,
+                });
+              } catch {}
+            }
+          }
+        }
+      } catch (unsealErr) {
+        console.warn('[getSharedWorkspaceEntitiesSecure] Agentic unseal error:', unsealErr);
+      }
+    }
+
     const finalRows = Array.from(rowsById.values()).filter((r) => r.isTrash !== true && r.trash !== true);
     return {
       success: true,

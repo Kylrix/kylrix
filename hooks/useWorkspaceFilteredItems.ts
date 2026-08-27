@@ -131,6 +131,7 @@ export function useWorkspaceFilteredItems<T extends WorkspaceItemLike>(
   const isSharedWorkspace = Boolean(
     isCustomWorkspace &&
       (activeWorkspace?.isShared ||
+        activeWorkspace?.isAgentic ||
         activeWorkspace?.role !== 'owner' ||
         (activeWorkspace?.ownerId && activeWorkspace.ownerId !== userId))
   );
@@ -165,22 +166,21 @@ export function useWorkspaceFilteredItems<T extends WorkspaceItemLike>(
       if (id && registeredIds.has(id)) return true;
       if (item.projectId === pid) return true;
       if ((item as any).isWorkspace === true && item.projectId === pid) return true;
-      if (Array.isArray(item.tags) && item.tags.some((t: string) => t === `workspace:${pid}` || t === `project:${pid}`)) return true;
       if (id && isEntityPendingInActiveWorkspace(entityKind, id)) return true;
       return false;
     });
 
     if (isSharedWorkspace || sharedWorkspaceRows.length > 0) {
       const byId = new Map<string, T>();
-      // Add shared workspace rows from Server SDK
+      // 1. Add shared workspace rows from Server SDK (unsealed by agent MEK)
       sharedWorkspaceRows.forEach((r) => {
         const id = (r as any).$id || (r as any).id;
         if (id) byId.set(id, r);
       });
-      // Merge local items
+      // 2. Merge local items if not already unsealed from server
       localMatching.forEach((r) => {
         const id = (r as any).$id || (r as any).id;
-        if (id) byId.set(id, r);
+        if (id && !byId.has(id)) byId.set(id, r);
       });
       return Array.from(byId.values());
     }
