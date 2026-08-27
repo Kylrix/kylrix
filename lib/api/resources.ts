@@ -661,14 +661,14 @@ export const ApiResources = {
         (err as any).status = 403;
         throw err;
       }
-      // If keys already initialized, prevent rewriting to protect vault & nostr identity
-      if (existingAgentRow.publicKey) {
+      // If keys already initialized and forceReset is not requested, prevent accidental rewriting
+      if (existingAgentRow.publicKey && !body.forceReset && !body.reset) {
         let parsedConfig: Record<string, any> = {};
         try {
           parsedConfig = JSON.parse(existingAgentRow.config || '{}');
         } catch {}
         if (parsedConfig.walletAddress) {
-          const err = new Error('Conflict: Sovereign cryptographic identity is already sealed for this agent. Keys cannot be rewritten.');
+          const err = new Error('Conflict: Sovereign cryptographic identity is already sealed for this agent. Pass forceReset: true to regenerate.');
           (err as any).status = 409;
           (err as any).code = 'identity_already_sealed';
           (err as any).data = {
@@ -826,6 +826,17 @@ export const ApiResources = {
           walletAddress,
           publicKey: nostrNpub,
           status: 'online',
+          preferences: JSON.stringify({
+            isAgentic: true,
+            ownerId: actor.userId,
+            agentId,
+            agentType,
+            role: String(body.role || name),
+            goal: String(body.goal || ''),
+            nostrNpub,
+            walletAddress,
+            updatedAt: now,
+          }),
         },
       }).catch(() => null);
     });
