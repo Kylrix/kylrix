@@ -1854,151 +1854,187 @@ export default function ConnectTopbar({
     const primaryHandle = profileUsername ? `@${profileUsername}` : profileDisplayName;
 
     const profileContent = (
-      <div className="w-full max-w-full font-satoshi text-white p-3.5 space-y-3 box-border overflow-x-hidden min-w-0">
-        {/* 1. Primary Profile Header Card (Avatar + Username/Name Click-to-Copy + Close) */}
-        <div className="p-3.5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-3 min-w-0 max-w-full">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <IdentityAvatar
-              userId={user?.$id}
-              size={46}
-              pro={isPro}
-              fallback={(profileUsername || profileDisplayName || 'U')[0].toUpperCase()}
-            />
-            <div className="min-w-0 flex-1">
-              {/* Clickable primary handle to copy instantly */}
-              <button
-                type="button"
-                onClick={handleCopyUsername}
-                title="Click to copy handle"
-                className="group/handle flex items-center gap-1.5 min-w-0 max-w-full cursor-pointer bg-transparent border-none p-0 outline-none text-left"
-              >
-                <span className="text-sm font-black font-clash text-white group-hover/handle:text-[#818CF8] transition-colors truncate min-w-0">
-                  {primaryHandle}
-                </span>
-                <span className="shrink-0 p-1 rounded-md text-white/30 group-hover/handle:text-white group-hover/handle:bg-white/[0.06] transition-all">
-                  {copyState === 'copied-username' ? <Check size={12} className="text-[#10B981]" /> : <CopyIcon size={12} />}
-                </span>
-              </button>
+      <Box
+        onWheel={(event: React.WheelEvent) => {
+          if (isDesktop) return;
+          const node = event.currentTarget;
+          if (event.deltaY < 0 && isTopbarScrollAtTop(node as HTMLElement)) {
+            event.preventDefault();
+            handleCloseAll();
+          }
+        }}
+        sx={{
+          px: isDesktop ? 0 : { xs: 2.25, md: 4 },
+          py: isDesktop ? 0 : 1.25,
+          maxHeight: isDesktop ? 'none' : '45vh',
+          overflowY: isDesktop ? 'visible' : 'auto',
+          width: '100%',
+          boxSizing: 'border-box',
+        }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            width: '100%',
+            borderRadius: '26px',
+            bgcolor: '#161412',
+            border: `1px solid ${alpha(appAccent, 0.22)}`,
+            overflow: 'hidden',
+            boxSizing: 'border-box',
+          }}
+        >
+          <Box sx={{ p: 1.25 }}>
+            {/* Outline Header */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, px: 0.5, mb: 1.25 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                <Box sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', color: appAccent, bgcolor: alpha(appAccent, 0.08), border: `1px solid ${alpha(appAccent, 0.18)}`, flexShrink: 0 }}>
+                  <Logo app={activeApp} size={16} variant="icon" />
+                </Box>
+                <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.2 }}>
+                  <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.92rem', lineHeight: 1.2, fontFamily: 'var(--font-clash)' }}>
+                    Profile
+                  </Typography>
+                  <Typography component="span" sx={{ color: 'rgba(255,255,255,0.45)', fontWeight: 700, fontSize: '0.68rem', lineHeight: 1.3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Account & Identity
+                  </Typography>
+                </Box>
+              </Box>
+              <IconButton onClick={handleCloseAll} size="small" sx={{ width: 30, height: 30, borderRadius: '999px', color: alpha('#fff', 0.7), bgcolor: alpha('#fff', 0.05), border: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', color: 'white' } }}>
+                ✕
+              </IconButton>
+            </Box>
 
-              <div className="flex items-center gap-2 mt-0.5 min-w-0">
-                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#EC4899]/15 text-[#EC4899] font-black uppercase tracking-wider shrink-0">
-                  {currentTier}
-                </span>
-                {profileUsername && profileDisplayName && profileDisplayName !== profileUsername && (
-                  <span className="text-[11px] text-white/40 truncate min-w-0">
-                    {profileDisplayName}
-                  </span>
-                )}
-                {!profileUsername && (
-                  <button
+            {/* Outlined Content Cards */}
+            <Box sx={{ display: 'grid', gap: 1.25, pr: 0.5, pb: 0.5 }}>
+              {/* 1. Identity Outlined Tile */}
+              <Box sx={{ p: 1.5, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <IdentityAvatar
+                  userId={user?.$id}
+                  size={46}
+                  pro={isPro}
+                  fallback={(profileUsername || profileDisplayName || 'U')[0].toUpperCase()}
+                />
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Box
+                    component="button"
                     type="button"
-                    onClick={handleGenerateUsername}
-                    disabled={isGeneratingUsername}
-                    className="px-2 py-0.5 rounded-lg bg-[#6366F1]/20 hover:bg-[#6366F1]/30 text-[#818cf8] text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 shrink-0"
+                    onClick={handleCopyUsername}
+                    title="Click to copy handle"
+                    sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 0, bgcolor: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', minWidth: 0, maxWidth: '100%' }}
                   >
-                    <Sparkles size={10} />
-                    <span>{isGeneratingUsername ? '...' : 'Claim @name'}</span>
-                  </button>
+                    <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.95rem', lineHeight: 1.2, fontFamily: 'var(--font-clash)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', '&:hover': { color: '#818CF8' } }}>
+                      {primaryHandle}
+                    </Typography>
+                    <Box sx={{ p: 0.5, borderRadius: '6px', color: copyState === 'copied-username' ? '#10B981' : 'rgba(255,255,255,0.3)', bgcolor: copyState === 'copied-username' ? 'rgba(16,185,129,0.15)' : 'transparent', flexShrink: 0 }}>
+                      {copyState === 'copied-username' ? <Check size={12} /> : <CopyIcon size={12} />}
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                    <Box component="span" sx={{ fontSize: '9px', fontFamily: 'monospace', px: 1, py: 0.25, borderRadius: '999px', bgcolor: 'rgba(236,72,153,0.15)', color: '#EC4899', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>
+                      {currentTier} PLAN
+                    </Box>
+                    {profileUsername && profileDisplayName && profileDisplayName !== profileUsername && (
+                      <Typography component="span" sx={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {profileDisplayName}
+                      </Typography>
+                    )}
+                    {!profileUsername && (
+                      <Box
+                        component="button"
+                        type="button"
+                        onClick={handleGenerateUsername}
+                        disabled={isGeneratingUsername}
+                        sx={{ px: 1, py: 0.25, borderRadius: '8px', bgcolor: 'rgba(99,102,241,0.2)', color: '#818cf8', fontSize: '10px', fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}
+                      >
+                        <Sparkles size={10} />
+                        <span>{isGeneratingUsername ? '...' : 'Claim @name'}</span>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* 2. Referral Outlined Tile */}
+              <Box sx={{ p: 1.5, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                  <Typography component="span" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: 900, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    <Users size={12} color="#10B981" />
+                    <span>Referral Link</span>
+                  </Typography>
+                  <Box component="span" sx={{ fontSize: '9px', fontFamily: 'monospace', color: '#10B981', bgcolor: 'rgba(16,185,129,0.1)', px: 1, py: 0.25, borderRadius: '4px', fontWeight: 700 }}>
+                    +1.5 $KYL / join
+                  </Box>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'rgba(0,0,0,0.4)', p: 0.75, borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <Typography component="span" sx={{ color: 'rgba(255,255,255,0.85)', fontFamily: 'monospace', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, px: 0.5, userSelect: 'all' }}>
+                    {typeof window !== 'undefined' ? `${window.location.host}/?ref=${referralCode}` : '/?ref=...'}
+                  </Typography>
+                  <Box
+                    component="button"
+                    type="button"
+                    onClick={handleCopyReferralLink}
+                    sx={{ px: 1.5, py: 0.5, borderRadius: '8px', fontSize: '11px', fontWeight: 900, color: 'white', bgcolor: copyState === 'copied-referral' ? '#10B981' : '#6366F1', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.5, transition: 'all 0.2s', flexShrink: 0, '&:hover': { bgcolor: copyState === 'copied-referral' ? '#10B981' : '#5254E8' } }}
+                  >
+                    {copyState === 'copied-referral' ? <Check size={11} /> : <CopyIcon size={11} />}
+                    <span>{copyState === 'copied-referral' ? 'Copied' : 'Copy'}</span>
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* 3. Action Buttons (Wallet & Settings side-by-side, Sign Out below) */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                  <Button
+                    onClick={() => {
+                      handleCloseAll();
+                      openWallet();
+                    }}
+                    sx={{ borderRadius: '14px', bgcolor: alpha(appAccent, 0.06), color: appAccent, py: 1, fontSize: '0.84rem', textTransform: 'none', fontWeight: 800, '&:hover': { bgcolor: alpha(appAccent, 0.12) } }}
+                    startIcon={<Wallet size={14} />}
+                  >
+                    Wallet
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      handleCloseAll();
+                      router.push('/settings');
+                    }}
+                    sx={{ borderRadius: '14px', bgcolor: 'rgba(255,255,255,0.02)', color: 'white', border: '1px solid rgba(255,255,255,0.06)', py: 1, fontSize: '0.84rem', textTransform: 'none', fontWeight: 800, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}
+                    startIcon={<Settings size={14} />}
+                  >
+                    Settings
+                  </Button>
+                </Box>
+
+                {!isPro && (
+                  <Button
+                    onClick={() => {
+                      handleCloseAll();
+                      openProUpgrade();
+                    }}
+                    sx={{ borderRadius: '14px', bgcolor: 'rgba(236,72,153,0.08)', color: '#EC4899', border: '1px solid rgba(236,72,153,0.2)', py: 0.75, fontSize: '0.82rem', textTransform: 'none', fontWeight: 800, '&:hover': { bgcolor: 'rgba(236,72,153,0.14)' } }}
+                    startIcon={<Sparkles size={14} />}
+                  >
+                    Upgrade to Pro
+                  </Button>
                 )}
-              </div>
-            </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={handleCloseAll}
-            className="w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-white/50 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
-            title="Close"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* 2. Referral Invite Card (Compact single-row) */}
-        <div className="p-3 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-1.5 min-w-0 max-w-full">
-          <div className="flex items-center justify-between gap-2 min-w-0">
-            <span className="text-[10px] font-mono font-bold text-white/50 uppercase tracking-wider flex items-center gap-1 min-w-0">
-              <Users size={12} className="text-[#10B981] shrink-0" />
-              <span className="truncate">Referral Link</span>
-            </span>
-            <span className="text-[9px] font-mono font-bold text-[#10B981] bg-[#10B981]/10 px-1.5 py-0.2 rounded shrink-0">
-              +1.5 $KYL / join
-            </span>
-          </div>
-          <div className="flex items-center gap-2 bg-[#161412] p-1.5 rounded-xl border border-white/[0.04] min-w-0 max-w-full overflow-hidden">
-            <span className="text-[11px] font-mono text-white/80 truncate flex-1 px-1 min-w-0 select-all">
-              {typeof window !== 'undefined' ? `${window.location.host}/?ref=${referralCode}` : '/?ref=...'}
-            </span>
-            <button
-              type="button"
-              onClick={handleCopyReferralLink}
-              className={`px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1 cursor-pointer shrink-0 ${
-                copyState === 'copied-referral'
-                  ? 'bg-[#10B981] text-white shadow-sm'
-                  : 'bg-[#6366F1] hover:bg-[#5254E8] text-white'
-              }`}
-            >
-              {copyState === 'copied-referral' ? <Check size={11} /> : <CopyIcon size={11} />}
-              <span>{copyState === 'copied-referral' ? 'Copied' : 'Copy'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 3. Action Buttons (Wallet & Settings side-by-side, Sign out below) */}
-        <div className="space-y-2 min-w-0 max-w-full pt-0.5">
-          <div className="grid grid-cols-2 gap-2 min-w-0">
-            <button
-              type="button"
-              onClick={() => {
-                handleCloseAll();
-                openWallet();
-              }}
-              className="h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.06] hover:border-white/10 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0"
-            >
-              <Wallet size={14} className="text-[#F59E0B] shrink-0" />
-              <span className="truncate">Wallet</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                handleCloseAll();
-                router.push('/settings');
-              }}
-              className="h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.06] hover:border-white/10 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0"
-            >
-              <Settings size={14} className="text-white/70 shrink-0" />
-              <span className="truncate">Settings</span>
-            </button>
-          </div>
-
-          {!isPro && (
-            <button
-              type="button"
-              onClick={() => {
-                handleCloseAll();
-                openProUpgrade();
-              }}
-              className="w-full h-9 px-3 rounded-xl bg-[#EC4899]/10 hover:bg-[#EC4899]/20 border border-[#EC4899]/25 text-[#EC4899] text-xs font-extrabold flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0"
-            >
-              <Sparkles size={13} className="shrink-0" />
-              <span>Upgrade to Pro</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => {
-              handleCloseAll();
-              void logout();
-            }}
-            className="w-full h-10 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer min-w-0"
-          >
-            <LogOut size={14} className="shrink-0" />
-            <span>Sign Out</span>
-          </button>
-        </div>
-      </div>
+                <Button
+                  onClick={() => {
+                    handleCloseAll();
+                    void logout();
+                  }}
+                  sx={{ borderRadius: '14px', bgcolor: 'rgba(255,77,77,0.06)', color: '#FF4D4D', border: '1px solid rgba(255,77,77,0.12)', py: 1, fontSize: '0.84rem', textTransform: 'none', fontWeight: 800, '&:hover': { bgcolor: 'rgba(255,77,77,0.12)' } }}
+                  startIcon={<LogOut size={14} />}
+                >
+                  Sign out
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        </Paper>
+      </Box>
     );
 
     if (isDesktop) {
@@ -2007,12 +2043,10 @@ export default function ConnectTopbar({
           <NativeSidebarMount
             active={Boolean(profileMenuAnchorEl)}
             sidebarKey="topbar-profile"
-            width={360}
+            width={380}
             title="Profile"
           >
-            <div className="bg-[#161412] h-full overflow-y-auto overflow-x-hidden">
-              {profileContent}
-            </div>
+            {profileContent}
           </NativeSidebarMount>
         );
       }
@@ -2027,21 +2061,19 @@ export default function ConnectTopbar({
           PaperProps={{
             sx: {
               bgcolor: '#161412',
-              width: 340,
-              maxWidth: '100vw',
-              height: '100vh',
+              backgroundImage: 'none',
+              width: 380,
               borderLeft: '1px solid rgba(255, 255, 255, 0.06)',
-              p: 0,
+              boxShadow: '0 12px 48px rgba(0,0,0,0.6)',
+              height: '100vh',
               display: 'flex',
               flexDirection: 'column',
               boxSizing: 'border-box',
-              overflowX: 'hidden',
+              p: 2.75,
             }
           }}
         >
-          <div className="h-full overflow-y-auto overflow-x-hidden">
-            {profileContent}
-          </div>
+          {profileContent}
         </Drawer>
       );
     }
@@ -2051,20 +2083,15 @@ export default function ConnectTopbar({
         data-kylrix-topbar-panel
         sx={{
           width: '100%',
-          maxWidth: '100vw',
-          boxSizing: 'border-box',
-          borderTop: '1px solid rgba(255,255,255,0.04)',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '0 0 24px 24px',
+          borderRadius: '0 0 28px 28px',
           bgcolor: '#161412',
-          overflowX: 'hidden',
-          overflowY: 'auto',
-          boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
+          overflow: 'hidden',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
-          {profileContent}
-        </Box>
+        {profileContent}
       </Box>
     );
   };
