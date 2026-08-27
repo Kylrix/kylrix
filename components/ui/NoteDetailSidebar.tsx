@@ -541,8 +541,10 @@ export function NoteDetailSidebar({
       if (autonomicSyncEngine.isPending(payload.$id)) return;
       const base = allNotesRef.current.find((n) => n.$id === payload.$id) || noteRef.current;
       const merged = base ? { ...base, ...payload } : payload;
-      pushLiveNote(merged);
-      onUpdate(merged);
+      updateLocalAndParentNote(merged);
+      try {
+        autonomicSyncEngine.markConfirmed(payload.$id);
+      } catch {}
     });
 
     return () => {
