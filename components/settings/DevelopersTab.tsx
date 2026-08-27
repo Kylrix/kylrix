@@ -25,6 +25,7 @@ type PatItem = {
   tokenPrefix: string;
   scopes: string[];
   status: string;
+  category?: string;
 };
 
 function Section({

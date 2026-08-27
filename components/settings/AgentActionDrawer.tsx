@@ -5,9 +5,7 @@ import { createPortal } from 'react-dom';
 import { 
   X, 
   Bot, 
-  Sparkles, 
   Key, 
-  ExternalLink, 
   MessageSquare, 
   Settings, 
   Trash2, 
@@ -51,7 +49,6 @@ export function AgentActionDrawer({
   const router = useRouter();
   const { openAgenticDrawer } = useAgenticDrawer();
   const [profile, setProfile] = useState<any>(null);
-  const [loadingProfile, setLoadingProfile] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -78,16 +75,12 @@ export function AgentActionDrawer({
   useEffect(() => {
     if (!open || !agentId) return;
     let active = true;
-    setLoadingProfile(true);
 
     AgentIdentityService.getAgentProfile(agentId)
       .then((p) => {
         if (active) setProfile(p);
       })
-      .catch(() => {})
-      .finally(() => {
-        if (active) setLoadingProfile(false);
-      });
+      .catch(() => {});
 
     return () => {
       active = false;
@@ -288,7 +281,7 @@ export function AgentActionDrawer({
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-white m-0">View Public Profile</h4>
-                  <p className="text-[11px] text-white/40 m-0">Inspect agent's public ecosystem page (/u/{username})</p>
+                  <p className="text-[11px] text-white/40 m-0">Inspect agent&apos;s public ecosystem page (/u/{username})</p>
                 </div>
               </div>
               <ArrowUpRight size={14} className="text-white/40 group-hover:text-white" />

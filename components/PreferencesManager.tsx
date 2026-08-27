@@ -2,19 +2,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  Sliders, 
   Terminal, 
-  Sparkles, 
   Volume2, 
-  Vibrate, 
   Mail, 
-  ShieldAlert, 
   Moon, 
   Sun, 
-  Laptop,
-  Check,
-  RefreshCw,
-  LayoutGrid
+  Laptop
 } from 'lucide-react';
 import { account } from '@/lib/appwrite/client';
 import { useTheme } from '@/lib/theme-context';
@@ -65,7 +58,6 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
   const { theme, setTheme } = useTheme();
   const { devMode, toggleDevMode } = useDevMode();
   const [loading, setLoading] = useState(true);
-  const [savingKey, setSavingKey] = useState<string | null>(null);
   const [allPrefs, setAllPrefs] = useState<Record<string, any>>({});
   const [prefs, setPrefs] = useState<KylrixPrefs>({
     theme: 'system',
@@ -128,7 +120,6 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
   }, [loadPreferences]);
 
   const updatePreference = async (key: keyof KylrixPrefs, value: any) => {
-    setSavingKey(key);
     const updatedUIPrefs = { ...prefs, [key]: value };
     setPrefs(updatedUIPrefs);
 
@@ -147,8 +138,6 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
     } catch (_err) {
       toast.error('Failed to save preference');
       void loadPreferences();
-    } finally {
-      setSavingKey(null);
     }
   };
 

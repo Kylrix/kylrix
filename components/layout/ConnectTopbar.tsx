@@ -26,7 +26,6 @@ import {
   Bot,
   Wallet,
   Copy as CopyIcon,
-  User as UserIcon,
   Search,
   X as CloseIcon,
   Bell,
@@ -56,7 +55,7 @@ import { getUserProfilePicId, getEffectiveUsername, hasEffectivePaidAccess } fro
 import { getCachedIdentityById } from '@/lib/identity-cache';
 import { toast } from 'react-hot-toast';
 import { APP_BASE_PATHS } from '@/lib/constants';
-import { getAppTone, type KylrixApp } from '@/lib/sdk/design';
+import { type KylrixApp } from '@/lib/sdk/design';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 import { createTopbarPanelMotion, createTopbarSearchSurface, isTopbarScrollAtTop } from '@/lib/sdk/topbar';
 import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePicId } from '@/lib/sdk/appwrite';
@@ -86,7 +85,6 @@ import {
   renderShortcutsList,
   searchOnPage,
   highlightElement,
-  shortenUserId,
   type PageMatch,
 } from './connect-topbar-utils';
 import { SyncIndicator } from './SyncIndicator';
@@ -255,7 +253,6 @@ export default function ConnectTopbar({
   const unreadNotifCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
   const profilePicId = getUserProfilePicId(user) || getSdkUserProfilePicId(user);
-  const tone = getAppTone(activeApp);
   const appAccent = getAppColor(activeApp);
   const { profile: myProfile } = useProfile();
   const cachedIdentity = (user as any)?.$id ? getCachedIdentityById((user as any).$id) : null;
@@ -497,16 +494,7 @@ export default function ConnectTopbar({
     return [...currentAppSuggestions, ...historicalSuggestions].slice(0, 3);
   }, [activeApp, localEvents]);
 
-  const [identityTab, setIdentityTab] = useState<'username' | 'userid'>('username');
   const [isGeneratingUsername, setIsGeneratingUsername] = useState(false);
-
-  useEffect(() => {
-    if (profileUsername) {
-      setIdentityTab('username');
-    } else {
-      setIdentityTab('userid');
-    }
-  }, [profileUsername]);
 
   const handleGenerateUsername = useCallback(async () => {
     if (isGeneratingUsername) return;
@@ -518,19 +506,11 @@ export default function ConnectTopbar({
         if (updatePreferences) {
           await updatePreferences({ username: res.username }).catch(() => null);
         }
-        setIdentityTab('username');
       }
     } catch {} finally {
       setIsGeneratingUsername(false);
     }
   }, [isGeneratingUsername, profileName, updatePreferences]);
-
-  const handleCopyUserId = useCallback(async () => {
-    if (!profileSeed.userId || typeof navigator === 'undefined' || !navigator.clipboard) return;
-    await navigator.clipboard.writeText(profileSeed.userId);
-    setCopyState('copied-userid');
-    window.setTimeout(() => setCopyState('idle'), 1600);
-  }, [profileSeed.userId]);
 
   const handleCopyUsername = useCallback(async () => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) return;
@@ -553,13 +533,6 @@ export default function ConnectTopbar({
     setCopyState('copied-referral');
     window.setTimeout(() => setCopyState('idle'), 1600);
   }, [profileUsername, profileSeed.userId]);
-
-  const handleOpenFullProfile = useCallback(() => {
-    if (!profileSeed.username) return;
-    stageProfileView(profileSeed as any, profileSeed.avatar || null);
-    handleCloseAll();
-    router.push(`/u/${encodeURIComponent(profileSeed.username)}?transition=profile`);
-  }, [profileSeed, handleCloseAll, router]);
 
   const appPanelMotion = useMemo(() => createTopbarPanelMotion(), []);
 

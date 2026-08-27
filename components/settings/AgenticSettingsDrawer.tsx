@@ -13,12 +13,10 @@ import {
   Key,
   Plus,
   Trash2,
-  Terminal,
   ShieldCheck,
-  AlertCircle,
   ArrowLeft
 } from 'lucide-react';
-import { SYSTEM_AGENTS, type SystemAgentDefinition } from '@/lib/agentic/system-agents';
+import type { SystemAgentDefinition } from '@/lib/agentic/system-agents';
 import type { AgentRecord } from '@/lib/services/agentic';
 import type { PatPublic } from '@/lib/services/pats';
 import { createPat, listPats, revokePat } from '@/lib/actions/client-ops';

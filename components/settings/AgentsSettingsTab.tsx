@@ -15,7 +15,6 @@ import {
   Copy, 
   Terminal, 
   BookOpen,
-  ShieldCheck,
   Zap
 } from 'lucide-react';
 import Link from 'next/link';
@@ -60,7 +59,7 @@ export function AgentsSettingsTab() {
     tier: string;
     percent: number;
   } | null>(null);
-  const [loadingCompute, setLoadingCompute] = useState(true);
+  const [_loadingCompute, setLoadingCompute] = useState(true);
 
   // Drawer helper (Desktop Right Sidebar / Mobile Bottom Sheet)
   const openAgentDrawer = useCallback((mode: AgentDrawerMode) => {

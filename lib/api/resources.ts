@@ -406,7 +406,6 @@ export const ApiResources = {
     if (!title) badRequest('title required');
     const wsId = body?.workspaceId || body?.projectId ? String(body.workspaceId || body.projectId) : null;
     const tables = createSystemTablesDB();
-    const now = new Date().toISOString();
     const goalId = ID.unique();
 
     const row = await tables.createRow({
@@ -853,164 +852,10 @@ export const ApiResources = {
       requireScope(actor, 'agents:provision');
     }
     
-    // If patching an existing uninitialized agent
-    if (body.agentId) {
-      const initResult = await this.initAgentIdentity(actor, String(body.agentId), body);
-      // Mint PAT if requested
-      if (body.mintPat !== false) {
-        const agentScopes = Array.isArray(body.scopes) && body.scopes.length > 0
-          ? body.scopes
-          : [
-              'workspaces:read',
-              'workspaces:write',
-              'notes:read',
-              'notes:write',
-              'goals:read',
-              'goals:write',
-              'chats:read',
-              'chats:write',
-              'agents:read',
-              'agents:write',
-            ];
-        const agentPatResult = await PatService.create({
-          userId: actor.userId,
-          name: `${initResult.name} (Agentic PAT)`,
-          scopes: agentScopes,
-          keyCategory: 'agentic_pat',
-          agentId: initResult.agentId,
-        });
-        return {
-          ...initResult,
-          agentToken: agentPatResult.token,
-        };
-      }
-      return initResult;
-    }
+    const targetAgentId = body.agentId ? String(body.agentId).trim() : ID.unique();
+    const initResult = await this.initAgentIdentity(actor, targetAgentId, body);
 
-    const name = String(body.name || 'Autonomous Agent').trim().slice(0, 128);
-    const agentType = String(body.agentType || 'autonomous').trim().slice(0, 64);
-    const agentId = ID.unique();
-    const now = new Date().toISOString();
-    const tables = createSystemTablesDB();
-
-    // 1. Generate autonomous keys & sovereign MEK entropy
-    const rawEntropy = new Uint8Array(32);
-    const nodeCrypto = await import('crypto');
-    nodeCrypto.randomFillSync(rawEntropy);
-
-    const secp = await import('@noble/secp256k1');
-    const { bech32 } = await import('@scure/base');
-    const { keccak_256 } = await import('@noble/hashes/sha3.js');
-
-    const secpPub = secp.getPublicKey(rawEntropy, false).slice(1);
-    const evmHash = keccak_256(secpPub);
-    const walletAddress = '0x' + Array.from(evmHash.slice(-20)).map((b) => b.toString(16).padStart(2, '0')).join('').toLowerCase();
-
-    const nostrPubRaw = secp.getPublicKey(rawEntropy, true).slice(1);
-    const nostrPubkeyHex = Array.from(nostrPubRaw).map((b) => b.toString(16).padStart(2, '0')).join('');
-    const nostrWords = bech32.toWords(nostrPubRaw);
-    const nostrNpub = bech32.encode('npub', nostrWords);
-
-    const agentUserId = `agent_${agentId}`;
-    const cleanHandle = `ag_${name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '') || agentId.slice(0, 8)}`;
-
-    // 2. Create an initial dedicated agentic workspace for this agent
-    const workspaceTitle = String(body.initialWorkspaceTitle || `${name}'s Workspace`).trim().slice(0, 255);
-    const wsRow = await tables.createRow({
-      databaseId: FLOW_DB,
-      tableId: 'projects',
-      rowId: ID.unique(),
-      data: {
-        title: workspaceTitle,
-        summary: `Autonomous workspace for agent ${name}`,
-        ownerId: actor.userId,
-        visibility: 'private',
-        status: 'active',
-        isAgentic: true,
-        isPublic: false,
-        isGuest: false,
-        createdAt: now,
-        updatedAt: now,
-      },
-      permissions: [Permission.read(Role.user(actor.userId))],
-    }).catch(() => null);
-
-    const workspaceId = wsRow ? (wsRow as any).$id : null;
-
-    // 3. Insert agent record into agents table
-    await tables.createRow({
-      databaseId: FLOW_DB,
-      tableId: 'agents',
-      rowId: agentId,
-      data: {
-        ownerId: actor.userId,
-        publicKey: nostrNpub,
-        config: JSON.stringify({
-          name,
-          agentType,
-          agentUserId,
-          username: cleanHandle,
-          walletAddress,
-          nostrNpub,
-          workspaceId,
-          capabilities: body.capabilities || ['notes', 'goals', 'chats', 'nostr'],
-          createdAt: now,
-        }),
-        status: 'active',
-        isPublic: true,
-        isGuest: true,
-      },
-      permissions: [Permission.read(Role.any()), Permission.update(Role.user(actor.userId))],
-    }).catch((err) => console.warn('[ApiResources.provisionAgent] Failed to insert agents table:', err?.message || err));
-
-    // 4. Create sovereign agent profile in profiles table
-    await tables.createRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-      tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
-      rowId: agentUserId,
-      data: {
-        userId: agentUserId,
-        username: cleanHandle,
-        displayName: `${name.trim()} (Smart Agent)`,
-        bio: String(body.bio || body.goal || `Autonomous ${agentType} smart partner`),
-        walletAddress,
-        publicKey: nostrNpub,
-        status: 'online',
-        preferences: JSON.stringify({
-          isAgentic: true,
-          ownerId: actor.userId,
-          agentId,
-          agentType,
-          role: String(body.role || name),
-          goal: String(body.goal || ''),
-          nostrNpub,
-          walletAddress,
-          updatedAt: now,
-        }),
-        isPublic: true,
-        isGuest: true,
-        isAvatar: true,
-        isContact: true,
-        isOnlineVisible: true,
-      },
-      permissions: [Permission.read(Role.any()), Permission.update(Role.user(actor.userId))],
-    }).catch(async () => {
-      // If row exists, update it
-      await tables.updateRow({
-        databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-        tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
-        rowId: agentUserId,
-        data: {
-          username: cleanHandle,
-          displayName: `${name.trim()} (Smart Agent)`,
-          walletAddress,
-          publicKey: nostrNpub,
-          status: 'online',
-        },
-      }).catch(() => null);
-    });
-
-    // 5. Mint dedicated Agentic PAT for this agent with full operational permissions
+    const name = String(body.name || initResult.name || 'Autonomous Agent').trim().slice(0, 128);
     const agentScopes = Array.isArray(body.scopes) && body.scopes.length > 0
       ? body.scopes
       : [
@@ -1031,28 +876,12 @@ export const ApiResources = {
       name: `${name} (Agentic PAT)`,
       scopes: agentScopes,
       keyCategory: 'agentic_pat',
-      agentId,
+      agentId: initResult.agentId,
     });
 
-    const nostrNsec = bech32.encode('nsec', nostrWords);
-    const mekHex = Array.from(rawEntropy).map((b) => b.toString(16).padStart(2, '0')).join('');
-
     return {
-      agentId,
-      agentUserId,
-      username: cleanHandle,
-      name,
-      agentType,
+      ...initResult,
       agentToken: agentPatResult.token,
-      workspaceId,
-      workspaceTitle,
-      walletAddress,
-      nostrNpub,
-      nostrNsec,
-      mekHex,
-      publicKey: nostrNpub,
-      ownerId: actor.userId,
-      createdAt: now,
     };
   },
 

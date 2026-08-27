@@ -476,7 +476,7 @@ export function EditProfileModal({
             ) : (
               <div className="flex items-center gap-2 truncate">
                 <span className="text-[10px] font-mono text-white/40 uppercase tracking-wider font-bold truncate">
-                  {activeMode === 'username_only' ? 'Username Claim' : 'Identity & Profile'}
+                  Identity & Profile
                 </span>
               </div>
             )}
@@ -668,7 +668,7 @@ export function EditProfileModal({
                   <button
                     type="button"
                     onClick={async () => {
-                      await navigator.clipboard.writeText(user.email);
+                      await navigator.clipboard.writeText(String(user.email));
                       setCopiedEmail(true);
                       toast.success('Email copied');
                       setTimeout(() => setCopiedEmail(false), 2000);

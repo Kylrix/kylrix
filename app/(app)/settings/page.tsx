@@ -14,7 +14,6 @@ import {
     Lightbulb,
     Loader2 as SpinnerIcon,
     Edit3,
-    UserCircle as ProfileIcon,
     ShieldCheck as SecurityIcon,
     ShieldCheck,
     MonitorSmartphone as SessionsIcon,
@@ -29,7 +28,6 @@ import {
     Copy,
     Check,
     Download,
-    HardDrive,
     AlertTriangle,
 } from 'lucide-react';
 import { WorkspaceTab } from '@/components/settings/WorkspaceTab';
@@ -931,7 +929,7 @@ function SettingsPageInner() {
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                navigator.clipboard.writeText(user.email);
+                                                navigator.clipboard.writeText(String(user.email));
                                                 toast.success('Email copied');
                                             }}
                                             className="py-2 px-4 rounded-xl border border-white/10 text-white font-bold text-xs hover:border-[#6366F1] hover:bg-[#6366F1]/5 transition-all cursor-pointer flex-shrink-0"
