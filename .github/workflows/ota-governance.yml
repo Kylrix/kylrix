@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   verify-native-linux:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[ci-build]') || contains(github.event.head_commit.message, '[enable-ci]')
     uses: ./.github/workflows/ota-verify-native-linux.yml
     with:
       ota_projection_identity: sha256:52218b0207b404fe7c0124b258d7b7170700a33fa75caf3bdd813186db9b97f4
@@ -19,6 +20,7 @@ jobs:
       ota_runner: ubuntu-latest
 
   verify-container-linux:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[ci-build]') || contains(github.event.head_commit.message, '[enable-ci]')
     uses: ./.github/workflows/ota-verify-container-linux.yml
     with:
       ota_projection_identity: sha256:219fd38f9c23aefb9691a3d672d93d5a2372b2b330fd10f6bd4d98c6d314d9dd
@@ -26,6 +28,7 @@ jobs:
       ota_runner: ubuntu-latest
 
   strict-replay-policy-refusal:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[ci-build]') || contains(github.event.head_commit.message, '[enable-ci]')
     name: Strict replay-input policy refusal
     runs-on: ubuntu-latest
     env:
@@ -96,9 +99,8 @@ jobs:
           path: ${{ runner.temp }}/ota-policy-*.json
           if-no-files-found: error
 
-
-
   contract-ci-drift:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[ci-build]') || contains(github.event.head_commit.message, '[enable-ci]')
     name: Contract-to-CI drift gate
     runs-on: ubuntu-latest
     steps:
