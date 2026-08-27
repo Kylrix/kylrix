@@ -10,6 +10,10 @@ export type ApiActor = {
   kind: 'pat' | 'oauth' | 'session';
   patId?: string;
   clientId?: string;
+  category?: string;
+  agentId?: string | null;
+  isAgent?: boolean;
+  workspaceId?: string | null;
   scopes: string[];
   rateLimits?: ApiRateLimits;
 };
@@ -48,10 +52,18 @@ export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
       userId: verified.userId,
       patId: verified.pat.$id,
     });
+
+    const isWs = verified.pat.isWorkspace === true || String(verified.pat.isWorkspace) === 'true';
+    const isAgent = (verified.pat as any).category === 'agentic_pat' || (verified.pat as any).category === 'agent_provisioning_key' || !!(verified.pat as any).agentId;
+
     return {
       userId: verified.userId,
       kind: 'pat',
       patId: verified.pat.$id,
+      category: (verified.pat as any).category || (isWs ? 'workspace_pat' : isAgent ? 'agentic_pat' : 'user_pat'),
+      agentId: (verified.pat as any).agentId || null,
+      isAgent,
+      workspaceId: verified.pat.workspaceId || null,
       scopes: verified.scopes,
       rateLimits: limits,
     };
@@ -97,6 +109,10 @@ export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
 
 export function requireScope(actor: ApiActor, scope: PatScope) {
   if (actor.kind === 'session') return;
+  // Agentic workspace policy: allow reading and creating tags by default so agents can discover and tag resources
+  if ((scope === 'tags:read' || scope === 'tags:write') && actor.isAgent) {
+    return;
+  }
   assertScope(actor.scopes, scope);
 }
 

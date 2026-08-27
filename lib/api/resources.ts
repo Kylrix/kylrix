@@ -3650,6 +3650,9 @@ export const ApiResources = {
   },
 
   async deleteTag(actor: ApiActor, id: string) {
+    if (actor.isAgent || actor.category === 'agentic_pat') {
+      forbidden('Autonomous agents cannot delete user tags. Tag deletion requires human owner authorization.');
+    }
     requireScope(actor, 'tags:write');
     const tables = createSystemTablesDB();
     await tables.deleteRow({
