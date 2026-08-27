@@ -2221,11 +2221,11 @@ export default function ConnectTopbar({
                 },
               }}
             >
-              <Box sx={{ minWidth: 0, flex: 1, pr: 1 }}>
-                <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff' }} noWrap>
+              <Box sx={{ minWidth: 0, flex: 1, pr: 1, overflow: 'hidden' }}>
+                <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} noWrap>
                   {w.title}
                 </Typography>
-                <Typography sx={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>
+                <Typography sx={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} noWrap>
                   {w.isPersonal ? 'Default workspace' : 'Workspace'}
                 </Typography>
               </Box>
@@ -2343,11 +2343,11 @@ export default function ConnectTopbar({
                     },
                   }}
                 >
-                  <Box sx={{ minWidth: 0, flex: 1, pr: 1 }}>
-                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff' }} noWrap>
+                  <Box sx={{ minWidth: 0, flex: 1, pr: 1, overflow: 'hidden' }}>
+                    <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#6366F1' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} noWrap>
                       {w.title}
                     </Typography>
-                    <Typography sx={{ fontSize: '0.72rem', color: 'rgba(99, 102, 241, 0.8)' }}>
+                    <Typography sx={{ fontSize: '0.72rem', color: 'rgba(99, 102, 241, 0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} noWrap>
                       {w.role ? `Shared (${w.role})` : 'Shared with you'}
                     </Typography>
                   </Box>
@@ -2501,11 +2501,11 @@ export default function ConnectTopbar({
                       },
                     }}
                   >
-                    <Box sx={{ minWidth: 0, flex: 1, pr: 1 }}>
-                      <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#818CF8' : '#fff' }} noWrap>
+                    <Box sx={{ minWidth: 0, flex: 1, pr: 1, overflow: 'hidden' }}>
+                      <Typography sx={{ fontWeight: 800, fontSize: '0.85rem', color: isActive ? '#818CF8' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} noWrap>
                         {w.title}
                       </Typography>
-                      <Typography sx={{ fontSize: '0.72rem', color: 'rgba(129, 140, 248, 0.8)' }}>
+                      <Typography sx={{ fontSize: '0.72rem', color: 'rgba(129, 140, 248, 0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} noWrap>
                         Agent Workspace
                       </Typography>
                     </Box>
@@ -2707,17 +2707,21 @@ export default function ConnectTopbar({
         animate={appPanelMotion.animate}
         exit={appPanelMotion.exit}
         transition={appPanelMotion.transition}
-        style={{ width: '100%', transformOrigin: 'top center' }}
+        style={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden', transformOrigin: 'top center' }}
       >
         <Box
           data-kylrix-topbar-panel
           sx={{
             width: '100%',
+            maxWidth: '100vw',
             bgcolor: '#161412',
-            overflow: 'hidden',
+            overflowX: 'hidden',
+            overflowY: 'hidden',
             borderBottom: '1px solid rgba(255,255,255,0.08)',
             borderRadius: '0 0 28px 28px',
-            boxShadow: '0 12px 32px rgba(0,0,0,0.35)'}}
+            boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
+            boxSizing: 'border-box',
+          }}
         >
           <Box
             onWheel={(event: React.WheelEvent) => {
@@ -2727,18 +2731,22 @@ export default function ConnectTopbar({
                 handleCloseAll();
               }
             }}
-            sx={{ px: { xs: 2.25, md: 4 }, py: 1.25, maxHeight: '45vh', overflowY: 'auto' }}
+            sx={{ px: { xs: 1.5, sm: 2.25, md: 4 }, py: 1.25, maxHeight: '55vh', overflowY: 'auto', overflowX: 'hidden', width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
           >
             <Paper
               elevation={0}
               sx={{
                 width: '100%',
+                maxWidth: '100%',
                 borderRadius: '26px',
                 bgcolor: '#161412',
                 border: `1px solid ${alpha(appAccent, 0.22)}`,
-                overflow: 'hidden'}}
+                overflowX: 'hidden',
+                overflowY: 'hidden',
+                boxSizing: 'border-box',
+              }}
             >
-              <Box sx={{ p: { xs: 1.5, sm: 2 } }}>
+              <Box sx={{ p: { xs: 1.25, sm: 2 }, width: '100%', maxWidth: '100%', overflowX: 'hidden', boxSizing: 'border-box' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 1.25 }}>
                   <IconButton onClick={handleCloseAll} size="small" sx={{ width: 28, height: 28, borderRadius: '999px', color: alpha('#fff', 0.6), bgcolor: alpha('#fff', 0.05), border: '1px solid rgba(255,255,255,0.06)', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}>
                     <CloseIcon size={14} />
