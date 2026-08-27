@@ -1205,22 +1205,32 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                 </ListItemButton>
               </ListItem>
 
-              {ecosystemTags.map((tag) => {
-                const isSelected = task.labels.includes(tag.name || '');
-                const color = (tag as any).color || '#9B9691';
+              {(() => {
+                const seenLower = new Set<string>();
+                const uniqueTags = (ecosystemTags || []).filter((tag) => {
+                  const key = String(tag.name || '').trim().toLowerCase();
+                  if (!key || seenLower.has(key)) return false;
+                  seenLower.add(key);
+                  return true;
+                });
 
-                return (
-                  <ListItem key={tag.$id} disablePadding sx={{ mb: 0.5 }}>
-                    <ListItemButton 
-                      onClick={async () => {
-                        let nextLabels = [...task.labels];
-                        if (!isSelected && tag.name) {
-                          nextLabels.push(tag.name);
-                        } else if (isSelected && tag.name) {
-                          nextLabels = nextLabels.filter(n => n !== tag.name);
-                        }
-                        await updateTask(task.id, { labels: nextLabels });
-                      }}
+                return uniqueTags.map((tag) => {
+                  const tagLower = (tag.name || '').trim().toLowerCase();
+                  const isSelected = (task.labels || []).some((l) => l.toLowerCase().trim() === tagLower);
+                  const color = (tag as any).color || '#9B9691';
+
+                  return (
+                    <ListItem key={tag.$id} disablePadding sx={{ mb: 0.5 }}>
+                      <ListItemButton 
+                        onClick={async () => {
+                          let nextLabels = [...(task.labels || [])];
+                          if (!isSelected && tag.name) {
+                            nextLabels.push(tag.name.trim());
+                          } else if (isSelected && tag.name) {
+                            nextLabels = nextLabels.filter((n) => n.toLowerCase().trim() !== tagLower);
+                          }
+                          await updateTask(task.id, { labels: nextLabels });
+                        }}
                       sx={{ 
                         borderRadius: '12px', 
                         py: 1.5,

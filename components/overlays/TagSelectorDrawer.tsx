@@ -78,39 +78,37 @@ export function TagSelectorDrawer() {
 
   const availableTags = React.useMemo(() => {
     const list: { $id: string; name: string; color: string }[] = [];
-    const seen = new Set<string>();
+    const seenLower = new Set<string>();
+
+    const addIfUnique = (id: string, name: string, color: string) => {
+      const trimmed = String(name || '').trim();
+      if (!trimmed) return;
+      const key = trimmed.toLowerCase();
+      if (!seenLower.has(key)) {
+        seenLower.add(key);
+        list.push({ $id: id || trimmed, name: trimmed, color: color || SYSTEM_PRIMARY });
+      }
+    };
 
     (directLocalTags || []).forEach((t: any) => {
       const name = typeof t === 'string' ? t : t?.name;
-      if (name && !seen.has(name)) {
-        seen.add(name);
-        list.push({ $id: t?.$id || name, name, color: t?.color || SYSTEM_PRIMARY });
-      }
+      if (name) addIfUnique(t?.$id || name, name, t?.color);
     });
 
     (ecosystemTags || []).forEach((t: any) => {
       const name = typeof t === 'string' ? t : t?.name;
-      if (name && !seen.has(name)) {
-        seen.add(name);
-        list.push({ $id: t?.$id || name, name, color: t?.color || SYSTEM_PRIMARY });
-      }
+      if (name) addIfUnique(t?.$id || name, name, t?.color);
     });
 
     (tasks || []).forEach((task) => {
       (task.labels || []).forEach((label) => {
-        if (label && !seen.has(label)) {
-          seen.add(label);
-          list.push({ $id: label, name: label, color: SYSTEM_PRIMARY });
-        }
+        if (label) addIfUnique(label, label, SYSTEM_PRIMARY);
       });
     });
 
     (notes || []).forEach((note: any) => {
       (note.tags || []).forEach((tag: string) => {
-        if (tag && !seen.has(tag)) {
-          seen.add(tag);
-          list.push({ $id: tag, name: tag, color: SYSTEM_PRIMARY });
-        }
+        if (tag) addIfUnique(tag, tag, SYSTEM_PRIMARY);
       });
     });
 

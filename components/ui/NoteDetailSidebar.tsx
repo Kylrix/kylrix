@@ -1712,24 +1712,34 @@ export function NoteDetailSidebar({
               </ListItemButton>
             </ListItem>
 
-            {ecosystemTags.map((tag) => {
-              const currentTagsArray = tags.split(',').map((t: string) => t.trim()).filter(Boolean);
-              const isSelected = currentTagsArray.includes(tag.name || '');
-              const color = (tag as any).color || '#9B9691';
+            {(() => {
+              const seenLower = new Set<string>();
+              const uniqueTags = (ecosystemTags || []).filter((tag) => {
+                const key = String(tag.name || '').trim().toLowerCase();
+                if (!key || seenLower.has(key)) return false;
+                seenLower.add(key);
+                return true;
+              });
 
-              return (
-                <ListItem key={tag.$id} disablePadding sx={{ mb: 0.5 }}>
-                  <ListItemButton 
-                    onClick={() => {
-                      let nextTagsArray = [...currentTagsArray];
-                      if (!isSelected && tag.name) {
-                        nextTagsArray.push(tag.name);
-                      } else if (isSelected && tag.name) {
-                        nextTagsArray = nextTagsArray.filter(n => n !== tag.name);
-                      }
-                      setTags(nextTagsArray.join(', '));
-                      setIsTagSelectorOpen(false);
-                    }}
+              return uniqueTags.map((tag) => {
+                const currentTagsArray = tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+                const tagLower = (tag.name || '').trim().toLowerCase();
+                const isSelected = currentTagsArray.some((t) => t.toLowerCase() === tagLower);
+                const color = (tag as any).color || '#9B9691';
+
+                return (
+                  <ListItem key={tag.$id} disablePadding sx={{ mb: 0.5 }}>
+                    <ListItemButton 
+                      onClick={() => {
+                        let nextTagsArray = [...currentTagsArray];
+                        if (!isSelected && tag.name) {
+                          nextTagsArray.push(tag.name.trim());
+                        } else if (isSelected && tag.name) {
+                          nextTagsArray = nextTagsArray.filter((n) => n.toLowerCase() !== tagLower);
+                        }
+                        setTags(nextTagsArray.join(', '));
+                        setIsTagSelectorOpen(false);
+                      }}
                     sx={{ 
                       borderRadius: '12px', 
                       py: 1.5,

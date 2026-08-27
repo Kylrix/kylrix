@@ -807,16 +807,29 @@ export async function listNotes(queries: any[] = [], limit: number = 100, option
 
 
 export async function createTag(data: Partial<Tags & { isPublic?: boolean; isGuest?: boolean }>, jwt?: string) {
+  const rawName = data.name?.trim();
+  if (!rawName) throw new Error("Tag name is required");
+  const nameLower = rawName.toLowerCase();
+
+  // 1. Client-side path: check if tag already exists in local/server tags
   if (typeof window !== 'undefined') {
     const { createRow } = await import('@/lib/actions/client-ops');
     
-    const name = data.name?.trim();
-    if (!name) throw new Error("Tag name is required");
+    try {
+      const { listTags } = await import('@/lib/appwrite/note');
+      const existingList = await listTags().catch(() => ({ rows: [] as any[] }));
+      const match = (existingList?.rows || []).find(
+        (t: any) => (t.nameLower && t.nameLower === nameLower) || (t.name && t.name.toLowerCase() === nameLower)
+      );
+      if (match) {
+        return hydrateTagMetadata(match as unknown as Tags);
+      }
+    } catch {}
 
-    const metadata = { color: data.color, description: data.description };
+    const metadata = { color: data.color || '#A855F7', description: data.description || '' };
     const payload = {
-      name,
-      nameLower: name.toLowerCase(),
+      name: rawName,
+      nameLower,
       metadata: JSON.stringify(metadata),
       isPublic: !!data.isPublic,
       isGuest: !!data.isGuest,
@@ -832,20 +845,37 @@ export async function createTag(data: Partial<Tags & { isPublic?: boolean; isGue
     return hydrateTagMetadata(doc as unknown as Tags);
   }
 
-  const { createRowSecure } = await import('@/lib/actions/secure-ops');
-  const name = data.name?.trim();
-  if (!name) throw new Error("Tag name is required");
+  // 2. Server-side path
+  const { createSystemTablesDB } = await import('@/lib/appwrite-admin');
+  const tables = createSystemTablesDB();
+  const { getActor } = await import('@/lib/actions/secure-ops/shared');
+  const actor = await getActor(jwt).catch(() => null);
+  const userId = actor?.$id;
 
-  const metadata = { color: data.color, description: data.description };
+  if (userId) {
+    const existing = await tables
+      .listRows({
+        databaseId: APPWRITE_DATABASE_ID,
+        tableId: APPWRITE_TABLE_ID_TAGS,
+        queries: [Query.equal('userId', userId), Query.equal('nameLower', nameLower), Query.limit(1)] as any,
+      })
+      .catch(() => ({ rows: [] as any[] }));
+    if (existing.rows && existing.rows.length > 0) {
+      return hydrateTagMetadata(existing.rows[0] as unknown as Tags);
+    }
+  }
+
+  const metadata = { color: data.color || '#A855F7', description: data.description || '' };
   const payload = {
-    name,
-    nameLower: name.toLowerCase(),
+    name: rawName,
+    nameLower,
     metadata: JSON.stringify(metadata),
     isPublic: !!data.isPublic,
     isGuest: !!data.isGuest,
     usageCount: 0
   };
 
+  const { createRowSecure } = await import('@/lib/actions/secure-ops');
   const doc = await createRowSecure(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, payload, undefined, jwt);
   return hydrateTagMetadata(doc as unknown as Tags);
 }

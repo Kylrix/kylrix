@@ -67,21 +67,25 @@ export function CreateGoalComposer({
   // Derive available tags from both ecosystem registry and local task copy
   const availableTagList = React.useMemo(() => {
     const list: { name: string; color: string }[] = [];
-    const seen = new Set<string>();
+    const seenLower = new Set<string>();
+
+    const addIfUnique = (name: string, color: string) => {
+      const trimmed = String(name || '').trim();
+      if (!trimmed) return;
+      const key = trimmed.toLowerCase();
+      if (!seenLower.has(key)) {
+        seenLower.add(key);
+        list.push({ name: trimmed, color: color || '#A855F7' });
+      }
+    };
 
     (ecosystemTags || []).forEach((t: any) => {
-      if (t?.name && !seen.has(t.name)) {
-        seen.add(t.name);
-        list.push({ name: t.name, color: t.color || '#A855F7' });
-      }
+      if (t?.name) addIfUnique(t.name, t.color);
     });
 
     (allTasks || []).forEach((task) => {
       (task.labels || []).forEach((label) => {
-        if (label && !seen.has(label)) {
-          seen.add(label);
-          list.push({ name: label, color: '#A855F7' });
-        }
+        if (label) addIfUnique(label, '#A855F7');
       });
     });
 
@@ -209,14 +213,18 @@ export function CreateGoalComposer({
   }, [initialContent?.id, resolvedId]);
 
   const appendTag = (tagName: string) => {
-    if (!tagName || tags.includes(tagName)) return;
-    const nextTags = [...tags, tagName];
+    const trimmed = tagName?.trim();
+    if (!trimmed) return;
+    const lower = trimmed.toLowerCase();
+    if (tags.some((t) => t.toLowerCase() === lower)) return;
+    const nextTags = [...tags, trimmed];
     setTags(nextTags);
     pushLive(buildLive(content, title, priority, dueDate, nextTags));
   };
 
   const removeTag = (tagName: string) => {
-    const nextTags = tags.filter((t) => t !== tagName);
+    const lower = tagName.toLowerCase().trim();
+    const nextTags = tags.filter((t) => t.toLowerCase().trim() !== lower);
     setTags(nextTags);
     pushLive(buildLive(content, title, priority, dueDate, nextTags));
   };
