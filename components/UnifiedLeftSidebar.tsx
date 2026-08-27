@@ -505,45 +505,47 @@ export function UnifiedLeftSidebar() {
                   </>
                 )}
 
-                {/* 3. Agent Workspaces Section (Contracted by default) */}
-                {agentWorkspaces.length > 0 && (
-                  <>
-                    <Box
-                      onClick={(e: React.MouseEvent) => {
-                        e.stopPropagation();
-                        setAgentWorkspacesExpanded((prev) => !prev);
-                      }}
-                      sx={{
-                        px: 1,
-                        pt: 1,
-                        pb: 0.5,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        cursor: 'pointer',
-                        userSelect: 'none',
-                        '&:hover span': { color: 'rgba(255,255,255,0.7)' },
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                        <BotIcon size={12} color="#818CF8" />
-                        <span style={{ fontSize: '0.62rem', fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                          Agent Workspaces ({agentWorkspaces.length})
-                        </span>
+                {/* 3. Agent Workspaces Section (Expanded when active or toggled) */}
+                {agentWorkspaces.length > 0 && (() => {
+                  const isAgentSectionOpen = agentWorkspacesExpanded || Boolean(activeWorkspace?.isAgentic);
+                  return (
+                    <>
+                      <Box
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          setAgentWorkspacesExpanded(!isAgentSectionOpen);
+                        }}
+                        sx={{
+                          px: 1,
+                          pt: 1,
+                          pb: 0.5,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          '&:hover span': { color: 'rgba(255,255,255,0.7)' },
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                          <BotIcon size={12} color="#818CF8" />
+                          <span style={{ fontSize: '0.62rem', fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            Agent Workspaces ({agentWorkspaces.length})
+                          </span>
+                        </Box>
+                        <Box sx={{ color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center' }}>
+                          {isAgentSectionOpen ? <WorkspaceChevronIcon size={12} /> : <ChevronRightIcon size={12} />}
+                        </Box>
                       </Box>
-                      <Box sx={{ color: 'rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center' }}>
-                        {agentWorkspacesExpanded ? <WorkspaceChevronIcon size={12} /> : <ChevronRightIcon size={12} />}
-                      </Box>
-                    </Box>
-                    {agentWorkspacesExpanded && agentWorkspaces.map((w) => {
-                      const isActive = w.id === activeWorkspace?.id;
-                      return (
-                        <Box
-                          key={w.id}
-                          onClick={() => {
-                            setActiveWorkspaceId(w.id);
-                            setWorkspaceMenuOpen(false);
-                          }}
+                      {isAgentSectionOpen && agentWorkspaces.map((w) => {
+                        const isActive = w.id === activeWorkspace?.id;
+                        return (
+                          <Box
+                            key={w.id}
+                            onClick={() => {
+                              setActiveWorkspaceId(w.id);
+                              setWorkspaceMenuOpen(false);
+                            }}
                           sx={{
                             display: 'flex',
                             alignItems: 'center',
@@ -587,8 +589,9 @@ export function UnifiedLeftSidebar() {
                       );
                     })}
                   </>
-                )}
-              </Box>
+                );
+              })()}
+            </Box>
           )}
         </Box>
 
