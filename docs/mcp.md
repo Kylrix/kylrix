@@ -1,5 +1,7 @@
 # Kylrix Model Context Protocol (MCP) Server
 
+[![smithery badge](https://smithery.ai/badge/kylrix/kylrix)](https://smithery.ai/servers/kylrix/kylrix)
+
 Connect Claude Desktop, Cursor, Claude Code, and autonomous AI agents directly to your Kylrix workspace over Streamable HTTP and Server-Sent Events (SSE).
 
 ---

@@ -19,6 +19,10 @@
   <a href="https://www.kylrix.space/docs/api">API Docs</a>
 </p>
 
+<p align="center">
+  <a href="https://smithery.ai/servers/kylrix/kylrix"><img src="https://smithery.ai/badge/kylrix/kylrix" alt="smithery badge"></a>
+</p>
+
 ---
 
 ## Philosophy
