@@ -31,56 +31,138 @@ function BareBonesMasterpassUnlock() {
   const [pwd, setPwd] = useState('');
   const [busy, setBusy] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLogs = () => {
+    if (!logs.length) return;
+    navigator.clipboard.writeText(logs.join('\n'));
+    setCopied(true);
+    toast.success('Logs copied to clipboard');
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleTestUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pwd || !user?.$id) return;
     setBusy(true);
     setLogs([]);
-    const addLog = (msg: string) => setLogs((prev) => [...prev, `${new Date().toLocaleTimeString()} ${msg}`]);
+    const addLog = (msg: string) => setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
 
     try {
-      addLog(`Testing direct unlock for user ID: ${user.$id}`);
+      addLog(`=== STARTING DIRECT CRYPTO PROBE ===`);
+      addLog(`User ID: "${user.$id}", Email: "${user.email || 'N/A'}"`);
       
       const { SecurityEnclave } = await import('@/lib/security/enclave');
-      const localKeychain = await SecurityEnclave.getKeychain(user.$id);
-      addLog(`Local enclave keychain count: ${localKeychain.length}`);
-      
       const { AppwriteService } = await import('@/lib/appwrite');
-      const remoteKeychain = await AppwriteService.listKeychainEntries(user.$id).catch((err) => {
-        addLog(`Remote fetch note: ${err?.message || err}`);
+      const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+
+      // 1. Inspect User Document
+      try {
+        const userDoc = await AppwriteService.getUserDoc(user.$id);
+        addLog(`UserDoc: exists=${Boolean(userDoc)}, masterpass=${userDoc?.masterpass}, isPasskey=${userDoc?.isPasskey}, authPass=${Boolean(userDoc?.authPass)}`);
+      } catch (err: any) {
+        addLog(`UserDoc fetch error: ${err?.message || err}`);
+      }
+
+      // 2. Fetch Enclave and Remote Keychain
+      const localKeychain = await SecurityEnclave.getKeychain(user.$id);
+      addLog(`Enclave Local Cache Rows: ${localKeychain.length}`);
+
+      const remoteEntries = await AppwriteService.listKeychainEntries(user.$id).catch((err: any) => {
+        addLog(`Remote listKeychainEntries error: ${err?.message || err}`);
         return [];
       });
-      addLog(`Remote Appwrite keychain count: ${remoteKeychain.length}`);
+      addLog(`Remote Appwrite Database (${APPWRITE_CONFIG.DATABASES.VAULT}.${APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN}) Rows: ${remoteEntries.length}`);
 
-      const entries = remoteKeychain.length > 0 ? remoteKeychain : localKeychain;
-      const pwdEntries = entries.filter((e: any) => e.type === 'password');
-      addLog(`Password type credentials found: ${pwdEntries.length}`);
-
-      if (pwdEntries.length === 0) {
-        addLog('ERROR: Zero password entries found on account! Vault is uninitialized or wiped.');
-        toast.error('No password entry found');
+      const allEntries = remoteEntries.length > 0 ? remoteEntries : localKeychain;
+      if (allEntries.length === 0) {
+        addLog(`ERROR: ZERO keychain entries found on account! Vault is uninitialized or wiped.`);
+        toast.error('Zero keychain entries found');
         return;
       }
 
-      for (let i = 0; i < pwdEntries.length; i++) {
-        const entry = pwdEntries[i];
-        addLog(`Credential #${i + 1} (id: ${entry.$id}): saltLen: ${entry.salt?.length || 0}, isArgon: ${Boolean(entry.isArgon)}, params: ${typeof entry.params === 'object' ? JSON.stringify(entry.params) : entry.params}`);
+      // 3. Inspect Every Entry
+      allEntries.forEach((entry: any, i: number) => {
+        addLog(`--- Entry #${i + 1} [$id: ${entry.$id}, type: "${entry.type}"] ---`);
+        addLog(`  salt: length=${entry.salt?.length || 0} (${entry.salt ? `${entry.salt.slice(0, 8)}...` : 'NONE'})`);
+        addLog(`  wrappedKey: length=${entry.wrappedKey?.length || 0} (${entry.wrappedKey ? `${entry.wrappedKey.slice(0, 16)}...` : 'NONE'})`);
+        addLog(`  isArgon: ${Boolean(entry.isArgon)}, isPending: ${Boolean(entry.isPending)}`);
+        addLog(`  params: ${typeof entry.params === 'object' ? JSON.stringify(entry.params) : String(entry.params)}`);
+        addLog(`  $createdAt: ${entry.$createdAt || 'N/A'}`);
+      });
+
+      const pwdEntries = allEntries.filter((e: any) => e.type === 'password');
+      addLog(`Found ${pwdEntries.length} 'password' type entries to test against.`);
+
+      if (pwdEntries.length === 0) {
+        addLog(`WARNING: No entries with type: 'password' (only passkeys or uninitialized entries exist).`);
       }
 
-      addLog('Invoking masterPassCrypto.unlock()...');
+      // 4. Test Step-by-Step Low-Level Derivation and AES-GCM Decrypt
       const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
+
+      for (let idx = 0; idx < pwdEntries.length; idx++) {
+        const entry = pwdEntries[idx];
+        addLog(`\n>>> Testing Decryption on Password Entry #${idx + 1} (${entry.$id}) <<<`);
+
+        if (!entry.salt || !entry.wrappedKey) {
+          addLog(`  SKIPPED: Missing salt or wrappedKey.`);
+          continue;
+        }
+
+        // Base64 decode
+        const decodeB64 = (b64: string) => {
+          const norm = b64.replace(/-/g, '+').replace(/_/g, '/');
+          const pad = norm.padEnd(Math.ceil(norm.length / 4) * 4, '=');
+          const bin = atob(pad);
+          const bytes = new Uint8Array(bin.length);
+          for (let k = 0; k < bin.length; k++) bytes[k] = bin.charCodeAt(k);
+          return bytes;
+        };
+
+        const saltBytes = decodeB64(entry.salt);
+        const wrappedKeyBytes = decodeB64(entry.wrappedKey);
+        addLog(`  Decoded Salt: ${saltBytes.length} bytes; Decoded WrappedKey: ${wrappedKeyBytes.length} bytes`);
+
+        const iv = wrappedKeyBytes.slice(0, 16);
+        const ciphertext = wrappedKeyBytes.slice(16);
+        addLog(`  IV: ${iv.length} bytes, Ciphertext: ${ciphertext.length} bytes`);
+
+        // Test with Argon2id and PBKDF2
+        for (const algo of ['Argon2id', 'PBKDF2']) {
+          const isArgonFlag = algo === 'Argon2id';
+          const t0 = performance.now();
+          try {
+            addLog(`  Deriving key with [${algo}]...`);
+            const authKey = await (masterPassCrypto as any).deriveKey(pwd, saltBytes, isArgonFlag);
+            const dt = (performance.now() - t0).toFixed(1);
+            addLog(`  Key derived in ${dt}ms. Attempting crypto.subtle.decrypt AES-GCM...`);
+
+            const testMek = await crypto.subtle.decrypt(
+              { name: 'AES-GCM', iv },
+              authKey,
+              ciphertext
+            );
+            addLog(`  >>> SUCCESS [${algo}]! Decrypted MEK byteLength: ${testMek.byteLength} <<<`);
+          } catch (decryptErr: any) {
+            addLog(`  FAILED [${algo}]: ${decryptErr?.name || 'Error'} - ${decryptErr?.message || String(decryptErr)}`);
+          }
+        }
+      }
+
+      // 5. Run full masterPassCrypto.unlock()
+      addLog(`\n>>> Running official masterPassCrypto.unlock() <<<`);
       const success = await masterPassCrypto.unlock(pwd, user.$id, false);
 
       if (success) {
-        addLog('SUCCESS: Vault unlocked cleanly! MEK imported and active in memory.');
+        addLog(`=== VERDICT: UNLOCK SUCCEEDED! Vault is active in memory. ===`);
         toast.success('Direct unlock succeeded!');
       } else {
-        addLog('FAILED: masterPassCrypto.unlock returned false. Cryptographic unwrap tag mismatch or bad password.');
+        addLog(`=== VERDICT: UNLOCK FAILED! Master password did not decrypt any keychain candidate. ===`);
         toast.error('Unlock failed');
       }
     } catch (err: any) {
-      addLog(`CRITICAL ERROR: ${err?.message || String(err)}`);
+      addLog(`CRITICAL FATAL PROBE ERROR: ${err?.name || 'Error'}: ${err?.message || String(err)}`);
       console.error('[BareBonesUnlock]', err);
       toast.error(`Error: ${err?.message}`);
     } finally {
@@ -92,7 +174,7 @@ function BareBonesMasterpassUnlock() {
     <Section title="Direct Masterpass Unlock (Diagnostic)">
       <div className="flex flex-col gap-3">
         <p className="text-xs text-white/50 leading-relaxed font-satoshi">
-          Bare-bones first-principles unlock: directly tests password derivation and MEK unwrap with real-time logs.
+          Bare-bones first-principles diagnostic: tests key derivation (Argon2id/PBKDF2) and MEK unwrap with real-time logs.
         </p>
         <form onSubmit={handleTestUnlock} className="flex flex-col sm:flex-row gap-2">
           <input
@@ -112,13 +194,39 @@ function BareBonesMasterpassUnlock() {
             {busy ? 'Testing...' : 'Unlock Direct'}
           </button>
         </form>
+
         {logs.length > 0 && (
-          <div className="p-3 bg-[#0A0908] border border-white/5 rounded-xl font-mono text-[11px] text-white/70 flex flex-col gap-1 max-h-48 overflow-y-auto">
-            {logs.map((log, idx) => (
-              <div key={idx} className={log.includes('SUCCESS') ? 'text-emerald-400 font-bold' : log.includes('ERROR') || log.includes('FAILED') ? 'text-red-400 font-bold' : ''}>
-                {log}
-              </div>
-            ))}
+          <div className="flex flex-col gap-2 mt-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono text-white/40 uppercase tracking-wider">
+                Probe Output ({logs.length} events)
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyLogs}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg cursor-pointer transition-all"
+              >
+                {copied ? 'Copied!' : 'Copy Full Logs'}
+              </button>
+            </div>
+            <div className="p-3 bg-[#0A0908] border border-white/5 rounded-xl font-mono text-[11px] text-white/70 flex flex-col gap-1 max-h-64 overflow-y-auto whitespace-pre-wrap select-all">
+              {logs.map((log, idx) => (
+                <div
+                  key={idx}
+                  className={
+                    log.includes('SUCCESS')
+                      ? 'text-emerald-400 font-bold'
+                      : log.includes('ERROR') || log.includes('FAILED') || log.includes('FATAL')
+                      ? 'text-red-400 font-bold'
+                      : log.includes('>>>')
+                      ? 'text-amber-400 font-semibold'
+                      : ''
+                  }
+                >
+                  {log}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
