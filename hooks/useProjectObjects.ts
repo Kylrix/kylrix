@@ -47,8 +47,10 @@ export function useProjectObjects(
   const load = useCallback(
     async (force = false) => {
       if (!projectId) {
-        setRows([]);
-        setLoading(false);
+        if (mountedRef.current) {
+          setRows([]);
+          setLoading(false);
+        }
         return;
       }
 
@@ -64,15 +66,19 @@ export function useProjectObjects(
             setRows(cachedList);
             setLoading(false);
           } else {
-            if (mountedRef.current) setRows([]);
-            setLoading(true);
+            if (mountedRef.current) {
+              setRows([]);
+              setLoading(true);
+            }
           }
         } catch {
-          if (mountedRef.current) setRows([]);
-          setLoading(true);
+          if (mountedRef.current) {
+            setRows([]);
+            setLoading(true);
+          }
         }
       } else {
-        setLoading(true);
+        if (mountedRef.current) setLoading(true);
       }
 
       // 2. Fetch project_objects via ProjectsService (backed by LocalEngine + Realtime)
@@ -86,21 +92,9 @@ export function useProjectObjects(
             ? result
             : [];
         if (mountedRef.current) {
-          setRows((prev) => {
-            const byId = new Map<string, ProjectObjects>();
-            const prevList = Array.isArray(prev) ? prev : [];
-            // Load existing local rows first
-            prevList.forEach((r) => {
-              const key = r.entityId || r.$id || (r as any).id;
-              if (key) byId.set(key, r);
-            });
-            // Merge remote rows
-            remoteList.forEach((r: ProjectObjects) => {
-              const key = r.entityId || r.$id || (r as any).id;
-              if (key) byId.set(key, r);
-            });
-            return Array.from(byId.values());
-          });
+          setRows(remoteList);
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+          void LocalEngine.cacheSet(cacheKey, remoteList);
         }
       } catch (err) {
         console.warn('[useProjectObjects] remote fetch failed:', err);
@@ -108,11 +102,12 @@ export function useProjectObjects(
         if (mountedRef.current) setLoading(false);
       }
     },
-    [projectId, entityKind],
+    [projectId, entityKind, nexusInvalidate],
   );
 
-  // Reload whenever projectId or entityKind changes
+  // Instantly clear rows and reload whenever projectId or entityKind changes
   useEffect(() => {
+    setRows([]);
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, entityKind]);

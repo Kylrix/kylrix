@@ -58,10 +58,16 @@ export function useSharedWorkspaceEntities<T = any>(
             setRows(cached);
             setLoading(false);
           } else {
-            if (mountedRef.current) setLoading(true);
+            if (mountedRef.current) {
+              setRows([]);
+              setLoading(true);
+            }
           }
         } catch {
-          if (mountedRef.current) setLoading(true);
+          if (mountedRef.current) {
+            setRows([]);
+            setLoading(true);
+          }
         }
       } else {
         if (mountedRef.current) setLoading(true);
@@ -93,9 +99,11 @@ export function useSharedWorkspaceEntities<T = any>(
     [workspaceId, isSharedWorkspace, cacheKey, entityKind],
   );
 
+  // Instantly clear rows when switching workspaces to prevent cross-workspace ghost items
   useEffect(() => {
+    setRows([]);
     void load();
-  }, [load]);
+  }, [workspaceId, entityKind, isSharedWorkspace, load]);
 
   const refetch = useCallback(() => load(true), [load]);
 
