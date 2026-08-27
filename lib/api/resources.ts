@@ -167,6 +167,81 @@ async function unlinkObjectFromWorkspace(
   }
 }
 
+const TAGS_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.TAGS || 'tags';
+
+async function ensureTagsExist(
+  tables: ReturnType<typeof createSystemTablesDB>,
+  userId: string,
+  rawTags: unknown[],
+): Promise<string[]> {
+  if (!Array.isArray(rawTags)) return [];
+  const cleanTags = Array.from(
+    new Set(
+      rawTags
+        .map((t) => String(t || '').trim())
+        .filter((t) => t.length > 0 && !t.startsWith('workspace:') && !t.startsWith('project:')),
+    ),
+  );
+  if (!cleanTags.length) return [];
+
+  const now = new Date().toISOString();
+  for (const name of cleanTags) {
+    const nameLower = name.toLowerCase();
+    try {
+      const existing = await tables
+        .listRows({
+          databaseId: DB,
+          tableId: TAGS_TABLE,
+          queries: [
+            Query.equal('userId', userId),
+            Query.equal('nameLower', nameLower),
+            Query.limit(1),
+          ],
+        })
+        .catch(() => ({ rows: [] as any[] }));
+
+      if (existing.rows && existing.rows.length > 0) {
+        const row = existing.rows[0];
+        await tables
+          .updateRow({
+            databaseId: DB,
+            tableId: TAGS_TABLE,
+            rowId: row.$id,
+            data: {
+              usageCount: (row.usageCount || 0) + 1,
+              updatedAt: now,
+            },
+          })
+          .catch(() => null);
+      } else {
+        await tables
+          .createRow({
+            databaseId: DB,
+            tableId: TAGS_TABLE,
+            rowId: ID.unique(),
+            data: {
+              name,
+              nameLower,
+              userId,
+              isPublic: false,
+              isGuest: false,
+              usageCount: 1,
+              metadata: JSON.stringify({ color: '#A855F7', description: '' }),
+              createdAt: now,
+              updatedAt: now,
+            },
+            permissions: [Permission.read(Role.any()), Permission.update(Role.user(userId))],
+          })
+          .catch(() => null);
+      }
+    } catch (err) {
+      console.warn(`[ApiResources] Failed to ensure tag '${name}':`, err);
+    }
+  }
+
+  return cleanTags;
+}
+
 async function getWorkspaceObjectIds(
   tables: ReturnType<typeof createSystemTablesDB>,
   projectId: string,
@@ -399,8 +474,7 @@ export const ApiResources = {
       filterNoteData,
     });
 
-    const userTags = Array.isArray(body?.tags) ? (body.tags as string[]).map(String) : [];
-    const noteTags = wsId ? Array.from(new Set([...userTags, `workspace:${wsId}`, `project:${wsId}`])) : userTags;
+    const cleanTags = await ensureTagsExist(tables, actor.userId, body?.tags as any[]);
 
     const note = await service.createNote({
       title,
@@ -409,7 +483,7 @@ export const ApiResources = {
       isPublic: isPublic || Boolean(wsId),
       isWorkspace: Boolean(wsId),
       projectId: wsId || undefined,
-      tags: noteTags.length ? noteTags : undefined,
+      tags: cleanTags.length ? cleanTags : undefined,
     });
 
     // Ensure ownership and workspace isolation metadata exist
@@ -423,7 +497,7 @@ export const ApiResources = {
         creatorId: actor.userId,
         isWorkspace: Boolean(wsId),
         projectId: wsId || null,
-        tags: noteTags,
+        tags: cleanTags,
         updatedAt: now,
       },
     }).catch(() => null);
@@ -449,6 +523,9 @@ export const ApiResources = {
     }
     if (body.content !== undefined) patch.content = String(body.content);
     if (body.isPublic !== undefined) patch.isPublic = !!body.isPublic;
+    if (body.tags !== undefined) {
+      patch.tags = await ensureTagsExist(tables, actor.userId, body.tags as any[]);
+    }
 
     const filtered = filterNoteData(cleanRowData(patch));
     const row = await tables.updateRow({
@@ -534,6 +611,8 @@ export const ApiResources = {
     const tables = createSystemTablesDB();
     const goalId = ID.unique();
 
+    const cleanTags = body?.tags !== undefined ? await ensureTagsExist(tables, actor.userId, body.tags as any[]) : undefined;
+
     const row = await tables.createRow({
       databaseId: FLOW_DB,
       tableId: TASKS,
@@ -542,6 +621,7 @@ export const ApiResources = {
         title: title.slice(0, 255),
         description: body?.description != null ? String(body.description) : (body?.summary != null ? String(body.summary) : ''),
         status: String(body?.status || 'todo'),
+        tags: cleanTags && cleanTags.length > 0 ? cleanTags : undefined,
         userId: actor.userId,
         isPublic: Boolean(wsId),
         isGuest: Boolean(wsId),
@@ -567,6 +647,9 @@ export const ApiResources = {
     if (body.title !== undefined) patch.title = String(body.title).trim().slice(0, 255);
     if (body.description !== undefined) patch.description = String(body.description);
     if (body.status !== undefined) patch.status = String(body.status);
+    if (body.tags !== undefined) {
+      patch.tags = await ensureTagsExist(tables, actor.userId, body.tags as any[]);
+    }
     const row = await tables.updateRow({
       databaseId: FLOW_DB,
       tableId: TASKS,
@@ -3079,18 +3162,107 @@ export const ApiResources = {
     requireScope(actor, 'tags:read');
     const tables = createSystemTablesDB();
     const res = await tables.listRows({
-      databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
-      tableId: APPWRITE_CONFIG.TABLES.TAGS || APPWRITE_CONFIG.TABLES.NOTE.TAGS,
+      databaseId: DB,
+      tableId: TAGS_TABLE,
       queries: [
         Query.equal('userId', actor.userId),
         Query.limit(Math.min(200, Math.max(1, limit))),
       ],
     });
-    return res.rows.map((r: any) => ({
-      id: r.$id,
-      name: r.name || r.label || r.$id,
-      color: r.color || null,
-    }));
+    return res.rows.map((r: any) => {
+      let color = r.color || null;
+      let description = '';
+      if (r.metadata) {
+        try {
+          const parsed = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata;
+          if (parsed.color) color = parsed.color;
+          if (parsed.description) description = parsed.description;
+        } catch {}
+      }
+      return {
+        id: r.$id,
+        name: r.name || r.label || r.$id,
+        color,
+        description,
+        usageCount: r.usageCount || 0,
+      };
+    });
+  },
+
+  async createTag(actor: ApiActor, body: Record<string, unknown>) {
+    requireScope(actor, 'tags:write');
+    const name = String(body.name || '').trim();
+    if (!name) badRequest('Tag name is required');
+    const tables = createSystemTablesDB();
+    const now = new Date().toISOString();
+    const nameLower = name.toLowerCase();
+
+    const existing = await tables
+      .listRows({
+        databaseId: DB,
+        tableId: TAGS_TABLE,
+        queries: [Query.equal('userId', actor.userId), Query.equal('nameLower', nameLower), Query.limit(1)],
+      })
+      .catch(() => ({ rows: [] as any[] }));
+
+    if (existing.rows && existing.rows.length > 0) {
+      const row = existing.rows[0];
+      let color = row.color || null;
+      let description = '';
+      if (row.metadata) {
+        try {
+          const parsed = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata;
+          if (parsed.color) color = parsed.color;
+          if (parsed.description) description = parsed.description;
+        } catch {}
+      }
+      return {
+        id: row.$id,
+        name: row.name,
+        color,
+        description,
+        usageCount: row.usageCount || 0,
+      };
+    }
+
+    const color = typeof body.color === 'string' ? body.color : '#A855F7';
+    const description = typeof body.description === 'string' ? body.description : '';
+    const created = await tables.createRow({
+      databaseId: DB,
+      tableId: TAGS_TABLE,
+      rowId: ID.unique(),
+      data: {
+        name,
+        nameLower,
+        userId: actor.userId,
+        isPublic: !!body.isPublic,
+        isGuest: !!body.isGuest,
+        usageCount: 0,
+        metadata: JSON.stringify({ color, description }),
+        createdAt: now,
+        updatedAt: now,
+      },
+      permissions: [Permission.read(Role.any()), Permission.update(Role.user(actor.userId))],
+    });
+
+    return {
+      id: created.$id,
+      name: created.name,
+      color,
+      description,
+      usageCount: 0,
+    };
+  },
+
+  async deleteTag(actor: ApiActor, id: string) {
+    requireScope(actor, 'tags:write');
+    const tables = createSystemTablesDB();
+    await tables.deleteRow({
+      databaseId: DB,
+      tableId: TAGS_TABLE,
+      rowId: id,
+    });
+    return { id, deleted: true };
   },
 
   async listObjects(actor: ApiActor, limit = 50) {

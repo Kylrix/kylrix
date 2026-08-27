@@ -205,8 +205,25 @@ function registerCoreTools() {
       tags: { type: 'array', description: 'Tag names array' },
       isPublic: { type: 'boolean', description: 'Public access toggle' }},
     execute: async (params) => {
+      if (Array.isArray(params.tags) && params.tags.length > 0) {
+        try {
+          const { createTag, listTags } = await import('@/lib/appwrite/note');
+          const existing = await listTags().catch(() => ({ rows: [] as any[] }));
+          const existingNames = new Set((existing.rows || []).map((t: any) => (t.name || '').toLowerCase()));
+          for (const rawTag of params.tags) {
+            const tName = String(rawTag || '').trim();
+            if (tName && !existingNames.has(tName.toLowerCase()) && !tName.startsWith('workspace:') && !tName.startsWith('project:')) {
+              await createTag({ name: tName, color: '#A855F7', description: '' }).catch(() => null);
+              existingNames.add(tName.toLowerCase());
+            }
+          }
+        } catch {}
+      }
       const { createNote } = await import('@/lib/appwrite/note');
-      const note = await createNote(params as any);
+      const cleanTags = Array.isArray(params.tags)
+        ? params.tags.map((t: any) => String(t || '').trim()).filter((t: string) => t && !t.startsWith('workspace:') && !t.startsWith('project:'))
+        : undefined;
+      const note = await createNote({ ...(params as any), tags: cleanTags });
       return { success: true, data: note };
     }});
 
@@ -240,8 +257,25 @@ function registerCoreTools() {
       content: { type: 'string', description: 'New content body' },
       tags: { type: 'array', description: 'Updated tag array' }},
     execute: async (params) => {
+      if (Array.isArray(params.tags) && params.tags.length > 0) {
+        try {
+          const { createTag, listTags } = await import('@/lib/appwrite/note');
+          const existing = await listTags().catch(() => ({ rows: [] as any[] }));
+          const existingNames = new Set((existing.rows || []).map((t: any) => (t.name || '').toLowerCase()));
+          for (const rawTag of params.tags) {
+            const tName = String(rawTag || '').trim();
+            if (tName && !existingNames.has(tName.toLowerCase()) && !tName.startsWith('workspace:') && !tName.startsWith('project:')) {
+              await createTag({ name: tName, color: '#A855F7', description: '' }).catch(() => null);
+              existingNames.add(tName.toLowerCase());
+            }
+          }
+        } catch {}
+      }
       const { updateNote } = await import('@/lib/appwrite/note');
-      const note = await updateNote(params.id, params as any);
+      const cleanTags = Array.isArray(params.tags)
+        ? params.tags.map((t: any) => String(t || '').trim()).filter((t: string) => t && !t.startsWith('workspace:') && !t.startsWith('project:'))
+        : undefined;
+      const note = await updateNote(params.id, { ...(params as any), tags: cleanTags });
       return { success: true, data: note };
     }});
 
@@ -289,10 +323,28 @@ function registerCoreTools() {
       status: { type: 'string', description: 'todo | in_progress | done' },
       priority: { type: 'string', description: 'low | medium | high' },
       dueDate: { type: 'string', description: 'ISO due date' },
-      description: { type: 'string', description: 'Detailed description' }},
+      description: { type: 'string', description: 'Detailed description' },
+      tags: { type: 'array', description: 'Tag names array' }},
     execute: async (params) => {
+      if (Array.isArray(params.tags) && params.tags.length > 0) {
+        try {
+          const { createTag, listTags } = await import('@/lib/appwrite/note');
+          const existing = await listTags().catch(() => ({ rows: [] as any[] }));
+          const existingNames = new Set((existing.rows || []).map((t: any) => (t.name || '').toLowerCase()));
+          for (const rawTag of params.tags) {
+            const tName = String(rawTag || '').trim();
+            if (tName && !existingNames.has(tName.toLowerCase()) && !tName.startsWith('workspace:') && !tName.startsWith('project:')) {
+              await createTag({ name: tName, color: '#A855F7', description: '' }).catch(() => null);
+              existingNames.add(tName.toLowerCase());
+            }
+          }
+        } catch {}
+      }
       const { tasks } = await import('@/lib/kylrixflow');
-      const task = await tasks.create(params as any);
+      const cleanTags = Array.isArray(params.tags)
+        ? params.tags.map((t: any) => String(t || '').trim()).filter((t: string) => t && !t.startsWith('workspace:') && !t.startsWith('project:'))
+        : undefined;
+      const task = await tasks.create({ ...(params as any), tags: cleanTags });
       return { success: true, data: task };
     }});
 

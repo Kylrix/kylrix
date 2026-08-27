@@ -344,8 +344,12 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
     }
   }
 
-  if (a === 'tags' && !b && method === 'GET') {
-    return jsonOk(await ApiResources.listTags(actor, limit()));
+  if (a === 'tags' && !b) {
+    if (method === 'GET') return jsonOk(await ApiResources.listTags(actor, limit()));
+    if (method === 'POST') return jsonOk(await ApiResources.createTag(actor, await readBody(req)));
+  }
+  if (a === 'tags' && b && !c && method === 'DELETE') {
+    return jsonOk(await ApiResources.deleteTag(actor, b));
   }
   if (a === 'objects' && !b && method === 'GET') {
     return jsonOk(await ApiResources.listObjects(actor, limit()));
