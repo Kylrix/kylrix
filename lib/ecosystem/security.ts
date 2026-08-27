@@ -248,6 +248,10 @@ class EcosystemSecurity {
     return this.deriveKeyPBKDF2(password, salt);
   }
 
+  clearDecryptionCache(): void {
+    this.decryptionCache.clear();
+  }
+
   // Import a raw key and set it as the master key
   async importMasterKey(keyBytes: ArrayBuffer): Promise<boolean> {
     try {
@@ -258,9 +262,12 @@ class EcosystemSecurity {
         true, // Make it extractable
         ["encrypt", "decrypt", "wrapKey", "unwrapKey"]);
       this.isUnlocked = true;
+      this.clearDecryptionCache();
       if (typeof sessionStorage !== "undefined") {
         sessionStorage.setItem("kylrix_vault_unlocked", "true");
+        sessionStorage.setItem("vault_unlocked", Date.now().toString());
       }
+      this.emitStatusChange();
       return true;
     } catch (e: unknown) {
       console.error("[Security] Failed to import master key", e);
@@ -372,6 +379,16 @@ class EcosystemSecurity {
   }
 
   getMasterKey(): CryptoKey | null {
+    if (!this.masterKey && typeof window !== 'undefined') {
+      try {
+        const { masterPassCrypto } = require('@/lib/masterpass-crypto');
+        const mk = masterPassCrypto.getMasterKey?.();
+        if (mk) {
+          this.masterKey = mk;
+          this.isUnlocked = true;
+        }
+      } catch {}
+    }
     return this.masterKey;
   }
 
@@ -506,18 +523,67 @@ class EcosystemSecurity {
    */
   async decryptWithWorkspace(
     encryptedData: string,
-    workspace?: { isAgentic?: boolean; agentId?: string | null } | null,
+    workspace?: { isAgentic?: boolean; agentId?: string | null; id?: string; ownerId?: string; metadata?: any } | null,
     wrappedDek?: string | null
   ): Promise<string> {
+    if (!encryptedData || typeof encryptedData !== 'string') return encryptedData;
     if (this.decryptionCache.has(encryptedData)) return this.decryptionCache.get(encryptedData)!;
 
-    const targetKey = await this.resolveWorkspaceMek(workspace);
-    if (!targetKey && !this.masterKey) {
+    const masterKey = this.getMasterKey();
+
+    const isAgentic = Boolean(
+      workspace?.isAgentic === true ||
+      (workspace?.metadata && (typeof workspace.metadata === 'string' ? workspace.metadata.includes('"isAgentic":true') : workspace.metadata?.isAgentic === true)) ||
+      (workspace?.ownerId && String(workspace.ownerId).startsWith('agent_'))
+    );
+
+    // 1. Direct User MEK First for Non-Agentic / Personal Workspaces
+    if (!isAgentic && masterKey) {
+      if (wrappedDek) {
+        try {
+          const dekBytes = atob(wrappedDek).split('').map((c) => c.charCodeAt(0));
+          const dekIv = new Uint8Array(dekBytes.slice(0, EcosystemSecurity.IV_SIZE));
+          const dekEncrypted = new Uint8Array(dekBytes.slice(EcosystemSecurity.IV_SIZE));
+          const rawDek = await crypto.subtle.decrypt({ name: "AES-GCM", iv: dekIv }, masterKey, dekEncrypted);
+          const itemKey = await crypto.subtle.importKey("raw", rawDek, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+
+          const dataBytes = atob(encryptedData).split('').map((c) => c.charCodeAt(0));
+          const dataIv = new Uint8Array(dataBytes.slice(0, EcosystemSecurity.IV_SIZE));
+          const dataEncrypted = new Uint8Array(dataBytes.slice(EcosystemSecurity.IV_SIZE));
+          const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: dataIv }, itemKey, dataEncrypted);
+          const plaintext = new TextDecoder().decode(decrypted);
+          this.decryptionCache.set(encryptedData, plaintext);
+          return plaintext;
+        } catch {}
+      }
+
+      try {
+        const combined = new Uint8Array(
+          atob(encryptedData).split("").map((char: any) => char.charCodeAt(0))
+        );
+        const iv = combined.slice(0, EcosystemSecurity.IV_SIZE);
+        const encrypted = combined.slice(EcosystemSecurity.IV_SIZE);
+        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, masterKey, encrypted);
+        const plaintext = new TextDecoder().decode(decrypted);
+        this.decryptionCache.set(encryptedData, plaintext);
+        return plaintext;
+      } catch {}
+    }
+
+    // 2. Hierarchical Agent MEK Resolution for Agentic Workspaces
+    let keyToUse = masterKey;
+    if (isAgentic) {
+      const agentKey = await this.resolveWorkspaceMek(workspace);
+      if (agentKey) {
+        keyToUse = agentKey;
+      }
+    }
+
+    if (!keyToUse) {
       throw new Error("VAULT_LOCKED");
     }
-    const keyToUse = targetKey || this.masterKey!;
 
-    // 1. If wrappedDek is present, unwrap DEK and decrypt payload
+    // A. If wrappedDek is present, unwrap DEK and decrypt payload
     if (wrappedDek) {
       try {
         const dekBytes = atob(wrappedDek).split('').map((c) => c.charCodeAt(0));
@@ -536,7 +602,7 @@ class EcosystemSecurity {
       } catch {}
     }
 
-    // 2. Direct decryption with workspace key
+    // B. Direct decryption with workspace key
     try {
       const combined = new Uint8Array(
         atob(encryptedData).split("").map((char: any) => char.charCodeAt(0))
@@ -549,8 +615,10 @@ class EcosystemSecurity {
       return plaintext;
     } catch (directErr) {
       // Fallback: If agentic decryption failed, try masterKey fallback if different
-      if (keyToUse !== this.masterKey && this.masterKey) {
-        return this.decrypt(encryptedData);
+      if (keyToUse !== masterKey && masterKey) {
+        try {
+          return await this.decrypt(encryptedData);
+        } catch {}
       }
       throw directErr;
     }

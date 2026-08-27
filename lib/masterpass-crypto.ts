@@ -114,7 +114,11 @@ class MasterPassCrypto {
     
     // Auto-unlock if we just imported a key (e.g. from SW recovery)
     if (this.masterKey) {
-        this.isUnlocked = true;
+      this.isUnlocked = true;
+      try {
+        const { ecosystemSecurity } = await import('./ecosystem/security');
+        await ecosystemSecurity.importMasterKey(keyBytes);
+      } catch {}
     }
   }
 
@@ -193,7 +197,13 @@ class MasterPassCrypto {
       logError("Cannot unlock with imported key: key is not present");
       return false;
     }
+    try {
+      const raw = await crypto.subtle.exportKey("raw", this.masterKey);
+      const { ecosystemSecurity } = await import('./ecosystem/security');
+      await ecosystemSecurity.importMasterKey(raw);
+    } catch {}
     this.markAsUnlocked();
+    await this.syncToServiceWorker();
     return true;
   }
 
