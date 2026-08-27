@@ -351,7 +351,7 @@ class MasterPassCrypto {
   // Unlock using the Keychain architecture
   private async unlockWithKeychain(password: string, userId: string): Promise<boolean> {
     try {
-      const keychainEntry = await ecosystemSecurity.fetchKeychain(userId);
+      let keychainEntry = await ecosystemSecurity.fetchKeychain(userId);
 
       if (!keychainEntry) {
         return false; // No keychain entry found
@@ -364,7 +364,7 @@ class MasterPassCrypto {
         ? keychainEntry.params.includes("Argon2id")
         : (keychainEntry.params?.algo === 'Argon2id' || !!keychainEntry.params?.memory);
       
-      const isArgon = Boolean(keychainEntry.isArgon || isArgonBySalt || isArgonByParam);
+      let isArgon = Boolean(keychainEntry.isArgon || isArgonBySalt || isArgonByParam);
 
       logDebug(`[Vault] Unlocking with ${isArgon ? "Argon2id" : "Legacy PBKDF2"}...`);
       let authKey = await this.deriveKey(password, salt, isArgon);
