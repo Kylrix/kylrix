@@ -830,6 +830,9 @@ export const ApiResources = {
       }).catch(() => null);
     });
 
+    const nostrNsec = bech32.encode('nsec', nostrWords);
+    const mekHex = Array.from(rawEntropy).map((b) => b.toString(16).padStart(2, '0')).join('');
+
     return {
       agentId,
       agentUserId,
@@ -840,6 +843,8 @@ export const ApiResources = {
       workspaceTitle,
       walletAddress,
       nostrNpub,
+      nostrNsec,
+      mekHex,
       publicKey: nostrNpub,
       ownerId: actor.userId,
       createdAt: now,
@@ -1032,6 +1037,9 @@ export const ApiResources = {
       agentId,
     });
 
+    const nostrNsec = bech32.encode('nsec', nostrWords);
+    const mekHex = Array.from(rawEntropy).map((b) => b.toString(16).padStart(2, '0')).join('');
+
     return {
       agentId,
       agentUserId,
@@ -1043,6 +1051,8 @@ export const ApiResources = {
       workspaceTitle,
       walletAddress,
       nostrNpub,
+      nostrNsec,
+      mekHex,
       publicKey: nostrNpub,
       ownerId: actor.userId,
       createdAt: now,
