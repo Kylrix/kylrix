@@ -1883,15 +1883,15 @@ export default function ConnectTopbar({
             boxSizing: 'border-box',
           }}
         >
-          <Box sx={{ p: 1.25 }}>
+          <Box sx={{ p: { xs: 1.5, sm: 2 } }}>
             {/* Outlined Content Cards */}
-            <Box sx={{ display: 'grid', gap: 1.25 }}>
+            <Box sx={{ display: 'grid', gap: { xs: 1.5, sm: 2 } }}>
               {/* 1. Identity Outlined Tile */}
-              <Box sx={{ p: 1.5, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0, flex: 1 }}>
+              <Box sx={{ p: { xs: 1.75, sm: 2 }, borderRadius: '22px', border: '1px solid rgba(255,255,255,0.08)', bgcolor: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.75, minWidth: 0, flex: 1 }}>
                   <IdentityAvatar
                     userId={user?.$id}
-                    size={46}
+                    size={48}
                     pro={isPro}
                     fallback={(profileUsername || profileDisplayName || 'U')[0].toUpperCase()}
                   />
@@ -1903,7 +1903,7 @@ export default function ConnectTopbar({
                       title="Click to copy handle"
                       sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 0, bgcolor: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', minWidth: 0, maxWidth: '100%' }}
                     >
-                      <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.95rem', lineHeight: 1.2, fontFamily: 'var(--font-clash)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', '&:hover': { color: '#818CF8' } }}>
+                      <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.98rem', lineHeight: 1.2, fontFamily: 'var(--font-clash)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', '&:hover': { color: '#818CF8' } }}>
                         {primaryHandle}
                       </Typography>
                       <Box sx={{ p: 0.5, borderRadius: '6px', color: copyState === 'copied-username' ? '#10B981' : 'rgba(255,255,255,0.3)', bgcolor: copyState === 'copied-username' ? 'rgba(16,185,129,0.15)' : 'transparent', flexShrink: 0 }}>
@@ -1911,12 +1911,12 @@ export default function ConnectTopbar({
                       </Box>
                     </Box>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                      <Box component="span" sx={{ fontSize: '9px', fontFamily: 'monospace', px: 1, py: 0.25, borderRadius: '999px', bgcolor: 'rgba(236,72,153,0.15)', color: '#EC4899', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.75 }}>
+                      <Box component="span" sx={{ fontSize: '9px', fontFamily: 'monospace', px: 1, py: 0.35, borderRadius: '999px', bgcolor: 'rgba(236,72,153,0.15)', color: '#EC4899', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
                         {currentTier} PLAN
                       </Box>
                       {profileUsername && profileDisplayName && profileDisplayName !== profileUsername && (
-                        <Typography component="span" sx={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <Typography component="span" sx={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {profileDisplayName}
                         </Typography>
                       )}
@@ -1926,7 +1926,7 @@ export default function ConnectTopbar({
                           type="button"
                           onClick={handleGenerateUsername}
                           disabled={isGeneratingUsername}
-                          sx={{ px: 1, py: 0.25, borderRadius: '8px', bgcolor: 'rgba(99,102,241,0.2)', color: '#818cf8', fontSize: '10px', fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}
+                          sx={{ px: 1.25, py: 0.35, borderRadius: '8px', bgcolor: 'rgba(99,102,241,0.2)', color: '#818cf8', fontSize: '10px', fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}
                         >
                           <Sparkles size={10} />
                           <span>{isGeneratingUsername ? '...' : 'Claim @name'}</span>
@@ -1936,48 +1936,48 @@ export default function ConnectTopbar({
                   </Box>
                 </Box>
 
-                <IconButton onClick={handleCloseAll} size="small" sx={{ width: 28, height: 28, borderRadius: '8px', color: alpha('#fff', 0.6), bgcolor: alpha('#fff', 0.04), border: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', color: 'white' } }}>
+                <IconButton onClick={handleCloseAll} size="small" sx={{ width: 30, height: 30, borderRadius: '999px', color: alpha('#fff', 0.6), bgcolor: alpha('#fff', 0.05), border: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, '&:hover': { bgcolor: 'rgba(255,255,255,0.1)', color: 'white' } }}>
                   ✕
                 </IconButton>
               </Box>
 
               {/* 2. Referral Outlined Tile */}
-              <Box sx={{ p: 1.5, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ p: { xs: 1.75, sm: 2 }, borderRadius: '22px', border: '1px solid rgba(255,255,255,0.08)', bgcolor: 'rgba(255,255,255,0.03)', display: 'flex', flexDirection: 'column', gap: 1.25 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                  <Typography component="span" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '10px', fontWeight: 900, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                    <Users size={12} color="#10B981" />
+                  <Typography component="span" sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '10.5px', fontWeight: 900, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    <Users size={13} color="#10B981" />
                     <span>Referral Link</span>
                   </Typography>
-                  <Box component="span" sx={{ fontSize: '9px', fontFamily: 'monospace', color: '#10B981', bgcolor: 'rgba(16,185,129,0.1)', px: 1, py: 0.25, borderRadius: '4px', fontWeight: 700 }}>
+                  <Box component="span" sx={{ fontSize: '9.5px', fontFamily: 'monospace', color: '#10B981', bgcolor: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.2)', px: 1.2, py: 0.3, borderRadius: '6px', fontWeight: 800 }}>
                     +1.5 $KYL / join
                   </Box>
                 </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'rgba(0,0,0,0.4)', p: 0.75, borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
-                  <Typography component="span" sx={{ color: 'rgba(255,255,255,0.85)', fontFamily: 'monospace', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, px: 0.5, userSelect: 'all' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'rgba(0,0,0,0.45)', p: 1, borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <Typography component="span" sx={{ color: 'rgba(255,255,255,0.85)', fontFamily: 'monospace', fontSize: '11.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, px: 0.75, userSelect: 'all' }}>
                     {typeof window !== 'undefined' ? `${window.location.host}/?ref=${referralCode}` : '/?ref=...'}
                   </Typography>
                   <Box
                     component="button"
                     type="button"
                     onClick={handleCopyReferralLink}
-                    sx={{ px: 1.5, py: 0.5, borderRadius: '8px', fontSize: '11px', fontWeight: 900, color: 'white', bgcolor: copyState === 'copied-referral' ? '#10B981' : '#6366F1', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.5, transition: 'all 0.2s', flexShrink: 0, '&:hover': { bgcolor: copyState === 'copied-referral' ? '#10B981' : '#5254E8' } }}
+                    sx={{ px: 2, py: 0.75, borderRadius: '10px', fontSize: '11.5px', fontWeight: 900, color: 'white', bgcolor: copyState === 'copied-referral' ? '#10B981' : '#6366F1', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.75, transition: 'all 0.2s', flexShrink: 0, '&:hover': { bgcolor: copyState === 'copied-referral' ? '#10B981' : '#5254E8' } }}
                   >
-                    {copyState === 'copied-referral' ? <Check size={11} /> : <CopyIcon size={11} />}
+                    {copyState === 'copied-referral' ? <Check size={12} /> : <CopyIcon size={12} />}
                     <span>{copyState === 'copied-referral' ? 'Copied' : 'Copy'}</span>
                   </Box>
                 </Box>
               </Box>
 
               {/* 3. Action Buttons (Wallet & Settings side-by-side, Sign Out below) */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, pt: 0.25 }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25 }}>
                   <Button
                     onClick={() => {
                       handleCloseAll();
                       openWallet();
                     }}
-                    sx={{ borderRadius: '14px', bgcolor: alpha(appAccent, 0.06), color: appAccent, py: 1, fontSize: '0.84rem', textTransform: 'none', fontWeight: 800, '&:hover': { bgcolor: alpha(appAccent, 0.12) } }}
-                    startIcon={<Wallet size={14} />}
+                    sx={{ borderRadius: '16px', bgcolor: alpha(appAccent, 0.08), border: `1px solid ${alpha(appAccent, 0.16)}`, color: appAccent, py: 1.25, fontSize: '0.86rem', textTransform: 'none', fontWeight: 800, '&:hover': { bgcolor: alpha(appAccent, 0.15) } }}
+                    startIcon={<Wallet size={15} />}
                   >
                     Wallet
                   </Button>
@@ -1986,8 +1986,8 @@ export default function ConnectTopbar({
                       handleCloseAll();
                       router.push('/settings');
                     }}
-                    sx={{ borderRadius: '14px', bgcolor: 'rgba(255,255,255,0.02)', color: 'white', border: '1px solid rgba(255,255,255,0.06)', py: 1, fontSize: '0.84rem', textTransform: 'none', fontWeight: 800, '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' } }}
-                    startIcon={<Settings size={14} />}
+                    sx={{ borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.03)', color: 'white', border: '1px solid rgba(255,255,255,0.08)', py: 1.25, fontSize: '0.86rem', textTransform: 'none', fontWeight: 800, '&:hover': { bgcolor: 'rgba(255,255,255,0.07)' } }}
+                    startIcon={<Settings size={15} />}
                   >
                     Settings
                   </Button>
@@ -1999,7 +1999,7 @@ export default function ConnectTopbar({
                       handleCloseAll();
                       openProUpgrade();
                     }}
-                    sx={{ borderRadius: '14px', bgcolor: 'rgba(236,72,153,0.08)', color: '#EC4899', border: '1px solid rgba(236,72,153,0.2)', py: 0.75, fontSize: '0.82rem', textTransform: 'none', fontWeight: 800, '&:hover': { bgcolor: 'rgba(236,72,153,0.14)' } }}
+                    sx={{ borderRadius: '16px', bgcolor: 'rgba(236,72,153,0.08)', color: '#EC4899', border: '1px solid rgba(236,72,153,0.22)', py: 1, fontSize: '0.84rem', textTransform: 'none', fontWeight: 800, '&:hover': { bgcolor: 'rgba(236,72,153,0.15)' } }}
                     startIcon={<Sparkles size={14} />}
                   >
                     Upgrade to Pro
@@ -2011,8 +2011,8 @@ export default function ConnectTopbar({
                     handleCloseAll();
                     void logout();
                   }}
-                  sx={{ borderRadius: '14px', bgcolor: 'rgba(255,77,77,0.06)', color: '#FF4D4D', border: '1px solid rgba(255,77,77,0.12)', py: 1, fontSize: '0.84rem', textTransform: 'none', fontWeight: 800, '&:hover': { bgcolor: 'rgba(255,77,77,0.12)' } }}
-                  startIcon={<LogOut size={14} />}
+                  sx={{ borderRadius: '16px', bgcolor: 'rgba(255,77,77,0.06)', color: '#FF4D4D', border: '1px solid rgba(255,77,77,0.14)', py: 1.25, fontSize: '0.86rem', textTransform: 'none', fontWeight: 800, '&:hover': { bgcolor: 'rgba(255,77,77,0.12)' } }}
+                  startIcon={<LogOut size={15} />}
                 >
                   Sign out
                 </Button>
