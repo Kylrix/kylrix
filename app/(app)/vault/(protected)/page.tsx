@@ -270,6 +270,7 @@ function DashboardPageContent() {
           if (!payload || !payload.$id || cancelled) return;
           const isOwn = !payload.userId || payload.userId === activeUserId;
           const isWorkspaceItem =
+            Boolean(activeWorkspace) ||
             payload.isWorkspace === true ||
             Boolean(payload.projectId) ||
             (Array.isArray(payload.tags) && payload.tags.some((t: string) => t.startsWith('workspace:') || t.startsWith('project:')));
