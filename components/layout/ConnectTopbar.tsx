@@ -1884,75 +1884,61 @@ export default function ConnectTopbar({
           }}
         >
           <Box sx={{ p: 1.25 }}>
-            {/* Outline Header */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, px: 0.5, mb: 1.25 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-                <Box sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', color: appAccent, bgcolor: alpha(appAccent, 0.08), border: `1px solid ${alpha(appAccent, 0.18)}`, flexShrink: 0 }}>
-                  <Logo app={activeApp} size={16} variant="icon" />
-                </Box>
-                <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.2 }}>
-                  <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.92rem', lineHeight: 1.2, fontFamily: 'var(--font-clash)' }}>
-                    Profile
-                  </Typography>
-                  <Typography component="span" sx={{ color: 'rgba(255,255,255,0.45)', fontWeight: 700, fontSize: '0.68rem', lineHeight: 1.3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    Account & Identity
-                  </Typography>
-                </Box>
-              </Box>
-              <IconButton onClick={handleCloseAll} size="small" sx={{ width: 30, height: 30, borderRadius: '999px', color: alpha('#fff', 0.7), bgcolor: alpha('#fff', 0.05), border: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', color: 'white' } }}>
-                ✕
-              </IconButton>
-            </Box>
-
             {/* Outlined Content Cards */}
-            <Box sx={{ display: 'grid', gap: 1.25, pr: 0.5, pb: 0.5 }}>
+            <Box sx={{ display: 'grid', gap: 1.25 }}>
               {/* 1. Identity Outlined Tile */}
-              <Box sx={{ p: 1.5, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <IdentityAvatar
-                  userId={user?.$id}
-                  size={46}
-                  pro={isPro}
-                  fallback={(profileUsername || profileDisplayName || 'U')[0].toUpperCase()}
-                />
-                <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Box
-                    component="button"
-                    type="button"
-                    onClick={handleCopyUsername}
-                    title="Click to copy handle"
-                    sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 0, bgcolor: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', minWidth: 0, maxWidth: '100%' }}
-                  >
-                    <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.95rem', lineHeight: 1.2, fontFamily: 'var(--font-clash)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', '&:hover': { color: '#818CF8' } }}>
-                      {primaryHandle}
-                    </Typography>
-                    <Box sx={{ p: 0.5, borderRadius: '6px', color: copyState === 'copied-username' ? '#10B981' : 'rgba(255,255,255,0.3)', bgcolor: copyState === 'copied-username' ? 'rgba(16,185,129,0.15)' : 'transparent', flexShrink: 0 }}>
-                      {copyState === 'copied-username' ? <Check size={12} /> : <CopyIcon size={12} />}
-                    </Box>
-                  </Box>
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                    <Box component="span" sx={{ fontSize: '9px', fontFamily: 'monospace', px: 1, py: 0.25, borderRadius: '999px', bgcolor: 'rgba(236,72,153,0.15)', color: '#EC4899', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>
-                      {currentTier} PLAN
-                    </Box>
-                    {profileUsername && profileDisplayName && profileDisplayName !== profileUsername && (
-                      <Typography component="span" sx={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {profileDisplayName}
+              <Box sx={{ p: 1.5, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0, flex: 1 }}>
+                  <IdentityAvatar
+                    userId={user?.$id}
+                    size={46}
+                    pro={isPro}
+                    fallback={(profileUsername || profileDisplayName || 'U')[0].toUpperCase()}
+                  />
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Box
+                      component="button"
+                      type="button"
+                      onClick={handleCopyUsername}
+                      title="Click to copy handle"
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 0, bgcolor: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', minWidth: 0, maxWidth: '100%' }}
+                    >
+                      <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.95rem', lineHeight: 1.2, fontFamily: 'var(--font-clash)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', '&:hover': { color: '#818CF8' } }}>
+                        {primaryHandle}
                       </Typography>
-                    )}
-                    {!profileUsername && (
-                      <Box
-                        component="button"
-                        type="button"
-                        onClick={handleGenerateUsername}
-                        disabled={isGeneratingUsername}
-                        sx={{ px: 1, py: 0.25, borderRadius: '8px', bgcolor: 'rgba(99,102,241,0.2)', color: '#818cf8', fontSize: '10px', fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}
-                      >
-                        <Sparkles size={10} />
-                        <span>{isGeneratingUsername ? '...' : 'Claim @name'}</span>
+                      <Box sx={{ p: 0.5, borderRadius: '6px', color: copyState === 'copied-username' ? '#10B981' : 'rgba(255,255,255,0.3)', bgcolor: copyState === 'copied-username' ? 'rgba(16,185,129,0.15)' : 'transparent', flexShrink: 0 }}>
+                        {copyState === 'copied-username' ? <Check size={12} /> : <CopyIcon size={12} />}
                       </Box>
-                    )}
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                      <Box component="span" sx={{ fontSize: '9px', fontFamily: 'monospace', px: 1, py: 0.25, borderRadius: '999px', bgcolor: 'rgba(236,72,153,0.15)', color: '#EC4899', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0 }}>
+                        {currentTier} PLAN
+                      </Box>
+                      {profileUsername && profileDisplayName && profileDisplayName !== profileUsername && (
+                        <Typography component="span" sx={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {profileDisplayName}
+                        </Typography>
+                      )}
+                      {!profileUsername && (
+                        <Box
+                          component="button"
+                          type="button"
+                          onClick={handleGenerateUsername}
+                          disabled={isGeneratingUsername}
+                          sx={{ px: 1, py: 0.25, borderRadius: '8px', bgcolor: 'rgba(99,102,241,0.2)', color: '#818cf8', fontSize: '10px', fontWeight: 700, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}
+                        >
+                          <Sparkles size={10} />
+                          <span>{isGeneratingUsername ? '...' : 'Claim @name'}</span>
+                        </Box>
+                      )}
+                    </Box>
                   </Box>
                 </Box>
+
+                <IconButton onClick={handleCloseAll} size="small" sx={{ width: 28, height: 28, borderRadius: '8px', color: alpha('#fff', 0.6), bgcolor: alpha('#fff', 0.04), border: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', color: 'white' } }}>
+                  ✕
+                </IconButton>
               </Box>
 
               {/* 2. Referral Outlined Tile */}
