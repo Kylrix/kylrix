@@ -749,46 +749,54 @@ function SettingsPageInner() {
                         {/* Left Column: Discoverability, Integrations & Feedback */}
                         <div className="flex flex-col gap-8">
                             {/* Referral Program */}
-                            <div className="p-5 md:p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-4 max-w-full overflow-hidden">
+                            <div className="p-5 md:p-6 bg-[#161412] border border-white/10 rounded-[22px] shadow-xl flex flex-col gap-4 max-w-full overflow-hidden">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                                        <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center shrink-0">
-                                            <Users size={20} />
+                                        <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 text-[#818CF8] flex items-center justify-center shrink-0">
+                                            <Users size={18} />
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <h4 className="text-white font-black text-sm md:text-base font-mono truncate">Referral & Growth</h4>
-                                            <p className="text-white/40 text-xs font-semibold line-clamp-2 sm:line-clamp-none">
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="text-white font-bold text-sm md:text-base font-clash m-0 truncate">
+                                                    Referral & Growth
+                                                </h4>
+                                                <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
+                                                    +1.5 $KYL / invite
+                                                </span>
+                                            </div>
+                                            <p className="text-white/40 text-xs font-medium mt-0.5 m-0 line-clamp-2 sm:line-clamp-none">
                                                 Earn 1.5 $KYL for each user who joins with your link, plus 0.5 $KYL for 30-day activity.
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-[10px] font-black text-white/30 uppercase tracking-widest font-mono">Referred</span>
-                                            <span className="text-white font-black text-sm font-mono">{referralStats?.totalReferred ?? 0} users</span>
+
+                                    {/* Inset Metric Badges */}
+                                    <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                                        <div className="bg-[#0A0908] border border-white/10 rounded-xl px-3 py-1.5 flex flex-col items-center justify-center min-w-[70px]">
+                                            <span className="text-[9px] font-bold text-white/40 uppercase tracking-widest font-mono">Referred</span>
+                                            <span className="text-white font-black text-xs font-mono">{referralStats?.totalReferred ?? 0}</span>
                                         </div>
-                                        <div className="h-7 w-[1px] bg-white/10" />
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-[10px] font-black text-white/30 uppercase tracking-widest font-mono">Earned</span>
-                                            <span className="text-[#10B981] font-black text-sm font-mono">+{referralStats?.totalTokensEarned ?? '0.0'} $KYL</span>
+                                        <div className="bg-[#0A0908] border border-emerald-500/20 rounded-xl px-3 py-1.5 flex flex-col items-center justify-center min-w-[85px]">
+                                            <span className="text-[9px] font-bold text-emerald-400/60 uppercase tracking-widest font-mono">Earned</span>
+                                            <span className="text-emerald-400 font-black text-xs font-mono">+{referralStats?.totalTokensEarned ?? '0.0'} $KYL</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Shareable Link Box */}
-                                <div className="flex items-center gap-2 bg-black/40 p-2 md:p-2.5 rounded-xl border border-white/5 max-w-full min-w-0">
+                                <div className="flex items-center gap-2 bg-[#0A0908] p-1.5 pl-3 rounded-xl border border-white/10 max-w-full min-w-0">
                                     <input 
                                         type="text"
                                         readOnly
                                         value={typeof window !== 'undefined' ? `${window.location.origin}/?ref=${getEffectiveUsername(user) ? `u_${getEffectiveUsername(user)}` : `id_${user?.$id || ''}`}` : ''}
-                                        className="flex-1 bg-transparent px-2 text-xs font-mono text-white/90 border-none outline-none truncate min-w-0"
+                                        className="flex-1 bg-transparent text-xs font-mono text-[#818CF8] border-none outline-none truncate min-w-0 select-all"
                                     />
                                     <button
                                         type="button"
                                         onClick={handleCopyReferral}
-                                        className="h-9 px-3.5 md:px-4 rounded-lg bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center gap-1.5 transition-all select-none shrink-0 cursor-pointer"
+                                        className="h-8 px-3.5 rounded-lg bg-[#6366F1] hover:bg-[#5254E8] text-white font-bold text-xs flex items-center gap-1.5 transition-all select-none shrink-0 cursor-pointer shadow-md"
                                     >
-                                        {copiedReferral ? <Check size={14} className="text-[#10B981]" /> : <Copy size={14} />}
+                                        {copiedReferral ? <Check size={13} className="text-emerald-300" /> : <Copy size={13} />}
                                         <span>{copiedReferral ? 'Copied' : 'Copy Link'}</span>
                                     </button>
                                 </div>
