@@ -516,45 +516,7 @@ export function NoteDetailSidebar({
   // hasCollaborators kept for external consumers if needed (no longer gates realtime)
   const _hasCollaborators = useMemo(() => collaboratorProfiles.length > 0, [collaboratorProfiles]);
 
-  // Stable realtime per note — avoid re-subscribe jitter on collaborator loading
-  useEffect(() => {
-    if (!liveNote.$id) return;
 
-    const channel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents.${liveNote.$id}`;
-    const tableChannel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.tables.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.rows.${liveNote.$id}`;
-    const unsubscribe = realtime.subscribe([channel, tableChannel], (response) => {
-      const payload = response.payload as Notes;
-      if (!payload?.$id) return;
-
-      const isCreate = response.events.some((event) => event.includes('.create'));
-      const isUpdate = response.events.some((event) => event.includes('.update'));
-      const isDelete = response.events.some((event) => event.includes('.delete'));
-
-      if (isDelete || (payload as any).isTrash === true || (payload as any).isDeleted === true) {
-        onDelete?.(payload.$id);
-        onClose?.();
-        return;
-      }
-
-      if (!isCreate && !isUpdate) return;
-      // Collaborator remote edits enter the unified local copy — local pending wins.
-      if (autonomicSyncEngine.isPending(payload.$id)) return;
-      const base = allNotesRef.current.find((n) => n.$id === payload.$id) || noteRef.current;
-      const merged = base ? { ...base, ...payload } : payload;
-      updateLocalAndParentNote(merged);
-      try {
-        autonomicSyncEngine.markConfirmed(payload.$id);
-      } catch {}
-    });
-
-    return () => {
-      if (typeof unsubscribe === 'function') {
-        (unsubscribe as any)();
-      } else if (unsubscribe && typeof (unsubscribe as any).unsubscribe === 'function') {
-        (unsubscribe as any).unsubscribe();
-      }
-    };
-  }, [liveNote.$id, pushLiveNote, onUpdate, onDelete, onClose]);
 
   useEffect(() => {
     let active = true;

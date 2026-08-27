@@ -310,9 +310,20 @@ export function KylrixWYSIWYGEditor({
         EditorView.updateListener.of((update) => {
           if (isExternalSyncRef.current) return;
           if (update.docChanged) {
+            const isUserChange = update.transactions.some(
+              (tr) =>
+                tr.isUserEvent('input') ||
+                tr.isUserEvent('delete') ||
+                tr.isUserEvent('undo') ||
+                tr.isUserEvent('redo') ||
+                tr.isUserEvent('drop') ||
+                tr.isUserEvent('paste')
+            );
             const str = update.state.doc.toString();
             lastEmittedValueRef.current = str;
-            onChange(str);
+            if (isUserChange) {
+              onChange(str);
+            }
           }
         }),
         EditorView.domEventHandlers({
