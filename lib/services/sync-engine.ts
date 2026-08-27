@@ -361,17 +361,17 @@ if (typeof window !== 'undefined') {
       if (delta < 250) globalIntensity = Math.min(10, globalIntensity + 2);
       else if (delta < 1000) globalIntensity = Math.min(10, globalIntensity + 0.5);
       else globalIntensity = Math.max(0.5, globalIntensity - 1);
+      activityListeners.forEach((l) => l(globalIntensity));
+      triggerAutonomicSyncScheduler();
     } else {
       globalIntensity = Math.max(0.2, globalIntensity - 0.2);
+      activityListeners.forEach((l) => l(globalIntensity));
     }
-    activityListeners.forEach((l) => l(globalIntensity));
-    triggerAutonomicSyncScheduler();
   };
 
   window.addEventListener('keydown', handleUserActivity, { passive: true });
   window.addEventListener('input', handleUserActivity, { passive: true });
   window.addEventListener('scroll', handleUserActivity, { passive: true });
-  window.addEventListener('click', handleUserActivity, { passive: true });
   window.addEventListener('online', () => {
     // Instant network status reset: clear backoff penalty and flush queue immediately
     failedSyncAttempts.clear();
@@ -527,6 +527,13 @@ async function flushGoalPending(
     const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
     failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
     notifyStatusListeners();
+    if (prev.count >= 2) {
+      pendingById.delete(pendingKey);
+      pendingById.delete(goalId);
+      autonomicSyncEngine.ack(pendingKey);
+      autonomicSyncEngine.ack(goalId);
+      writePersistedQueue();
+    }
     return;
   }
 
@@ -668,6 +675,11 @@ async function flushNotePending(
     const prev = failedSyncAttempts.get(noteId) || { count: 0, lastFailedAt: 0 };
     failedSyncAttempts.set(noteId, { count: prev.count + 1, lastFailedAt: Date.now() });
     notifyStatusListeners();
+    if (prev.count >= 2) {
+      pendingById.delete(noteId);
+      autonomicSyncEngine.ack(noteId);
+      writePersistedQueue();
+    }
     return;
   }
 

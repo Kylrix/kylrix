@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -104,8 +104,7 @@ export default function ConnectTopbar({
   const { currentTier } = useSubscription();
   const isPro = hasEffectivePaidAccess(user, currentTier);
   const router = useRouter();
-  const [, startNavTransition] = useTransition();
-  const navPush = useCallback((href: string) => startNavTransition(() => router.push(href)), [router]);
+  const navPush = useCallback((href: string) => router.push(href), [router]);
   const pathname = usePathname();
   const { setIsCollapsed } = useSidebar();
   const { activeWorkspace, workspaces, ownedWorkspaces, sharedWorkspaces, agentWorkspaces, setActiveWorkspaceId, markWorkspacePublic, loadingWorkspaces } = useWorkspace();

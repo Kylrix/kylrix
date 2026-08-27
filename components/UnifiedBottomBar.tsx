@@ -128,7 +128,10 @@ export function UnifiedBottomBar() {
                 onClick={(e) => {
                   if (isSelected && pathname === item.route) {
                     e.preventDefault();
+                    return;
                   }
+                  e.preventDefault();
+                  router.push(item.route);
                 }}
                 className="flex flex-col items-center justify-center flex-1 h-full py-1 rounded-xl transition-transform active:scale-95 cursor-pointer no-underline group"
                 style={{

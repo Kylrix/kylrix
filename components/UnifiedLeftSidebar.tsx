@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useTransition, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Box, Paper, Tooltip } from '@/lib/openbricks/primitives';
 import {
@@ -43,8 +43,7 @@ import { isFlowPath } from '@/lib/routing/app-paths';
 export function UnifiedLeftSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [, startNavTransition] = useTransition();
-  const navPush = useCallback((href: string) => startNavTransition(() => router.push(href)), [router]);
+  const navPush = useCallback((href: string) => router.push(href), [router]);
   const { open: openUnified } = useUnifiedDrawer();
   const { } = useAppChrome();
   const { } = useDrawerState();
