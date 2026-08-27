@@ -2005,21 +2005,50 @@ export const ApiResources = {
   ) {
     requireScope(actor, 'vault:read');
     const tables = createSystemTablesDB();
-    const res = await tables.listRows({
-      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-      tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
-      queries: [
-        Query.equal('userId', actor.userId),
-        Query.equal('isDeleted', false),
-        Query.orderDesc('$updatedAt'),
-        Query.limit(Math.min(100, Math.max(1, limit))),
-      ],
-    });
-
     const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
+    const lim = Math.min(100, Math.max(1, limit));
+
+    let rows: any[] = [];
+
+    if (opts?.workspaceId) {
+      const wsId = opts.workspaceId;
+      const credIds = await getWorkspaceObjectIds(tables, wsId, 'credential');
+      const seen = new Set<string>();
+
+      for (const cid of credIds) {
+        if (seen.has(cid)) continue;
+        seen.add(cid);
+        const row = (await tables
+          .getRow({
+            databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+            tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
+            rowId: cid,
+          })
+          .catch(() => null)) as any;
+
+        if (row && row.userId === actor.userId && !row.isDeleted) {
+          rows.push(row);
+        }
+      }
+      rows = rows.slice(0, lim);
+    } else {
+      const linkedIds = await getAllLinkedWorkspaceObjectIds(tables, 'credential');
+      const res = await tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS || 'credentials',
+        queries: [
+          Query.equal('userId', actor.userId),
+          Query.equal('isDeleted', false),
+          Query.orderDesc('$updatedAt'),
+          Query.limit(lim),
+        ],
+      });
+
+      rows = res.rows.filter((r: any) => !r.isWorkspace && !r.projectId && !linkedIds.has(r.$id));
+    }
 
     return Promise.all(
-      res.rows.map(async (r: any) => {
+      rows.map(async (r: any) => {
         let decryptedSecret: string | null = null;
         let decryptedNotes: string | null = null;
 
@@ -2179,7 +2208,7 @@ export const ApiResources = {
     });
 
     if (wsId) {
-      await linkObjectToWorkspace(tables, wsId, 'secret', itemId, actor.userId, { title: name });
+      await linkObjectToWorkspace(tables, wsId, 'credential', itemId, actor.userId, { title: name });
     }
 
     return {
@@ -2291,6 +2320,7 @@ export const ApiResources = {
         updatedAt: new Date().toISOString(),
       },
     });
+    await unlinkObjectFromWorkspace(tables, 'credential', id);
 
     return { id, deleted: true, trashed: true };
   },
