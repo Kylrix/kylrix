@@ -1779,7 +1779,8 @@ export function NoteDetailSidebar({
                   </ListItemButton>
                 </ListItem>
               );
-            })}
+            })
+          })()}
           </List>
         </Box>
       </Drawer>
