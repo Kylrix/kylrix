@@ -1196,15 +1196,63 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
             </div>
 
             <div className="p-5 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-3">
-              <span className="text-xs font-bold text-white font-mono uppercase tracking-wider block">
-                Shell Environment Variables
-              </span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-white font-mono uppercase tracking-wider block">
+                  Shell Environment Variables
+                </span>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const text = `export KYLRIX_AGENT_KEY=kyl_apk_...\nexport KYLRIX_API_URL=http://localhost:3005/api/v1`;
+                    await navigator.clipboard.writeText(text);
+                    toast.success('Environment variables copied');
+                  }}
+                  className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-[#818CF8] hover:underline cursor-pointer"
+                >
+                  <Copy size={11} />
+                  <span>Copy All</span>
+                </button>
+              </div>
               <p className="text-xs text-white/50 leading-relaxed m-0">
                 Set your agent provisioning key in your local shell to allow headless agents to authenticate:
               </p>
-              <div className="p-3 rounded-xl bg-[#161412] border border-white/[0.06] font-mono text-xs text-white/70 space-y-1.5 select-all">
-                <div className="text-emerald-400">export KYLRIX_AGENT_KEY=kyl_apk_...</div>
-                <div className="text-white/60">export KYLRIX_API_URL=http://localhost:3005/api/v1</div>
+              
+              <div className="space-y-2 max-w-full overflow-hidden">
+                {/* Var 1: KYLRIX_AGENT_KEY */}
+                <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.06] flex items-center justify-between gap-2 min-w-0">
+                  <code className="text-xs font-mono text-emerald-400 truncate flex-1 select-all">
+                    export KYLRIX_AGENT_KEY=kyl_apk_...
+                  </code>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText('export KYLRIX_AGENT_KEY=kyl_apk_...');
+                      toast.success('KYLRIX_AGENT_KEY export copied');
+                    }}
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer shrink-0"
+                    title="Copy export"
+                  >
+                    <Copy size={12} />
+                  </button>
+                </div>
+
+                {/* Var 2: KYLRIX_API_URL */}
+                <div className="p-2.5 rounded-xl bg-[#161412] border border-white/[0.06] flex items-center justify-between gap-2 min-w-0">
+                  <code className="text-xs font-mono text-white/70 truncate flex-1 select-all">
+                    export KYLRIX_API_URL=http://localhost:3005/api/v1
+                  </code>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText('export KYLRIX_API_URL=http://localhost:3005/api/v1');
+                      toast.success('KYLRIX_API_URL export copied');
+                    }}
+                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer shrink-0"
+                    title="Copy export"
+                  >
+                    <Copy size={12} />
+                  </button>
+                </div>
               </div>
             </div>
 
