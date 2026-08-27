@@ -677,7 +677,7 @@ export function NoteDetailSidebar({
   const isPageLayout = layout === 'page';
 
   const renderContextActionsContent = useCallback(() => (
-    <div className="flex flex-col gap-3 p-5 md:p-6 bg-[#161412] text-white select-none min-h-0 overflow-y-auto">
+    <div className="flex flex-col gap-3 p-5 md:p-6 bg-[#161412] text-white select-none max-h-[60vh] overflow-y-auto">
       {/* Drawer Handle */}
       <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-2" aria-hidden />
 
@@ -1795,6 +1795,7 @@ export function NoteDetailSidebar({
               backgroundImage: 'none',
               maxWidth: 580,
               width: '100%',
+              maxHeight: '60vh',
               mx: 'auto',
               p: 0,
               overflow: 'hidden',
