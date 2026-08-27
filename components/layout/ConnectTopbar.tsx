@@ -44,6 +44,10 @@ import {
   Share2 as ShareIcon,
   MoreVertical as MoreIcon,
   ChevronDown,
+  Check,
+  LogOut,
+  Settings,
+  Users,
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
@@ -1820,278 +1824,192 @@ export default function ConnectTopbar({
     if (!profileMenuAnchorEl || !user) return null;
 
     const profileContent = (
-      <Box
-        sx={{ px: { xs: 2.25, md: 4 }, py: 1.25, maxHeight: isDesktop ? 'none' : '45vh', overflowY: isDesktop ? 'visible' : 'auto' }}
-      >
-          <Paper
-            elevation={0}
-            sx={{
-              width: '100%',
-              borderRadius: '26px',
-              bgcolor: '#161412',
-              border: `1px solid ${alpha(appAccent, 0.22)}`,
-              overflow: 'hidden'}}
+      <div className="w-full font-satoshi text-white p-4 space-y-3.5">
+        {/* Top bar header inside drawer */}
+        <div className="flex items-center justify-between pb-1">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center text-white shrink-0">
+              <Logo app={activeApp} size={15} variant="icon" />
+            </div>
+            <div>
+              <h3 className="text-xs font-black font-clash text-white uppercase tracking-wider m-0">
+                Account & Identity
+              </h3>
+              <p className="text-[10px] text-white/40 font-mono m-0">Kylrix Ecosystem</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleCloseAll}
+            className="w-7 h-7 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-white/50 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
           >
-            <Box sx={{ p: 1.25 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, px: 0.5, mb: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', color: appAccent, bgcolor: alpha(appAccent, 0.06), border: `1px solid ${alpha(appAccent, 0.18)}` }}>
-                    <Logo app={activeApp} size={16} variant="icon" />
-                  </Box>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, minWidth: 0 }}>
-                    <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.86rem', lineHeight: 1.2 }}>
-                      {profileName}
-                    </Typography>
-                    <Typography component="span" variant="caption" sx={{ color: alpha('#fff', 0.45), fontWeight: 700, lineHeight: 1.3 }}>
-                      Profile
-                    </Typography>
-                  </Box>
-                </Box>
-                <IconButton onClick={handleCloseAll} size="small" sx={{ width: 30, height: 30, borderRadius: '999px', color: alpha('#fff', 0.8), bgcolor: alpha('#fff', 0.05), border: '1px solid rgba(255,255,255,0.06)' }}>
-                  ✕
-                </IconButton>
-               </Box>
-              <Box sx={{ display: 'grid', gap: 1.5, maxHeight: isDesktop ? 'none' : '65vh', overflowY: isDesktop ? 'visible' : 'auto', pr: 0.5, pb: 0.5 }}>
-                {/* Profile Avatar & Header */}
-                <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', p: 0.5 }}>
-                  <IdentityAvatar
-                    userId={user?.$id}
-                    size={64}
-                    pro={isPro}
-                    fallback={profileName.slice(0, 1).toUpperCase()}
-                    sx={{
-                       bgcolor: tone.secondary,
-                       flexShrink: 0
-                    }}
-                  />
-                  <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                    <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
-                      <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '1rem', lineHeight: 1.2, minWidth: 0, flex: 1 }} noWrap>
-                        {profileName}
-                      </Typography>
-                      {profileSeed.username && (
-                        <IconButton
-                          onClick={handleOpenFullProfile}
-                          size="small"
-                          title="View public profile"
-                          sx={{
-                            flexShrink: 0,
-                            width: 28,
-                            height: 28,
-                            color: 'rgba(255, 255, 255, 0.5)',
-                            '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' },
-                          }}
-                        >
-                          <UserIcon size={14} />
-                        </IconButton>
-                      )}
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
-                      <span className="text-[10px] font-black text-[#EC4899] uppercase tracking-wider">
-                        {currentTier} PLAN
-                      </span>
-                      {!isPro && (
-                        <Button
-                          onClick={() => {
-                            handleCloseAll();
-                            openProUpgrade();
-                          }}
-                          sx={{
-                            borderRadius: '8px',
-                            bgcolor: '#6366F1',
-                            color: 'white',
-                            fontWeight: 900,
-                            fontSize: '0.64rem',
-                            py: 0.25,
-                            px: 1.2,
-                            textTransform: 'uppercase',
-                            flexShrink: 0,
-                            '&:hover': { bgcolor: '#5254E8' }
-                          }}
-                        >
-                          Upgrade
-                        </Button>
-                      )}
-                    </Box>
-                  </Box>
-                </Box>
+            ✕
+          </button>
+        </div>
 
-                {/* Identity Tabs: Username / User ID */}
-                <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.02] p-3.5 flex flex-col gap-2.5">
-                  <div className="flex items-center justify-between gap-1 bg-black/30 p-1 rounded-xl border border-white/[0.04]">
-                    <button
-                      type="button"
-                      onClick={() => setIdentityTab('username')}
-                      className={`flex-1 py-1 px-2.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                        identityTab === 'username'
-                          ? 'bg-[#6366F1] text-white shadow-sm'
-                          : 'text-white/40 hover:text-white/70'
-                      }`}
-                    >
-                      Username
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIdentityTab('userid')}
-                      className={`flex-1 py-1 px-2.5 rounded-lg text-[11px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                        identityTab === 'userid'
-                          ? 'bg-[#6366F1] text-white shadow-sm'
-                          : 'text-white/40 hover:text-white/70'
-                      }`}
-                    >
-                      User ID
-                    </button>
-                  </div>
+        {/* 1. Single Clean Identity Card */}
+        <div className="p-3.5 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center gap-3.5">
+          <IdentityAvatar
+            userId={user?.$id}
+            size={48}
+            pro={isPro}
+            fallback={profileName.slice(0, 1).toUpperCase()}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-1">
+              <h4 className="text-sm font-bold text-white truncate m-0 font-clash">
+                {profileName}
+              </h4>
+              <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-[#EC4899]/15 text-[#EC4899] font-black uppercase tracking-wider shrink-0">
+                {currentTier}
+              </span>
+            </div>
 
-                  {/* Tab Content */}
-                  {identityTab === 'username' ? (
-                    <div className="flex items-center justify-between gap-2 px-1">
-                      {profileUsername ? (
-                        <>
-                          <span className="text-white/90 font-mono text-xs font-bold truncate flex-1 select-all">
-                            @{String(profileUsername).replace(/^@+/, '')}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={handleCopyUsername}
-                            title={copyState === 'copied-username' ? 'Copied!' : 'Copy username'}
-                            className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
-                              copyState === 'copied-username' ? 'text-[#10B981] bg-[#10B981]/15' : 'text-white/40 hover:text-white hover:bg-white/10'
-                            }`}
-                          >
-                            <CopyIcon size={13} />
-                          </button>
-                        </>
-                      ) : (
-                        <div className="flex items-center justify-between gap-2 w-full">
-                          <span className="text-white/40 text-xs italic">No username set</span>
-                          <button
-                            type="button"
-                            onClick={handleGenerateUsername}
-                            disabled={isGeneratingUsername}
-                            className="px-2.5 py-1 rounded-lg bg-[#6366F1]/20 hover:bg-[#6366F1]/30 text-[#818cf8] text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                          >
-                            <Sparkles size={12} />
-                            <span>{isGeneratingUsername ? 'Generating...' : 'Generate on the fly'}</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between gap-2 px-1">
-                      <span className="text-white/90 font-mono text-xs font-semibold truncate flex-1 select-all">
-                        {shortenUserId(profileSeed.userId) || 'No ID'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleCopyUserId}
-                        title={copyState === 'copied-userid' ? 'Copied!' : 'Copy user ID'}
-                        className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
-                          copyState === 'copied-userid' ? 'text-[#10B981] bg-[#10B981]/15' : 'text-white/40 hover:text-white hover:bg-white/10'
-                        }`}
-                      >
-                        <CopyIcon size={13} />
-                      </button>
-                    </div>
-                  )}
+            {/* Username / User ID Row */}
+            <div className="mt-1 flex items-center gap-1.5">
+              {profileUsername ? (
+                <div className="flex items-center gap-1 min-w-0 flex-1">
+                  <span className="text-xs font-mono font-bold text-[#818cf8] truncate select-all">
+                    @{String(profileUsername).replace(/^@+/, '')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleCopyUsername}
+                    title="Copy username"
+                    className="p-1 rounded-md text-white/40 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer shrink-0"
+                  >
+                    {copyState === 'copied-username' ? <Check size={12} className="text-[#10B981]" /> : <CopyIcon size={12} />}
+                  </button>
                 </div>
-
-                {/* Referral Link Quick Copy Card */}
-                <div className="rounded-[20px] border border-white/[0.06] bg-[#1a1715] p-3.5 flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-white/45 text-[10px] font-black uppercase tracking-wider font-mono">
-                      Referral Invite
-                    </span>
-                    <span className="text-[9px] font-extrabold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full font-mono">
-                      +1.5 $KYL / user
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 bg-black/40 px-2.5 py-1.5 rounded-xl border border-white/[0.04]">
-                    <span className="text-white/80 font-mono text-[11px] truncate flex-1 select-all">
-                      {typeof window !== 'undefined' ? `${window.location.host}/?ref=u_${profileUsername ? String(profileUsername).replace(/^@+/, '') : shortenUserId(profileSeed.userId)}` : '/?ref=...'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleCopyReferralLink}
-                      title={copyState === 'copied-referral' ? 'Copied!' : 'Copy referral link'}
-                      className={`flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
-                        copyState === 'copied-referral'
-                          ? 'bg-[#10B981] text-white shadow-sm'
-                          : 'bg-[#6366F1] hover:bg-[#5254E8] text-white'
-                      }`}
-                    >
-                      <CopyIcon size={11} />
-                      <span>{copyState === 'copied-referral' ? 'Copied' : 'Copy'}</span>
-                    </button>
-                  </div>
+              ) : (
+                <div className="flex items-center justify-between gap-1 w-full">
+                  <span className="text-[11px] font-mono text-white/40 truncate select-all">
+                    {shortenUserId(profileSeed.userId)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleGenerateUsername}
+                    disabled={isGeneratingUsername}
+                    className="px-2 py-0.5 rounded-lg bg-[#6366F1]/20 hover:bg-[#6366F1]/30 text-[#818cf8] text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  >
+                    <Sparkles size={11} />
+                    <span>{isGeneratingUsername ? '...' : 'Claim @name'}</span>
+                  </button>
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
 
-                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                  <Button
-                    onClick={() => {
-                      handleCloseAll();
-                        openWallet();
-                    }}
-                    sx={{
-                      minWidth: 0,
-                      flex: '1 1 120px',
-                      borderRadius: '14px',
-                      bgcolor: alpha(appAccent, 0.06),
-                      color: appAccent,
-                      px: 1.25,
-                      py: 1,
-                      fontSize: '0.84rem',
-                      textTransform: 'none',
-                      '&:hover': { bgcolor: alpha(appAccent, 0.12) }}}
-                    startIcon={<Wallet size={14} />}
-                  >
-                    Wallet
-                  </Button>
-                  {/* Account switching disabled */}
-                  <Button
-                    onClick={() => {
-                      handleCloseAll();
-                      router.push('/settings');
-                    }}
-                    sx={{
-                      minWidth: 0,
-                      flex: '1 1 120px',
-                      borderRadius: '14px',
-                      bgcolor: 'rgba(255,255,255,0.02)',
-                      color: 'white',
-                      px: 1.25,
-                      py: 1,
-                      fontSize: '0.84rem',
-                      textTransform: 'none',
-                      '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' }}}
-                  >
-                    Settings
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      handleCloseAll();
-                      void logout();
-                    }}
-                    sx={{
-                      minWidth: 0,
-                      flex: '1 1 120px',
-                      borderRadius: '14px',
-                      bgcolor: 'rgba(255, 77, 77, 0.06)',
-                      color: '#FF4D4D',
-                      px: 1.25,
-                      py: 1,
-                      fontSize: '0.84rem',
-                      textTransform: 'none',
-                      '&:hover': { bgcolor: 'rgba(255, 77, 77, 0.12)' }}}
-                  >
-                    Sign out
-                  </Button>
-                </Stack>
+        {/* 2. Referral Card (Compact single-row) */}
+        <div className="p-3 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-mono font-bold text-white/50 uppercase tracking-wider flex items-center gap-1">
+              <Users size={12} className="text-[#10B981]" />
+              <span>Referral Invite</span>
+            </span>
+            <span className="text-[9px] font-mono font-bold text-[#10B981] bg-[#10B981]/10 px-1.5 py-0.2 rounded">
+              +1.5 $KYL
+            </span>
+          </div>
+          <div className="flex items-center gap-2 bg-[#161412] p-1.5 rounded-xl border border-white/[0.04]">
+            <span className="text-[11px] font-mono text-white/80 truncate flex-1 px-1 select-all">
+              {typeof window !== 'undefined' ? `${window.location.host}/?ref=u_${profileUsername ? String(profileUsername).replace(/^@+/, '') : shortenUserId(profileSeed.userId)}` : '/?ref=...'}
+            </span>
+            <button
+              type="button"
+              onClick={handleCopyReferralLink}
+              className={`px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all flex items-center gap-1 cursor-pointer shrink-0 ${
+                copyState === 'copied-referral'
+                  ? 'bg-[#10B981] text-white shadow-sm'
+                  : 'bg-[#6366F1] hover:bg-[#5254E8] text-white'
+              }`}
+            >
+              {copyState === 'copied-referral' ? <Check size={11} /> : <CopyIcon size={11} />}
+              <span>{copyState === 'copied-referral' ? 'Copied' : 'Copy'}</span>
+            </button>
+          </div>
+        </div>
 
-             </Box>
-          </Box>
-        </Paper>
-      </Box>
+        {/* 3. Action Menu (Clean vertical stack, zero horizontal wrap/overflow) */}
+        <div className="space-y-1.5">
+          {profileSeed.username && (
+            <button
+              type="button"
+              onClick={handleOpenFullProfile}
+              className="w-full h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.04] hover:border-white/10 text-white text-xs font-bold flex items-center justify-between transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-2.5">
+                <UserIcon size={14} className="text-[#818CF8]" />
+                <span>Public Profile</span>
+              </div>
+              <ChevronRight size={13} className="text-white/30 group-hover:text-white transition-colors" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              handleCloseAll();
+              openWallet();
+            }}
+            className="w-full h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.04] hover:border-white/10 text-white text-xs font-bold flex items-center justify-between transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-2.5">
+              <Wallet size={14} className="text-[#F59E0B]" />
+              <span>Wallet & Balance</span>
+            </div>
+            <ChevronRight size={13} className="text-white/30 group-hover:text-white transition-colors" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              handleCloseAll();
+              router.push('/settings');
+            }}
+            className="w-full h-10 px-3 rounded-xl bg-[#0A0908] hover:bg-[#1C1A18] border border-white/[0.04] hover:border-white/10 text-white text-xs font-bold flex items-center justify-between transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-2.5">
+              <Settings size={14} className="text-white/70" />
+              <span>Settings & Preferences</span>
+            </div>
+            <ChevronRight size={13} className="text-white/30 group-hover:text-white transition-colors" />
+          </button>
+
+          {!isPro && (
+            <button
+              type="button"
+              onClick={() => {
+                handleCloseAll();
+                openProUpgrade();
+              }}
+              className="w-full h-10 px-3 rounded-xl bg-[#EC4899]/10 hover:bg-[#EC4899]/20 border border-[#EC4899]/25 text-[#EC4899] text-xs font-extrabold flex items-center justify-between transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-2.5">
+                <Sparkles size={14} />
+                <span>Upgrade to Pro</span>
+              </div>
+              <span className="text-[10px] font-mono uppercase tracking-wider font-bold">Pro →</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              handleCloseAll();
+              void logout();
+            }}
+            className="w-full h-10 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-xs font-bold flex items-center justify-between transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-2.5">
+              <LogOut size={14} />
+              <span>Sign Out</span>
+            </div>
+            <span className="text-[10px] font-mono text-red-400/60">End Session</span>
+          </button>
+        </div>
+      </div>
     );
 
     if (isDesktop) {
@@ -2100,16 +2018,18 @@ export default function ConnectTopbar({
           <NativeSidebarMount
             active={Boolean(profileMenuAnchorEl)}
             sidebarKey="topbar-profile"
-            width={380}
+            width={360}
             title="Profile"
           >
-            {profileContent}
+            <div className="bg-[#161412] h-full overflow-y-auto">
+              {profileContent}
+            </div>
           </NativeSidebarMount>
         );
       }
       return (
         <Drawer
-          anchor="left"
+          anchor="right"
           open={Boolean(profileMenuAnchorEl)}
           onClose={() => setProfileMenuAnchorEl(null)}
           keepMounted={false}
@@ -2118,16 +2038,19 @@ export default function ConnectTopbar({
           PaperProps={{
             sx: {
               bgcolor: '#161412',
-              width: 320,
+              width: 340,
               height: '100vh',
-              borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+              borderLeft: '1px solid rgba(255, 255, 255, 0.06)',
               p: 0,
               display: 'flex',
               flexDirection: 'column',
-              boxSizing: 'border-box'}
+              boxSizing: 'border-box',
+            }
           }}
         >
-          {profileContent}
+          <div className="h-full overflow-y-auto">
+            {profileContent}
+          </div>
         </Drawer>
       );
     }
@@ -2139,10 +2062,11 @@ export default function ConnectTopbar({
           width: '100%',
           borderTop: '1px solid rgba(255,255,255,0.04)',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: '0 0 28px 28px',
+          borderRadius: '0 0 24px 24px',
           bgcolor: '#161412',
           overflow: 'hidden',
-          boxShadow: '0 12px 32px rgba(0,0,0,0.35)'}}
+          boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
+        }}
       >
         {profileContent}
       </Box>
