@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 import type { Credentials } from '@/lib/appwrite/types';
 import { storage, deleteCredential } from '@/lib/appwrite';
-import { useAI } from '@/context/AIContext';
 import { useSudo } from '@/context/SudoContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { 
@@ -14,7 +13,6 @@ import {
   EyeOff, 
   Globe, 
   ShieldCheck, 
-  ShieldAlert, 
   ExternalLink, 
   Folder,
   Share2,
@@ -181,30 +179,6 @@ export default function CredentialDetail({
       toast.error('Failed to copy share link: ' + err.message);
     }
   }, [credential, isPublic]);
-
-  const { analyze } = useAI();
-  const [urlSafety, setUrlSafety] = useState<{ safe: boolean; riskLevel: string; reason: string } | null>(null);
-  const [checkingUrl, setCheckingUrl] = useState(false);
-
-  const checkUrlSafety = useCallback(async (url: string) => {
-    setCheckingUrl(true);
-    try {
-      const result = (await analyze('URL_SAFETY', { url })) as { safe: boolean; riskLevel: string; reason: string };
-      if (result) {
-        setUrlSafety(result);
-      }
-    } catch (e: unknown) {
-      console.error("Failed to check URL safety", e);
-    } finally {
-      setCheckingUrl(false);
-    }
-  }, [analyze]);
-
-  useEffect(() => {
-    if (credential.url && !urlSafety && !checkingUrl) {
-      checkUrlSafety(credential.url);
-    }
-  }, [credential.url, checkUrlSafety, checkingUrl, urlSafety]);
 
   if (!credential) return null;
 
@@ -450,21 +424,18 @@ export default function CredentialDetail({
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-[#10B981] hover:underline"
               >
                 <Globe className="w-3.5 h-3.5" />
-                <span className="truncate">{new URL(liveCredential.url).hostname}</span>
+                <span className="truncate">
+                  {(() => {
+                    try {
+                      const u = liveCredential.url.startsWith('http://') || liveCredential.url.startsWith('https://') ? liveCredential.url : `https://${liveCredential.url}`;
+                      return new URL(u).hostname;
+                    } catch {
+                      return liveCredential.url;
+                    }
+                  })()}
+                </span>
                 <ExternalLink className="w-3 h-3" />
               </a>
-              {urlSafety && (
-                <div
-                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 mt-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${
-                    urlSafety.safe 
-                      ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20' 
-                      : 'bg-red-500/10 text-red-400 border-red-500/20'
-                  }`}
-                >
-                  {urlSafety.safe ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
-                  <span>{urlSafety.riskLevel} Risk: {urlSafety.reason}</span>
-                </div>
-              )}
             </div>
           </div>
         )}
