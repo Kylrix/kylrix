@@ -635,10 +635,256 @@ export const ApiResources = {
     });
   },
 
+  async initAgentIdentity(actor: ApiActor, targetAgentId: string, body: Record<string, unknown> = {}) {
+    if (!actor.scopes.includes('agents:provision') && !actor.scopes.includes('agents:write') && !actor.scopes.includes('pats:write')) {
+      requireScope(actor, 'agents:provision');
+    }
+    const agentId = String(targetAgentId || '').trim();
+    if (!agentId) {
+      const err = new Error('Missing required agentId');
+      (err as any).status = 400;
+      throw err;
+    }
+    const tables = createSystemTablesDB();
+    const now = new Date().toISOString();
+
+    // 1. Check if agent already exists in agents table
+    const existingAgentRow = await tables.getRow({
+      databaseId: FLOW_DB,
+      tableId: 'agents',
+      rowId: agentId,
+    }).catch(() => null);
+
+    if (existingAgentRow) {
+      if (existingAgentRow.ownerId && existingAgentRow.ownerId !== actor.userId) {
+        const err = new Error('Forbidden: You do not own this agent');
+        (err as any).status = 403;
+        throw err;
+      }
+      // If keys already initialized, prevent rewriting to protect vault & nostr identity
+      if (existingAgentRow.publicKey) {
+        let parsedConfig: Record<string, any> = {};
+        try {
+          parsedConfig = JSON.parse(existingAgentRow.config || '{}');
+        } catch {}
+        if (parsedConfig.walletAddress) {
+          const err = new Error('Conflict: Sovereign cryptographic identity is already sealed for this agent. Keys cannot be rewritten.');
+          (err as any).status = 409;
+          (err as any).code = 'identity_already_sealed';
+          (err as any).data = {
+            agentId,
+            agentUserId: `agent_${agentId}`,
+            username: parsedConfig.username,
+            name: parsedConfig.name,
+            walletAddress: parsedConfig.walletAddress,
+            nostrNpub: existingAgentRow.publicKey,
+            publicKey: existingAgentRow.publicKey,
+            workspaceId: parsedConfig.workspaceId,
+          };
+          throw err;
+        }
+      }
+    }
+
+    // 2. Generate autonomous keys & sovereign MEK entropy
+    const name = String(body.name || 'Autonomous Agent').trim().slice(0, 128);
+    const agentType = String(body.agentType || 'autonomous').trim().slice(0, 64);
+    const rawEntropy = new Uint8Array(32);
+    const nodeCrypto = await import('crypto');
+    nodeCrypto.randomFillSync(rawEntropy);
+
+    const secp = await import('@noble/secp256k1');
+    const { bech32 } = await import('@scure/base');
+    const { keccak_256 } = await import('@noble/hashes/sha3.js');
+
+    const secpPub = secp.getPublicKey(rawEntropy, false).slice(1);
+    const evmHash = keccak_256(secpPub);
+    const walletAddress = '0x' + Array.from(evmHash.slice(-20)).map((b) => b.toString(16).padStart(2, '0')).join('').toLowerCase();
+
+    const nostrPubRaw = secp.getPublicKey(rawEntropy, true).slice(1);
+    const nostrPubkeyHex = Array.from(nostrPubRaw).map((b) => b.toString(16).padStart(2, '0')).join('');
+    const nostrWords = bech32.toWords(nostrPubRaw);
+    const nostrNpub = bech32.encode('npub', nostrWords);
+
+    const agentUserId = `agent_${agentId}`;
+    const cleanHandle = `ag_${name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '') || agentId.slice(0, 8)}`;
+
+    // 3. Resolve or create workspace
+    let workspaceId = body.workspaceId ? String(body.workspaceId) : null;
+    let workspaceTitle = String(body.initialWorkspaceTitle || `${name}'s Workspace`).trim().slice(0, 255);
+
+    if (!workspaceId) {
+      const wsRow = await tables.createRow({
+        databaseId: FLOW_DB,
+        tableId: 'projects',
+        rowId: ID.unique(),
+        data: {
+          title: workspaceTitle,
+          summary: `Autonomous workspace for agent ${name}`,
+          ownerId: actor.userId,
+          visibility: 'private',
+          status: 'active',
+          isAgentic: true,
+          isPublic: false,
+          isGuest: false,
+          createdAt: now,
+          updatedAt: now,
+        },
+        permissions: [Permission.read(Role.user(actor.userId))],
+      }).catch(() => null);
+      if (wsRow) workspaceId = (wsRow as any).$id;
+    }
+
+    // 4. Save to agents table
+    if (existingAgentRow) {
+      await tables.updateRow({
+        databaseId: FLOW_DB,
+        tableId: 'agents',
+        rowId: agentId,
+        data: {
+          publicKey: nostrNpub,
+          config: JSON.stringify({
+            name,
+            agentType,
+            agentUserId,
+            username: cleanHandle,
+            walletAddress,
+            nostrNpub,
+            workspaceId,
+            capabilities: body.capabilities || ['notes', 'goals', 'chats', 'nostr'],
+            updatedAt: now,
+          }),
+          status: 'active',
+        },
+      }).catch(() => null);
+    } else {
+      await tables.createRow({
+        databaseId: FLOW_DB,
+        tableId: 'agents',
+        rowId: agentId,
+        data: {
+          ownerId: actor.userId,
+          publicKey: nostrNpub,
+          config: JSON.stringify({
+            name,
+            agentType,
+            agentUserId,
+            username: cleanHandle,
+            walletAddress,
+            nostrNpub,
+            workspaceId,
+            capabilities: body.capabilities || ['notes', 'goals', 'chats', 'nostr'],
+            createdAt: now,
+          }),
+          status: 'active',
+          isPublic: true,
+          isGuest: true,
+        },
+        permissions: [Permission.read(Role.any()), Permission.update(Role.user(actor.userId))],
+      }).catch(() => null);
+    }
+
+    // 5. Create or sync profile in profiles table
+    await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
+      rowId: agentUserId,
+      data: {
+        userId: agentUserId,
+        username: cleanHandle,
+        displayName: `${name.trim()} (Smart Agent)`,
+        bio: String(body.bio || body.goal || `Autonomous ${agentType} smart partner`),
+        walletAddress,
+        publicKey: nostrNpub,
+        status: 'online',
+        preferences: JSON.stringify({
+          isAgentic: true,
+          ownerId: actor.userId,
+          agentId,
+          agentType,
+          role: String(body.role || name),
+          goal: String(body.goal || ''),
+          nostrNpub,
+          walletAddress,
+          updatedAt: now,
+        }),
+        isPublic: true,
+        isGuest: true,
+        isAvatar: true,
+        isContact: true,
+        isOnlineVisible: true,
+      },
+      permissions: [Permission.read(Role.any()), Permission.update(Role.user(actor.userId))],
+    }).catch(async () => {
+      await tables.updateRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+        tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
+        rowId: agentUserId,
+        data: {
+          username: cleanHandle,
+          displayName: `${name.trim()} (Smart Agent)`,
+          walletAddress,
+          publicKey: nostrNpub,
+          status: 'online',
+        },
+      }).catch(() => null);
+    });
+
+    return {
+      agentId,
+      agentUserId,
+      username: cleanHandle,
+      name,
+      agentType,
+      workspaceId,
+      workspaceTitle,
+      walletAddress,
+      nostrNpub,
+      publicKey: nostrNpub,
+      ownerId: actor.userId,
+      createdAt: now,
+    };
+  },
+
   async provisionAgent(actor: ApiActor, body: Record<string, unknown>) {
     if (!actor.scopes.includes('agents:provision') && !actor.scopes.includes('agents:write') && !actor.scopes.includes('pats:write')) {
       requireScope(actor, 'agents:provision');
     }
+    
+    // If patching an existing uninitialized agent
+    if (body.agentId) {
+      const initResult = await this.initAgentIdentity(actor, String(body.agentId), body);
+      // Mint PAT if requested
+      if (body.mintPat !== false) {
+        const agentScopes = Array.isArray(body.scopes) && body.scopes.length > 0
+          ? body.scopes
+          : [
+              'workspaces:read',
+              'workspaces:write',
+              'notes:read',
+              'notes:write',
+              'goals:read',
+              'goals:write',
+              'chats:read',
+              'chats:write',
+              'agents:read',
+              'agents:write',
+            ];
+        const agentPatResult = await PatService.create({
+          userId: actor.userId,
+          name: `${initResult.name} (Agentic PAT)`,
+          scopes: agentScopes,
+          keyCategory: 'agentic_pat',
+          agentId: initResult.agentId,
+        });
+        return {
+          ...initResult,
+          agentToken: agentPatResult.token,
+        };
+      }
+      return initResult;
+    }
+
     const name = String(body.name || 'Autonomous Agent').trim().slice(0, 128);
     const agentType = String(body.agentType || 'autonomous').trim().slice(0, 64);
     const agentId = ID.unique();
