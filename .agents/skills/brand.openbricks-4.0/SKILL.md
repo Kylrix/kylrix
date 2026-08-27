@@ -144,25 +144,28 @@ Drawer top action bars must follow a strict 3-slot button order:
 
 ## 11. Multi-Item Catalogs & Interactive Action Tiles (Canonical Standard)
 
-When rendering groups of multiple items (specialist agents, integrations, compute keys, or resource cards), use the **OpenBricks 4.0 Multi-Item Tile Standard**:
+### 💡 General Rule of Thumb:
+- **Mandatory for Scalable & User-Generated Lists**: Always use this layout for user-generated collections (where a user could theoretically create 10, 50, or 100+ items) and multi-member internal lists (e.g. system agents catalog).
+- **Anti-Packing Bottom Drawer Pattern**: Instead of cramming full details, nested controls, or massive forms onto the page, each compact tile acts as a high-contrast gateway that opens into a dedicated bottom drawer (`60dvh`) upon click. This prevents pages from becoming crowded while keeping navigation lightning-fast.
+- **Default Card Blueprint**: This is the official canonical card blueprint across the entire product.
 
 ```tsx
 <div
   onClick={handleOpenDrawer}
-  className="p-4 bg-[#161412] border border-white/5 hover:border-white/15 hover:bg-[#1C1A18] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
+  className="p-4 bg-[#161412] border border-white/10 hover:border-[var(--accent)]/40 hover:bg-[#1C1A18] rounded-[22px] shadow-xl flex flex-col justify-between gap-3 transition-all cursor-pointer group"
 >
-  {/* Top: Icon + Title + Subtitle */}
+  {/* Top: Inset Icon Well + Title + Subtitle + Optional Badge */}
   <div className="flex items-center gap-3 min-w-0">
-    <div className="w-10 h-10 rounded-xl bg-[var(--accent)]/10 text-[var(--accent)] flex items-center justify-center text-lg shrink-0">
+    <div className="w-10 h-10 rounded-xl bg-[var(--accent)]/10 text-[var(--accent)] flex items-center justify-center text-lg shrink-0 border border-[var(--accent)]/20">
       <Icon size={18} />
     </div>
     <div className="min-w-0 flex-1">
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 flex-wrap">
         <h4 className="text-white font-bold text-xs font-clash m-0 truncate group-hover:text-[var(--accent)] transition-colors">
           {item.name}
         </h4>
         {item.isBadge && (
-          <span className="text-[8px] font-mono px-1.5 py-0.2 rounded bg-[var(--accent)]/15 text-[var(--accent)] font-bold">
+          <span className="text-[8px] font-mono px-1.5 py-0.2 rounded bg-[var(--accent)]/15 text-[var(--accent)] font-bold border border-[var(--accent)]/20">
             {item.badge}
           </span>
         )}
@@ -171,8 +174,8 @@ When rendering groups of multiple items (specialist agents, integrations, comput
     </div>
   </div>
 
-  {/* Bottom: Hairline Divider + Action CTA + Chevron */}
-  <div className="flex items-center justify-between text-[11px] font-mono text-[var(--accent)] border-t border-white/[0.04] pt-2">
+  {/* Bottom: Crisp Hairline Divider + Action CTA + Chevron */}
+  <div className="flex items-center justify-between text-[11px] font-mono text-[var(--accent)] border-t border-white/10 pt-2">
     <span>{actionLabel}</span>
     <ChevronRight size={12} />
   </div>
@@ -180,10 +183,10 @@ When rendering groups of multiple items (specialist agents, integrations, comput
 ```
 
 ### Key Architectural Mandates for Multi-Item Tiles:
-1. **Responsive Fluid Grids**: Layout cards in `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5` (or `sm:grid-cols-3` for 3-item utility rows).
+1. **Responsive Fluid Grids**: Layout cards in `grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5` (or `lg:grid-cols-4` for compact catalog rows, and `sm:grid-cols-3` for 3-item utility rows).
 2. **Generous Corner Radii**: Always use `rounded-[22px]`.
-3. **Contained Surface Contrast**: Opaque ash base (`#161412`), hairline boundary (`border-white/5`), and subtle hover illumination (`hover:border-white/15 hover:bg-[#1C1A18]`).
-4. **Separated Action Footers**: A hairline top divider (`border-t border-white/[0.04] pt-2`) anchoring the action label and `ChevronRight` at the bottom of each tile for consistent visual balance.
+3. **High-Contrast Crisp Outlines**: Opaque signature ash base (`#161412`), crisp 1px boundary (`border-white/10`), and illuminated accent hover (`hover:border-[var(--accent)]/40 hover:bg-[#1C1A18]`).
+4. **Separated Action Footers**: A crisp hairline top divider (`border-t border-white/10 pt-2`) anchoring the action label and `ChevronRight` at the bottom of each tile for consistent visual balance.
 
 ---
 

@@ -240,10 +240,10 @@ export function AgentsSettingsTab() {
   return (
     <div className="space-y-6 font-satoshi">
       {/* ── Section 1: Default Agent Partner & Quick Launchbar ── */}
-      <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl space-y-4">
+      <div className="p-6 bg-[#161412] border border-white/10 rounded-[28px] shadow-2xl space-y-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 rounded-2xl bg-[#F59E0B]/12 border border-[#F59E0B]/25 text-[#F59E0B] flex items-center justify-center text-xl shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-[#F59E0B]/12 border border-[#F59E0B]/30 text-[#F59E0B] flex items-center justify-center text-xl shrink-0">
               {isCustomDefault ? '🤖' : '✨'}
             </div>
             <div className="min-w-0">
@@ -251,11 +251,11 @@ export function AgentsSettingsTab() {
                 <h3 className="text-white font-black text-base font-clash m-0 truncate">
                   {activeDefaultName}
                 </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#F59E0B]/10 text-[#F59E0B] font-bold">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#F59E0B]/15 text-[#F59E0B] font-bold border border-[#F59E0B]/20">
                   Active Default
                 </span>
               </div>
-              <p className="text-white/40 text-xs font-semibold m-0 mt-0.5 truncate">
+              <p className="text-white/50 text-xs font-semibold m-0 mt-0.5 truncate">
                 {activeDefaultRole}
               </p>
             </div>
@@ -325,7 +325,7 @@ export function AgentsSettingsTab() {
                 onCreated: () => void loadAgents(),
               })
             }
-            className="h-8 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-white/80 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
+            className="h-8 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white/90 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
           >
             <Plus size={12} />
             <span>Create</span>
@@ -333,12 +333,12 @@ export function AgentsSettingsTab() {
         </div>
 
         {loadingAgents ? (
-          <div className="p-8 rounded-[24px] bg-[#161412] border border-white/5 flex items-center justify-center text-white/40 text-xs">
+          <div className="p-8 rounded-[22px] bg-[#161412] border border-white/10 flex items-center justify-center text-white/40 text-xs">
             <RefreshCw size={14} className="animate-spin mr-2" /> Loading custom agents...
           </div>
         ) : customAgents.length === 0 ? (
-          <div className="p-6 rounded-[24px] bg-[#161412] border border-white/5 flex flex-col items-center justify-center text-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-white/[0.03] border border-white/5 grid place-items-center text-white/30">
+          <div className="p-6 rounded-[22px] bg-[#161412] border border-white/10 flex flex-col items-center justify-center text-center gap-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-white/[0.03] border border-white/10 grid place-items-center text-white/30">
               <Bot size={20} />
             </div>
             <div>
@@ -362,7 +362,7 @@ export function AgentsSettingsTab() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
             {customAgents.map((ca) => {
               const cfg = JSON.parse(ca.config || '{}');
               const isSelected = defaultAgentId === ca.$id;
@@ -370,23 +370,23 @@ export function AgentsSettingsTab() {
                 <div
                   key={ca.$id}
                   onClick={() => setSelectedAgentForAction(ca)}
-                  className="p-4 bg-[#161412] border border-white/5 hover:border-white/15 hover:bg-[#1C1A18] rounded-[24px] shadow-xl flex flex-col justify-between gap-3.5 transition-all duration-300 cursor-pointer group"
+                  className="p-4 bg-[#161412] border border-white/10 hover:border-[#6366F1]/40 hover:bg-[#1C1A18] rounded-[22px] shadow-xl flex flex-col justify-between gap-3 transition-all duration-200 cursor-pointer group"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-center text-[#6366F1] shrink-0 font-bold">
+                      <div className="w-10 h-10 rounded-xl bg-[#0A0908] border border-white/10 flex items-center justify-center text-[#6366F1] shrink-0 font-bold">
                         <Bot size={18} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-white font-bold text-sm font-clash m-0 truncate group-hover:text-[#6366F1] transition-colors">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="text-white font-bold text-xs font-clash m-0 truncate group-hover:text-[#818CF8] transition-colors">
                             {cfg.name || 'Custom Agent'}
                           </h4>
-                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#6366F1]/10 text-[#818cf8] font-bold">
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#6366F1]/15 text-[#818cf8] font-bold border border-[#6366F1]/20">
                             {cfg.framework || 'kylrix'}
                           </span>
                         </div>
-                        <p className="text-white/40 text-xs mt-0.5 m-0 line-clamp-1">
+                        <p className="text-white/40 text-[11px] mt-0.5 m-0 truncate">
                           {cfg.role || cfg.goal || 'Custom instructions defined'}
                         </p>
                       </div>
@@ -394,26 +394,27 @@ export function AgentsSettingsTab() {
 
                     <div className="flex items-center gap-1 shrink-0">
                       {isSelected && (
-                        <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-[#F59E0B]/15 text-[#F59E0B]">
+                        <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/30">
                           Default
                         </span>
                       )}
                       <button
                         type="button"
                         onClick={(e) => handleDeleteCustomAgent(e, ca.$id, cfg.name || 'Agent')}
-                        className="p-1.5 rounded-lg text-white/30 hover:text-red-400 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                        className="p-1 rounded-lg text-white/30 hover:text-red-400 hover:bg-white/[0.06] transition-colors cursor-pointer"
+                        title="Delete"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={12} />
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs font-mono text-white/50 border-t border-white/[0.04] pt-2.5">
-                    <span className="flex items-center gap-1">
-                      <Key size={11} className="text-emerald-400" /> View Profile & Keys
+                  <div className="flex items-center justify-between text-[11px] font-mono text-[#818cf8] border-t border-white/10 pt-2">
+                    <span className="flex items-center gap-1 text-[10px]">
+                      <Key size={11} className="text-emerald-400" /> Keys & Actions
                     </span>
-                    <span className="text-[#6366F1] font-bold group-hover:underline flex items-center gap-0.5">
-                      Actions <ChevronRight size={12} />
+                    <span className="font-bold group-hover:underline flex items-center gap-0.5">
+                      Open <ChevronRight size={12} />
                     </span>
                   </div>
                 </div>
@@ -444,10 +445,10 @@ export function AgentsSettingsTab() {
               <div
                 key={agent.id}
                 onClick={() => setSelectedAgentForAction(agent)}
-                className="p-4 bg-[#161412] border border-white/5 hover:border-white/15 hover:bg-[#1C1A18] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
+                className="p-4 bg-[#161412] border border-white/10 hover:border-[#F59E0B]/40 hover:bg-[#1C1A18] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center text-lg shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center text-lg shrink-0 border border-[#F59E0B]/20">
                     {agent.avatar}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -456,7 +457,7 @@ export function AgentsSettingsTab() {
                         {agent.name}
                       </h4>
                       {isKylie && (
-                        <span className="text-[8px] font-mono px-1.5 py-0.2 rounded bg-[#F59E0B]/15 text-[#F59E0B] font-bold">
+                        <span className="text-[8px] font-mono px-1.5 py-0.2 rounded bg-[#F59E0B]/20 text-[#F59E0B] font-bold border border-[#F59E0B]/30">
                           Core
                         </span>
                       )}
@@ -465,7 +466,7 @@ export function AgentsSettingsTab() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] font-mono text-[#F59E0B] border-t border-white/[0.04] pt-2">
+                <div className="flex items-center justify-between text-[11px] font-mono text-[#F59E0B] border-t border-white/10 pt-2">
                   <span>Inspect & Prompt</span>
                   <ChevronRight size={12} />
                 </div>
@@ -493,10 +494,10 @@ export function AgentsSettingsTab() {
           {/* Tile 1: Provisioning Keys */}
           <div
             onClick={() => openAgentDrawer({ type: 'manage_provisioning_keys' })}
-            className="p-4 bg-[#161412] border border-white/5 hover:border-white/15 hover:bg-[#1C1A18] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
+            className="p-4 bg-[#161412] border border-white/10 hover:border-[#6366F1]/40 hover:bg-[#1C1A18] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 text-[#818CF8] flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 text-[#818CF8] flex items-center justify-center shrink-0 border border-[#6366F1]/20">
                 <Key size={18} />
               </div>
               <div className="min-w-0 flex-1">
@@ -506,7 +507,7 @@ export function AgentsSettingsTab() {
                 <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">Root keys for CLI subagents</p>
               </div>
             </div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-[#818CF8] border-t border-white/[0.04] pt-2">
+            <div className="flex items-center justify-between text-[11px] font-mono text-[#818CF8] border-t border-white/10 pt-2">
               <span>Manage Keys</span>
               <ChevronRight size={12} />
             </div>
@@ -515,10 +516,10 @@ export function AgentsSettingsTab() {
           {/* Tile 2: CLI Skill Integration */}
           <div
             onClick={() => openAgentDrawer({ type: 'manage_cli_skill' })}
-            className="p-4 bg-[#161412] border border-white/5 hover:border-white/15 hover:bg-[#1C1A18] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
+            className="p-4 bg-[#161412] border border-white/10 hover:border-white/25 hover:bg-[#1C1A18] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-white/5 text-white/70 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-white/5 text-white/70 flex items-center justify-center shrink-0 border border-white/10">
                 <Terminal size={18} />
               </div>
               <div className="min-w-0 flex-1">
@@ -528,7 +529,7 @@ export function AgentsSettingsTab() {
                 <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">npx skills add kylrix/agents</p>
               </div>
             </div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-white/50 border-t border-white/[0.04] pt-2">
+            <div className="flex items-center justify-between text-[11px] font-mono text-white/50 border-t border-white/10 pt-2">
               <span>View Terminal Setup</span>
               <ChevronRight size={12} />
             </div>
@@ -553,10 +554,10 @@ export function AgentsSettingsTab() {
                 },
               })
             }
-            className="p-4 bg-[#161412] border border-white/5 hover:border-white/15 hover:bg-[#1C1A18] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
+            className="p-4 bg-[#161412] border border-white/10 hover:border-emerald-500/40 hover:bg-[#1C1A18] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20">
                 <Zap size={18} />
               </div>
               <div className="min-w-0 flex-1">
@@ -568,7 +569,7 @@ export function AgentsSettingsTab() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-emerald-400 border-t border-white/[0.04] pt-2">
+            <div className="flex items-center justify-between text-[11px] font-mono text-emerald-400 border-t border-white/10 pt-2">
               <span>Configure Gemini Key</span>
               <ChevronRight size={12} />
             </div>
