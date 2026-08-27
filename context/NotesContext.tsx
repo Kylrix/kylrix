@@ -586,12 +586,16 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     if (!note?.$id) return;
     const tags = Array.isArray(note.tags) ? note.tags : [];
     const cardTitle = resolveNoteCardTitle(note.title, note.content) || note.title || '';
-    liveEditGuardsRef.current.set(note.$id, {
-      title: cardTitle,
-      content: note.content || '',
-      tags,
-      at: Date.now()});
     const isPending = options?.pending !== false;
+    if (isPending) {
+      liveEditGuardsRef.current.set(note.$id, {
+        title: cardTitle,
+        content: note.content || '',
+        tags,
+        at: Date.now()});
+    } else {
+      liveEditGuardsRef.current.delete(note.$id);
+    }
     const nowIso = new Date().toISOString();
     const stamped: Notes = {
       ...note,
@@ -794,16 +798,13 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           } catch {}
           return;
         }
+        liveEditGuardsRef.current.delete(payload.$id);
+        autonomicSyncEngine.markConfirmed(payload.$id);
+        const normalized = normalizeVisibility(payload);
+
         if (activeComposeNoteIdsRef.current.has(payload.$id) || notesRef.current.some(n => n.$id === payload.$id)) {
-          // Update the existing card with guard-merged content, but do NOT add a new row.
-          setNotes(prev => {
-            const guard = liveEditGuardsRef.current.get(payload.$id);
-            const merged = guard ? mergeServerWithLiveGuard(payload, guard) : normalizeVisibility(payload);
-            return dedupeNotesById(prev.map(n => n.$id === payload.$id ? merged : n));
-          });
-          const guard = liveEditGuardsRef.current.get(payload.$id);
-          const merged = guard ? mergeServerWithLiveGuard(payload, guard) : normalizeVisibility(payload);
-          setCachedData(`note_${payload.$id}`, merged);
+          setNotes(prev => dedupeNotesById(prev.map(n => n.$id === payload.$id ? normalized : n)));
+          setCachedData(`note_${payload.$id}`, normalized);
           return;
         }
 
@@ -812,33 +813,27 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         );
         if (liveComposeId) {
           transferComposeSession(liveComposeId, payload.$id);
-          const guard = liveEditGuardsRef.current.get(payload.$id);
-          const merged = guard ? mergeServerWithLiveGuard(payload, guard) : normalizeVisibility(payload);
           setNotes((prev) => dedupeNotesById([
-            merged,
+            normalized,
             ...prev.filter((n) => n.$id !== liveComposeId && n.$id !== payload.$id),
           ]));
-          setCachedData(`note_${payload.$id}`, merged);
+          setCachedData(`note_${payload.$id}`, normalized);
           if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
           void opportunisticallyDecryptNote(payload);
           return;
         }
 
         setNotes(prev => {
-          const guard = liveEditGuardsRef.current.get(payload.$id);
-          const merged = guard ? mergeServerWithLiveGuard(payload, guard) : normalizeVisibility(payload);
           if (prev.some(n => n.$id === payload.$id)) {
-            return dedupeNotesById(prev.map(n => n.$id === payload.$id ? merged : n));
+            return dedupeNotesById(prev.map(n => n.$id === payload.$id ? normalized : n));
           }
-          return dedupeNotesById([merged, ...prev]);
+          return dedupeNotesById([normalized, ...prev]);
         });
-        const guard = liveEditGuardsRef.current.get(payload.$id);
-        const merged = guard ? mergeServerWithLiveGuard(payload, guard) : normalizeVisibility(payload);
         const alreadyListed = notesRef.current.some(n => n.$id === payload.$id);
         if (!alreadyListed) {
           setTotalNotes(prev => prev + 1);
         }
-        setCachedData(`note_${payload.$id}`, merged);
+        setCachedData(`note_${payload.$id}`, normalized);
         if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
         void opportunisticallyDecryptNote(payload);
       } else if (isUpdate) {
@@ -854,18 +849,11 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           } catch {}
           return;
         }
-        if (activeComposeNoteIdsRef.current.has(payload.$id) && !liveEditGuardsRef.current.has(payload.$id)) {
-          return;
-        }
-        setNotes(prev => prev.map(n => {
-          if (n.$id !== payload.$id) return n;
-          const guard = liveEditGuardsRef.current.get(payload.$id);
-          if (!guard) return normalizeVisibility(payload);
-          return mergeServerWithLiveGuard(payload, guard);
-        }));
-        const guard = liveEditGuardsRef.current.get(payload.$id);
-        const merged = guard ? mergeServerWithLiveGuard(payload, guard) : normalizeVisibility(payload);
-        setCachedData(`note_${payload.$id}`, merged);
+        liveEditGuardsRef.current.delete(payload.$id);
+        autonomicSyncEngine.markConfirmed(payload.$id);
+        const normalized = normalizeVisibility(payload);
+        setNotes(prev => prev.map(n => n.$id === payload.$id ? normalized : n));
+        setCachedData(`note_${payload.$id}`, normalized);
         scheduleInvalidateInitialNotesPage();
         void opportunisticallyDecryptNote(payload);
       } else if (isDelete) {
