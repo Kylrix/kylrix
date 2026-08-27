@@ -106,17 +106,17 @@ export const LocalEngine = {
 
   /** Check if a incoming payload has actual structural differences against its baseline snapshot. */
   hasObjectDiff(id: string, payload: any): boolean {
-    if (typeof window === 'undefined' || !id || !payload) return true;
+    if (typeof window === 'undefined' || !id || !payload) return false;
     const baseline = (window as any)[`__kylrix_baseline_${id}`];
     if (!baseline) {
       this.snapshotBaseline(id, payload);
-      return true;
+      return false;
     }
     try {
       const currentSnapshot = JSON.stringify(pickComparablePayload(payload));
       return currentSnapshot !== baseline;
     } catch {
-      return true;
+      return false;
     }
   },
 
@@ -173,6 +173,7 @@ export const LocalEngine = {
             const doc = event.payload;
             const cacheKey = `${channel}:${doc.$id || doc.id}`;
             await this.cacheSet(cacheKey, doc);
+            LocalEngine.snapshotBaseline(doc.$id || doc.id, doc);
             if (handler) handler(doc);
             if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data: doc } }));
           } else if (handler) handler(event);
