@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
     CheckCircle2, 
     Upload as UploadIcon, 
@@ -8,6 +9,8 @@ import {
     ArrowLeft,
     ArrowRight,
     ArrowUpRight,
+    Maximize2,
+    Minimize2,
     Send
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
@@ -16,6 +19,7 @@ import { useDataNexus } from '@/context/DataNexusContext';
 import { secureUploadFile } from '@/lib/actions/client-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { exportToMarkdown, exportToPDF } from '@/lib/utils/export';
+import { LocalEngine } from '@/lib/services/LocalEngine';
 
 interface UnifiedFormContentProps {
     formId: string;
@@ -23,6 +27,7 @@ interface UnifiedFormContentProps {
 }
 
 export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps) {
+    const router = useRouter();
     const { fetchOptimized } = useDataNexus();
     const [form, setForm] = useState<Forms | null>(null);
     const [loading, setLoading] = useState(true);
@@ -32,10 +37,12 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
     const [formData, setFormData] = useState<Record<string, any>>({});
     const [currentStep, setCurrentStep] = useState(0);
     const [currentUser, setCurrentUser] = useState<any>(null);
+    const [isFullscreen, setIsFullscreen] = useState(false);
 
-    const handleOpenStandalone = () => {
+    const handlePopOut = () => {
+        onClose();
         if (typeof window !== 'undefined') {
-            window.open(`/form/${formId}`, '_blank', 'noopener,noreferrer');
+            router.push(`/form/${formId}`);
         }
     };
 
@@ -75,19 +82,17 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
 
                 setForm(data);
 
-                // Load existing draft
+                // Load existing draft from RxDB LocalEngine
                 const localKey = `form_draft_${formId}`;
-                const localData = localStorage.getItem(localKey);
-                if (localData && localData !== 'undefined') {
-                    try {
-                        setFormData(JSON.parse(localData));
-                    } catch (_e) {}
+                const localData = await LocalEngine.cacheGet<Record<string, any>>(localKey);
+                if (localData && typeof localData === 'object' && isMounted) {
+                    setFormData(localData);
                 }
 
                 if (user) {
                     try {
                         const draft = await FormsService.getDraft(formId, user.$id);
-                        if (draft?.payload) {
+                        if (draft?.payload && isMounted) {
                             try {
                                 setFormData(JSON.parse(draft.payload));
                             } catch (parseErr) {
@@ -109,13 +114,13 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
         return () => { isMounted = false; };
     }, [formId, fetchOptimized]);
 
-    // Autosave draft
+    // Autosave draft into RxDB LocalEngine
     useEffect(() => {
         if (!form || Object.keys(formData).length === 0 || submitted) return;
 
         const timer = setTimeout(async () => {
             const localKey = `form_draft_${formId}`;
-            localStorage.setItem(localKey, JSON.stringify(formData));
+            await LocalEngine.cacheSet(localKey, formData);
 
             if (currentUser) {
                 try {
@@ -204,7 +209,7 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
         try {
             await FormsService.submitForm(formId, JSON.stringify(formData));
             setSubmitted(true);
-            localStorage.removeItem(`form_draft_${formId}`);
+            await LocalEngine.cacheDelete(`form_draft_${formId}`);
         } catch (err: any) {
             setError(err.message || 'Failed to submit form. Please try again.');
         } finally {
@@ -397,8 +402,8 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
     const completionProgress = visibleFields.length > 0 ? ((currentStep + 1) / visibleFields.length) * 100 : 0;
 
     return (
-        <div className="flex flex-col h-full bg-[#161412] text-white select-none">
-            {/* Top Progress Bar */}
+        <div className={isFullscreen ? "fixed inset-0 z-[99999] w-screen h-screen bg-[#161412] text-white flex flex-col select-none" : "flex flex-col h-full bg-[#161412] text-white select-none"}>
+            {/* Top Progress Bar Slider */}
             <div className="w-full h-1 bg-white/5 shrink-0">
                 <div 
                     className="h-full bg-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.5)] transition-all duration-300 ease-out"
@@ -406,27 +411,24 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                 />
             </div>
 
-            {/* Header */}
-            <div className="px-5 py-3.5 flex items-center justify-between border-b border-white/5 bg-[#161412] shrink-0">
-                <div className="min-w-0 pr-3">
-                    <h3 className="font-extrabold text-sm text-white truncate font-clash">
-                        {form?.title || 'Form Submission'}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider">
-                            {visibleFields.length > 0 && !submitted ? `${currentStep + 1} OF ${visibleFields.length}` : 'COMPLETED'}
-                        </span>
-                        {form?.description && (
-                            <span className="text-[10.5px] text-zinc-400 truncate max-w-[200px]">
-                                • {form.description}
-                            </span>
-                        )}
-                    </div>
-                </div>
+            {/* Minimal Slim Topbar (No crowded text, full real-estate) */}
+            <div className="px-4 py-2.5 flex items-center justify-between border-b border-white/5 bg-[#161412] shrink-0">
+                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest truncate">
+                    {form?.title || 'Form'}
+                </span>
+
                 <div className="flex items-center gap-1 shrink-0">
                     <button 
                         type="button"
-                        onClick={handleOpenStandalone} 
+                        onClick={() => setIsFullscreen(!isFullscreen)} 
+                        className="p-1.5 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                        title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+                    >
+                        {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={handlePopOut} 
                         className="p-1.5 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
                         title="Open in Standalone Page"
                     >
@@ -443,8 +445,8 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                 </div>
             </div>
 
-            {/* Content Area */}
-            <div className="flex-1 overflow-y-auto p-5 md:p-6 flex flex-col justify-between">
+            {/* Scrollable Content Area: Title, Detail & Questions scroll cleanly together */}
+            <div className="flex-1 overflow-y-auto p-5 md:p-6 flex flex-col justify-between max-w-3xl w-full mx-auto">
                 {loading ? (
                     <div className="flex flex-col justify-center items-center py-16 gap-3 my-auto">
                         <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#6366F1] border-t-transparent" />
@@ -493,11 +495,25 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                         </div>
                     </div>
                 ) : activeField ? (
-                    <div className="flex flex-col flex-1 justify-between gap-6 my-auto">
-                        {/* Staggered Question Block */}
-                        <div className="flex flex-col gap-3">
-                            <div className="flex flex-col gap-1">
-                                <h4 className="text-base md:text-lg font-black font-clash text-white leading-snug">
+                    <div className="flex flex-col flex-1 justify-between gap-6">
+                        <div className="flex flex-col gap-4">
+                            {/* Scrollable Title & Description block */}
+                            {form && (
+                                <div className="flex flex-col gap-1 pb-3 border-b border-white/5">
+                                    <h3 className="font-extrabold text-base md:text-lg text-white font-clash leading-snug">
+                                        {form.title || 'Form'}
+                                    </h3>
+                                    {form.description && (
+                                        <p className="text-xs text-zinc-400 font-satoshi leading-relaxed whitespace-pre-wrap">
+                                            {form.description}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Staggered Question Block */}
+                            <div className="flex flex-col gap-2 pt-1">
+                                <h4 className="text-sm md:text-base font-black font-clash text-white leading-snug">
                                     {activeField.label} {activeField.required && <span className="text-rose-400 font-bold">*</span>}
                                 </h4>
                                 {activeField.description && (
@@ -508,7 +524,7 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                             </div>
 
                             {/* Render Active Field */}
-                            <div className="pt-2">
+                            <div className="pt-1">
                                 {renderField(activeField)}
                             </div>
 
@@ -520,7 +536,7 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
                         </div>
 
                         {/* Step Navigation Bar */}
-                        <div className="flex items-center justify-between gap-3 pt-4 border-t border-white/5">
+                        <div className="flex items-center justify-between gap-3 pt-4 border-t border-white/5 mt-auto">
                             {currentStep > 0 ? (
                                 <button
                                     type="button"

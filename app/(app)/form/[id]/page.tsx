@@ -14,6 +14,7 @@ import { UsersService } from '@/lib/services/users';
 import { ChatService } from '@/lib/services/chat';
 import { createComment, getNote } from '@/lib/appwrite/note';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { LocalEngine } from '@/lib/services/LocalEngine';
 import toast from 'react-hot-toast';
 
 export default function PublicFormPage({ params }: { params: Promise<{ id: string }> }) {
@@ -63,13 +64,11 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
 
                 setForm(data);
 
-                // Load existing draft/local data
+                // Load existing draft/local data from RxDB LocalEngine
                 const localKey = `form_draft_${resolvedParams.id}`;
-                const localData = localStorage.getItem(localKey);
-                if (localData && localData !== 'undefined') {
-                    try {
-                        setFormData(JSON.parse(localData));
-                    } catch (_e) {}
+                const localData = await LocalEngine.cacheGet<Record<string, any>>(localKey);
+                if (localData && typeof localData === 'object') {
+                    setFormData(localData);
                 }
 
                 // If logged in, prioritize DB draft if exists
@@ -97,14 +96,14 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
         fetchForm();
     }, [resolvedParams.id, fetchOptimized]);
 
-    // Autosave logic
+    // Autosave logic with RxDB LocalEngine
     useEffect(() => {
         if (!form || Object.keys(formData).length === 0 || submitted) return;
 
         const timer = setTimeout(async () => {
-            // Local save
+            // Local save into RxDB
             const localKey = `form_draft_${resolvedParams.id}`;
-            localStorage.setItem(localKey, JSON.stringify(formData));
+            await LocalEngine.cacheSet(localKey, formData);
 
             // Remote save if logged in
             if (currentUser) {
@@ -223,8 +222,8 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
         try {
             await FormsService.submitForm(resolvedParams.id, JSON.stringify(formData));
             setSubmitted(true);
-            // Clear local draft
-            localStorage.removeItem(`form_draft_${resolvedParams.id}`);
+            // Clear local draft from RxDB
+            await LocalEngine.cacheDelete(`form_draft_${resolvedParams.id}`);
         } catch (err: any) {
             setError(err.message || 'Failed to submit form. Please try again.');
         } finally {
