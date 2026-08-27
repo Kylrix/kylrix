@@ -21,6 +21,9 @@ export interface NoteCreationInput {
   format?: 'text' | 'markdown';
   tags?: string[];
   isPublic?: boolean;
+  isGuest?: boolean;
+  isWorkspace?: boolean;
+  projectId?: string;
   origin?: CrossObjectOrigin | null;
   metadata?: Record<string, unknown> | string;
   attachments?: unknown[];
@@ -32,6 +35,9 @@ export interface NoteUpdateInput {
   format?: 'text' | 'markdown';
   tags?: string[];
   isPublic?: boolean;
+  isGuest?: boolean;
+  isWorkspace?: boolean;
+  projectId?: string;
   metadata?: Record<string, unknown> | string;
   kind?: string;
 }

@@ -274,26 +274,26 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
       ? `${typeof window !== 'undefined' ? window.location.origin : ''}/connect/post/nostr_${momentId}`
       : buildPublicResourceUrl('moment', momentId || item.id);
 
-    const menuItems = [
+    const menuItems: Parameters<typeof openMenu>[0]['items'] = [
       {
         label: 'Open Thread & Comments',
         icon: <MessageCircle size={16} />,
-        onClick: open,
+        onClick: () => { open(); },
       },
       {
         label: liked ? 'Unlike Moment' : 'Like Moment',
         icon: <Heart size={16} className={liked ? 'text-pink-500 fill-pink-500' : ''} />,
-        onClick: onLike,
+        onClick: (event: any) => { void onLike(event || e); },
       },
       {
         label: reposted ? 'Reposted' : 'Pulse / Repost',
         icon: <Repeat2 size={16} className={reposted ? 'text-emerald-400' : ''} />,
-        onClick: onRepost,
+        onClick: (event: any) => { void onRepost(event || e); },
       },
       {
         label: 'Zap Creator',
         icon: <Zap size={16} className="text-amber-400" />,
-        onClick: onZap,
+        onClick: (event: any) => { void onZap(event || e); },
       },
       {
         label: 'Copy Post Link',
@@ -342,8 +342,8 @@ function MomentCardInner({ item }: { item: UnifiedFeedItem }) {
         variant: 'destructive' as const,
         onClick: async () => {
           try {
-            const { deleteMoment } = await import('@/lib/appwrite');
-            await deleteMoment(momentId);
+            const { SocialService } = await import('@/lib/services/social');
+            await SocialService.deleteMoment(momentId);
             toast.success('Moment deleted');
           } catch {
             toast.error('Failed to delete moment');

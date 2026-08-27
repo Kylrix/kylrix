@@ -2,7 +2,6 @@ import { ID, Query } from 'appwrite';
 import { tablesDB, realtime, storage } from '../appwrite/client';
 import { UsersService } from './users';
 import { APPWRITE_CONFIG } from '../appwrite/config';
-import { FeedRanker } from './internal/feed-ranker';
 import { getCachedMomentPreview, seedMomentPreview } from '../moment-preview';
 import { getCachedMomentThread } from '../moment-thread-cache';
 import { getTablesDbRowCached } from '../ecosystem/tablesdb-row-cache';

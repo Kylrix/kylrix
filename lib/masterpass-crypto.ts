@@ -447,7 +447,7 @@ class MasterPassCrypto {
             if (decryptedMek) break;
           }
         } catch (recoveryErr) {
-          logDebug('[Vault] Recovery sync failed:', recoveryErr);
+          logDebug('[Vault] Recovery sync failed:', { error: String(recoveryErr) });
         }
       }
 

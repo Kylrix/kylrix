@@ -90,7 +90,7 @@ export default function SudoModal({
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [passkeyLoading, setPasskeyLoading] = useState(false);
-    const [_hasPasskey, setHasPasskey] = useState(false);
+    const [hasPasskey, setHasPasskey] = useState(false);
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
     const [confirmPassword, setConfirmPassword] = useState("");
     const [resetConfirmation, setResetConfirmation] = useState("");
@@ -425,7 +425,7 @@ export default function SudoModal({
                 SUDO_DETECT_CACHE.set(user.$id, {
                     hasPass: true,
                     pending: false,
-                    passkeyPresent: passkeyPresent || false,
+                    passkeyPresent: hasPasskey || false,
                     timestamp: Date.now()
                 });
                 // IF MIGRATING: Don't call handleSuccessWithSync yet.

@@ -10,7 +10,6 @@ import {
   RefreshCw,
   Settings,
   Lock,
-  Folder,
   MessageSquare,
   Sparkles,
   Sliders,
@@ -19,7 +18,6 @@ import {
   Copy,
   Plus,
   CheckCircle2,
-  Calendar,
   Layers,
   Shield,
   Bot,
@@ -36,7 +34,7 @@ type KylrixApp = 'root' | 'accounts' | 'kylrix' | 'vault' | 'flow' | 'note' | 'c
 interface ContextMenuItem {
   label: string;
   icon?: React.ReactNode;
-  onClick?: () => void;
+  onClick?: (e?: any) => void | Promise<void>;
   submenu?: ContextMenuItem[];
   variant?: 'default' | 'destructive';
   keepOpen?: boolean;
@@ -324,7 +322,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
         } else if (appType === 'flow') {
           menuTitle = 'Goals & Workflows';
           items.push(
-            { label: 'New Goal / Task', icon: <Plus size={16} className="text-emerald-400" />, onClick: () => openUnifiedDrawer('task') },
+            { label: 'New Goal / Task', icon: <Plus size={16} className="text-emerald-400" />, onClick: () => router.push('/tasks?action=new') },
             { label: 'Create Workflow', icon: <Layers size={16} />, onClick: () => router.push('/flows') },
             { label: 'Notes & Ideas', icon: <FileText size={16} />, onClick: () => router.push('/app') }
           );

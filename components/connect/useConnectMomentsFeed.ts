@@ -251,7 +251,7 @@ function buildItems(
 }
 
 /** Patch engagement / profile fields on existing rows — never drop rows. */
-function patchExisting(
+function _patchExisting(
   prev: UnifiedFeedItem[],
   incomingById: Map<string, UnifiedFeedItem>,
 ): UnifiedFeedItem[] {

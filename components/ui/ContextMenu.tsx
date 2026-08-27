@@ -8,7 +8,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 interface ContextMenuItem {
   label: string;
   icon?: React.ReactNode;
-  onClick?: () => void;
+  onClick?: (e?: any) => void | Promise<void>;
   submenu?: ContextMenuItem[];
   variant?: 'default' | 'destructive';
   keepOpen?: boolean;
