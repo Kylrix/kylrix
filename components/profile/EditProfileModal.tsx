@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   CheckCircle2, 
@@ -107,6 +108,11 @@ export function EditProfileModal({
   const [profile, setProfile] = useState<any>(initialProfile || null);
   const [activeMode, setActiveMode] = useState<ProfileDrawerMode>(initialMode);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Form Fields
   const [username, setUsername] = useState(initialProfile?.username || '');
@@ -438,9 +444,9 @@ export function EditProfileModal({
     }
   };
 
-  if (!open) return null;
+  if (!open || !mounted || typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <div 
@@ -891,6 +897,7 @@ export function EditProfileModal({
           </button>
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 }
