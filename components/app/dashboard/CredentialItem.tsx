@@ -92,20 +92,19 @@ export default function CredentialItem({
   useEffect(() => {
     let cancelled = false;
     const tryDecrypt = async () => {
-      const isEncrypted = looksEncrypted(credential.name) || looksEncrypted(credential.username) || looksEncrypted(credential.url);
-      if (!isEncrypted) {
+      const isAgentic = Boolean(activeWorkspace?.isAgentic || (credential as any).isAgentic);
+      // Only decrypt when vault is unlocked or inside an agentic workspace
+      if (!isVaultUnlockedState && !isAgentic) {
         if (!cancelled) setDisplayCredential(credential);
         return;
       }
-      const isAgentic = Boolean(activeWorkspace?.isAgentic || (credential as any).isAgentic);
-      // Only decrypt when vault is unlocked or inside an agentic workspace
-      if (!isVaultUnlockedState && !isAgentic) return;
+
       try {
         const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
         const updated: any = { ...credential };
         let changed = false;
         let dekKey: CryptoKey | null = null;
-        if (credential.dek && looksEncrypted(credential.dek)) {
+        if (credential.dek && typeof credential.dek === 'string' && credential.dek.trim().length > 0) {
           try {
             const dekBase64 = await ecosystemSecurity.decryptWithWorkspace(credential.dek, activeWorkspace);
             const rawKey = new Uint8Array(atob(dekBase64).split('').map((c) => c.charCodeAt(0)));
@@ -114,16 +113,30 @@ export default function CredentialItem({
         }
         for (const field of ['name', 'username', 'url'] as const) {
           const val = (credential as any)[field];
-          if (val && typeof val === 'string' && looksEncrypted(val)) {
+          if (val && typeof val === 'string' && val.trim().length > 0) {
             try {
               let plain: string | null = null;
-              if (dekKey) plain = await ecosystemSecurity.decryptWithKey(val, dekKey);
-              else plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, credential.dek);
-              if (plain && plain !== val) { updated[field] = plain; changed = true; }
+              if (dekKey) {
+                try {
+                  plain = await ecosystemSecurity.decryptWithKey(val, dekKey);
+                } catch {
+                  plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, credential.dek);
+                }
+              } else {
+                plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, credential.dek);
+              }
+              if (plain && plain !== val) {
+                updated[field] = plain;
+                changed = true;
+              }
             } catch {}
           }
         }
-        if (changed && !cancelled) setDisplayCredential(updated);
+        if (changed && !cancelled) {
+          setDisplayCredential(updated);
+        } else if (!changed && !cancelled) {
+          setDisplayCredential(credential);
+        }
       } catch {}
     };
     void tryDecrypt();

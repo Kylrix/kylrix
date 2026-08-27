@@ -97,16 +97,17 @@ function TOTPCardStable({
   useEffect(() => {
     let cancelled = false;
     const tryDecrypt = async () => {
-      const isEncrypted = looksEncrypted(totp.issuer) || looksEncrypted(totp.accountName) || looksEncrypted(totp.secretKey) || looksEncrypted((totp as any).dek);
-      if (!isEncrypted) { if (!cancelled) setDisplayTotp(totp); return; }
       const isAgentic = Boolean(activeWorkspace?.isAgentic || (totp as any).isAgentic);
-      if (!isVaultUnlockedState && !isAgentic) return;
+      if (!isVaultUnlockedState && !isAgentic) {
+        if (!cancelled) setDisplayTotp(totp);
+        return;
+      }
       try {
         const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
         const updated: any = { ...totp };
         let changed = false;
         let dekKey: any = null;
-        if ((totp as any).dek && looksEncrypted((totp as any).dek)) {
+        if ((totp as any).dek && typeof (totp as any).dek === 'string' && (totp as any).dek.trim().length > 0) {
           try {
             const dekBase64 = await ecosystemSecurity.decryptWithWorkspace((totp as any).dek, activeWorkspace);
             const rawKey = new Uint8Array(atob(dekBase64).split('').map((c: any) => c.charCodeAt(0)));
@@ -115,21 +116,32 @@ function TOTPCardStable({
         }
         for (const field of ['issuer','accountName','secretKey','url'] as const) {
           const val = (totp as any)[field];
-          if (val && typeof val === 'string' && looksEncrypted(val)) {
+          if (val && typeof val === 'string' && val.trim().length > 0) {
             try {
               let plain: string | null = null;
-              if (dekKey) plain = await ecosystemSecurity.decryptWithKey(val, dekKey);
-              else plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, (totp as any).dek);
+              if (dekKey) {
+                try {
+                  plain = await ecosystemSecurity.decryptWithKey(val, dekKey);
+                } catch {
+                  plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, (totp as any).dek);
+                }
+              } else {
+                plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, (totp as any).dek);
+              }
               if (plain && plain !== val) { updated[field] = plain; changed = true; }
             } catch {}
           }
         }
-        if (changed && !cancelled) setDisplayTotp(updated);
+        if (changed && !cancelled) {
+          setDisplayTotp(updated);
+        } else if (!changed && !cancelled) {
+          setDisplayTotp(totp);
+        }
       } catch {}
     };
     void tryDecrypt();
     return () => { cancelled = true; };
-  }, [totp.$id, totp.issuer, totp.accountName, totp.secretKey, (totp as any).dek, isVaultUnlockedState, activeWorkspace]);
+  }, [totp, isVaultUnlockedState, activeWorkspace]);
   const isLockedEncrypted = !isVaultUnlockedState && looksEncrypted(displayTotp.secretKey);
   const code = isLockedEncrypted ? '--- ---' : generateTOTP(displayTotp.secretKey, { step: displayTotp.period || 30, digits: displayTotp.digits || 6 });
   const timeRemaining = getTimeRemaining(displayTotp.period || 30);
