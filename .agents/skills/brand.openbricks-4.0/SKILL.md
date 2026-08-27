@@ -1,0 +1,97 @@
+---
+name: brand.openbricks-4.0
+description: Core principles, tactile patterns, and anti-SaaS upgrade rules for OpenBricks 4.0. Use when designing or upgrading drawers, overlays, action panels, and input surfaces.
+---
+
+# OpenBricks 4.0 Design System & Tactile Patterns
+
+OpenBricks 4.0 evolves the Kylrix design language from rigid, corporate SaaS conventions into a fast, tactile, layman-friendly productivity surface.
+
+---
+
+## 1. Anti-SaaS Philosophy & Layman Tactile Experience
+
+### ❌ What makes UI look "shitty" & enterprise-SaaS-y:
+1. **Nested Sub-Modal Hell**: Opening a bottom drawer that opens another bottom drawer/modal just to pick "Public" vs "Private".
+2. **Enterprise Wizard Jargon**: Multi-step step-bars (`"Step 1: Link Context"`, `"Step 2: Finalize Workspace"`, `"Advanced Access Control"`, `"Anonymous Guest View"`).
+3. **Verbose Explanatory Paragraphs**: Long descriptive blocks explaining obvious toggles.
+4. **Bloated Material Textfield Wrappers**: Default thick outline focus borders and floating labels.
+
+### ✅ OpenBricks 4.0 Standard:
+1. **Flat, Inline Tactile Controls**: Replace sub-modals with inline segmented pill controls (e.g. `Public` / `Private` switch directly inside the form).
+2. **Crisp, Layman Labels**: Use direct, natural language: `"Workspace Name"` → `"Name"`, `"Summary / Purpose"` → `"Description (Optional)"`, `"Access Level"` → `"Access"`.
+3. **Single-Action Workflows**: Keep creation snappy. Default to 1-page flows unless complex dependency resolution is strictly necessary.
+
+---
+
+## 2. Surfaces & Unified Color Architecture
+
+- **Single Unified Surface Fill (`#161412`)**:
+  - The drawer body, header, and footer share a continuous ash background.
+  - Never split a panel into awkward two-tone slabs (e.g. ash header with pitch-black body sharing one outer border).
+- **Tactile Inset Child Wells (`#0A0908`)**:
+  - Nest interactive child blocks inside `#0A0908` with subtle hairline borders (`rgba(255, 255, 255, 0.08)`).
+  - Use generous radii (`rounded-2xl` / `16px`–`20px`).
+- **Dark Inset Inputs**:
+  - Native `<input>` / `<textarea>` elements styled with:
+    ```tsx
+    bgcolor: '#0A0908',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: '16px',
+    px: 2,
+    py: 1.5,
+    color: '#fff',
+    '&:focus': { borderColor: '#6366F1' },
+    '&::placeholder': { color: 'rgba(255, 255, 255, 0.25)' }
+    ```
+
+---
+
+## 3. Container Insets & Edge Hugging (`ui.tailwind-fix`)
+
+- **Prevent Double-Padding Squish**:
+  - Outer `Drawer` / `Paper` wrappers should own outer gutters (`px: 2.25`, `py: 2`), while inner Paper cards should reset extra default padding (`p: 0` or controlled `p: 2`).
+- **Generous Internal Padding on Child Tiles**:
+  - Identity & resource tiles: `px: 2.25, py: 1.75`–`2`.
+  - Inset link containers / URL boxes: `px: 1.75, py: 1.25` with `borderRadius: '14px'`.
+  - Buttons: `px: 2, py: 1.25`, `minHeight: 44px`–`46px`.
+- **Stacked Copy Columns**:
+  - Wrap multi-line text blocks in a dedicated flex column:
+    ```tsx
+    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.5, pr: 0.5 }}>
+      <Typography component="span" sx={{ fontWeight: 900, lineHeight: 1.25 }} noWrap>...</Typography>
+      <Typography component="span" sx={{ color: 'rgba(255,255,255,0.5)', lineHeight: 1.35 }} noWrap>...</Typography>
+    </Box>
+    ```
+
+---
+
+## 4. Anti-Overflow & Horizontal Containment
+
+- **Strict Ellipsis Truncation**:
+  - Every flex container holding text must have `minWidth: 0` and `overflow: 'hidden'`.
+  - Every single-line text element must have `noWrap`, `textOverflow: 'ellipsis'`, and `component="span"`.
+- **No Side-to-Side Drag on Mobile**:
+  - Apply `maxWidth: '100%'`, `boxSizing: 'border-box'`, and `overflowX: 'hidden'` across all drawer panels and drop-downs.
+
+---
+
+## 5. Dynamic 1-Line Grouping & Dismiss Actions
+
+- **Eliminate Single-Pill Full-Width Wastage**:
+  - If two complementary actions exist (e.g. `GitHub` + `Discord`, `Wallet` + `Settings`), group them into a dynamic 2-column grid (`grid grid-cols-2 gap-1.25`) with centered labels.
+- **Top Dismiss Action**:
+  - Always place a compact, circular close button (`✕`, `30px`–`32px`, `rounded-full`, `bg-white/[0.05]`) at the top right of panels so mobile users can immediately dismiss without relying solely on drag gestures.
+
+---
+
+## Summary Checklist for OpenBricks 4.0 Upgrades
+
+| Feature | Old (SaaS-y / Clunky) | OpenBricks 4.0 (Tactile & Clean) |
+|---|---|---|
+| **Access Picker** | Sub-drawer popup inside bottom drawer | Inline segmented toggle (`Public` / `Private`) |
+| **Inputs** | MUI Textfield with thick floating borders | Inset `#0A0908` dark fields with subtle focus rings |
+| **CTA Rows** | Full-width single buttons stacked vertically | Dynamic 2-column compact grid for complementary CTAs |
+| **Copy Tone** | Corporate wizard steps & jargon | Plain English, crisp, action-oriented labels |
+| **Drawer Close** | Missing or tucked inside subheadings | Unified top-right circular dismiss button (`✕`) |
+| **Text Overflow** | Text pushing container outside viewport | Strict `minWidth: 0` + `textOverflow: 'ellipsis'` |

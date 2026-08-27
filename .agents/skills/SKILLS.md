@@ -132,6 +132,7 @@ _Catalog covers 86 skills._
 | `ui.skeleton-philosophy` | Skeleton loading patterns for perceived performance without layout thrash. |
 | `ui.tailwind-fix` | Row and card text layout fixes after Tailwind v4 + OpenBricks migration. Use when list rows, cards, or drawer items have clipped text, crushed line-height, or c |
 | `ui.tailwind-v4` | Tailwind v4 + OpenBricks migration notes for utility and theme tokens. |
+| `brand.openbricks-4.0` | Core principles, tactile patterns, and anti-SaaS upgrade rules for OpenBricks 4.0 drawers, overlays, and input surfaces. |
 
 ## Agentic
 
