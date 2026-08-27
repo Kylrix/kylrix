@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Fingerprint,
   Lock,
@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   ArrowUpCircle,
   Clock,
+  KeyRound,
 } from 'lucide-react';
 import { RememberUnlockSettings } from '@/components/settings/RememberUnlockSettings';
 import { AgentByokSettings } from '@/components/settings/AgentByokSettings';
@@ -22,6 +23,108 @@ import { FlowInstallSecuritySettings } from '@/components/settings/FlowInstallSe
 import { ZapSecuritySettings } from '@/components/settings/ZapSecuritySettings';
 import { formatDateWithFallback } from '@/lib/date-utils';
 import { useAppwriteVault } from '@/context/appwrite-context';
+import { useAuth } from '@/lib/auth';
+import { toast } from 'react-hot-toast';
+
+function BareBonesMasterpassUnlock() {
+  const { user } = useAuth();
+  const [pwd, setPwd] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
+
+  const handleTestUnlock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pwd || !user?.$id) return;
+    setBusy(true);
+    setLogs([]);
+    const addLog = (msg: string) => setLogs((prev) => [...prev, `${new Date().toLocaleTimeString()} ${msg}`]);
+
+    try {
+      addLog(`Testing direct unlock for user ID: ${user.$id}`);
+      
+      const { SecurityEnclave } = await import('@/lib/security/enclave');
+      const localKeychain = await SecurityEnclave.getKeychain(user.$id);
+      addLog(`Local enclave keychain count: ${localKeychain.length}`);
+      
+      const { AppwriteService } = await import('@/lib/appwrite');
+      const remoteKeychain = await AppwriteService.listKeychainEntries(user.$id).catch((err) => {
+        addLog(`Remote fetch note: ${err?.message || err}`);
+        return [];
+      });
+      addLog(`Remote Appwrite keychain count: ${remoteKeychain.length}`);
+
+      const entries = remoteKeychain.length > 0 ? remoteKeychain : localKeychain;
+      const pwdEntries = entries.filter((e: any) => e.type === 'password');
+      addLog(`Password type credentials found: ${pwdEntries.length}`);
+
+      if (pwdEntries.length === 0) {
+        addLog('ERROR: Zero password entries found on account! Vault is uninitialized or wiped.');
+        toast.error('No password entry found');
+        return;
+      }
+
+      for (let i = 0; i < pwdEntries.length; i++) {
+        const entry = pwdEntries[i];
+        addLog(`Credential #${i + 1} (id: ${entry.$id}): saltLen: ${entry.salt?.length || 0}, isArgon: ${Boolean(entry.isArgon)}, params: ${typeof entry.params === 'object' ? JSON.stringify(entry.params) : entry.params}`);
+      }
+
+      addLog('Invoking masterPassCrypto.unlock()...');
+      const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
+      const success = await masterPassCrypto.unlock(pwd, user.$id, false);
+
+      if (success) {
+        addLog('SUCCESS: Vault unlocked cleanly! MEK imported and active in memory.');
+        toast.success('Direct unlock succeeded!');
+      } else {
+        addLog('FAILED: masterPassCrypto.unlock returned false. Cryptographic unwrap tag mismatch or bad password.');
+        toast.error('Unlock failed');
+      }
+    } catch (err: any) {
+      addLog(`CRITICAL ERROR: ${err?.message || String(err)}`);
+      console.error('[BareBonesUnlock]', err);
+      toast.error(`Error: ${err?.message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Section title="Direct Masterpass Unlock (Diagnostic)">
+      <div className="flex flex-col gap-3">
+        <p className="text-xs text-white/50 leading-relaxed font-satoshi">
+          Bare-bones first-principles unlock: directly tests password derivation and MEK unwrap with real-time logs.
+        </p>
+        <form onSubmit={handleTestUnlock} className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="password"
+            placeholder="Enter master password to test..."
+            value={pwd}
+            onChange={(e) => setPwd(e.target.value)}
+            disabled={busy}
+            className="flex-1 bg-[#0A0908] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-amber-400/50 font-mono"
+          />
+          <button
+            type="submit"
+            disabled={busy || !pwd}
+            className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black font-extrabold text-xs shrink-0 cursor-pointer transition-all flex items-center justify-center gap-1.5"
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+            {busy ? 'Testing...' : 'Unlock Direct'}
+          </button>
+        </form>
+        {logs.length > 0 && (
+          <div className="p-3 bg-[#0A0908] border border-white/5 rounded-xl font-mono text-[11px] text-white/70 flex flex-col gap-1 max-h-48 overflow-y-auto">
+            {logs.map((log, idx) => (
+              <div key={idx} className={log.includes('SUCCESS') ? 'text-emerald-400 font-bold' : log.includes('ERROR') || log.includes('FAILED') ? 'text-red-400 font-bold' : ''}>
+                {log}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Section>
+  );
+}
 
 function PasskeyPreferenceSettings() {
   const { usePasskeysByDefault, setUsePasskeysByDefault } = useAppwriteVault();
@@ -300,6 +403,9 @@ export function SecurityTab({
           />
         )}
       </Section>
+
+      {/* First-principles direct unlock diagnostic */}
+      <BareBonesMasterpassUnlock />
 
       <Section
         title="Passkeys"
