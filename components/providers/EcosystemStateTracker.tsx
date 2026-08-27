@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { saveEcosystemState } from '@/lib/ecosystem/state-tracker';
 
 /**
@@ -10,7 +10,6 @@ import { saveEcosystemState } from '@/lib/ecosystem/state-tracker';
  */
 export function EcosystemStateTracker({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const lastScrollY = useRef(0);
 
   useEffect(() => {
@@ -33,9 +32,9 @@ export function EcosystemStateTracker({ children }: { children: React.ReactNode 
       return;
     }
 
-    // Combine path and search params for exact state tracking
-    const paramsString = searchParams.toString();
-    const fullPath = paramsString ? `${pathname}?${paramsString}` : pathname;
+    // Combine path and search params safely on client without suspending
+    const search = typeof window !== 'undefined' ? window.location.search : '';
+    const fullPath = search ? `${pathname}${search}` : pathname;
 
     // Save initial load for this route
     saveEcosystemState(fullPath, window.scrollY);
@@ -54,7 +53,7 @@ export function EcosystemStateTracker({ children }: { children: React.ReactNode 
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   return <>{children}</>;
 }

@@ -110,12 +110,6 @@ export function UnifiedLeftSidebar() {
     return null;
   };
 
-  useEffect(() => {
-    ['/app', '/goals', '/vault', '/connect', '/flows'].forEach((route) => {
-      router.prefetch(route);
-    });
-  }, [router]);
-
   const handleNavChange = (navId: NavId) => {
     const routes: Record<NavId, string> = {
       note: '/app',

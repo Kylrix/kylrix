@@ -131,12 +131,20 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  // Skip static assets, API routes, and Next.js internals entirely — zero overhead
+  // Skip static assets, API routes, RSC flight streams, and Next.js internals entirely — zero overhead
+  const isRSC =
+    request.headers.get('RSC') === '1' ||
+    request.headers.has('next-router-prefetch') ||
+    request.headers.has('next-router-state-tree') ||
+    searchParams.has('_rsc') ||
+    request.headers.get('accept')?.includes('text/x-component');
+
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     pathname.startsWith('/favicon') ||
-    pathname.includes('.') // static files like .css, .js, .png
+    pathname.includes('.') || // static files like .css, .js, .png
+    isRSC
   ) {
     return NextResponse.next();
   }
