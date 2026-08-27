@@ -686,25 +686,10 @@ export const ApiResources = {
       }
     }
 
-    // 2. Generate autonomous keys & sovereign MEK entropy
+    // 2. Generate autonomous keys, BIP39 mnemonic & multi-chain wallets
     const name = String(body.name || 'Autonomous Agent').trim().slice(0, 128);
     const agentType = String(body.agentType || 'autonomous').trim().slice(0, 64);
-    const rawEntropy = new Uint8Array(32);
-    const nodeCrypto = await import('crypto');
-    nodeCrypto.randomFillSync(rawEntropy);
-
-    const secp = await import('@noble/secp256k1');
-    const { bech32 } = await import('@scure/base');
-    const { keccak_256 } = await import('@noble/hashes/sha3.js');
-
-    const secpPub = secp.getPublicKey(rawEntropy, false).slice(1);
-    const evmHash = keccak_256(secpPub);
-    const walletAddress = '0x' + Array.from(evmHash.slice(-20)).map((b) => b.toString(16).padStart(2, '0')).join('').toLowerCase();
-
-    const nostrPubRaw = secp.getPublicKey(rawEntropy, true).slice(1);
-    const nostrPubkeyHex = Array.from(nostrPubRaw).map((b) => b.toString(16).padStart(2, '0')).join('');
-    const nostrWords = bech32.toWords(nostrPubRaw);
-    const nostrNpub = bech32.encode('npub', nostrWords);
+    const crypto = await this.deriveAgentSovereignCrypto(typeof body.mnemonic === 'string' ? body.mnemonic : undefined);
 
     const agentUserId = `agent_${agentId}`;
     const cleanHandle = `ag_${name.trim().toLowerCase().replace(/[^a-z0-9_]/g, '') || agentId.slice(0, 8)}`;
@@ -742,14 +727,15 @@ export const ApiResources = {
         tableId: 'agents',
         rowId: agentId,
         data: {
-          publicKey: nostrNpub,
+          publicKey: crypto.nostrNpub,
           config: JSON.stringify({
             name,
             agentType,
             agentUserId,
             username: cleanHandle,
-            walletAddress,
-            nostrNpub,
+            walletAddress: crypto.walletAddressJson,
+            walletMap: crypto.walletMap,
+            nostrNpub: crypto.nostrNpub,
             workspaceId,
             capabilities: body.capabilities || ['notes', 'goals', 'chats', 'nostr'],
             updatedAt: now,
@@ -764,14 +750,15 @@ export const ApiResources = {
         rowId: agentId,
         data: {
           ownerId: actor.userId,
-          publicKey: nostrNpub,
+          publicKey: crypto.nostrNpub,
           config: JSON.stringify({
             name,
             agentType,
             agentUserId,
             username: cleanHandle,
-            walletAddress,
-            nostrNpub,
+            walletAddress: crypto.walletAddressJson,
+            walletMap: crypto.walletMap,
+            nostrNpub: crypto.nostrNpub,
             workspaceId,
             capabilities: body.capabilities || ['notes', 'goals', 'chats', 'nostr'],
             createdAt: now,
@@ -794,8 +781,8 @@ export const ApiResources = {
         username: cleanHandle,
         displayName: `${name.trim()} (Smart Agent)`,
         bio: String(body.bio || body.goal || `Autonomous ${agentType} smart partner`),
-        walletAddress,
-        publicKey: nostrNpub,
+        walletAddress: crypto.walletAddressJson,
+        publicKey: crypto.nostrNpub,
         status: 'online',
         preferences: JSON.stringify({
           isAgentic: true,
@@ -804,8 +791,8 @@ export const ApiResources = {
           agentType,
           role: String(body.role || name),
           goal: String(body.goal || ''),
-          nostrNpub,
-          walletAddress,
+          nostrNpub: crypto.nostrNpub,
+          walletAddress: crypto.walletMap,
           updatedAt: now,
         }),
         isPublic: true,
@@ -823,8 +810,8 @@ export const ApiResources = {
         data: {
           username: cleanHandle,
           displayName: `${name.trim()} (Smart Agent)`,
-          walletAddress,
-          publicKey: nostrNpub,
+          walletAddress: crypto.walletAddressJson,
+          publicKey: crypto.nostrNpub,
           status: 'online',
           preferences: JSON.stringify({
             isAgentic: true,
@@ -833,16 +820,13 @@ export const ApiResources = {
             agentType,
             role: String(body.role || name),
             goal: String(body.goal || ''),
-            nostrNpub,
-            walletAddress,
+            nostrNpub: crypto.nostrNpub,
+            walletAddress: crypto.walletMap,
             updatedAt: now,
           }),
         },
       }).catch(() => null);
     });
-
-    const nostrNsec = bech32.encode('nsec', nostrWords);
-    const mekHex = Array.from(rawEntropy).map((b) => b.toString(16).padStart(2, '0')).join('');
 
     return {
       agentId,
@@ -852,11 +836,13 @@ export const ApiResources = {
       agentType,
       workspaceId,
       workspaceTitle,
-      walletAddress,
-      nostrNpub,
-      nostrNsec,
-      mekHex,
-      publicKey: nostrNpub,
+      mnemonic: crypto.mnemonic,
+      walletAddress: crypto.walletAddressJson,
+      walletMap: crypto.walletMap,
+      nostrNpub: crypto.nostrNpub,
+      nostrNsec: crypto.nostrNsec,
+      mekHex: crypto.mekHex,
+      publicKey: crypto.nostrNpub,
       ownerId: actor.userId,
       createdAt: now,
     };
@@ -2086,6 +2072,99 @@ export const ApiResources = {
         return !kind || kind === 'post' || kind === 'quote' || kind === 'pulse';
       })
       .map((r: any) => shapeMoment(r));
+  },
+
+  async deriveAgentSovereignCrypto(customMnemonic?: string) {
+    const bip39 = await import('@scure/bip39');
+    const { wordlist } = await import('@scure/bip39/wordlists/english.js');
+    const { HDKey } = await import('@scure/bip32');
+    const secp256k1 = await import('@noble/secp256k1');
+    const ed25519 = await import('@noble/ed25519');
+    const { sha512 } = await import('@noble/hashes/sha2.js');
+    const { base58, bech32 } = await import('@scure/base');
+    const { keccak_256 } = await import('@noble/hashes/sha3.js');
+    const { ripemd160: hash160 } = await import('@noble/hashes/legacy.js');
+    const { blake2b } = await import('@noble/hashes/blake2.js');
+
+    ed25519.hashes.sha512 = (message: Uint8Array) => sha512(message);
+    ed25519.hashes.sha512Async = (message: Uint8Array) => Promise.resolve(sha512(message));
+
+    const mnemonic = customMnemonic || bip39.generateMnemonic(wordlist, 128);
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const rootKey = HDKey.fromMasterSeed(seed);
+
+    // 1. EVM (m/44'/60'/0'/0/0)
+    const evmChild = rootKey.derive("m/44'/60'/0'/0/0");
+    if (!evmChild.privateKey) throw new Error('Failed to derive EVM key');
+    const evmPub = secp256k1.getPublicKey(evmChild.privateKey, false).slice(1);
+    const evmHash = keccak_256(evmPub);
+    const ethAddress = '0x' + Array.from(evmHash.slice(-20)).map((b) => b.toString(16).padStart(2, '0')).join('').toLowerCase();
+
+    // 2. Solana (m/44'/501'/0'/0')
+    const solChild = rootKey.derive("m/44'/501'/0'/0'");
+    if (!solChild.privateKey) throw new Error('Failed to derive Solana key');
+    const solPub = await ed25519.getPublicKey(solChild.privateKey);
+    const solAddress = base58.encode(solPub);
+
+    // 3. Bitcoin (m/84'/0'/0'/0/0 Native SegWit P2WPKH)
+    const btcChild = rootKey.derive("m/84'/0'/0'/0/0");
+    if (!btcChild.publicKey) throw new Error('Failed to derive Bitcoin key');
+    const pkh = hash160(btcChild.publicKey);
+    const btcWords = bech32.toWords(pkh);
+    const btcAddress = bech32.encode('bc', [0, ...btcWords]);
+
+    // 4. Sui (m/44'/784'/0'/0'/0')
+    const suiChild = rootKey.derive("m/44'/784'/0'/0'/0'");
+    if (!suiChild.privateKey) throw new Error('Failed to derive Sui key');
+    const suiPub = await ed25519.getPublicKey(suiChild.privateKey);
+    const tmp = new Uint8Array(33);
+    tmp.set([0x00]);
+    tmp.set(suiPub, 1);
+    const suiHash = blake2b(tmp, { dkLen: 32 });
+    const suiAddress = '0x' + Array.from(suiHash).map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 64);
+
+    // 5. Nostr keypair
+    const nostrPriv = evmChild.privateKey;
+    const nostrPubRaw = secp256k1.getPublicKey(nostrPriv, true).slice(1);
+    const nostrPubkeyHex = Array.from(nostrPubRaw).map((b) => b.toString(16).padStart(2, '0')).join('');
+    const nostrWords = bech32.toWords(nostrPubRaw);
+    const nostrNpub = bech32.encode('npub', nostrWords);
+    const nostrNsec = bech32.encode('nsec', bech32.toWords(nostrPriv));
+
+    // 6. 32-byte MEK Hex
+    const mekHex = Array.from(nostrPriv).map((b) => b.toString(16).padStart(2, '0')).join('');
+
+    // 7. Multi-chain Wallet JSON map matching Kylrix standard
+    const walletMap = {
+      sol: solAddress,
+      eth: ethAddress,
+      btc: btcAddress,
+      sui: suiAddress,
+      base: ethAddress,
+      polygon: ethAddress,
+      arbitrum: ethAddress,
+    };
+
+    const walletAddressJson = JSON.stringify({
+      sol: solAddress,
+      eth: ethAddress,
+      btc: btcAddress,
+      sui: suiAddress,
+    });
+
+    return {
+      mnemonic,
+      walletAddressJson,
+      walletMap,
+      ethAddress,
+      solAddress,
+      btcAddress,
+      suiAddress,
+      nostrNpub,
+      nostrNsec,
+      nostrPubkeyHex,
+      mekHex,
+    };
   },
 
   async listFeed(
