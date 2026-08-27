@@ -93,6 +93,8 @@ export default function CredentialItem({
     let cancelled = false;
     const tryDecrypt = async () => {
       const isAgentic = Boolean(activeWorkspace?.isAgentic || (credential as any).isAgentic);
+      const isShared = Boolean(activeWorkspace && !activeWorkspace.isPersonal && activeWorkspace.isShared);
+
       // Only decrypt when vault is unlocked or inside an agentic workspace
       if (!isVaultUnlockedState && !isAgentic) {
         if (!cancelled) setDisplayCredential(credential);
@@ -100,9 +102,55 @@ export default function CredentialItem({
       }
 
       try {
-        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
+        const { masterPassCrypto, decryptField } = await import('@/lib/masterpass-crypto');
         const updated: any = { ...credential };
         let changed = false;
+
+        // Personal non-agentic workspace: flat straight decrypt with user MEK
+        if (!isAgentic && !isShared) {
+          if (!masterPassCrypto.isVaultUnlocked()) {
+            if (!cancelled) setDisplayCredential(credential);
+            return;
+          }
+
+          let dekKey: CryptoKey | null = null;
+          if (credential.dek && typeof credential.dek === 'string' && credential.dek.trim().length > 0) {
+            try {
+              const dekBase64 = await decryptField(credential.dek);
+              const rawKey = new Uint8Array(atob(dekBase64).split('').map((c) => c.charCodeAt(0)));
+              dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+            } catch {}
+          }
+
+          for (const field of ['name', 'username', 'url'] as const) {
+            const val = (credential as any)[field];
+            if (val && typeof val === 'string' && val.trim().length > 0) {
+              try {
+                let plain: string | null = null;
+                if (dekKey) {
+                  const dataBytes = atob(val).split('').map((c) => c.charCodeAt(0));
+                  const dataIv = new Uint8Array(dataBytes.slice(0, 16));
+                  const dataEncrypted = new Uint8Array(dataBytes.slice(16));
+                  const dec = await crypto.subtle.decrypt({ name: "AES-GCM", iv: dataIv }, dekKey, dataEncrypted);
+                  plain = new TextDecoder().decode(dec);
+                } else {
+                  plain = await decryptField(val);
+                }
+                if (plain && plain !== val) {
+                  updated[field] = plain;
+                  changed = true;
+                }
+              } catch {}
+            }
+          }
+
+          if (changed && !cancelled) setDisplayCredential(updated);
+          else if (!changed && !cancelled) setDisplayCredential(credential);
+          return;
+        }
+
+        // Agentic / Shared workspace: ecosystemSecurity resolution
+        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
         let dekKey: CryptoKey | null = null;
         if (credential.dek && typeof credential.dek === 'string' && credential.dek.trim().length > 0) {
           try {

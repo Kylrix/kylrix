@@ -54,16 +54,59 @@ export default function CredentialDetail({
 
     const decryptAllFields = async () => {
       try {
-        const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
-        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
-        
+        const { masterPassCrypto, decryptField } = await import('@/lib/masterpass-crypto');
         const isAgentic = Boolean(activeWorkspace?.isAgentic || (credential as any).isAgentic);
+        const isShared = Boolean(activeWorkspace && !activeWorkspace.isPersonal && activeWorkspace.isShared);
+        
         if (!masterPassCrypto.isVaultUnlocked() && !isAgentic) return;
 
         const fieldsToDecrypt = ['name', 'username', 'password', 'url', 'notes', 'customFields'];
         const updated = { ...credential };
         let changed = false;
 
+        // Personal non-agentic workspace: flat straight decrypt with user MEK
+        if (!isAgentic && !isShared) {
+          if (!masterPassCrypto.isVaultUnlocked()) return;
+
+          let dekKey: CryptoKey | null = null;
+          if (credential.dek) {
+            try {
+              const dekBase64 = await decryptField(credential.dek);
+              const rawKey = new Uint8Array(atob(dekBase64).split('').map((c) => c.charCodeAt(0)));
+              dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+            } catch {}
+          }
+
+          for (const field of fieldsToDecrypt) {
+            const val = (credential as any)[field];
+            if (val && typeof val === 'string' && val.trim().length > 0) {
+              try {
+                let plain: string | null = null;
+                if (dekKey) {
+                  const dataBytes = atob(val).split('').map((c) => c.charCodeAt(0));
+                  const dataIv = new Uint8Array(dataBytes.slice(0, 16));
+                  const dataEncrypted = new Uint8Array(dataBytes.slice(16));
+                  const dec = await crypto.subtle.decrypt({ name: "AES-GCM", iv: dataIv }, dekKey, dataEncrypted);
+                  plain = new TextDecoder().decode(dec);
+                } else {
+                  plain = await decryptField(val);
+                }
+                if (plain && plain !== val) {
+                  (updated as any)[field] = plain;
+                  changed = true;
+                }
+              } catch {}
+            }
+          }
+
+          if (changed && !isCancelled) {
+            setLiveCredential(updated);
+          }
+          return;
+        }
+
+        // Agentic / Shared workspace
+        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
         let dekKey: CryptoKey | null = null;
         if (credential.dek) {
           try {

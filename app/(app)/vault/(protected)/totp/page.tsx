@@ -99,14 +99,63 @@ function TOTPCardStable({
     let cancelled = false;
     const tryDecrypt = async () => {
       const isAgentic = Boolean(activeWorkspace?.isAgentic || (totp as any).isAgentic);
+      const isShared = Boolean(activeWorkspace && !activeWorkspace.isPersonal && activeWorkspace.isShared);
+
       if (!isVaultUnlockedState && !isAgentic) {
         if (!cancelled) setDisplayTotp(totp);
         return;
       }
+
       try {
-        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
+        const { masterPassCrypto, decryptField } = await import('@/lib/masterpass-crypto');
         const updated: any = { ...totp };
         let changed = false;
+
+        // Personal non-agentic workspace: flat straight decrypt with user MEK
+        if (!isAgentic && !isShared) {
+          if (!masterPassCrypto.isVaultUnlocked()) {
+            if (!cancelled) setDisplayTotp(totp);
+            return;
+          }
+
+          let dekKey: any = null;
+          if ((totp as any).dek && typeof (totp as any).dek === 'string' && (totp as any).dek.trim().length > 0) {
+            try {
+              const dekBase64 = await decryptField((totp as any).dek);
+              const rawKey = new Uint8Array(atob(dekBase64).split('').map((c: any) => c.charCodeAt(0)));
+              dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+            } catch {}
+          }
+
+          for (const field of ['issuer','accountName','secretKey','url'] as const) {
+            const val = (totp as any)[field];
+            if (val && typeof val === 'string' && val.trim().length > 0) {
+              try {
+                let plain: string | null = null;
+                if (dekKey) {
+                  const dataBytes = atob(val).split('').map((c: any) => c.charCodeAt(0));
+                  const dataIv = new Uint8Array(dataBytes.slice(0, 16));
+                  const dataEncrypted = new Uint8Array(dataBytes.slice(16));
+                  const dec = await crypto.subtle.decrypt({ name: "AES-GCM", iv: dataIv }, dekKey, dataEncrypted);
+                  plain = new TextDecoder().decode(dec);
+                } else {
+                  plain = await decryptField(val);
+                }
+                if (plain && plain !== val) {
+                  updated[field] = plain;
+                  changed = true;
+                }
+              } catch {}
+            }
+          }
+
+          if (changed && !cancelled) setDisplayTotp(updated);
+          else if (!changed && !cancelled) setDisplayTotp(totp);
+          return;
+        }
+
+        // Agentic / Shared workspace
+        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
         let dekKey: any = null;
         if ((totp as any).dek && typeof (totp as any).dek === 'string' && (totp as any).dek.trim().length > 0) {
           try {
