@@ -985,6 +985,14 @@ export const autonomicSyncEngine = {
     notifyStatusListeners();
   },
 
+  /** Acknowledge that an object has been confirmed on the remote database. */
+  markConfirmed(noteOrResourceId: string) {
+    const id = String(noteOrResourceId || '').trim();
+    if (!id) return;
+    this.ack(id);
+    this.cancelPending(id);
+  },
+
   /** Unconditionally cancel any pending create/update for an item (e.g. upon deletion) so it never resuscitates. */
   cancelPending(noteOrGoalId: string) {
     const id = String(noteOrGoalId || '').trim();
