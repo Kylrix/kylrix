@@ -9,12 +9,13 @@ import {
   Check, 
   Copy, 
   Lock, 
-  RefreshCw,
-  Key,
-  Plus,
-  Trash2,
-  ShieldCheck,
-  ArrowLeft
+  RefreshCw, 
+  Key, 
+  Plus, 
+  Trash2, 
+  ShieldCheck, 
+  ArrowLeft,
+  ChevronRight
 } from 'lucide-react';
 import type { SystemAgentDefinition } from '@/lib/agentic/system-agents';
 import type { AgentRecord } from '@/lib/services/agentic';
