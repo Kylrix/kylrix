@@ -44,7 +44,13 @@
 - **No Build/Lint Unless Asked**: Do not run `pnpm build`, `pnpm lint`, `tsc`, or equivalent verification gates unless the user explicitly tells you to. Default to surgical code edits only.
 - **CI Workflows Disabled By Default (STRICT)**: Ota governance and Docker build/publish GitHub Actions workflows are disabled by default on standard commits to ensure ultra-fast push velocity. They must ONLY run when the user explicitly requests `pnpm build` and `pnpm lint` verification, both commands succeed with 0 errors, and the agent tags the commit message with `[ci-build]` (or uses `workflow_dispatch`). Standard feature/bugfix commits must never trigger CI runs.
 
-### 🥣 Dogfooding & Kylrix API Mandate (STRICT)
+### 📡 Real-Time Local Dev Console & Error Streaming (`/api/dev/logs`)
+- **Live Runtime Diagnostics**: In development mode (`localhost:3005`), the Next.js server hooks `console.error`, `console.warn`, `unhandledRejection`, and uncaught client errors into an in-memory ring buffer.
+- **Agent Log Inspection & SSE Streaming**:
+  - `GET http://localhost:3005/api/dev/logs?limit=50&level=error`: Fetches recent errors and stack traces in JSON.
+  - `GET http://localhost:3005/api/dev/logs?stream=true`: Streams live server and client errors via Server-Sent Events (SSE).
+  - `DELETE http://localhost:3005/api/dev/logs`: Resets/clears the in-memory buffer before verifying a fix.
+- **Autonomous Error Tailing**: Agents are encouraged to query this endpoint to inspect runtime exceptions, verify fixes in real-time, and diagnose server/client errors without asking the user for terminal logs.
 - **Ecosystem Self-Hosting (Dogfooding)**: From henceforth, Kylrix itself is the platform and workspace environment used to organize, plan, track, and build this ecosystem. Agents must operate within a dedicated agentic workspace (`isAgentic: true`) to record task goals, ideas, and conversation sessions.
 - **Agent Local API Base URI**: When dogfooding via the Kylrix HTTP API (`/api/v1`), autonomous agents MUST target the local instance at `http://localhost:3005/api/v1` (NOT the public production URI `https://www.kylrix.space`).
 - **Kylrix HTTP API vs Appwrite (STRICT SEPARATION)**: Agents are special dogfooding users of the product. All agent task planning, object CRUD, notes, goals, and communication MUST go through the **Kylrix HTTP API (`/api/v1`)** using PATs/Agent tokens. NEVER confuse or replace Kylrix HTTP API calls with raw Appwrite admin APIs, internal SDKs, or CLI data mutations.

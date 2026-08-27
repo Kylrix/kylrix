@@ -182,6 +182,18 @@ export async function submitRuntimeErrorFeedback(input: RuntimeErrorFeedbackInpu
   sessionStorage.setItem(totalSentKey, String(sentCount + 1));
 
   try {
+    if (process.env.NODE_ENV !== 'production') {
+      void fetch('/api/dev/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          level: 'error',
+          message: `[Client ${input.boundary}] ${input.error.message}`,
+          stack: input.error.stack,
+        }),
+      }).catch(() => {});
+    }
+
     const form = await FormsService.getForm(FEATURE_REQUEST_FORM_ID);
     const schema = parseSchema(form?.schema);
     const payload = buildPayload(schema, input);
