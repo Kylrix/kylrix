@@ -184,7 +184,6 @@ export function NoteDetailSidebar({
           }
           updateLocalAndParentNote(payload as Notes);
           try {
-            const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
             autonomicSyncEngine.markConfirmed(payload.$id);
           } catch {}
         }
