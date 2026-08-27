@@ -55,6 +55,7 @@ function TOTPCardStable({
   copyToClipboard: (text: string) => void;
 }) {
   const { user, isVaultBlurEnabled } = useAppwriteVault();
+  const { activeWorkspace } = useWorkspace();
   const contextMenu = useContextMenu();
   const openMenu = contextMenu?.openMenu;
   const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
