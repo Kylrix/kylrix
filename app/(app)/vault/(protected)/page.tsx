@@ -253,6 +253,50 @@ function DashboardPageContent() {
     void hydrateVaultData();
   }, [hydrateVaultData]);
 
+  // Realtime live updates for credentials
+  useEffect(() => {
+    const activeUserId = user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.$id || '') : '');
+    if (!activeUserId) return;
+    let unsub: (() => void) | null = null;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+        const credsChannel = `databases.${APPWRITE_CONFIG.DATABASES.VAULT}.tables.${APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS}.rows`;
+
+        const cleanup = await LocalEngine.subscribeRealtime(credsChannel, (payload: any) => {
+          if (!payload || !payload.$id || cancelled) return;
+          if (payload.userId && payload.userId !== activeUserId) return;
+
+          const isDeleted = payload.isDeleted === true || payload.isTrash === true;
+          if (isDeleted) {
+            setAllCredentials(prev => prev.filter(c => c.$id !== payload.$id));
+            return;
+          }
+
+          setAllCredentials(prev => {
+            const idx = prev.findIndex(c => c.$id === payload.$id);
+            if (idx >= 0) {
+              const updated = [...prev];
+              updated[idx] = { ...updated[idx], ...payload };
+              return updated;
+            }
+            return [payload, ...prev];
+          });
+        });
+        if (cancelled) cleanup();
+        else unsub = cleanup;
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+      if (unsub) unsub();
+    };
+  }, [user?.$id]);
+
   const openDeleteModal = (cred: Credentials) => {
     requireUnlock(() => {
       setCredentialToDelete(cred);

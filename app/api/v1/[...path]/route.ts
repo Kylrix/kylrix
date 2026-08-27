@@ -269,6 +269,46 @@ async function dispatch(req: NextRequest, parts: string[], actor: ApiActor) {
     }
   }
 
+  // Vault - TOTP Secrets
+  if ((a === 'totp' && (!b || b === 'items') && !c) || (a === 'vault' && b === 'totp' && !c)) {
+    const wsId = req.nextUrl.searchParams.get('workspaceId') || req.nextUrl.searchParams.get('projectId') || undefined;
+    const agId = req.nextUrl.searchParams.get('agentId') || undefined;
+    if (method === 'GET') {
+      return jsonOk(await ApiResources.listTotpSecrets(actor, limit(), { mek: mekHeader, workspaceId: wsId, agentId: agId }));
+    }
+    if (method === 'POST') {
+      const body = await readBody(req);
+      return jsonOk(
+        await ApiResources.createTotpSecret(actor, body, {
+          mek: mekHeader || (body.mek as string),
+          workspaceId: wsId || (body.workspaceId as string) || (body.projectId as string),
+          agentId: agId || (body.agentId as string),
+        }),
+      );
+    }
+  }
+  if ((a === 'totp' && b && b !== 'items' && !c) || (a === 'vault' && b === 'totp' && c)) {
+    const targetId = a === 'totp' ? b : c;
+    const wsId = req.nextUrl.searchParams.get('workspaceId') || req.nextUrl.searchParams.get('projectId') || undefined;
+    const agId = req.nextUrl.searchParams.get('agentId') || undefined;
+    if (method === 'GET') {
+      return jsonOk(await ApiResources.getTotpSecret(actor, targetId, { mek: mekHeader, workspaceId: wsId, agentId: agId }));
+    }
+    if (method === 'PATCH' || method === 'PUT') {
+      const body = await readBody(req);
+      return jsonOk(
+        await ApiResources.updateTotpSecret(actor, targetId, body, {
+          mek: mekHeader || (body.mek as string),
+          workspaceId: wsId || (body.workspaceId as string) || (body.projectId as string),
+          agentId: agId || (body.agentId as string),
+        }),
+      );
+    }
+    if (method === 'DELETE') {
+      return jsonOk(await ApiResources.deleteTotpSecret(actor, targetId));
+    }
+  }
+
   // Trash / Recovery System
   if (a === 'trash' && !b) {
     if (method === 'GET') {

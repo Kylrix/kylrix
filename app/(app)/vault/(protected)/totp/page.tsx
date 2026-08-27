@@ -321,6 +321,50 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     };
   }, [activeWorkspace?.id]);
 
+  // Realtime live updates for TOTP secrets
+  useEffect(() => {
+    const activeUserId = user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.$id || '') : '');
+    if (!activeUserId) return;
+    let unsub: (() => void) | null = null;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+        const totpChannel = `databases.${APPWRITE_CONFIG.DATABASES.VAULT}.tables.${APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS}.rows`;
+
+        const cleanup = await LocalEngine.subscribeRealtime(totpChannel, (payload: any) => {
+          if (!payload || !payload.$id || cancelled) return;
+          if (payload.userId && payload.userId !== activeUserId) return;
+
+          const isDeleted = payload.isDeleted === true || payload.isTrash === true;
+          if (isDeleted) {
+            setTotpCodes(prev => prev.filter(t => t.$id !== payload.$id));
+            return;
+          }
+
+          setTotpCodes(prev => {
+            const idx = prev.findIndex(t => t.$id === payload.$id);
+            if (idx >= 0) {
+              const updated = [...prev];
+              updated[idx] = { ...updated[idx], ...payload };
+              return updated;
+            }
+            return [payload, ...prev];
+          });
+        });
+        if (cancelled) cleanup();
+        else unsub = cleanup;
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+      if (unsub) unsub();
+    };
+  }, [user?.$id]);
+
   useEffect(() => {
     if (!isVaultUnlocked()) return;
     if (totpCodes.length > 0 && !selectedTotp) {

@@ -18,6 +18,10 @@ import {
   parseMekToBytes,
   sealVaultSecret,
   unsealVaultSecret,
+  sealRowFields,
+  unsealRowFields,
+  looksEncrypted,
+  VAULT_ENCRYPTED_FIELDS,
 } from '@/lib/api/vault-crypto';
 
 const DB = APPWRITE_CONFIG.DATABASES.NOTE;
@@ -2154,34 +2158,36 @@ export const ApiResources = {
 
     return Promise.all(
       rows.map(async (r: any) => {
-        let decryptedSecret: string | null = null;
-        let decryptedNotes: string | null = null;
+        const unsealed = mekBytes
+          ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.credentials, mekBytes)
+          : {};
 
-        if (mekBytes && r.password) {
-          try {
-            decryptedSecret = await unsealVaultSecret(r.password, r.dek || null, mekBytes);
-          } catch {}
-        }
-        if (mekBytes && r.notes) {
-          try {
-            decryptedNotes = await unsealVaultSecret(r.notes, r.dek || null, mekBytes);
-          } catch {}
-        }
+        const rawName = unsealed.name ?? r.name ?? '';
+        const name = looksEncrypted(rawName) && !mekBytes ? 'Protected Secret' : (rawName || 'Untitled');
+        const username = unsealed.username !== undefined ? unsealed.username : (looksEncrypted(r.username) && !mekBytes ? null : r.username ?? null);
+        const url = unsealed.url !== undefined ? unsealed.url : (looksEncrypted(r.url) && !mekBytes ? null : r.url ?? null);
 
         return {
           id: r.$id,
-          name: r.name || 'Untitled',
+          name,
           itemType: r.itemType || 'login',
-          url: r.url || null,
-          username: r.username || null,
+          url,
+          username,
           folderId: r.folderId || null,
           isFavorite: !!r.isFavorite,
           isPinned: !!r.isPinned,
+          tags: Array.isArray(r.tags) ? r.tags : [],
           updatedAt: r.$updatedAt || r.updatedAt || null,
           createdAt: r.$createdAt || r.createdAt || null,
           hasSecret: !!(r.password || r.cardNumber),
-          ...(decryptedSecret !== null ? { secret: decryptedSecret, password: decryptedSecret } : {}),
-          ...(decryptedNotes !== null ? { notes: decryptedNotes } : {}),
+          ...(unsealed.password ? { secret: unsealed.password, password: unsealed.password } : {}),
+          ...(unsealed.notes ? { notes: unsealed.notes } : {}),
+          ...(unsealed.customFields ? { customFields: unsealed.customFields } : {}),
+          ...(unsealed.cardNumber ? { cardNumber: unsealed.cardNumber } : {}),
+          ...(unsealed.cardholderName ? { cardholderName: unsealed.cardholderName } : {}),
+          ...(unsealed.cardExpiry ? { cardExpiry: unsealed.cardExpiry } : {}),
+          ...(unsealed.cardCVV ? { cardCVV: unsealed.cardCVV } : {}),
+          ...(unsealed.cardPIN ? { cardPIN: unsealed.cardPIN } : {}),
         };
       }),
     );
@@ -2205,36 +2211,36 @@ export const ApiResources = {
     if (!r || r.userId !== actor.userId || r.isDeleted) notFound('Vault item not found');
 
     const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
-    let decryptedSecret: string | null = null;
-    let decryptedNotes: string | null = null;
+    const unsealed = mekBytes
+      ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.credentials, mekBytes)
+      : {};
 
-    if (mekBytes && r.password) {
-      try {
-        decryptedSecret = await unsealVaultSecret(r.password, r.dek || null, mekBytes);
-      } catch (e: any) {
-        console.warn('[ApiResources.getVaultItem] Decrypt failed:', e?.message || e);
-      }
-    }
-    if (mekBytes && r.notes) {
-      try {
-        decryptedNotes = await unsealVaultSecret(r.notes, r.dek || null, mekBytes);
-      } catch {}
-    }
+    const rawName = unsealed.name ?? r.name ?? '';
+    const name = looksEncrypted(rawName) && !mekBytes ? 'Protected Secret' : (rawName || 'Untitled');
+    const username = unsealed.username !== undefined ? unsealed.username : (looksEncrypted(r.username) && !mekBytes ? null : r.username ?? null);
+    const url = unsealed.url !== undefined ? unsealed.url : (looksEncrypted(r.url) && !mekBytes ? null : r.url ?? null);
 
     return {
       id: r.$id,
-      name: r.name || 'Untitled',
+      name,
       itemType: r.itemType || 'login',
-      url: r.url || null,
-      username: r.username || null,
+      url,
+      username,
       folderId: r.folderId || null,
       isFavorite: !!r.isFavorite,
       isPinned: !!r.isPinned,
+      tags: Array.isArray(r.tags) ? r.tags : [],
       updatedAt: r.$updatedAt || r.updatedAt || null,
       createdAt: r.$createdAt || r.createdAt || null,
       hasSecret: !!(r.password || r.cardNumber),
-      ...(decryptedSecret !== null ? { secret: decryptedSecret, password: decryptedSecret } : {}),
-      ...(decryptedNotes !== null ? { notes: decryptedNotes } : {}),
+      ...(unsealed.password ? { secret: unsealed.password, password: unsealed.password } : {}),
+      ...(unsealed.notes ? { notes: unsealed.notes } : {}),
+      ...(unsealed.customFields ? { customFields: unsealed.customFields } : {}),
+      ...(unsealed.cardNumber ? { cardNumber: unsealed.cardNumber } : {}),
+      ...(unsealed.cardholderName ? { cardholderName: unsealed.cardholderName } : {}),
+      ...(unsealed.cardExpiry ? { cardExpiry: unsealed.cardExpiry } : {}),
+      ...(unsealed.cardCVV ? { cardCVV: unsealed.cardCVV } : {}),
+      ...(unsealed.cardPIN ? { cardPIN: unsealed.cardPIN } : {}),
     };
   },
 
@@ -2266,19 +2272,31 @@ export const ApiResources = {
     let rawSecret = body.secret != null ? String(body.secret) : (body.password != null ? String(body.password) : '');
     let wasGenerated = false;
 
-    if (!rawSecret) {
+    if (!rawSecret && (body.itemType === 'login' || !body.itemType || body.type === 'login')) {
       const genOptions = (body.generateOptions && typeof body.generateOptions === 'object' ? body.generateOptions : {}) as any;
       rawSecret = generateRandomVaultSecret(genOptions);
       wasGenerated = true;
     }
 
-    const { encrypted: encryptedPassword, wrappedDek } = await sealVaultSecret(rawSecret, mekBytes);
+    const payloadToSeal: Record<string, any> = {
+      name,
+      username: body.username != null ? String(body.username) : null,
+      password: rawSecret || null,
+      url: body.url != null ? String(body.url) : null,
+      notes: body.notes != null ? String(body.notes) : null,
+      customFields: body.customFields != null ? (typeof body.customFields === 'object' ? JSON.stringify(body.customFields) : String(body.customFields)) : null,
+      cardNumber: body.cardNumber != null ? String(body.cardNumber) : null,
+      cardholderName: body.cardholderName != null ? String(body.cardholderName) : null,
+      cardExpiry: body.cardExpiry != null ? String(body.cardExpiry) : null,
+      cardCVV: body.cardCVV != null ? String(body.cardCVV) : null,
+      cardPIN: body.cardPIN != null ? String(body.cardPIN) : null,
+    };
 
-    let encryptedNotes: string | null = null;
-    if (body.notes != null && String(body.notes).trim().length > 0) {
-      const sealedNotes = await sealVaultSecret(String(body.notes), mekBytes, wrappedDek);
-      encryptedNotes = sealedNotes.encrypted;
-    }
+    const { encryptedFields, wrappedDek } = await sealRowFields(
+      payloadToSeal,
+      VAULT_ENCRYPTED_FIELDS.credentials,
+      mekBytes
+    );
 
     const itemId = ID.unique();
     const now = new Date().toISOString();
@@ -2290,12 +2308,18 @@ export const ApiResources = {
       rowId: itemId,
       data: {
         userId: actor.userId,
-        name: name.slice(0, 100),
-        username: body.username != null ? String(body.username).slice(0, 255) : null,
-        password: encryptedPassword,
+        name: encryptedFields.name || name.slice(0, 100),
+        username: encryptedFields.username ?? null,
+        password: encryptedFields.password ?? null,
         dek: wrappedDek,
-        url: body.url != null ? String(body.url).slice(0, 2048) : null,
-        notes: encryptedNotes,
+        url: encryptedFields.url ?? null,
+        notes: encryptedFields.notes ?? null,
+        customFields: encryptedFields.customFields ?? null,
+        cardNumber: encryptedFields.cardNumber ?? null,
+        cardholderName: encryptedFields.cardholderName ?? null,
+        cardExpiry: encryptedFields.cardExpiry ?? null,
+        cardCVV: encryptedFields.cardCVV ?? null,
+        cardPIN: encryptedFields.cardPIN ?? null,
         itemType,
         folderId: body.folderId != null ? String(body.folderId) : null,
         isFavorite: body.isFavorite === true,
@@ -2318,16 +2342,23 @@ export const ApiResources = {
 
     return {
       id: (row as any).$id,
-      name: (row as any).name,
-      username: (row as any).username,
-      itemType: (row as any).itemType,
-      url: (row as any).url,
+      name,
+      username: body.username != null ? String(body.username) : null,
+      itemType,
+      url: body.url != null ? String(body.url) : null,
       folderId: (row as any).folderId,
       isFavorite: !!(row as any).isFavorite,
       isPinned: !!(row as any).isPinned,
-      secret: rawSecret,
-      password: rawSecret,
+      tags: Array.isArray(body.tags) ? body.tags.map(String) : [],
+      secret: rawSecret || null,
+      password: rawSecret || null,
       notes: body.notes != null ? String(body.notes) : null,
+      customFields: body.customFields ?? null,
+      cardNumber: body.cardNumber != null ? String(body.cardNumber) : null,
+      cardholderName: body.cardholderName != null ? String(body.cardholderName) : null,
+      cardExpiry: body.cardExpiry != null ? String(body.cardExpiry) : null,
+      cardCVV: body.cardCVV != null ? String(body.cardCVV) : null,
+      cardPIN: body.cardPIN != null ? String(body.cardPIN) : null,
       generated: wasGenerated,
       createdAt: now,
       updatedAt: now,
@@ -2356,16 +2387,27 @@ export const ApiResources = {
       updatedAt: new Date().toISOString(),
     };
 
-    if (body.name !== undefined) patch.name = String(body.name).trim().slice(0, 100);
-    if (body.username !== undefined) patch.username = body.username == null ? null : String(body.username).slice(0, 255);
-    if (body.url !== undefined) patch.url = body.url == null ? null : String(body.url).slice(0, 2048);
     if (body.itemType !== undefined) patch.itemType = String(body.itemType).slice(0, 50);
     if (body.folderId !== undefined) patch.folderId = body.folderId == null ? null : String(body.folderId);
     if (body.isFavorite !== undefined) patch.isFavorite = !!body.isFavorite;
     if (body.isPinned !== undefined) patch.isPinned = !!body.isPinned;
     if (body.tags !== undefined && Array.isArray(body.tags)) patch.tags = body.tags.map(String);
 
-    if (body.secret !== undefined || body.password !== undefined || body.notes !== undefined) {
+    const hasEncryptedField =
+      body.name !== undefined ||
+      body.username !== undefined ||
+      body.url !== undefined ||
+      body.secret !== undefined ||
+      body.password !== undefined ||
+      body.notes !== undefined ||
+      body.customFields !== undefined ||
+      body.cardNumber !== undefined ||
+      body.cardholderName !== undefined ||
+      body.cardExpiry !== undefined ||
+      body.cardCVV !== undefined ||
+      body.cardPIN !== undefined;
+
+    if (hasEncryptedField) {
       const mekBytes = await resolveWorkspaceMekBytes(tables, actor, {
         workspaceId: (body.workspaceId || body.projectId || opts?.workspaceId) as string,
         agentId: (body.agentId || opts?.agentId) as string,
@@ -2373,24 +2415,35 @@ export const ApiResources = {
       });
 
       if (!mekBytes) {
-        badRequest('Updating encrypted secret/notes requires MEK header X-Kylrix-MEK, mek body property, or agentic workspace context');
+        badRequest('Updating encrypted vault fields requires MEK header X-Kylrix-MEK, mek body property, or agentic workspace context');
       }
 
+      const payloadToSeal: Record<string, any> = {};
+      if (body.name !== undefined) payloadToSeal.name = String(body.name).trim();
+      if (body.username !== undefined) payloadToSeal.username = body.username == null ? null : String(body.username);
+      if (body.url !== undefined) payloadToSeal.url = body.url == null ? null : String(body.url);
       if (body.secret !== undefined || body.password !== undefined) {
-        const rawSecret = String(body.secret ?? body.password ?? '');
-        const { encrypted, wrappedDek } = await sealVaultSecret(rawSecret, mekBytes, existing.dek);
-        patch.password = encrypted;
-        patch.dek = wrappedDek;
+        payloadToSeal.password = String(body.secret ?? body.password ?? '');
       }
+      if (body.notes !== undefined) payloadToSeal.notes = body.notes == null ? null : String(body.notes);
+      if (body.customFields !== undefined) {
+        payloadToSeal.customFields = body.customFields == null ? null : (typeof body.customFields === 'object' ? JSON.stringify(body.customFields) : String(body.customFields));
+      }
+      if (body.cardNumber !== undefined) payloadToSeal.cardNumber = body.cardNumber == null ? null : String(body.cardNumber);
+      if (body.cardholderName !== undefined) payloadToSeal.cardholderName = body.cardholderName == null ? null : String(body.cardholderName);
+      if (body.cardExpiry !== undefined) payloadToSeal.cardExpiry = body.cardExpiry == null ? null : String(body.cardExpiry);
+      if (body.cardCVV !== undefined) payloadToSeal.cardCVV = body.cardCVV == null ? null : String(body.cardCVV);
+      if (body.cardPIN !== undefined) payloadToSeal.cardPIN = body.cardPIN == null ? null : String(body.cardPIN);
 
-      if (body.notes !== undefined) {
-        if (body.notes == null || String(body.notes).trim() === '') {
-          patch.notes = null;
-        } else {
-          const { encrypted } = await sealVaultSecret(String(body.notes), mekBytes, (patch.dek as string) || existing.dek);
-          patch.notes = encrypted;
-        }
-      }
+      const { encryptedFields, wrappedDek } = await sealRowFields(
+        payloadToSeal,
+        Object.keys(payloadToSeal),
+        mekBytes,
+        existing.dek
+      );
+
+      Object.assign(patch, encryptedFields);
+      patch.dek = wrappedDek;
     }
 
     await tables.updateRow({
@@ -2426,6 +2479,331 @@ export const ApiResources = {
       },
     });
     await unlinkObjectFromWorkspace(tables, 'credential', id);
+
+    return { id, deleted: true, trashed: true };
+  },
+
+  // --- TOTP Secrets ---
+  async listTotpSecrets(
+    actor: ApiActor,
+    limit = 50,
+    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
+  ) {
+    requireScope(actor, 'vault:read');
+    const tables = createSystemTablesDB();
+    const lim = Math.min(100, Math.max(1, limit));
+    const wsId = opts?.workspaceId;
+    const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
+
+    let rows: any[] = [];
+    if (wsId) {
+      const totpIds = await getWorkspaceObjectIds(tables, wsId, 'totp');
+      const seen = new Set<string>();
+
+      for (const tid of totpIds) {
+        if (seen.has(tid)) continue;
+        seen.add(tid);
+        const row = (await tables
+          .getRow({
+            databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+            tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+            rowId: tid,
+          })
+          .catch(() => null)) as any;
+
+        if (row && row.userId === actor.userId && !row.isDeleted) {
+          rows.push(row);
+        }
+      }
+      rows = rows.slice(0, lim);
+    } else {
+      const linkedIds = await getAllLinkedWorkspaceObjectIds(tables, 'totp');
+      const res = await tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+        queries: [
+          Query.equal('userId', actor.userId),
+          Query.equal('isDeleted', false),
+          Query.orderDesc('$updatedAt'),
+          Query.limit(lim),
+        ],
+      });
+
+      rows = res.rows.filter((r: any) => !r.isWorkspace && !r.projectId && !linkedIds.has(r.$id));
+    }
+
+    return Promise.all(
+      rows.map(async (r: any) => {
+        const unsealed = mekBytes
+          ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.totpSecrets, mekBytes)
+          : {};
+
+        const rawIssuer = unsealed.issuer ?? r.issuer ?? '';
+        const issuer = looksEncrypted(rawIssuer) && !mekBytes ? 'Encrypted Code' : (rawIssuer || 'Smart Code');
+        const accountName = unsealed.accountName !== undefined ? unsealed.accountName : (looksEncrypted(r.accountName) && !mekBytes ? null : r.accountName ?? null);
+        const url = unsealed.url !== undefined ? unsealed.url : (looksEncrypted(r.url) && !mekBytes ? null : r.url ?? null);
+
+        return {
+          id: r.$id,
+          issuer,
+          accountName,
+          url,
+          algorithm: r.algorithm || 'SHA1',
+          digits: r.digits || 6,
+          period: r.period || 30,
+          folderId: r.folderId || null,
+          isFavorite: !!r.isFavorite,
+          tags: Array.isArray(r.tags) ? r.tags : [],
+          updatedAt: r.$updatedAt || r.updatedAt || null,
+          createdAt: r.$createdAt || r.createdAt || null,
+          hasSecret: !!r.secretKey,
+          ...(unsealed.secretKey ? { secretKey: unsealed.secretKey } : {}),
+        };
+      }),
+    );
+  },
+
+  async getTotpSecret(
+    actor: ApiActor,
+    id: string,
+    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
+  ) {
+    requireScope(actor, 'vault:read');
+    const tables = createSystemTablesDB();
+    const r = (await tables
+      .getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+        rowId: id,
+      })
+      .catch(() => null)) as any;
+
+    if (!r || r.userId !== actor.userId || r.isDeleted) notFound('TOTP secret not found');
+
+    const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
+    const unsealed = mekBytes
+      ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.totpSecrets, mekBytes)
+      : {};
+
+    const rawIssuer = unsealed.issuer ?? r.issuer ?? '';
+    const issuer = looksEncrypted(rawIssuer) && !mekBytes ? 'Encrypted Code' : (rawIssuer || 'Smart Code');
+    const accountName = unsealed.accountName !== undefined ? unsealed.accountName : (looksEncrypted(r.accountName) && !mekBytes ? null : r.accountName ?? null);
+    const url = unsealed.url !== undefined ? unsealed.url : (looksEncrypted(r.url) && !mekBytes ? null : r.url ?? null);
+
+    return {
+      id: r.$id,
+      issuer,
+      accountName,
+      url,
+      algorithm: r.algorithm || 'SHA1',
+      digits: r.digits || 6,
+      period: r.period || 30,
+      folderId: r.folderId || null,
+      isFavorite: !!r.isFavorite,
+      tags: Array.isArray(r.tags) ? r.tags : [],
+      updatedAt: r.$updatedAt || r.updatedAt || null,
+      createdAt: r.$createdAt || r.createdAt || null,
+      hasSecret: !!r.secretKey,
+      ...(unsealed.secretKey ? { secretKey: unsealed.secretKey } : {}),
+    };
+  },
+
+  async createTotpSecret(
+    actor: ApiActor,
+    body: Record<string, unknown>,
+    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
+  ) {
+    requireScope(actor, 'vault:write');
+    const secretKey = String(body.secretKey || body.secret || '').trim();
+    if (!secretKey) badRequest('secretKey required');
+
+    const tables = createSystemTablesDB();
+    const wsId = (body.workspaceId || body.projectId || opts?.workspaceId) as string | undefined;
+    const agId = (body.agentId || opts?.agentId) as string | undefined;
+    const mekBytes = await resolveWorkspaceMekBytes(tables, actor, {
+      workspaceId: wsId,
+      agentId: agId,
+      mek: opts?.mek || (body.mek as string),
+    });
+
+    if (!mekBytes) {
+      const err = new Error('TOTP creation requires MEK or an Agentic Workspace context (pass X-Kylrix-MEK, mek, or workspaceId)');
+      (err as any).status = 400;
+      (err as any).code = 'mek_required';
+      throw err;
+    }
+
+    const issuer = String(body.issuer || body.name || body.title || 'App').trim();
+    const accountName = body.accountName != null ? String(body.accountName).trim() : null;
+    const url = body.url != null ? String(body.url).trim() : null;
+
+    const payloadToSeal: Record<string, any> = {
+      issuer,
+      accountName,
+      secretKey,
+      url,
+    };
+
+    const { encryptedFields, wrappedDek } = await sealRowFields(
+      payloadToSeal,
+      VAULT_ENCRYPTED_FIELDS.totpSecrets,
+      mekBytes
+    );
+
+    const itemId = ID.unique();
+    const now = new Date().toISOString();
+
+    const row = await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+      tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+      rowId: itemId,
+      data: {
+        userId: actor.userId,
+        issuer: encryptedFields.issuer || issuer.slice(0, 100),
+        accountName: encryptedFields.accountName ?? null,
+        secretKey: encryptedFields.secretKey ?? null,
+        dek: wrappedDek,
+        url: encryptedFields.url ?? null,
+        algorithm: String(body.algorithm || 'SHA1'),
+        digits: Number(body.digits || 6),
+        period: Number(body.period || 30),
+        folderId: body.folderId != null ? String(body.folderId) : null,
+        isFavorite: body.isFavorite === true,
+        isDeleted: false,
+        tags: Array.isArray(body.tags) ? body.tags.map(String) : [],
+        createdAt: now,
+        updatedAt: now,
+      },
+      permissions: [
+        Permission.read(Role.user(actor.userId)),
+        Permission.update(Role.user(actor.userId)),
+        Permission.delete(Role.user(actor.userId)),
+      ],
+    });
+
+    if (wsId) {
+      await linkObjectToWorkspace(tables, wsId, 'totp', itemId, actor.userId, { title: issuer });
+    }
+
+    return {
+      id: (row as any).$id,
+      issuer,
+      accountName,
+      url,
+      algorithm: (row as any).algorithm,
+      digits: (row as any).digits,
+      period: (row as any).period,
+      folderId: (row as any).folderId,
+      isFavorite: !!(row as any).isFavorite,
+      tags: Array.isArray(body.tags) ? body.tags.map(String) : [],
+      secretKey,
+      createdAt: now,
+      updatedAt: now,
+    };
+  },
+
+  async updateTotpSecret(
+    actor: ApiActor,
+    id: string,
+    body: Record<string, unknown>,
+    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
+  ) {
+    requireScope(actor, 'vault:write');
+    const tables = createSystemTablesDB();
+    const existing = (await tables
+      .getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+        rowId: id,
+      })
+      .catch(() => null)) as any;
+
+    if (!existing || existing.userId !== actor.userId) notFound('TOTP secret not found');
+
+    const patch: Record<string, unknown> = {
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (body.algorithm !== undefined) patch.algorithm = String(body.algorithm);
+    if (body.digits !== undefined) patch.digits = Number(body.digits);
+    if (body.period !== undefined) patch.period = Number(body.period);
+    if (body.folderId !== undefined) patch.folderId = body.folderId == null ? null : String(body.folderId);
+    if (body.isFavorite !== undefined) patch.isFavorite = !!body.isFavorite;
+    if (body.tags !== undefined && Array.isArray(body.tags)) patch.tags = body.tags.map(String);
+
+    const hasEncryptedField =
+      body.issuer !== undefined ||
+      body.name !== undefined ||
+      body.accountName !== undefined ||
+      body.secretKey !== undefined ||
+      body.secret !== undefined ||
+      body.url !== undefined;
+
+    if (hasEncryptedField) {
+      const mekBytes = await resolveWorkspaceMekBytes(tables, actor, {
+        workspaceId: (body.workspaceId || body.projectId || opts?.workspaceId) as string,
+        agentId: (body.agentId || opts?.agentId) as string,
+        mek: opts?.mek || (body.mek as string),
+      });
+
+      if (!mekBytes) {
+        badRequest('Updating encrypted TOTP fields requires MEK header X-Kylrix-MEK, mek body property, or agentic workspace context');
+      }
+
+      const payloadToSeal: Record<string, any> = {};
+      if (body.issuer !== undefined || body.name !== undefined) {
+        payloadToSeal.issuer = String(body.issuer ?? body.name ?? '').trim();
+      }
+      if (body.accountName !== undefined) payloadToSeal.accountName = body.accountName == null ? null : String(body.accountName);
+      if (body.secretKey !== undefined || body.secret !== undefined) {
+        payloadToSeal.secretKey = String(body.secretKey ?? body.secret ?? '').trim();
+      }
+      if (body.url !== undefined) payloadToSeal.url = body.url == null ? null : String(body.url);
+
+      const { encryptedFields, wrappedDek } = await sealRowFields(
+        payloadToSeal,
+        Object.keys(payloadToSeal),
+        mekBytes,
+        existing.dek
+      );
+
+      Object.assign(patch, encryptedFields);
+      patch.dek = wrappedDek;
+    }
+
+    await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+      tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+      rowId: id,
+      data: patch as any,
+    });
+
+    return this.getTotpSecret(actor, id, opts);
+  },
+
+  async deleteTotpSecret(actor: ApiActor, id: string) {
+    requireScope(actor, 'vault:write');
+    const tables = createSystemTablesDB();
+    const existing = (await tables
+      .getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+        tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+        rowId: id,
+      })
+      .catch(() => null)) as any;
+
+    if (!existing || existing.userId !== actor.userId) notFound('TOTP secret not found');
+
+    await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+      tableId: APPWRITE_CONFIG.TABLES.VAULT.TOTPSECRETS || 'totpSecrets',
+      rowId: id,
+      data: {
+        isDeleted: true,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+    await unlinkObjectFromWorkspace(tables, 'totp', id);
 
     return { id, deleted: true, trashed: true };
   },
