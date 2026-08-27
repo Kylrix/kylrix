@@ -171,11 +171,26 @@ export const LocalEngine = {
         try {
           if (event?.payload && event?.events?.[0]) {
             const doc = event.payload;
-            const cacheKey = `${channel}:${doc.$id || doc.id}`;
-            await this.cacheSet(cacheKey, doc);
-            LocalEngine.snapshotBaseline(doc.$id || doc.id, doc);
+            const docId = doc.$id || doc.id;
+            const cacheKey = `${channel}:${docId}`;
+            const isDelete = event.events.some((e: string) => e.endsWith('.delete')) || doc.isTrash === true || doc.isDeleted === true;
+            if (isDelete) {
+              await this.cacheDelete(cacheKey);
+              await this.cacheDelete(`note_${docId}`);
+              await this.cacheDelete(`goal_${docId}`);
+              await this.cacheDelete(docId);
+              if (typeof window !== 'undefined') {
+                delete (window as any)[`__kylrix_baseline_${docId}`];
+                window.dispatchEvent(new CustomEvent('kylrix:nexus:delete', { detail: { key: cacheKey, id: docId } }));
+              }
+            } else {
+              await this.cacheSet(cacheKey, doc);
+              LocalEngine.snapshotBaseline(docId, doc);
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data: doc } }));
+              }
+            }
             if (handler) handler(doc);
-            if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('kylrix:nexus:update', { detail: { key: cacheKey, data: doc } }));
           } else if (handler) handler(event);
         } catch {}
       });

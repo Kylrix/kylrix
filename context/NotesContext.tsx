@@ -777,27 +777,37 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     
     const sub = realtime.subscribe(channels, (response) => {
       const payload = normalizeVisibility(response.payload as Notes);
-      
-      const isOwner = payload.userId === user.$id || (payload as any).owner_id === user.$id;
+      const isKnownNote = notesRef.current.some(n => n.$id === payload.$id);
+      const isOwner =
+        !user?.$id ||
+        isKnownNote ||
+        !payload.userId ||
+        payload.userId === user.$id ||
+        (payload as any).owner_id === user.$id ||
+        (payload as any).creatorId === user.$id;
       if (!isOwner) return;
 
       const isCreate = response.events.some(e => e.endsWith('.create'));
       const isUpdate = response.events.some(e => e.endsWith('.update'));
       const isDelete = response.events.some(e => e.endsWith('.delete'));
+      const isTrash = (payload as any).isTrash === true || (payload as any).isDeleted === true;
+
+      if (isDelete || isTrash) {
+        liveEditGuardsRef.current.delete(payload.$id);
+        autonomicSyncEngine.markConfirmed(payload.$id);
+        setNotes(prev => prev.filter(n => n.$id !== payload.$id));
+        setTotalNotes(prev => Math.max(0, prev - 1));
+        setPinnedIds(prev => prev.filter(id => id !== payload.$id));
+        invalidate(`note_${payload.$id}`);
+        scheduleInvalidateInitialNotesPage();
+        try {
+          const { invalidateNoteRowClientCache } = require('@/lib/appwrite/note');
+          invalidateNoteRowClientCache(payload.$id);
+        } catch {}
+        return;
+      }
 
       if (isCreate) {
-        if ((payload as any).isTrash === true || (payload as any).isDeleted === true) {
-          setNotes(prev => prev.filter(n => n.$id !== payload.$id));
-          setTotalNotes(prev => Math.max(0, prev - 1));
-          setPinnedIds(prev => prev.filter(id => id !== payload.$id));
-          invalidate(`note_${payload.$id}`);
-          scheduleInvalidateInitialNotesPage();
-          try {
-            const { invalidateNoteRowClientCache } = require('@/lib/appwrite/note');
-            invalidateNoteRowClientCache(payload.$id);
-          } catch {}
-          return;
-        }
         liveEditGuardsRef.current.delete(payload.$id);
         autonomicSyncEngine.markConfirmed(payload.$id);
         const normalized = normalizeVisibility(payload);
@@ -837,18 +847,6 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
         void opportunisticallyDecryptNote(payload);
       } else if (isUpdate) {
-        if ((payload as any).isTrash === true || (payload as any).isDeleted === true) {
-          setNotes(prev => prev.filter(n => n.$id !== payload.$id));
-          setTotalNotes(prev => Math.max(0, prev - 1));
-          setPinnedIds(prev => prev.filter(id => id !== payload.$id));
-          invalidate(`note_${payload.$id}`);
-          scheduleInvalidateInitialNotesPage();
-          try {
-            const { invalidateNoteRowClientCache } = require('@/lib/appwrite/note');
-            invalidateNoteRowClientCache(payload.$id);
-          } catch {}
-          return;
-        }
         liveEditGuardsRef.current.delete(payload.$id);
         autonomicSyncEngine.markConfirmed(payload.$id);
         const normalized = normalizeVisibility(payload);
@@ -856,16 +854,6 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         setCachedData(`note_${payload.$id}`, normalized);
         scheduleInvalidateInitialNotesPage();
         void opportunisticallyDecryptNote(payload);
-      } else if (isDelete) {
-        setNotes(prev => prev.filter(n => n.$id !== payload.$id));
-        setTotalNotes(prev => Math.max(0, prev - 1));
-        setPinnedIds(prev => prev.filter(id => id !== payload.$id));
-        invalidate(`note_${payload.$id}`);
-        if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
-        try {
-          const { invalidateNoteRowClientCache } = require('@/lib/appwrite/note');
-          invalidateNoteRowClientCache(payload.$id);
-        } catch {}
       }
     });
     
