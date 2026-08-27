@@ -22,6 +22,7 @@ import { SYSTEM_AGENTS, type SystemAgentDefinition } from '@/lib/agentic/system-
 import type { AgentRecord } from '@/lib/services/agentic';
 import type { PatPublic } from '@/lib/services/pats';
 import { createPat, listPats, revokePat } from '@/lib/actions/client-ops';
+import { LocalEngine } from '@/lib/services/LocalEngine';
 import { toast } from 'react-hot-toast';
 
 export type AgentDrawerMode = 
@@ -74,33 +75,50 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
   const [newlyCreatedApk, setNewlyCreatedApk] = useState<string | null>(null);
   const [copiedApk, setCopiedApk] = useState(false);
 
-  // Load Agentic PATs for current custom agent
+  // Load Agentic PATs for current custom agent with LocalEngine caching
   const loadAgentPats = useCallback(async () => {
     if (mode.type !== 'edit_custom') return;
-    setLoadingAgentPats(true);
+    const cacheKey = `agent_pats_${mode.agent.$id}`;
+    const cached = await LocalEngine.cacheGet<PatPublic[]>(cacheKey);
+    if (cached && Array.isArray(cached)) {
+      setAgentPats(cached);
+      setLoadingAgentPats(false);
+    } else {
+      setLoadingAgentPats(true);
+    }
     try {
       const res = await listPats({ category: 'agentic_pat', agentId: mode.agent.$id });
       if (res?.success) {
-        setAgentPats((res.data || []) as PatPublic[]);
+        const fresh = (res.data || []) as PatPublic[];
+        setAgentPats(fresh);
+        void LocalEngine.cacheSet(cacheKey, fresh);
       }
     } catch {
-      setAgentPats([]);
+      if (!cached) setAgentPats([]);
     } finally {
       setLoadingAgentPats(false);
     }
   }, [mode]);
 
-  // Load Provisioning Keys
+  // Load Provisioning Keys with LocalEngine instant caching
   const loadApkList = useCallback(async () => {
     if (mode.type !== 'manage_provisioning_keys') return;
-    setLoadingApk(true);
+    const cached = await LocalEngine.cacheGet<PatPublic[]>('apk_list_cache');
+    if (cached && Array.isArray(cached)) {
+      setApkList(cached);
+      setLoadingApk(false);
+    } else {
+      setLoadingApk(true);
+    }
     try {
       const res = await listPats({ category: 'agent_provisioning_key' });
       if (res?.success) {
-        setApkList((res.data || []) as PatPublic[]);
+        const fresh = (res.data || []) as PatPublic[];
+        setApkList(fresh);
+        void LocalEngine.cacheSet('apk_list_cache', fresh);
       }
     } catch {
-      setApkList([]);
+      if (!cached) setApkList([]);
     } finally {
       setLoadingApk(false);
     }
@@ -238,11 +256,18 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
   const handleRevokeAgentPat = async (patId: string) => {
     if (!confirm('Revoke this Agentic token? The agent will lose access.')) return;
     try {
+      setAgentPats((prev) => {
+        const next = prev.filter((p) => p.id !== patId);
+        if (mode.type === 'edit_custom') {
+          void LocalEngine.cacheSet(`agent_pats_${mode.agent.$id}`, next);
+        }
+        return next;
+      });
       await revokePat(patId);
       toast.success('Token revoked');
-      setAgentPats((prev) => prev.filter((p) => p.id !== patId));
     } catch (err: any) {
       toast.error(err?.message || 'Failed to revoke token');
+      void loadAgentPats();
     }
   };
 
@@ -278,11 +303,16 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
   const handleRevokeApk = async (patId: string) => {
     if (!confirm('Revoke this Agent Provisioning Key? CLI agents will no longer be able to use it.')) return;
     try {
+      setApkList((prev) => {
+        const next = prev.filter((p) => p.id !== patId);
+        void LocalEngine.cacheSet('apk_list_cache', next);
+        return next;
+      });
       await revokePat(patId);
       toast.success('Key revoked');
-      setApkList((prev) => prev.filter((p) => p.id !== patId));
     } catch (err: any) {
       toast.error(err?.message || 'Failed to revoke key');
+      void loadApkList();
     }
   };
 

@@ -25,6 +25,7 @@ import { BYOKManager } from '@/lib/ai/byok';
 import { AgenticService, type AgentRecord } from '@/lib/services/agentic';
 import { SYSTEM_AGENTS } from '@/lib/agentic/system-agents';
 import { KYLRIX_AGENTS_SKILL_INSTALL } from '@/lib/api/public';
+import { LocalEngine } from '@/lib/services/LocalEngine';
 import { AgenticSettingsDrawer, type AgentDrawerMode } from './AgenticSettingsDrawer';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -74,18 +75,26 @@ export function AgentsSettingsTab() {
     }
   }, [openSidebar, closeSidebar, openOverlay, closeOverlay]);
 
-  // Load custom agents
+  // Load custom agents with LocalEngine
   const loadAgents = useCallback(async () => {
     if (!user?.$id) {
       setLoadingAgents(false);
       return;
     }
-    setLoadingAgents(true);
+    const cacheKey = `custom_agents_${user.$id}`;
+    const cached = await LocalEngine.cacheGet<AgentRecord[]>(cacheKey);
+    if (cached && Array.isArray(cached)) {
+      setCustomAgents(cached);
+      setLoadingAgents(false);
+    } else {
+      setLoadingAgents(true);
+    }
     try {
       const list = await AgenticService.listMyAgents(user.$id, true);
       setCustomAgents(list);
+      void LocalEngine.cacheSet(cacheKey, list);
     } catch {
-      setCustomAgents([]);
+      if (!cached) setCustomAgents([]);
     } finally {
       setLoadingAgents(false);
     }
@@ -95,19 +104,16 @@ export function AgentsSettingsTab() {
     loadAgents();
   }, [loadAgents]);
 
-  // Load default agent choice from localStorage
+  // Load default agent choice from LocalEngine
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('kylrix_default_agent_id');
+    void LocalEngine.cacheGet<string>('kylrix_default_agent_id').then((saved) => {
       if (saved) setDefaultAgentId(saved);
-    }
+    });
   }, []);
 
   const handleSelectDefaultAgent = (id: string) => {
     setDefaultAgentId(id);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('kylrix_default_agent_id', id);
-    }
+    void LocalEngine.cacheSet('kylrix_default_agent_id', id);
   };
 
   // Check BYOK Key
