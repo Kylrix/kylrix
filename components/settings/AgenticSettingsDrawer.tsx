@@ -24,6 +24,8 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 import { toast } from 'react-hot-toast';
 
 export type AgentDrawerMode = 
+  | { type: 'list_custom'; customAgents: AgentRecord[]; defaultAgentId: string; onSelectAgent: (agent: any) => void; onCreateAgent: () => void; onDeleteAgent?: (id: string, name: string) => void }
+  | { type: 'list_system'; onSelectAgent: (agent: SystemAgentDefinition) => void }
   | { type: 'preview_system'; agent: SystemAgentDefinition }
   | { type: 'create_custom'; onCreated?: (created: any) => void }
   | { type: 'edit_custom'; agent: AgentRecord; onSaved?: () => void }
@@ -347,18 +349,26 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
           )}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 font-mono m-0">
+              {mode.type === 'list_custom' && 'Autonomous Agents'}
+              {mode.type === 'list_system' && 'Core Specialists'}
               {mode.type === 'preview_system' && 'Internal System Agent'}
               {mode.type === 'create_custom' && 'Agent Crafter'}
               {mode.type === 'edit_custom' && 'Edit Custom Agent'}
               {mode.type === 'select_default' && 'Select Default Partner'}
               {mode.type === 'manage_provisioning_keys' && (isCreatingApkKey ? 'Mint Provisioning Key' : 'Security Keys')}
+              {mode.type === 'manage_byok' && 'Compute & BYOK'}
+              {mode.type === 'manage_cli_skill' && 'CLI Skill & Integration'}
             </p>
             <h2 className="text-sm font-black font-clash text-white m-0 leading-tight mt-0.5">
+              {mode.type === 'list_custom' && 'Custom Agents Catalog'}
+              {mode.type === 'list_system' && 'Internal System Agents'}
               {mode.type === 'preview_system' && mode.agent.name}
               {mode.type === 'create_custom' && 'Create Custom Agent'}
               {mode.type === 'edit_custom' && name}
               {mode.type === 'select_default' && 'Active Agent Partner'}
               {mode.type === 'manage_provisioning_keys' && (isCreatingApkKey ? 'New Provisioning Key' : 'Agent Provisioning Keys')}
+              {mode.type === 'manage_byok' && 'Google Gemini BYOK'}
+              {mode.type === 'manage_cli_skill' && 'Terminal Skill Integration'}
             </h2>
           </div>
         </div>
@@ -374,6 +384,155 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
 
       {/* Main Drawer Body */}
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6 min-h-0">
+        {/* MODE 0A: List Custom Autonomous Agents */}
+        {mode.type === 'list_custom' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono font-bold text-white/50 uppercase tracking-wider">
+                {mode.customAgents.length} Agents Configured
+              </span>
+              <button
+                type="button"
+                onClick={mode.onCreateAgent}
+                className="h-8 px-3 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-bold text-xs flex items-center gap-1 transition-all cursor-pointer shadow-md"
+              >
+                <Plus size={12} />
+                <span>New Agent</span>
+              </button>
+            </div>
+
+            {mode.customAgents.length === 0 ? (
+              <div className="p-8 rounded-[22px] bg-[#0A0908] border border-white/10 flex flex-col items-center justify-center text-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-white/[0.03] border border-white/10 grid place-items-center text-white/30">
+                  <Bot size={20} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white m-0">No Custom Agents Yet</h4>
+                  <p className="text-xs text-white/40 max-w-sm mt-0.5 m-0">
+                    Use the Meta Crafter to build specialized agents with their own dedicated Agentic PATs.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={mode.onCreateAgent}
+                  className="mt-1 h-8 px-3.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Plus size={13} />
+                  <span>Create Custom Agent</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {mode.customAgents.map((ca) => {
+                  const cfg = JSON.parse(ca.config || '{}');
+                  const isSelected = mode.defaultAgentId === ca.$id;
+                  return (
+                    <div
+                      key={ca.$id}
+                      onClick={() => {
+                        onClose();
+                        mode.onSelectAgent(ca);
+                      }}
+                      className="p-4 bg-[#0A0908] border border-white/10 hover:border-[#6366F1]/40 hover:bg-[#161412] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-[#161412] border border-white/10 flex items-center justify-center text-[#6366F1] shrink-0 font-bold">
+                            <Bot size={18} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h4 className="text-white font-bold text-xs font-clash m-0 truncate group-hover:text-[#818CF8] transition-colors">
+                                {cfg.name || 'Custom Agent'}
+                              </h4>
+                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#6366F1]/15 text-[#818cf8] font-bold border border-[#6366F1]/20">
+                                {cfg.framework || 'kylrix'}
+                              </span>
+                            </div>
+                            <p className="text-white/40 text-[11px] mt-0.5 m-0 truncate">
+                              {cfg.role || cfg.goal || 'Custom instructions defined'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isSelected && (
+                            <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/30">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] font-mono text-[#818cf8] border-t border-white/10 pt-2">
+                        <span className="flex items-center gap-1 text-[10px]">
+                          <Key size={11} className="text-emerald-400" /> Keys & Actions
+                        </span>
+                        <span className="font-bold group-hover:underline flex items-center gap-0.5">
+                          Inspect <ChevronRight size={12} />
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* MODE 0B: List Internal System Agents */}
+        {mode.type === 'list_system' && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-1">
+              <span className="text-xs font-bold text-white font-mono uppercase tracking-wider block">
+                System Specialist Catalog
+              </span>
+              <p className="text-xs text-white/50 m-0">
+                Pre-built task agents for workspace orchestration, flow mapping, and meta prompt crafting.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {SYSTEM_AGENTS.map((agent) => {
+                const isKylie = agent.id === 'kylie';
+                return (
+                  <div
+                    key={agent.id}
+                    onClick={() => {
+                      onClose();
+                      mode.onSelectAgent(agent);
+                    }}
+                    className="p-4 bg-[#0A0908] border border-white/10 hover:border-[#F59E0B]/40 hover:bg-[#161412] rounded-[22px] shadow-lg flex flex-col justify-between gap-3 transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center text-lg shrink-0 border border-[#F59E0B]/20">
+                        {agent.avatar}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="text-white font-bold text-xs font-clash m-0 truncate group-hover:text-[#F59E0B] transition-colors">
+                            {agent.name}
+                          </h4>
+                          {isKylie && (
+                            <span className="text-[8px] font-mono px-1.5 py-0.2 rounded bg-[#F59E0B]/20 text-[#F59E0B] font-bold border border-[#F59E0B]/30">
+                              Core
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-white/40 text-[11px] m-0 mt-0.5 truncate">{agent.role}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] font-mono text-[#F59E0B] border-t border-white/10 pt-2">
+                      <span>Inspect Prompt & Persona</span>
+                      <ChevronRight size={12} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {/* MODE 1: Preview System Agent (Kylie, Sidekick, Flow Architect, Meta Crafter) */}
         {mode.type === 'preview_system' && (
           <div className="space-y-6">
