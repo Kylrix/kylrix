@@ -67,7 +67,8 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
   // ── Provisioning Keys State ──
   const [apkList, setApkList] = useState<PatPublic[]>([]);
   const [loadingApk, setLoadingApk] = useState(false);
-  const [newApkName, setNewApkName] = useState('Agent Provisioning Key');
+  const [isCreatingApkKey, setIsCreatingApkKey] = useState(false);
+  const [newApkName, setNewApkName] = useState('');
   const [creatingApk, setCreatingApk] = useState(false);
   const [newlyCreatedApk, setNewlyCreatedApk] = useState<string | null>(null);
   const [copiedApk, setCopiedApk] = useState(false);
@@ -246,7 +247,11 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
 
   // Create Agent Provisioning Key
   const handleCreateApk = async () => {
-    const keyName = (newApkName.trim() || 'Agent Provisioning Key').slice(0, 128);
+    const keyName = newApkName.trim().slice(0, 128);
+    if (!keyName) {
+      toast.error('Please enter a name for the provisioning key');
+      return;
+    }
     setCreatingApk(true);
     try {
       const res = await createPat({
@@ -256,6 +261,8 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
       });
       if (res?.token) {
         setNewlyCreatedApk(res.token);
+        setNewApkName('');
+        setIsCreatingApkKey(false);
         toast.success('Agent Provisioning Key created');
         void loadApkList();
       }
@@ -292,14 +299,14 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
               {mode.type === 'create_custom' && 'Agent Crafter'}
               {mode.type === 'edit_custom' && 'Edit Custom Agent'}
               {mode.type === 'select_default' && 'Select Default Partner'}
-              {mode.type === 'manage_provisioning_keys' && 'Security Keys'}
+              {mode.type === 'manage_provisioning_keys' && (isCreatingApkKey ? 'Mint Provisioning Key' : 'Security Keys')}
             </p>
             <h2 className="text-sm font-black font-clash text-white m-0 leading-tight mt-0.5">
               {mode.type === 'preview_system' && mode.agent.name}
               {mode.type === 'create_custom' && 'Create Custom Agent'}
               {mode.type === 'edit_custom' && name}
               {mode.type === 'select_default' && 'Active Agent Partner'}
-              {mode.type === 'manage_provisioning_keys' && 'Agent Provisioning Keys'}
+              {mode.type === 'manage_provisioning_keys' && (isCreatingApkKey ? 'New Provisioning Key' : 'Agent Provisioning Keys')}
             </h2>
           </div>
         </div>
@@ -714,89 +721,136 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
         {/* MODE 5: Manage Agent Provisioning Keys (kyl_apk_...) */}
         {mode.type === 'manage_provisioning_keys' && (
           <div className="space-y-6">
-            <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2">
-              <div className="flex items-center gap-2 text-white font-bold text-xs">
-                <ShieldCheck size={15} className="text-[#6366F1]" />
-                <span>Zero-Trust Provisioning Architecture</span>
-              </div>
-              <p className="text-xs text-white/50 m-0 leading-relaxed">
-                Agent Provisioning Keys (<code className="text-[#818cf8] font-mono">kyl_apk_…</code>) only have permission to register agent identities and mint scoped Agentic PATs. They cannot access your notes or vault.
-              </p>
-            </div>
-
-            {/* Newly Created APK Banner */}
-            {newlyCreatedApk && (
-              <div className="p-4 rounded-2xl bg-[#6366F1]/10 border border-[#6366F1]/30 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#818cf8] flex items-center gap-1.5 font-mono">
-                    <Check size={13} /> Provisioning Key Generated (Shown Once)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(newlyCreatedApk);
-                      setCopiedApk(true);
-                      toast.success('Provisioning key copied');
-                      setTimeout(() => setCopiedApk(false), 2000);
-                    }}
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#818cf8] hover:text-white cursor-pointer"
-                  >
-                    {copiedApk ? <Check size={12} /> : <Copy size={12} />}
-                    <span>{copiedApk ? 'Copied' : 'Copy Key'}</span>
-                  </button>
-                </div>
-                <code className="block text-[11px] font-mono text-white bg-black/50 border border-white/10 p-2.5 rounded-xl break-all select-all">
-                  {newlyCreatedApk}
-                </code>
-                <p className="text-[10px] text-white/50 m-0">
-                  Export this key as <code className="text-[#818cf8]">KYLRIX_AGENT_KEY</code> in your terminal.
-                </p>
-              </div>
-            )}
-
-            {/* Active Provisioning Keys List */}
-            <div className="space-y-2.5">
-              <h4 className="text-xs font-bold text-white/40 uppercase tracking-wider font-mono m-0">
-                Active Provisioning Keys
-              </h4>
-
-              {loadingApk ? (
-                <div className="p-6 rounded-2xl bg-[#0A0908] border border-white/5 flex items-center justify-center text-white/40 text-xs">
-                  <RefreshCw size={14} className="animate-spin mr-2" /> Loading keys...
-                </div>
-              ) : apkList.length === 0 ? (
-                <div className="p-6 rounded-2xl bg-[#0A0908] border border-white/5 text-center text-xs text-white/40">
-                  No active provisioning keys. Generate one below to connect CLI agents.
-                </div>
-              ) : (
-                apkList.map((apk) => (
-                  <div
-                    key={apk.id}
-                    className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-bold text-white truncate m-0">{apk.name}</h4>
-                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#6366F1]/10 text-[#818cf8] font-bold">
-                          kyl_apk_{apk.tokenPrefix}…
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-white/30 font-mono m-0 mt-0.5">
-                        Scope: agents:provision • Created {apk.createdAt ? new Date(apk.createdAt).toLocaleDateString() : 'recently'}
-                      </p>
-                    </div>
+            {/* STATE 1: Newly Created APK Banner (Shown Once) */}
+            {newlyCreatedApk ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-[#6366F1]/10 border border-[#6366F1]/30 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#818cf8] flex items-center gap-1.5 font-mono">
+                      <Check size={13} /> Provisioning Key Generated (Shown Once)
+                    </span>
                     <button
                       type="button"
-                      onClick={() => handleRevokeApk(apk.id)}
-                      className="p-2 rounded-lg text-white/30 hover:text-red-400 hover:bg-white/[0.04] transition-colors cursor-pointer"
-                      title="Revoke Key"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(newlyCreatedApk);
+                        setCopiedApk(true);
+                        toast.success('Provisioning key copied');
+                        setTimeout(() => setCopiedApk(false), 2000);
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[#818cf8] hover:text-white cursor-pointer"
                     >
-                      <Trash2 size={14} />
+                      {copiedApk ? <Check size={12} /> : <Copy size={12} />}
+                      <span>{copiedApk ? 'Copied' : 'Copy Key'}</span>
                     </button>
                   </div>
-                ))
-              )}
-            </div>
+                  <code className="block text-[11px] font-mono text-white bg-black/50 border border-white/10 p-3 rounded-xl break-all select-all">
+                    {newlyCreatedApk}
+                  </code>
+                  <p className="text-xs text-white/60 m-0 leading-relaxed">
+                    Copy and export this key as <code className="text-[#818cf8] font-mono">KYLRIX_AGENT_KEY</code> in your agent terminal. It will not be shown again.
+                  </p>
+                </div>
+              </div>
+            ) : isCreatingApkKey ? (
+              /* STATE 2: Dedicated Key Name Selection & Creation Form */
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-3">
+                  <div>
+                    <label className="text-xs font-bold text-white uppercase tracking-wider font-mono block mb-1">
+                      Key Name / Environment <span className="text-[#6366F1]">*</span>
+                    </label>
+                    <p className="text-xs text-white/50 m-0 mb-3">
+                      Assign a clear label to identify which external agent or device will use this key.
+                    </p>
+                    <input
+                      value={newApkName}
+                      onChange={(e) => setNewApkName(e.target.value)}
+                      placeholder="e.g. Cursor Local Agent, CI Pipeline, Home Server"
+                      autoFocus
+                      className="w-full h-11 rounded-xl bg-[#161412] border border-white/[0.08] px-3.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#6366F1] transition-colors"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newApkName.trim()) {
+                          e.preventDefault();
+                          void handleCreateApk();
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2">
+                  <div className="flex items-center gap-2 text-white font-bold text-xs">
+                    <ShieldCheck size={15} className="text-[#6366F1]" />
+                    <span>Granted Scope & Permissions</span>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-[#6366F1]/10 border border-[#6366F1]/20 text-[#818cf8] font-bold">
+                      agents:provision
+                    </span>
+                  </div>
+                  <p className="text-xs text-white/40 m-0 pt-1 leading-relaxed">
+                    Zero-trust root permission. Allows external agent daemons to authenticate, declare identities, and request scoped runtime session PATs. Does not grant direct access to your notes or vault.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              /* STATE 3: Active Keys List & Zero-Trust Architecture Info */
+              <div className="space-y-6">
+                <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] space-y-2">
+                  <div className="flex items-center gap-2 text-white font-bold text-xs">
+                    <ShieldCheck size={15} className="text-[#6366F1]" />
+                    <span>Zero-Trust Provisioning Architecture</span>
+                  </div>
+                  <p className="text-xs text-white/50 m-0 leading-relaxed">
+                    Agent Provisioning Keys (<code className="text-[#818cf8] font-mono">kyl_apk_…</code>) only have permission to register agent identities and mint scoped Agentic PATs. They cannot access your notes or vault.
+                  </p>
+                </div>
+
+                {/* Active Provisioning Keys List */}
+                <div className="space-y-2.5">
+                  <h4 className="text-xs font-bold text-white/40 uppercase tracking-wider font-mono m-0">
+                    Active Provisioning Keys
+                  </h4>
+
+                  {loadingApk ? (
+                    <div className="p-6 rounded-2xl bg-[#0A0908] border border-white/5 flex items-center justify-center text-white/40 text-xs">
+                      <RefreshCw size={14} className="animate-spin mr-2" /> Loading keys...
+                    </div>
+                  ) : apkList.length === 0 ? (
+                    <div className="p-6 rounded-2xl bg-[#0A0908] border border-white/5 text-center text-xs text-white/40">
+                      No active provisioning keys. Click below to generate one.
+                    </div>
+                  ) : (
+                    apkList.map((apk) => (
+                      <div
+                        key={apk.id}
+                        className="p-4 rounded-2xl bg-[#0A0908] border border-white/[0.06] flex items-center justify-between gap-3"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs font-bold text-white truncate m-0">{apk.name}</h4>
+                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#6366F1]/10 text-[#818cf8] font-bold">
+                              kyl_apk_{apk.tokenPrefix}…
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-white/30 font-mono m-0 mt-0.5">
+                            Scope: agents:provision • Created {apk.createdAt ? new Date(apk.createdAt).toLocaleDateString() : 'recently'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRevokeApk(apk.id)}
+                          className="p-2 rounded-lg text-white/30 hover:text-red-400 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                          title="Revoke Key"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -818,29 +872,68 @@ export function AgenticSettingsDrawer({ mode, onClose }: AgenticDrawerProps) {
 
       {mode.type === 'manage_provisioning_keys' && (
         <div className="shrink-0 border-t border-white/[0.06] bg-[#161412] px-5 py-3 md:py-3.5 z-10">
-          <div className="flex gap-2 max-w-full">
-            <input
-              value={newApkName}
-              onChange={(e) => setNewApkName(e.target.value)}
-              placeholder="Key label e.g. Cursor Local Agent"
-              className="flex-1 h-10 rounded-xl bg-[#0A0908] border border-white/[0.08] px-3.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#6366F1]/50 truncate min-w-0"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  void handleCreateApk();
-                }
-              }}
-            />
+          {newlyCreatedApk ? (
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(newlyCreatedApk);
+                  setCopiedApk(true);
+                  toast.success('Provisioning key copied');
+                  setTimeout(() => setCopiedApk(false), 2000);
+                }}
+                className="px-4 h-10 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                {copiedApk ? <Check size={14} /> : <Copy size={14} />}
+                <span>{copiedApk ? 'Copied Key' : 'Copy Key'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewlyCreatedApk(null);
+                  setIsCreatingApkKey(false);
+                  setNewApkName('');
+                }}
+                className="px-6 h-10 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs transition-colors cursor-pointer ml-auto"
+              >
+                Done
+              </button>
+            </div>
+          ) : isCreatingApkKey ? (
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCreatingApkKey(false);
+                  setNewApkName('');
+                }}
+                className="px-4 h-10 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-bold text-xs transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateApk}
+                disabled={creatingApk || !newApkName.trim()}
+                className="px-5 h-10 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 ml-auto shadow-lg shadow-[#6366F1]/10"
+              >
+                {creatingApk ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
+                <span>Generate Key</span>
+              </button>
+            </div>
+          ) : (
             <button
               type="button"
-              onClick={handleCreateApk}
-              disabled={creatingApk}
-              className="h-10 px-4 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 shrink-0 shadow-lg shadow-[#6366F1]/10"
+              onClick={() => {
+                setIsCreatingApkKey(true);
+                setNewApkName('');
+              }}
+              className="w-full h-10 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-lg shadow-[#6366F1]/10"
             >
-              {creatingApk ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
-              <span>Generate Key</span>
+              <Plus size={14} />
+              <span>Generate Provisioning Key</span>
             </button>
-          </div>
+          )}
         </div>
       )}
     </div>
