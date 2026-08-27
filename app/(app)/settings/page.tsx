@@ -389,7 +389,8 @@ function SettingsPageInner() {
         if (!user?.$id) return;
         const effUsername = getEffectiveUsername(user);
         const refParam = effUsername ? `u_${effUsername}` : `id_${user.$id}`;
-        const link = referralStats?.referralLink || `${window.location.origin}/?ref=${refParam}`;
+        const baseUri = typeof window !== 'undefined' ? window.location.origin : 'https://www.kylrix.space';
+        const link = `${baseUri}/?ref=${refParam}`;
         try {
             await navigator.clipboard.writeText(link);
             setCopiedReferral(true);
@@ -744,20 +745,20 @@ function SettingsPageInner() {
                         {/* Left Column: Discoverability, Integrations & Feedback */}
                         <div className="flex flex-col gap-8">
                             {/* Referral Program */}
-                            <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-4">
-                                <div className="flex items-center justify-between gap-4 flex-wrap">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center flex-shrink-0">
+                            <div className="p-5 md:p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-4 max-w-full overflow-hidden">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center shrink-0">
                                             <Users size={20} />
                                         </div>
-                                        <div>
-                                            <h4 className="text-white font-black text-base font-mono">Referral & Growth</h4>
-                                            <p className="text-white/40 text-xs font-semibold">
+                                        <div className="min-w-0 flex-1">
+                                            <h4 className="text-white font-black text-sm md:text-base font-mono truncate">Referral & Growth</h4>
+                                            <p className="text-white/40 text-xs font-semibold line-clamp-2 sm:line-clamp-none">
                                                 Earn 1.5 $KYL for each user who joins with your link, plus 0.5 $KYL for 30-day activity.
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
                                         <div className="flex flex-col items-end">
                                             <span className="text-[10px] font-black text-white/30 uppercase tracking-widest font-mono">Referred</span>
                                             <span className="text-white font-black text-sm font-mono">{referralStats?.totalReferred ?? 0} users</span>
@@ -771,17 +772,17 @@ function SettingsPageInner() {
                                 </div>
 
                                 {/* Shareable Link Box */}
-                                <div className="flex items-center gap-2 bg-black/40 p-2 rounded-xl border border-white/5">
+                                <div className="flex items-center gap-2 bg-black/40 p-2 md:p-2.5 rounded-xl border border-white/5 max-w-full min-w-0">
                                     <input 
                                         type="text"
                                         readOnly
-                                        value={referralStats?.referralLink || (typeof window !== 'undefined' ? `${window.location.origin}/?ref=${getEffectiveUsername(user) ? `u_${getEffectiveUsername(user)}` : `id_${user?.$id || ''}`}` : '')}
-                                        className="flex-1 bg-transparent px-2 text-xs font-mono text-white/90 border-none outline-none truncate"
+                                        value={typeof window !== 'undefined' ? `${window.location.origin}/?ref=${getEffectiveUsername(user) ? `u_${getEffectiveUsername(user)}` : `id_${user?.$id || ''}`}` : ''}
+                                        className="flex-1 bg-transparent px-2 text-xs font-mono text-white/90 border-none outline-none truncate min-w-0"
                                     />
                                     <button
                                         type="button"
                                         onClick={handleCopyReferral}
-                                        className="h-9 px-4 rounded-lg bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center gap-1.5 transition-all select-none flex-shrink-0 cursor-pointer"
+                                        className="h-9 px-3.5 md:px-4 rounded-lg bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center gap-1.5 transition-all select-none shrink-0 cursor-pointer"
                                     >
                                         {copiedReferral ? <Check size={14} className="text-[#10B981]" /> : <Copy size={14} />}
                                         <span>{copiedReferral ? 'Copied' : 'Copy Link'}</span>
